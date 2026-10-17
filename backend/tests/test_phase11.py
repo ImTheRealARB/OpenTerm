@@ -293,12 +293,6 @@ def _wait(client, job_id, states=("done", "error", "cancelled"), timeout=30.0) -
     raise AssertionError(f"job {job_id} still {job['state']}")
 
 
-def test_migration_8_adds_jobs_table():
-    from openterm.db import MIGRATIONS
-
-    assert len(MIGRATIONS) >= 8 and "CREATE TABLE jobs" in MIGRATIONS[7]
-
-
 def test_job_hash_is_stable_and_order_free():
     h = mod("openterm.jobs").job_hash
     assert h("sleep", "1", {"a": 1, "b": [1, 2]}) == h("sleep", "1", {"b": [1, 2], "a": 1})

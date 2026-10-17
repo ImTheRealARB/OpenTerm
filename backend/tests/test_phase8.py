@@ -1,45 +1,14 @@
 """Phase 8: portfolios (migration 6) and price / percent alerts (migration 7)."""
 
-import asyncio
 
 import pytest
 
-from openterm.db import MIGRATIONS, open_db
 from openterm.portfolio import MAX_ALERTS, MAX_POSITIONS, add_lot, check_currency, check_positions
 from openterm.userdata import UserDataError
 
 
 def lot(symbol="AAPL", qty=10.0, cost=100.0, currency=None, notes=None):
     return {"symbol": symbol, "qty": qty, "cost": cost, "currency": currency, "notes": notes}
-
-
-# --- migrations ------------------------------------------------------------------------------
-def test_migrations_6_and_7_create_portfolios_and_alerts(tmp_path):
-    async def run():
-        path = tmp_path / "p.db"
-        db = await open_db(path)
-        await db.execute("PRAGMA user_version=5")  # a Phase 5 database
-        await db.execute("DROP TABLE portfolios")
-        await db.execute("DROP TABLE alerts")
-        await db.execute("DROP TABLE jobs")  # Phase 11
-        await db.execute("DROP TABLE strategies")  # Phase 12
-        await db.execute("DROP TABLE bt_runs")
-        await db.commit()
-        await db.close()
-        db = await open_db(path)
-        async with db.execute("PRAGMA user_version") as cur:
-            version = (await cur.fetchone())[0]
-        async with db.execute("SELECT name FROM sqlite_master WHERE type='table'") as cur:
-            tables = {r[0] for r in await cur.fetchall()}
-        async with db.execute("PRAGMA table_info(alerts)") as cur:
-            cols = [r[1] for r in await cur.fetchall()]
-        await db.close()
-        return version, tables, cols
-
-    version, tables, cols = asyncio.run(run())
-    assert len(MIGRATIONS) >= 7 and version == len(MIGRATIONS)  # Phase 11 added migration 8 (jobs)
-    assert {"portfolios", "alerts", "watchlists"} <= tables
-    assert cols == ["id", "symbol", "op", "unit", "value", "status", "created_at", "triggered_at", "trigger_price"]
 
 
 # --- average cost ----------------------------------------------------------------------------
@@ -129,24 +98,6 @@ def test_portfolio_validation(client):
     client.patch("/api/portfolios/X", json={"add": [{"symbol": "AAPL", "qty": 2, "cost": 10}]})
     assert client.patch("/api/portfolios/X", json={"add": [{"symbol": "AAPL", "qty": -2}]}).json()["positions"] == []
 
-
-def test_portfolios_survive_restart(tmp_path, monkeypatch):
-    from fastapi.testclient import TestClient
-
-    from openterm.config import get_settings
-
-    monkeypatch.setenv("OPENTERM_FIXTURES", "1")
-    monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "pf.db"))
-    get_settings.cache_clear()
-    from openterm.main import app
-
-    with TestClient(app) as c:
-        c.put("/api/portfolios/KEEP", json={"positions": [{"symbol": "VOD.L", "qty": 100, "cost": 72.5, "currency": "GBp"}]})
-        c.post("/api/alerts", json={"symbol": "AAPL", "op": ">", "unit": "price", "value": 200})
-    with TestClient(app) as c:
-        assert c.get("/api/portfolios/KEEP").json()["positions"][0]["currency"] == "GBp"
-        assert c.get("/api/alerts").json()["alerts"][0]["symbol"] == "AAPL"
-    get_settings.cache_clear()
 
 
 # --- alerts ----------------------------------------------------------------------------------

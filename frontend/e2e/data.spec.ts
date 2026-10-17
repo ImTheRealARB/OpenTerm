@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openApp } from "./app";
 
 const env = (data: unknown, source = "yahoo") => ({ data, source, as_of: 0, age_s: 0, stale: false, fallback_from: [] });
 
@@ -8,10 +9,7 @@ test.beforeEach(async ({ page }) => {
       json: env([{ symbol: "RELIANCE.NS", name: "Reliance Industries Limited", exchange: "NSE", type: "Equity", source: "yahoo" }]),
     }),
   );
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
 });
 
 test("ticker search suggests securities and prefetches the highlighted one", async ({ page }) => {

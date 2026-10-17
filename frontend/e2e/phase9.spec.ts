@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Download, type Page } from "@playwright/test";
+import { openApp } from "./app";
 
 // Mocked routes only (no network). The series below are synthetic test data made up in this file.
 const now = () => Date.now() / 1000;
@@ -79,10 +80,7 @@ async function setup(page: Page, o: Opts = {}) {
   await page.route("**/api/peers?**", (r) =>
     o.peers === undefined ? r.fulfill({ json: env(PEERS, { source: "yahoo_peers" }) }) : r.fulfill({ status: 404, json: o.peers }),
   );
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
   return { requests };
 }
 

@@ -1,13 +1,11 @@
 """Phase 5: watchlists (SQLite), news (RSS / GDELT), movers, crypto, and the quote boards' symbols."""
 
-import asyncio
 import json
 from datetime import UTC, datetime
 
 import httpx
 import pytest
 
-from openterm.db import MIGRATIONS, open_db
 from openterm.providers.base import ProviderError
 from openterm.providers.crypto import BinanceProvider, CoinGeckoProvider
 from openterm.providers.fixtures import FIXTURES, _route, fixture_transport
@@ -39,20 +37,6 @@ def rss_text(name: str) -> bytes:
 
 
 # --- watchlists ------------------------------------------------------------------------------
-def test_migration_adds_watchlists(tmp_path):
-    async def run():
-        db = await open_db(tmp_path / "w.db")
-        async with db.execute("PRAGMA user_version") as cur:
-            version = (await cur.fetchone())[0]
-        async with db.execute("SELECT name FROM sqlite_master WHERE type='table'") as cur:
-            tables = {r[0] for r in await cur.fetchall()}
-        await db.close()
-        return version, tables
-
-    version, tables = asyncio.run(run())
-    assert version == len(MIGRATIONS) and "watchlists" in tables
-
-
 def test_watchlist_crud(client):
     assert client.get("/api/watchlists").json() == {"watchlists": []}
     r = client.put("/api/watchlists/tech", json={"symbols": ["aapl", "MSFT", "aapl", " nvda "]})
@@ -89,22 +73,6 @@ def test_watchlist_validation(client):
     client.put("/api/watchlists/X", json={"symbols": ["AAPL"]})
     assert client.patch("/api/watchlists/X", json={"remove": ["AAPL"]}).json()["symbols"] == []
 
-
-def test_watchlists_survive_restart(tmp_path, monkeypatch):
-    from fastapi.testclient import TestClient
-
-    from openterm.config import get_settings
-
-    monkeypatch.setenv("OPENTERM_FIXTURES", "1")
-    monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "wl.db"))
-    get_settings.cache_clear()
-    from openterm.main import app
-
-    with TestClient(app) as c:
-        c.put("/api/watchlists/KEEP", json={"symbols": ["AAPL", "GC=F"]})
-    with TestClient(app) as c:
-        assert c.get("/api/watchlists/KEEP").json()["symbols"] == ["AAPL", "GC=F"]
-    get_settings.cache_clear()
 
 
 # --- news: parsing ---------------------------------------------------------------------------

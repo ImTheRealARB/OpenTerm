@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { openApp } from "./app";
 
 const now = () => Date.now() / 1000;
 const env = (data: unknown, extra = {}) => ({ data, source: "fred_csv", as_of: now(), age_s: 2, stale: false, fallback_from: [], ...extra });
@@ -62,10 +63,7 @@ async function setup(page: Page) {
     });
   });
   await page.route("**/api/quote?**", (r) => r.fulfill({ json: { results: {} } }));
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
 }
 
 const run = async (page: Page, t: string) => {

@@ -374,3 +374,28 @@ Phase 3 optimizations (before → after):
 Phase 1 optimizations (before → after):
 - Cheatsheet overlay moved to a lazy chunk; it was pulled into the entry chunk by a static import (entry 79.2 → 78.4 KB gz).
 - Clock writes `textContent` once per second instead of re-rendering React (no measurable cost now; avoids a 1 Hz render of the top bar).
+
+## Test suite speed (2026-10-19, on top of Phase 12 step 4)
+Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
+
+| Suite | Before | After |
+|---|---|---|
+| pytest | 263 passed + 19 xfail, 39-41 s (`-n 4`) | 268 passed + 19 xfail, 20-29 s (`-n 6 --dist worksteal`) |
+| vitest | 187, 2.1 s (forks) | 187, 1.3-1.6 s (threads) |
+| Playwright (`CI=1`, incl. build) | 77, 30-45 s wall | 77, 18-27 s wall |
+
+- **pytest: shared TLS context.** Each app start (`client` fixture, ~300 per run) built an httpx client, and loading
+  certifi's CA bundle cost ~0.35 s of its ~0.4 s. `conftest.py` builds the default context once per xdist worker (tests
+  never open a TLS connection). Worker time 133 s -> 60 s, of which fixture setup 68 s -> 8 s.
+- **pytest: `-n 6 --dist worksteal`.** The job tests (each spawns a worker that imports pandas, ~2 s) bunched up on
+  one worker under the default scheduler. `-n 10` was not faster.
+- **pytest: merged duplicates, no assertion lost.** Four migration-upgrade tests (userdata v2, phase 5 fresh DB,
+  phase 8 v5 + alert columns, phase 11 migration text) -> one test parametrized over every schema version 0-9 (plus a
+  check that `TABLES_BY_VERSION` covers every migration). Three "survives restart" tests (history + layouts, watchlists,
+  portfolios + alerts) -> one test with 2 app starts instead of 6.
+- **pytest flake fixed:** `test_runtime_limits_fail_closed` gave the MEMORY LIMIT and NO SIGNALS cases a 3 s limit that
+  also covers the worker's pandas import, so under load they ended as TIME LIMIT. Only the TIME LIMIT case keeps 3 s.
+- **Playwright: one page load per test.** Every setup did goto -> `localStorage.clear()` -> reload, but each test already
+  gets a fresh browser context. Now `e2e/app.ts` `openApp()` (phase 12's spec left as is while its steps land). Phase 4's
+  mid-test "fresh session" still clears storage itself.
+- **Playwright web server runs `vite build`, not `npm run build`:** the `tsc --noEmit` inside it (~5 s) is its own gate.

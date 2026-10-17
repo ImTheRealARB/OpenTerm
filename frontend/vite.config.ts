@@ -17,5 +17,5 @@ export default defineConfig({
     },
   },
   build: { target: "es2022", sourcemap: false, reportCompressedSize: true },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  test: { include: ["src/**/*.test.ts"], environment: "node", pool: "threads" }, // threads start faster than forks here
 });

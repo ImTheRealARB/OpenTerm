@@ -1,4 +1,5 @@
 import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import { openApp } from "./app";
 
 /*
  * Phase 11 (spec: docs/specs/PHASE_11.md): APIKEYS, the KEY REQUIRED line, JOBS.
@@ -55,10 +56,7 @@ async function setup(page: Page) {
     }
     return r.fulfill({ json: { jobs: [] } });
   });
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
   return { keys, puts, history, deletes };
 }
 
