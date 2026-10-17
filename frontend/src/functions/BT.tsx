@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtMetric, METRIC_ROWS, type MetricRow } from "../bt/metricsFormat";
-import { BT_USAGE, isBtRun, parseBtArgs, type BtRun } from "../bt/ruleParse";
+import { BT_USAGE, isBtRun, parseBtArgs, parseRule, type BtRun } from "../bt/ruleParse";
 import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
@@ -21,17 +21,13 @@ import { isActive, progressText } from "../net/jobFrames";
 import { adoptJob, cancelJob, fetchJob, useJob } from "../net/jobs";
 import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
 import { navKey, useLatest } from "./quoteRows";
+import BtEditor from "./BtEditor";
 import BtRuns from "./BtRuns";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
 
 const BASE_VIEWS = ["CHART", "METRICS", "TRADES", "CODE"] as const;
 type View = (typeof BASE_VIEWS)[number] | "MC" | "WF";
-/** Keys that belong to later Phase 12 steps: say so instead of doing nothing. */
-const LATER: Record<string, string> = {
-  s: "S: SAVING STRATEGIES ARRIVES WITH THE STRATEGY EDITOR (PHASE 12 STEP 4B)",
-};
-const SUB_STEP: Record<string, string> = { SAVE: "4B", LOAD: "4B", DEL: "4B" };
 const EXPORT_USAGE = "USAGE: BT EXPORT <RUNID> [PINE|TRADES|EQUITY|METRICS]  (PINE: rule strategies only; the default is PINE)";
 const VAL_NAME = { MC: "MONTE CARLO", WF: "WALK-FORWARD" } as const;
 
@@ -89,7 +85,7 @@ const TRADE_COLS: Column<BtTrade>[] = [
 
 function request(a: BtRun) {
   return {
-    rule: a.rule, symbols: a.symbols, interval: a.interval, range: a.range,
+    ...(a.strategy ? { strategy: a.strategy } : { rule: a.rule }), symbols: a.symbols, interval: a.interval, range: a.range,
     options: {
       ...(a.short ? { short: true } : {}), ...(a.fees !== undefined ? { fees_bps: a.fees } : {}),
       ...(a.slip !== undefined ? { slip_bps: a.slip } : {}), ...(a.cash !== 100_000 ? { cash: a.cash } : {}),
@@ -166,6 +162,25 @@ export default function BT({ panelId, args }: FunctionProps) {
       );
   };
 
+  /** BT SAVE <NAME> <RULE>: a named rule, run later as `BT <SYMBOLS> @<NAME>`. (Python strategies are saved from BT EDIT.) */
+  const saveRule = (name: string | undefined, rule: string) => {
+    if (!name || !rule.trim()) return setState({ k: "bad", error: "USAGE: BT SAVE <NAME> <RULE>  (PYTHON STRATEGIES: BT EDIT <NAME>, CTRL+S)" });
+    const r = parseRule(rule);
+    if (!r.ok) return setState({ k: "bad", error: r.error, rule, col: r.col });
+    setState({ k: "note", text: `SAVING ${name}…` });
+    btApi
+      .putStrategy(name, { rule })
+      .then((s) => setState({ k: "note", text: `SAVED RULE ${s.name}: ${rule} · RUN IT: BT <SYMBOLS> @${s.name} 1D 5Y` }))
+      .catch((e) => setState({ k: "failed", error: errText(e) }));
+  };
+  const deleteStrategy = (name: string | undefined) => {
+    if (!name) return setState({ k: "bad", error: "USAGE: BT DEL <NAME>" });
+    btApi
+      .deleteStrategy(name)
+      .then(() => setState({ k: "note", text: `DELETED STRATEGY ${name.toLowerCase()}` }))
+      .catch((e) => setState({ k: "failed", error: errText(e) }));
+  };
+
   /** Server-built export (Pine for rule runs, CSV parts), saved as a file. */
   const exportRun = (id: string | undefined, what = "PINE") => {
     const w = what.toUpperCase();
@@ -192,7 +207,9 @@ export default function BT({ panelId, args }: FunctionProps) {
       if (parsed.sub === "RUNS") return setState({ k: "usage" }); // drawn by BtRuns
       if (parsed.sub === "OPEN") return id ? load(id) : setState({ k: "bad", error: "USAGE: BT OPEN <RUNID> (BT RUNS LISTS THE IDS)" });
       if (parsed.sub === "EXPORT") return exportRun(id, parsed.args[1]);
-      return setState({ k: "later", text: `BT ${parsed.sub}: NOT BUILT YET (PHASE 12 STEP ${SUB_STEP[parsed.sub] ?? "?"})` });
+      if (parsed.sub === "SAVE") return saveRule(id, parsed.args.slice(1).join(" "));
+      if (parsed.sub === "DEL") return deleteStrategy(id);
+      return setState({ k: "bad", error: `BT ${parsed.sub}: UNKNOWN SUBCOMMAND` }); // EDIT / LOAD / RUNS are drawn by their own components
     }
     submit(parsed);
     // args identity changes only when the command changes
@@ -374,8 +391,8 @@ export default function BT({ panelId, args }: FunctionProps) {
           cancelJob(j.id).catch((err) => setMsg(`ERR: ${errText(err)}`));
           return true;
         }
-        if (LATER[k] && r) {
-          setMsg(LATER[k]);
+        if (k === "s" && r) {
+          setMsg(r.code ? "S: COPY THE CODE FROM THE CODE VIEW INTO BT EDIT <NAME> AND PRESS CTRL+S" : "S: BT SAVE <NAME> <RULE> SAVES THIS RULE; PYTHON STRATEGIES ARE SAVED FROM BT EDIT <NAME>");
           return true;
         }
         return false;
@@ -386,6 +403,7 @@ export default function BT({ panelId, args }: FunctionProps) {
   );
 
   if (parsed.ok && parsed.sub === "RUNS") return <BtRuns panelId={panelId} />;
+  if (parsed.ok && (parsed.sub === "EDIT" || parsed.sub === "LOAD")) return <BtEditor panelId={panelId} name={parsed.args[0]} />;
   return (
     <div className="fn">
       <Head parsed={isBtRun(parsed) ? parsed : null} run={run} />
@@ -394,6 +412,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
+          <div className="dim">BT EDIT [NAME] = PYTHON STRATEGY EDITOR · BT SAVE &lt;NAME&gt; &lt;RULE&gt; · BT DEL &lt;NAME&gt; · BT &lt;SYMBOLS&gt; @&lt;NAME&gt; RUNS A SAVED ONE</div>
           <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|TRADES|EQUITY|METRICS]</div>
           <div className="dim">BT MC|WF &lt;SYMBOLS&gt; &lt;RULE&gt; … RUNS IT, THEN SHUFFLES ITS TRADES (MC) OR SPLITS IT INTO WINDOWS (WF) · M / W ON AN OPEN RUN DO THE SAME</div>
         </>

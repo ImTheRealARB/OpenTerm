@@ -77,6 +77,25 @@ ALRT                           list; ALRT DEL id, ALRT REARM id, ALRT CLEAR (tri
 ```
 Clean up: `PORT DEL MAIN`, `WL DEL TECH`, `ALRT DEL <id>`, `LAYOUT DEL <name>`.
 
+## Backtest (historical simulation, not a forecast)
+```
+BT AAPL SMA20>SMA50 1D 5Y                 a rule on 5 years of daily bars; V cycles CHART METRICS TRADES CODE
+BT SPY,QQQ RSI14<30 1D 10Y SHORT FEES=5   several symbols, shorts allowed, fees in bps (SLIP=, CASH=, BENCH=SPY, MKT=india)
+BT RELIANCE.NS RSI14<30 1D 10Y            India engine (STT, stamp duty, GST); also BTCUSDT.P (perp + funding), EURUSD=X, ES=F
+BT AAPL,BTCUSDT.P CLOSE>SMA50             several markets in one shared-capital run (one currency only)
+BT MC AAPL SMA20>SMA50 1D 10Y             run it, then shuffle its trades (Monte Carlo) + bootstrap Sharpe interval; M on an open run
+BT WF AAPL SMA20>SMA50 1D 10Y             run it, then walk-forward windows; W on an open run
+BT RUNS                                   stored runs (last 200): Enter opens, C marks two to compare, V switches to equity lines
+BT OPEN <runid>   BT EXPORT <runid> PINE  open a run; export Pine Script (rule runs) or TRADES / EQUITY / METRICS as CSV (P, E in a run)
+BT SAVE golden SMA20>SMA50                save a rule;  BT AAPL @golden 1D 5Y  runs it;  BT DEL golden removes it
+BT EDIT mysma                             Python strategy editor (SignalEngine): Ctrl+S save, Ctrl+Enter save and run; BT EDIT lists them
+IMPORT MYBARS                             paste daily bars (date,open,high,low,close[,volume]); then GP MYBARS or BT MYBARS CLOSE>SMA20
+IMPORT                                    list imported symbols (D twice removes; IMPORT DEL MYBARS)
+```
+Rule terms: `CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn`, numbers; `> < >= <= CROSS> CROSS<`; `AND OR`.
+Orders fill at the next bar's open. Every result says HISTORICAL SIMULATION, NOT A FORECAST and shows its data sources, fees
+and slippage. Imported bars are labelled LOCAL DATA. Python strategies run in a restricted worker (no files, no network).
+
 ## Workspace and app
 ```
 LAYOUT SAVE MYDESK    save panels (LAYOUT lists, LAYOUT MYDESK loads, Ctrl+S / Ctrl+O)

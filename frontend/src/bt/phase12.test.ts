@@ -149,3 +149,16 @@ describe("csvImport extra rules (step 8)", () => {
     expect(parseBarsCsv("date,open,high,low,close\n" + rows).errors).toHaveLength(20);
   });
 });
+
+describe("BT strategies (step 4B)", () => {
+  it("@name in the rule position names a saved strategy", () => {
+    expect(parseBtArgs(["AAPL", "@MySma", "1D", "5Y"])).toMatchObject({ ok: true, symbols: ["AAPL"], strategy: "mysma", rule: "@MySma", range: "5Y" });
+    expect(parseBtArgs(["MC", "AAPL", "@golden"])).toMatchObject({ ok: true, strategy: "golden", val: "MC" });
+    expect(parseBtArgs(["AAPL", "@bad name!"]).ok).toBe(false);
+    expect(parseBtArgs(["AAPL", "@"]).ok).toBe(false);
+  });
+
+  it("EDIT, LOAD, SAVE and DEL are subcommands", () => {
+    for (const s of ["EDIT", "LOAD", "SAVE", "DEL"]) expect(parseBtArgs([s, "x"])).toMatchObject({ ok: true, sub: s, args: ["x"] });
+  });
+});

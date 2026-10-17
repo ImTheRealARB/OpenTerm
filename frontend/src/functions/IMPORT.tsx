@@ -130,7 +130,7 @@ function Paste({ symbol }: { symbol: string }) {
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    e.stopPropagation(); // typing here must not reach panel keys or type-to-command
+    if (!((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) e.stopPropagation(); // typing must not reach panel keys; Ctrl+K still opens the command line
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       store();

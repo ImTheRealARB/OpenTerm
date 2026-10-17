@@ -62,7 +62,7 @@ async function setup(page: Page) {
   await page.route("**/api/bt/**", (r) => {
     const req = r.request();
     const path = new URL(req.url()).pathname;
-    if (req.method() === "POST") {
+    if (req.method() !== "GET") {
       let body: unknown = req.postData();
       try {
         body = req.postDataJSON();
@@ -73,6 +73,19 @@ async function setup(page: Page) {
     }
     if (path === "/api/bt/run") return r.fulfill({ json: { id: "j1", kind: "bt.run", state: "queued", progress: 0, msg: "", cached: false } });
     if (path === "/api/bt/runs") return r.fulfill({ json: { runs: [...runs.values()].map(({ equity, benchmark, trades, ...card }) => card) } });
+    if (path === "/api/bt/strategies") {
+      return r.fulfill({ json: { strategies: [{ name: "mysma", kind: "python", updated_at: now() - 90 }, { name: "golden", kind: "rule", updated_at: now() - 30 }] } });
+    }
+    if (path === "/api/bt/strategies/mysma" && req.method() === "GET") {
+      return r.fulfill({ json: { name: "mysma", kind: "python", updated_at: now(), code: "class SignalEngine:\n    def generate(self, data_map):\n        return {}\n" } });
+    }
+    if (path === "/api/bt/strategies/golden" && req.method() === "GET") return r.fulfill({ json: { name: "golden", kind: "rule", updated_at: now(), code: "SMA20>SMA50" } });
+    if (path === "/api/bt/strategies/newone" && req.method() === "GET") return r.fulfill({ status: 404, json: { error: "NO STRATEGY newone", kind: "not_found" } });
+    if (path === "/api/bt/strategies/bad" && req.method() === "GET") return r.fulfill({ status: 404, json: { error: "NO STRATEGY bad", kind: "not_found" } });
+    if (path === "/api/bt/strategies/bad" && req.method() === "PUT") {
+      return r.fulfill({ status: 400, json: { error: "STRATEGY REJECTED", kind: "bad_request", detail: "LINE 2: IMPORT OF os IS NOT ALLOWED" } });
+    }
+    if (path.startsWith("/api/bt/strategies/")) return r.fulfill({ json: { name: path.split("/").pop(), kind: "python", updated_at: now(), deleted: path.split("/").pop() } });
     if (/\/export$/.test(path)) {
       return r.fulfill({ contentType: "text/plain", body: path.includes("/r1/") ? "//@version=5\nstrategy(\"OpenTerm BT\")\n" : "x" });
     }
@@ -319,4 +332,72 @@ test("IMPORT: lists stored symbols and D twice removes one", async ({ page }) =>
   }).toPass();
   await page.keyboard.press("d");
   await expect.poll(() => posts.some((x) => x.url === "DELETE /api/bt/import/MYBARS")).toBe(true);
+});
+
+test("BT EDIT: lists saved strategies and Enter opens one in the editor", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT EDIT");
+  const p = panel(page);
+  await expect(p.locator(".grid .sr")).toContainText("mysma");
+  await expect(async () => {
+    await page.keyboard.press("Enter");
+    await expect(p).toContainText("BT EDIT mysma", { timeout: 500 });
+  }).toPass();
+  await expect(p.locator("textarea")).toHaveValue(/class SignalEngine/);
+  await expect(p).toContainText("SAVED PYTHON STRATEGY");
+});
+
+test("BT EDIT: a new strategy starts from the template, Tab indents, Ctrl+S saves it", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "BT EDIT newone");
+  const box = panel(page).locator("textarea");
+  await expect(box).toHaveValue(/class SignalEngine/);
+  await expect(panel(page)).toContainText("NEW PYTHON STRATEGY");
+  await expect(box).toBeFocused();
+  await box.press("Control+Home");
+  await box.press("Tab");
+  expect((await box.inputValue()).startsWith("    import numpy")).toBe(true);
+  await expect(panel(page)).toContainText("UNSAVED CHANGES");
+  await box.press("Control+s");
+  await expect(panel(page)).toContainText("SAVED newone (PYTHON)");
+  const put = posts.find((x) => x.url === "/api/bt/strategies/newone");
+  expect((put!.body as { code: string }).code).toContain("class SignalEngine");
+});
+
+test("BT EDIT: the server's reason for refusing code is shown and nothing runs", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "BT EDIT bad");
+  const box = panel(page).locator("textarea");
+  await expect(box).toHaveValue(/class SignalEngine/);
+  await box.press("Control+Enter");
+  await expect(panel(page)).toContainText("NOT SAVED: STRATEGY REJECTED: LINE 2: IMPORT OF os IS NOT ALLOWED");
+  expect(posts.filter((x) => x.url === "/api/bt/run")).toHaveLength(0);
+});
+
+test("BT EDIT: Ctrl+Enter saves and runs the strategy with the RUN line", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "BT EDIT mysma");
+  await expect(panel(page).locator("textarea")).toHaveValue(/class SignalEngine/);
+  await panel(page).getByLabel("run line").fill("SPY,QQQ 1W 10Y SHORT");
+  await panel(page).locator("textarea").press("Control+Enter");
+  await expect.poll(() => posts.some((x) => x.url === "/api/bt/run")).toBe(true);
+  expect(posts.find((x) => x.url === "/api/bt/run")!.body).toMatchObject({ strategy: "mysma", symbols: ["SPY", "QQQ"], interval: "1W", range: "10Y", options: { short: true } });
+  expect((posts.find((x) => x.url === "/api/bt/run")!.body as { rule?: string }).rule).toBeUndefined();
+  expect(posts.some((x) => x.url === "/api/bt/strategies/mysma")).toBe(true);
+});
+
+test("BT: @name runs a saved strategy, BT SAVE stores a rule, BT DEL removes a strategy", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "BT AAPL @golden 1D 5Y");
+  await expect.poll(() => posts.some((x) => x.url === "/api/bt/run")).toBe(true);
+  expect(posts.find((x) => x.url === "/api/bt/run")!.body).toMatchObject({ strategy: "golden", symbols: ["AAPL"] });
+  await cmd(page, "BT SAVE fast EMA12 CROSS> EMA26");
+  await expect(panel(page)).toContainText("SAVED RULE fast: EMA12 CROSS> EMA26");
+  expect(posts.find((x) => x.url === "/api/bt/strategies/fast")!.body).toEqual({ rule: "EMA12 CROSS> EMA26" });
+  await cmd(page, "BT SAVE broken SMA20>>SMA50");
+  await expect(panel(page)).toContainText("BAD RULE");
+  await cmd(page, "BT DEL fast");
+  await expect(panel(page)).toContainText("DELETED STRATEGY fast");
+  await cmd(page, "BT SAVE onlyname");
+  await expect(panel(page)).toContainText("USAGE: BT SAVE <NAME> <RULE>");
 });

@@ -690,7 +690,22 @@ export interface BtImported {
   label: string;
 }
 
+export interface BtStrategyCard {
+  name: string;
+  kind: "python" | "rule";
+  updated_at: number;
+}
+export interface BtStrategy extends BtStrategyCard {
+  code: string;
+}
+
 export const btApi = {
+  strategies: () => send<{ strategies: BtStrategyCard[] }>("GET", "/api/bt/strategies"),
+  strategy: (name: string) => send<BtStrategy>("GET", `/api/bt/strategies/${encodeURIComponent(name)}`),
+  /** Python code, or a rule. The server checks both (the sandbox allowlist for code) and says why it refuses. */
+  putStrategy: (name: string, body: { code: string } | { rule: string }) =>
+    send<BtStrategyCard>("PUT", `/api/bt/strategies/${encodeURIComponent(name)}`, body),
+  deleteStrategy: (name: string) => send<{ deleted: string }>("DELETE", `/api/bt/strategies/${encodeURIComponent(name)}`),
   imports: () => send<{ symbols: BtImported[] }>("GET", "/api/bt/import"),
   deleteImport: (symbol: string) => send<{ deleted: string }>("DELETE", `/api/bt/import/${encodeURIComponent(symbol)}`),
   /** Stores the CSV text as the symbol's daily bars (replaces an earlier import). */

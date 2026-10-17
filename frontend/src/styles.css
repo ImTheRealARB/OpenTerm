@@ -114,6 +114,8 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 /* --- Phase 8 --- */
 .alrt-flash { background: var(--warn); color: var(--bg); padding: 0 4px; }
 .import { flex: none; border-top: 1px solid var(--line); max-height: 60%; overflow: auto; }
+.import.editor textarea { height: 22em; tab-size: 4; white-space: pre; overflow: auto; }
+.runline { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; width: 40ch; }
 .import textarea { width: 100%; height: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; resize: none; }
 
 /* --- Phase 9: CORR heat (colour carries the sign; strength steps with |r| 0.2 / 0.4 / 0.7) --- */

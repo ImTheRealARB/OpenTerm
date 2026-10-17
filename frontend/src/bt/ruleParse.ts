@@ -14,7 +14,9 @@ export const INTERVALS = ["1D", "1W"];
 const RANGE_RE = /^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$/;
 const TOKEN_RE = /\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))/iy;
 /** `BT <SUB> ...` forms; anything else is `BT <SYMBOLS> <RULE> ...`. */
-export const SUBCOMMANDS = new Set(["RUNS", "OPEN", "EXPORT", "SAVE", "LOAD", "DEL"]);
+export const SUBCOMMANDS = new Set(["RUNS", "OPEN", "EXPORT", "SAVE", "LOAD", "EDIT", "DEL"]);
+/** A saved strategy in the rule position: `BT AAPL @golden 1D 5Y`. */
+const STRATEGY_RE = /^@([A-Za-z0-9_-]{1,40})$/;
 /** `BT MC|WF <SYMBOLS> <RULE> ...` runs the backtest, then validates it. */
 const VALIDATIONS = new Set(["MC", "WF"]);
 
@@ -128,6 +130,8 @@ export interface BtRun {
   cash: number;
   bench?: string;
   mkt?: string;
+  /** Name of a saved strategy (`@name` in the rule position); `rule` then holds `@name`. */
+  strategy?: string;
   /** Validate the finished run: Monte Carlo (MC) or walk-forward (WF). */
   val?: "MC" | "WF";
 }
@@ -195,6 +199,12 @@ export function parseBtArgs(args: string[]): BtArgs {
       else if (u.startsWith("MKT=")) out.mkt = u.slice(4).toLowerCase() || undefined;
       else throw new RuleError(`UNKNOWN BT OPTION ${a}`);
     }
+    const named = STRATEGY_RE.exec(out.rule);
+    if (named) {
+      out.strategy = named[1].toLowerCase();
+      return out;
+    }
+    if (out.rule.startsWith("@")) return { ok: false, error: "A SAVED STRATEGY IS @NAME: 1-40 LETTERS, DIGITS, _ OR -" };
     const r = parseRule(out.rule);
     if (!r.ok) return { ok: false, error: r.error, col: r.col, rule: out.rule };
     return out;
