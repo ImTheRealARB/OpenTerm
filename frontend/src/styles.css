@@ -1,0 +1,87 @@
+/* Utilitarian by design: no shadows, radii, gradients, transitions or web fonts. */
+:root {
+  --bg: #000000;
+  --fg: #ffb000;
+  --fg-dim: #b37a00;
+  --up: #00d26a;
+  --down: #ff3b30;
+  --sel: #1a1a1a;
+  --accent: #00b7ff;
+  --warn: #ffd60a;
+  --err: #ff3b30;
+  --line: #3a2a00;
+  --font: "JetBrains Mono", "IBM Plex Mono", Consolas, "Cascadia Mono", Menlo, monospace;
+  --fs: 12px;
+  --row: 16px;
+}
+:root[data-theme="green"] { --fg: #33ff66; --fg-dim: #1f9940; --line: #0d3318; }
+:root[data-theme="white"] { --fg: #e6e6e6; --fg-dim: #8c8c8c; --line: #333333; }
+:root[data-theme="light"] {
+  --bg: #ffffff; --fg: #1a1a1a; --fg-dim: #666666; --sel: #e8e8e8; --line: #c8c8c8;
+  --up: #007a3d; --down: #c4161c; --accent: #0066cc;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; background: var(--bg); color: var(--fg); }
+body {
+  font: var(--fs)/var(--row) var(--font);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+input, button { font: inherit; color: inherit; background: none; border: 0; outline: 0; }
+:focus-visible { outline: 1px solid var(--fg); outline-offset: -1px; }
+
+.app { display: grid; grid-template-rows: 22px 1fr 18px; height: 100%; }
+
+/* Top bar */
+.top { display: flex; align-items: center; border-bottom: 1px solid var(--line); height: 22px; min-width: 0; }
+.brand { padding: 0 6px; color: var(--bg); background: var(--fg); font-weight: bold; height: 100%; line-height: 22px; }
+.cmd { position: relative; flex: 1 1 auto; min-width: 120px; height: 100%; }
+.cmd input { width: 100%; height: 100%; padding: 0 6px; caret-color: var(--fg); text-transform: uppercase; }
+.cmd input::placeholder { color: var(--fg-dim); }
+.cmd.focus { background: var(--sel); }
+.ac { position: absolute; left: 0; top: 22px; z-index: 20; min-width: 420px; max-width: 100%;
+  background: var(--bg); border: 1px solid var(--fg); }
+.ac div { display: grid; grid-template-columns: 110px 1fr 70px; padding: 0 6px; white-space: nowrap; overflow: hidden; }
+.ac div.on { background: var(--sel); color: var(--accent); }
+.ac .k { color: var(--fg-dim); text-align: right; }
+.msg { padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+.msg.err { color: var(--err); }
+.msg.info { color: var(--accent); }
+.clock { display: flex; gap: 10px; padding: 0 8px; white-space: nowrap; border-left: 1px solid var(--line); height: 100%; align-items: center; }
+.mk { color: var(--fg-dim); }
+.mk.open { color: var(--up); }
+
+/* Workspace */
+.ws { position: relative; min-height: 0; min-width: 0; display: flex; }
+.split { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; }
+.split.h { flex-direction: column; }
+.panel { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; border: 1px solid var(--line); contain: strict; }
+.panel.focus { border-color: var(--fg); }
+.ph { display: flex; height: 16px; padding: 0 4px; gap: 8px; background: var(--sel); color: var(--fg-dim); white-space: nowrap; overflow: hidden; flex: none; }
+.panel.focus .ph { color: var(--fg); }
+.ph .id { color: var(--bg); background: var(--fg-dim); padding: 0 4px; }
+.panel.focus .ph .id { background: var(--fg); }
+.pb { flex: 1 1 auto; overflow: auto; padding: 2px 4px; min-height: 0; }
+
+/* Tables (DOM tables only for small static content; live grids are canvas) */
+.t { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.t td, .t th { padding: 0 6px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; font-weight: normal; }
+.t th { color: var(--fg-dim); border-bottom: 1px solid var(--line); }
+.t .n { text-align: right; }
+.dim { color: var(--fg-dim); }
+.acc { color: var(--accent); }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.err { color: var(--err); }
+.warn { color: var(--warn); }
+h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px; }
+
+/* Status bar */
+.status { display: flex; gap: 12px; align-items: center; padding: 0 6px; border-top: 1px solid var(--line); color: var(--fg-dim); white-space: nowrap; overflow: hidden; }
+.status .sp { flex: 1; }
+
+/* Overlays */
+.overlay { position: absolute; inset: 0; z-index: 30; background: var(--bg); border: 1px solid var(--fg); padding: 4px 8px; overflow: auto; }
+.hud { position: fixed; right: 4px; bottom: 22px; z-index: 40; width: 300px; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; pointer-events: none; }
+.hud .t td:last-child { text-align: right; }

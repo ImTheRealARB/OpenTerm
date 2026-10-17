@@ -1,0 +1,22 @@
+{
+  "focusCommand": ["/", "`", "Ctrl+K"],
+  "escape": ["Escape"],
+  "focusPanel": ["Alt+1..9", "Ctrl+1..9"],
+  "nextPanel": ["Tab"],
+  "prevPanel": ["Shift+Tab"],
+  "splitVertical": ["Ctrl+\\"],
+  "splitHorizontal": ["Ctrl+-"],
+  "closePanel": ["Ctrl+W", "Alt+W"],
+  "resizeLeft": ["Ctrl+Shift+ArrowLeft"],
+  "resizeRight": ["Ctrl+Shift+ArrowRight"],
+  "resizeUp": ["Ctrl+Shift+ArrowUp"],
+  "resizeDown": ["Ctrl+Shift+ArrowDown"],
+  "maximize": ["Ctrl+Shift+F"],
+  "historyBack": ["Ctrl+["],
+  "historyForward": ["Ctrl+]"],
+  "refresh": ["F5"],
+  "saveWorkspace": ["Ctrl+S"],
+  "openWorkspace": ["Ctrl+O"],
+  "cheatsheet": ["?"],
+  "perfHud": ["Ctrl+Shift+P"]
+}

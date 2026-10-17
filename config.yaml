@@ -1,0 +1,12 @@
+# Non-secret settings. Secrets go in .env.
+app:
+  display_timezone: Asia/Kolkata
+  default_market: US
+cache:
+  lru_entries: 5000
+  quote_ttl_s: 5
+  history_ttl_s: 3600
+providers:
+  # Order = fallback order per capability (phase 2).
+  quotes: [yahoo, stooq]
+  history: [yahoo, stooq]

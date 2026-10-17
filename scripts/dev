@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Starts backend (:8000) and frontend (:5173). Ctrl+C stops both.
+root="$(cd "$(dirname "$0")/.." && pwd)"
+(cd "$root/backend" && uv run python -m openterm --reload) &
+be=$!
+trap 'kill $be 2>/dev/null' EXIT INT TERM
+cd "$root/frontend" && npm run dev

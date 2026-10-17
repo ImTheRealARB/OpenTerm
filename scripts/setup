@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# One-command setup (macOS/Linux). Requires: uv, Node 20+.
+set -e
+root="$(cd "$(dirname "$0")/.." && pwd)"
+(cd "$root/backend" && uv sync)
+(cd "$root/frontend" && npm install --no-audit --no-fund && npx playwright install chromium)
+[ -f "$root/.env" ] || cp "$root/.env.example" "$root/.env"
+echo "Setup done. Run: ./scripts/dev"
