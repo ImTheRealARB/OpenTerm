@@ -1,14 +1,15 @@
 """api.nasdaq.com public quote endpoints. Zero-key fallback for plain US tickers; daily history only."""
 
 import asyncio
+import re
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
-from ..models import Bars, Profile, Quote
+from ..models import Bars, Mover, Movers, Profile, Quote
 from ..ranges import range_days
 from ..symbols import is_us_plain
-from .base import HISTORY, PROFILE, QUOTES, Provider, ProviderError
+from .base import HISTORY, MOVERS, PROFILE, QUOTES, Provider, ProviderError
 from .yahoo import UA
 
 BASE = "https://api.nasdaq.com/api/quote"
@@ -93,11 +94,49 @@ def bars_from_rows(symbol: str, rows: list[dict[str, Any]], range_: str, source:
     )
 
 
+# Nasdaq market-movers table -> OpenTerm tab.
+MOVER_TABLES = {
+    "MostAdvanced": "GAINERS", "MostDeclined": "LOSERS", "MostActiveByShareVolume": "ACTIVE",
+    "MostActiveByDollarVolume": "DOLLAR", "Nasdaq100Movers": "NDX100",
+}
+_AS_OF = re.compile(r"^\s*data as of\s*", re.IGNORECASE)
+
+
+def movers_from_body(body: Any, source: str, as_of: float) -> Movers:
+    stocks = (((body or {}).get("data") or {}).get("STOCKS") or {}) if isinstance(body, dict) else {}
+    tables: dict[str, list[Mover]] = {}
+    table_as_of: dict[str, str | None] = {}
+    for key, tab in MOVER_TABLES.items():
+        t = stocks.get(key) or {}
+        table = t.get("table") or {}
+        # The third column is "% Change" in most tables and "Share Volume" in the share-volume one.
+        is_volume = "volume" in str((table.get("headers") or {}).get("change", "")).lower()
+        rows = []
+        for r in table.get("rows") or []:
+            if not r.get("symbol"):
+                continue
+            price, chg, third = num(r.get("lastSalePrice")), num(r.get("lastSaleChange")), num(r.get("change"))
+            pct = None if is_volume else third
+            if pct is None and price is not None and chg is not None and price != chg:
+                pct = chg / (price - chg) * 100  # derived from the reported last and change
+            rows.append(Mover(symbol=r["symbol"].upper(), name=r.get("name"), price=price, change=chg,
+                              change_pct=pct, volume=third if is_volume else None))
+        tables[tab] = rows
+        table_as_of[tab] = t.get("dataAsOf")
+    if not any(tables.values()):
+        raise ProviderError("not_found", "no movers")
+    first = next((v for v in table_as_of.values() if v), None)
+    return Movers(
+        tables=tables, table_as_of=table_as_of, as_of_text=first,
+        market_time=parse_trade_time(_AS_OF.sub("", first)) if first else None, source=source, as_of=as_of,
+    )
+
+
 class NasdaqProvider(Provider):
     name = "nasdaq"
     label = "Nasdaq.com public API"
-    capabilities = frozenset({QUOTES, HISTORY, PROFILE})
-    markets = "US-listed stocks and ETFs (plain tickers only); daily history only"
+    capabilities = frozenset({QUOTES, HISTORY, PROFILE, MOVERS})
+    markets = "US-listed stocks and ETFs (plain tickers only); daily history only; US market movers"
     terms = "Public website API; personal use. Quotes are delayed. Undocumented: may change."
     rate = (2.0, 4)
     headers: ClassVar[dict[str, str]] = {"User-Agent": UA, "Accept": "application/json, text/plain, */*"}
@@ -154,6 +193,11 @@ class NasdaqProvider(Provider):
             country=v("Region"), website=v("CompanyUrl"), description=v("CompanyDescription"),
             currency="USD", source=self.source, as_of=self.now(),
         )
+
+    async def movers(self) -> Movers:
+        # This endpoint is slow (4-5 s measured from India), hence the longer timeout.
+        body = await self.get_json("https://api.nasdaq.com/api/marketmovers", {"assetclass": "stocks"}, timeout=12.0)
+        return movers_from_body(body, self.source, self.now())
 
     async def probe(self) -> None:
         if not await self._one("AAPL"):

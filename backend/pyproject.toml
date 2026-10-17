@@ -20,7 +20,12 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.6",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -32,6 +37,7 @@ packages = ["openterm"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "-n 4"  # pytest-xdist; 4 beats auto on Windows (worker startup dominates). Debug serially with -n 0.
 
 [tool.ruff]
 line-length = 100

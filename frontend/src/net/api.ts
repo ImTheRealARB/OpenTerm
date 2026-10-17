@@ -66,6 +66,8 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public kind = "unavailable",
+    /** Each provider's reason, e.g. "gdelt: rate_limited (429 from upstream)". */
+    public detail?: string,
   ) {
     super(message);
   }
@@ -91,7 +93,7 @@ async function request<T>(path: string, maxAgeMs: number): Promise<T> {
     }
     const body = await res.json().catch(() => null);
     gauges.set(`api.${path.split("?")[0]}`, performance.now() - t0);
-    if (!res.ok) throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`, body?.kind);
+    if (!res.ok) throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`, body?.kind, body?.detail);
     cache.delete(path);
     cache.set(path, { value: body, at: performance.now() });
     if (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value!);
@@ -118,7 +120,7 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError(0, "BACKEND DOWN");
   }
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind);
+  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
   return json as T;
 }
 
@@ -139,9 +141,86 @@ export const api = {
   saveLayout: (name: string, state: unknown) =>
     send<{ name: string; updated_at: number }>("PUT", `/api/layouts/${encodeURIComponent(name)}`, { state }),
   deleteLayout: (name: string) => send<{ deleted: string }>("DELETE", `/api/layouts/${encodeURIComponent(name)}`),
+  // `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope.
+  news: (q: { symbol?: string; q?: string }, fresh = false) =>
+    request<Envelope<NewsPayload>>(`/api/news?${qs(q)}`, fresh ? 0 : 30_000),
+  movers: (fresh = false) => request<Envelope<MoversPayload>>("/api/movers", fresh ? 0 : 30_000),
+  crypto: (vs: string, fresh = false) =>
+    request<Envelope<{ vs: string; coins: Coin[] }>>(`/api/crypto?${qs({ vs })}`, fresh ? 0 : 15_000),
+  watchlists: () => send<{ watchlists: WatchlistInfo[] }>("GET", "/api/watchlists"),
+  watchlist: (name: string) => send<Watchlist>("GET", `/api/watchlists/${encodeURIComponent(name)}`),
+  putWatchlist: (name: string, symbols: string[]) => send<Watchlist>("PUT", `/api/watchlists/${encodeURIComponent(name)}`, { symbols }),
+  editWatchlist: (name: string, change: { add?: string[]; remove?: string[] }) =>
+    send<Watchlist>("PATCH", `/api/watchlists/${encodeURIComponent(name)}`, change),
+  deleteWatchlist: (name: string) => send<{ deleted: string }>("DELETE", `/api/watchlists/${encodeURIComponent(name)}`),
   cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
   pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
 };
+
+export interface WatchlistInfo {
+  name: string;
+  count: number;
+  updated_at: number;
+}
+
+export interface Watchlist {
+  name: string;
+  symbols: string[];
+  updated_at: number;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  url: string;
+  publisher: string | null;
+  /** Epoch seconds. */
+  published: number | null;
+  summary: string | null;
+  source: string;
+}
+
+export interface NewsPayload {
+  kind: "top" | "symbol" | "keyword";
+  query: string | null;
+  items: NewsItem[];
+  /** Feeds that did not answer this time (top stories only). */
+  failed: string[];
+}
+
+export interface Mover {
+  symbol: string;
+  name: string | null;
+  price: number | null;
+  change: number | null;
+  change_pct: number | null;
+  volume: number | null;
+}
+
+export interface MoversPayload {
+  tables: Record<string, Mover[]>;
+  table_as_of: Record<string, string | null>;
+  as_of_text: string | null;
+  market_time: number | null;
+  source: string;
+}
+
+export interface Coin {
+  symbol: string;
+  name: string | null;
+  rank: number | null;
+  quote: string;
+  price: number | null;
+  change_pct_1h: number | null;
+  change_pct_24h: number | null;
+  change_pct_7d: number | null;
+  high_24h: number | null;
+  low_24h: number | null;
+  volume_24h: number | null;
+  market_cap: number | null;
+  updated: number | null;
+  source: string;
+}
 
 export interface LayoutInfo {
   name: string;

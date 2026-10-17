@@ -31,11 +31,25 @@ Non-US symbols currently have **one** zero-key source (Yahoo). If Yahoo is down 
   description only; no valuation numbers).
 - `EXCHANGE DATA DELAYED N MIN` is the delay reported by the source per exchange.
 
+## Phase 5 sources (verified 2026-10-17)
+
+| Function | Source chain | Limits and caveats |
+|---|---|---|
+| N (top stories) | Publisher RSS: CNBC, MarketWatch, BBC Business, Economic Times markets, Mint markets (override in `config.yaml` `news.feeds`) | Headlines, the feed's own teaser (max 300 chars, tags stripped) and a link only. Articles open on the publisher's site. Feeds that fail are listed as `NOT ANSWERING`. MarketWatch and Mint sometimes send invalid UTF-8; the bad bytes show as `�`. |
+| N (security) | Yahoo headline RSS, then GDELT | Yahoo RSS is unofficial and sparse outside US listings. The GDELT fallback searches the symbol's base as a keyword (3+ letters only). |
+| N (keyword) | GDELT DOC 2.0 (English, last 7 days) | GDELT asks for one request every 5 s and answers in 8-12 s from India. It often answers 429 even when calls are spaced; a second search inside 5 s waits for its slot (up to 6 s). |
+| MOV | Nasdaq.com market movers (US only) | Includes warrants and penny stocks as Nasdaq reports them. Each tab shows Nasdaq's own "data as of" (tabs can be from different sessions). %CHG on the share-volume tab is derived from the reported last and change. Slow (4-5 s), hence a 12 s timeout. Yahoo predefined screeners returned zero rows on 2026-10-17 (a Saturday, with and without crumb), so they are not used. |
+| CRYP | CoinGecko markets (top 50), then Binance `data-api.binance.vision` 24 h tickers | CoinGecko keyless is roughly 5-30 calls/min (backend TTL 60 s). Binance fallback: 22 fixed USDT pairs, prices in USDT, no rank or market cap (blank). Binance rejects the whole call if one pair does not exist. |
+| WEI, FX, FXC, CMDTY | Yahoo quotes + stream (same path as Q) | Fixed symbol lists in `frontend/src/functions/boards.ts`, all checked on Yahoo spark. FXC crosses are triangulated through USD from `USDxxx=X` legs; a missing leg leaves the cell blank. Commodity units are contract specs (USC = US cents). |
+| WL | SQLite (`watchlists` table) | Up to 500 symbols per list; aliases are resolved like the command line (EURUSD becomes EURUSD=X). |
+
 ## Behaviour on failure
 - Cached data is served instantly and marked `stale` with its `age_s` while a background refresh runs.
 - A provider that fails 3 times in a row, or returns 429, is skipped for 5 s doubling up to 5 min,
   and probed every 30 s until it recovers.
 - An unknown symbol is `NO DATA FOR SYMBOL`; it never trips a provider.
+- Error responses carry `detail` with each provider's reason (e.g. `gdelt: rate_limited (...)`); the
+  N, MOV and CRYP panels show it next to the error.
 
 ## Fixture mode
 `OPENTERM_FIXTURES=1` replays recorded responses from `backend/tests/fixtures/` (tests and bench).

@@ -4,12 +4,17 @@ import httpx
 
 from ..config import Settings
 from .base import Provider
+from .crypto import BinanceProvider, CoinGeckoProvider
 from .fixtures import fixture_transport
 from .nasdaq import NasdaqProvider
+from .news import GdeltProvider, RssProvider, YahooRssProvider
 from .synthetic import SyntheticProvider
 from .yahoo import YahooProvider
 
-ADAPTERS: dict[str, type[Provider]] = {"yahoo": YahooProvider, "nasdaq": NasdaqProvider}
+ADAPTERS: dict[str, type[Provider]] = {
+    "yahoo": YahooProvider, "nasdaq": NasdaqProvider, "rss": RssProvider, "yahoo_rss": YahooRssProvider,
+    "gdelt": GdeltProvider, "coingecko": CoinGeckoProvider, "binance": BinanceProvider,
+}
 
 # Keyed providers planned for later phases: name -> (settings attribute, phase, purpose).
 KEYED = {

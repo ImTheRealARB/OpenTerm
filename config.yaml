@@ -8,10 +8,23 @@ cache:
   intraday_ttl_s: 60
   daily_ttl_s: 3600
   search_ttl_s: 86400
+  news_ttl_s: 120
+  movers_ttl_s: 60
+  crypto_ttl_s: 60
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
   quotes: [yahoo, nasdaq]
   history: [yahoo, nasdaq]
   search: [yahoo]
   profile: [yahoo, nasdaq]
+  news_top: [rss]
+  news_symbol: [yahoo_rss, gdelt]
+  news_keyword: [gdelt]
+  movers: [nasdaq]
+  crypto: [coingecko, binance]
   # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.
+news:
+  # Market top-stories feeds for N. Leave unset to use the built-in list
+  # (CNBC, MarketWatch, BBC Business, Economic Times markets, Mint markets). Example:
+  # feeds:
+  #   - {name: CNBC, url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"}

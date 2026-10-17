@@ -11,6 +11,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from .cache import Cache
+from .providers.crypto import VS
 from .ranges import normalize
 from .router import AllFailed, Router
 from .symbols import resolve
@@ -21,11 +22,12 @@ INTRADAY = {"1m", "2m", "5m", "15m", "30m", "60m", "90m"}
 
 
 class DataError(Exception):
-    """kind: bad_request | not_found | unavailable"""
+    """kind: bad_request | not_found | unavailable. `detail` names each provider's reason."""
 
-    def __init__(self, kind: str, message: str):
+    def __init__(self, kind: str, message: str, detail: str | None = None):
         super().__init__(message)
         self.kind = kind
+        self.detail = detail
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
@@ -46,7 +48,8 @@ class DataService:
         self.router = router
         self.cache = cache
         self.ttl = {
-            "quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, "profile": 86400.0, **(ttl or {})
+            "quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, "profile": 86400.0,
+            "news": 120.0, "movers": 60.0, "crypto": 60.0, **(ttl or {}),
         }
         self._inflight: dict[str, asyncio.Future] = {}
         self._bg: set[asyncio.Task] = set()
@@ -98,7 +101,8 @@ class DataService:
         try:
             value = await self._once(key, fetch)
         except AllFailed as e:
-            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e)) from e
+            detail = "; ".join(f"{name}: {err.kind} ({err})" for name, err in e.errors) or None
+            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e), detail) from e
         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
 
     # --- public API ---------------------------------------------------------------------------
@@ -124,6 +128,58 @@ class DataService:
             return {"data": prof.model_dump(), "fallback_from": failed}
 
         return await self._swr(f"p:{symbol}", self.ttl["profile"], fetch)
+
+    async def news(self, symbol: str | None = None, query: str | None = None) -> dict:
+        """Symbol headlines, a keyword search, or (neither) the market top stories."""
+        if symbol and symbol.strip():
+            kind, arg = "symbol", resolve(symbol)
+            cap, call = "news_symbol", lambda p: p.news_symbol(arg)
+        elif query and query.strip():
+            kind, arg = "keyword", " ".join(query.split()).upper()
+            if len(arg) < 2:
+                raise DataError("bad_request", "SEARCH NEEDS 2+ CHARACTERS")
+            cap, call = "news_keyword", lambda p: p.news_keyword(arg)
+        else:
+            kind, arg = "top", None
+            cap, call = "news_top", lambda p: p.news_top()
+
+        async def fetch() -> dict:
+            out, failed = await self.router.call(cap, call, arg)
+            items = out["items"]
+            return {
+                "data": {"kind": kind, "query": arg, "items": [i.model_dump() for i in items], "failed": out["failed"]},
+                "source": items[0].source if items else None,
+                "fallback_from": failed,
+            }
+
+        try:
+            return await self._swr(f"n:{kind}:{arg or ''}", self.ttl["news"], fetch)
+        except DataError as e:
+            if e.kind != "not_found":
+                raise
+            raise DataError("not_found", "NO HEADLINES FOUND", e.detail) from e
+
+    async def movers(self) -> dict:
+        async def fetch() -> dict:
+            m, failed = await self.router.call("movers", lambda p: p.movers())
+            return {"data": m.model_dump(), "fallback_from": failed}
+
+        return await self._swr("mv:us", self.ttl["movers"], fetch)
+
+    async def crypto(self, vs: str = "USD") -> dict:
+        vs = vs.strip().upper()
+        if vs not in VS:
+            raise DataError("bad_request", f"QUOTE CURRENCY: {' '.join(sorted(VS))}")
+
+        async def fetch() -> dict:
+            coins, failed = await self.router.call("crypto", lambda p: p.crypto(vs), vs)
+            return {
+                "data": {"vs": vs, "coins": [c.model_dump() for c in coins]},
+                "source": coins[0].source if coins else None,
+                "fallback_from": failed,
+            }
+
+        return await self._swr(f"c:{vs}", self.ttl["crypto"], fetch)
 
     def apply_tick(self, tick) -> None:
         """Fold a streamed tick into the cached quote so REST snapshots match the stream."""

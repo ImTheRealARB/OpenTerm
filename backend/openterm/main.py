@@ -24,6 +24,8 @@ from .userdata import UserData
 STARTED = time.time()
 DEFAULT_ORDER = {
     "quotes": ["yahoo", "nasdaq"], "history": ["yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
+    "news_top": ["rss"], "news_symbol": ["yahoo_rss", "gdelt"], "news_keyword": ["gdelt"],
+    "movers": ["nasdaq"], "crypto": ["coingecko", "binance"],
 }
 MAX_SUBS_PER_CLIENT = 2000
 
@@ -50,6 +52,7 @@ async def lifespan(app: FastAPI):
     service = DataService(router, cache, ttl={
         "quote": c.get("quote_ttl_s", 5), "intraday": c.get("intraday_ttl_s", 60),
         "daily": c.get("daily_ttl_s", 3600), "search": c.get("search_ttl_s", 86400),
+        "news": c.get("news_ttl_s", 120), "movers": c.get("movers_ttl_s", 60), "crypto": c.get("crypto_ttl_s", 60),
     })
 
     # Streaming: one upstream subscription per symbol, whatever the number of clients and panels.

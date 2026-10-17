@@ -13,6 +13,8 @@ MIGRATIONS: list[str] = [
     "CREATE TABLE layouts (name TEXT PRIMARY KEY, state BLOB NOT NULL, updated_at REAL NOT NULL)",
     # 4: command line history, oldest first by id
     "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, cmd TEXT NOT NULL, at REAL NOT NULL)",
+    # 5: watchlists (symbols is a JSON array of canonical symbols, in display order)
+    "CREATE TABLE watchlists (name TEXT PRIMARY KEY, symbols BLOB NOT NULL, updated_at REAL NOT NULL)",
 ]
 
 

@@ -64,6 +64,7 @@ function clip(s: string, n: number): string {
 function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>, ref: React.Ref<GridHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const sr = useRef<HTMLDivElement>(null);
   const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[] });
   const data = useRef({ columns, rows });
   data.current = { columns, rows };
@@ -107,6 +108,14 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
       const tx = col.align === "right" ? x + PAD + (col.width - text.length) * s.cw : x + PAD;
       ctx.fillText(text, tx, y + ROW_H / 2 + 1);
     }
+  };
+
+  /** Canvas is invisible to screen readers: mirror the selected row as text (on selection change only). */
+  const describe = () => {
+    const el = sr.current;
+    const row = data.current.rows[st.current.sel];
+    if (!el) return;
+    el.textContent = row === undefined ? "" : data.current.columns.map((c) => `${c.title} ${c.text(row)}`.trim()).join(" · ");
   };
 
   const drawScrollbar = () => {
@@ -170,6 +179,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
       drawRow(prevSel, -1);
       drawRow(next, -1);
     }
+    describe();
     onSelect?.(next);
   };
 
@@ -243,11 +253,13 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
     layout();
     clampTop();
     redraw();
+    describe();
   }, [rows, columns]);
 
   return (
     <div ref={box} className="grid">
-      <canvas ref={canvas} />
+      <canvas ref={canvas} aria-hidden="true" />
+      <div ref={sr} className="sr" role="status" aria-live="polite" />
     </div>
   );
 }

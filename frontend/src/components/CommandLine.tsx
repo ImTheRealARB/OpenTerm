@@ -3,6 +3,7 @@ import { execute, statusMsg } from "../command/execute";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
+import { refreshWatchlists, watchlistList } from "../command/watchlists";
 import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
@@ -10,7 +11,7 @@ import { keyDown, keyEchoed } from "../perf/metrics";
 interface Suggestion {
   value: string;
   label: string;
-  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT";
+  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT" | "LIST";
 }
 
 const SEARCH_DEBOUNCE_MS = 80;
@@ -30,6 +31,15 @@ function layoutSuggestions(token: string): Suggestion[] {
   const names = layoutList.get() ?? [];
   const ranked = token ? fuzzyRank(token, names, (l) => l.name, 10) : names.slice(0, 10);
   return ranked.map((l) => ({ value: l.name, label: `${l.panels} PANELS`, kind: "LAYOUT" }));
+}
+
+/** `WL <name>` or `WL DEL <name>` (optionally after a security): the partial list name, else null. */
+const WL_ARG = /^\s*(?:[1-9]\s*:\s*)?(?:\S+\s+)?WL\s+(?:(?:DEL|DELETE)\s+)?(\S*)$/i;
+
+function watchlistSuggestions(token: string): Suggestion[] {
+  const lists = watchlistList.get() ?? [];
+  const ranked = token ? fuzzyRank(token, lists, (l) => l.name, 10) : lists.slice(0, 10);
+  return ranked.map((l) => ({ value: l.name, label: `${l.count} SYMBOLS`, kind: "LIST" }));
 }
 
 /** The token under the cursor (always the last one) and whether it sits in the security slot. */
@@ -83,7 +93,7 @@ export function CommandLine() {
   // Predictive prefetch: a highlighted security will most likely be charted or quoted next.
   useEffect(() => {
     const s = items[sel];
-    if (s && s.kind !== "FUNC") prefetch(s.value);
+    if (s && (s.kind === "RECENT" || s.kind === "SEC")) prefetch(s.value);
   }, [items, sel]);
 
   const searchSecurities = (text: string, token: string) => {
@@ -153,17 +163,18 @@ export function CommandLine() {
     // moment GP appears in the command line instead of after Enter.
     if (/(^|\s)GP(\s|$)/i.test(v)) void loadModule("GP").catch(() => {});
     const layoutArg = LAYOUT_ARG.exec(v);
-    if (layoutArg) {
+    const wlArg = layoutArg ? null : WL_ARG.exec(v);
+    if (layoutArg || wlArg) {
       searchSeq.current++;
       const show = () => {
         if (input.current?.value !== v) return;
         startTransition(() => {
-          setItems(layoutSuggestions(layoutArg[1]));
+          setItems(layoutArg ? layoutSuggestions(layoutArg[1]) : watchlistSuggestions(wlArg![1]));
           setSel(-1);
         });
       };
       show();
-      void refreshLayouts(5000).then(show, () => {});
+      void (layoutArg ? refreshLayouts(5000) : refreshWatchlists(5000)).then(show, () => {});
       return;
     }
     const { token, securitySlot } = lastToken(v);

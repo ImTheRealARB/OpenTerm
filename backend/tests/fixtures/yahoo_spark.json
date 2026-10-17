@@ -245,6 +245,5780 @@
        }
       }
      ]
+    },
+    {
+     "symbol": "^IXIC",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "^IXIC",
+        "exchangeName": "NIM",
+        "fullExchangeName": "Nasdaq GIDS",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 34612200,
+        "regularMarketTime": 1792185359,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 26140.033,
+        "regularMarketChangePercent": -2.145,
+        "fulldayPrice": 26140.033,
+        "fulldayChange": -572.992,
+        "fulldayChangePercent": -2.145,
+        "fiftyTwoWeekHigh": 27722.75,
+        "fiftyTwoWeekLow": 20690.25,
+        "regularMarketDayHigh": 26674.66,
+        "regularMarketDayLow": 26023.102,
+        "regularMarketVolume": 8351719000,
+        "longName": "NASDAQ Composite",
+        "shortName": "NASDAQ Composite",
+        "chartPreviousClose": 26713.025,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792137600,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792195200,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           26140.03
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^DJI",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "^DJI",
+        "exchangeName": "DJI",
+        "fullExchangeName": "DJI",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 694362600,
+        "regularMarketTime": 1792183329,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 52002.41,
+        "regularMarketChangePercent": -0.336,
+        "fulldayPrice": 52002.41,
+        "fulldayChange": -175.281,
+        "fulldayChangePercent": -0.336,
+        "fiftyTwoWeekHigh": 54744.33,
+        "fiftyTwoWeekLow": 45057.28,
+        "regularMarketDayHigh": 52582.32,
+        "regularMarketDayLow": 51847.94,
+        "regularMarketVolume": 488091543,
+        "longName": "Dow Jones Industrial Average",
+        "shortName": "Dow Jones Industrial Average",
+        "chartPreviousClose": 52177.7,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792137600,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792195200,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           52002.41
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^RUT",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "^RUT",
+        "exchangeName": "WCB",
+        "fullExchangeName": "Chicago Options",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 558279000,
+        "regularMarketTime": 1792182610,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 2721.37,
+        "regularMarketChangePercent": -1.659,
+        "fulldayPrice": 2721.37,
+        "fulldayChange": -45.899,
+        "fulldayChangePercent": -1.659,
+        "fiftyTwoWeekHigh": 3069.71,
+        "fiftyTwoWeekLow": 2303.46,
+        "regularMarketDayHigh": 2771.725,
+        "regularMarketDayLow": 2716.228,
+        "regularMarketVolume": 0,
+        "longName": " Russell 2000 Index",
+        "shortName": "Russell 2000",
+        "chartPreviousClose": 2767.27,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792137600,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792195200,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           2721.37
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^MXX",
+     "response": [
+      {
+       "meta": {
+        "currency": "MXN",
+        "symbol": "^MXX",
+        "exchangeName": "MEX",
+        "fullExchangeName": "Mexico",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 689607000,
+        "regularMarketTime": 1792182361,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -21600,
+        "timezone": "CST",
+        "exchangeTimezoneName": "America/Mexico_City",
+        "regularMarketPrice": 68929.72,
+        "regularMarketChangePercent": 1.872,
+        "fulldayPrice": 68929.72,
+        "fulldayChange": 1266.43,
+        "fulldayChangePercent": 1.872,
+        "fiftyTwoWeekHigh": 72111.41,
+        "fiftyTwoWeekLow": 60599.1,
+        "regularMarketDayHigh": 68988.11,
+        "regularMarketDayLow": 67622.36,
+        "regularMarketVolume": 161383463,
+        "longName": "IPC MEXICO",
+        "shortName": "S&P/BMV IPC",
+        "chartPreviousClose": 67663.3,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CST",
+          "end": 1792157400,
+          "start": 1792157400,
+          "gmtoffset": -21600
+         },
+         "regular": {
+          "timezone": "CST",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -21600
+         },
+         "post": {
+          "timezone": "CST",
+          "end": 1792180800,
+          "start": 1792180800,
+          "gmtoffset": -21600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           68929.72
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "FTSEMIB.MI",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "FTSEMIB.MI",
+        "exchangeName": "MIL",
+        "fullExchangeName": "Milan",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 883555200,
+        "regularMarketTime": 1792164929,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Rome",
+        "regularMarketPrice": 49857.18,
+        "regularMarketChangePercent": 0.93,
+        "fulldayPrice": 49857.18,
+        "fulldayChange": 459.18,
+        "fulldayChangePercent": 0.93,
+        "fiftyTwoWeekHigh": 54042.0,
+        "fiftyTwoWeekLow": 41616.0,
+        "regularMarketDayHigh": 49929.86,
+        "regularMarketDayLow": 49581.51,
+        "regularMarketVolume": 0,
+        "longName": "FTSE MIB Index",
+        "shortName": "FTSE MIB Index",
+        "chartPreviousClose": 49398.0,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792130400,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           49857.0
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^GSPTSE",
+     "response": [
+      {
+       "meta": {
+        "currency": "CAD",
+        "symbol": "^GSPTSE",
+        "exchangeName": "TSI",
+        "fullExchangeName": "Toronto",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 299511000,
+        "regularMarketTime": 1792182001,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/Toronto",
+        "regularMarketPrice": 36176.55,
+        "regularMarketChangePercent": 0.109,
+        "fulldayPrice": 36176.55,
+        "fulldayChange": 39.449,
+        "fulldayChangePercent": 0.109,
+        "fiftyTwoWeekHigh": 37069.1,
+        "fiftyTwoWeekLow": 29530.9,
+        "regularMarketDayHigh": 36462.46,
+        "regularMarketDayLow": 36018.76,
+        "regularMarketVolume": 268839511,
+        "longName": "S&P/TSX Composite index",
+        "shortName": "S&P/TSX Composite index",
+        "chartPreviousClose": 36137.1,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792152000,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792184400,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           36176.6
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^FCHI",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "^FCHI",
+        "exchangeName": "PAR",
+        "fullExchangeName": "Paris",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 636278400,
+        "regularMarketTime": 1792166702,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Paris",
+        "regularMarketPrice": 7956.7,
+        "regularMarketChangePercent": 0.277,
+        "fulldayPrice": 7956.7,
+        "fulldayChange": 22.0,
+        "fulldayChangePercent": 0.277,
+        "fiftyTwoWeekHigh": 8755.03,
+        "fiftyTwoWeekLow": 7505.27,
+        "regularMarketDayHigh": 7980.99,
+        "regularMarketDayLow": 7916.98,
+        "regularMarketVolume": 0,
+        "longName": "CAC 40",
+        "shortName": "CAC 40",
+        "chartPreviousClose": 7934.7,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           7956.7
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^AEX",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "^AEX",
+        "exchangeName": "AMS",
+        "fullExchangeName": "Amsterdam",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 718876800,
+        "regularMarketTime": 1792166702,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Amsterdam",
+        "regularMarketPrice": 1142.88,
+        "regularMarketChangePercent": 0.909,
+        "fulldayPrice": 1142.88,
+        "fulldayChange": 10.3,
+        "fulldayChangePercent": 0.909,
+        "fiftyTwoWeekHigh": 1147.35,
+        "fiftyTwoWeekLow": 916.79,
+        "regularMarketDayHigh": 1147.35,
+        "regularMarketDayLow": 1135.08,
+        "regularMarketVolume": 0,
+        "longName": "AEX-Index",
+        "shortName": "AEX-Index",
+        "chartPreviousClose": 1132.58,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1142.88
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^GDAXI",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "^GDAXI",
+        "exchangeName": "GER",
+        "fullExchangeName": "XETRA",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 567849600,
+        "regularMarketTime": 1792166400,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Berlin",
+        "regularMarketPrice": 25622.61,
+        "regularMarketChangePercent": 0.945,
+        "fulldayPrice": 25622.61,
+        "fulldayChange": 239.99,
+        "fulldayChangePercent": 0.945,
+        "fiftyTwoWeekHigh": 26618.74,
+        "fiftyTwoWeekLow": 21863.81,
+        "regularMarketDayHigh": 25693.89,
+        "regularMarketDayLow": 25466.09,
+        "regularMarketVolume": 0,
+        "longName": "DAX P",
+        "shortName": "DAX                           P",
+        "chartPreviousClose": 25382.62,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792126800,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792175400,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           25622.61
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^GSPC",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "^GSPC",
+        "exchangeName": "SNP",
+        "fullExchangeName": "SNP",
+        "instrumentType": "INDEX",
+        "firstTradeDate": -1325583000,
+        "regularMarketTime": 1792183328,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 7659.44,
+        "regularMarketChangePercent": -1.093,
+        "fulldayPrice": 7659.44,
+        "fulldayChange": -84.62,
+        "fulldayChangePercent": -1.093,
+        "fiftyTwoWeekHigh": 7844.52,
+        "fiftyTwoWeekLow": 6316.91,
+        "regularMarketDayHigh": 7756.84,
+        "regularMarketDayLow": 7631.77,
+        "regularMarketVolume": 3319597000,
+        "longName": "S&P 500",
+        "shortName": "S&P 500",
+        "chartPreviousClose": 7744.06,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792137600,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792195200,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           7659.44
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^VIX",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "^VIX",
+        "exchangeName": "CXI",
+        "fullExchangeName": "Cboe Indices",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 631267200,
+        "regularMarketTime": 1792181701,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -18000,
+        "timezone": "CDT",
+        "exchangeTimezoneName": "America/Chicago",
+        "regularMarketPrice": 19.99,
+        "regularMarketChangePercent": 21.446,
+        "fulldayPrice": 19.99,
+        "fulldayChange": 3.53,
+        "fulldayChangePercent": 21.446,
+        "fiftyTwoWeekHigh": 35.3,
+        "fiftyTwoWeekLow": 13.38,
+        "regularMarketDayHigh": 22.31,
+        "regularMarketDayLow": 15.72,
+        "regularMarketVolume": 0,
+        "longName": "CBOE Volatility Index",
+        "shortName": "CBOE Volatility Index",
+        "chartPreviousClose": 16.46,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CDT",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": -18000
+         },
+         "regular": {
+          "timezone": "CDT",
+          "end": 1792181700,
+          "start": 1792134000,
+          "gmtoffset": -18000
+         },
+         "post": {
+          "timezone": "CDT",
+          "end": 1792181700,
+          "start": 1792181700,
+          "gmtoffset": -18000
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           19.99
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^NDX",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "^NDX",
+        "exchangeName": "NIM",
+        "fullExchangeName": "Nasdaq GIDS",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 497021400,
+        "regularMarketTime": 1792185359,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 29187.549,
+        "regularMarketChangePercent": -2.499,
+        "fulldayPrice": 29187.549,
+        "fulldayChange": -748.045,
+        "fulldayChangePercent": -2.499,
+        "fiftyTwoWeekHigh": 31361.37,
+        "fiftyTwoWeekLow": 22841.42,
+        "regularMarketDayHigh": 29822.914,
+        "regularMarketDayLow": 29073.285,
+        "regularMarketVolume": 1467756000,
+        "longName": "NASDAQ-100",
+        "shortName": "NASDAQ-100",
+        "chartPreviousClose": 29935.594,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792137600,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792195200,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           29187.55
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^N225",
+     "response": [
+      {
+       "meta": {
+        "currency": "JPY",
+        "symbol": "^N225",
+        "exchangeName": "OSA",
+        "fullExchangeName": "Osaka",
+        "instrumentType": "INDEX",
+        "firstTradeDate": -157420800,
+        "regularMarketTime": 1792133103,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 32400,
+        "timezone": "JST",
+        "exchangeTimezoneName": "Asia/Tokyo",
+        "regularMarketPrice": 65324.29,
+        "regularMarketChangePercent": 1.394,
+        "fulldayPrice": 65324.29,
+        "fulldayChange": 898.34,
+        "fulldayChangePercent": 1.394,
+        "fiftyTwoWeekHigh": 72831.73,
+        "fiftyTwoWeekLow": 48235.3,
+        "regularMarketDayHigh": 65712.3,
+        "regularMarketDayLow": 64800.9,
+        "regularMarketVolume": 0,
+        "longName": "Nikkei 225",
+        "shortName": "Nikkei 225",
+        "chartPreviousClose": 64425.95,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "JST",
+          "end": 1792108800,
+          "start": 1792108800,
+          "gmtoffset": 32400
+         },
+         "regular": {
+          "timezone": "JST",
+          "end": 1792132200,
+          "start": 1792108800,
+          "gmtoffset": 32400
+         },
+         "post": {
+          "timezone": "JST",
+          "end": 1792132200,
+          "start": 1792132200,
+          "gmtoffset": 32400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792108800
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           65324.29
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^STOXX50E",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "^STOXX50E",
+        "exchangeName": "ZRH",
+        "fullExchangeName": "Zurich",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 1175238000,
+        "regularMarketTime": 1792166400,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Zurich",
+        "regularMarketPrice": 6204.23,
+        "regularMarketChangePercent": 0.583,
+        "fulldayPrice": 6204.23,
+        "fulldayChange": 35.97,
+        "fulldayChangePercent": 0.583,
+        "fiftyTwoWeekHigh": 6577.2,
+        "fiftyTwoWeekLow": 5376.81,
+        "regularMarketDayHigh": 6223.62,
+        "regularMarketDayLow": 6177.45,
+        "regularMarketVolume": 0,
+        "longName": "EURO STOXX 50 I",
+        "shortName": "EURO STOXX 50                 I",
+        "chartPreviousClose": 6168.26,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           6204.23
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^IBEX",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "^IBEX",
+        "exchangeName": "MCE",
+        "fullExchangeName": "MCE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 742460400,
+        "regularMarketTime": 1792164930,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Madrid",
+        "regularMarketPrice": 19326.3,
+        "regularMarketChangePercent": 0.775,
+        "fulldayPrice": 19326.3,
+        "fulldayChange": 148.602,
+        "fulldayChangePercent": 0.775,
+        "fiftyTwoWeekHigh": 20356.5,
+        "fiftyTwoWeekLow": 15704.7,
+        "regularMarketDayHigh": 19380.2,
+        "regularMarketDayLow": 19232.2,
+        "regularMarketVolume": 107858866,
+        "longName": "IBEX 35",
+        "shortName": "IBEX 35",
+        "chartPreviousClose": 19177.7,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           19326.3
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^BVSP",
+     "response": [
+      {
+       "meta": {
+        "currency": "BRL",
+        "symbol": "^BVSP",
+        "exchangeName": "SAO",
+        "fullExchangeName": "São Paulo",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 735915600,
+        "regularMarketTime": 1792181880,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -10800,
+        "timezone": "BRT",
+        "exchangeTimezoneName": "America/Sao_Paulo",
+        "regularMarketPrice": 205430.33,
+        "regularMarketChangePercent": 0.541,
+        "fulldayPrice": 205430.33,
+        "fulldayChange": 1106.063,
+        "fulldayChangePercent": 0.541,
+        "fiftyTwoWeekHigh": 209714.0,
+        "fiftyTwoWeekLow": 143396.0,
+        "regularMarketDayHigh": 206305.27,
+        "regularMarketDayLow": 204164.17,
+        "regularMarketVolume": 0,
+        "longName": "IBOVESPA",
+        "shortName": "IBOVESPA",
+        "chartPreviousClose": 204324.27,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BRT",
+          "end": 1792155600,
+          "start": 1792154700,
+          "gmtoffset": -10800
+         },
+         "regular": {
+          "timezone": "BRT",
+          "end": 1792180800,
+          "start": 1792155600,
+          "gmtoffset": -10800
+         },
+         "post": {
+          "timezone": "BRT",
+          "end": 1792184400,
+          "start": 1792180800,
+          "gmtoffset": -10800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792155600
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           205430.0
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^OMX",
+     "response": [
+      {
+       "meta": {
+        "currency": "SEK",
+        "symbol": "^OMX",
+        "exchangeName": "STO",
+        "fullExchangeName": "Stockholm",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 1227168000,
+        "regularMarketTime": 1792164900,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Stockholm",
+        "regularMarketPrice": 3296.8425,
+        "regularMarketChangePercent": 1.2519,
+        "fulldayPrice": 3296.8425,
+        "fulldayChange": 40.7629,
+        "fulldayChangePercent": 1.2519,
+        "fiftyTwoWeekHigh": 3349.5,
+        "fiftyTwoWeekLow": 2655.36,
+        "regularMarketDayHigh": 3298.605,
+        "regularMarketDayLow": 3274.2837,
+        "regularMarketVolume": 0,
+        "longName": "OMX Stockholm 30 Index",
+        "shortName": "OMX Stockholm 30 Index",
+        "chartPreviousClose": 3256.0796,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           3296.84
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^SSMI",
+     "response": [
+      {
+       "meta": {
+        "currency": "CHF",
+        "symbol": "^SSMI",
+        "exchangeName": "EBS",
+        "fullExchangeName": "Swiss",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 658137600,
+        "regularMarketTime": 1792164702,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 7200,
+        "timezone": "CEST",
+        "exchangeTimezoneName": "Europe/Zurich",
+        "regularMarketPrice": 14391.31,
+        "regularMarketChangePercent": 0.291,
+        "fulldayPrice": 14391.31,
+        "fulldayChange": 41.8,
+        "fulldayChangePercent": 0.291,
+        "fiftyTwoWeekHigh": 14669.51,
+        "fiftyTwoWeekLow": 12053.51,
+        "regularMarketDayHigh": 14399.49,
+        "regularMarketDayLow": 14307.52,
+        "regularMarketVolume": 0,
+        "shortName": "SMI PR",
+        "chartPreviousClose": 14349.51,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CEST",
+          "end": 1792134000,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "regular": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 7200
+         },
+         "post": {
+          "timezone": "CEST",
+          "end": 1792164600,
+          "start": 1792164600,
+          "gmtoffset": 7200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           14391.31
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^MERV",
+     "response": [
+      {
+       "meta": {
+        "currency": "",
+        "symbol": "^MERV",
+        "exchangeName": "BUE",
+        "fullExchangeName": "Buenos Aires",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 844783200,
+        "regularMarketTime": 1792182243,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -10800,
+        "timezone": "ART",
+        "exchangeTimezoneName": "America/Argentina/Buenos_Aires",
+        "regularMarketPrice": 2848945.2,
+        "regularMarketChangePercent": -0.353,
+        "fulldayPrice": 2848945.2,
+        "fulldayChange": -10106.0,
+        "fulldayChangePercent": -0.353,
+        "fiftyTwoWeekHigh": 3395937.0,
+        "fiftyTwoWeekLow": 1959529.0,
+        "regularMarketDayHigh": 2880639.8,
+        "regularMarketDayLow": 2835603.8,
+        "regularMarketVolume": 0,
+        "longName": "MERVAL",
+        "shortName": "MERVAL",
+        "chartPreviousClose": 2859051.2,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "ART",
+          "end": 1792159200,
+          "start": 1792157400,
+          "gmtoffset": -10800
+         },
+         "regular": {
+          "timezone": "ART",
+          "end": 1792180800,
+          "start": 1792159200,
+          "gmtoffset": -10800
+         },
+         "post": {
+          "timezone": "ART",
+          "end": 1792180800,
+          "start": 1792180800,
+          "gmtoffset": -10800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792159200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           2848945.0
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^FTSE",
+     "response": [
+      {
+       "meta": {
+        "currency": "GBP",
+        "symbol": "^FTSE",
+        "exchangeName": "FGI",
+        "fullExchangeName": "FTSE Index",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 441964800,
+        "regularMarketTime": 1792164929,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 10881.9,
+        "regularMarketChangePercent": 0.383,
+        "fulldayPrice": 10881.9,
+        "fulldayChange": 41.5,
+        "fulldayChangePercent": 0.383,
+        "fiftyTwoWeekHigh": 10989.5,
+        "fiftyTwoWeekLow": 9354.5,
+        "regularMarketDayHigh": 10892.38,
+        "regularMarketDayLow": 10796.71,
+        "regularMarketVolume": 0,
+        "longName": "FTSE 100",
+        "shortName": "FTSE 100",
+        "chartPreviousClose": 10840.4,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "end": 1792134000,
+          "start": 1792131300,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "end": 1792164600,
+          "start": 1792134000,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "end": 1792167300,
+          "start": 1792164600,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792134000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           10881.9
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "GBPUSD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "GBPUSD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792192529,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 1.333,
+        "regularMarketChangePercent": 0.4212,
+        "fulldayPrice": 1.333,
+        "fulldayChange": 0.0056,
+        "fulldayChangePercent": 0.4212,
+        "fiftyTwoWeekHigh": 1.3847,
+        "fiftyTwoWeekLow": 1.3012,
+        "regularMarketDayHigh": 1.3371,
+        "regularMarketDayLow": 1.3269,
+        "regularMarketVolume": 0,
+        "longName": "GBP/USD",
+        "shortName": "GBP/USD",
+        "chartPreviousClose": 1.3274,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792192529
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1.3273,
+           1.333
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "000001.SS",
+     "response": [
+      {
+       "meta": {
+        "currency": "CNY",
+        "symbol": "000001.SS",
+        "exchangeName": "SHH",
+        "fullExchangeName": "Shanghai",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 867807000,
+        "regularMarketTime": 1792134029,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 28800,
+        "timezone": "CST",
+        "exchangeTimezoneName": "Asia/Shanghai",
+        "regularMarketPrice": 3716.284,
+        "regularMarketChangePercent": 0.238,
+        "fulldayPrice": 3716.284,
+        "fulldayChange": 8.808,
+        "fulldayChangePercent": 0.238,
+        "fiftyTwoWeekHigh": 4258.863,
+        "fiftyTwoWeekLow": 3674.817,
+        "regularMarketDayHigh": 3750.77,
+        "regularMarketDayLow": 3681.283,
+        "regularMarketVolume": 18575544,
+        "longName": "SSE Composite Index",
+        "shortName": "SSE Composite Index",
+        "chartPreviousClose": 3707.48,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CST",
+          "start": 1792114200,
+          "end": 1792114200,
+          "gmtoffset": 28800
+         },
+         "regular": {
+          "timezone": "CST",
+          "start": 1792114200,
+          "end": 1792134000,
+          "gmtoffset": 28800
+         },
+         "post": {
+          "timezone": "CST",
+          "start": 1792134000,
+          "end": 1792134000,
+          "gmtoffset": 28800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792114200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           3716.284
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^KS11",
+     "response": [
+      {
+       "meta": {
+        "currency": "KRW",
+        "symbol": "^KS11",
+        "exchangeName": "KSC",
+        "fullExchangeName": "KSE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 850262400,
+        "regularMarketTime": 1792148740,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 32400,
+        "timezone": "KST",
+        "exchangeTimezoneName": "Asia/Seoul",
+        "regularMarketPrice": 5668.05,
+        "regularMarketChangePercent": 2.049,
+        "fulldayPrice": 5668.05,
+        "fulldayChange": 113.83,
+        "fulldayChangePercent": 2.049,
+        "fiftyTwoWeekHigh": 9385.59,
+        "fiftyTwoWeekLow": 3728.38,
+        "regularMarketDayHigh": 5809.94,
+        "regularMarketDayLow": 5590.33,
+        "regularMarketVolume": 298850,
+        "longName": "KOSPI Composite Index",
+        "shortName": "KOSPI Composite Index",
+        "chartPreviousClose": 5554.22,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "KST",
+          "start": 1792103400,
+          "end": 1792108800,
+          "gmtoffset": 32400
+         },
+         "regular": {
+          "timezone": "KST",
+          "start": 1792108800,
+          "end": 1792130400,
+          "gmtoffset": 32400
+         },
+         "post": {
+          "timezone": "KST",
+          "start": 1792130400,
+          "end": 1792141200,
+          "gmtoffset": 32400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792108800
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           5668.05
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^HSI",
+     "response": [
+      {
+       "meta": {
+        "currency": "HKD",
+        "symbol": "^HSI",
+        "exchangeName": "HKG",
+        "fullExchangeName": "HKSE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 536376600,
+        "regularMarketTime": 1792138118,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 28800,
+        "timezone": "HKT",
+        "exchangeTimezoneName": "Asia/Hong_Kong",
+        "regularMarketPrice": 24186.83,
+        "regularMarketChangePercent": 0.516,
+        "fulldayPrice": 24186.83,
+        "fulldayChange": 124.109,
+        "fulldayChangePercent": 0.516,
+        "fiftyTwoWeekHigh": 28056.1,
+        "fiftyTwoWeekLow": 22518.0,
+        "regularMarketDayHigh": 24392.3,
+        "regularMarketDayLow": 24087.23,
+        "regularMarketVolume": 0,
+        "longName": "HANG SENG INDEX",
+        "shortName": "HANG SENG INDEX",
+        "chartPreviousClose": 24062.7,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "HKT",
+          "start": 1792112400,
+          "end": 1792114200,
+          "gmtoffset": 28800
+         },
+         "regular": {
+          "timezone": "HKT",
+          "start": 1792114200,
+          "end": 1792138200,
+          "gmtoffset": 28800
+         },
+         "post": {
+          "timezone": "HKT",
+          "start": 1792138200,
+          "end": 1792138200,
+          "gmtoffset": 28800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792114200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           24186.83
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^NSEI",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "^NSEI",
+        "exchangeName": "NSI",
+        "fullExchangeName": "NSE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 1190000700,
+        "regularMarketTime": 1792144867,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 19800,
+        "timezone": "IST",
+        "exchangeTimezoneName": "Asia/Kolkata",
+        "regularMarketPrice": 23146.15,
+        "regularMarketChangePercent": 0.647,
+        "fulldayPrice": 23146.15,
+        "fulldayChange": 148.801,
+        "fulldayChangePercent": 0.647,
+        "fiftyTwoWeekHigh": 26373.2,
+        "fiftyTwoWeekLow": 22179.9,
+        "regularMarketDayHigh": 23149.85,
+        "regularMarketDayLow": 22913.8,
+        "regularMarketVolume": 0,
+        "longName": "NIFTY 50",
+        "shortName": "NIFTY 50",
+        "chartPreviousClose": 22997.3,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "IST",
+          "start": 1792122300,
+          "end": 1792122300,
+          "gmtoffset": 19800
+         },
+         "regular": {
+          "timezone": "IST",
+          "start": 1792122300,
+          "end": 1792144800,
+          "gmtoffset": 19800
+         },
+         "post": {
+          "timezone": "IST",
+          "start": 1792144800,
+          "end": 1792144800,
+          "gmtoffset": 19800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792122300
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           23146.15
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "NZDUSD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "NZDUSD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792212569,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.5655,
+        "regularMarketChangePercent": 0.5598,
+        "fulldayPrice": 0.5655,
+        "fulldayChange": 0.0031,
+        "fulldayChangePercent": 0.5598,
+        "fiftyTwoWeekHigh": 0.6093,
+        "fiftyTwoWeekLow": 0.5567,
+        "regularMarketDayHigh": 0.5655,
+        "regularMarketDayLow": 0.5655,
+        "regularMarketVolume": 0,
+        "longName": "NZD/USD",
+        "shortName": "NZD/USD",
+        "chartPreviousClose": 0.5623,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792212569
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.5621,
+           0.5655
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^AXJO",
+     "response": [
+      {
+       "meta": {
+        "currency": "AUD",
+        "symbol": "^AXJO",
+        "exchangeName": "ASX",
+        "fullExchangeName": "ASX",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 722473200,
+        "regularMarketTime": 1792130204,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 39600,
+        "timezone": "AEDT",
+        "exchangeTimezoneName": "Australia/Sydney",
+        "regularMarketPrice": 8806.7,
+        "regularMarketChangePercent": 0.998,
+        "fulldayPrice": 8806.7,
+        "fulldayChange": 87.0,
+        "fulldayChangePercent": 0.998,
+        "fiftyTwoWeekHigh": 9296.7,
+        "fiftyTwoWeekLow": 8262.4,
+        "regularMarketDayHigh": 8824.5,
+        "regularMarketDayLow": 8719.7,
+        "regularMarketVolume": 0,
+        "longName": "S&P/ASX 200 [XJO]",
+        "shortName": "S&P/ASX 200 [XJO]",
+        "chartPreviousClose": 8719.7,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "AEDT",
+          "start": 1792094400,
+          "end": 1792105200,
+          "gmtoffset": 39600
+         },
+         "regular": {
+          "timezone": "AEDT",
+          "start": 1792105200,
+          "end": 1792127520,
+          "gmtoffset": 39600
+         },
+         "post": {
+          "timezone": "AEDT",
+          "start": 1792127520,
+          "end": 1792127520,
+          "gmtoffset": 39600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792130204
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           8806.7,
+           8806.7
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^STI",
+     "response": [
+      {
+       "meta": {
+        "currency": "SGD",
+        "symbol": "^STI",
+        "exchangeName": "SES",
+        "fullExchangeName": "SES",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 567651600,
+        "regularMarketTime": 1792142400,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 28800,
+        "timezone": "SGT",
+        "exchangeTimezoneName": "Asia/Singapore",
+        "regularMarketPrice": 5415.53,
+        "regularMarketChangePercent": 0.223,
+        "fulldayPrice": 5415.53,
+        "fulldayChange": 12.03,
+        "fulldayChangePercent": 0.223,
+        "fiftyTwoWeekHigh": 5828.5,
+        "fiftyTwoWeekLow": 4372.64,
+        "regularMarketDayHigh": 5450.18,
+        "regularMarketDayLow": 5401.25,
+        "regularMarketVolume": 0,
+        "longName": "STI Index",
+        "shortName": "STI Index",
+        "chartPreviousClose": 5403.5,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "SGT",
+          "start": 1792110600,
+          "end": 1792112400,
+          "gmtoffset": 28800
+         },
+         "regular": {
+          "timezone": "SGT",
+          "start": 1792112400,
+          "end": 1792141200,
+          "gmtoffset": 28800
+         },
+         "post": {
+          "timezone": "SGT",
+          "start": 1792141200,
+          "end": 1792141200,
+          "gmtoffset": 28800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792112400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           5415.53
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^NSEBANK",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "^NSEBANK",
+        "exchangeName": "NSI",
+        "fullExchangeName": "NSE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 1190000700,
+        "regularMarketTime": 1792144867,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 19800,
+        "timezone": "IST",
+        "exchangeTimezoneName": "Asia/Kolkata",
+        "regularMarketPrice": 55844.0,
+        "regularMarketChangePercent": 0.06,
+        "fulldayPrice": 55844.0,
+        "fulldayChange": 33.5,
+        "fulldayChangePercent": 0.06,
+        "fiftyTwoWeekHigh": 61764.85,
+        "fiftyTwoWeekLow": 49954.85,
+        "regularMarketDayHigh": 55989.55,
+        "regularMarketDayLow": 55526.3,
+        "regularMarketVolume": 0,
+        "longName": "NIFTY BANK",
+        "shortName": "NIFTY BANK",
+        "chartPreviousClose": 55810.5,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "IST",
+          "start": 1792122300,
+          "end": 1792122300,
+          "gmtoffset": 19800
+         },
+         "regular": {
+          "timezone": "IST",
+          "start": 1792122300,
+          "end": 1792144800,
+          "gmtoffset": 19800
+         },
+         "post": {
+          "timezone": "IST",
+          "start": 1792144800,
+          "end": 1792144800,
+          "gmtoffset": 19800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792122300
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           55844.0
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "EURUSD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "EURUSD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792186167,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 1.1244,
+        "regularMarketChangePercent": 0.2024,
+        "fulldayPrice": 1.1244,
+        "fulldayChange": 0.0023,
+        "fulldayChangePercent": 0.2024,
+        "fiftyTwoWeekHigh": 1.2024,
+        "fiftyTwoWeekLow": 1.1114,
+        "regularMarketDayHigh": 1.1273,
+        "regularMarketDayLow": 1.1212,
+        "regularMarketVolume": 0,
+        "longName": "EUR/USD",
+        "shortName": "EUR/USD",
+        "chartPreviousClose": 1.1221,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792186167
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1.1213,
+           1.1244
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^NZ50",
+     "response": [
+      {
+       "meta": {
+        "currency": "NZD",
+        "symbol": "^NZ50",
+        "exchangeName": "NZE",
+        "fullExchangeName": "NZSE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 1041541200,
+        "regularMarketTime": 1792125670,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 46800,
+        "timezone": "NZDT",
+        "exchangeTimezoneName": "Pacific/Auckland",
+        "regularMarketPrice": 13753.73,
+        "regularMarketChangePercent": -0.572,
+        "fulldayPrice": 13753.73,
+        "fulldayChange": -79.069,
+        "fulldayChangePercent": -0.572,
+        "fiftyTwoWeekHigh": 14069.22,
+        "fiftyTwoWeekLow": 12689.78,
+        "regularMarketDayHigh": 13875.4,
+        "regularMarketDayLow": 13735.72,
+        "regularMarketVolume": 0,
+        "longName": "S&P/NZX 50 INDEX GROSS ( GROSS",
+        "shortName": "S&P/NZX 50 INDEX GROSS ( GROSS ",
+        "chartPreviousClose": 13832.8,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "NZDT",
+          "start": 1792094400,
+          "end": 1792098000,
+          "gmtoffset": 46800
+         },
+         "regular": {
+          "timezone": "NZDT",
+          "start": 1792098000,
+          "end": 1792123200,
+          "gmtoffset": 46800
+         },
+         "post": {
+          "timezone": "NZDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": 46800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792098000,
+        1792125670
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           13753.73,
+           13753.73
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^TWII",
+     "response": [
+      {
+       "meta": {
+        "currency": "TWD",
+        "symbol": "^TWII",
+        "exchangeName": "TAI",
+        "fullExchangeName": "Taiwan",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 867805200,
+        "regularMarketTime": 1792128805,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 28800,
+        "timezone": "CST",
+        "exchangeTimezoneName": "Asia/Taipei",
+        "regularMarketPrice": 47111.26,
+        "regularMarketChangePercent": 0.301,
+        "fulldayPrice": 47111.26,
+        "fulldayChange": 141.391,
+        "fulldayChangePercent": 0.301,
+        "fiftyTwoWeekHigh": 49968.92,
+        "fiftyTwoWeekLow": 26395.98,
+        "regularMarketDayHigh": 47520.6,
+        "regularMarketDayLow": 46995.03,
+        "regularMarketVolume": 0,
+        "longName": "TSEC CAPITALIZATION WEIGHTED ST",
+        "shortName": "TSEC CAPITALIZATION WEIGHTED ST",
+        "chartPreviousClose": 46969.9,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "CST",
+          "start": 1792112400,
+          "end": 1792112400,
+          "gmtoffset": 28800
+         },
+         "regular": {
+          "timezone": "CST",
+          "start": 1792112400,
+          "end": 1792128600,
+          "gmtoffset": 28800
+         },
+         "post": {
+          "timezone": "CST",
+          "start": 1792128600,
+          "end": 1792128600,
+          "gmtoffset": 28800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792112400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           47111.26
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDHKD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "HKD",
+        "symbol": "USDHKD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 995238000,
+        "regularMarketTime": 1792210878,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 7.8479,
+        "regularMarketChangePercent": 0.0159,
+        "fulldayPrice": 7.8479,
+        "fulldayChange": 0.0012,
+        "fulldayChangePercent": 0.0159,
+        "fiftyTwoWeekHigh": 7.8487,
+        "fiftyTwoWeekLow": 7.7662,
+        "regularMarketDayHigh": 7.8479,
+        "regularMarketDayLow": 7.8479,
+        "regularMarketVolume": 0,
+        "longName": "USD/HKD",
+        "shortName": "USD/HKD",
+        "chartPreviousClose": 7.8467,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792210878
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           7.8472,
+           7.8479
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDJPY=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "JPY",
+        "symbol": "JPY=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 846633600,
+        "regularMarketTime": 1792184395,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 157.987,
+        "regularMarketChangePercent": 0.0095,
+        "fulldayPrice": 157.987,
+        "fulldayChange": 0.015,
+        "fulldayChangePercent": 0.0095,
+        "fiftyTwoWeekHigh": 163.979,
+        "fiftyTwoWeekLow": 150.286,
+        "regularMarketDayHigh": 158.34,
+        "regularMarketDayLow": 157.687,
+        "regularMarketVolume": 0,
+        "longName": "USD/JPY",
+        "shortName": "USD/JPY",
+        "chartPreviousClose": 157.972,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792184395
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           158.143,
+           157.987
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^BSESN",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "^BSESN",
+        "exchangeName": "BSE",
+        "fullExchangeName": "BSE",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 867728700,
+        "regularMarketTime": 1792144947,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 19800,
+        "timezone": "IST",
+        "exchangeTimezoneName": "Asia/Kolkata",
+        "regularMarketPrice": 74729.27,
+        "regularMarketChangePercent": 0.557,
+        "fulldayPrice": 74729.27,
+        "fulldayChange": 413.664,
+        "fulldayChangePercent": 0.557,
+        "fiftyTwoWeekHigh": 86159.02,
+        "fiftyTwoWeekLow": 71292.88,
+        "regularMarketDayHigh": 74778.78,
+        "regularMarketDayLow": 74012.99,
+        "regularMarketVolume": 0,
+        "longName": "S&P BSE SENSEX",
+        "shortName": "S&P BSE SENSEX",
+        "chartPreviousClose": 74315.6,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "IST",
+          "start": 1792122300,
+          "end": 1792122300,
+          "gmtoffset": 19800
+         },
+         "regular": {
+          "timezone": "IST",
+          "start": 1792122300,
+          "end": 1792144800,
+          "gmtoffset": 19800
+         },
+         "post": {
+          "timezone": "IST",
+          "start": 1792144800,
+          "end": 1792144800,
+          "gmtoffset": 19800
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792122300
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           74729.27
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDCHF=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "CHF",
+        "symbol": "USDCHF=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1063753200,
+        "regularMarketTime": 1792184395,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.8236,
+        "regularMarketChangePercent": -0.3292,
+        "fulldayPrice": 0.8236,
+        "fulldayChange": -0.0027,
+        "fulldayChangePercent": -0.3292,
+        "fiftyTwoWeekHigh": 0.8395,
+        "fiftyTwoWeekLow": 0.7629,
+        "regularMarketDayHigh": 0.8282,
+        "regularMarketDayLow": 0.8217,
+        "regularMarketVolume": 0,
+        "longName": "USD/CHF",
+        "shortName": "USD/CHF",
+        "chartPreviousClose": 0.8263,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792184395
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.8278,
+           0.8236
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "^JKSE",
+     "response": [
+      {
+       "meta": {
+        "currency": "IDR",
+        "symbol": "^JKSE",
+        "exchangeName": "JKT",
+        "fullExchangeName": "Jakarta",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 639367200,
+        "regularMarketTime": 1792141205,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 25200,
+        "timezone": "WIB",
+        "exchangeTimezoneName": "Asia/Jakarta",
+        "regularMarketPrice": 5185.105,
+        "regularMarketChangePercent": -11.574,
+        "fulldayPrice": 5185.105,
+        "fulldayChange": -678.675,
+        "fulldayChangePercent": -11.574,
+        "fiftyTwoWeekHigh": 9174.474,
+        "fiftyTwoWeekLow": 5185.105,
+        "regularMarketDayHigh": 5404.508,
+        "regularMarketDayLow": 5185.105,
+        "regularMarketVolume": 0,
+        "longName": "IDX COMPOSITE",
+        "shortName": "IDX COMPOSITE",
+        "chartPreviousClose": 5863.78,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "WIB",
+          "start": 1792116000,
+          "end": 1792116000,
+          "gmtoffset": 25200
+         },
+         "regular": {
+          "timezone": "WIB",
+          "start": 1792116000,
+          "end": 1792142100,
+          "gmtoffset": 25200
+         },
+         "post": {
+          "timezone": "WIB",
+          "start": 1792142100,
+          "end": 1792142100,
+          "gmtoffset": 25200
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792116000
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           5185.105
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDCAD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "CAD",
+        "symbol": "USDCAD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1063753200,
+        "regularMarketTime": 1792210878,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 1.4137,
+        "regularMarketChangePercent": -0.3384,
+        "fulldayPrice": 1.4137,
+        "fulldayChange": -0.0048,
+        "fulldayChangePercent": -0.3384,
+        "fiftyTwoWeekHigh": 1.4299,
+        "fiftyTwoWeekLow": 1.3484,
+        "regularMarketDayHigh": 1.4137,
+        "regularMarketDayLow": 1.4137,
+        "regularMarketVolume": 0,
+        "longName": "USD/CAD",
+        "shortName": "USD/CAD",
+        "chartPreviousClose": 1.4185,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792210878
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1.4193,
+           1.4137
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDCNY=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "CNY",
+        "symbol": "USDCNY=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 993423600,
+        "regularMarketTime": 1792207832,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 6.6862,
+        "regularMarketChangePercent": -0.0628,
+        "fulldayPrice": 6.6862,
+        "fulldayChange": -0.0042,
+        "fulldayChangePercent": -0.0628,
+        "fiftyTwoWeekHigh": 7.1909,
+        "fiftyTwoWeekLow": 6.6768,
+        "regularMarketDayHigh": 6.6862,
+        "regularMarketDayLow": 6.6768,
+        "regularMarketVolume": 0,
+        "longName": "USD/CNY",
+        "shortName": "USD/CNY",
+        "chartPreviousClose": 6.6904,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792207832
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           6.6909,
+           6.6862
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "AUDUSD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "AUDUSD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1147734000,
+        "regularMarketTime": 1792212569,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.6949,
+        "regularMarketChangePercent": 0.3683,
+        "fulldayPrice": 0.6949,
+        "fulldayChange": 0.0026,
+        "fulldayChangePercent": 0.3683,
+        "fiftyTwoWeekHigh": 0.7277,
+        "fiftyTwoWeekLow": 0.6422,
+        "regularMarketDayHigh": 0.6949,
+        "regularMarketDayLow": 0.6949,
+        "regularMarketVolume": 0,
+        "longName": "AUD/USD",
+        "shortName": "AUD/USD",
+        "chartPreviousClose": 0.6924,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792212569
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.6919,
+           0.6949
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDNZD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "NZD",
+        "symbol": "NZD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792212569,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 1.7685,
+        "regularMarketChangePercent": -0.5567,
+        "fulldayPrice": 1.7685,
+        "fulldayChange": -0.0099,
+        "fulldayChangePercent": -0.5567,
+        "fiftyTwoWeekHigh": 1.7963,
+        "fiftyTwoWeekLow": 1.6411,
+        "regularMarketDayHigh": 1.7685,
+        "regularMarketDayLow": 1.7685,
+        "regularMarketVolume": 0,
+        "longName": "USD/NZD",
+        "shortName": "USD/NZD",
+        "chartPreviousClose": 1.7784,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792212569
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1.7789,
+           1.7685
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDAUD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "AUD",
+        "symbol": "USDAUD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1147734000,
+        "regularMarketTime": 1792212569,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 1.439,
+        "regularMarketChangePercent": -0.367,
+        "fulldayPrice": 1.439,
+        "fulldayChange": -0.0053,
+        "fulldayChangePercent": -0.367,
+        "fiftyTwoWeekHigh": 1.5572,
+        "fiftyTwoWeekLow": 1.3741,
+        "regularMarketDayHigh": 1.439,
+        "regularMarketDayLow": 1.439,
+        "regularMarketVolume": 0,
+        "longName": "USD/AUD",
+        "shortName": "USD/AUD",
+        "chartPreviousClose": 1.4443,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792212569
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1.4454,
+           1.439
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "RB=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "RB=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 973054800,
+        "regularMarketTime": 1792184396,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 3.1443,
+        "regularMarketChangePercent": 2.0943,
+        "fulldayPrice": 3.1443,
+        "fulldayChange": 0.0645,
+        "fulldayChangePercent": 2.0943,
+        "fiftyTwoWeekHigh": 3.8232,
+        "fiftyTwoWeekLow": 1.6656,
+        "regularMarketDayHigh": 3.1497,
+        "regularMarketDayLow": 2.9816,
+        "regularMarketVolume": 67065,
+        "shortName": "RBOB Gasoline Dec 26",
+        "chartPreviousClose": 3.0798,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           3.2354
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "PL=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "PL=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 878101200,
+        "regularMarketTime": 1792184394,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 1633.1,
+        "regularMarketChangePercent": 0.715,
+        "fulldayPrice": 1633.1,
+        "fulldayChange": 11.6,
+        "fulldayChangePercent": 0.715,
+        "fiftyTwoWeekHigh": 2852.4,
+        "fiftyTwoWeekLow": 1477.1,
+        "regularMarketDayHigh": 1660.8,
+        "regularMarketDayLow": 1622.1,
+        "regularMarketVolume": 16722,
+        "shortName": "Platinum Jan 27",
+        "chartPreviousClose": 1621.5,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1623.3
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "CL=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "CL=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 967003200,
+        "regularMarketTime": 1792184398,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 99.02,
+        "regularMarketChangePercent": 2.611,
+        "fulldayPrice": 99.02,
+        "fulldayChange": 2.52,
+        "fulldayChangePercent": 2.611,
+        "fiftyTwoWeekHigh": 119.48,
+        "fiftyTwoWeekLow": 54.98,
+        "regularMarketDayHigh": 99.34,
+        "regularMarketDayLow": 95.29,
+        "regularMarketVolume": 304249,
+        "shortName": "Crude Oil Nov 26",
+        "chartPreviousClose": 96.5,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           101.41
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "EURJPY=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "JPY",
+        "symbol": "EURJPY=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1043280000,
+        "regularMarketTime": 1792186167,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 177.579,
+        "regularMarketChangePercent": 0.2354,
+        "fulldayPrice": 177.579,
+        "fulldayChange": 0.417,
+        "fulldayChangePercent": 0.2354,
+        "fiftyTwoWeekHigh": 187.935,
+        "fiftyTwoWeekLow": 174.83,
+        "regularMarketDayHigh": 177.963,
+        "regularMarketDayLow": 177.1,
+        "regularMarketVolume": 0,
+        "longName": "EUR/JPY",
+        "shortName": "EUR/JPY",
+        "chartPreviousClose": 177.162,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792186167
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           177.323,
+           177.579
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "NG=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "NG=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 967608000,
+        "regularMarketTime": 1792184397,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 3.116,
+        "regularMarketChangePercent": -3.708,
+        "fulldayPrice": 3.116,
+        "fulldayChange": -0.12,
+        "fulldayChangePercent": -3.708,
+        "fiftyTwoWeekHigh": 7.827,
+        "fiftyTwoWeekLow": 2.483,
+        "regularMarketDayHigh": 3.229,
+        "regularMarketDayLow": 3.062,
+        "regularMarketVolume": 215260,
+        "shortName": "Natural Gas Nov 26",
+        "chartPreviousClose": 3.236,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           3.116
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "GC=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "GC=F",
+        "exchangeName": "CMX",
+        "fullExchangeName": "COMEX",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 967608000,
+        "regularMarketTime": 1792184399,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 4181.1,
+        "regularMarketChangePercent": 0.264,
+        "fulldayPrice": 4181.1,
+        "fulldayChange": 11.0,
+        "fulldayChangePercent": 0.264,
+        "fiftyTwoWeekHigh": 5586.2,
+        "fiftyTwoWeekLow": 3901.3,
+        "regularMarketDayHigh": 4220.4,
+        "regularMarketDayLow": 4167.5,
+        "regularMarketVolume": 135074,
+        "shortName": "Gold Dec 26",
+        "chartPreviousClose": 4170.1,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           4181.1
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "HO=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "HO=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 967780800,
+        "regularMarketTime": 1792184386,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 4.7232,
+        "regularMarketChangePercent": 1.476,
+        "fulldayPrice": 4.7232,
+        "fulldayChange": 0.0687,
+        "fulldayChangePercent": 1.476,
+        "fiftyTwoWeekHigh": 5.4275,
+        "fiftyTwoWeekLow": 2.0469,
+        "regularMarketDayHigh": 4.7379,
+        "regularMarketDayLow": 4.565,
+        "regularMarketVolume": 40831,
+        "shortName": "Heating Oil Nov 26",
+        "chartPreviousClose": 4.6545,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           4.8991
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "EURINR=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "EURINR=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792207805,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 106.7066,
+        "regularMarketChangePercent": 0.0944,
+        "fulldayPrice": 106.7066,
+        "fulldayChange": 0.1006,
+        "fulldayChangePercent": 0.0944,
+        "fiftyTwoWeekHigh": 112.64,
+        "fiftyTwoWeekLow": 100.899,
+        "regularMarketDayHigh": 106.7066,
+        "regularMarketDayLow": 106.7066,
+        "regularMarketVolume": 0,
+        "longName": "EUR/INR",
+        "shortName": "EUR/INR",
+        "chartPreviousClose": 106.606,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792207805
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           106.514,
+           106.7066
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "BZ=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "BZ=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 1185768000,
+        "regularMarketTime": 1792184371,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 109.86,
+        "regularMarketChangePercent": 3.72,
+        "fulldayPrice": 109.86,
+        "fulldayChange": 3.94,
+        "fulldayChangePercent": 3.72,
+        "fiftyTwoWeekHigh": 126.1,
+        "fiftyTwoWeekLow": 58.72,
+        "regularMarketDayHigh": 110.0,
+        "regularMarketDayLow": 104.92,
+        "regularMarketVolume": 37509,
+        "longName": "Brent Crude Oil Last Day Financial Futures",
+        "shortName": "Brent Crude Oil Last Day Financ",
+        "chartPreviousClose": 105.92,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           109.86
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDEUR=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "EUR",
+        "symbol": "USDEUR=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792186167,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.8894,
+        "regularMarketChangePercent": -0.202,
+        "fulldayPrice": 0.8894,
+        "fulldayChange": -0.0018,
+        "fulldayChangePercent": -0.202,
+        "fiftyTwoWeekHigh": 0.8998,
+        "fiftyTwoWeekLow": 0.8317,
+        "regularMarketDayHigh": 0.8919,
+        "regularMarketDayLow": 0.8871,
+        "regularMarketVolume": 0,
+        "longName": "USD/EUR",
+        "shortName": "USD/EUR",
+        "chartPreviousClose": 0.8912,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792186167
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.8918,
+           0.8894
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "EURGBP=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "GBP",
+        "symbol": "EURGBP=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 915408000,
+        "regularMarketTime": 1792186167,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.8432,
+        "regularMarketChangePercent": -0.2036,
+        "fulldayPrice": 0.8432,
+        "fulldayChange": -0.0017,
+        "fulldayChangePercent": -0.2036,
+        "fiftyTwoWeekHigh": 0.8865,
+        "fiftyTwoWeekLow": 0.8418,
+        "regularMarketDayHigh": 0.8452,
+        "regularMarketDayLow": 0.8418,
+        "regularMarketVolume": 0,
+        "longName": "EUR/GBP",
+        "shortName": "EUR/GBP",
+        "chartPreviousClose": 0.845,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792186167
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.8448,
+           0.8432
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDINR=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "USDINR=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792207805,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 94.96,
+        "regularMarketChangePercent": -0.0894,
+        "fulldayPrice": 94.96,
+        "fulldayChange": -0.085,
+        "fulldayChangePercent": -0.0894,
+        "fiftyTwoWeekHigh": 97.0541,
+        "fiftyTwoWeekLow": 85.8629,
+        "regularMarketDayHigh": 94.96,
+        "regularMarketDayLow": 94.96,
+        "regularMarketVolume": 0,
+        "longName": "USD/INR",
+        "shortName": "USD/INR",
+        "chartPreviousClose": 95.045,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792207805
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           94.5248,
+           94.96
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDSGD=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "SGD",
+        "symbol": "USDSGD=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792210877,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 1.2796,
+        "regularMarketChangePercent": -0.1381,
+        "fulldayPrice": 1.2796,
+        "fulldayChange": -0.0018,
+        "fulldayChangePercent": -0.1381,
+        "fiftyTwoWeekHigh": 1.3096,
+        "fiftyTwoWeekLow": 1.2588,
+        "regularMarketDayHigh": 1.2796,
+        "regularMarketDayLow": 1.2796,
+        "regularMarketVolume": 0,
+        "longName": "USD/SGD",
+        "shortName": "USD/SGD",
+        "chartPreviousClose": 1.2814,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792210877
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1.2815,
+           1.2796
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "DX-Y.NYB",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "DX-Y.NYB",
+        "exchangeName": "NYB",
+        "fullExchangeName": "ICE Futures",
+        "instrumentType": "INDEX",
+        "firstTradeDate": 31813200,
+        "regularMarketTime": 1792184399,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 101.779,
+        "regularMarketChangePercent": -0.057,
+        "fulldayPrice": 101.779,
+        "fulldayChange": -0.058,
+        "fulldayChangePercent": -0.057,
+        "fiftyTwoWeekHigh": 102.95,
+        "fiftyTwoWeekLow": 95.55,
+        "regularMarketDayHigh": 102.086,
+        "regularMarketDayLow": 101.576,
+        "longName": "US Dollar Index",
+        "shortName": "ICE US Dollar Index - Index - C",
+        "chartPreviousClose": 101.837,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           101.84
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "USDGBP=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "GBP",
+        "symbol": "USDGBP=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792192529,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.7502,
+        "regularMarketChangePercent": -0.4195,
+        "fulldayPrice": 0.7502,
+        "fulldayChange": -0.0032,
+        "fulldayChangePercent": -0.4195,
+        "fiftyTwoWeekHigh": 0.7685,
+        "fiftyTwoWeekLow": 0.7222,
+        "regularMarketDayHigh": 0.7537,
+        "regularMarketDayLow": 0.7479,
+        "regularMarketVolume": 0,
+        "longName": "USD/GBP",
+        "shortName": "USD/GBP",
+        "chartPreviousClose": 0.7534,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792192529
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.7534,
+           0.7502
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "GBPINR=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "GBPINR=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1147734000,
+        "regularMarketTime": 1792207805,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 126.5627,
+        "regularMarketChangePercent": 0.3232,
+        "fulldayPrice": 126.5627,
+        "fulldayChange": 0.4077,
+        "fulldayChangePercent": 0.3232,
+        "fiftyTwoWeekHigh": 130.897,
+        "fiftyTwoWeekLow": 115.361,
+        "regularMarketDayHigh": 126.5627,
+        "regularMarketDayLow": 126.5627,
+        "regularMarketVolume": 0,
+        "longName": "GBP/INR",
+        "shortName": "GBP/INR",
+        "chartPreviousClose": 126.155,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792207805
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           125.4517,
+           126.5627
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "JPYINR=X",
+     "response": [
+      {
+       "meta": {
+        "currency": "INR",
+        "symbol": "JPYINR=X",
+        "exchangeName": "CCY",
+        "fullExchangeName": "CCY",
+        "instrumentType": "CURRENCY",
+        "firstTradeDate": 1070236800,
+        "regularMarketTime": 1792186167,
+        "hasPrePostMarketData": false,
+        "gmtoffset": 3600,
+        "timezone": "BST",
+        "exchangeTimezoneName": "Europe/London",
+        "regularMarketPrice": 0.6009,
+        "regularMarketChangePercent": -0.0316,
+        "fulldayPrice": 0.6009,
+        "fulldayChange": -0.0002,
+        "fulldayChangePercent": -0.0316,
+        "fiftyTwoWeekHigh": 0.6229,
+        "fiftyTwoWeekLow": 0.5611,
+        "regularMarketDayHigh": 0.6019,
+        "regularMarketDayLow": 0.5992,
+        "regularMarketVolume": 0,
+        "longName": "JPY/INR",
+        "shortName": "JPY/INR",
+        "chartPreviousClose": 0.6011,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792105200,
+          "gmtoffset": 3600
+         },
+         "regular": {
+          "timezone": "BST",
+          "start": 1792105200,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         },
+         "post": {
+          "timezone": "BST",
+          "start": 1792191540,
+          "end": 1792191540,
+          "gmtoffset": 3600
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792105200,
+        1792186167
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           0.6006,
+           0.6009
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "SI=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "SI=F",
+        "exchangeName": "CMX",
+        "fullExchangeName": "COMEX",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 967608000,
+        "regularMarketTime": 1792184397,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 57.305,
+        "regularMarketChangePercent": 0.261,
+        "fulldayPrice": 57.305,
+        "fulldayChange": 0.149,
+        "fulldayChangePercent": 0.261,
+        "fiftyTwoWeekHigh": 121.3,
+        "fiftyTwoWeekLow": 45.845,
+        "regularMarketDayHigh": 58.14,
+        "regularMarketDayLow": 57.035,
+        "regularMarketVolume": 34163,
+        "shortName": "Silver Dec 26",
+        "chartPreviousClose": 57.156,
+        "priceHint": 3,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           56.995
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "HG=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "HG=F",
+        "exchangeName": "CMX",
+        "fullExchangeName": "COMEX",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 967608000,
+        "regularMarketTime": 1792184373,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 6.5735,
+        "regularMarketChangePercent": 0.2593,
+        "fulldayPrice": 6.5735,
+        "fulldayChange": 0.017,
+        "fulldayChangePercent": 0.2593,
+        "fiftyTwoWeekHigh": 6.83,
+        "fiftyTwoWeekLow": 4.9045,
+        "regularMarketDayHigh": 6.649,
+        "regularMarketDayLow": 6.5465,
+        "regularMarketVolume": 43045,
+        "shortName": "Copper Dec 26",
+        "chartPreviousClose": 6.5565,
+        "priceHint": 4,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           6.531
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "SB=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "SB=F",
+        "exchangeName": "NYB",
+        "fullExchangeName": "ICE Futures",
+        "instrumentType": "ALTSYMBOL",
+        "firstTradeDate": 951886800,
+        "regularMarketTime": 1792169999,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 20.85,
+        "regularMarketChangePercent": 0.0,
+        "fulldayPrice": 20.85,
+        "fulldayChange": 0.0,
+        "fulldayChangePercent": 0.0,
+        "fiftyTwoWeekHigh": 21.29,
+        "fiftyTwoWeekLow": 13.22,
+        "regularMarketDayHigh": 21.01,
+        "regularMarketDayLow": 20.47,
+        "regularMarketVolume": 76324,
+        "shortName": "Sugar #11 Mar 27",
+        "chartPreviousClose": 20.85,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           20.85
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "ZC=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "ZC=F",
+        "exchangeName": "CBT",
+        "fullExchangeName": "CBOT",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 963806400,
+        "regularMarketTime": 1792174798,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 474.25,
+        "regularMarketChangePercent": -0.785,
+        "fulldayPrice": 474.25,
+        "fulldayChange": -3.75,
+        "fulldayChangePercent": -0.785,
+        "fiftyTwoWeekHigh": 544.5,
+        "fiftyTwoWeekLow": 398.5,
+        "regularMarketDayHigh": 481.0,
+        "regularMarketDayLow": 473.0,
+        "regularMarketVolume": 185762,
+        "shortName": "Corn Futures,Dec-2026",
+        "chartPreviousClose": 478.0,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           474.25
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "PA=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "PA=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 906955200,
+        "regularMarketTime": 1792184396,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 1118.6,
+        "regularMarketChangePercent": -0.877,
+        "fulldayPrice": 1118.6,
+        "fulldayChange": -9.9,
+        "fulldayChangePercent": -0.877,
+        "fiftyTwoWeekHigh": 2169.9,
+        "fiftyTwoWeekLow": 1086.5,
+        "regularMarketDayHigh": 1146.5,
+        "regularMarketDayLow": 1112.0,
+        "regularMarketVolume": 5434,
+        "shortName": "Palladium Dec 26",
+        "chartPreviousClose": 1128.5,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1113.3
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "LE=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "LE=F",
+        "exchangeName": "CME",
+        "fullExchangeName": "CME",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 983422800,
+        "regularMarketTime": 1792173899,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 228.35,
+        "regularMarketChangePercent": 0.484,
+        "fulldayPrice": 228.35,
+        "fulldayChange": 1.1,
+        "fulldayChangePercent": 0.484,
+        "fiftyTwoWeekHigh": 258.725,
+        "fiftyTwoWeekLow": 204.55,
+        "regularMarketDayHigh": 228.75,
+        "regularMarketDayLow": 227.075,
+        "regularMarketVolume": 20122,
+        "shortName": "Live Cattle Futures,Dec-2026",
+        "chartPreviousClose": 227.25,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           227.55
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "KC=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "KC=F",
+        "exchangeName": "NYB",
+        "fullExchangeName": "ICE Futures",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 946875600,
+        "regularMarketTime": 1792171795,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 305.55,
+        "regularMarketChangePercent": -0.016,
+        "fulldayPrice": 305.55,
+        "fulldayChange": -0.05,
+        "fulldayChangePercent": -0.016,
+        "fiftyTwoWeekHigh": 437.95,
+        "fiftyTwoWeekLow": 242.7,
+        "regularMarketDayHigh": 311.3,
+        "regularMarketDayLow": 298.35,
+        "regularMarketVolume": 25328,
+        "shortName": "Coffee Dec 26",
+        "chartPreviousClose": 305.6,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           305.6
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "HE=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "HE=F",
+        "exchangeName": "CME",
+        "fullExchangeName": "CME",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 976856400,
+        "regularMarketTime": 1792173896,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 66.925,
+        "regularMarketChangePercent": 0.526,
+        "fulldayPrice": 66.925,
+        "fulldayChange": 0.35,
+        "fulldayChangePercent": 0.526,
+        "fiftyTwoWeekHigh": 103.35,
+        "fiftyTwoWeekLow": 65.8,
+        "regularMarketDayHigh": 67.375,
+        "regularMarketDayLow": 66.3,
+        "regularMarketVolume": 21127,
+        "shortName": "Lean Hog Futures,Dec-2026",
+        "chartPreviousClose": 66.575,
+        "priceHint": 3,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           66.925
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "ZW=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "ZW=F",
+        "exchangeName": "CBT",
+        "fullExchangeName": "CBOT",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 963806400,
+        "regularMarketTime": 1792174798,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 660.5,
+        "regularMarketChangePercent": -1.418,
+        "fulldayPrice": 660.5,
+        "fulldayChange": -9.5,
+        "fulldayChangePercent": -1.418,
+        "fiftyTwoWeekHigh": 775.75,
+        "fiftyTwoWeekLow": 498.0,
+        "regularMarketDayHigh": 670.25,
+        "regularMarketDayLow": 656.25,
+        "regularMarketVolume": 75544,
+        "shortName": "Chicago SRW Wheat Futures,Dec-2",
+        "chartPreviousClose": 670.0,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           660.5
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "CT=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "CT=F",
+        "exchangeName": "NYM",
+        "fullExchangeName": "NY Mercantile",
+        "instrumentType": "ALTSYMBOL",
+        "firstTradeDate": 946875600,
+        "regularMarketTime": 1792164627,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 80.19,
+        "regularMarketChangePercent": 0.162,
+        "fulldayPrice": 80.19,
+        "fulldayChange": 0.13,
+        "fulldayChangePercent": 0.162,
+        "fiftyTwoWeekHigh": 92.15,
+        "fiftyTwoWeekLow": 60.71,
+        "regularMarketDayHigh": 81.07,
+        "regularMarketDayLow": 80.01,
+        "regularMarketVolume": 13876,
+        "chartPreviousClose": 80.66,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           80.0
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "CC=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "CC=F",
+        "exchangeName": "NYB",
+        "fullExchangeName": "ICE Futures",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 946875600,
+        "regularMarketTime": 1792171796,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 5686.0,
+        "regularMarketChangePercent": 0.726,
+        "fulldayPrice": 5686.0,
+        "fulldayChange": 41.0,
+        "fulldayChangePercent": 0.726,
+        "fiftyTwoWeekHigh": 6675.0,
+        "fiftyTwoWeekLow": 2798.0,
+        "regularMarketDayHigh": 5861.0,
+        "regularMarketDayLow": 5625.0,
+        "regularMarketVolume": 14504,
+        "shortName": "Cocoa Dec 26",
+        "chartPreviousClose": 5645.0,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           5645.0
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "ZS=F",
+     "response": [
+      {
+       "meta": {
+        "currency": "USX",
+        "symbol": "ZS=F",
+        "exchangeName": "CBT",
+        "fullExchangeName": "CBOT",
+        "instrumentType": "FUTURE",
+        "firstTradeDate": 968990400,
+        "regularMarketTime": 1792174799,
+        "hasPrePostMarketData": false,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 1261.25,
+        "regularMarketChangePercent": -0.139,
+        "fulldayPrice": 1261.25,
+        "fulldayChange": -1.75,
+        "fulldayChangePercent": -0.139,
+        "fiftyTwoWeekHigh": 1332.25,
+        "fiftyTwoWeekLow": 1019.75,
+        "regularMarketDayHigh": 1265.75,
+        "regularMarketDayLow": 1253.25,
+        "regularMarketVolume": 172567,
+        "shortName": "Soybean Futures,Nov-2026",
+        "chartPreviousClose": 1263.0,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792123200,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "start": 1792123200,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "start": 1792209540,
+          "end": 1792209540,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792123200
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           1261.25
+          ]
+         }
+        ]
+       }
+      }
+     ]
     }
    ],
    "error": null

@@ -9,6 +9,14 @@ export function fmtPrice(v: number | null | undefined): string {
   return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+/** FX rates and crosses: more decimals for smaller numbers (1.0852, 150.51, 0.011364). */
+export function fmtRate(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return DASH;
+  const a = Math.abs(v);
+  const d = a >= 100 ? 2 : a >= 10 ? 3 : a >= 1 ? 4 : a >= 0.1 ? 5 : a >= 0.001 ? 6 : 8;
+  return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
 export function fmtChg(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return DASH;
   return (v > 0 ? "+" : "") + fmtPrice(v);

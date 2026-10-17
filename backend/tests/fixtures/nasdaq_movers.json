@@ -1,0 +1,495 @@
+{
+ "status": 200,
+ "body": {
+  "data": {
+   "STOCKS": {
+    "MostActiveByShareVolume": {
+     "dataAsOf": "Data as of Oct 16, 2026 4:15 PM ET",
+     "lastTradeTimestamp": "Oct 16, 2026 4:15 PM ET",
+     "table": {
+      "asOf": null,
+      "headers": {
+       "symbol": "Symbol",
+       "name": "Name",
+       "lastSalePrice": "Last",
+       "lastSaleChange": "Change",
+       "change": "Share Volume"
+      },
+      "rows": [
+       {
+        "symbol": "HODO",
+        "name": "House of Doge Inc. Common Stock",
+        "lastSalePrice": "$0.0928",
+        "lastSaleChange": "+0.0253",
+        "change": "561,137,454.657995",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "NWGL",
+        "name": "Nature Wood Group Limited",
+        "lastSalePrice": "$0.234",
+        "lastSaleChange": "+0.013",
+        "change": "325,038,361.496217",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "SXTC",
+        "name": "China SXT Pharmaceuticals, Inc.",
+        "lastSalePrice": "$0.065",
+        "lastSaleChange": "-0.0038",
+        "change": "259,597,883.834623",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "ZTG",
+        "name": "Zenta Group Company Limited Class A Ordinary Shares",
+        "lastSalePrice": "$0.705",
+        "lastSaleChange": "+0.082",
+        "change": "169,003,733.345732",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "XLAB",
+        "name": "Exascale Labs Holdings Inc. Class A Common Stock",
+        "lastSalePrice": "$2.35",
+        "lastSaleChange": "+0.99",
+        "change": "166,992,212.448145",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "SGRX",
+        "name": "SANGRIX INC. Class A Ordinary Shares",
+        "lastSalePrice": "$0.8686",
+        "lastSaleChange": "+0.1835",
+        "change": "158,170,679.57579",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "SDST",
+        "name": "Stardust Power Inc.",
+        "lastSalePrice": "$0.0298",
+        "lastSaleChange": "-0.0106",
+        "change": "124,292,427.378721",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "INTC",
+        "name": "Intel Corporation",
+        "lastSalePrice": "$89.85",
+        "lastSaleChange": "-5.52",
+        "change": "121,057,893.967308",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "lastSalePrice": "$214.13",
+        "lastSaleChange": "-3.1",
+        "change": "119,848,999.042799",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "NVD",
+        "name": "GraniteShares ETF Trust",
+        "lastSalePrice": "$4.11",
+        "lastSaleChange": "+0.13",
+        "change": "119,832,067.803353",
+        "deltaIndicator": "up"
+       }
+      ]
+     }
+    },
+    "MostAdvanced": {
+     "dataAsOf": "Data as of Oct 16, 2026 4:15 PM ET",
+     "lastTradeTimestamp": "Oct 16, 2026 4:15 PM ET",
+     "table": {
+      "asOf": null,
+      "headers": {
+       "symbol": "Symbol",
+       "name": "Name",
+       "lastSalePrice": "Last",
+       "lastSaleChange": "Change",
+       "change": "% Change"
+      },
+      "rows": [
+       {
+        "symbol": "XLABW",
+        "name": "Exascale Labs Holdings Inc. Warrant",
+        "lastSalePrice": "$0.195",
+        "lastSaleChange": "+0.1244",
+        "change": "+176.204%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "BCAT",
+        "name": "BlackRock Capital Allocation Term Trust",
+        "lastSalePrice": "$0.0007",
+        "lastSaleChange": "+0.0004",
+        "change": "+133.3333%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "CDTTW",
+        "name": "Conduit Pharmaceuticals Inc. ",
+        "lastSalePrice": "$0.006",
+        "lastSaleChange": "+0.0033",
+        "change": "+122.2222%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "OGGWZ",
+        "name": "Osisko Gold Group Inc. Warrant expiring 5/27/2027",
+        "lastSalePrice": "$0.03",
+        "lastSaleChange": "+0.0149",
+        "change": "+98.6755%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "XLAB",
+        "name": "Exascale Labs Holdings Inc. Class A Common Stock",
+        "lastSalePrice": "$2.35",
+        "lastSaleChange": "+0.99",
+        "change": "+72.7941%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "CINGW",
+        "name": "Cingulate Inc.",
+        "lastSalePrice": "$0.005",
+        "lastSaleChange": "+0.002",
+        "change": "+66.6667%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "ERNAW",
+        "name": "Ernexa Therapeutics Inc. Warrants",
+        "lastSalePrice": "$0.0395",
+        "lastSaleChange": "+0.0143",
+        "change": "+56.746%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "NXGLW",
+        "name": "NexGel, Inc",
+        "lastSalePrice": "$0.0098",
+        "lastSaleChange": "+0.0033",
+        "change": "+50.7692%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "MDCXW",
+        "name": "Medicus Pharma Ltd.",
+        "lastSalePrice": "$0.1949",
+        "lastSaleChange": "+0.0647",
+        "change": "+49.6928%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "AACG",
+        "name": "ATA Creativity Global",
+        "lastSalePrice": "$0.9543",
+        "lastSaleChange": "+0.3125",
+        "change": "+48.6912%",
+        "deltaIndicator": "up"
+       }
+      ]
+     }
+    },
+    "MostDeclined": {
+     "dataAsOf": "Data as of Oct 16, 2026 4:15 PM ET",
+     "lastTradeTimestamp": "Oct 16, 2026 4:15 PM ET",
+     "table": {
+      "asOf": null,
+      "headers": {
+       "symbol": "Symbol",
+       "name": "Name",
+       "lastSalePrice": "Last",
+       "lastSaleChange": "Change",
+       "change": "% Change"
+      },
+      "rows": [
+       {
+        "symbol": "MDXH",
+        "name": "MDxHealth SA",
+        "lastSalePrice": "$0.2066",
+        "lastSaleChange": "-0.397",
+        "change": "-65.772%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "BEATW",
+        "name": "Heartbeam, Inc.",
+        "lastSalePrice": "$0.0031",
+        "lastSaleChange": "-0.0059",
+        "change": "-65.5556%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "GUTS",
+        "name": "Fractyl Health, Inc.",
+        "lastSalePrice": "$1.55",
+        "lastSaleChange": "-2.61",
+        "change": "-62.7404%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "RBNE",
+        "name": "Robin Energy Ltd. Common Stock",
+        "lastSalePrice": "$0.77",
+        "lastSaleChange": "-1.15",
+        "change": "-59.8958%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "RPGL",
+        "name": "Republic Power Group Limited Class A Ordinary Shares",
+        "lastSalePrice": "$6.89",
+        "lastSaleChange": "-6.44",
+        "change": "-48.3121%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "SMX",
+        "name": "SMX (Security Matters) Public Limited Company",
+        "lastSalePrice": "$1.89",
+        "lastSaleChange": "-1.71",
+        "change": "-47.5%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "XXII",
+        "name": "22nd Century Group, Inc",
+        "lastSalePrice": "$0.335",
+        "lastSaleChange": "-0.2922",
+        "change": "-46.588%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "MRNOW",
+        "name": "Murano Global Investments PLC",
+        "lastSalePrice": "$0.0051",
+        "lastSaleChange": "-0.0044",
+        "change": "-46.3158%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "BACCR",
+        "name": "Blue Acquisition Corp. Right ",
+        "lastSalePrice": "$0.26",
+        "lastSaleChange": "-0.22",
+        "change": "-45.8333%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "TWG",
+        "name": "Top Wealth Group Holding Limited",
+        "lastSalePrice": "$0.0606",
+        "lastSaleChange": "-0.0438",
+        "change": "-41.954%",
+        "deltaIndicator": "down"
+       }
+      ]
+     }
+    },
+    "MostActiveByDollarVolume": {
+     "dataAsOf": "Data as of Oct 16, 2026 4:15 PM ET",
+     "lastTradeTimestamp": "Oct 16, 2026 4:15 PM ET",
+     "table": {
+      "asOf": null,
+      "headers": {
+       "symbol": "Symbol",
+       "name": "Name",
+       "lastSalePrice": "Last",
+       "lastSaleChange": "Change",
+       "change": "% Change"
+      },
+      "rows": [
+       {
+        "symbol": "SPY",
+        "name": "SPDR S&P 500",
+        "lastSalePrice": "$763.23",
+        "lastSaleChange": "-8.56",
+        "change": "-1.1091%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "QQQ",
+        "name": "Invesco QQQ Trust, Series 1",
+        "lastSalePrice": "$709.8",
+        "lastSaleChange": "-18.2",
+        "change": "-2.5%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "MU",
+        "name": "Micron Technology, Inc.",
+        "lastSalePrice": "$878.84",
+        "lastSaleChange": "-52.4",
+        "change": "-5.6269%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "NVDA",
+        "name": "NVIDIA Corporation",
+        "lastSalePrice": "$214.13",
+        "lastSaleChange": "-3.1",
+        "change": "-1.4271%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "TSLA",
+        "name": "Tesla, Inc. ",
+        "lastSalePrice": "$354.72",
+        "lastSaleChange": "-7.72",
+        "change": "-2.13%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "lastSalePrice": "$343.46",
+        "lastSaleChange": "+1.46",
+        "change": "+0.4269%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "META",
+        "name": "Meta Platforms, Inc.",
+        "lastSalePrice": "$709.325",
+        "lastSaleChange": "-27.395",
+        "change": "-3.7185%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "MSFT",
+        "name": "Microsoft Corporation",
+        "lastSalePrice": "$529.05",
+        "lastSaleChange": "-10.39",
+        "change": "-1.9261%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "AMD",
+        "name": "Advanced Micro Devices, Inc.",
+        "lastSalePrice": "$528.75",
+        "lastSaleChange": "-33.48",
+        "change": "-5.9549%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "SPCX",
+        "name": "Space Exploration Technologies Corp. Class A Common Stock",
+        "lastSalePrice": "$146.03",
+        "lastSaleChange": "-2.59",
+        "change": "-1.7427%",
+        "deltaIndicator": "down"
+       }
+      ]
+     }
+    },
+    "Nasdaq100Movers": {
+     "dataAsOf": "Data as of Oct 15, 2026 4:00 PM ET",
+     "lastTradeTimestamp": "Oct 15, 2026 4:00 PM ET",
+     "table": {
+      "asOf": null,
+      "headers": {
+       "symbol": "Symbol",
+       "name": "Name",
+       "lastSalePrice": "Last",
+       "lastSaleChange": "Change",
+       "change": "% Change"
+      },
+      "rows": [
+       {
+        "symbol": "ADBE",
+        "name": "Adobe Inc. Common Stock",
+        "lastSalePrice": "245.2000",
+        "lastSaleChange": "-6.4700",
+        "change": "-2.57%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "AMD",
+        "name": "Advanced Micro Devices, Inc. Common Stock",
+        "lastSalePrice": "528.7500",
+        "lastSaleChange": "-33.4800",
+        "change": "-5.95%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "ABNB",
+        "name": "Airbnb, Inc. Class A Common Stock",
+        "lastSalePrice": "173.7000",
+        "lastSaleChange": "-0.5800",
+        "change": "-0.33%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "ALNY",
+        "name": "Alnylam Pharmaceuticals, Inc. Common Stock",
+        "lastSalePrice": "231.8300",
+        "lastSaleChange": "-2.2000",
+        "change": "-0.94%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "GOOGL",
+        "name": "Alphabet Inc. Class A Common Stock",
+        "lastSalePrice": "340.5900",
+        "lastSaleChange": "-8.6300",
+        "change": "-2.47%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "GOOG",
+        "name": "Alphabet Inc. Class C Capital Stock",
+        "lastSalePrice": "336.9100",
+        "lastSaleChange": "-8.0000",
+        "change": "-2.32%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "AMZN",
+        "name": "Amazon.com, Inc. Common Stock",
+        "lastSalePrice": "250.0000",
+        "lastSaleChange": "-4.7600",
+        "change": "-1.87%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "AEP",
+        "name": "American Electric Power Company, Inc. Common Stock",
+        "lastSalePrice": "127.1400",
+        "lastSaleChange": "+2.8500",
+        "change": "+2.29%",
+        "deltaIndicator": "up"
+       },
+       {
+        "symbol": "AMGN",
+        "name": "Amgen Inc. Common Stock",
+        "lastSalePrice": "432.4900",
+        "lastSaleChange": "-1.5400",
+        "change": "-0.35%",
+        "deltaIndicator": "down"
+       },
+       {
+        "symbol": "XEL",
+        "name": "Xcel Energy Inc. Common Stock",
+        "lastSalePrice": "76.3100",
+        "lastSaleChange": "+1.1900",
+        "change": "+1.58%",
+        "deltaIndicator": "up"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "message": null,
+  "status": {
+   "rCode": 200,
+   "bCodeMessage": null,
+   "developerMessage": null
+  }
+ }
+}

@@ -22,18 +22,28 @@ def user(request: Request) -> UserData:
     return request.app.state.userdata
 
 
-async def json_body(request: Request, key: str):
+async def json_object(request: Request) -> dict:
     try:
         body = orjson.loads(await request.body())
     except orjson.JSONDecodeError:
         raise UserDataError("bad_request", "BODY IS NOT JSON") from None
-    if not isinstance(body, dict) or key not in body:
+    if not isinstance(body, dict):
+        raise UserDataError("bad_request", "BODY MUST BE A JSON OBJECT")
+    return body
+
+
+async def json_body(request: Request, key: str):
+    body = await json_object(request)
+    if key not in body:
         raise UserDataError("bad_request", f"BODY NEEDS {key}")
     return body[key]
 
 
 def error(e: DataError | UserDataError) -> Response:
-    return Orjson({"error": str(e), "kind": e.kind}, status_code=STATUS.get(e.kind, 500))
+    body = {"error": str(e), "kind": e.kind}
+    if getattr(e, "detail", None):
+        body["detail"] = e.detail
+    return Orjson(body, status_code=STATUS.get(e.kind, 500))
 
 
 @router.get("/quote")
@@ -64,6 +74,32 @@ async def profile(request: Request, symbol: str):
 async def search(request: Request, q: str = Query(..., max_length=64)):
     try:
         return await svc(request).search(q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/news")
+async def news(
+    request: Request, symbol: str | None = Query(None, max_length=24), q: str | None = Query(None, max_length=100)
+):
+    try:
+        return await svc(request).news(symbol, q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/movers")
+async def movers(request: Request):
+    try:
+        return await svc(request).movers()
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/crypto")
+async def crypto(request: Request, vs: str = Query("USD", max_length=5)):
+    try:
+        return await svc(request).crypto(vs)
     except DataError as e:
         return error(e)
 
@@ -133,5 +169,43 @@ async def push_history(request: Request):
         if not isinstance(cmds, list) or not all(isinstance(c, str) for c in cmds):
             raise UserDataError("bad_request", "cmds MUST BE A LIST OF STRINGS")
         return {"added": await user(request).push_history(cmds[:1000])}
+    except UserDataError as e:
+        return error(e)
+
+
+@router.get("/watchlists")
+async def watchlists(request: Request):
+    return {"watchlists": await user(request).watchlists()}
+
+
+@router.get("/watchlists/{name}")
+async def watchlist(request: Request, name: str):
+    try:
+        return await user(request).watchlist(name)
+    except UserDataError as e:
+        return error(e)
+
+
+@router.put("/watchlists/{name}")
+async def save_watchlist(request: Request, name: str):
+    try:
+        return await user(request).save_watchlist(name, await json_body(request, "symbols"))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.patch("/watchlists/{name}")
+async def edit_watchlist(request: Request, name: str):
+    try:
+        body = await json_object(request)
+        return await user(request).edit_watchlist(name, body.get("add"), body.get("remove"))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.delete("/watchlists/{name}")
+async def delete_watchlist(request: Request, name: str):
+    try:
+        return {"deleted": await user(request).delete_watchlist(name)}
     except UserDataError as e:
         return error(e)

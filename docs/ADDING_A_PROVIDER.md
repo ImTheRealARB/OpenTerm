@@ -38,8 +38,13 @@ fallback, health tracking and the SOURCES screen all work from the adapter's dec
    (see `tests/test_adapters.py`). Tests never hit the network.
 
 Rules:
-- Use `self.get_json`: it applies the rate limiter (never waits more than 250 ms, so the router
-  falls back instead of stalling the UI) and maps 404/429/5xx/timeouts to `ProviderError` kinds.
+- Use `self.get_json` (or `self.get_bytes` for XML/text such as RSS): it applies the rate limiter
+  (waits at most `max_wait`, 250 ms by default, so the router falls back instead of stalling the UI)
+  and maps 404/429/5xx/timeouts to `ProviderError` kinds. Slow or one-slot-per-few-seconds sources
+  raise the class attributes `timeout` (default 6 s) and `max_wait` (GDELT: 20 s and 6 s).
+- Non-quote capabilities (`news_top`, `news_symbol`, `news_keyword`, `movers`, `crypto`) have their own
+  fallback order under `providers:` in `config.yaml`. Text fixtures are recorded as
+  `{"status", "content_type", "text"}`; unrecorded paths on a new host must answer 404 in `fixtures.py`.
 - Raise `not_found` for unknown symbols. It does not count against provider health. Everything else does.
 - Never fill gaps with estimates. Missing fields stay `None`; the UI shows them as blank.
 - Do not work around bot checks, captchas or terms of service.

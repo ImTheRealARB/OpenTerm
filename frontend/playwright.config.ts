@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "e2e",
+  fullyParallel: true,
   timeout: 20_000,
   use: { baseURL: "http://127.0.0.1:4173", viewport: { width: 1600, height: 900 } },
   webServer: {

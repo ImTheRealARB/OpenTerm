@@ -17,13 +17,32 @@ ROUTES = {
     ("/api/quote/AAPL/info", "stocks"): "nasdaq_info_aapl",
 }
 SUMMARIES = {"AAPL": "yahoo_summary_aapl", "RELIANCE.NS": "yahoo_summary_reliance_ns"}
+# Path-only routes (one recording each). Unrecorded queries on these hosts are 404s.
+PATHS = {
+    "/rs/search/combinedcms/view.xml": "rss_cnbc",
+    "/public/rss/mw_topstories": "rss_marketwatch",
+    "/news/business/rss.xml": "rss_bbc",
+    "/markets/rssfeeds/1977021501.cms": "rss_et",
+    "/rss/markets": "rss_mint",
+    "/api/marketmovers": "nasdaq_movers",
+    "/api/v3/ticker/24hr": "binance_24hr",
+}
+YAHOO_RSS = {"AAPL": "yahoo_rss_aapl"}
+GDELT = {"nvidia": "gdelt_nvidia"}
+COINGECKO = {"usd": "coingecko_markets_usd"}
 # Simulated upstream latency (bench "cold network" budget). 0 = instant.
 LATENCY_S = float(os.environ.get("OPENTERM_FIXTURE_LATENCY_MS", "0")) / 1000
 
 
 def _load(name: str) -> httpx.Response:
     rec = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    if "text" in rec:  # XML feeds and plain-text answers are recorded as text
+        return httpx.Response(rec["status"], text=rec["text"], headers={"content-type": rec["content_type"]})
     return httpx.Response(rec["status"], json=rec["body"])
+
+
+def _keyed(table: dict[str, str], key: str) -> httpx.Response:
+    return _load(table[key]) if key in table else httpx.Response(404, text="not recorded")
 
 
 async def _handler(request: httpx.Request) -> httpx.Response:
@@ -44,6 +63,14 @@ def _route(request: httpx.Request) -> httpx.Response:
         if sym in SUMMARIES:
             return _load(SUMMARIES[sym])
         return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
+    if p in PATHS:
+        return _load(PATHS[p])
+    if p == "/rss/2.0/headline":
+        return _keyed(YAHOO_RSS, q.get("s", ""))
+    if p == "/api/v2/doc/doc":
+        return _keyed(GDELT, (q.get("query") or "").split(" ")[0].strip('"').lower())
+    if p == "/api/v3/coins/markets":
+        return _keyed(COINGECKO, q.get("vs_currency", ""))
     if p == "/api/company/AAPL/company-profile":
         return _load("nasdaq_profile_aapl")
     if p == "/v7/finance/spark":

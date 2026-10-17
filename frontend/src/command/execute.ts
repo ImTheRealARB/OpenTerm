@@ -5,6 +5,7 @@ import { history } from "./history";
 import { layoutCommand } from "./layouts";
 import { parseCommand } from "./parser";
 import { fail, statusMsg } from "./status";
+import { deleteWatchlist, editWatchlist, parseWl } from "./watchlists";
 
 export { statusMsg, type StatusMsg } from "./status";
 
@@ -20,6 +21,21 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
     if (done !== null) return done;
   }
 
+  let args = parsed.args;
+  if (parsed.fn === "WL") {
+    const act = parseWl(args, parsed.security);
+    if (act.kind === "error") return fail(act.message);
+    if (act.kind === "delete") {
+      statusMsg.set(() => null);
+      void deleteWatchlist(act.name);
+      return true;
+    }
+    if (act.kind === "edit") {
+      void editWatchlist(act.name, act.add, act.remove);
+      args = [act.name]; // then show the list
+    }
+  }
+
   const s = workspace.get();
   let panelId = parsed.target ?? s.focus;
   if (parsed.target && !s.panels[parsed.target]) return fail(`NO PANEL ${parsed.target}`);
@@ -29,7 +45,8 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
     panelId = id;
   }
 
-  const sticky = currentView(workspace.get().panels[panelId]).security;
+  const cur = currentView(workspace.get().panels[panelId]);
+  const sticky = cur.security;
   const fn = parsed.fn ?? "DES";
   const def = FUNCTIONS.get(fn)!;
   // Security context is sticky per panel, even across functions that don't use it.
@@ -38,7 +55,9 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   if (parsed.security) history.addRecentSecurity(parsed.security.symbol);
 
   statusMsg.set(() => null);
+  // Editing the list a panel already shows: it refetches by itself, no new history entry.
+  if (fn === "WL" && cur.fn === "WL" && args.length && cur.args[0]?.toUpperCase() === args[0]) return true;
   commandStart(panelId, parsed.raw);
-  navigate(panelId, { fn, security, args: parsed.args });
+  navigate(panelId, { fn, security, args });
   return true;
 }

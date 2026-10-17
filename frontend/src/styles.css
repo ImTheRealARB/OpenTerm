@@ -91,6 +91,10 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .fn { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .fn > .grid { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
 .grid canvas { display: block; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tabs { display: flex; gap: 12px; flex: none; }
+.tabs .on { color: var(--accent); }
+.summary { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--line); }
 .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
 .big { font-size: 20px; line-height: 24px; }
 .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); column-gap: 16px; }

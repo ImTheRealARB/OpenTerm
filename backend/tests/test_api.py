@@ -23,7 +23,9 @@ def test_search_and_sources(client):
     hits = client.get("/api/search", params={"q": "relian"}).json()
     assert hits["data"][0]["symbol"] == "RELIANCE.NS"
     s = client.get("/api/sources").json()
-    assert {p["name"] for p in s["providers"]} == {"yahoo", "nasdaq", "synthetic"}
+    assert {p["name"] for p in s["providers"]} == {
+        "yahoo", "nasdaq", "synthetic", "rss", "yahoo_rss", "gdelt", "coingecko", "binance",
+    }
     assert s["fixtures"] is True
     keyed = {k["name"]: k["status"] for k in s["keyed"]}
     assert keyed["fred"] in ("KEY REQUIRED", "NOT BUILT") and keyed["stooq"] == "RETIRED"

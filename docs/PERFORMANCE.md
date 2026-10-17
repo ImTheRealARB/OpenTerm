@@ -106,6 +106,33 @@ Notes:
 - Command history writes are batched (500 ms) and sent off the command path, so running a command
   never waits on the network. Cached command to paint did not move (16.9 → 15.5 ms, noise).
 
+### Phase 5 (2026-10-17, same machine; fixtures + SYNTHETIC stream)
+
+17/17 PASS. Phase 4 numbers in brackets; no budget regressed.
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 84.8 KB [83.4] | 400 KB | PASS |
+| Backend p95 cached health / quote / history (server-side) | 0.7 / 0.9 / 2.2 ms [0.4 / 0.5 / 1.7] | 20 ms | PASS |
+| Cold start to usable command line | 92.5 ms [76.6] | 1500 ms | PASS |
+| Keystroke to echo p95 (idle / streaming load) | 14.4 / 10.5 ms [14.2 / 10.4] | 16.7 ms | PASS |
+| Command submit to first paint p95 (cached / cold network) | 17.5 / 12.6 ms [16.7 / 17.9] | 100 / 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 37.5 ms [35.6] | 50 ms | PASS |
+| Frame time p95 (8-panel / streaming / 10k grid / 50k chart) | 16.7 / 16.8 / 16.8 / 16.7 ms | 20 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 6.0 MB [5.3] | 500 MB | PASS |
+| Ticks delivered per second (offered 4,000) | 3,992 [3,960] | - | INFO |
+| Layout load to paint p95 | 35.8 ms [34.7] | 100 ms | PASS |
+
+Notes:
+- Entry bundle +1.4 KB gz (83.4 → 84.8): the `WL` command grammar and watchlist autocomplete live in
+  the entry chunk because the command line needs them at once. The eight new panels (N, WL, WEI, MOV,
+  FX, FXC, CRYP, CMDTY) and the shared `quoteRows` / `boards` code are lazy function modules.
+- The other moves are within run-to-run noise on this machine (sub-millisecond backend p95, cold start
+  ±15 ms between runs). The Q refactor onto `quoteRows.ts` did not move tick-to-pixel or frame time.
+- Test wall time: pytest now runs on 4 xdist workers (13.1 → 9.3 s; `-n auto` = 20 workers was slower,
+  15.3 s, because worker start-up dominates). Playwright runs tests within a file in parallel too.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds
