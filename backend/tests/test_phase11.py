@@ -14,7 +14,6 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-KEYS = pytest.mark.xfail(strict=True, reason="Phase 11 step 3 (keys) not built")
 JOBS = pytest.mark.xfail(strict=True, reason="Phase 11 step 4 (jobs) not built")
 LLM = pytest.mark.xfail(strict=True, reason="Phase 11 step 5 (LLM gateway) not built")
 
@@ -46,7 +45,6 @@ def make_client(monkeypatch, tmp_path, **env) -> TestClient:
 
 # --- 1. Key store -----------------------------------------------------------------------------------------------
 
-@KEYS
 def test_key_specs_cover_the_roadmap_table():
     keys = mod("openterm.keys")
     assert set(keys.KEY_SPECS) == SPEC_NAMES
@@ -57,7 +55,6 @@ def test_key_specs_cover_the_roadmap_table():
         assert spec.signup.startswith("https://")
 
 
-@KEYS
 def test_lookup_order_env_then_keyring_then_dotenv(tmp_path):
     keys = mod("openterm.keys")
     dotenv = tmp_path / "keys.env"
@@ -76,7 +73,6 @@ def test_lookup_order_env_then_keyring_then_dotenv(tmp_path):
     assert env_store.status("finnhub")["source"] == "env"
 
 
-@KEYS
 def test_status_never_contains_the_value(tmp_path):
     keys = mod("openterm.keys")
     store = keys.KeyStore(env={}, dotenv=tmp_path / "k.env", keyring=keys.MemoryKeyring())
@@ -88,7 +84,6 @@ def test_status_never_contains_the_value(tmp_path):
     assert SECRET in store.secrets()
 
 
-@KEYS
 def test_env_keys_are_locked(tmp_path):
     keys = mod("openterm.keys")
     store = keys.KeyStore(env={"FRED_API_KEY": "env-value-123456"}, dotenv=tmp_path / "k.env",
@@ -105,7 +100,6 @@ def test_env_keys_are_locked(tmp_path):
     assert e.value.kind == "bad_request"
 
 
-@KEYS
 def test_no_keyring_backend_writes_dotenv_keeping_other_lines(tmp_path):
     keys = mod("openterm.keys")
     dotenv = tmp_path / "k.env"
@@ -119,7 +113,6 @@ def test_no_keyring_backend_writes_dotenv_keeping_other_lines(tmp_path):
     assert store.status("eia")["source"] == "dotenv"
 
 
-@KEYS
 @pytest.mark.parametrize("status, body, state", [
     (200, '{"data": {}}', "OK"),
     (401, '{"error": "Invalid API key"}', "INVALID"),
@@ -143,7 +136,6 @@ def test_keyring_is_not_imported_at_startup(monkeypatch, tmp_path):
 
 # --- Redaction --------------------------------------------------------------------------------------------------
 
-@KEYS
 def test_redact_known_secrets_and_common_shapes():
     redact = mod("openterm.redact").redact
     assert redact(f"GET https://x/q?symbol=A&token={SECRET} 401", {SECRET}) == "GET https://x/q?symbol=A&token=*** 401"
@@ -157,7 +149,6 @@ def test_redact_known_secrets_and_common_shapes():
 
 # --- /api/keys --------------------------------------------------------------------------------------------------
 
-@KEYS
 def test_api_keys_roundtrip_without_values(client):
     r = client.get("/api/keys")
     assert r.status_code == 200
@@ -180,20 +171,17 @@ def test_api_keys_roundtrip_without_values(client):
     assert rows["finnhub"]["state"] == "MISSING"
 
 
-@KEYS
 def test_api_keys_openrouter_ok_from_doc_shaped_fixture(client):
     r = client.put("/api/keys/openrouter", json={"fields": {"OPENROUTER_API_KEY": SECRET}})
     assert r.status_code == 200 and r.json()["state"] == "OK", r.text
 
 
-@KEYS
 def test_api_keys_errors(client):
     assert client.put("/api/keys/nope", json={"fields": {"X": "y" * 12}}).status_code == 404
     assert client.put("/api/keys/finnhub", json={"fields": {"WRONG": "y" * 12}}).status_code == 400
     assert client.put("/api/keys/finnhub", json={"nope": 1}).status_code == 400
 
 
-@KEYS
 def test_env_key_cannot_be_changed_from_the_api(monkeypatch, tmp_path):
     with make_client(monkeypatch, tmp_path, FRED_API_KEY="env-fred-0123456789") as c:
         rows = {row["name"]: row for row in c.get("/api/keys").json()["keys"]}
@@ -203,7 +191,6 @@ def test_env_key_cannot_be_changed_from_the_api(monkeypatch, tmp_path):
         assert "env-fred-0123456789" not in c.get("/api/keys").text
 
 
-@KEYS
 def test_key_writes_only_from_loopback(monkeypatch, tmp_path):
     with make_client(monkeypatch, tmp_path) as c:
         remote = TestClient(c.app, client=("10.1.2.3", 40000))
@@ -212,7 +199,6 @@ def test_key_writes_only_from_loopback(monkeypatch, tmp_path):
         assert remote.delete("/api/keys/fmp").status_code == 403
 
 
-@KEYS
 def test_secret_never_leaks_into_logs_perf_sources_or_errors(client):
     assert client.put("/api/keys/finnhub", json={"fields": {"FINNHUB_API_KEY": SECRET}}).status_code == 200
     logging.getLogger("openterm.test").warning("calling https://finnhub.io/api/v1/quote?token=%s", SECRET)
@@ -259,7 +245,6 @@ def _router(*providers):
     return router.Router(ps, {"estimates": [p.name for p in providers]}), router
 
 
-@KEYS
 def test_router_reports_key_required_when_only_keyed_providers_exist():
     r, router = _router(_Keyed)
     with pytest.raises(router.AllFailed) as e:
@@ -267,7 +252,6 @@ def test_router_reports_key_required_when_only_keyed_providers_exist():
     assert e.value.kind == "key_required" and str(e.value) == "KEY REQUIRED" and e.value.key == "FINNHUB"
 
 
-@KEYS
 def test_router_falls_through_to_keyless_provider():
     r, _ = _router(_Keyed, _Keyless)
     for _ in range(5):
@@ -276,7 +260,6 @@ def test_router_falls_through_to_keyless_provider():
     assert not r.health["keyedonly"].down  # a missing key is not an outage: no circuit-breaker strike
 
 
-@KEYS
 def test_key_required_envelope_is_424():
     import orjson
 
@@ -289,7 +272,6 @@ def test_key_required_envelope_is_424():
                                       "detail": "KEY REQUIRED: set FINNHUB in APIKEYS"}
 
 
-@KEYS
 def test_sources_keyed_rows_come_from_the_key_store(client):
     keyed = {k["name"]: k for k in client.get("/api/sources").json()["keyed"]}
     assert keyed["openrouter"]["status"] == "KEY REQUIRED" and "APIKEYS" in keyed["openrouter"]["note"]

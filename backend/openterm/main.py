@@ -9,7 +9,7 @@ import httpx
 import orjson
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from . import APP_NAME, __version__, logbuf, perf, providers, scheduler
+from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, scheduler
 from .api import router as api_router
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
@@ -84,12 +84,35 @@ async def lifespan(app: FastAPI):
     app.state.service = service
     app.state.hub = hub
     app.state.userdata = UserData(db)
+
+    # --- Phase 11: key store. Key tests use the fixture transport in fixture mode. ---
+    redact.install()
+    app.state.keys = store = keys.from_settings(settings)
+    keys_http = httpx.AsyncClient(transport=providers.fixture_transport()) if settings.openterm_fixtures else http
+    app.state.keys_http = keys_http
+
+    def on_key_change(name: str) -> None:
+        # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
+        if name == "fred" and "fred" in router.providers:
+            router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
+
+    app.state.on_key_change = on_key_change
+
+    async def apply_stored_keys() -> None:
+        # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
+        await asyncio.sleep(2.0)
+        await asyncio.to_thread(on_key_change, "fred")
+
+    key_loader = asyncio.create_task(apply_stored_keys())
     sched = scheduler.start(router)
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
     finally:
         sched.shutdown(wait=False)
+        key_loader.cancel()
+        if keys_http is not http:
+            await keys_http.aclose()
         for part in (hub, synthetic, poller, yahoo):
             if part:
                 await part.stop()

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { fmtAge } from "../format";
 import type { ApiError, Envelope } from "../net/api";
+import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 
 export const US_ONLY = "SEC DATA COVERS US FILERS ONLY";
 
@@ -66,6 +67,7 @@ export function Header({ title, env, loading, extra, keys }: { title: ReactNode;
 /** Error line. "US filers only" is a coverage state, not a failure, so it is shown in the warning colour. */
 export function ErrorLine({ error, hasData }: { error: ApiError | null; hasData: boolean }) {
   if (!error) return null;
+  if (isKeyRequired(error)) return <KeyRequiredLine error={error} />;
   if (error.message === US_ONLY)
     return (
       <div className="warn">

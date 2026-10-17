@@ -188,3 +188,21 @@ PATHS.update({
     # Real answer for an unknown symbol (ZZZZNOPE): 200 with an empty result list.
     "/v6/finance/recommendationsbysymbol/ZZZZNOPE": "yahoo_recs_empty",
 })
+
+
+# --- Phase 11: key tests (APIKEYS) ---
+# keytest_*_401: real answers to a made-up key, recorded 2026-10-18 with no account. keytest_openrouter_ok is built
+# from OpenRouter's docs for GET /api/v1/key (no key was available), marked "doc_shaped" in the file.
+KEY_TESTS = {
+    ("finnhub.io", "/api/v1/quote"): "keytest_finnhub_401",
+    ("api.openai.com", "/v1/models"): "keytest_openai_401",
+    ("api.anthropic.com", "/v1/models"): "keytest_anthropic_401",
+    ("openrouter.ai", "/api/v1/key"): "keytest_openrouter_ok",
+}
+_route_before_phase11 = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    if (name := KEY_TESTS.get((request.url.host, request.url.path))) is not None:
+        return _load(name)
+    return _route_before_phase11(request)

@@ -112,6 +112,11 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `test.fail()`. The build step deletes the markers (and switches vitest to static imports). Strict xfail turns an accidental pass red.
 - **`conftest.py` `client` sets `OPENTERM_KEYRING=memory`, `OPENTERM_DOTENV_PATH` (tmp) and `OPENTERM_JOB_WORKERS=2`** and connects
   as `127.0.0.1` (key writes are loopback-only). Tests must never touch the real OS keyring or the repo `.env`.
+- **Key store (`keys.py`):** env > keyring > `.env`; `keyring` is never imported at startup (a pinned test checks it); keyring-stored
+  keys are applied 2 s after startup in a thread. A keyed adapter must read its key from `app.state.keys` (or be refreshed by
+  `on_key_change`), not only from `Settings`, or a key set in APIKEYS does nothing until restart. `KeyStore.set` shadows the builtin
+  `set` in the class body: keep `from __future__ import annotations` at the top of `keys.py`.
+- **Any app error text goes through `redact()`** (`api.error`, SOURCES `last_error`, key-test detail). New error paths must too.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
 ## Conventions

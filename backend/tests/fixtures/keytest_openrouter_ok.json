@@ -1,0 +1,14 @@
+{
+ "doc_shaped": "Built from OpenRouter's docs for GET /api/v1/key (no key available on 2026-10-18), not recorded.",
+ "status": 200,
+ "body": {
+  "data": {
+   "label": "sk-or-v1-abc...123",
+   "limit": null,
+   "usage": 0,
+   "limit_remaining": null,
+   "is_free_tier": true,
+   "rate_limit": {"requests": 20, "interval": "10s"}
+  }
+ }
+}

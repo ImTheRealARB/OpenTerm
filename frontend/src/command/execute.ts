@@ -29,7 +29,11 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   // Phase 10: THEME name / SETTINGS key value apply at once and stay on the current panel;
   // bare THEME or SETTINGS opens the SETTINGS panel.
   let fnOverride: string | undefined;
-  if (parsed.fn === "THEME" || parsed.fn === "SETTINGS") {
+  // Phase 11: SETTINGS APIKEYS [PROVIDER] is the APIKEYS panel.
+  if (parsed.fn === "SETTINGS" && args[0]?.toUpperCase() === "APIKEYS") {
+    fnOverride = "APIKEYS";
+    args = args.slice(1);
+  } else if (parsed.fn === "THEME" || parsed.fn === "SETTINGS") {
     const cmd = (parsed.fn === "THEME" ? themeArgs : settingsArgs)(args, getSettings());
     if (cmd && !cmd.ok) return fail(cmd.error);
     if (cmd) {

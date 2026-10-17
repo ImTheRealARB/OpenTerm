@@ -99,3 +99,24 @@ def keyed_status(settings: Settings) -> list[dict]:
 from .screener import NasdaqScreenerProvider, YahooPeersProvider
 
 ADAPTERS.update({"nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider})
+
+# --- Phase 11: keyed rows come from the key store (APIKEYS) ---
+from ..keys import KEY_SPECS
+
+for _name in KEY_SPECS:
+    KEYED.pop(_name, None)
+_keyed_status_before_phase11 = _keyed_status_before_phase7
+
+
+def keyed_status(settings: Settings, keys=None) -> list[dict]:
+    """One row per KEY_SPECS provider (state from the key store, never the value), then planned and retired ones."""
+    rows = []
+    for st in keys.statuses() if keys is not None else []:
+        spec = KEY_SPECS[st["name"]]
+        if st["present"]:
+            note = f"{spec.purpose}. Key from {st['source']}." + (f" {st['detail']}" if st["detail"] else "")
+            rows.append({"name": spec.name, "status": st["state"], "note": note})
+        else:
+            rows.append({"name": spec.name, "status": "KEY REQUIRED",
+                         "note": f"{spec.purpose}. Phase {spec.phase}. Set {spec.label} in APIKEYS."})
+    return rows + _keyed_status_before_phase11(settings)

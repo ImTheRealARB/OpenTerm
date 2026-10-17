@@ -74,7 +74,6 @@ const job = (state: string, progress: number, msg = "") =>
   ws!.send(JSON.stringify(["J", { id: "j1", kind: "sleep", state, progress, msg, cached: false }]));
 
 test("APIKEYS: lists providers, saves a key through the masked field, never shows or records it", async ({ page }) => {
-  test.fail();
   const { puts, history } = await setup(page);
   await run(page, "APIKEYS");
   const p = panel(page);
@@ -98,7 +97,6 @@ test("APIKEYS: lists providers, saves a key through the masked field, never show
 });
 
 test("APIKEYS: Esc cancels an edit, D twice deletes", async ({ page }) => {
-  test.fail();
   const { keys, puts } = await setup(page);
   keys.get("openrouter")!.present = true;
   Object.assign(keys.get("openrouter")!, { source: "keyring", state: "OK" });
@@ -114,7 +112,6 @@ test("APIKEYS: Esc cancels an edit, D twice deletes", async ({ page }) => {
 });
 
 test("KEY REQUIRED: a 424 shows the amber line, Enter opens APIKEYS on that provider", async ({ page }) => {
-  test.fail();
   await setup(page);
   await run(page, "AAPL FA");
   const line = panel(page).locator(".keyreq");

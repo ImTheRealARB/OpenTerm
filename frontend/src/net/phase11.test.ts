@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { maskKey } from "../functions/apikeysMask";
+import { keyRequired } from "./keyRequired";
 
 /*
  * Phase 11 pure modules (spec: docs/specs/PHASE_11.md), written before the code.
@@ -38,8 +40,7 @@ describe("jobFrames (step 4)", () => {
 });
 
 describe("KEY REQUIRED envelope (step 3)", () => {
-  it.fails("reads the 424 envelope", async () => {
-    const { keyRequired } = await load("./keyRequired");
+  it("reads the 424 envelope", () => {
     const body = { error: "KEY REQUIRED", kind: "key_required", key: "FINNHUB", detail: "KEY REQUIRED: set FINNHUB in APIKEYS" };
     expect(keyRequired(424, body)).toEqual({ key: "FINNHUB", detail: "KEY REQUIRED: set FINNHUB in APIKEYS" });
     expect(keyRequired(503, { error: "PROVIDER DOWN", kind: "unavailable" })).toBeNull();
@@ -48,8 +49,7 @@ describe("KEY REQUIRED envelope (step 3)", () => {
 });
 
 describe("APIKEYS masking (step 3)", () => {
-  it.fails("shows only the last 4 characters while typing", async () => {
-    const { maskKey } = await load("../functions/apikeysMask");
+  it("shows only the last 4 characters while typing", () => {
     expect(maskKey("sk-or-v1-abcdef1234")).toBe("••••1234");
     expect(maskKey("abc")).toBe("•••");
     expect(maskKey("")).toBe("");

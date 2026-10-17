@@ -431,6 +431,8 @@ class FredApiProvider(Provider):
     timeout = 10.0
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm/0.1", "Accept": "application/json"}
 
+    key_name = "FRED"
+
     def __init__(self, http: httpx.AsyncClient, source: str | None = None, api_key: str | None = None):
         super().__init__(http, source)
         self._key = get_settings().fred_api_key if api_key is None else api_key

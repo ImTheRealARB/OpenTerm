@@ -3,6 +3,7 @@
  * prefetch reuse them. Every payload keeps the backend's source/as_of/stale envelope intact.
  */
 import { gauges } from "../perf/metrics";
+import { keyRequired, type KeyRequiredInfo } from "./keyRequired";
 
 export interface Envelope<T> {
   data: T;
@@ -68,9 +69,16 @@ export class ApiError extends Error {
     public kind = "unavailable",
     /** Each provider's reason, e.g. "gdelt: rate_limited (429 from upstream)". */
     public detail?: string,
+    /** Phase 11: the missing key's env name on a 424 KEY REQUIRED envelope (see keyRequired.ts). */
+    public key?: string,
   ) {
     super(message);
   }
+}
+
+/** The key and message of a KEY REQUIRED failure, or null for any other error. */
+export function keyRequiredOf(e: ApiError | null | undefined): KeyRequiredInfo | null {
+  return e ? keyRequired(e.status, { key: e.key, detail: e.detail }) : null;
 }
 
 const MAX_ENTRIES = 500;
@@ -93,7 +101,7 @@ async function request<T>(path: string, maxAgeMs: number): Promise<T> {
     }
     const body = await res.json().catch(() => null);
     gauges.set(`api.${path.split("?")[0]}`, performance.now() - t0);
-    if (!res.ok) throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`, body?.kind, body?.detail);
+    if (!res.ok) throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`, body?.kind, body?.detail, body?.key);
     cache.delete(path);
     cache.set(path, { value: body, at: performance.now() });
     if (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value!);
@@ -120,7 +128,7 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError(0, "BACKEND DOWN");
   }
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
+  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail, json?.key);
   return json as T;
 }
 
@@ -155,7 +163,34 @@ export const api = {
   deleteWatchlist: (name: string) => send<{ deleted: string }>("DELETE", `/api/watchlists/${encodeURIComponent(name)}`),
   cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
   pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
+  // Phase 11 API keys: uncached (`send`); the backend never returns a value, only status.
+  keys: () => send<KeysPayload>("GET", "/api/keys"),
+  putKey: (name: string, fields: Record<string, string>) => send<KeyRow>("PUT", `/api/keys/${encodeURIComponent(name)}`, { fields }),
+  testKey: (name: string) => send<KeyRow>("POST", `/api/keys/${encodeURIComponent(name)}/test`),
+  deleteKey: (name: string) => send<KeyRow>("DELETE", `/api/keys/${encodeURIComponent(name)}`),
 };
+
+export type KeyState = "MISSING" | "UNTESTED" | "OK" | "INVALID" | "QUOTA" | "ERROR";
+
+export interface KeyRow {
+  name: string;
+  present: boolean;
+  source: "env" | "keyring" | "dotenv" | null;
+  state: KeyState;
+  /** Epoch seconds of the last test. */
+  checked_at: number | null;
+  detail: string | null;
+  /** Env names to fill in, e.g. ["ALPACA_KEY_ID", "ALPACA_SECRET_KEY"]. */
+  fields: string[];
+  purpose: string;
+  phase: number;
+  signup: string;
+}
+
+export interface KeysPayload {
+  keys: KeyRow[];
+  spend: { today: number; cap: number };
+}
 
 export interface WatchlistInfo {
   name: string;

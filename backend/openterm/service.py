@@ -23,12 +23,14 @@ INTRADAY = {"1m", "2m", "5m", "15m", "30m", "60m", "90m"}
 
 
 class DataError(Exception):
-    """kind: bad_request | not_found | unavailable. `detail` names each provider's reason."""
+    """kind: bad_request | not_found | unavailable | key_required. `detail` names each provider's reason;
+    `key` names the missing key (key_required only)."""
 
-    def __init__(self, kind: str, message: str, detail: str | None = None):
+    def __init__(self, kind: str, message: str, detail: str | None = None, key: str | None = None):
         super().__init__(message)
         self.kind = kind
         self.detail = detail
+        self.key = key
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
@@ -103,7 +105,7 @@ class DataService:
             value = await self._once(key, fetch)
         except AllFailed as e:
             detail = "; ".join(f"{name}: {err.kind} ({err})" for name, err in e.errors) or None
-            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e), detail) from e
+            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e), detail, e.key) from e
         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
 
     # --- public API ---------------------------------------------------------------------------

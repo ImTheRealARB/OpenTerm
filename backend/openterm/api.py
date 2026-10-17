@@ -1,9 +1,13 @@
+import asyncio
+
 import orjson
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
 
+from . import keys as keystore
 from . import logbuf
 from .providers import keyed_status
+from .redact import redact
 from .responses import Orjson
 from .service import DataError, DataService
 from .symbols import resolve
@@ -11,7 +15,7 @@ from .userdata import UserData, UserDataError
 
 router = APIRouter(prefix="/api")
 
-STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503}
+STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503, "key_required": 424}
 
 
 def svc(request: Request) -> DataService:
@@ -40,9 +44,12 @@ async def json_body(request: Request, key: str):
 
 
 def error(e: DataError | UserDataError) -> Response:
-    body = {"error": str(e), "kind": e.kind}
-    if getattr(e, "detail", None):
-        body["detail"] = e.detail
+    body = {"error": redact(str(e)), "kind": e.kind}
+    if e.kind == "key_required" and getattr(e, "key", None):
+        body["key"] = e.key
+        body["detail"] = f"KEY REQUIRED: set {e.key} in APIKEYS"
+    elif getattr(e, "detail", None):
+        body["detail"] = redact(e.detail)
     return Orjson(body, status_code=STATUS.get(e.kind, 500))
 
 
@@ -113,8 +120,9 @@ async def resolve_symbol(symbol: str):
 async def sources(request: Request):
     s = svc(request)
     return {
-        "providers": s.router.summary(),
-        "keyed": keyed_status(request.app.state.settings),
+        "providers": [{**p, "last_error": redact(p["last_error"])} if p.get("last_error") else p
+                      for p in s.router.summary()],
+        "keyed": await asyncio.to_thread(keyed_status, request.app.state.settings, request.app.state.keys),
         "order": s.router.order,
         "cache": s.stats(),
         "fixtures": request.app.state.settings.openterm_fixtures,
@@ -422,3 +430,76 @@ async def put_settings_doc(request: Request):
         return await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
     except UserDataError as e:
         return error(e)
+
+
+# --- Phase 11: key store (APIKEYS). Values go in, never out. ---
+KEY_STATUS = {"unknown_provider": 404, "bad_request": 400, "env_locked": 409, "forbidden": 403}
+LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+
+
+def key_error(kind: str, message: str) -> Response:
+    return Orjson({"error": message, "kind": kind}, status_code=KEY_STATUS.get(kind, 500))
+
+
+def key_row(st: dict) -> dict:
+    spec = keystore.KEY_SPECS[st["name"]]
+    return {**st, "fields": list(spec.fields), "purpose": spec.purpose, "phase": spec.phase, "signup": spec.signup}
+
+
+def keys_of(request: Request) -> keystore.KeyStore:
+    return request.app.state.keys
+
+
+def loopback(request: Request) -> bool:
+    return bool(request.client) and request.client.host in LOOPBACK
+
+
+@router.get("/keys")
+async def keys_list(request: Request):
+    rows = await asyncio.to_thread(keys_of(request).statuses)
+    return {"keys": [key_row(r) for r in rows], "spend": {"today": 0.0, "cap": 1.0}}
+
+
+async def _test(request: Request, name: str) -> dict:
+    st = await keystore.run_test(keys_of(request), name, request.app.state.keys_http,
+                                 fixtures=request.app.state.settings.openterm_fixtures)
+    request.app.state.on_key_change(name)
+    return key_row(st)
+
+
+@router.put("/keys/{name}")
+async def keys_put(request: Request, name: str):
+    if not loopback(request):
+        return key_error("forbidden", "KEYS CAN ONLY BE CHANGED FROM THIS MACHINE")
+    if name not in keystore.KEY_SPECS:
+        return key_error("unknown_provider", f"UNKNOWN PROVIDER {name.upper()}")
+    try:
+        body = orjson.loads(await request.body())
+    except orjson.JSONDecodeError:
+        body = None
+    if not isinstance(body, dict) or not isinstance(body.get("fields"), dict):
+        return key_error("bad_request", "BODY MUST BE {fields: {ENV_NAME: value}}")
+    try:
+        await asyncio.to_thread(keys_of(request).set, name, body["fields"])
+    except keystore.KeyStoreError as e:
+        return key_error(e.kind, str(e))
+    return await _test(request, name)
+
+
+@router.post("/keys/{name}/test")
+async def keys_test(request: Request, name: str):
+    if name not in keystore.KEY_SPECS:
+        return key_error("unknown_provider", f"UNKNOWN PROVIDER {name.upper()}")
+    return await _test(request, name)
+
+
+@router.delete("/keys/{name}")
+async def keys_delete(request: Request, name: str):
+    if not loopback(request):
+        return key_error("forbidden", "KEYS CAN ONLY BE CHANGED FROM THIS MACHINE")
+    try:
+        await asyncio.to_thread(keys_of(request).delete, name)
+    except keystore.KeyStoreError as e:
+        return key_error(e.kind, str(e))
+    request.app.state.on_key_change(name)
+    return key_row(await asyncio.to_thread(keys_of(request).status, name))

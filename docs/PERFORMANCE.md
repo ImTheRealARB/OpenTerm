@@ -298,6 +298,12 @@ run 2: **17/17**. Run 2 is the baseline for Phase 11:
 Bench 16/17 on both runs, each missing a different known-noisy budget: run 1 long tasks 1 (budget 0; tick-to-pixel 39.6 ms),
 run 2 chart pan 33.4 ms (long tasks 0, tick-to-pixel 50.0 ms). Neither can come from this step.
 
+### Phase 11 step 3: key store, redaction, KEY REQUIRED, APIKEYS (2026-10-18)
+186 pytest + 16 xfail (steps 4-5), 174 vitest, 70 Playwright, tsc + ruff clean. Bench **17/17** first run: bundle 96.0 KB
+(+0.4), backend p95 0.8 / 1.0 / 2.8 ms, cold start 127.8 ms, keystroke 14.6 ms, cached command 16.4 ms, tick-to-pixel 37.9 ms,
+long tasks 0, heap 5.6 MB, layout 40.3 ms, chart pan 16.7 ms. `keyring` stays out of startup (loaded 2 s later, off the
+event loop). The APIKEYS open budget is added to the bench with JOBS in step 4.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

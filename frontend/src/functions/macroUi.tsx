@@ -1,6 +1,7 @@
 /** Shared status pieces for the Phase 7 macro panels: source + age, STALE, fallback, and the error line. */
 import { fmtAge } from "../format";
 import type { ApiError, Envelope } from "../net/api";
+import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 
 export function EnvStatus({ env, loading }: { env: Envelope<unknown> | null; loading: boolean }) {
   return (
@@ -16,6 +17,7 @@ export function EnvStatus({ env, loading }: { env: Envelope<unknown> | null; loa
 /** A failed load. When older data is still on screen it is said to be STALE rather than hidden. */
 export function ErrorLine({ error, hasData, usage }: { error: ApiError | null; hasData: boolean; usage?: string }) {
   if (!error) return null;
+  if (isKeyRequired(error)) return <KeyRequiredLine error={error} />;
   const down = error.status !== 0 && error.kind === "unavailable";
   return (
     <div className="err">

@@ -133,3 +133,10 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .cmd .vim { position: absolute; right: 6px; top: 0; color: var(--accent); pointer-events: none; }
 .cmd[data-vim="normal"] input { caret-color: transparent; }
 .cmd[data-vim="normal"] input::selection { background: var(--fg); color: var(--bg); }
+
+/* --- Phase 11 --- */
+.keyreq { color: var(--warn); }
+.keyedit { flex: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 2px 0; }
+.keyfield { display: block; white-space: nowrap; }
+.keyedit input { background: var(--bg); color: var(--fg); border: 1px solid var(--fg-dim); font: inherit; width: 44ch; padding: 0 4px; outline: none; }
+.keyedit input:focus { border-color: var(--accent); }

@@ -2,6 +2,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def hermetic_keys(tmp_path, monkeypatch):
+    """Phase 11: no test touches the real OS keyring or the repo's .env, whichever app fixture it uses."""
+    monkeypatch.setenv("OPENTERM_KEYRING", "memory")
+    monkeypatch.setenv("OPENTERM_DOTENV_PATH", str(tmp_path / "keys.env"))
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     """App in fixture + synthetic mode: no network, recorded responses, SYNxxxx test instruments."""

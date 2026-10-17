@@ -53,13 +53,18 @@ class Health:
 
 
 class AllFailed(Exception):
-    def __init__(self, errors: list[tuple[str, ProviderError]]):
+    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None):
         self.errors = errors
+        self.key: str | None = None
         kinds = {e.kind for _, e in errors}
         if not errors:
             self.kind, msg = "unsupported", "NO PROVIDER SUPPORTS THIS SYMBOL"
         elif kinds <= {"not_found", "unsupported"}:
             self.kind, msg = "not_found", "NO DATA FOR SYMBOL"
+        elif "key_required" in kinds and kinds <= {"not_found", "unsupported", "key_required"}:
+            # Phase 11: no keyless provider could answer, so the missing key is the reason.
+            self.kind, msg = "key_required", "KEY REQUIRED"
+            self.key = next((keys or {}).get(n) for n, e in errors if e.kind == "key_required")
         else:
             self.kind, msg = "unavailable", "PROVIDER DOWN"
         super().__init__(msg)
@@ -86,6 +91,9 @@ class Router:
         try:
             result = await fn(p)
         except ProviderError as e:
+            if e.kind == "key_required":  # not an outage: no circuit-breaker strike
+                log.debug("provider %s needs a key", p.name)
+                raise
             self.health[p.name].fail(e)
             log.warning("provider %s failed: %s %s", p.name, e.kind, e)
             raise
@@ -102,12 +110,15 @@ class Router:
     ) -> tuple[T, list[str]]:
         """Returns (result, names of providers that failed first)."""
         errors: list[tuple[str, ProviderError]] = []
+        keys: dict[str, str] = {}
         for p in self.candidates(capability, symbol):
             try:
                 return await self._attempt(p, fn), [n for n, _ in errors]
             except ProviderError as e:
                 errors.append((p.name, e))
-        raise AllFailed(errors)
+                if e.kind == "key_required":
+                    keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
+        raise AllFailed(errors, keys)
 
     async def quotes(self, symbols: list[str]) -> tuple[dict, dict[str, AllFailed]]:
         """Batch quotes across providers: each provider gets the symbols still missing that it supports."""
