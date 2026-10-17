@@ -1,21 +1,25 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-3 done; step 4 (BT panel) next, waiting for the user's go-ahead)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-4 done; step 5 (engines) next)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-19, after step 12.3)
+## Resume here (2026-10-19, after step 12.4)
 - **Where the work is:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`
   (open the new session there; a session cannot write into another worktree). `backend/.venv` and `frontend/node_modules`
-  are installed. Last commit: **"Phase 12 step 3: BT engine core..."**. Nothing is running. Not merged into `main`; no remote.
-- **Step 12.3 is done and committed.** Gates: 262 pytest + 19 xfail (18 for steps 5-8, 1 Phase 11 recording), ruff clean,
-  tsc clean, 187 vitest, 77 Playwright, bench 21/21 (numbers in `docs/PERFORMANCE.md`). Ruff cleanup: safe autofixes
-  (annotations, re flags, imports) plus `# noqa` where a fix would change Vibe behaviour; `pairwise` in `rebalance_mask.py`.
-  Three old migration tests needed migration 9's tables in their DROP lists. `THIRD_PARTY.md` has the six ported files.
-- **Next action: step 4, the `BT` panel** (frontend; `src/bt/ruleParse.ts`, `metricsFormat.ts`; delete the step 4
-  `it.fails` / `test.fail()` markers) plus the BT bench budgets (10-year run < 300 ms, cached < 20 ms, BT open < 100 ms).
-  The user asked to be asked before step 4 starts.
+  are installed. Last commit: **"Phase 12 step 4: BT panel..."**. Nothing is running. Not merged into `main`; no remote.
+- **Steps 12.3 and 12.4 are done and committed.** Gates after step 4: 263 pytest + 19 xfail (18 for steps 5-8, 1 Phase 11
+  recording), ruff, tsc, 187 vitest, 77 Playwright, bench **24/24** (BT run 224 ms, cached 5 ms, BT open 65 ms; see
+  `docs/PERFORMANCE.md`). Step 4 also added VaR 95 / ES 95 (`bt/job.py` `tail_risk`, decision H was missed in step 3).
+- **What step 4 added:** `functions/BT.tsx` (views CHART / METRICS / TRADES / CODE cycled with `V`, not `Tab`; labels of
+  decision L; progress from `J` frames; `R` re-run, `X` cancel, `E` CSV of the visible view), `bt/ruleParse.ts` (mirror
+  of `bt/rules.py`), `bt/metricsFormat.ts`, `btApi` in `net/api.ts`, `adoptJob` in `net/jobs.ts`, ChartView `lowerPane`
+  (drawdown) and lazy indicator worker, BT intent prefetch, `btOpen` perf series, bench section H + `btBench()`.
+  `BT RUNS/EXPORT/MC/WF/SAVE/LOAD/DEL` say NOT BUILT YET with their step. **Not built yet: the Python strategy editor**
+  (spec section 1: textarea + `BT SAVE/LOAD/DEL`); call it step 4B, before step 9.
+- **Next action: step 5, engines** (India, crypto spot + perps, forex, futures, composite; Binance klines adapter; delete
+  the `ENGINES` markers in `tests/test_phase12.py`). Then 6 (MC/WF), 7 (RUNS/EXPORT), 8 (IMPORT), 4B (editor), 9 (docs).
 - **What step 3 added** (`backend/openterm/bt/`):
   - Ported verbatim from Vibe-Trading `d0db2e3` by a copy script (header line names the source): `models.py`,
     `metrics.py`, `rebalance_mask.py`, `engines/hooks.py` (= `_market_hooks.py`), `engines/global_equity.py`,
@@ -35,14 +39,17 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
 - **Changed from the spec (tell the user):** default benchmark is Vibe's (equal-weight buy and hold of the traded
   symbols), not SPY; `BENCH=SPY` compares with an index. Needed so API runs match the Vibe cross-check exactly.
 - **Still open from Phase 11:** the OpenRouter recording (`scripts/record_llm.py`, then delete `@RECORDING`).
-- **The user's working rules for Phases 11-19** (from their prompt; keep following them):
-  1. Do one step per turn, in HANDOFF order. A step is a spec, a tests set, or one function's code.
-  2. Each phase starts with `docs/specs/PHASE_<n>.md`, with the roadmap's proposed defaults listed at the top for approval.
-     Then tests first, then code.
-  3. Sonnet subagents only, at most 2 at once, and only for truly parallel pieces. Splitting backend and frontend halves worked well.
-  4. Before a step is done, run `uv run pytest -q`, `uv run ruff check .`, `npx tsc --noEmit`, `npx vitest run`,
-     `npx playwright test` and `node scripts/bench.mjs`. Record the bench numbers in `docs/PERFORMANCE.md`.
-  5. After each step, update only the changed sections of HANDOFF.md and CLAUDE.md, then commit.
+- **The user's working rules for Phases 11-19** (updated 2026-10-19 to speed things up; quality and terminal speed
+  must not drop):
+  1. Do a whole phase per turn, step by step in HANDOFF order, committing each step. Stop only on a gate failure that
+     needs a decision, a missing key, or a real product decision.
+  2. Each phase starts with `docs/specs/PHASE_<n>.md` (proposed defaults at the top), then tests, then code.
+  3. One fresh session per phase (HANDOFF.md carries the state). Sonnet subagents only, at most 2 at once, only for
+     truly parallel pieces (backend and frontend halves).
+  4. Every step: `uv run pytest -q`, `uv run ruff check .`, `npx tsc --noEmit`, `npx vitest run`, `npx playwright test`.
+     `node scripts/bench.mjs` at the end of each phase and on any step that touches rendering, hot paths or the bench;
+     a phase is not done while any budget regresses. Record bench numbers in `docs/PERFORMANCE.md`.
+  5. Docs (HANDOFF.md, CLAUDE.md): only the changed sections.
   6. At 95% of the 5-hour or weekly limit: stop subagents, write the state to HANDOFF.md, commit, and stop.
   7. Keep output small. If a key is needed, stop and say which one.
 - **Before the bench:** port 8000 must be free. The user's own `start.ps1` backend sometimes holds it; ask before stopping it.
@@ -262,6 +269,7 @@ Remaining:
    | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **approved** 2026-10-19 |
    | 12.2 Tests set + recordings + Vibe cross-check values | **done** 2026-10-19: `backend/tests/test_phase12.py` (75; markers `CORE` step 3, `ENGINES` 5, `VALID` 6, `RUNS` 7, `IMPORT` 8), `frontend/src/bt/phase12.test.ts` (6), `frontend/e2e/phase12.spec.ts` (5); fixtures by `scripts/record_phase12.py`; expected values `bt_vibe_expected.json` by `scripts/vibe_crosscheck.py` |
    | 12.3 Engine core, rules, sandbox, API, migration 9 | **done** 2026-10-19: all gates green, bench 21/21, THIRD_PARTY rows added |
+   | 12.4 `BT` panel + BT bench budgets | **done** 2026-10-19: bench 24/24; strategy editor split out as 12.4B |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
    (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,

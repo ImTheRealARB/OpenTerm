@@ -1,9 +1,11 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; steps 1-3 done; step 4 (BT panel) next.**
+Status: **approved as written 2026-10-19; steps 1-4 done.**
 
 Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
 symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.
+Changes made in step 4: views cycle with `V` (not `Tab`, the global next-panel key); VaR 95 / ES 95 (decision H) added
+to the run metrics (`bt/job.py` `tail_risk`).
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 12", [FEATURE_GAP.md](../FEATURE_GAP.md) rows for
 `agent/backtest/*`, and the Vibe-Trading code itself at commit `d0db2e3` (MIT; read 2026-10-19).
 
@@ -63,7 +65,8 @@ class SignalEngine:
 
 ## 4. Frontend
 - `BT` panel: header with labels (decision L); equity + drawdown + benchmark in `ChartView` (one chart, drawdown as a
-  second pane); metrics table and trade list in the canvas `Grid`; `Tab` cycles CHART / METRICS / TRADES / CODE.
+  second pane); metrics table and trade list in the canvas `Grid`; `V` / `Shift+V` cycle CHART / METRICS / TRADES / CODE,
+  `1`-`4` pick one (changed in step 4: `Tab` is the global next-panel key and never reaches a panel).
   Keys: `R` re-run, `S` save, `M` Monte Carlo, `W` walk-forward, `E` / Alt+X CSV, `X` cancel the running job.
 - `BT RUNS`: run cards in a `Grid`; `Enter` opens, `C` marks two runs and shows them side by side (metrics diff, two
   equity lines).

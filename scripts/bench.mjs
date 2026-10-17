@@ -106,6 +106,65 @@ async function jobsBench() {
   return { coldMs, cachedServer };
 }
 
+/** Phase 12: BT runs on 10 years of daily fixture bars. Server time per request comes from the `server-timing`
+ * header (Node fetch on Windows loopback adds ~16 ms); job time is the job's own created_at -> finished_at. */
+async function btBench() {
+  const post = async (body) => {
+    const res = await fetch(`${BACKEND}/api/bt/run`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    });
+    const serverMs = Number(/dur=([\d.]+)/.exec(res.headers.get("server-timing") ?? "")?.[1]);
+    const j = await res.json();
+    if (!res.ok) throw new Error(`bt run failed: ${j.error}${j.detail ? ` (${j.detail})` : ""}`);
+    return { j, serverMs };
+  };
+  const done = async (id) => {
+    for (let i = 0; i < 3000; i++) {
+      const j = await (await fetch(`${BACKEND}/api/jobs/${id}`)).json();
+      if (j.state === "done") return j;
+      if (j.state === "error" || j.state === "cancelled") throw new Error(`bt job ended ${j.state}: ${j.error}`);
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error("bt job did not finish in time");
+  };
+  const req = (rule, symbols = ["AAPL"]) => ({ rule, symbols, interval: "1D", range: "10Y", options: {} });
+
+  const t0 = performance.now();
+  const first = await post(req("SMA20>SMA50"));
+  await done(first.j.id);
+  const coldMs = performance.now() - t0; // pandas import in a fresh worker + the first bar fetch
+  // Warm every worker: rounds of concurrent distinct runs (a worker imports pandas on its first BT job).
+  for (let k = 0; k < 2; k++) {
+    const js = await Promise.all([0, 1, 2, 3].map((i) => post(req(`SMA${5 + i + k * 4}>SMA60`))));
+    await Promise.all(js.map((x) => done(x.j.id)));
+  }
+  const runs = [];
+  for (let i = 0; i < 12; i++) {
+    const { j, serverMs } = await post(req(`EMA${10 + i}>SMA100`));
+    const d = await done(j.id);
+    runs.push(serverMs + (d.finished_at - d.created_at) * 1000);
+  }
+  const cached = [];
+  for (let i = 0; i < 30; i++) {
+    const { j, serverMs } = await post(req("EMA10>SMA100"));
+    if (!j.cached) throw new Error("repeated BT run was not served from the cache");
+    cached.push(serverMs);
+  }
+  // 100 symbols x 10 years: synthetic bars (SYN0000-SYN0099). Measured, not gated.
+  let big = null, bigNote = "";
+  try {
+    const syms = Array.from({ length: 100 }, (_, i) => `SYN${String(i).padStart(4, "0")}`);
+    const b0 = performance.now();
+    const { j } = await post(req("SMA20>SMA50", syms));
+    await done(j.id);
+    big = performance.now() - b0;
+    bigNote = "SYN0000-SYN0099, end to end incl. bar fetch";
+  } catch (e) {
+    bigNote = `not measured: ${String(e.message ?? e).slice(0, 60)}`;
+  }
+  return { coldMs, run: p95(runs), cached: p95(cached), big, bigNote };
+}
+
 async function freshPage(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   const page = await ctx.newPage();
@@ -248,6 +307,19 @@ async function browserBench() {
       await page.context().close();
     }
 
+    // H. Phase 12: BT result open (cached runs from btBench) to the painted, labelled result.
+    {
+      const page = await freshPage(browser);
+      out.p12 = await measure(page, async () => {
+        for (let i = 0; i < 20; i++) {
+          await run(page, i % 2 ? "BT AAPL EMA10>SMA100 1D 10Y" : "BT AAPL SMA20>SMA50 1D 10Y");
+          await page.waitForTimeout(300);
+          await page.keyboard.press("Escape");
+        }
+      });
+      await page.context().close();
+    }
+
     // D. 10,000-row canvas grid: keyboard paging + wheel scrolling.
     {
       const page = await freshPage(browser);
@@ -310,6 +382,7 @@ async function main() {
   }
 
   const jobs = await jobsBench(); // warms the worker pool before the browser section G
+  const bt = await btBench(); // caches the runs section H opens
 
   const r = await browserBench();
   const { a, stream: st } = r;
@@ -338,6 +411,13 @@ async function main() {
   add("Cached job (same hash) p95, server-side", jobs.cachedServer, 20, "ms", "POST /api/jobs, n=31");
   add("JOBS / APIKEYS open to first paint p95", r.p11.cmdToPaint.p95, 100, "ms", `n=${r.p11.cmdToPaint.n}`);
   add("Worker pool cold start (first job done)", jobs.coldMs, null, "ms", "spawn; measured, not gated");
+  add("BT 10-year daily rule run p95, server-side", bt.run, 300, "ms", "POST + job created->finished, warm worker, n=12");
+  add("BT cached run (same hash) p95, server-side", bt.cached, 20, "ms", "POST /api/bt/run, n=30");
+  const bo = r.p12.btOpen ?? { p95: null, n: 0 };
+  const g = (k) => (r.p12.gauges[k] ?? NaN).toFixed(1);
+  add("BT result open to first paint p95", bo.n ? bo.p95 : null, 100, "ms", `cached run; n=${bo.n}; p50 ${bo.p50?.toFixed(1)}; last: post ${g("bt.postMs")} get ${g("bt.getMs")} render ${g("bt.renderMs")} ms`);
+  add("BT first run, cold worker (pandas import)", bt.coldMs, null, "ms", "measured, not gated");
+  add("BT 100 symbols x 10 years", bt.big, null, "ms", bt.bigNote);
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

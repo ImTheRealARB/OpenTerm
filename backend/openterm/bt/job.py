@@ -40,6 +40,16 @@ def scalar_metrics(m: dict) -> dict:
     return out
 
 
+def tail_risk(equity) -> dict:
+    """Historical one-bar VaR 95 and ES 95 of the equity curve's bar returns (spec decision H), as returns:
+    VaR = the 5th percentile (linear interpolation), ES = the mean of the returns at or below it. None under 20 bars."""
+    r = equity.pct_change(fill_method=None).dropna()
+    if len(r) < 20:
+        return {"var_95": None, "es_95": None}
+    var = float(r.quantile(0.05))
+    return {"var_95": _num(var), "es_95": _num(float(r[r <= var].mean()))}
+
+
 def _epoch(ts) -> int:
     return int(ts.value // 1_000_000_000)
 
@@ -104,7 +114,7 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
         labels["data_note"] = (labels.get("data_note", "") + " RAW CLOSES: NO ADJUSTED CLOSES FROM THE SOURCE").strip()
     return {
         "run_id": params["run_id"],
-        "metrics": scalar_metrics(res.metrics),
+        "metrics": {**scalar_metrics(res.metrics), **tail_risk(res.equity)},
         "equity": [[_epoch(ts), round(float(v), 4)] for ts, v in res.equity.items()],
         "benchmark": [[_epoch(ts), round(float(v), 4)] for ts, v in bench_eq.items()],
         "trades": trades,

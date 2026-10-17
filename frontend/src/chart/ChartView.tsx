@@ -45,6 +45,8 @@ interface Props {
   indicators: IndicatorName[];
   /** Single-value series (FRED): the readout shows `<date> <label> <value>` instead of O/H/L/C/V. */
   readoutLabel?: string;
+  /** BT: one extra line in a second pane on the same timestamps as `data` (drawdown). NaN = gap. */
+  lowerPane?: { title: string; v: Float64Array } | null;
 }
 
 const INTERVAL_S: Record<string, number> = {
@@ -75,7 +77,7 @@ function formatters(tz: string, intraday: boolean) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -127,9 +129,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
       writeReadout(Math.round(p.logical as number));
     });
     chartRef.current = chart;
-    worker.current = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
     return () => {
       worker.current?.terminate();
+      worker.current = null;
       chart.remove();
       chartRef.current = null;
     };
@@ -201,6 +203,14 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
       cs.setData(pts);
       extra.current.push(cs);
     }
+    if (lowerPane) {
+      const ls = chart.addSeries(LineSeries, { color: c.down, lineWidth: 1, priceLineVisible: false, title: lowerPane.title, priceFormat: { type: "percent" } }, 1);
+      const pts = [];
+      for (let i = 0; i < Math.min(n, lowerPane.v.length); i++) pts.push(Number.isFinite(lowerPane.v[i]) ? { time: toTime(data.t[i]), value: lowerPane.v[i] } : { time: toTime(data.t[i]) });
+      ls.setData(pts);
+      extra.current.push(ls);
+      chart.panes()[1]?.setHeight(90);
+    }
     chart.priceScale("right").applyOptions({
       mode: compare ? PriceScaleMode.Percentage : log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
     });
@@ -208,7 +218,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
     writeReadout(n - 1);
 
     // Indicators: computed off the main thread, drawn when they arrive (unless superseded).
-    if (indicators.length && n && worker.current) {
+    if (indicators.length && n) {
+      // Started on the first indicator request: line-only charts (FRED, BT) never pay for the worker.
+      worker.current ??= new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
       const id = ++reqId.current;
       const w = worker.current;
       w.onmessage = (ev: MessageEvent<{ id: number; results: Record<string, Float64Array> }>) => {
@@ -262,7 +274,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
       const panes = ch.panes();
       for (let i = 1; i < panes.length; i++) panes[i].setHeight(90);
     }
-  }, [data, compare, type, log, indicators, ver]);
+  }, [data, compare, type, log, indicators, lowerPane, ver]);
 
   useImperativeHandle(ref, () => ({
     pan(bars) {

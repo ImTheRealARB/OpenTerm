@@ -4,7 +4,7 @@ Keyboard-first, open-source market terminal (amber on black, command line + tile
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
 All 10 phases are built and on `main`. **Phases 11-19 are in progress on branch `claude/openterm-phases-11-19-a99b2b`**
-(Phase 11 done except one OpenRouter recording; Phase 12 steps 1-3 done, step 4 (BT panel) next; HANDOFF.md "Resume here" has the next action and the user's step rules). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+(Phase 11 done except one OpenRouter recording; Phase 12 steps 1-4 done, step 5 (engines) next; HANDOFF.md "Resume here" has the next action and the user's step rules). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
 5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
@@ -147,6 +147,13 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `# noqa` (TRY004, BLE001, B023, UP040) where a fix would change Vibe's behaviour; the header's `Changes:` line says so.
 - **A new migration breaks the old migration tests** (`test_userdata`, `test_phase8`, `test_phase11`): they roll
   `user_version` back and drop the later tables, so add the new tables to their DROP lists.
+- **Tab never reaches a panel:** it is the global next-panel key (`ALWAYS_GLOBAL`). Panel views cycle with another key
+  (BT uses `V` / `Shift+V` and `1`-`4`); the `Tab` cases in FA, FIL and MOV are dead code.
+- **Big JSON routes must return `Orjson(...)`, not a dict:** FastAPI runs `jsonable_encoder` over a returned dict even with
+  `default_response_class=Orjson` (~30 ms for a 10-year equity curve).
+- **BT panel:** POST `/api/bt/run` answers with `run_id` (and the stored `run` when cached); `net/jobs.ts` `adoptJob` puts
+  the job in the store so `J` frames update it. A done frame can arrive before the POST answer: the job effect handles it.
+  `BaseEngine._bar_row` (our addition to the ported engine) caches `df.loc[ts]` per bar; hooks must not mutate rows.
 - **Strategy sandbox is defence in depth:** allowlisted imports, no dunder/`format` attribute access, no file or network
   entry points of numpy/pandas, restricted builtins, sockets off in the worker, memory cap via a Windows Job Object.
 - **A session cannot write into another worktree** (hook). Bring the branch here with `git merge --ff-only <branch>` instead.

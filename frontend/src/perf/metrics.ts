@@ -44,6 +44,8 @@ export const series = {
   jobsFirstFrame: new Ring(64),
   /** Phase 11: a job's first J frame received on the socket to the frame that paints it (no network in it). */
   jobsFrameToPaint: new Ring(64),
+  /** Phase 12: `BT` command submit to the painted labelled result (cached run: no simulation in it). */
+  btOpen: new Ring(64),
 };
 export type SeriesName = keyof typeof series;
 
@@ -71,12 +73,18 @@ export function afterPaint(fn: () => void): void {
 
 // --- Command-to-paint: start on submit, end when the target panel reports its content painted.
 const pending = new Map<number, { seq: number; cmd: string; t0: number }>();
+const started = new Map<number, number>();
 let seq = 0;
+
+/** When the last command aimed at this panel was submitted (performance.now()), if any. */
+export const commandStartedAt = (panelId: number): number | undefined => started.get(panelId);
 
 export function commandStart(panelId: number, cmd: string): void {
   seq++;
   performance.mark(`cmd:${seq}:start`);
-  pending.set(panelId, { seq, cmd, t0: performance.now() });
+  const t0 = performance.now();
+  pending.set(panelId, { seq, cmd, t0 });
+  started.set(panelId, t0);
 }
 
 export function panelPainted(panelId: number): void {
@@ -177,6 +185,7 @@ export function snapshot() {
     layoutLoad: s(series.layoutLoad),
     jobsFirstFrame: s(series.jobsFirstFrame),
     jobsFrameToPaint: s(series.jobsFrameToPaint),
+    btOpen: s(series.btOpen),
     gauges: Object.fromEntries(gauges),
     panels: Object.fromEntries([...panelRender].map(([id, r]) => [id, r.percentile(95)])),
   };

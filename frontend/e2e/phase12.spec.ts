@@ -72,7 +72,6 @@ const frame = (state: string, progress: number, msg = "", result?: unknown) =>
   ws!.send(JSON.stringify(["J", { id: "j1", kind: "bt.run", state, progress, msg, cached: false, ...(result ? { result } : {}) }]));
 
 test("BT: a rule run shows progress, then the labelled result", async ({ page }) => {
-  test.fail();
   const { posts } = await setup(page);
   await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y");
   await expect.poll(() => posts.some((p) => p.url === "/api/bt/run")).toBe(true);
@@ -87,30 +86,28 @@ test("BT: a rule run shows progress, then the labelled result", async ({ page })
   await expect(p).toContainText("YAHOO");
 });
 
-test("BT: Tab cycles CHART / METRICS / TRADES / CODE and E exports the visible table", async ({ page }) => {
-  test.fail();
+test("BT: V cycles CHART / METRICS / TRADES / CODE and E exports the visible table", async ({ page }) => {
   await setup(page);
   await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y");
   frame("done", 1, "", { run_id: "r1" });
   const p = panel(page);
   await expect(p).toContainText("HISTORICAL SIMULATION");
   await expect(async () => {
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("v");
     await expect(p.locator(".bt-view")).toHaveText("METRICS", { timeout: 500 });
   }).toPass();
   await expect(p.locator(".grid .sr")).toContainText("FINAL VALUE");
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("v");
   await expect(p.locator(".bt-view")).toHaveText("TRADES");
   const [dl]: [Download, void] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("e")]);
   expect(dl.suggestedFilename()).toMatch(/^BT_.*TRADES.*\.csv$/);
   expect(await readFile((await dl.path())!, "utf-8")).toContain("AAPL");
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("v");
   await expect(p.locator(".bt-view")).toHaveText("CODE");
   await expect(p).toContainText("SMA20>SMA50");
 });
 
 test("BT: a bad rule shows the parser error at its column and sends nothing", async ({ page }) => {
-  test.fail();
   const { posts } = await setup(page);
   await cmd(page, "BT AAPL SMA20>>SMA50 1D 5Y");
   await expect(panel(page)).toContainText("BAD RULE");

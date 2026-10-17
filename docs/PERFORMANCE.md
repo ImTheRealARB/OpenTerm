@@ -344,6 +344,20 @@ streaming frame 16.7 ms, layout load 36.6 ms, job frame-to-paint 27.9 ms, job su
 JOBS/APIKEYS open 19.5 ms; INFO: worker pool cold start 278.0 ms (was 187.6 ms; not gated).
 The BT budgets (10-year run < 300 ms, cached < 20 ms, BT open < 100 ms) are gated from step 4.
 
+### Phase 12 step 4: BT panel, BT bench budgets (2026-10-19)
+263 pytest + 19 xfail, 187 vitest, 77 Playwright, tsc + ruff clean. Bench **24/24**: bundle 98.3 KB, cold start 95.0 ms,
+tick-to-pixel 36.4 ms, chart pan 16.8 ms; new gates: **BT 10-year rule run 224.2 ms** (< 300, server-side: POST +
+job created->finished, n=12), **BT cached run 5.0 ms** (< 20), **BT open to first paint 65.4 ms** (< 100, p50 57, n=20);
+INFO: BT cold worker (pandas import) 2.2 s, 100 symbols x 10 years 1.7 s end to end (target < 5 s).
+Optimizations found while gating (before -> after):
+- **Per-bar row cache in the ported engine** (`BaseEngine._bar_row`): `df.loc[ts]` ran 2-3 times per bar and was half
+  the run. Backtest alone 235 -> 177 ms; the Vibe cross-checks still match exactly. BT run gate 299 -> 214-224 ms.
+- **Return `Orjson(...)` from big routes.** A plain dict goes through FastAPI's `jsonable_encoder`, which walks every
+  equity point (~30 ms for a 10-year run). BT cached POST that embeds the run: 39 -> 5 ms.
+- **Cached BT answers carry the run** (no second request) and `BT` in the command line prefetches the BT + chart chunks.
+- **ChartView starts its indicator worker on the first indicator request**, so line-only charts (FRED, BT) skip it.
+  BT open p95 154 -> 65 ms over all four changes.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

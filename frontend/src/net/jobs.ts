@@ -119,6 +119,12 @@ export async function submitJob(kind: string, params: unknown): Promise<JobRec> 
   }
 }
 
+/** Merges a job another endpoint created (e.g. POST /api/bt/run) so its J frames have a row to update. */
+export function adoptJob(job: JobRec): JobRec {
+  setJobs((m) => applyJob(m, job));
+  return jobsStore.get().jobs.get(job.id) ?? job;
+}
+
 /** Asks the backend to cancel. The job ends in `cancelled` (a frame follows); the answer is merged at once. */
 export async function cancelJob(id: string): Promise<void> {
   const job = await api.cancelJob(id);

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 
 import orjson
 from fastapi import APIRouter, Query, Request
@@ -746,7 +747,13 @@ async def bt_run(request: Request):
     jobs, store = jobs_of(request), bt_of(request)
     if not await store.has_run(params["run_id"]):  # a deleted or trimmed run must not come back from the job cache
         await jobs.store.forget(jobs.hash_for("bt.run", params))
-    return await jobs.submit("bt.run", params, internal=True)
+    # run_id is known before the job runs. A cached answer also carries the stored run, so opening it costs no
+    # second request.
+    job = {**await jobs.submit("bt.run", params, internal=True), "run_id": params["run_id"]}
+    if job.get("state") == "done":
+        with contextlib.suppress(BtError):
+            job["run"] = await store.run(params["run_id"])
+    return Orjson(job)  # a Response skips FastAPI's jsonable_encoder walk over every equity point
 
 
 @router.get("/bt/runs")
@@ -759,7 +766,7 @@ async def bt_run_get(request: Request, run_id: str):
     from .bt.store import BtError
 
     try:
-        return await bt_of(request).run(run_id)
+        return Orjson(await bt_of(request).run(run_id))  # skips jsonable_encoder (see bt_run)
     except BtError as e:
         return bt_error(e)
 

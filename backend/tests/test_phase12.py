@@ -174,6 +174,20 @@ def test_metrics_on_a_fixed_curve():
     assert_metrics(got, m["metrics"])
 
 
+
+def test_tail_risk_var_es_95():
+    pd = mod("pandas")
+    # 21 bars -> 20 returns: -5%, -3%, then eighteen +1%. 5th percentile (linear) of 20 values sits at
+    # position 0.95: -5% + 0.95 * (-3% - -5%) = -3.1%; ES = mean of returns <= -3.1% = -5%.
+    eq = [100.0, 95.0, 92.15]
+    for _ in range(18):
+        eq.append(eq[-1] * 1.01)
+    got = mod("openterm.bt.job").tail_risk(pd.Series(eq))
+    assert got["var_95"] == pytest.approx(-0.031)
+    assert got["es_95"] == pytest.approx(-0.05)
+    assert mod("openterm.bt.job").tail_risk(pd.Series(eq[:10])) == {"var_95": None, "es_95": None}
+
+
 # --- 3. Rule syntax ----------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("text", ["SMA20>SMA50", "CLOSE>SMA200", "RSI14<30", "EMA12 CROSS> EMA26",
@@ -287,6 +301,8 @@ def test_bt_run_rule_through_the_api_matches_vibe(client):
     again = client.post("/api/bt/run", json={"rule": "SMA20>SMA50", "symbols": ["AAPL"], "interval": "1D",
                                              "range": "10Y", "options": {"cash": 100_000, "adjusted": False}}).json()
     assert again["cached"] is True and again["state"] == "done" and (time.perf_counter() - t0) < 0.5
+    assert again["run_id"] == job["result"]["run_id"]  # the panel opens a cached run straight from the POST
+    assert again["run"]["id"] == again["run_id"] and len(again["run"]["equity"]) > 2000
 
 
 def test_bt_run_default_uses_adjusted_closes(client):

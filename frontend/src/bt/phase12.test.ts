@@ -1,25 +1,23 @@
 import { describe, expect, it } from "vitest";
+import { fmtMetric, METRIC_ROWS } from "./metricsFormat";
+import { parseBtArgs, parseRule } from "./ruleParse";
 
 /*
  * Phase 12 pure modules (spec: docs/specs/PHASE_12.md), written before the code.
- * `it.fails` + variable-path imports until the build steps land (tsc would reject a missing module); step 4
- * (ruleParse, metricsFormat) and step 8 (csvImport) switch these to static imports and plain `it`.
+ * ruleParse and metricsFormat landed in step 4 (static imports, plain `it`). csvImport keeps `it.fails` + a
+ * variable-path import until step 8 (tsc would reject a missing module).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const load = (p: string): Promise<any> => import(/* @vite-ignore */ p);
-const RULE = "./ruleParse";
-const FMT = "./metricsFormat";
 const CSV = "./csvImport";
 
 describe("ruleParse (step 4): same grammar and columns as backend bt/rules.py", () => {
-  it.fails("accepts the rule forms", async () => {
-    const { parseRule } = await load(RULE);
+  it("accepts the rule forms", () => {
     for (const r of ["SMA20>SMA50", "CLOSE>SMA200", "RSI14<30", "EMA12 CROSS> EMA26", "RSI14<30 AND CLOSE>SMA200",
       "RET20>0.05 OR HIGH20<=CLOSE", "sma20 > sma50"]) expect(parseRule(r)).toEqual({ ok: true });
   });
 
-  it.fails("rejects with the 0-based column of the offending character", async () => {
-    const { parseRule } = await load(RULE);
+  it("rejects with the 0-based column of the offending character", () => {
     const cases: [string, number][] = [["SMA20>>SMA50", 6], ["FOO>1", 0], ["SMA0>CLOSE", 0], ["SMA20", 5],
       ["SMA20>SMA50 AND", 15], ["RSI14<", 6]];
     for (const [text, col] of cases) {
@@ -30,8 +28,7 @@ describe("ruleParse (step 4): same grammar and columns as backend bt/rules.py", 
     }
   });
 
-  it.fails("parses BT command arguments", async () => {
-    const { parseBtArgs } = await load(RULE);
+  it("parses BT command arguments", () => {
     expect(parseBtArgs(["AAPL", "SMA20>SMA50", "1D", "5Y"])).toMatchObject({
       ok: true, symbols: ["AAPL"], rule: "SMA20>SMA50", interval: "1D", range: "5Y", short: false,
     });
@@ -45,8 +42,7 @@ describe("ruleParse (step 4): same grammar and columns as backend bt/rules.py", 
 });
 
 describe("metricsFormat (step 4)", () => {
-  it.fails("formats each metric kind", async () => {
-    const { fmtMetric } = await load(FMT);
+  it("formats each metric kind", () => {
     expect(fmtMetric("total_return", 0.12345)).toBe("+12.35%");
     expect(fmtMetric("max_drawdown", -0.2075)).toBe("-20.75%");
     expect(fmtMetric("sharpe", 0.81119)).toBe("0.81");
@@ -55,8 +51,7 @@ describe("metricsFormat (step 4)", () => {
     expect(fmtMetric("profit_factor", null)).toBe("—");
   });
 
-  it.fails("lists the metric rows in the spec's order", async () => {
-    const { METRIC_ROWS } = await load(FMT);
+  it("lists the metric rows in the spec's order", () => {
     expect(METRIC_ROWS.map((r: { key: string }) => r.key).slice(0, 5))
       .toEqual(["final_value", "total_return", "annual_return", "max_drawdown", "sharpe"]);
   });

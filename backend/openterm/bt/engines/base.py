@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/base.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths, loaders/run card/artifacts removed, run_backtest -> run(); ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
+# Changes: import paths, loaders/run card/artifacts removed, run_backtest -> run(); ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change); per-bar row cache `_bar_row` (OpenTerm perf: same rows, built once per bar).
 """Base backtest engine with shared bar-by-bar execution loop.
 
 All market engines inherit from BaseEngine and override market-rule methods.
@@ -403,6 +403,9 @@ class BaseEngine(ABC):
         # metrics instead of only to a subclass that overrode the hook.
         self.plan_rejections: Counter = Counter()
         self._bar_idx: int = 0
+        # OpenTerm: rows of the current bar, built once per (frame, ts). `df.loc[ts]` was half the run time.
+        self._row_ts = None
+        self._row_cache: dict[int, Any] = {}
         self._active_symbol: str = ""  # set by _rebalance/_close_position for subclass use
 
     # ── Market rule interface (subclass must implement) ──
@@ -571,8 +574,9 @@ class BaseEngine(ABC):
     ) -> bool:
         """Run the legacy post-fill bar hooks; return True to stop."""
         for code in codes:
-            if timestamp in data_map[code].index:
-                self.on_bar(code, data_map[code].loc[timestamp], timestamp)
+            row = self._bar_row(data_map[code], timestamp)
+            if row is not None:
+                self.on_bar(code, row, timestamp)
         return False
 
     def after_position_adjustment(
@@ -601,6 +605,19 @@ class BaseEngine(ABC):
         "zero_size",
         "insufficient_capital",
     )
+
+    def _bar_row(self, frame: pd.DataFrame, ts: pd.Timestamp):
+        """``frame.loc[ts]`` or None when ``ts`` is not in ``frame.index``, cached for the current bar
+        (OpenTerm addition; hooks never mutate the row, so sharing it within a bar is safe)."""
+        if ts is not self._row_ts and ts != self._row_ts:
+            self._row_ts = ts
+            self._row_cache = {}
+        key = id(frame)
+        if key in self._row_cache:
+            return self._row_cache[key]
+        row = frame.loc[ts] if ts in frame.index else None
+        self._row_cache[key] = row
+        return row
 
     def _plan_rejection_metrics(self) -> dict[str, Any]:
         """Summarise opening plans the engine wanted but could not take.
@@ -1035,8 +1052,9 @@ class BaseEngine(ABC):
                 _val_arr=_varr,
             )
             frame = data_map.get(sym)
-            if frame is not None and ts in frame.index:
-                open_price = self.valuation_open(frame.loc[ts])
+            row = self._bar_row(frame, ts) if frame is not None else None
+            if row is not None:
+                open_price = self.valuation_open(row)
                 if (
                     pd.notna(open_price)
                     and float(open_price) > 0
@@ -1116,10 +1134,9 @@ class BaseEngine(ABC):
         # Nothing to do
         if current_pos is None and target_dir == 0:
             return
-        if df is None or ts not in df.index:
+        bar = self._bar_row(df, ts) if df is not None else None
+        if bar is None:
             return
-
-        bar = df.loc[ts]
 
         # Close if target is flat or direction changed
         if current_pos is not None:
@@ -1169,10 +1186,10 @@ class BaseEngine(ABC):
         if df is None:
             rejected("no_data")
             return None
-        if ts not in df.index:
+        bar = self._bar_row(df, ts)
+        if bar is None:
             rejected("no_bar")
             return None
-        bar = df.loc[ts]
         if not self.can_execute(symbol, direction, bar):
             rejected("execution_blocked")
             return None
@@ -1284,9 +1301,9 @@ class BaseEngine(ABC):
             before = self.positions.get(symbol)
             target_direction = 1 if target_weight > 1e-9 else (-1 if target_weight < -1e-9 else 0)
             frame = data_map.get(symbol)
-            if frame is None or ts not in frame.index:
+            bar = self._bar_row(frame, ts) if frame is not None else None
+            if bar is None:
                 continue
-            bar = frame.loc[ts]
 
             if before is None or target_direction != before.direction:
                 if before is not None:

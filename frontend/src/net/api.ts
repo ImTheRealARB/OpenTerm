@@ -72,6 +72,8 @@ export class ApiError extends Error {
     public detail?: string,
     /** Phase 11: the missing key's env name on a 424 KEY REQUIRED envelope (see keyRequired.ts). */
     public key?: string,
+    /** Phase 12: 0-based column of a BT rule syntax error. */
+    public col?: number,
   ) {
     super(message);
   }
@@ -129,7 +131,7 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError(0, "BACKEND DOWN");
   }
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail, json?.key);
+  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail, json?.key, json?.col);
   return json as T;
 }
 
@@ -564,4 +566,74 @@ export interface SettingsDoc {
 export const settingsApi = {
   get: () => send<SettingsDoc>("GET", "/api/settings"),
   put: (settings: unknown) => send<{ version: number; settings: unknown; updated_at: number }>("PUT", "/api/settings", { version: 1, settings }),
+};
+
+// --- Phase 12: backtester ---
+export interface BtSource {
+  symbol?: string;
+  name?: string | null;
+  as_of?: number | null;
+  age_s?: number | null;
+  stale?: boolean;
+}
+export interface BtLabels {
+  headline: string;
+  engine: string;
+  prices: "ADJ" | "RAW";
+  fees_bps: number;
+  slip_bps: number;
+  costs?: string;
+  warmup_bars: number;
+  short?: boolean;
+  sources: BtSource[];
+  benchmark?: string;
+  data_note?: string;
+}
+export interface BtTrade {
+  symbol: string;
+  direction: number;
+  entry_time: string;
+  exit_time: string;
+  entry_price: number | null;
+  exit_price: number | null;
+  size: number | null;
+  pnl: number | null;
+  pnl_pct?: number | null;
+  commission: number | null;
+  holding_bars?: number | null;
+  exit_reason: string;
+}
+export interface BtRunCard {
+  id: string;
+  rule: string | null;
+  strategy: string | null;
+  symbols: string[];
+  interval: string;
+  range: string;
+  engine?: string;
+  labels: BtLabels;
+  created_at: number;
+  metrics: Record<string, number | null>;
+}
+export interface BtRunFull extends BtRunCard {
+  /** [epoch seconds, value] */
+  equity: [number, number][];
+  benchmark: [number, number][];
+  trades: BtTrade[];
+  code?: string | null;
+}
+export interface BtRunRequest {
+  rule?: string;
+  code?: string;
+  strategy?: string;
+  symbols: string[];
+  interval: string;
+  range: string;
+  options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string };
+}
+
+export const btApi = {
+  /** The job, plus the id its run will be stored under (open it at once when the answer is cached). */
+  run: (body: BtRunRequest) => send<JobRec & { run_id: string; run?: BtRunFull }>("POST", "/api/bt/run", body),
+  get: (id: string) => send<BtRunFull>("GET", `/api/bt/runs/${encodeURIComponent(id)}`),
 };
