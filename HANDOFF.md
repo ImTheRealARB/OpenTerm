@@ -1,20 +1,20 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-7 merged; Phase 7 awaiting commit)._
+_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-8 merged; Phase 8 awaiting commit)._
 
 > **Resuming in a new session or account?** Paste the prompt from [RESUME_PROMPT.md](RESUME_PROMPT.md)
 > and read "Parallel build of Phases 6-10" below.
 
 ## Parallel build of Phases 6-10 (MERGING)
 Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
-6, 7, 8, 9, 10, one commit each; the user approves every commit. Phase 6 is committed (`96d40b9`); Phase 7 is merged and verified, awaiting commit.**
+6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-7 are committed (`96d40b9`, `90bffb1`); Phase 8 is merged and verified, awaiting commit.**
 The last column tracks the merge into this worktree.
 
 | Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
 |---|---|---|---|---|
 | 6 FA, FIL/SEC, OWN, HDS | `openterm-p6` | `claude/openterm-p6-wip` | `PHASE_6_NOTES.md` | **COMMITTED** `96d40b9` |
-| 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **MERGED + verified here** (see Phase 7 details); commit pending user approval |
-| 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | Finished in worktree, not merged yet |
+| 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **COMMITTED** `90bffb1` |
+| 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | **MERGED + verified here** (see Phase 8 details); commit pending user approval |
 | 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | Finished in worktree, not merged yet; CSV-export hook wired into 6-8 panels after merge |
 | 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | Finished in worktree, not merged yet |
 
@@ -42,15 +42,15 @@ The last column tracks the merge into this worktree.
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
 - **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phase 6 is committed (`96d40b9`); Phase 7 is merged into the working tree and verified, not yet committed.**
+  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-7 are committed (`96d40b9`, `90bffb1`); Phase 8 is merged into the working tree and verified, not yet committed.**
 - Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
   The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
   `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
   Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
-- Latest verification (Phase 7 tree):
-  - Backend: 116 pytest passed (`-n auto`, ~21 s), ruff clean.
-  - Frontend: 66 vitest passed, tsc clean, 40 Playwright passed (`--workers=8`, ~15 s).
-  - Bench: 17/17 budgets PASS on the last two runs; earlier runs each missed one noisy metric (see `docs/PERFORMANCE.md` Phase 7).
+- Latest verification (Phase 8 tree):
+  - Backend: 126 pytest passed (`-n auto`, ~19 s), ruff clean.
+  - Frontend: 91 vitest passed, tsc clean, 46 Playwright passed (`--workers=8`, ~20 s).
+  - Bench: 17/17 budgets PASS on three consecutive runs (see `docs/PERFORMANCE.md` Phase 8).
 
 ## Done
 | Phase | Contents |
@@ -62,6 +62,24 @@ The last column tracks the merge into this worktree.
 | 5 Boards + lists | Watchlists (SQLite, `WL` grammar), news (`N`: RSS / Yahoo RSS / GDELT), `MOV` (Nasdaq movers), `CRYP` (CoinGecko, Binance), boards `WEI` `FX` `CMDTY`, `FXC` cross matrix, shared `quoteRows.ts`; pytest-xdist, fully parallel Playwright |
 | 6 SEC + ownership | `FA` (SEC EDGAR XBRL financials: IS/BS/CF, annual/quarterly), `FIL`/`SEC` (filings list), `OWN` (Form 4 insider transactions), `HDS` (institutional + fund holders); providers `sec`, `yahoo_own`; needs `SEC_USER_AGENT` in env |
 | 7 Macro | `FRED` (series chart), `MACRO` (curated list + search), `RATES` (Treasury yield curve + spreads), `ERN` (earnings calendar), `ECO` (BLS + BEA release dates); providers `fred`, `fred_csv`, `treasury`, `nasdaq_earnings`, `agency_ics` |
+| 8 Portfolio + alerts | SQLite migrations 6-7 (`portfolios`, `alerts`), `PORT` (positions with average-cost lots, live P&L, FX to base currency, CSV import/export), `ALRT` (price / percent alerts evaluated on raw ticks, status-bar flash, rearm) |
+
+## Phase 8 details (PORT, ALRT)
+
+**Built and verified (merged from `openterm-p8`):**
+- Backend: **126 pytest passed, ruff clean** (116 + 10 in `tests/test_phase8.py`; `test_userdata.py` migration pin updated).
+  - Migration 6 `portfolios (name PK, base, positions JSON, updated_at)`, migration 7 `alerts (id, symbol, op, unit, value, status, created_at, triggered_at, trigger_price)`.
+  - `portfolio.py` CRUD with average-cost lots; `/api/portfolios[/{name}]` GET / PUT / PATCH `{add, set, remove, base}` / DELETE;
+    `/api/alerts` GET / POST, `/api/alerts/{id}` DELETE, `/{id}/trigger`, `/{id}/rearm`, `DELETE /api/alerts?status=triggered`.
+- Frontend: **91 vitest** (+25), **46 Playwright** (+6 `e2e/phase8.spec.ts`), tsc clean.
+  - Pure modules `command/portfolioArgs.ts`, `command/alertArgs.ts`, `functions/portfolioCsv.ts`, `functions/portfolioMath.ts`;
+    `command/portfolios.ts`, `command/alerts.ts` (engine), `execute.ts` PORT/ALRT block, `api8` block in `net/api.ts`.
+  - `PORT.tsx`: ADD lots with cost, RM, D/U confirm + undo, EXPORT download, V paste + preview + merge; mixed currencies convert to the
+    base with live Yahoo `CCYBASE=X`, labelled (no rate = per-currency subtotal, excluded from the total).
+  - `ALRT.tsx`; the engine starts in `main.tsx` (`startAlerts()`), listens through `onRawTicks` in `state/ticks.ts`, flashes via `components/AlertFlash.tsx` in `StatusBar`.
+    Alerts fire once, R rearms, C clears. Evaluation is frontend-only (the backend never watches prices).
+- Merge fixes: api.py and `net/api.ts` Phase 7/8 blocks joined (restored the closing `return error(e)` / `};`); registry takes Phase 8's PORT and ALRT lines;
+  `phase5.spec.ts` FXC assertion now retries (`toPass`) because it raced the frame flush once Phase 8's startup work shifted timing.
 
 ## Phase 7 details (FRED, MACRO, RATES, ERN, ECO)
 
@@ -150,7 +168,7 @@ ticks 4,000/s; layout load 36.3 ms. (Phase 5 baseline: 84.8 KB, 37.5 ms tick-to-
 Phases 6-10 in order:
 - 6: done (merged, see Phase 6 details).
 - 7: done (merged, see Phase 7 details).
-- 8: PORT (CSV import/export), ALRT with desktop notifications.
+- 8: done (merged, see Phase 8 details). Desktop notifications were not part of the build: alerts flash in the status bar.
 - 9: EQS screener, CORR, COMP, HIST, CSV export everywhere.
 - 10: Themes UI, vim mode, keybinding overrides, SETTINGS, Docker, Tauri, release notes, full perf pass.
 

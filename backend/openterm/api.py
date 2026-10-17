@@ -285,3 +285,102 @@ async def eco(request: Request, start: str | None = Query(None, max_length=10), 
         return await svc(request).eco(start, days)
     except DataError as e:
         return error(e)
+
+
+# --- Phase 8: portfolios and alerts -----------------------------------------------------------
+def portfolios(request: Request):
+    from .portfolio import Portfolios
+
+    return Portfolios(user(request).db)
+
+
+def alerts_store(request: Request):
+    from .portfolio import Alerts
+
+    return Alerts(user(request).db)
+
+
+@router.get("/portfolios")
+async def list_portfolios(request: Request):
+    return {"portfolios": await portfolios(request).all()}
+
+
+@router.get("/portfolios/{name}")
+async def get_portfolio(request: Request, name: str):
+    try:
+        return await portfolios(request).get(name)
+    except UserDataError as e:
+        return error(e)
+
+
+@router.put("/portfolios/{name}")
+async def put_portfolio(request: Request, name: str):
+    try:
+        body = await json_object(request)
+        if "positions" not in body:
+            raise UserDataError("bad_request", "BODY NEEDS positions")
+        return await portfolios(request).put(name, body["positions"], body.get("base"))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.patch("/portfolios/{name}")
+async def edit_portfolio(request: Request, name: str):
+    try:
+        b = await json_object(request)
+        return await portfolios(request).edit(name, b.get("add"), b.get("set"), b.get("remove"), b.get("base"))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.delete("/portfolios/{name}")
+async def delete_portfolio(request: Request, name: str):
+    try:
+        return {"deleted": await portfolios(request).delete(name)}
+    except UserDataError as e:
+        return error(e)
+
+
+@router.get("/alerts")
+async def list_alerts(request: Request):
+    return {"alerts": await alerts_store(request).all()}
+
+
+@router.post("/alerts")
+async def create_alert(request: Request):
+    try:
+        return await alerts_store(request).create(await json_object(request))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.delete("/alerts")
+async def clear_alerts(request: Request, status: str = Query(...)):
+    if status != "triggered":
+        return error(UserDataError("bad_request", "ONLY status=triggered CAN BE CLEARED"))
+    return {"deleted": await alerts_store(request).clear_triggered()}
+
+
+@router.delete("/alerts/{alert_id}")
+async def delete_alert(request: Request, alert_id: int):
+    try:
+        return {"deleted": await alerts_store(request).delete(alert_id)}
+    except UserDataError as e:
+        return error(e)
+
+
+@router.post("/alerts/{alert_id}/trigger")
+async def trigger_alert(request: Request, alert_id: int):
+    try:
+        body = await json_object(request)
+        return await alerts_store(request).trigger(alert_id, body.get("price"), body.get("at"))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.post("/alerts/{alert_id}/rearm")
+async def rearm_alert(request: Request, alert_id: int):
+    try:
+        return await alerts_store(request).rearm(alert_id)
+    except UserDataError as e:
+        return error(e)

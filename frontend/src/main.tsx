@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { startAlerts } from "./command/alerts"; // Phase 8
 import { history } from "./command/history";
 import { FUNCTION_LIST, loadModule } from "./functions/registry";
 import { afterPaint, installObservers } from "./perf/metrics";
@@ -14,6 +15,7 @@ afterPaint(() => {
   performance.mark("openterm:ready");
   window.__openterm_perf!.ready = performance.now();
   connect();
+  startAlerts(); // Phase 8: alert symbols are watched app-wide, not only while ALRT is open
   pollSources();
   void history.sync().catch(() => {}); // backend down: history starts empty and still works in memory
   addEventListener("pagehide", () => history.flushOnExit());

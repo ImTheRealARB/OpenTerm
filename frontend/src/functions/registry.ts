@@ -38,11 +38,11 @@ const defs: FunctionDef[] = [
   { code: "FA", title: "Financial analysis", needsSecurity: true, argsSchema: "[A|Q] [IS|BS|CF]", phase: 6, load: () => import("./FA") },
   { code: "FIL", title: "SEC filings", needsSecurity: true, argsSchema: "[FORM]", phase: 6, load: () => import("./FIL") },
   { code: "SEC", title: "SEC filings (alias of FIL)", needsSecurity: true, argsSchema: "[FORM]", phase: 6, load: () => import("./FIL") },
-  { code: "PORT", title: "Portfolio", needsSecurity: false, phase: 8 },
+  { code: "PORT", title: "Portfolio (live P&L, CSV import/export)", needsSecurity: false, argsSchema: "[NAME] [ADD SYM QTY [COST] [CCY] | RM SYM... | EXPORT | IMPORT | BASE CCY] | DEL NAME", phase: 8, load: () => import("./PORT") },
   { code: "ECO", title: "Economic calendar", needsSecurity: false, argsSchema: "[1-62] [MAJOR] [YYYY-MM-DD]", phase: 7, load: () => import("./ECO") },
   { code: "MACRO", title: "FRED series browser", needsSecurity: false, argsSchema: "[query]", phase: 7, load: () => import("./MACRO") },
   { code: "FRED", title: "Plot a FRED series", needsSecurity: false, argsSchema: "SERIES_ID [1Y|2Y|5Y|10Y|20Y|MAX]", phase: 7, load: () => import("./FRED"), idlePreload: false },
-  { code: "ALRT", title: "Price / percent alerts", needsSecurity: false, phase: 8 },
+  { code: "ALRT", title: "Price / percent alerts", needsSecurity: false, argsSchema: "[SYM > PRICE | SYM < PRICE | SYM +PCT% | SYM -PCT% | DEL ID | REARM ID | CLEAR]", phase: 8, load: () => import("./ALRT") },
   // P2
   { code: "MOV", title: "Top movers", needsSecurity: false, argsSchema: "[GAINERS|LOSERS|ACTIVE|DOLLAR|NDX100]", phase: 5, load: () => import("./MOV") },
   { code: "FX", title: "Currency rates", needsSecurity: false, phase: 5, load: () => import("./FX") },

@@ -71,6 +71,12 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Don't assert "NOT BUILT YET" in e2e tests**; each phase makes it false for its own functions.
 - **Grid cursor below a header row:** call `grid.moveTo(1)` in an effect keyed on the payload (`initialSelected` is clamped to 0 while rows are empty).
 - **A lone bench miss (50k-bar chart pan 33 ms, tick-to-pixel NaN / ~52 ms) has been noise;** rerun before investigating.
+- **Panel key handlers registered once (`useEffect` with stable deps) must read state through `useLatest`,** never the render's variables
+  (PORT's import preview Enter did nothing until fixed). The `.sr` mirror does not refresh when only a dependent quote (an FX leg)
+  ticks: assert converted values on the DOM summary (`data-testid=port-summary`).
+- **Alerts are evaluated in the frontend** on raw ticks (`onRawTicks` hook in `ticks.ingest`); the status-bar flash replaces the
+  "ALRT n" count for 15 s, so do not assert the count right after a trigger. Only Phase 8 adds migrations (6-7: `portfolios`, `alerts`).
+- **FXC e2e needed `toPass` retry:** a tick lands on the next frame flush, so re-select the row until the mirrored text updates.
 - **fredgraph.csv hangs on a browser User-Agent; BLS ICS needs a UA with contact info** (403 otherwise). FRED API paths need `FRED_API_KEY`
   and are only fixture-tested; the keyless `fred_csv` / `treasury` / `nasdaq_earnings` / `agency_ics` (BLS + BEA) providers serve Phase 7.
 - **`ChartView` captures `writeReadout` in its create-once effect,** so the crosshair readout keeps the first render's data. FRED remounts

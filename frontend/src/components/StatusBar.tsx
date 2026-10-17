@@ -2,6 +2,7 @@ import { DISCLAIMER } from "../config";
 import { link } from "../net/socket";
 import { sources } from "../net/sources";
 import { useStore } from "../state/store";
+import { AlertFlash } from "./AlertFlash"; // Phase 8
 import { workspace } from "../state/workspace";
 
 const PCLS: Record<string, string> = { OK: "up", DEGRADED: "warn", DOWN: "err", IDLE: "dim" };
@@ -44,6 +45,7 @@ export function StatusBar() {
         LAYOUT <span className={layout ? "acc" : "dim"}>{layout ?? "NONE"}</span>
       </span>
       <span>MODE CMD</span>
+      <AlertFlash />
       <span className="sp" />
       <span>{DISCLAIMER}</span>
     </footer>

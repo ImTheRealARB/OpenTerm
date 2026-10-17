@@ -410,3 +410,59 @@ export const macroApi = {
   eco: (start: string | null, days: number, fresh = false) =>
     request<Envelope<EcoPayload>>(`/api/eco?${qs({ start: start ?? undefined, days: String(days) })}`, fresh ? 0 : 60_000),
 };
+
+// --- Phase 8: portfolios and alerts ---
+export interface Position {
+  symbol: string;
+  qty: number;
+  cost: number | null;
+  currency: string | null;
+  notes: string | null;
+}
+
+export interface PortfolioInfo {
+  name: string;
+  base: string;
+  count: number;
+  updated_at: number;
+}
+
+export interface Portfolio {
+  name: string;
+  base: string;
+  positions: Position[];
+  updated_at: number;
+}
+
+export type PositionIn = Partial<Position> & { symbol: string; qty: number };
+
+export interface Alert {
+  id: number;
+  symbol: string;
+  op: ">" | "<";
+  unit: "price" | "pct";
+  value: number;
+  status: "active" | "triggered";
+  created_at: number;
+  triggered_at: number | null;
+  trigger_price: number | null;
+}
+
+const pf = (name: string) => `/api/portfolios/${encodeURIComponent(name)}`;
+
+export const api8 = {
+  portfolios: () => send<{ portfolios: PortfolioInfo[] }>("GET", "/api/portfolios"),
+  portfolio: (name: string) => send<Portfolio>("GET", pf(name)),
+  putPortfolio: (name: string, positions: PositionIn[], base?: string) =>
+    send<Portfolio>("PUT", pf(name), base ? { positions, base } : { positions }),
+  editPortfolio: (name: string, change: { add?: PositionIn[]; set?: PositionIn[]; remove?: string[]; base?: string }) =>
+    send<Portfolio>("PATCH", pf(name), change),
+  deletePortfolio: (name: string) => send<{ deleted: string }>("DELETE", pf(name)),
+  alerts: () => send<{ alerts: Alert[] }>("GET", "/api/alerts"),
+  createAlert: (a: { symbol: string; op: ">" | "<"; unit: "price" | "pct"; value: number }) => send<Alert>("POST", "/api/alerts", a),
+  deleteAlert: (id: number) => send<{ deleted: number }>("DELETE", `/api/alerts/${id}`),
+  triggerAlert: (id: number, price: number, at: number) =>
+    send<{ alert: Alert; changed: boolean }>("POST", `/api/alerts/${id}/trigger`, { price, at }),
+  rearmAlert: (id: number) => send<Alert>("POST", `/api/alerts/${id}/rearm`),
+  clearAlerts: () => send<{ deleted: number }>("DELETE", "/api/alerts?status=triggered"),
+};

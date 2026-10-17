@@ -212,9 +212,12 @@ test("FXC: cross matrix triangulated from USD legs, live ticks recompute it", as
   await expect(selected(page)).toContainText("175.00"); // 1 EUR = 150.5 / 0.86 JPY
   await expect.poll(() => subs.flat().sort().join(",")).toBe("USDEUR=X,USDJPY=X");
   ws!.send(JSON.stringify(["T", [["USDJPY=X", 172.0, null, null, null, null, null, Date.now(), "y"]]]));
-  await page.keyboard.press("k");
-  await page.keyboard.press("j"); // re-select the EUR row to refresh the mirrored text
-  await expect(selected(page)).toContainText("200.00"); // 172 / 0.86
+  // The tick lands on the next frame flush, so re-select the EUR row (refreshes the mirrored text) until it shows.
+  await expect(async () => {
+    await page.keyboard.press("k");
+    await page.keyboard.press("j");
+    await expect(selected(page)).toContainText("200.00", { timeout: 500 }); // 172 / 0.86
+  }).toPass({ timeout: 8000 });
 });
 
 test("MOV: tabs by number keys, Enter describes the security", async ({ page }) => {

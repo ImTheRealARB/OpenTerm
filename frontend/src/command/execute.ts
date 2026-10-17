@@ -6,6 +6,8 @@ import { layoutCommand } from "./layouts";
 import { parseCommand } from "./parser";
 import { fail, statusMsg } from "./status";
 import { deleteWatchlist, editWatchlist, parseWl } from "./watchlists";
+import { alrtCommand } from "./alerts"; // Phase 8
+import { portCommand } from "./portfolios"; // Phase 8
 
 export { statusMsg, type StatusMsg } from "./status";
 
@@ -36,6 +38,13 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
     }
   }
 
+  // --- Phase 8: PORT / ALRT edit first, then show the panel ---
+  if (parsed.fn === "PORT" || parsed.fn === "ALRT") {
+    const r = parsed.fn === "PORT" ? portCommand(args, parsed.security) : alrtCommand(args, parsed.security);
+    if (typeof r === "boolean") return r;
+    args = r;
+  }
+
   const s = workspace.get();
   let panelId = parsed.target ?? s.focus;
   if (parsed.target && !s.panels[parsed.target]) return fail(`NO PANEL ${parsed.target}`);
@@ -57,6 +66,7 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   statusMsg.set(() => null);
   // Editing the list a panel already shows: it refetches by itself, no new history entry.
   if (fn === "WL" && cur.fn === "WL" && args.length && cur.args[0]?.toUpperCase() === args[0]) return true;
+  if ((fn === "PORT" || fn === "ALRT") && cur.fn === fn && (cur.args[0] ?? "").toUpperCase() === (args[0] ?? "")) return true; // Phase 8
   commandStart(panelId, parsed.raw);
   navigate(panelId, { fn, security, args });
   return true;

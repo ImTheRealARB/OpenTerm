@@ -15,6 +15,13 @@ MIGRATIONS: list[str] = [
     "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, cmd TEXT NOT NULL, at REAL NOT NULL)",
     # 5: watchlists (symbols is a JSON array of canonical symbols, in display order)
     "CREATE TABLE watchlists (name TEXT PRIMARY KEY, symbols BLOB NOT NULL, updated_at REAL NOT NULL)",
+    # 6: portfolios (Phase 8). positions is a JSON array of {symbol, qty, cost, currency, notes}, in display order
+    "CREATE TABLE portfolios (name TEXT PRIMARY KEY, base TEXT NOT NULL, positions BLOB NOT NULL, updated_at REAL NOT NULL)",
+    # 7: price / percent alerts (Phase 8). op '>' | '<', unit 'price' | 'pct' (vs previous close)
+    (
+        "CREATE TABLE alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, op TEXT NOT NULL, unit TEXT NOT NULL,"
+        " value REAL NOT NULL, status TEXT NOT NULL, created_at REAL NOT NULL, triggered_at REAL, trigger_price REAL)"
+    ),
 ]
 
 

@@ -22,6 +22,8 @@ def test_migrations_upgrade_an_existing_db(tmp_path):
         await db.execute("DROP TABLE IF EXISTS layouts")
         await db.execute("DROP TABLE IF EXISTS history")
         await db.execute("DROP TABLE IF EXISTS watchlists")
+        await db.execute("DROP TABLE IF EXISTS portfolios")
+        await db.execute("DROP TABLE IF EXISTS alerts")
         await db.commit()
         await db.close()
         db = await open_db(path)
@@ -32,7 +34,7 @@ def test_migrations_upgrade_an_existing_db(tmp_path):
         await db.close()
         return tables
 
-    assert {"cache", "kv", "layouts", "history", "watchlists"} <= asyncio.run(run())
+    assert {"cache", "kv", "layouts", "history", "watchlists", "portfolios", "alerts"} <= asyncio.run(run())
 
 
 def test_layout_crud(client):

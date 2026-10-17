@@ -36,6 +36,7 @@ let gaugeAt = performance.now();
 
 export function ingest(rows: Row[], recvAt: number): void {
   for (const r of rows) pending.set(r[0], r);
+  for (const l of rawListeners) l(rows); // Phase 8: alerts (runs even when rAF is paused in a hidden tab)
   ticksSinceGauge += rows.length;
   if (!oldestRecv) oldestRecv = recvAt;
   if (!scheduled) {
@@ -91,3 +92,13 @@ export function onTicks(l: TickListener): () => void {
 }
 
 export const SRC_LABEL: Record<string, string> = { y: "STREAM", p: "POLL", s: "SYNTHETIC" };
+
+// --- Phase 8: raw tick listeners ---
+export type RawTickListener = (rows: readonly Row[]) => void;
+const rawListeners = new Set<RawTickListener>();
+
+/** Every tick as it arrives, before frame batching: alert checks must not wait for (or miss) a paint. */
+export function onRawTicks(l: RawTickListener): () => void {
+  rawListeners.add(l);
+  return () => rawListeners.delete(l);
+}

@@ -186,6 +186,33 @@ Notes:
   `ChartView`. If the streaming gate fails alone, rerun twice before investigating.
 - Tests: 116 pytest (90 + 26 in `test_phase7.py`), 66 vitest (46 + 20 `macroArgs`), 40 Playwright (29 + 11 in `phase7.spec.ts`).
 
+### Phase 8 (2026-10-17, same machine; fixtures + SYNTHETIC stream)
+
+17/17 PASS on three consecutive runs. Phase 7 numbers in brackets (ranges where it was noisy).
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 89.3 KB [85.4] | 400 KB | PASS |
+| Backend p95 cached health / quote / history (server-side) | 0.5 / 0.7 / 1.5 ms [0.5-0.6 / 0.7-0.8 / 2.3] | 20 ms | PASS |
+| Cold start to usable command line | 83.5-93.0 ms [94-112] | 1500 ms | PASS |
+| Keystroke to echo p95 (idle / streaming load) | 14.9 / 10.0-15.4 ms [14.3-14.7 / 12.1-15.1] | 16.7 ms | PASS |
+| Command submit to first paint p95 (cached / cold network) | 17.0 / 13.6 ms [16.6-17.6 / 15.6-17.7] | 100 / 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 36.0-45.6 ms [38.5-44.2] | 50 ms | PASS |
+| Frame time p95 (8-panel / streaming / 10k grid / 50k chart) | 16.7 ms each | 20 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 5.6-8.8 MB [5.1] | 500 MB | PASS |
+| Ticks delivered per second (offered 4,000) | 4,010 [3,969-4,026] | - | INFO |
+| Layout load to paint p95 | 35.1-38.5 ms [35.5-39.9] | 100 ms | PASS |
+
+Notes:
+- Entry bundle +3.9 KB gz (85.4 → 89.3): the alert engine (`command/alerts.ts`, `AlertFlash`), the PORT / ALRT command
+  grammar in `execute.ts` and `portfolios.ts` are in the entry chunk because alerts watch symbols app-wide and the
+  command line needs the grammar at once. The PORT and ALRT panels and the portfolio math / CSV code are lazy modules.
+- The alert hook runs inside `ticks.ingest` (raw ticks, before frame batching). With no active alerts it is a set lookup per
+  tick; tick-to-pixel and frame time did not move beyond the run-to-run spread above.
+- Tests: 126 pytest (116 + 10 in `test_phase8.py`), 91 vitest (66 + 25), 46 Playwright (40 + 6 in `phase8.spec.ts`).
+- One pytest (`test_core.py::test_stale_while_revalidate`) failed once under 4-worker load and passed on three solo runs and the rerun.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds
