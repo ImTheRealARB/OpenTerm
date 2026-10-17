@@ -14,7 +14,9 @@ export const INTERVALS = ["1D", "1W"];
 const RANGE_RE = /^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$/;
 const TOKEN_RE = /\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))/iy;
 /** `BT <SUB> ...` forms; anything else is `BT <SYMBOLS> <RULE> ...`. */
-export const SUBCOMMANDS = new Set(["RUNS", "MC", "WF", "EXPORT", "SAVE", "LOAD", "DEL"]);
+export const SUBCOMMANDS = new Set(["RUNS", "EXPORT", "SAVE", "LOAD", "DEL"]);
+/** `BT MC|WF <SYMBOLS> <RULE> ...` runs the backtest, then validates it. */
+const VALIDATIONS = new Set(["MC", "WF"]);
 
 export type RuleCheck = { ok: true; error?: undefined; col?: undefined } | { ok: false; error: string; col: number };
 
@@ -126,6 +128,8 @@ export interface BtRun {
   cash: number;
   bench?: string;
   mkt?: string;
+  /** Validate the finished run: Monte Carlo (MC) or walk-forward (WF). */
+  val?: "MC" | "WF";
 }
 export interface BtSub {
   ok: true;
@@ -164,6 +168,12 @@ function num(key: string, raw: string, lo: number, hi: number): number {
 
 /** `BT` command arguments (as split by the command line) -> a run request, a subcommand, or an error. */
 export function parseBtArgs(args: string[]): BtArgs {
+  if (args.length && VALIDATIONS.has(args[0].toUpperCase())) {
+    const val = args[0].toUpperCase() as "MC" | "WF";
+    const inner = parseBtArgs(args.slice(1));
+    if (inner.ok && inner.sub === undefined) return { ...inner, val };
+    return inner.ok ? { ok: false, error: `BT ${val} <SYMBOLS> <RULE> [OPTIONS]: IT RUNS THE BACKTEST, THEN VALIDATES IT` } : inner;
+  }
   if (args.length && SUBCOMMANDS.has(args[0].toUpperCase())) return { ok: true, sub: args[0].toUpperCase(), args: args.slice(1) };
   try {
     if (args.length < 2) throw new RuleError(BT_USAGE);

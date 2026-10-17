@@ -23,6 +23,7 @@ Filled from Phase 12 onwards. One row per ported file.
 | `openterm/bt/engines/global_futures.py` | `agent/backtest/engines/global_futures.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/composite.py` | `agent/backtest/engines/composite.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/bands.py` | `agent/backtest/engines/china_a (only `_blocked_by_limit`).py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/validation.py` | `agent/backtest/validation.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 
 ### HKUDS/Vibe-Trading (MIT)
 

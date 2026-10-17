@@ -4,15 +4,18 @@
  * `J` frames drive the progress line and the finished run is fetched by id. Every result carries the labels of
  * spec decision L (historical simulation, data sources and age, ADJ/RAW, fees, slippage, engine, warm-up).
  * V / Shift+V cycle CHART / METRICS / TRADES / CODE (1-4 pick one; Tab stays the global next-panel key). Nothing is invented: failures show the backend's error.
+ * M / W (or `BT MC|WF <SYMBOLS> <RULE> ...`) start a Monte Carlo or walk-forward job on the open run; each result adds a
+ * view (MC: text histogram of the shuffled Sharpe ratios; WF: one row per window), numbers straight from Vibe's functions.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtMetric, METRIC_ROWS, type MetricRow } from "../bt/metricsFormat";
 import { BT_USAGE, isBtRun, parseBtArgs, type BtRun } from "../bt/ruleParse";
+import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtRunFull, type BtTrade } from "../net/api";
+import { ApiError, btApi, type BtMcResult, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
 import { isActive, progressText } from "../net/jobFrames";
 import { adoptJob, cancelJob, fetchJob, useJob } from "../net/jobs";
 import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
@@ -20,15 +23,14 @@ import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
 
-const VIEWS = ["CHART", "METRICS", "TRADES", "CODE"] as const;
-type View = (typeof VIEWS)[number];
+const BASE_VIEWS = ["CHART", "METRICS", "TRADES", "CODE"] as const;
+type View = (typeof BASE_VIEWS)[number] | "MC" | "WF";
 /** Keys that belong to later Phase 12 steps: say so instead of doing nothing. */
 const LATER: Record<string, string> = {
-  m: "M: MONTE CARLO ARRIVES IN PHASE 12 STEP 6",
-  w: "W: WALK-FORWARD ARRIVES IN PHASE 12 STEP 6",
   s: "S: SAVING STRATEGIES ARRIVES WITH THE STRATEGY EDITOR (PHASE 12 STEP 4B)",
 };
-const SUB_STEP: Record<string, string> = { RUNS: "7", EXPORT: "7", MC: "6", WF: "6", SAVE: "4B", LOAD: "4B", DEL: "4B" };
+const SUB_STEP: Record<string, string> = { RUNS: "7", EXPORT: "7", SAVE: "4B", LOAD: "4B", DEL: "4B" };
+const VAL_NAME = { MC: "MONTE CARLO", WF: "WALK-FORWARD" } as const;
 
 type State =
   | { k: "usage" }
@@ -53,6 +55,17 @@ const signColor = (v: number | null | undefined): CellColor => (v == null || v =
 const METRIC_COLS: Column<MetricLine>[] = [
   { title: "METRIC", width: 26, text: (m) => m.row.label, color: () => "dim" },
   { title: "VALUE", width: 14, align: "right", text: (m) => fmtMetric(m.row.key, m.v), color: (m) => (m.row.signed ? signColor(m.v) : "fg") },
+];
+
+const WF_COLS: Column<BtWfWindow>[] = [
+  { title: "WIN", width: 5, align: "right", text: (w) => String(w.window), color: () => "dim" },
+  { title: "START", width: 11, text: (w) => w.start },
+  { title: "END", width: 11, text: (w) => w.end },
+  { title: "RETURN", width: 10, align: "right", text: (w) => fmtPct(w.return * 100), color: (w) => signColor(w.return) },
+  { title: "SHARPE", width: 8, align: "right", text: (w) => fmtNum(w.sharpe, 2), color: (w) => signColor(w.sharpe) },
+  { title: "MAX DD", width: 9, align: "right", text: (w) => fmtPct(w.max_dd * 100), color: (w) => signColor(w.max_dd) },
+  { title: "TRADES", width: 7, align: "right", text: (w) => String(w.trades) },
+  { title: "WIN RATE", width: 9, align: "right", text: (w) => `${fmtNum(w.win_rate * 100, 1)}%` },
 ];
 
 const TRADE_COLS: Column<BtTrade>[] = [
@@ -112,6 +125,10 @@ export default function BT({ panelId, args }: FunctionProps) {
   const t0 = useRef<number | null>(null);
   const jobId = state.k === "running" ? state.jobId : null;
   const job = useJob(jobId);
+  const [mc, setMc] = useState<BtMcResult | null>(null);
+  const [wf, setWf] = useState<BtWfResult | null>(null);
+  const [valRun, setValRun] = useState<{ kind: "MC" | "WF"; jobId: string } | null>(null);
+  const valJob = useJob(valRun?.jobId ?? null);
 
   const load = (runId: string) => {
     setState({ k: "loading", runId });
@@ -180,6 +197,61 @@ export default function BT({ panelId, args }: FunctionProps) {
   }, [job]);
 
   const run = state.k === "done" ? state.run : null;
+  const views = useMemo<View[]>(() => [...BASE_VIEWS, ...(mc ? (["MC"] as const) : []), ...(wf ? (["WF"] as const) : [])], [mc, wf]);
+  const shown: View = views.includes(view) ? view : "CHART";
+
+  const finishVal = (kind: "MC" | "WF", result: unknown) => {
+    const r = result as { run_id?: string } | null;
+    setValRun(null);
+    if (!r || r.run_id !== latest.current.run?.id) return;
+    if (kind === "MC") setMc(r as BtMcResult);
+    else setWf(r as BtWfResult);
+    setView(kind);
+    setMsg(null);
+  };
+
+  const startVal = (kind: "MC" | "WF") => {
+    const r = latest.current.run;
+    if (!r) return;
+    setMsg(`${VAL_NAME[kind]}…`);
+    btApi
+      .validate(r.id, kind === "MC" ? "mc" : "wf")
+      .then((j) => {
+        const rec = adoptJob(j);
+        if (rec.state === "done" && j.result) finishVal(kind, j.result);
+        else setValRun({ kind, jobId: rec.id });
+      })
+      .catch((e) => setMsg(`ERR: ${errText(e)}`));
+  };
+
+  // A new run (or a re-run) drops the old validations; `BT MC|WF ...` starts one as soon as the run is on screen.
+  useEffect(() => {
+    setMc(null);
+    setWf(null);
+    setValRun(null);
+    if (run && isBtRun(parsed) && parsed.val) startVal(parsed.val);
+    // keyed on the run only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run?.id]);
+
+  // Validation job finished: its result (the done frame carries it, else GET /api/jobs/{id}) becomes a view.
+  useEffect(() => {
+    if (!valJob || !valRun) return;
+    if (valJob.state === "error" || valJob.state === "cancelled") {
+      setValRun(null);
+      return setMsg(valJob.state === "cancelled" ? "CANCELLED" : `ERR: ${valJob.error ?? valJob.msg ?? "THE JOB FAILED"}`);
+    }
+    if (valJob.state !== "done") return;
+    if (valJob.result) return finishVal(valRun.kind, valJob.result);
+    fetchJob(valJob.id)
+      .then((full) => finishVal(valRun.kind, full.result))
+      .catch((e) => {
+        setValRun(null);
+        setMsg(`ERR: ${errText(e)}`);
+      });
+    // reacts to the job record only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valJob]);
 
   // Perf: command submit to the painted result (bench "BT result open to first paint").
   useEffect(() => {
@@ -197,15 +269,20 @@ export default function BT({ panelId, args }: FunctionProps) {
   const trades = run?.trades ?? [];
   const chartBits = useMemo(() => (run ? chartData(run) : null), [run]);
   useEffect(() => {
-    if (view === "METRICS" || view === "TRADES") grid.current?.moveTo(0);
-  }, [view, run]);
+    if (shown === "METRICS" || shown === "TRADES" || shown === "WF") grid.current?.moveTo(0);
+  }, [shown, run]);
 
-  const latest = useLatest({ state, view, run, metricRows, parsed, job });
+  const latest = useLatest({ state, view: shown, views, run, metricRows, parsed, job, valJob, valRun, mc, wf });
   const name = run ? `BT_${run.symbols.slice(0, 3).join("-")}` : "BT";
   useCsvExport(panelId, (): CsvTable | null => {
     const { run: r, view: v, metricRows: m } = latest.current;
     if (!r) return null;
     if (v === "METRICS") return gridCsv(`${name}_METRICS`, METRIC_COLS, m, [{ title: "RAW", text: (x) => x.v ?? "" }]);
+    if (v === "WF" && latest.current.wf) return gridCsv(`${name}_WALKFORWARD`, WF_COLS, latest.current.wf.windows);
+    if (v === "MC" && latest.current.mc) {
+      const h = histogram(latest.current.mc.sharpe_samples, HIST_BINS, latest.current.mc.actual_sharpe);
+      return { name: `${name}_MONTECARLO`, header: ["SHARPE FROM", "SHARPE TO", "SHUFFLES", "CONTAINS ACTUAL"], rows: h.map((b) => [b.lo, b.hi, b.count, b.actual ? "YES" : ""]) };
+    }
     if (v === "TRADES") return gridCsv(`${name}_TRADES`, TRADE_COLS, r.trades);
     const bench = new Map(r.benchmark.map(([t, b]) => [t, b]));
     return {
@@ -219,19 +296,20 @@ export default function BT({ panelId, args }: FunctionProps) {
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
-        const { state: s, view: v, run: r, metricRows: m, parsed: p, job: j } = latest.current;
+        const { state: s, view: v, views: vs, run: r, metricRows: m, parsed: p, job: j, valJob: vj, valRun: vr, mc: mcr, wf: wfr } = latest.current;
         // Tab is the global next-panel key and never reaches a panel: V / Shift+V cycle the views, 1-4 pick one.
         if ((e.key === "v" || e.key === "V") && r) {
-          const i = VIEWS.indexOf(v);
-          setView(VIEWS[(i + (e.key === "V" ? VIEWS.length - 1 : 1)) % VIEWS.length]);
+          const i = vs.indexOf(v);
+          setView(vs[(i + (e.key === "V" ? vs.length - 1 : 1)) % vs.length]);
           return true;
         }
         const d = Number(e.key);
-        if (r && d >= 1 && d <= VIEWS.length) {
-          setView(VIEWS[d - 1]);
+        if (r && d >= 1 && d <= vs.length) {
+          setView(vs[d - 1]);
           return true;
         }
         if ((v === "METRICS" || v === "TRADES") && r && navKey(e, grid.current, v === "METRICS" ? m.length : r.trades.length)) return true;
+        if (v === "WF" && wfr && navKey(e, grid.current, wfr.windows.length)) return true;
         if (v === "CHART" && r) {
           const c = chart.current;
           if (e.key === "h" || e.key === "ArrowLeft") return c?.pan(-10), true;
@@ -242,6 +320,18 @@ export default function BT({ panelId, args }: FunctionProps) {
         const k = e.key.toLowerCase();
         if (k === "r" && isBtRun(p) && s.k !== "running" && s.k !== "submitting") {
           submit(p);
+          return true;
+        }
+        if ((k === "m" || k === "w") && r) {
+          const kind = k === "m" ? "MC" : "WF";
+          if (vr) setMsg(`${VAL_NAME[vr.kind]} IS STILL RUNNING`);
+          else if ((kind === "MC" ? mcr : wfr) != null) setView(kind);
+          else startVal(kind);
+          return true;
+        }
+        if (vr && vj && isActive(vj.state) && (k === "x" || e.key === "Escape")) {
+          setMsg(`CANCELLING ${vj.id}…`);
+          cancelJob(vj.id).catch((err) => setMsg(`ERR: ${errText(err)}`));
           return true;
         }
         if (k === "x" || (e.key === "Escape" && s.k === "running")) {
@@ -269,6 +359,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
+          <div className="dim">BT MC|WF &lt;SYMBOLS&gt; &lt;RULE&gt; … RUNS IT, THEN SHUFFLES ITS TRADES (MC) OR SPLITS IT INTO WINDOWS (WF) · M / W ON AN OPEN RUN DO THE SAME</div>
         </>
       )}
       {state.k === "bad" && <BadRule {...state} />}
@@ -280,6 +371,12 @@ export default function BT({ panelId, args }: FunctionProps) {
           {progressText(job?.progress ?? 0)} <span className="dim">{job?.msg ?? job?.state.toUpperCase() ?? "QUEUED"} · X CANCEL</span>
         </div>
       )}
+      {valRun && (
+        <div className="line">
+          <span className="acc">{VAL_NAME[valRun.kind]} </span>
+          {progressText(valJob?.progress ?? 0)} <span className="dim">{valJob?.msg ?? valJob?.state.toUpperCase() ?? "QUEUED"} · X CANCEL</span>
+        </div>
+      )}
       {state.k === "loading" && <div className="dim">LOADING RUN {state.runId}…</div>}
       {state.k === "failed" && <div className="err">ERR: {state.error}</div>}
       {msg && <div className="dim">{msg}</div>}
@@ -288,15 +385,22 @@ export default function BT({ panelId, args }: FunctionProps) {
           <Labels run={run} />
           <Headline run={run} />
           <div className="line">
-            VIEW <span className="bt-view acc">{view}</span>
-            <span className="dim"> · V NEXT VIEW (1-4: CHART METRICS TRADES CODE) · R RE-RUN · E EXPORT{view === "CHART" ? " · H/L PAN · +/- ZOOM" : " · J/K MOVE"}</span>
+            VIEW <span className="bt-view acc">{shown}</span>
+            <span className="dim"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
           </div>
-          {view === "CHART" && chartBits && (
+          {shown === "CHART" && chartBits && (
             <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
           )}
-          {view === "METRICS" && <Grid ref={grid} columns={METRIC_COLS} rows={metricRows} />}
-          {view === "TRADES" && (trades.length ? <Grid ref={grid} columns={TRADE_COLS} rows={trades} /> : <div className="dim">NO TRADES IN THIS RUN</div>)}
-          {view === "CODE" && <pre className="desc">{run.rule ?? run.code ?? (run.strategy ? `STRATEGY ${run.strategy}` : "—")}</pre>}
+          {shown === "METRICS" && <Grid ref={grid} columns={METRIC_COLS} rows={metricRows} />}
+          {shown === "TRADES" && (trades.length ? <Grid ref={grid} columns={TRADE_COLS} rows={trades} /> : <div className="dim">NO TRADES IN THIS RUN</div>)}
+          {shown === "CODE" && <pre className="desc">{run.rule ?? run.code ?? (run.strategy ? `STRATEGY ${run.strategy}` : "—")}</pre>}
+          {shown === "MC" && mc && <McView mc={mc} />}
+          {shown === "WF" && wf && (
+            <>
+              <WfSummary wf={wf} />
+              <Grid ref={grid} columns={WF_COLS} rows={wf.windows} />
+            </>
+          )}
         </>
       )}
     </div>
@@ -304,6 +408,60 @@ export default function BT({ panelId, args }: FunctionProps) {
 }
 
 const NO_INDICATORS: never[] = [];
+const HIST_BINS = 20;
+
+function McView({ mc }: { mc: BtMcResult }) {
+  const rows = useMemo(() => histogram(mc.sharpe_samples, HIST_BINS, mc.actual_sharpe), [mc]);
+  const b = mc.bootstrap;
+  return (
+    <div>
+      <div className="line warn">
+        {mc.labels.headline} · {mc.labels.validation}
+      </div>
+      <div className="line">
+        ACTUAL SHARPE <span className="acc">{fmtNum(mc.actual_sharpe, 2)}</span> · SHUFFLED MEAN {fmtNum(mc.simulated_sharpe_mean, 2)} (P5 {fmtNum(mc.simulated_sharpe_p5, 2)} · P95{" "}
+        {fmtNum(mc.simulated_sharpe_p95, 2)}) · P-VALUE <span className="acc">{fmtP(mc.p_value_sharpe)}</span>
+        <span className="dim"> = SHUFFLES WITH A SHARPE AT LEAST AS HIGH</span>
+      </div>
+      <div className="line">
+        ACTUAL MAX DD <span className="acc">{fmtPct(mc.actual_max_dd * 100)}</span> · P-VALUE <span className="acc">{fmtP(mc.p_value_max_dd)}</span>
+        <span className="dim"> = SHUFFLES WITH A DRAWDOWN NO DEEPER · {mc.n_trades} TRADES · {mc.n_simulations} SHUFFLES</span>
+      </div>
+      <div className="line">
+        {b.error ? (
+          <span className="err">BOOTSTRAP: {b.error.toUpperCase()}</span>
+        ) : (
+          <>
+            BOOTSTRAP SHARPE {fmtNum((b.confidence ?? 0) * 100, 0)}% CI{" "}
+            <span className="acc">
+              {fmtNum(b.ci_lower, 2)} TO {fmtNum(b.ci_upper, 2)}
+            </span>{" "}
+            · MEDIAN {fmtNum(b.median_sharpe, 2)} · SHARPE &gt; 0 IN {fmtP(b.prob_positive)} OF {b.n_bootstrap} RESAMPLES
+          </>
+        )}
+      </div>
+      <div className="line dim">{MC_NOTE}</div>
+      <pre className="desc" data-testid="mc-hist">
+        {"SHUFFLED SHARPE          SHUFFLES\n"}
+        {rows.map((r) => `${fmtNum(r.lo, 2).padStart(7)} TO ${fmtNum(r.hi, 2).padStart(6)} ${"█".repeat(r.bar).padEnd(40)} ${String(r.count).padStart(4)}${r.actual ? "  ◄ ACTUAL" : ""}`).join("\n")}
+      </pre>
+    </div>
+  );
+}
+
+function WfSummary({ wf }: { wf: BtWfResult }) {
+  return (
+    <>
+      <div className="line warn">
+        {wf.labels.headline} · {wf.labels.validation}
+      </div>
+      <div className="line">
+        {wf.profitable_windows} OF {wf.n_windows} WINDOWS PROFITABLE ({fmtP(wf.consistency_rate)}) · RETURN MEAN {fmtPct(wf.return_mean * 100)} STD {fmtNum(wf.return_std * 100, 2)}% · SHARPE MEAN{" "}
+        {fmtNum(wf.sharpe_mean, 2)} STD {fmtNum(wf.sharpe_std, 2)}
+      </div>
+    </>
+  );
+}
 
 function Head({ parsed, run }: { parsed: BtRun | null; run: BtRunFull | null }) {
   const syms = run?.symbols ?? parsed?.symbols;

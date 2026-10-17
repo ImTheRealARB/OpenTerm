@@ -384,6 +384,14 @@ worktree; re-check at the end of the phase), 100 symbols x 10 years 1.6 s. The h
 `binance_klines` in front: its `supports()` is one regex, so Yahoo symbols pay nothing measurable (backend p95
 cached /api/history 1.9 ms).
 
+### Phase 12 step 6: BT MC / BT WF (2026-10-19)
+315 pytest + 9 xfail, 192 vitest, 80 Playwright, tsc + ruff clean. Bench **24/24** on the third run, after two runs that
+missed on machine noise with no change in the code they time: run 1 tick-to-pixel 65.7 ms (the streaming path is not
+touched by this step); run 2 BT 10-year run 411.5 ms and BT open 100.8 ms (the same metrics read 229.9 / 90.4 on run 1
+and 285.6 / 72.1 on run 3; `import pandas` and the 100-symbol run slowed by the same factor in run 2). Run 3: tick-to-pixel
+36.5 ms, **BT 10-year rule run 285.6 ms** (< 300; step 5 233.2), cached run 5.2 ms, BT open 72.1 ms (< 100), cold worker
+2.2 s, 100 symbols x 10 years 1.6 s. The BT run budget has little headroom on this machine: watch it in steps 7-9.
+
 ## Test suite speed (2026-10-19, on top of Phase 12 step 4)
 Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
 

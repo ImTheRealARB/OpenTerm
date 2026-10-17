@@ -632,7 +632,52 @@ export interface BtRunRequest {
   options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string };
 }
 
+/** Result of a bt.mc job: Vibe's trade-order permutation test plus the bootstrap Sharpe interval. */
+export interface BtMcResult {
+  run_id: string;
+  actual_sharpe: number;
+  actual_max_dd: number;
+  p_value_sharpe: number;
+  p_value_max_dd: number;
+  simulated_sharpe_mean: number;
+  simulated_sharpe_std: number;
+  simulated_sharpe_p5: number;
+  simulated_sharpe_p95: number;
+  n_simulations: number;
+  n_trades: number;
+  sharpe_samples: number[];
+  bootstrap: { observed_sharpe?: number; ci_lower?: number; ci_upper?: number; median_sharpe?: number; prob_positive?: number;
+    confidence?: number; n_bootstrap?: number; error?: string };
+  labels: BtLabels & { validation?: string };
+}
+export interface BtWfWindow {
+  window: number;
+  start: string;
+  end: string;
+  return: number;
+  sharpe: number;
+  max_dd: number;
+  trades: number;
+  win_rate: number;
+}
+/** Result of a bt.wf job. */
+export interface BtWfResult {
+  run_id: string;
+  n_windows: number;
+  windows: BtWfWindow[];
+  profitable_windows: number;
+  consistency_rate: number;
+  return_mean: number;
+  return_std: number;
+  sharpe_mean: number;
+  sharpe_std: number;
+  labels: BtLabels & { validation?: string };
+}
+
 export const btApi = {
+  /** Start a Monte Carlo (`mc`) or walk-forward (`wf`) job on a stored run. */
+  validate: (id: string, kind: "mc" | "wf", body: Record<string, unknown> = {}) =>
+    send<JobRec>("POST", `/api/bt/runs/${encodeURIComponent(id)}/${kind}`, body),
   /** The job, plus the id its run will be stored under (open it at once when the answer is cached). */
   run: (body: BtRunRequest) => send<JobRec & { run_id: string; run?: BtRunFull }>("POST", "/api/bt/run", body),
   get: (id: string) => send<BtRunFull>("GET", `/api/bt/runs/${encodeURIComponent(id)}`),

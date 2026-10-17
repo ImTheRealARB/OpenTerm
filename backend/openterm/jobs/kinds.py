@@ -102,9 +102,43 @@ def bt_job(params: dict, progress: Callable[[float, str], None]) -> dict:
     return run(params, progress)
 
 
+# --- bt.mc / bt.wf: validation of a stored run (Phase 12 step 6). Params are built by /api/bt/runs/{id}/mc|wf. ----
+
+VAL_COMMON = {"run_id", "initial_cash", "bars_per_year", "equity", "trades", "labels"}
+VAL_KEYS = {
+    "bt.mc": VAL_COMMON | {"n_simulations", "n_bootstrap", "confidence", "seed"},
+    "bt.wf": VAL_COMMON | {"n_windows"},
+}
+
+
+def validate_bt_val(kind: str):
+    def validate(params: dict) -> dict:
+        if not isinstance(params, dict) or set(params) != VAL_KEYS[kind]:
+            raise BadParams(f"{kind.upper()} PARAMS ARE BUILT BY /api/bt/runs/{{id}}/{kind[3:]}")
+        return params
+
+    return validate
+
+
+def bt_mc_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..bt.validate_job import monte_carlo  # pandas loads here, in the worker
+
+    return monte_carlo(params, progress)
+
+
+def bt_wf_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..bt.validate_job import walk_forward
+
+    return walk_forward(params, progress)
+
+
 KINDS: dict[str, Kind] = {
     "sleep": Kind("sleep", "1", "TEST JOB", sleep_job, validate_sleep),
     "bt.run": Kind("bt.run", "1", "BACKTEST", bt_job, validate_bt, time_limit_s=60.0,
                    fingerprint=lambda p: p["data_sha"], internal=True,
                    hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"}),
+    "bt.mc": Kind("bt.mc", "1", "MONTE CARLO", bt_mc_job, validate_bt_val("bt.mc"), time_limit_s=60.0, internal=True,
+                  hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"}),
+    "bt.wf": Kind("bt.wf", "1", "WALK-FORWARD", bt_wf_job, validate_bt_val("bt.wf"), time_limit_s=60.0, internal=True,
+                  hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"}),
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fmtMetric, METRIC_ROWS } from "./metricsFormat";
 import { parseBtArgs, parseRule } from "./ruleParse";
+import { fmtP, histogram } from "./validationFormat";
 
 /*
  * Phase 12 pure modules (spec: docs/specs/PHASE_12.md), written before the code.
@@ -69,5 +70,49 @@ describe("csvImport (step 8)", () => {
     expect(parseBarsCsv("date,open,high,low,close\n2024-01-02,1,1,1,abc\n").errors[0]).toMatch(/ROW 1/);
     // volume is optional
     expect(parseBarsCsv("date,open,high,low,close\n2024-01-02,1,1,1,1\n").bars[0].v).toBeUndefined();
+  });
+});
+
+describe("BT MC / WF (step 6)", () => {
+  it("BT MC|WF <run args> is a run that validates itself", () => {
+    expect(parseBtArgs(["MC", "AAPL", "SMA20>SMA50", "1D", "10Y"])).toMatchObject({
+      ok: true, symbols: ["AAPL"], rule: "SMA20>SMA50", range: "10Y", val: "MC",
+    });
+    expect(parseBtArgs(["wf", "SPY", "RSI14<30"])).toMatchObject({ ok: true, val: "WF" });
+    expect(parseBtArgs(["AAPL", "SMA20>SMA50"]).ok && "val" in parseBtArgs(["AAPL", "SMA20>SMA50"])).toBe(false);
+  });
+
+  it("BT MC with nothing to run, or with another subcommand, is an error", () => {
+    expect(parseBtArgs(["MC"]).ok).toBe(false);
+    expect(parseBtArgs(["MC", "RUNS"]).ok).toBe(false);
+    const bad = parseBtArgs(["MC", "AAPL", "SMA20>>SMA50"]);
+    expect(bad).toMatchObject({ ok: false, col: 6, rule: "SMA20>>SMA50" });
+  });
+
+  it("histogram: counts, scaled bars, the actual value's bin", () => {
+    const h = histogram([1, 1, 1, 2, 3, 4, 4], 3, 4, 10);
+    expect(h.map((r) => r.count)).toEqual([3, 1, 3]);
+    expect(h.map((r) => r.bar)).toEqual([10, 3, 10]);
+    expect(h.map((r) => r.actual)).toEqual([false, false, true]);
+    expect(h[0].lo).toBe(1);
+    expect(h[2].hi).toBe(4);
+  });
+
+  it("histogram: the range widens to include the actual value, a constant sample still has width, nothing draws nothing", () => {
+    const wide = histogram([0, 1], 4, 5);
+    expect(wide[wide.length - 1].hi).toBe(5);
+    expect(wide.reduce((n, r) => n + r.count, 0)).toBe(2);
+    expect(wide.filter((r) => r.actual)).toHaveLength(1);
+    const flat = histogram([2, 2, 2], 2, null);
+    expect(flat.reduce((n, r) => n + r.count, 0)).toBe(3);
+    expect(flat[0].hi).toBeGreaterThan(flat[0].lo);
+    expect(histogram([], 5, 1)).toEqual([]);
+    expect(histogram([NaN, Infinity], 5, 1)).toEqual([]);
+  });
+
+  it("p-values read as shares", () => {
+    expect(fmtP(0.041)).toBe("4.1%");
+    expect(fmtP(null)).toBe("—");
+    expect(fmtP(NaN)).toBe("—");
   });
 });

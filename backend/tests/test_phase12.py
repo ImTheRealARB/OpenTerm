@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-VALID = pytest.mark.xfail(strict=True, reason="Phase 12 step 6 (BT MC, BT WF) not built")
 RUNS = pytest.mark.xfail(strict=True, reason="Phase 12 step 7 (BT RUNS compare, BT EXPORT) not built")
 IMPORT = pytest.mark.xfail(strict=True, reason="Phase 12 step 8 (IMPORT) not built")
 
@@ -478,7 +477,6 @@ def _assert_dict(got: dict, want: dict):
             assert got[k] == v, k
 
 
-@VALID
 def test_monte_carlo_bootstrap_and_walk_forward_match_vibe():
     v = mod("openterm.bt.validation")
     res = _aapl_run()
@@ -491,7 +489,6 @@ def test_monte_carlo_bootstrap_and_walk_forward_match_vibe():
                  want["walk_forward"])
 
 
-@VALID
 def test_bt_mc_and_wf_jobs(client):
     run = bt_run(client, rule="SMA20>SMA50", symbols=["AAPL"], interval="1D", range="10Y",
                  options={"cash": 100_000, "adjusted": False})

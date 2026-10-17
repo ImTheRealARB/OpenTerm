@@ -1,6 +1,6 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; steps 1-5 done.**
+Status: **approved as written 2026-10-19; steps 1-6 done.**
 
 Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
 symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.
@@ -10,6 +10,13 @@ Changes made in step 5: Vibe's `perpetual_strict` crypto mode is not ported (nee
 data no keyless source has; `docs/DATA_LIMITS.md`); the composite engine classifies symbols with its own `market_of`
 (Vibe's detector reads `BTCUSDT.P`, `BRK-B` and `^GSPC` as China A); `Bars` gained an optional `fund` list; new keyless
 provider `binance_klines` (spot + USD-M candles with funding) sits first in the history order.
+Changes made in step 6: `BT MC|WF <SYMBOLS> <RULE> ...` runs the backtest and then validates it (the command line has no
+run id to point at); `M` / `W` do the same on an open run. Each result adds a view after CODE (MC: text histogram of the
+20-bin shuffled Sharpe ratios with the actual one marked, p-values as shares, bootstrap CI; WF: one row per window).
+Job kinds `bt.mc` / `bt.wf` are server-submitted only (`POST /api/bt/runs/{id}/mc|wf`); the stored run's trades and equity
+travel in the job params, so the worker never reads the database. Equity is the stored 4-decimal curve, so a bootstrap
+interval can differ from a run on the unrounded curve in the 5th digit; the Monte Carlo numbers use trades only and match
+Vibe exactly.
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 12", [FEATURE_GAP.md](../FEATURE_GAP.md) rows for
 `agent/backtest/*`, and the Vibe-Trading code itself at commit `d0db2e3` (MIT; read 2026-10-19).
 
@@ -115,7 +122,7 @@ Frontend:
    (`keyring` dependency if decision M stands).
 4. `BT` panel (frontend) with chart, metrics, trades, code views and labels; bench budgets.
 5. Engines: India, crypto (spot + perps), forex, futures, composite; Binance klines adapter. **Done 2026-10-19.**
-6. `BT MC`, `BT WF`.
+6. `BT MC`, `BT WF`. **Done 2026-10-19.**
 7. `BT RUNS` compare and `BT EXPORT` (CSV, Pine).
 8. `IMPORT` (CSV, `LOCAL DATA`).
 9. `THIRD_PARTY.md` rows, docs (`DATA_LIMITS.md`, `COMMANDS.md`, `ADDING_A_FUNCTION.md` if needed), phase verification.

@@ -29,6 +29,24 @@ const run = (id: string, rule: string, total: number) => ({
   ],
 });
 
+const MC = {
+  run_id: "r1", actual_sharpe: 6.2753, actual_max_dd: -0.2075, p_value_sharpe: 0.041, p_value_max_dd: 0.155,
+  simulated_sharpe_mean: 5.01, simulated_sharpe_std: 1.05, simulated_sharpe_p5: 3.66, simulated_sharpe_p95: 6.24,
+  n_simulations: 1000, n_trades: 29, sharpe_samples: Array.from({ length: 200 }, (_, i) => 3 + (i % 40) / 10),
+  bootstrap: { observed_sharpe: 6.2, ci_lower: 4.1, ci_upper: 8.3, median_sharpe: 6.1, prob_positive: 1, confidence: 0.95, n_bootstrap: 1000 },
+  labels: { headline: "HISTORICAL SIMULATION, NOT A FORECAST", engine: "us", validation: "TRADE-ORDER PERMUTATION x1000, BOOTSTRAP x1000 AT 95%, SEED 42" },
+};
+const WF = {
+  run_id: "r1", n_windows: 3, profitable_windows: 2, consistency_rate: 0.6667, return_mean: 0.21, return_std: 0.09,
+  sharpe_mean: 1.4, sharpe_std: 0.6,
+  windows: [
+    { window: 1, start: "2021-01-04", end: "2021-06-30", return: 0.3, sharpe: 1.9, max_dd: -0.08, trades: 4, win_rate: 0.75 },
+    { window: 2, start: "2021-07-01", end: "2021-12-31", return: -0.05, sharpe: -0.2, max_dd: -0.12, trades: 3, win_rate: 0.33 },
+    { window: 3, start: "2022-01-03", end: "2022-06-30", return: 0.38, sharpe: 2.5, max_dd: -0.05, trades: 5, win_rate: 0.8 },
+  ],
+  labels: { headline: "HISTORICAL SIMULATION, NOT A FORECAST", engine: "us", validation: "3 EQUAL WINDOWS, NO RE-FITTING" },
+};
+
 async function setup(page: Page) {
   ws = null;
   const posts: { url: string; body: unknown }[] = [];
@@ -47,6 +65,11 @@ async function setup(page: Page) {
     if (req.method() === "POST") posts.push({ url: path, body: req.postDataJSON?.() ?? req.postData() });
     if (path === "/api/bt/run") return r.fulfill({ json: { id: "j1", kind: "bt.run", state: "queued", progress: 0, msg: "", cached: false } });
     if (path === "/api/bt/runs") return r.fulfill({ json: { runs: [...runs.values()].map(({ equity, benchmark, trades, ...card }) => card) } });
+    const v = /^\/api\/bt\/runs\/(\w+)\/(mc|wf)$/.exec(path);
+    if (v) {
+      const kind = v[2] === "mc" ? "bt.mc" : "bt.wf";
+      return r.fulfill({ json: { id: `v-${v[2]}`, kind, state: "done", progress: 1, msg: "", cached: false, result: v[2] === "mc" ? MC : WF } });
+    }
     const m = /^\/api\/bt\/runs\/(\w+)$/.exec(path);
     if (m) return r.fulfill({ json: runs.get(m[1]) });
     if (path === "/api/bt/compare") return r.fulfill({ json: { a: runs.get("r1"), b: runs.get("r2"), diff: { total_return: -1.8 } } });
@@ -143,4 +166,56 @@ test("IMPORT: paste CSV, preview, Enter stores it as LOCAL DATA", async ({ page 
   await page.keyboard.press("Control+Enter");
   await expect.poll(() => posts.some((p) => p.url === "/api/bt/import")).toBe(true);
   await expect(panel(page)).toContainText("LOCAL DATA");
+});
+
+test("BT: M runs a Monte Carlo on the open run and adds a labelled MC view with the histogram", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y");
+  frame("done", 1, "", { run_id: "r1" });
+  const p = panel(page);
+  await expect(p).toContainText("HISTORICAL SIMULATION");
+  await expect(async () => {
+    await page.keyboard.press("m");
+    await expect(p.locator(".bt-view")).toHaveText("MC", { timeout: 500 });
+  }).toPass();
+  expect(posts.some((x) => x.url === "/api/bt/runs/r1/mc")).toBe(true);
+  await expect(p).toContainText("P-VALUE 4.1%");
+  await expect(p).toContainText("BOOTSTRAP SHARPE 95% CI 4.10 TO 8.30");
+  await expect(p).toContainText("TRADE-ORDER PERMUTATION x1000");
+  await expect(p).toContainText("NOT WHETHER THE RULE HAS AN EDGE");
+  await expect(p.getByTestId("mc-hist")).toContainText("ACTUAL");
+  await expect(p).toContainText("1-5: CHART METRICS TRADES CODE MC");
+  await page.keyboard.press("v"); // wraps around to CHART
+  await expect(p.locator(".bt-view")).toHaveText("CHART");
+});
+
+test("BT WF: runs the backtest, then the walk-forward windows table", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "BT WF AAPL SMA20>SMA50 1D 5Y");
+  await expect.poll(() => posts.some((x) => x.url === "/api/bt/run")).toBe(true);
+  frame("done", 1, "", { run_id: "r1" });
+  const p = panel(page);
+  await expect(p.locator(".bt-view")).toHaveText("WF");
+  expect(posts.some((x) => x.url === "/api/bt/runs/r1/wf")).toBe(true);
+  await expect(p).toContainText("2 OF 3 WINDOWS PROFITABLE (66.7%)");
+  await expect(p.locator(".grid .sr")).toContainText("2021-01-04");
+  await page.keyboard.press("j");
+  await expect(p.locator(".grid .sr")).toContainText("2021-07-01");
+  const [dl]: [Download, void] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("e")]);
+  expect(dl.suggestedFilename()).toMatch(/^BT_.*WALKFORWARD.*\.csv$/);
+  expect(await readFile((await dl.path())!, "utf-8")).toContain("2022-01-03");
+});
+
+test("BT MC: a failed validation job says why and keeps the run on screen", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/bt/runs/r1/mc", (r) => r.fulfill({ status: 400, json: { error: "SEED MUST BE AN INTEGER 0-2147483647", kind: "bad_request" } }));
+  await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y");
+  frame("done", 1, "", { run_id: "r1" });
+  const p = panel(page);
+  await expect(p).toContainText("HISTORICAL SIMULATION");
+  await expect(async () => {
+    await page.keyboard.press("m");
+    await expect(p).toContainText("ERR: SEED MUST BE AN INTEGER", { timeout: 500 });
+  }).toPass();
+  await expect(p.locator(".bt-view")).toHaveText("CHART");
 });

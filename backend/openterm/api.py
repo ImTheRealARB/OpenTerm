@@ -777,6 +777,52 @@ async def bt_run_get(request: Request, run_id: str):
         return bt_error(e)
 
 
+def _val_int(body: dict, key: str, lo: int, hi: int, default: int) -> int:
+    v = body.get(key, default)
+    if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+        from .bt.store import BtError
+
+        raise BtError("bad_request", f"{key.upper()} MUST BE AN INTEGER {lo}-{hi}")
+    return v
+
+
+async def _bt_validate(request: Request, run_id: str, kind: str):
+    """Copy the stored run into the params of a bt.mc / bt.wf job and submit it."""
+    from .bt import catalog
+    from .bt.store import BtError
+
+    try:
+        body = await json_object(request)
+        run = await bt_of(request).run(run_id)
+        common = {"run_id": run_id, "initial_cash": float(run["config"].get("initial_cash", 100_000)),
+                  "bars_per_year": catalog.bars_per_year(run["engine"], str(run["interval"] or "1D")),
+                  "equity": run["equity"], "trades": run["trades"], "labels": run["labels"] or {}}
+        if kind == "bt.mc":
+            conf = body.get("confidence", 0.95)
+            if isinstance(conf, bool) or not isinstance(conf, int | float) or not 0.5 <= conf <= 0.999:
+                raise BtError("bad_request", "CONFIDENCE MUST BE A NUMBER 0.5-0.999")
+            params = {**common, "n_simulations": _val_int(body, "n_simulations", 100, 10_000, 1000),
+                      "n_bootstrap": _val_int(body, "n_bootstrap", 100, 10_000, 1000), "confidence": float(conf),
+                      "seed": _val_int(body, "seed", 0, 2**31 - 1, 42)}
+        else:
+            params = {**common, "n_windows": _val_int(body, "n_windows", 2, 12, 5)}
+    except BtError as e:
+        return bt_error(e)
+    except UserDataError as e:
+        return error(e)
+    return Orjson(await jobs_of(request).submit(kind, params, internal=True))
+
+
+@router.post("/bt/runs/{run_id}/mc")
+async def bt_run_mc(request: Request, run_id: str):
+    return await _bt_validate(request, run_id, "bt.mc")
+
+
+@router.post("/bt/runs/{run_id}/wf")
+async def bt_run_wf(request: Request, run_id: str):
+    return await _bt_validate(request, run_id, "bt.wf")
+
+
 @router.delete("/bt/runs/{run_id}")
 async def bt_run_delete(request: Request, run_id: str):
     from .bt.store import BtError

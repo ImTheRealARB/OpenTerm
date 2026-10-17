@@ -1,18 +1,18 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; Phase 12 steps 1-5 done; step 6 (MC/WF) next; full scope, defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; Phase 12 steps 1-6 done; step 7 (RUNS/EXPORT) next; full scope, defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-19, after step 12.5)
+## Resume here (2026-10-19, after step 12.6)
 - **Where the work is:** branch `claude/openterm-phases-12-19-5ebe04`, worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`
   (a session cannot write into another worktree). It was fast-forwarded from `claude/openterm-phases-11-19-a99b2b` (that
   worktree is clean and now stale: do not work there) and `claude/test-speedup` is merged. `backend/.venv` and
   `frontend/node_modules` are installed. Nothing is running. Not merged into `main`; no remote.
-- **Steps 12.3, 12.4 and 12.5 are done and committed.** Gates after step 5: 302 pytest + 11 xfail (10 for steps 6-8, 1
-  Phase 11 recording), ruff, tsc, 187 vitest, 77 Playwright, bench **24/24** (BT run 233 ms, cached 5 ms, BT open 81 ms;
-  see `docs/PERFORMANCE.md`). Step 4 also added VaR 95 / ES 95 (`bt/job.py` `tail_risk`, decision H was missed in step 3).
+- **Steps 12.3 to 12.6 are done and committed.** Gates after step 6: 315 pytest + 9 xfail (8 for steps 7-8, 1 Phase 11
+  recording), ruff, tsc, 192 vitest, 80 Playwright, bench **24/24** on the third run (two runs missed on machine noise;
+  BT run 286 ms of 300, cached 5 ms, BT open 72 ms; see `docs/PERFORMANCE.md`; the BT run budget has little headroom). Step 4 also added VaR 95 / ES 95 (`bt/job.py` `tail_risk`, decision H was missed in step 3).
 - **What step 5 added:** `bt/engines/` `india_equity.py`, `crypto.py`, `forex.py`, `futures_base.py`, `global_futures.py`,
   `composite.py`, `bands.py` (ported from Vibe `d0db2e3`, THIRD_PARTY.md rows added), wired in `bt/engine.py`; all six
   `ENGINES` tests pass against Vibe's own numbers. Ours: `composite.market_of` (Vibe's detector reads `BTCUSDT.P`, `BRK-B`,
@@ -31,9 +31,14 @@ _Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-ph
   (drawdown) and lazy indicator worker, BT intent prefetch, `btOpen` perf series, bench section H + `btBench()`.
   `BT RUNS/EXPORT/MC/WF/SAVE/LOAD/DEL` say NOT BUILT YET with their step. **Not built yet: the Python strategy editor**
   (spec section 1: textarea + `BT SAVE/LOAD/DEL`); call it step 4B, before step 9.
-- **Next action: step 6, `BT MC` / `BT WF`** (port Vibe `validation` Monte Carlo + bootstrap Sharpe CI + walk-forward;
-  delete the `VALID` marker in `tests/test_phase12.py`; job kinds `bt.mc`, `bt.wf`; panel views). Then 7 (RUNS/EXPORT),
-  8 (IMPORT), 4B (editor), 9 (docs, `COMMANDS.md`, phase bench).
+- **What step 6 added:** `bt/validation.py` (Vibe's `monte_carlo_test`, `bootstrap_sharpe_ci`, `walk_forward_analysis`; matches
+  Vibe's numbers), `bt/validate_job.py` + job kinds `bt.mc` / `bt.wf` (server-submitted, `POST /api/bt/runs/{id}/mc|wf`),
+  frontend `BT MC|WF <run args>` and `M` / `W` keys, MC and WF views, `bt/validationFormat.ts`. Tests:
+  `tests/test_phase12_validation.py`, vitest + 3 Playwright tests. **Not yet checked against the real backend in a browser:**
+  do one smoke run (fixture mode) at step 9, with RUNS and IMPORT.
+- **Next action: step 7, `BT RUNS` (compare two runs) and `BT EXPORT` (CSV, Pine for rule runs)**; delete the `RUNS` marker in
+  `tests/test_phase12.py` and `test.fail()` in the e2e `BT RUNS` test. Then 8 (IMPORT), 4B (editor), 9 (docs,
+  `COMMANDS.md`, phase bench, browser smoke run).
 - **Scope and plan (decided by the user 2026-10-19; do not relitigate):**
   - **Full scope, Phases 12-19, minus paid-only data.** Removed: `TRAN`, `SEG` (paid FMP). Keys: keyless sources
     first; free sign-up keys are fine (Finnhub free tier for `EE`/`ANR` only as far as it covers them, Alpaca/Finnhub
