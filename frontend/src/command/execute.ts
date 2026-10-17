@@ -4,10 +4,12 @@ import { currentView, navigate, split, workspace } from "../state/workspace";
 import { history } from "./history";
 import { layoutCommand } from "./layouts";
 import { parseCommand } from "./parser";
-import { fail, statusMsg } from "./status";
+import { fail, info, statusMsg } from "./status";
 import { deleteWatchlist, editWatchlist, parseWl } from "./watchlists";
 import { alrtCommand } from "./alerts"; // Phase 8
 import { portCommand } from "./portfolios"; // Phase 8
+import { settingsArgs, themeArgs } from "../settings/commands";
+import { getSettings, updateSettings } from "../settings/runtime";
 
 export { statusMsg, type StatusMsg } from "./status";
 
@@ -24,6 +26,19 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   }
 
   let args = parsed.args;
+  // Phase 10: THEME name / SETTINGS key value apply at once and stay on the current panel;
+  // bare THEME or SETTINGS opens the SETTINGS panel.
+  let fnOverride: string | undefined;
+  if (parsed.fn === "THEME" || parsed.fn === "SETTINGS") {
+    const cmd = (parsed.fn === "THEME" ? themeArgs : settingsArgs)(args, getSettings());
+    if (cmd && !cmd.ok) return fail(cmd.error);
+    if (cmd) {
+      updateSettings(() => cmd.next);
+      info(cmd.message);
+      return true;
+    }
+    fnOverride = "SETTINGS";
+  }
   if (parsed.fn === "WL") {
     const act = parseWl(args, parsed.security);
     if (act.kind === "error") return fail(act.message);
@@ -56,7 +71,7 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
 
   const cur = currentView(workspace.get().panels[panelId]);
   const sticky = cur.security;
-  const fn = parsed.fn ?? "DES";
+  const fn = fnOverride ?? parsed.fn ?? "DES";
   const def = FUNCTIONS.get(fn)!;
   // Security context is sticky per panel, even across functions that don't use it.
   const security = parsed.security ?? sticky;

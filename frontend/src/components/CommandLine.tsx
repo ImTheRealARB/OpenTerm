@@ -7,6 +7,9 @@ import { refreshWatchlists, watchlistList } from "../command/watchlists";
 import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
+import { VIM_INSERT, vimKey, type VimMode } from "../command/vim";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 
 interface Suggestion {
   value: string;
@@ -18,6 +21,12 @@ const SEARCH_DEBOUNCE_MS = 80;
 
 export const commandInputRef: { current: HTMLInputElement | null } = { current: null };
 const prefillRef: { current: ((text: string) => void) | null } = { current: null };
+const vimInsertRef: { current: (() => void) | null } = { current: null };
+
+/** Vim mode: back to insert mode (the focus-command key calls it, also when the line is already focused in normal mode). */
+export function vimInsertMode(): void {
+  vimInsertRef.current?.();
+}
 
 /** Puts text in the command line, focuses it and shows its suggestions (Ctrl+O: "LAYOUT LOAD "). */
 export function prefillCommand(text: string): void {
@@ -89,6 +98,17 @@ export function CommandLine() {
   const [, startTransition] = useTransition();
   const searchSeq = useRef(0);
   const searchTimer = useRef(0);
+  // Phase 10: opt-in vim editing (SETTINGS). Off by default; the default path is one boolean check.
+  const vimOn = useStore(settingsStore, (st) => st.vim);
+  const vim = useRef(VIM_INSERT);
+  const [vimMode, setVimMode] = useState<VimMode>("insert");
+  const setVim = (mode: VimMode) => {
+    vim.current = mode === "insert" ? VIM_INSERT : { mode, pending: "" };
+    setVimMode(mode);
+  };
+  useEffect(() => {
+    if (!vimOn) setVim("insert");
+  }, [vimOn]);
 
   // Predictive prefetch: a highlighted security will most likely be charted or quoted next.
   useEffect(() => {
@@ -126,8 +146,34 @@ export function CommandLine() {
     setSel(-1);
   };
 
+  /** Vim normal-mode keys (and Esc from insert mode). Returns true when the key was consumed. */
+  const vimHandle = (e: React.KeyboardEvent<HTMLInputElement>): boolean => {
+    if (e.ctrlKey || e.altKey || e.metaKey) return false;
+    if (vim.current.mode === "insert" && (e.key !== "Escape" || items.length)) return false; // Esc closes suggestions first
+    const el = e.currentTarget;
+    const r = vimKey(vim.current, e.key, el.value, el.selectionStart ?? el.value.length);
+    if (!r.handled) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    let { text, cursor } = r;
+    if (r.action) {
+      text = history.step(r.action === "historyPrev" ? -1 : 1) ?? "";
+      cursor = Math.max(0, text.length - 1);
+    }
+    if (text !== el.value) el.value = text;
+    vim.current = r.state;
+    setItems([]);
+    setSel(-1);
+    // Normal mode shows a block cursor by selecting the character under it.
+    if (r.state.mode === "normal" && text) el.setSelectionRange(cursor, cursor + 1);
+    else el.setSelectionRange(cursor, cursor);
+    if (r.state.mode !== vimMode) setVimMode(r.state.mode);
+    return true;
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     keyDown(e.timeStamp);
+    if (vimOn && vimHandle(e)) return;
     const el = e.currentTarget;
     if (e.key === "Enter") {
       e.preventDefault();
@@ -135,6 +181,7 @@ export function CommandLine() {
         setValue("");
         setItems([]);
         setSel(-1);
+        if (vimOn) setVim("insert");
       }
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();
@@ -194,6 +241,9 @@ export function CommandLine() {
     suggest(e.currentTarget.value);
   };
 
+  vimInsertRef.current = () => {
+    if (vimOn) setVim("insert");
+  };
   prefillRef.current = (text: string) => {
     const el = input.current;
     if (!el) return;
@@ -203,7 +253,7 @@ export function CommandLine() {
   };
 
   return (
-    <div className={"cmd" + (focused ? " focus" : "")}>
+    <div className={"cmd" + (focused ? " focus" : "")} data-vim={vimOn ? vimMode : undefined}>
       <input
         ref={(el) => {
           input.current = el;
@@ -216,12 +266,16 @@ export function CommandLine() {
         placeholder="TYPE A COMMAND  e.g. AAPL GP  |  HELP  |  ? FOR SHORTCUTS"
         onKeyDown={onKeyDown}
         onInput={onInput}
-        onFocus={() => setFocused(true)}
+        onFocus={() => {
+          setFocused(true);
+          if (vimOn) setVim("insert");
+        }}
         onBlur={() => {
           setFocused(false);
           setItems([]);
         }}
       />
+      {vimOn && focused && <span className="vim">{vimMode === "normal" ? "-- NORMAL --" : "-- INSERT --"}</span>}
       {focused && items.length > 0 && (
         <div className="ac" role="listbox">
           {items.map((s, i) => (

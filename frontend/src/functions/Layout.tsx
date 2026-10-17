@@ -7,6 +7,7 @@ import { useStore } from "../state/store";
 import { workspace } from "../state/workspace";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
+import { listNav } from "./listNav";
 
 const when = (t: number) => {
   const d = new Date(t * 1000);
@@ -41,6 +42,12 @@ export default function Layout({ panelId }: FunctionProps) {
         const n = l?.length ?? 0;
         const name = l?.[Math.min(i, n - 1)]?.name;
         if (c && e.key !== "Delete" && e.key !== "x") setConfirm(null);
+        // Phase 10: g / G / Home / End / PgUp / PgDn too (vim Ctrl+D / Ctrl+U arrive as PgDn / PgUp).
+        const to = /^[jk]$|^Arrow(Up|Down)$/.test(e.key) ? null : listNav(e.key, i, n);
+        if (to !== null) {
+          setSel(to);
+          return true;
+        }
         switch (e.key) {
           case "j":
           case "ArrowDown":

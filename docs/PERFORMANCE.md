@@ -243,6 +243,34 @@ Notes:
 - CSV-hook wiring of the Phase 6-8 panels (follow-up commit): bundle unchanged at 90.3 KB, bench 17/17 on two more runs (cold start 90-111 ms, tick-to-pixel 36-40 ms); 60 Playwright.
 - `test_core.py::test_stale_while_revalidate` flaked twice under 4 xdist workers (50 ms TTL); its TTL is now 0.5 s.
 
+### Phase 10 (2026-10-17, same machine; fixtures + SYNTHETIC stream) and full pass
+
+17/17 PASS on two of three runs; one run missed only the 50k-bar chart pan (33.4 ms) and the next two runs were 16.7-16.8 ms. Phase 9 numbers in brackets.
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 95.5 KB [90.3] | 400 KB | PASS |
+| Backend p95 cached /api/health (server-side) | 0.6-0.7 ms [0.6-0.8] | 20 ms | PASS |
+| Cold start to usable command line | 107-155 ms [90-255] | 1500 ms | PASS |
+| Keystroke to echo p95 (idle / streaming load) | 14.4-14.5 / 9.8-13.8 ms [14.0-14.8 / 10.8-15.5] | 16.7 ms | PASS |
+| Command submit to first paint p95 (cached / cold network) | 15.7-20.1 / 11.5-14.3 ms [17.1-17.6 / 11.1-25.3] | 100 / 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 38.3-41.9 ms [37.0-44.2] | 50 ms | PASS |
+| Frame time p95 (8-panel / streaming / 10k grid / 50k chart) | 16.7-16.8 ms (chart pan 33.4 in one run) | 20 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 5.9-7.4 MB [5.7-9.7] | 500 MB | PASS |
+| Ticks delivered per second (offered 4,000) | 3,992-4,031 [3,959-4,043] | - | INFO |
+| Layout load to paint p95 | 37.8-44.1 ms [39.2-48.3] | 100 ms | PASS |
+
+Notes:
+- Entry bundle +5.2 KB gz (90.3 → 95.5): settings runtime / sync, vim state machine, keybinding overrides and the theme list are in the entry chunk
+  because the first paint needs the theme and the command line needs vim at once. The SETTINGS panel is a lazy module. 95.5 KB is 24% of the 400 KB budget.
+- Settings cost on the cold path: the theme comes from the localStorage mirror before first paint; the `/api/settings` reconcile runs after paint.
+  Cold start stayed in the same 90-155 ms spread as earlier phases.
+- Tests at the end of Phase 10: 163 pytest (139 + 24 in `test_phase10.py`), 169 vitest (119 + 50), 66 Playwright (60 + 6 in `phase10.spec.ts`).
+- Whole-build comparison, Phase 5 → Phase 10: bundle 84.8 → 95.5 KB, tick-to-pixel 37.5 → 38-42 ms, layout load 35.8 → 38-44 ms, frame p95 unchanged at 16.7 ms,
+  long tasks 0. No budget regressed; all moves are within the machine's run-to-run spread except the bundle, which grew with 5 phases of features.
+- Not measured: Docker image and Tauri shell (neither tool is installed here).
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

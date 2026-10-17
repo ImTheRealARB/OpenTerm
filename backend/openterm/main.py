@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -84,6 +85,7 @@ async def lifespan(app: FastAPI):
     app.state.hub = hub
     app.state.userdata = UserData(db)
     sched = scheduler.start(router)
+    mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
     finally:
@@ -154,3 +156,24 @@ DEFAULT_ORDER.update({
     "fred_series": ["fred", "fred_csv"], "fred_search": ["fred"], "yield_curve": ["treasury", "fred_csv"],
     "earnings": ["nasdaq_earnings"], "eco_calendar": ["agency_ics", "fred"],
 })
+
+# --- Phase 10: static frontend ---
+def mount_static(application: FastAPI, directory: str) -> bool:
+    """Serves the built frontend at "/" when OPENTERM_STATIC_DIR is set (Docker, desktop build).
+
+    Mounted from the lifespan so it lands after every API and WebSocket route, whatever order modules
+    register them in. Dev mode leaves the setting empty and Vite serves the frontend.
+    """
+    if not directory:
+        return False
+    from fastapi.staticfiles import StaticFiles
+
+    path = Path(directory)
+    path = path if path.is_absolute() else ROOT / path
+    if not (path / "index.html").is_file():
+        logging.getLogger(__name__).warning("OPENTERM_STATIC_DIR %s has no index.html; not serving it", path)
+        return False
+    if any(getattr(r, "name", None) == "frontend" for r in application.router.routes):
+        return True  # a second lifespan run (tests) reuses the mount
+    application.mount("/", StaticFiles(directory=path, html=True), name="frontend")
+    return True

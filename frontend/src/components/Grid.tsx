@@ -3,6 +3,7 @@
  * (no text measuring in hot paths), imperative partial repaints for ticks. No DOM per cell.
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { displayVersion } from "../settings/runtime";
 
 export type CellColor = "fg" | "dim" | "up" | "down" | "warn" | "err" | "acc";
 
@@ -245,6 +246,22 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
       cv.removeEventListener("mousedown", onDown);
     };
   }, []);
+
+  // Phase 10: theme or number format changed. Re-read the CSS variables once and repaint (never per frame).
+  useEffect(
+    () =>
+      displayVersion.subscribe(() => {
+        const s = st.current;
+        if (!box.current || !s.ctx) return;
+        s.theme = readTheme(box.current);
+        s.ctx.font = s.theme.font;
+        s.cw = s.ctx.measureText("0").width;
+        layout();
+        clampTop();
+        redraw();
+      }),
+    [],
+  );
 
   // New rows or columns from React: relayout and repaint once.
   useEffect(() => {

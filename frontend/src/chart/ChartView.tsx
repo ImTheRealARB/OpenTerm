@@ -10,6 +10,8 @@ import {
   type IChartApi, type ISeriesApi, type SeriesType, type Time, type UTCTimestamp,
 } from "lightweight-charts";
 import { fmtBig, fmtPrice } from "../format";
+import { displayVersion } from "../settings/runtime";
+import { useStore } from "../state/store";
 import type { IndicatorName } from "./indicators";
 
 export type ChartType = "CANDLE" | "OHLC" | "LINE" | "AREA";
@@ -87,6 +89,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
   const reqId = useRef(0);
 
   const colors = useRef(themeColors());
+  // Phase 10: theme switch. Colours are re-read once per change (never per frame), then series are rebuilt.
+  const ver = useStore(displayVersion, (v) => v);
+  const seenVer = useRef(ver);
 
   const writeReadout = (i: number) => {
     const el = readout.current;
@@ -130,7 +135,21 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
     };
   }, []);
 
-  // Series + data: rebuilt when data, type, log, compare or indicators change (not on ticks).
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || seenVer.current === ver) return;
+    seenVer.current = ver;
+    const c = (colors.current = themeColors());
+    chart.applyOptions({
+      layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, panes: { separatorColor: c.line } },
+      grid: { vertLines: { color: c.sel }, horzLines: { color: c.sel } },
+      rightPriceScale: { borderColor: c.line },
+      timeScale: { borderColor: c.line },
+      crosshair: { vertLine: { color: c.dim, labelBackgroundColor: c.sel }, horzLine: { color: c.dim, labelBackgroundColor: c.sel } },
+    });
+  }, [ver]);
+
+  // Series + data: rebuilt when data, type, log, compare, indicators or the theme change (not on ticks).
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -240,7 +259,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
       const panes = ch.panes();
       for (let i = 1; i < panes.length; i++) panes[i].setHeight(90);
     }
-  }, [data, compare, type, log, indicators]);
+  }, [data, compare, type, log, indicators, ver]);
 
   useImperativeHandle(ref, () => ({
     pan(bars) {

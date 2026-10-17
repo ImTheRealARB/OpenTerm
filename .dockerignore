@@ -1,0 +1,17 @@
+.git
+.claude
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+.ruff_cache
+frontend/dist
+frontend/playwright-report
+frontend/test-results
+data
+desktop
+docs
+*.md
+!README.md
+bench-report.json
+.env

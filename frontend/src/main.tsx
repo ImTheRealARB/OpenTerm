@@ -7,8 +7,11 @@ import { afterPaint, installObservers } from "./perf/metrics";
 import { connect } from "./net/socket";
 import { pollSources } from "./net/sources";
 import "./styles.css";
+import { initSettings, pollMs } from "./settings/runtime";
+import { startSettingsSync } from "./settings/sync";
 
 installObservers();
+initSettings(); // Phase 10: theme, number format, keybinding overrides from the localStorage mirror (sync, no fetch)
 createRoot(document.getElementById("root")!).render(<App />);
 
 afterPaint(() => {
@@ -16,7 +19,8 @@ afterPaint(() => {
   window.__openterm_perf!.ready = performance.now();
   connect();
   startAlerts(); // Phase 8: alert symbols are watched app-wide, not only while ALRT is open
-  pollSources();
+  pollSources(pollMs("sources"));
+  void startSettingsSync(); // Phase 10: reconcile with /api/settings after first paint
   void history.sync().catch(() => {}); // backend down: history starts empty and still works in memory
   addEventListener("pagehide", () => history.flushOnExit());
   // Warm function modules while idle so the first command doesn't wait on a chunk download.

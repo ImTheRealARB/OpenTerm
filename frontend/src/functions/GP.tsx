@@ -7,6 +7,8 @@ import { ApiError, api } from "../net/api";
 import { subscribe } from "../net/socket";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { replaceView } from "../state/workspace";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import type { FunctionProps } from "./registry";
 
 const RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"];
@@ -25,8 +27,9 @@ interface Parsed {
 }
 
 /** GP args: [range] [interval] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 RSI ...]. Order free. */
-export function parseGpArgs(args: string[]): Parsed {
-  const p: Parsed = { range: "1Y", type: "CANDLE", log: false, indicators: [] };
+/** `defaults`: the SETTINGS default range and chart type (Phase 10). */
+export function parseGpArgs(args: string[], defaults: { range: string; type: ChartType } = { range: "1Y", type: "CANDLE" }): Parsed {
+  const p: Parsed = { range: defaults.range, type: defaults.type, log: false, indicators: [] };
   for (let i = 0; i < args.length; i++) {
     const raw = args[i];
     const a = raw.toUpperCase();
@@ -40,12 +43,12 @@ export function parseGpArgs(args: string[]): Parsed {
   return p;
 }
 
-function serialize(p: Parsed): string[] {
+function serialize(p: Parsed, defaultType: ChartType = "CANDLE"): string[] {
   return [
     p.range,
     ...(p.interval ? [p.interval] : []),
     ...(p.compare ? ["VS", p.compare] : []),
-    ...(p.type !== "CANDLE" ? [p.type] : []),
+    ...(p.type !== defaultType ? [p.type] : []),
     ...(p.log ? ["LOG"] : []),
     ...p.indicators,
   ];
@@ -62,7 +65,8 @@ interface Loaded {
 }
 
 export default function GP({ panelId, security, args }: FunctionProps) {
-  const p = useMemo(() => parseGpArgs(args), [args]);
+  const chartDefaults = useStore(settingsStore, (st) => st.chart);
+  const p = useMemo(() => parseGpArgs(args, chartDefaults), [args, chartDefaults]);
   const symbol = security!.symbol;
   const [state, setState] = useState<{ loaded?: Loaded; error?: string; loading: boolean }>({ loading: true });
   const [picker, setPicker] = useState(false);
@@ -72,7 +76,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const pRef = useRef(p);
   pRef.current = p;
 
-  const update = (fn: (q: Parsed) => Parsed) => replaceView(panelId, (v) => ({ ...v, args: serialize(fn(pRef.current)) }));
+  const update = (fn: (q: Parsed) => Parsed) => replaceView(panelId, (v) => ({ ...v, args: serialize(fn(pRef.current), chartDefaults.type) }));
 
   useEffect(() => {
     let alive = true;

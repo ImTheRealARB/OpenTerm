@@ -1,4 +1,5 @@
 /** Crypto board: CoinGecko top 50 by market cap; Binance 24 h tickers (USDT) when CoinGecko is down. */
+import { pollMs } from "../settings/runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtPct, fmtPrice, fmtTime } from "../format";
@@ -9,7 +10,6 @@ import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
-const POLL_MS = 30_000;
 
 const COLUMNS: Column<Coin>[] = [
   { title: "#", width: 3, align: "right", text: (r) => (r.rank == null ? "" : String(r.rank)), color: () => "dim" },
@@ -50,7 +50,7 @@ export default function CRYP({ panelId, args }: FunctionProps) {
 
   useEffect(() => {
     void load(false);
-    const t = setInterval(() => void load(false), POLL_MS);
+    const t = setInterval(() => void load(false), pollMs("crypto"));
     return () => clearInterval(t);
   }, [load]);
 

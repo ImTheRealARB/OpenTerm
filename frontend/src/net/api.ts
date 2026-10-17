@@ -509,3 +509,16 @@ export const api9 = {
   screener: (fresh = false) => request<Envelope<ScreenerPayload>>("/api/screener", fresh ? 0 : 300_000),
   peers: (symbol: string) => request<Envelope<PeersPayload>>(`/api/peers?${qs({ symbol })}`, 600_000),
 };
+
+// --- Phase 10: settings ---
+export interface SettingsDoc {
+  version: number;
+  /** null until the first save. */
+  settings: Record<string, unknown> | null;
+  updated_at: number | null;
+}
+
+export const settingsApi = {
+  get: () => send<SettingsDoc>("GET", "/api/settings"),
+  put: (settings: unknown) => send<{ version: number; settings: unknown; updated_at: number }>("PUT", "/api/settings", { version: 1, settings }),
+};

@@ -1,4 +1,5 @@
 import bindings from "./keybindings.json";
+import { buildIndex, mergeBindings } from "./overrides";
 
 export type Action = keyof typeof bindings;
 export const KEYBINDINGS: Record<Action, string[]> = bindings;
@@ -43,15 +44,19 @@ export function chord(e: KeyboardEvent): string {
   return parts.join("+");
 }
 
-const index = new Map<string, { action: Action; n?: number }>();
-for (const [action, chords] of Object.entries(KEYBINDINGS) as [Action, string[]][]) {
-  for (const c of chords) {
-    const range = /^(.*)\+1\.\.9$/.exec(c);
-    if (range) for (let n = 1; n <= 9; n++) index.set(`${range[1]}+${n}`, { action, n });
-    else index.set(c, { action });
-  }
+// Phase 10: user overrides (SETTINGS) are merged on top of keybindings.json; the index is rebuilt on change.
+let effective: Record<Action, string[]> = mergeBindings(KEYBINDINGS, undefined) as Record<Action, string[]>;
+let index = buildIndex(effective);
+
+/** Applies keybinding overrides from settings (an action -> chords map; {} restores the defaults). */
+export function setKeyOverrides(overrides: Record<string, string[]> | undefined): void {
+  effective = mergeBindings(KEYBINDINGS, overrides) as Record<Action, string[]>;
+  index = buildIndex(effective);
 }
 
+/** The bindings in force (defaults + overrides), for SHORTCUTS and the SETTINGS editor. */
+export const effectiveBindings = (): Record<Action, string[]> => effective;
+
 export function match(e: KeyboardEvent): { action: Action; n?: number } | undefined {
-  return index.get(chord(e));
+  return index.get(chord(e)) as { action: Action; n?: number } | undefined;
 }

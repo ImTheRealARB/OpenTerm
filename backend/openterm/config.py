@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     fmp_api_key: str = ""
     polygon_api_key: str = ""
 
+    # --- Phase 10 ---
+    # Serve a built frontend (frontend/dist) from the backend at "/". Empty = off (dev mode uses Vite).
+    # Docker and the desktop build set it.
+    openterm_static_dir: str = ""
+
     @property
     def yaml(self) -> dict:
         return load_yaml()

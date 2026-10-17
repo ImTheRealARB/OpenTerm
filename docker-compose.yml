@@ -1,0 +1,18 @@
+# docker compose up --build   ->   http://localhost:8000
+services:
+  openterm:
+    build: .
+    image: openterm:local
+    ports:
+      - "8000:8000"
+    environment:
+      # Optional keys; everything works without them.
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      # Uncomment to run on test data only (labelled SYNTHETIC on screen):
+      # OPENTERM_SYNTHETIC: "1"
+    volumes:
+      - openterm-data:/data
+    restart: unless-stopped
+volumes:
+  openterm-data:

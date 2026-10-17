@@ -1,4 +1,5 @@
 /** US market movers from Nasdaq.com: gainers, losers, most active (shares / dollars), Nasdaq-100. */
+import { pollMs } from "../settings/runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice } from "../format";
@@ -17,7 +18,6 @@ const TABS = [
   ["NDX100", "NASDAQ-100"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
-const POLL_MS = 60_000;
 
 const COLUMNS: Column<Mover>[] = [
   { title: "SECURITY", width: 8, text: (r) => r.symbol, color: () => "acc" },
@@ -54,7 +54,7 @@ export default function MOV({ panelId, args }: FunctionProps) {
 
   useEffect(() => {
     void load(false);
-    const t = setInterval(() => void load(false), POLL_MS);
+    const t = setInterval(() => void load(false), pollMs("movers"));
     return () => clearInterval(t);
   }, [load]);
 

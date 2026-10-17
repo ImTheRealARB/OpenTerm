@@ -1,4 +1,5 @@
 /** News: market top stories (RSS), a security's headlines (Yahoo RSS, GDELT) or a GDELT keyword search. */
+import { pollMs } from "../settings/runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtTime } from "../format";
@@ -9,7 +10,6 @@ import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
-const POLL_MS = 60_000;
 
 interface Row extends NewsItem {
   fresh: boolean;
@@ -55,7 +55,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
     firstIds.current = null;
     setEnv(null);
     void load(false);
-    const t = setInterval(() => void load(false), POLL_MS);
+    const t = setInterval(() => void load(false), pollMs("news"));
     return () => clearInterval(t);
   }, [load]);
 

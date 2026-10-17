@@ -2,23 +2,41 @@ import { useEffect, useRef } from "react";
 import { statusMsg } from "../command/execute";
 import { APP_NAME } from "../config";
 import { MARKETS, isOpen } from "../markets/hours";
+import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { CommandLine } from "./CommandLine";
 
-const timeFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
-const utcFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
+/** Phase 10: zones come from SETTINGS (default LOCAL + UTC). The first clock shows seconds. */
+function zoneFormat(zone: string, seconds: boolean): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit", minute: "2-digit", ...(seconds ? { second: "2-digit" } : {}), hourCycle: "h23",
+    ...(zone === "LOCAL" ? {} : { timeZone: zone }),
+  });
+}
 
-/** Clock updates its own DOM once a second; it never re-renders React. */
+const zoneLabel = (zone: string) =>
+  zone === "LOCAL" || zone === "UTC" ? "" : (zone.split("/").pop() ?? zone).replace(/_/g, " ").toUpperCase().slice(0, 10) + " ";
+
+/** Clock updates its own DOM once a second; it never re-renders React (except when the zones change). */
 function Clock() {
-  const local = useRef<HTMLSpanElement>(null);
-  const utc = useRef<HTMLSpanElement>(null);
+  const zones = useStore(settingsStore, (st) => st.clocks);
+  const clocks = useRef<(HTMLSpanElement | null)[]>([]);
   const lights = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
+    const fmts = zones.map((z, i) => {
+      try {
+        return zoneFormat(z, i === 0);
+      } catch {
+        return zoneFormat("UTC", i === 0); // a zone this browser does not know
+      }
+    });
     const tick = () => {
       const now = new Date();
-      local.current!.textContent = timeFmt.format(now);
-      utc.current!.textContent = utcFmt.format(now) + "Z";
+      zones.forEach((z, i) => {
+        const el = clocks.current[i];
+        if (el) el.textContent = zoneLabel(z) + fmts[i].format(now) + (z === "UTC" ? "Z" : "");
+      });
       MARKETS.forEach((m, i) => {
         const el = lights.current[i];
         if (el) el.className = isOpen(m, now) ? "mk open" : "mk";
@@ -27,7 +45,7 @@ function Clock() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [zones]);
 
   return (
     <div className="clock">
@@ -36,8 +54,9 @@ function Clock() {
           {m.code}
         </span>
       ))}
-      <span ref={local} />
-      <span ref={utc} className="dim" />
+      {zones.map((z, i) => (
+        <span key={z + i} ref={(el) => void (clocks.current[i] = el)} className={i === 0 ? undefined : "dim"} title={z} />
+      ))}
     </div>
   );
 }

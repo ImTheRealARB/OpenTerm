@@ -401,3 +401,24 @@ async def peers(request: Request, symbol: str = Query(..., max_length=24)):
         return await svc(request).peers(symbol)
     except DataError as e:
         return error(e)
+
+
+# --- Phase 10: settings ---
+@router.get("/settings")
+async def get_settings_doc(request: Request):
+    from .settings_store import SettingsStore
+
+    return await SettingsStore(user(request).db).get()
+
+
+@router.put("/settings")
+async def put_settings_doc(request: Request):
+    from .settings_store import VERSION, SettingsStore
+
+    try:
+        body = await json_object(request)
+        if "settings" not in body:
+            raise UserDataError("bad_request", "BODY NEEDS settings")
+        return await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
+    except UserDataError as e:
+        return error(e)

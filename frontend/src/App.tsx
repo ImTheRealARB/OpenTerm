@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { saveLayout } from "./command/layouts";
 import { info } from "./command/status";
-import { commandInputRef, prefillCommand } from "./components/CommandLine";
+import { commandInputRef, prefillCommand, vimInsertMode } from "./components/CommandLine";
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
 import { Workspace } from "./components/Workspace";
@@ -9,6 +9,7 @@ import { match } from "./keys/keys";
 import { dispatchPanelKey } from "./keys/panelKeys";
 import { exportPanelCsv } from "./functions/tableExport";
 import { PerfTable } from "./perf/PerfTable";
+import { getSettings } from "./settings/runtime";
 import { loadJSON, saveJSON } from "./state/store";
 import {
   closePanel, cyclePanel, focusPanel, historyStep, resizeFocused, split, toggleMaximize, workspace,
@@ -42,6 +43,13 @@ export function App() {
         }
       }
 
+      // Phase 10: vim mode adds Ctrl+D / Ctrl+U (page down / up) to the focused grid or list.
+      if (!inInput && e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === "d" || e.key === "u") && getSettings().vim) {
+        e.preventDefault();
+        dispatchPanelKey(workspace.get().focus, new KeyboardEvent("keydown", { key: e.key === "d" ? "PageDown" : "PageUp" }));
+        return;
+      }
+
       if (!m) {
         // Typing anywhere starts a command.
         if (!inInput && !modified && e.key.length === 1 && input) input.focus();
@@ -53,6 +61,7 @@ export function App() {
       e.preventDefault();
       switch (m.action) {
         case "focusCommand":
+          vimInsertMode();
           input?.focus();
           input?.select();
           break;

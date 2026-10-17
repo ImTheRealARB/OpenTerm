@@ -1,13 +1,13 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-9 committed; CSV-hook wiring awaiting commit)._
+_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-9 and the CSV wiring committed; Phase 10 merged, awaiting commit)._
 
 > **Resuming in a new session or account?** Paste the prompt from [RESUME_PROMPT.md](RESUME_PROMPT.md)
 > and read "Parallel build of Phases 6-10" below.
 
 ## Parallel build of Phases 6-10 (MERGING)
 Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
-6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV-hook wiring is done and awaiting commit; Phase 10 is next.**
+6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV wiring is committed (`7e3ca69`); Phase 10 is merged and verified, awaiting commit.**
 The last column tracks the merge into this worktree.
 
 | Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
@@ -16,7 +16,7 @@ The last column tracks the merge into this worktree.
 | 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **COMMITTED** `90bffb1` |
 | 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | **COMMITTED** `1070230` |
 | 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | **COMMITTED** `b5515ac`; CSV hook wired into the Phase 6-8 panels in the follow-up commit |
-| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | Finished in worktree, not merged yet |
+| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | **MERGED + verified here** (see Phase 10 details); commit pending user approval |
 
 - All five branch from `4b3814c`; their changes are **uncommitted** in their worktrees. Rules they follow:
   [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) (append-only "Phase N" blocks in shared files, no migrations except
@@ -42,15 +42,15 @@ The last column tracks the merge into this worktree.
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
 - **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV-hook wiring for Phase 6-8 panels is verified and uncommitted.**
+  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); CSV wiring `7e3ca69`; Phase 10 is merged and verified, not yet committed.**
 - Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
   The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
   `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
   Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
-- Latest verification (Phase 9 tree + CSV wiring):
-  - Backend: 139 pytest passed (`-n auto`, ~21 s), ruff clean.
-  - Frontend: 119 vitest passed, tsc clean, 60 Playwright passed (`--workers=8`, ~17 s; +1 FA export test in `phase6.spec.ts`).
-  - Bench: 17/17 budgets PASS on four of five runs, one noisy tick-to-pixel miss (see `docs/PERFORMANCE.md` Phase 9).
+- Latest verification (Phase 10 tree):
+  - Backend: 163 pytest passed (`-n auto`, ~25 s), ruff clean.
+  - Frontend: 169 vitest passed, tsc clean, 66 Playwright passed (`--workers=8`, ~24 s).
+  - Bench: 17/17 budgets PASS on two of three runs, one lone chart-pan miss (see `docs/PERFORMANCE.md` Phase 10).
 
 ## Done
 | Phase | Contents |
@@ -64,6 +64,21 @@ The last column tracks the merge into this worktree.
 | 7 Macro | `FRED` (series chart), `MACRO` (curated list + search), `RATES` (Treasury yield curve + spreads), `ERN` (earnings calendar), `ECO` (BLS + BEA release dates); providers `fred`, `fred_csv`, `treasury`, `nasdaq_earnings`, `agency_ics` |
 | 8 Portfolio + alerts | SQLite migrations 6-7 (`portfolios`, `alerts`), `PORT` (positions with average-cost lots, live P&L, FX to base currency, CSV import/export), `ALRT` (price / percent alerts evaluated on raw ticks, status-bar flash, rearm) |
 | 9 Analysis | `HIST` (price table, ADJ CLOSE when available), `EQS` (screener over the US universe, filter grammar in args), `COMP` (peers + median, 1M-1Y returns), `CORR` (heat matrix); CSV export everywhere via `E` / Alt+X (`tableExport.ts`); providers `nasdaq_screener`, `yahoo_peers` |
+| 10 Settings + packaging | `SETTINGS` panel and `THEME` (amber, green, white, light), vim mode for the command line, keybinding overrides, number format, header clocks, chart and poll defaults (`/api/settings`, SQLite `kv`), `Dockerfile` + compose + `OPENTERM_STATIC_DIR`, Tauri scaffold in `desktop/`, `docs/RELEASE_NOTES.md`, `CHANGELOG.md` |
+
+## Phase 10 details (SETTINGS, themes, vim, keybinding overrides, packaging)
+
+**Built and verified (merged from `openterm-p10`):**
+- Backend: **163 pytest passed, ruff clean** (+24 in `tests/test_phase10.py`). `settings_store.py` (validates, stores only non-defaults as versioned JSON in `kv` key `settings`),
+  `/api/settings` GET / PUT, `config.py` `openterm_static_dir`, `main.py` `mount_static()` (serves the built frontend at `/` when `OPENTERM_STATIC_DIR` is set).
+- Frontend: **169 vitest** (+50), **66 Playwright** (+6 `e2e/phase10.spec.ts`), tsc clean.
+  - `settings/{schema,runtime,sync,themes,commands}.ts`, `functions/SETTINGS.tsx`, `THEME name` / `SETTINGS KEY VALUE` commands, themes as CSS variable blocks,
+    `command/vim.ts` (opt-in), `keys/overrides.ts` (conflicts, browser-reserved chords, fixed Esc / panel focus refused), `functions/listNav.ts` (g/G/PgUp/PgDn in lists),
+    `format.ts` number-format wrap, TopBar clock zones, GP chart defaults, `pollMs` for N/MOV/CRYP/sources.
+- Packaging (not built here): `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `desktop/` Tauri 2 scaffold, `docs/DESKTOP.md`.
+- Docs: `docs/RELEASE_NOTES.md` (Phase 6-9 bullets rewritten against what was built), `CHANGELOG.md`.
+- Merge resolution: import lines, the Phase 7/8/9 api blocks and `main.tsx` startup calls were all kept (`startAlerts()`, `pollSources(pollMs("sources"))`, `startSettingsSync()`);
+  Shortcuts text lists both the settings hint and Alt+X.
 
 ## Phase 9 details (EQS, HIST, CORR, COMP, CSV export)
 
@@ -191,7 +206,7 @@ Phases 6-10 in order:
 - 7: done (merged, see Phase 7 details).
 - 8: done (merged, see Phase 8 details). Desktop notifications were not part of the build: alerts flash in the status bar.
 - 9: done (merged, see Phase 9 details). CSV export (`E` / Alt+X) is wired into every table panel, Phase 6-8 included (FA, FIL, OWN, HDS, FRED, MACRO, RATES, ERN, ECO, ALRT via `useCsvExport`); PORT keeps its own `E`/EXPORT, which writes a re-importable portfolio CSV.
-- 10: Themes UI, vim mode, keybinding overrides, SETTINGS, Docker, Tauri, release notes, full perf pass.
+- 10: done (merged, see Phase 10 details). Remaining: ask the user to delete `wip-patches/` and `RESUME_PROMPT.md`, then merge to `main` (see the notes below).
 
 ## Decisions already made (don't relitigate)
 - Stooq is dropped (bot check). The zero-key chain is Yahoo, then Nasdaq (US only, daily history only).

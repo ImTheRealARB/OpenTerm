@@ -14,11 +14,18 @@
   --fs: 12px;
   --row: 16px;
 }
-:root[data-theme="green"] { --fg: #33ff66; --fg-dim: #1f9940; --line: #0d3318; }
-:root[data-theme="white"] { --fg: #e6e6e6; --fg-dim: #8c8c8c; --line: #333333; }
+/* Themes (Phase 10): each one defines every colour token (settings/themes.test.ts checks it). Switch: THEME name. */
+:root[data-theme="green"] {
+  --bg: #000000; --fg: #33ff66; --fg-dim: #1f9940; --up: #00ffd0; --down: #ff5c5c;
+  --sel: #0f2a16; --accent: #e0ffe0; --warn: #ffd60a; --err: #ff5c5c; --line: #0d3318;
+}
+:root[data-theme="white"] {
+  --bg: #000000; --fg: #ffffff; --fg-dim: #c0c0c0; --up: #00ff66; --down: #ff4040;
+  --sel: #333333; --accent: #00d0ff; --warn: #ffff00; --err: #ff4040; --line: #808080;
+}
 :root[data-theme="light"] {
-  --bg: #ffffff; --fg: #1a1a1a; --fg-dim: #666666; --sel: #e8e8e8; --line: #c8c8c8;
-  --up: #007a3d; --down: #c4161c; --accent: #0066cc;
+  --bg: #ffffff; --fg: #1a1a1a; --fg-dim: #5c5c5c; --up: #007a3d; --down: #c4161c;
+  --sel: #dcdcdc; --accent: #0055b3; --warn: #8a5a00; --err: #c4161c; --line: #b0b0b0;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,3 +128,8 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .corr-t td.h-m1 { color: var(--down); opacity: .6; }
 .corr-t td.h-m2 { color: var(--down); }
 .corr-t td.h-m3 { color: var(--down); font-weight: bold; background: var(--sel); }
+
+/* --- Phase 10: vim mode indicator --- */
+.cmd .vim { position: absolute; right: 6px; top: 0; color: var(--accent); pointer-events: none; }
+.cmd[data-vim="normal"] input { caret-color: transparent; }
+.cmd[data-vim="normal"] input::selection { background: var(--fg); color: var(--bg); }

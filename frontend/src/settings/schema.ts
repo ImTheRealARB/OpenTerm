@@ -1,0 +1,156 @@
+/**
+ * Settings schema (pure; unit-tested). Mirrors backend/openterm/settings_store.py: every field optional on
+ * the wire, defaults filled in here. Invalid fields from storage fall back to their default (with a note in
+ * `errors`) so a bad value never blocks cold start.
+ */
+import { isTheme, type ThemeName } from "./themes";
+
+export const SETTINGS_VERSION = 1;
+export const CHART_RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"] as const;
+export const CHART_TYPES = ["CANDLE", "OHLC", "LINE", "AREA"] as const;
+export const THOUSANDS = [",", ".", " ", "'", ""] as const;
+export const DECIMALS = [".", ","] as const;
+/** Seconds, [min, max]. The floors keep the free providers inside their rate limits. */
+export const POLL_BOUNDS = { news: [30, 600], movers: [30, 600], crypto: [15, 600], sources: [5, 120] } as const;
+export type PollKey = keyof typeof POLL_BOUNDS;
+export const MAX_CLOCKS = 3;
+
+export interface Settings {
+  theme: ThemeName;
+  vim: boolean;
+  numberFormat: { thousands: (typeof THOUSANDS)[number]; decimal: (typeof DECIMALS)[number] };
+  /** "LOCAL", "UTC" or an IANA zone such as "America/New_York". */
+  clocks: string[];
+  chart: { range: (typeof CHART_RANGES)[number]; type: (typeof CHART_TYPES)[number] };
+  poll: Record<PollKey, number>;
+  /** Keybinding overrides: action -> chords (replaces that action's defaults). */
+  keys: Record<string, string[]>;
+}
+
+export const DEFAULTS: Settings = Object.freeze({
+  theme: "amber",
+  vim: false,
+  numberFormat: { thousands: ",", decimal: "." },
+  clocks: ["LOCAL", "UTC"],
+  chart: { range: "1Y", type: "CANDLE" },
+  poll: { news: 60, movers: 60, crypto: 30, sources: 10 },
+  keys: {},
+}) as Settings;
+
+const ZONE_RE = /^(LOCAL|UTC|[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){1,2})$/;
+const ACTION_RE = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
+
+/** LOCAL, UTC or a zone this browser's Intl knows. */
+export function isZone(z: unknown): z is string {
+  if (typeof z !== "string" || !ZONE_RE.test(z)) return false;
+  if (z === "LOCAL" || z === "UTC") return true;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: z });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const oneOf = <T extends readonly unknown[]>(list: T, v: unknown): v is T[number] => list.includes(v);
+
+/** Fills defaults and drops invalid fields. Never throws. */
+export function normalize(raw: unknown): { settings: Settings; errors: string[] } {
+  const errors: string[] = [];
+  const d = DEFAULTS;
+  const r = isObj(raw) ? raw : {};
+  if (raw != null && !isObj(raw)) errors.push("settings is not an object");
+  const pick = <T>(key: string, ok: boolean, value: T, fallback: T): T => {
+    if (r[key] === undefined) return fallback;
+    if (ok) return value;
+    errors.push(key);
+    return fallback;
+  };
+
+  const nf = isObj(r.numberFormat) ? r.numberFormat : {};
+  let numberFormat = {
+    thousands: oneOf(THOUSANDS, nf.thousands) ? nf.thousands : d.numberFormat.thousands,
+    decimal: oneOf(DECIMALS, nf.decimal) ? nf.decimal : d.numberFormat.decimal,
+  };
+  if (numberFormat.thousands === numberFormat.decimal) {
+    errors.push("numberFormat");
+    numberFormat = { ...d.numberFormat };
+  }
+
+  const ch = isObj(r.chart) ? r.chart : {};
+  const chart = {
+    range: oneOf(CHART_RANGES, ch.range) ? ch.range : d.chart.range,
+    type: oneOf(CHART_TYPES, ch.type) ? ch.type : d.chart.type,
+  };
+
+  const pr = isObj(r.poll) ? r.poll : {};
+  const poll = { ...d.poll };
+  for (const k of Object.keys(POLL_BOUNDS) as PollKey[]) {
+    const v = pr[k];
+    if (v === undefined) continue;
+    const [lo, hi] = POLL_BOUNDS[k];
+    if (typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi) poll[k] = v;
+    else errors.push(`poll.${k}`);
+  }
+
+  const clocksOk = Array.isArray(r.clocks) && r.clocks.length >= 1 && r.clocks.length <= MAX_CLOCKS && r.clocks.every(isZone);
+  const keys: Record<string, string[]> = {};
+  if (isObj(r.keys)) {
+    for (const [a, c] of Object.entries(r.keys)) {
+      if (ACTION_RE.test(a) && Array.isArray(c) && c.length <= 4 && c.every((x) => typeof x === "string" && x.length > 0 && x.length <= 32)) {
+        keys[a] = [...new Set(c as string[])];
+      } else errors.push(`keys.${a}`);
+    }
+  } else if (r.keys !== undefined) errors.push("keys");
+
+  return {
+    settings: {
+      theme: pick("theme", isTheme(r.theme), r.theme as ThemeName, d.theme),
+      vim: pick("vim", typeof r.vim === "boolean", r.vim as boolean, d.vim),
+      numberFormat,
+      clocks: pick("clocks", clocksOk, (r.clocks as string[])?.slice(), [...d.clocks]),
+      chart,
+      poll,
+      keys,
+    },
+    errors,
+  };
+}
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** What the backend stores: only the fields that differ from the defaults. */
+export function diffFromDefaults(s: Settings): Partial<Settings> {
+  const out: Partial<Settings> = {};
+  for (const k of Object.keys(DEFAULTS) as (keyof Settings)[]) {
+    if (k === "keys") {
+      if (Object.keys(s.keys).length) out.keys = s.keys;
+    } else if (!same(s[k], DEFAULTS[k])) (out as Record<string, unknown>)[k] = s[k];
+  }
+  return out;
+}
+
+/** Steps through a list (wrapping), for keyboard editing with h/l or arrow keys. */
+export function cycle<T>(list: readonly T[], current: T, dir: 1 | -1): T {
+  const i = list.indexOf(current);
+  return list[(((i < 0 ? 0 : i) + dir) % list.length + list.length) % list.length];
+}
+
+/** Steps a poll interval inside its bounds (5 s steps under a minute, then 30 s). */
+export function stepPoll(key: PollKey, value: number, dir: 1 | -1): number {
+  const [lo, hi] = POLL_BOUNDS[key];
+  const step = value + dir * (dir > 0 ? (value >= 60 ? 30 : 5) : value > 60 ? 30 : 5);
+  return Math.min(hi, Math.max(lo, step));
+}
+
+/** Reconcile the localStorage mirror with the backend copy at startup. */
+export function reconcile(
+  local: { updatedAt: number; dirty: boolean },
+  remote: { settings: unknown; updated_at: number | null },
+): "push" | "adopt" | "keep" {
+  if (remote.settings == null) return local.dirty || local.updatedAt > 0 ? "push" : "keep";
+  const rAt = remote.updated_at ?? 0;
+  if (local.dirty && local.updatedAt > rAt) return "push";
+  return rAt === local.updatedAt && !local.dirty ? "keep" : "adopt";
+}
