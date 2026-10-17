@@ -1,4 +1,5 @@
 import { DISCLAIMER } from "../config";
+import { useRunningJobs } from "../net/jobs";
 import { link } from "../net/socket";
 import { sources } from "../net/sources";
 import { useStore } from "../state/store";
@@ -23,6 +24,16 @@ function Providers() {
   );
 }
 
+/** Phase 11: shown only while a background job is queued or running. */
+function JobsCount() {
+  const n = useRunningJobs();
+  return n > 0 ? (
+    <span>
+      JOBS <span className="acc">{n}</span>
+    </span>
+  ) : null;
+}
+
 export function StatusBar() {
   const l = useStore(link, (s) => s);
   const focus = useStore(workspace, (s) => s.focus);
@@ -45,6 +56,7 @@ export function StatusBar() {
         LAYOUT <span className={layout ? "acc" : "dim"}>{layout ?? "NONE"}</span>
       </span>
       <span>MODE CMD</span>
+      <JobsCount />
       <AlertFlash />
       <span className="sp" />
       <span>{DISCLAIMER}</span>

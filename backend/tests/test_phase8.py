@@ -21,6 +21,7 @@ def test_migrations_6_and_7_create_portfolios_and_alerts(tmp_path):
         await db.execute("PRAGMA user_version=5")  # a Phase 5 database
         await db.execute("DROP TABLE portfolios")
         await db.execute("DROP TABLE alerts")
+        await db.execute("DROP TABLE jobs")  # Phase 11
         await db.commit()
         await db.close()
         db = await open_db(path)
@@ -34,7 +35,7 @@ def test_migrations_6_and_7_create_portfolios_and_alerts(tmp_path):
         return version, tables, cols
 
     version, tables, cols = asyncio.run(run())
-    assert len(MIGRATIONS) == 7 and version == 7
+    assert len(MIGRATIONS) >= 7 and version == len(MIGRATIONS)  # Phase 11 added migration 8 (jobs)
     assert {"portfolios", "alerts", "watchlists"} <= tables
     assert cols == ["id", "symbol", "op", "unit", "value", "status", "created_at", "triggered_at", "trigger_price"]
 

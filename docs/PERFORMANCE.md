@@ -304,6 +304,17 @@ run 2 chart pan 33.4 ms (long tasks 0, tick-to-pixel 50.0 ms). Neither can come 
 long tasks 0, heap 5.6 MB, layout 40.3 ms, chart pan 16.7 ms. `keyring` stays out of startup (loaded 2 s later, off the
 event loop). The APIKEYS open budget is added to the bench with JOBS in step 4.
 
+### Phase 11 step 4: job runner, JOBS (2026-10-18)
+195 pytest + 7 xfail (step 5), 178 vitest, 70 Playwright, tsc + ruff clean. New bench section G + `jobsBench()`.
+First runs gated submit-to-first-frame end to end at 50 ms: 66.8 / 52.6 / 54.1 ms p95 (p50 41.7-46.1). Split: frame
+received to paint 34.6 ms p95, the rest is the HTTP POST through the Vite preview proxy (~16 ms Node loopback artifact on
+Windows); server time 1.4 ms. The gate was split with the user's OK (frame-to-paint 50 ms, server submit 20 ms, end to end
+INFO). Final run **21/21**: bundle 98.0 KB (+2.0, jobs store + frames in the entry: the socket routes `J` frames),
+backend p95 0.6 / 0.8 / 1.7 ms, cold start 100.6 ms, keystroke 14.5 ms, cached command 16.9 ms, tick-to-pixel 36.1 ms,
+heap 5.2 MB, layout 38.7 ms; job frame-to-paint 33.3 ms, job submit server 2.0 ms, end to end 49.2 ms (INFO), cached job
+1.3 ms, JOBS/APIKEYS open 23.0 ms, worker pool cold start 157-207 ms (INFO). Chart pan missed once (33.4 ms) in an earlier
+run, as before.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

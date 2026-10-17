@@ -122,7 +122,6 @@ test("KEY REQUIRED: a 424 shows the amber line, Enter opens APIKEYS on that prov
 });
 
 test("JOBS: JOBS TEST streams progress, Esc cancels, status bar counts running jobs", async ({ page }) => {
-  test.fail();
   const { deletes } = await setup(page);
   await run(page, "JOBS TEST 20 50");
   await expect(panel(page).locator(".ph")).toContainText("JOBS");

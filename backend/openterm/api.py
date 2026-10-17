@@ -503,3 +503,48 @@ async def keys_delete(request: Request, name: str):
         return key_error(e.kind, str(e))
     request.app.state.on_key_change(name)
     return key_row(await asyncio.to_thread(keys_of(request).status, name))
+
+
+# --- Phase 11: background jobs ---
+def jobs_of(request: Request):
+    return request.app.state.jobs
+
+
+@router.post("/jobs")
+async def jobs_submit(request: Request):
+    from .jobs.kinds import BadParams
+
+    try:
+        body = await json_object(request)
+    except UserDataError as e:
+        return error(e)
+    try:
+        return await jobs_of(request).submit(str(body.get("kind", "")), body.get("params", {}))
+    except BadParams as e:
+        return error(DataError("bad_request", str(e)))
+
+
+@router.get("/jobs")
+async def jobs_list(request: Request):
+    return {"jobs": await jobs_of(request).list()}
+
+
+@router.get("/jobs/{job_id}")
+async def jobs_get(request: Request, job_id: str):
+    job = await jobs_of(request).get(job_id)
+    return job if job else error(DataError("not_found", "NO SUCH JOB"))
+
+
+@router.delete("/jobs/{job_id}")
+async def jobs_cancel(request: Request, job_id: str):
+    job = jobs_of(request).cancel(job_id)
+    if job is None:
+        return error(DataError("not_found", "JOB IS NOT RUNNING"))
+    return job
+
+
+@router.delete("/jobs")
+async def jobs_clear(request: Request, state: str = "finished"):
+    if state != "finished":
+        return error(DataError("bad_request", "ONLY state=finished CAN BE CLEARED"))
+    return {"cleared": await jobs_of(request).clear_finished()}

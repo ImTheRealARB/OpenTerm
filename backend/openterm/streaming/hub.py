@@ -28,6 +28,7 @@ class Client:
         self.pending: dict[str, Tick] = {}
         self.ready = asyncio.Event()
         self.sent_frames = 0
+        self.outbox: deque[list] = deque(maxlen=1000)  # Phase 11: non-tick frames (jobs), sent before ticks
 
     def offer(self, ticks: dict[str, Tick]) -> None:
         hit = False
@@ -40,10 +41,16 @@ class Client:
     async def send_json(self, obj) -> None:
         await self.ws.send_text(orjson.dumps(obj).decode())
 
+    def push(self, frame: list) -> None:
+        self.outbox.append(frame)
+        self.ready.set()
+
     async def sender(self) -> None:
         while True:
             await self.ready.wait()
             self.ready.clear()
+            while self.outbox:
+                await self.send_json(self.outbox.popleft())
             batch, self.pending = self.pending, {}
             if batch:
                 await self.send_json(["T", [t.wire() for t in batch.values()]])
@@ -62,6 +69,11 @@ class Hub:
         self._task: asyncio.Task | None = None
         self.ticks_in = 0
         self._rate: deque[tuple[float, int]] = deque(maxlen=50)
+
+    def broadcast(self, frame: list) -> None:
+        """Phase 11: one frame to every connected client (job progress)."""
+        for c in self.clients:
+            c.push(frame)
 
     def start(self) -> None:
         self._task = asyncio.create_task(self._flush_loop())

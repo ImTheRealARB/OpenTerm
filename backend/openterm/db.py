@@ -22,6 +22,11 @@ MIGRATIONS: list[str] = [
         "CREATE TABLE alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, op TEXT NOT NULL, unit TEXT NOT NULL,"
         " value REAL NOT NULL, status TEXT NOT NULL, created_at REAL NOT NULL, triggered_at REAL, trigger_price REAL)"
     ),
+    # 8: background jobs (Phase 11). params / result are JSON; the hash index is created by jobs/store.py
+    (
+        "CREATE TABLE jobs (id TEXT PRIMARY KEY, kind TEXT NOT NULL, hash TEXT NOT NULL, state TEXT NOT NULL,"
+        " params BLOB NOT NULL, result BLOB, error TEXT, created_at REAL NOT NULL, started_at REAL, finished_at REAL)"
+    ),
 ]
 
 

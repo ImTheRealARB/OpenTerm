@@ -83,6 +83,29 @@ async function backendP95(path = "/api/health") {
   return { server, client: p95(lat) };
 }
 
+/** Phase 11: first job starts the worker pool (cold, reported); then identical submits return the cached result. */
+async function jobsBench() {
+  const post = async () => (await fetch(`${BACKEND}/api/jobs`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: "sleep", params: { steps: 1, step_ms: 1, tag: "bench" } }),
+  })).json();
+  const t0 = performance.now();
+  const first = await post();
+  for (let i = 0; i < 600; i++) {
+    const j = await (await fetch(`${BACKEND}/api/jobs/${first.id}`)).json();
+    if (j.state === "done") break;
+    if (j.state === "error" || j.state === "cancelled") throw new Error(`bench job ended ${j.state}: ${j.error}`);
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  const coldMs = performance.now() - t0;
+  for (let i = 0; i < 30; i++) {
+    const j = await post();
+    if (!j.cached) throw new Error("repeated bench job was not served from the cache");
+  }
+  const cachedServer = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/jobs"].p95;
+  return { coldMs, cachedServer };
+}
+
 async function freshPage(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   const page = await ctx.newPage();
@@ -209,6 +232,22 @@ async function browserBench() {
       await page.context().close();
     }
 
+    // G. Phase 11: JOBS / APIKEYS open (cached-command budget) and submit to first painted J frame (warm pool).
+    {
+      const page = await freshPage(browser);
+      out.p11 = await measure(page, async () => {
+        for (let i = 0; i < 10; i++) {
+          await run(page, `JOBS TEST ${i + 2} 1`);
+          await page.waitForTimeout(250);
+        }
+        for (let i = 0; i < 10; i++) {
+          await run(page, i % 2 ? "APIKEYS" : "JOBS");
+          await page.waitForTimeout(150);
+        }
+      });
+      await page.context().close();
+    }
+
     // D. 10,000-row canvas grid: keyboard paging + wheel scrolling.
     {
       const page = await freshPage(browser);
@@ -270,6 +309,8 @@ async function main() {
     add(`Backend p95, cached ${path.split("?")[0]}`, be.server, 20, "ms", `server-side; node client ${be.client.toFixed(1)} ms`);
   }
 
+  const jobs = await jobsBench(); // warms the worker pool before the browser section G
+
   const r = await browserBench();
   const { a, stream: st } = r;
   add("Cold start to usable command line (web)", r.cold, 1500, "ms", "p95 of 5 fresh contexts");
@@ -286,6 +327,17 @@ async function main() {
   add("Layout load to paint p95 (SQLite, 9 / 1 panels)", r.layout.layoutLoad.p95, 100, "ms", `n=${r.layout.layoutLoad.n}; frame p95 ${r.layout.frameP95.toFixed(1)} ms`);
   add("Frame time p95, 10k-row grid scroll", r.grid.frameP95, 20, "ms", "keys + wheel");
   add("Frame time p95, 50k-bar chart pan/zoom", r.chart.frameP95, 20, "ms", "keys");
+  // Job budgets are split like backend latency: browser frame-to-paint and server time are gated; end to end goes
+  // through the Vite preview proxy (Node on Windows loopback adds ~16 ms) and is reported only.
+  const jf = r.p11.jobsFirstFrame ?? { p95: null, n: 0 };
+  const ftp = r.p11.jobsFrameToPaint ?? { p95: null, n: 0 };
+  const jobsServer = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/jobs"].p95;
+  add("Job J frame received to paint p95", ftp.n ? ftp.p95 : null, 50, "ms", `JOBS TEST; n=${ftp.n}`);
+  add("Job submit p95, server-side (new + cached)", jobsServer, 20, "ms", "POST /api/jobs");
+  add("Job submit to first J frame painted p95", jf.n ? jf.p95 : null, null, "ms", `via proxy; p50 ${jf.p50?.toFixed(1)} ms; n=${jf.n}`);
+  add("Cached job (same hash) p95, server-side", jobs.cachedServer, 20, "ms", "POST /api/jobs, n=31");
+  add("JOBS / APIKEYS open to first paint p95", r.p11.cmdToPaint.p95, 100, "ms", `n=${r.p11.cmdToPaint.n}`);
+  add("Worker pool cold start (first job done)", jobs.coldMs, null, "ms", "spawn; measured, not gated");
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

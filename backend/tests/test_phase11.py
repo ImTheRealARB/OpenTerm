@@ -14,7 +14,6 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-JOBS = pytest.mark.xfail(strict=True, reason="Phase 11 step 4 (jobs) not built")
 LLM = pytest.mark.xfail(strict=True, reason="Phase 11 step 5 (LLM gateway) not built")
 
 SECRET = "sk-test-0123456789abcdefSECRET"
@@ -293,14 +292,12 @@ def _wait(client, job_id, states=("done", "error", "cancelled"), timeout=30.0) -
     raise AssertionError(f"job {job_id} still {job['state']}")
 
 
-@JOBS
 def test_migration_8_adds_jobs_table():
     from openterm.db import MIGRATIONS
 
     assert len(MIGRATIONS) == 8 and "CREATE TABLE jobs" in MIGRATIONS[7]
 
 
-@JOBS
 def test_job_hash_is_stable_and_order_free():
     h = mod("openterm.jobs").job_hash
     assert h("sleep", "1", {"a": 1, "b": [1, 2]}) == h("sleep", "1", {"b": [1, 2], "a": 1})
@@ -308,7 +305,6 @@ def test_job_hash_is_stable_and_order_free():
     assert h("sleep", "1", {"a": 1}, "fp1") != h("sleep", "1", {"a": 1}, "fp2")
 
 
-@JOBS
 def test_dummy_job_streams_progress_and_caches(client):
     with client.websocket_connect("/ws") as ws:
         r = client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": 5, "step_ms": 20}})
@@ -333,7 +329,6 @@ def test_dummy_job_streams_progress_and_caches(client):
     assert again["cached"] is True and again["state"] == "done" and again["result"]["steps"] == 5
 
 
-@JOBS
 def test_identical_running_jobs_coalesce(client):
     a = client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": 20, "step_ms": 50}}).json()
     b = client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": 20, "step_ms": 50}}).json()
@@ -341,7 +336,6 @@ def test_identical_running_jobs_coalesce(client):
     client.delete(f"/api/jobs/{a['id']}")
 
 
-@JOBS
 def test_cooperative_cancel(client):
     job = client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": 400, "step_ms": 50}}).json()
     _wait(client, job["id"], states=("running",))
@@ -349,7 +343,6 @@ def test_cooperative_cancel(client):
     assert _wait(client, job["id"], timeout=5)["state"] == "cancelled"
 
 
-@JOBS
 def test_hard_cancel_kills_and_respawns_the_worker(client):
     job = client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": 1, "step_ms": 60000,
                                                                      "ignore_cancel": True}}).json()
@@ -362,7 +355,6 @@ def test_hard_cancel_kills_and_respawns_the_worker(client):
     assert _wait(client, nxt["id"])["state"] == "done"
 
 
-@JOBS
 def test_failing_and_crashing_jobs(client):
     fail = client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": 5, "step_ms": 5, "fail_at": 2}}).json()
     got = _wait(client, fail["id"])
@@ -375,7 +367,6 @@ def test_failing_and_crashing_jobs(client):
     assert _wait(client, ok["id"])["state"] == "done"
 
 
-@JOBS
 def test_job_api_errors_and_listing(client):
     assert client.post("/api/jobs", json={"kind": "nope", "params": {}}).status_code == 400
     assert client.post("/api/jobs", json={"kind": "sleep", "params": {"steps": "x"}}).status_code == 400
@@ -386,7 +377,6 @@ def test_job_api_errors_and_listing(client):
     assert any(r["id"] == job["id"] for r in rows) and all("result" not in r for r in rows)
 
 
-@JOBS
 def test_job_store_trims_to_200(tmp_path):
     from openterm.db import migrate, open_db
 

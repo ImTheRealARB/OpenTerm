@@ -3,6 +3,7 @@
  * prefetch reuse them. Every payload keeps the backend's source/as_of/stale envelope intact.
  */
 import { gauges } from "../perf/metrics";
+import type { JobRec } from "./jobFrames";
 import { keyRequired, type KeyRequiredInfo } from "./keyRequired";
 
 export interface Envelope<T> {
@@ -168,6 +169,12 @@ export const api = {
   putKey: (name: string, fields: Record<string, string>) => send<KeyRow>("PUT", `/api/keys/${encodeURIComponent(name)}`, { fields }),
   testKey: (name: string) => send<KeyRow>("POST", `/api/keys/${encodeURIComponent(name)}/test`),
   deleteKey: (name: string) => send<KeyRow>("DELETE", `/api/keys/${encodeURIComponent(name)}`),
+  // Phase 11 job runner (uncached). `job` carries the result; the list does not.
+  jobs: () => send<{ jobs: JobRec[] }>("GET", "/api/jobs"),
+  job: (id: string) => send<JobRec>("GET", `/api/jobs/${encodeURIComponent(id)}`),
+  submitJob: (kind: string, params: unknown) => send<JobRec>("POST", "/api/jobs", { kind, params }),
+  cancelJob: (id: string) => send<JobRec>("DELETE", `/api/jobs/${encodeURIComponent(id)}`),
+  clearFinishedJobs: () => send<{ cleared: number }>("DELETE", "/api/jobs?state=finished"),
 };
 
 export type KeyState = "MISSING" | "UNTESTED" | "OK" | "INVALID" | "QUOTA" | "ERROR";

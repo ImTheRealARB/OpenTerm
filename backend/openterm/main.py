@@ -104,6 +104,12 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(on_key_change, "fred")
 
     key_loader = asyncio.create_task(apply_stored_keys())
+
+    # --- Phase 11: job runner (worker processes start on the first job) ---
+    from .jobs.runner import JobRunner
+    from .jobs.store import JobStore
+
+    app.state.jobs = jobs = JobRunner(JobStore(db), hub.broadcast, settings.openterm_job_workers)
     sched = scheduler.start(router)
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
@@ -111,6 +117,7 @@ async def lifespan(app: FastAPI):
     finally:
         sched.shutdown(wait=False)
         key_loader.cancel()
+        await asyncio.to_thread(jobs.close)
         if keys_http is not http:
             await keys_http.aclose()
         for part in (hub, synthetic, poller, yahoo):
@@ -143,6 +150,7 @@ async def ws(socket: WebSocket) -> None:
     client -> ["sub", [symbols]] | ["unsub", [symbols]] | ["ping", client_ts]
     server -> ["T", [[symbol, price, change, change_pct, volume, high, low, time_ms, src], ...]]
               ["pong", client_ts, server_ts_ms]
+              ["J", {id, kind, state, progress, msg, cached}]  (Phase 11 job progress, to every client, <= 10/s/job)
     src: y = Yahoo stream, p = REST poll fallback, s = SYNTHETIC test data.
     """
     await socket.accept()

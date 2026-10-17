@@ -172,7 +172,10 @@ Frontend:
 ## Performance budgets
 - Unchanged: every existing bench budget (cold start must not grow: `keyring`, job pool and LLM modules load lazily).
 - New, recorded in `docs/PERFORMANCE.md` and gated in `scripts/bench.mjs`:
-  - Job round trip (warm pool): submit to first `J` progress frame painted in `JOBS` < 50 ms.
+  - Job frame: first `J` frame received to painted < 50 ms (browser side, like tick-to-pixel), and job submit
+    < 20 ms server-side. Submit to first frame painted end to end is reported, not gated: in the bench it goes through
+    the Vite preview proxy, where Node on Windows loopback adds ~16 ms (changed 2026-10-18 with the user's OK; the
+    first end-to-end runs were 46 ms p50 / 52-67 ms p95).
   - Cached job (same hash): submit to `done` < 20 ms server-side.
   - `APIKEYS` and `JOBS` open: cached-command budget (< 100 ms to paint).
 - Measured, not gated: pool cold start (first job), expected 300-800 ms on Windows (spawn).

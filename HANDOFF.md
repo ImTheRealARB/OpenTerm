@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-18, session 5 (Phases 11-19 on branch `claude/openterm-phases-11-19-328938`; Phase 11 steps 1-3 done; next: step 11.4 jobs)._
+_Last updated: 2026-10-18, session 5 (Phases 11-19 on branch `claude/openterm-phases-11-19-328938`; Phase 11 steps 1-4 done; next: step 11.5 LLM gateway, needs an OpenRouter key)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -213,8 +213,8 @@ Remaining:
    | 11.1 Spec [docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) | **done**, defaults approved 2026-10-18 |
    | 11.2 Tests set: `backend/tests/test_phase11.py` (39), `frontend/src/net/phase11.test.ts` (5), `frontend/e2e/phase11.spec.ts` (4) | **done**; all marked expected-to-fail per step (see CLAUDE.md) |
    | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | **done** (backend by the main session, frontend by one Sonnet subagent) |
-   | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **next**: remove the `@JOBS` markers, the jobFrames `it.fails` and the JOBS `test.fail()` |
-   | 11.5 LLM gateway + health | pending; **needs an OpenRouter key** to record one streamed answer (free model is enough) |
+   | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **done** (backend main session, frontend one Sonnet subagent); bench 21/21 |
+   | 11.5 LLM gateway + health | **next**; **needs an OpenRouter key** (`OPENROUTER_API_KEY`) to record one streamed answer (a free model is enough). Remove the `@LLM` markers |
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | pending |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
@@ -230,6 +230,12 @@ Remaining:
    OpenAI, Anthropic, OpenRouter (`keytest_*_401`); `keytest_openrouter_ok` is doc-shaped. Frontend: `APIKEYS.tsx`, `KeyRequiredLine.tsx`
    (wired into `secPanel` and `macroUi` error lines only; DES, N, GP and others still show their own error text),
    `state/panelContext.ts`, `net/keyRequired.ts`, `apikeysMask.ts`, `apikeysSignup.ts`. Spend cap editing (`C`) waits for step 5.
+   Step 4 notes: `backend/openterm/jobs/` (`__init__` = `job_hash` only, kept import-light for workers; `kinds.py` (`sleep` = TEST JOB);
+   `worker.py`; `store.py` (migration 8, hash index made on first use, trim 200, results > 8 MB not cached); `runner.py`: own pool of
+   spawn workers, two pipes + a shared cancel flag each, one reader thread on pipes + sentinels, hard cancel after 2 s, time limit,
+   `WORKER DIED`, 10 frames/s/job). Hub `Client.push` / `Hub.broadcast` carry `J` frames. `/api/jobs` POST/GET, `/{id}` GET/DELETE,
+   `DELETE /api/jobs?state=finished`. Frontend: `net/jobFrames.ts`, `net/jobs.ts`, `functions/JOBS.tsx`, `jobsArgs.ts`, status bar `JOBS n`.
+   The job budget is split (user's choice): frame-to-paint and server time gated, end to end through the bench proxy is INFO.
    Baseline before Phase 11 code: 163 pytest, 169 vitest, 66 Playwright, bench 17/17 on the rerun (see `docs/PERFORMANCE.md`
    "Phase 11 baseline"). Open problem: port 8000 was held by the user's own `start.ps1` backend (system Python); stop it
    (with the user's OK) before the bench.

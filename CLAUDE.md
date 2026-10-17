@@ -116,6 +116,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   keys are applied 2 s after startup in a thread. A keyed adapter must read its key from `app.state.keys` (or be refreshed by
   `on_key_change`), not only from `Settings`, or a key set in APIKEYS does nothing until restart. `KeyStore.set` shadows the builtin
   `set` in the class body: keep `from __future__ import annotations` at the top of `keys.py`.
+- **Jobs:** `openterm/jobs/__init__.py` and `kinds.py` are imported by every worker process: keep them free of FastAPI, aiosqlite
+  and heavy libraries (import those inside a kind's `fn`). Migration tests that fake an old DB must also `DROP TABLE jobs`.
+  Bench job budgets are split like backend latency: the Vite preview proxy adds ~16 ms on Windows, so end to end is INFO.
 - **Any app error text goes through `redact()`** (`api.error`, SOURCES `last_error`, key-test detail). New error paths must too.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 

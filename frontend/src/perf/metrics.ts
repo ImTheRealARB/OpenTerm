@@ -40,6 +40,10 @@ export const series = {
   frame: new Ring(600),
   wsRtt: new Ring(64),
   layoutLoad: new Ring(64),
+  /** Phase 11: submitJob call to the painted frame showing that job's first J update. Gauge: `jobs.firstFrameMs`. */
+  jobsFirstFrame: new Ring(64),
+  /** Phase 11: a job's first J frame received on the socket to the frame that paints it (no network in it). */
+  jobsFrameToPaint: new Ring(64),
 };
 export type SeriesName = keyof typeof series;
 
@@ -171,6 +175,8 @@ export function snapshot() {
     tickToPixel: s(series.tickToPixel),
     wsRtt: s(series.wsRtt),
     layoutLoad: s(series.layoutLoad),
+    jobsFirstFrame: s(series.jobsFirstFrame),
+    jobsFrameToPaint: s(series.jobsFrameToPaint),
     gauges: Object.fromEntries(gauges),
     panels: Object.fromEntries([...panelRender].map(([id, r]) => [id, r.percentile(95)])),
   };
