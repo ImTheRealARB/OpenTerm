@@ -5,6 +5,35 @@ _Last updated: 2026-10-18, session 5 (Phases 11-19 on branch `claude/openterm-ph
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
+## Resume here (paused 2026-10-18, end of session 5)
+- **Where the work is:** branch `claude/openterm-phases-11-19-328938`, checked out in the worktree
+  `.claude/worktrees/openterm-phases-11-19-328938` (under the main checkout `C:\Users\Asus\Documents\OpenTerm`). Not merged
+  into `main`; no remote. The tree is clean: the last code commit is Phase 11 step 4 (`308835b`), followed by this docs commit.
+  Nothing is running: no subagents, no servers.
+- **Open the new session in that worktree** (or `git checkout claude/openterm-phases-11-19-328938` elsewhere). In a fresh
+  checkout, run `cd backend; uv sync` and `cd frontend; npm ci` first.
+- **Exact next action: Phase 11 step 5, the LLM gateway** ([docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) section 3).
+  It is blocked on an **OpenRouter key**. The user sets `OPENROUTER_API_KEY` in the APIKEYS panel or in the worktree's `.env`
+  (gitignored). Never paste a key into chat or the repo. Then:
+  1. Record one real streamed answer from a free `:free` model to `backend/tests/fixtures/llm_openrouter_stream.txt`
+     (raw SSE text; keep the key out of the file).
+  2. Build `openterm/llm/` (`sse.py`, `openai_compat.py`, `anthropic.py`, `spend.py`, `client.py`), `/api/llm/health`, the
+     `ollama` SOURCES row and the APIKEYS spend-cap edit (`C`).
+  3. Delete the `@LLM` markers in `backend/tests/test_phase11.py` (7 tests) and make those tests pass.
+
+  Step 6 then closes Phase 11: `THIRD_PARTY.md`, the CLAUDE.md rule changes, docs, and the phase verification.
+- **The user's working rules for Phases 11-19** (from their prompt; keep following them):
+  1. Do one step per turn, in HANDOFF order. A step is a spec, a tests set, or one function's code.
+  2. Each phase starts with `docs/specs/PHASE_<n>.md`, with the roadmap's proposed defaults listed at the top for approval.
+     Then tests first, then code.
+  3. Sonnet subagents only, at most 2 at once, and only for truly parallel pieces. Splitting backend and frontend halves worked well.
+  4. Before a step is done, run `uv run pytest -q`, `uv run ruff check .`, `npx tsc --noEmit`, `npx vitest run`,
+     `npx playwright test` and `node scripts/bench.mjs`. Record the bench numbers in `docs/PERFORMANCE.md`.
+  5. After each step, update only the changed sections of HANDOFF.md and CLAUDE.md, then commit.
+  6. At 95% of the 5-hour or weekly limit: stop subagents, write the state to HANDOFF.md, commit, and stop.
+  7. Keep output small. If a key is needed, stop and say which one.
+- **Before the bench:** port 8000 must be free. The user's own `start.ps1` backend sometimes holds it; ask before stopping it.
+
 ## How Phases 6-10 were built (history)
 Built in parallel, one git worktree per phase (`openterm-p6..p10`, from `4b3814c`), by Sonnet sessions following
 [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) (append-only "Phase N" blocks in shared files; only Phase 8 adds
