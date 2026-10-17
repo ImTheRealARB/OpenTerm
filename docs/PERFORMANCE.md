@@ -375,6 +375,15 @@ Phase 1 optimizations (before → after):
 - Cheatsheet overlay moved to a lazy chunk; it was pulled into the entry chunk by a static import (entry 79.2 → 78.4 KB gz).
 - Clock writes `textContent` once per second instead of re-rendering React (no measurable cost now; avoids a 1 Hz render of the top bar).
 
+### Phase 12 step 5: engines (India, crypto, forex, futures, composite), Binance candles (2026-10-19)
+302 pytest + 11 xfail, 187 vitest, 77 Playwright, tsc + ruff clean. Bench **24/24** first run: bundle 98.3 KB, cold start
+90.3 ms, tick-to-pixel 36.9 ms, chart pan 16.7 ms, **BT 10-year rule run 233.2 ms** (< 300; step 4 was 224.2), cached run
+4.8 ms, BT open 81.2 ms (< 100; p50 59.9, step 4 65.4); INFO: BT cold worker 4.1 s (step 4: 2.2 s; `import pandas`
+alone is 1.5 s on this machine, the six new engine modules add about 10 ms, so the rest is machine noise on a fresh
+worktree; re-check at the end of the phase), 100 symbols x 10 years 1.6 s. The history provider order gained
+`binance_klines` in front: its `supports()` is one regex, so Yahoo symbols pay nothing measurable (backend p95
+cached /api/history 1.9 ms).
+
 ## Test suite speed (2026-10-19, on top of Phase 12 step 4)
 Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
 

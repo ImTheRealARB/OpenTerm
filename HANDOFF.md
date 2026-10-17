@@ -1,25 +1,39 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-4 done; step 5 (engines) next; full scope, defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; Phase 12 steps 1-5 done; step 6 (MC/WF) next; full scope, defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-19, after step 12.4)
-- **Where the work is:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`
-  (open the new session there; a session cannot write into another worktree). `backend/.venv` and `frontend/node_modules`
-  are installed. Last commit: **"Phase 12 step 4: BT panel..."**. Nothing is running. Not merged into `main`; no remote.
-- **Steps 12.3 and 12.4 are done and committed.** Gates after step 4: 263 pytest + 19 xfail (18 for steps 5-8, 1 Phase 11
-  recording), ruff, tsc, 187 vitest, 77 Playwright, bench **24/24** (BT run 224 ms, cached 5 ms, BT open 65 ms; see
-  `docs/PERFORMANCE.md`). Step 4 also added VaR 95 / ES 95 (`bt/job.py` `tail_risk`, decision H was missed in step 3).
+## Resume here (2026-10-19, after step 12.5)
+- **Where the work is:** branch `claude/openterm-phases-12-19-5ebe04`, worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`
+  (a session cannot write into another worktree). It was fast-forwarded from `claude/openterm-phases-11-19-a99b2b` (that
+  worktree is clean and now stale: do not work there) and `claude/test-speedup` is merged. `backend/.venv` and
+  `frontend/node_modules` are installed. Nothing is running. Not merged into `main`; no remote.
+- **Steps 12.3, 12.4 and 12.5 are done and committed.** Gates after step 5: 302 pytest + 11 xfail (10 for steps 6-8, 1
+  Phase 11 recording), ruff, tsc, 187 vitest, 77 Playwright, bench **24/24** (BT run 233 ms, cached 5 ms, BT open 81 ms;
+  see `docs/PERFORMANCE.md`). Step 4 also added VaR 95 / ES 95 (`bt/job.py` `tail_risk`, decision H was missed in step 3).
+- **What step 5 added:** `bt/engines/` `india_equity.py`, `crypto.py`, `forex.py`, `futures_base.py`, `global_futures.py`,
+  `composite.py`, `bands.py` (ported from Vibe `d0db2e3`, THIRD_PARTY.md rows added), wired in `bt/engine.py`; all six
+  `ENGINES` tests pass against Vibe's own numbers. Ours: `composite.market_of` (Vibe's detector reads `BTCUSDT.P`, `BRK-B`,
+  `^GSPC` as China A; unplaceable symbols raise), `providers/crypto.py` `BinanceKlinesProvider` (`binance_klines`, first in
+  the `history` order in `main.py` and `config.yaml`; spot `BTCUSDT`/`BTC-USDT`, perp `BTCUSDT.P` with `Bars.fund` =
+  mean funding per bar), `frames.from_bars` reads `fund`, `catalog.py` (`BUILT`, `SLIPPAGE_KEYS`, `COSTS`,
+  `bars_per_year()`), API sets `interval` + `funding_rate` 0 for crypto/composite and refuses `SLIP` on forex. New tests:
+  `tests/test_phase12_engines.py`. **Not ported:** Vibe's crypto `perpetual_strict` (needs mark prices and maintenance
+  brackets; the engine refuses it), see `docs/DATA_LIMITS.md`.
+- **The permission classifier denied running a copy script** over the downloaded Vibe sources, so the ported files were
+  written by hand from reading them (headers name the source file and the changes). Vibe sources were fetched with
+  `curl` from `raw.githubusercontent.com/HKUDS/Vibe-Trading/d0db2e3/...` into the scratchpad only, never into the repo.
 - **What step 4 added:** `functions/BT.tsx` (views CHART / METRICS / TRADES / CODE cycled with `V`, not `Tab`; labels of
   decision L; progress from `J` frames; `R` re-run, `X` cancel, `E` CSV of the visible view), `bt/ruleParse.ts` (mirror
   of `bt/rules.py`), `bt/metricsFormat.ts`, `btApi` in `net/api.ts`, `adoptJob` in `net/jobs.ts`, ChartView `lowerPane`
   (drawdown) and lazy indicator worker, BT intent prefetch, `btOpen` perf series, bench section H + `btBench()`.
   `BT RUNS/EXPORT/MC/WF/SAVE/LOAD/DEL` say NOT BUILT YET with their step. **Not built yet: the Python strategy editor**
   (spec section 1: textarea + `BT SAVE/LOAD/DEL`); call it step 4B, before step 9.
-- **Next action: step 5, engines** (India, crypto spot + perps, forex, futures, composite; Binance klines adapter; delete
-  the `ENGINES` markers in `tests/test_phase12.py`). Then 6 (MC/WF), 7 (RUNS/EXPORT), 8 (IMPORT), 4B (editor), 9 (docs).
+- **Next action: step 6, `BT MC` / `BT WF`** (port Vibe `validation` Monte Carlo + bootstrap Sharpe CI + walk-forward;
+  delete the `VALID` marker in `tests/test_phase12.py`; job kinds `bt.mc`, `bt.wf`; panel views). Then 7 (RUNS/EXPORT),
+  8 (IMPORT), 4B (editor), 9 (docs, `COMMANDS.md`, phase bench).
 - **Scope and plan (decided by the user 2026-10-19; do not relitigate):**
   - **Full scope, Phases 12-19, minus paid-only data.** Removed: `TRAN`, `SEG` (paid FMP). Keys: keyless sources
     first; free sign-up keys are fine (Finnhub free tier for `EE`/`ANR` only as far as it covers them, Alpaca/Finnhub
@@ -37,9 +51,8 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
     script run; (5) faster gates (test-suite audit running in its own session on its own branch, see below).
     Quality, accuracy, terminal speed and bench budgets are never traded for pace.
   - Estimate: about 9-13 hours of active work (4-5 sessions of one 5-hour window each). Re-check after Phase 12.
-  - **Test audit: finished, NOT merged yet.** Branch `refs/heads/claude/test-speedup`, commit `5347a9b` (off `976c7ad`,
-    23 files). **First action of the next session:** merge it into this branch (`git merge claude/test-speedup`; expect
-    conflicts only in docs: keep both sides), run all five gates, commit. What it does: pytest 39-41 s -> 20-29 s
+  - **Test audit: finished and MERGED (2026-10-19, `863af15`, no conflicts, all five gates green).** Branch
+    `refs/heads/claude/test-speedup`, commit `5347a9b` (off `976c7ad`, 23 files). What it does: pytest 39-41 s -> 20-29 s
     (httpx client / CA bundle built once per worker in `conftest.py`; `addopts` `-n 6 --dist worksteal`), Playwright
     30-45 s -> 18-27 s (shared `openApp()` in `e2e/app.ts` loads the page once; web server builds without the type check),
     vitest 2.1 -> 1.3-1.6 s (`threads` pool). Merged duplicates: four migration-upgrade tests -> one test upgrading from

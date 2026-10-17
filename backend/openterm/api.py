@@ -689,7 +689,9 @@ async def _bt_params(request: Request, body: dict) -> dict:
 
     engine = catalog.engine_for(symbols, opts.get("engine"))
     if engine not in catalog.BUILT:
-        raise BtError("bad_request", f"ENGINE {engine.upper()} IS NOT BUILT YET (PHASE 12 STEP 5)")
+        raise BtError("bad_request", f"ENGINE {engine.upper()} IS NOT BUILT (HAVE {', '.join(sorted(catalog.BUILT)).upper()})")
+    if slip is not None and engine == "forex":
+        raise BtError("bad_request", "SLIP DOES NOT APPLY TO FOREX (ITS COST IS A SPREAD AND SLIPPAGE IN PIPS)")
 
     s = svc(request)
     wanted = symbols + ([resolve(bench.strip().upper())] if bench else [])
@@ -706,8 +708,12 @@ async def _bt_params(request: Request, body: dict) -> dict:
     sha, path = await asyncio.to_thread(store.write_data, payload)
 
     config: dict = {"initial_cash": float(cash)}
-    if slip is not None and engine in catalog.SLIPPAGE_KEY:
-        config[catalog.SLIPPAGE_KEY[engine]] = slip / 1e4
+    if slip is not None:
+        for key in catalog.SLIPPAGE_KEYS.get(engine, ()):
+            config[key] = slip / 1e4
+    if engine in ("crypto", "composite"):
+        config["interval"] = interval  # sets how many 8-hour funding settlements one bar spans
+        config["funding_rate"] = 0.0  # spot has no funding; perpetual bars carry their own recorded rate
     if fees:
         config["fees_bps"] = fees
     if warmup:
@@ -725,7 +731,7 @@ async def _bt_params(request: Request, body: dict) -> dict:
     meta = {"rule": rule, "strategy": strategy, "code": code, "symbols": symbols, "interval": interval,
             "range": range_, "engine": engine, "short": short, "bench": wanted[-1] if bench else None}
     params = {"data_path": str(path), "data_sha": sha, "short": short, "engine": engine, "config": config,
-              "bars_per_year": catalog.BARS_PER_YEAR.get(engine, 252 if interval == "1D" else 52),
+              "bars_per_year": catalog.bars_per_year(engine, interval),
               "adjusted": adjusted, "time_limit_s": limit_s, "memory_limit_mb": int(mem_mb), "labels": labels,
               "meta": meta, **({"rule": rule} if rule else {"code": code})}
     stable = {k: v for k, v in params.items() if k != "labels"}  # labels carry data age: not part of the identity

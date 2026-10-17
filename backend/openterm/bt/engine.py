@@ -1,7 +1,7 @@
 """One entry point over the market engines: `backtest(data_map, signal_map, config, engine=...)`.
 
-Worker-side only (pandas). Engine names: us, uk, hk, ca (global equity); india, crypto, forex, futures and
-composite arrive in Phase 12 step 5.
+Worker-side only (pandas). Engine names: us, uk, hk, ca (global equity), india, crypto (perpetuals), forex,
+futures (global) and composite (a shared-capital basket across those markets).
 """
 
 from __future__ import annotations
@@ -12,13 +12,26 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from .engines.base import BaseEngine
+from .engines.composite import CompositeEngine
+from .engines.crypto import CryptoEngine
+from .engines.forex import ForexEngine
 from .engines.global_equity import GlobalEquityEngine
+from .engines.global_futures import GlobalFuturesEngine
+from .engines.india_equity import IndiaEquityEngine
 from .models import FillRecord, TradeRecord
 
 FACTORIES: dict[str, Callable[[dict, list[str]], BaseEngine]] = {
     m: (lambda cfg, codes, m=m: GlobalEquityEngine(cfg, market=m)) for m in ("us", "uk", "hk", "ca")
 }
-BARS_PER_YEAR = {"us": 252, "uk": 252, "hk": 252, "ca": 252}
+FACTORIES.update({
+    "india": lambda cfg, codes: IndiaEquityEngine(cfg),
+    "crypto": lambda cfg, codes: CryptoEngine(cfg),
+    "forex": lambda cfg, codes: ForexEngine(cfg),
+    "futures": lambda cfg, codes: GlobalFuturesEngine(cfg),
+    "composite": lambda cfg, codes: CompositeEngine(cfg, codes),
+})
+BARS_PER_YEAR = {"us": 252, "uk": 252, "hk": 252, "ca": 252, "india": 252, "forex": 252, "futures": 252, "crypto": 365,
+                 "composite": 252}
 
 
 @dataclass

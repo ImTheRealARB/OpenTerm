@@ -139,3 +139,21 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - **Background jobs** run in local worker processes; no upstream calls. Phase 11 ships only the `sleep` TEST JOB.
 - **Fixture mode:** key tests replay recorded 401s (and a doc-shaped OpenRouter success); the Ollama port refuses; OpenRouter
   chat replays `llm_openrouter_stream.txt` once it is recorded (not yet: waits for the key); other LLM calls are 404.
+
+## Backtester engines and Binance candles (Phase 12 step 5)
+- **Engines built:** US, UK, Hong Kong, Canada (global equity), India (delivery), crypto perpetuals, forex, global
+  futures, composite. **Not built:** China A, China futures, Korea, Vietnam, Brazil, Argentina (a composite or `MKT=`
+  naming one fails with the market's name). Options waits for Phase 14.
+- **Crypto `perpetual_strict` is cut.** Vibe's strict mode (mark-price frames, maintenance-bracket schedules, cross-margin
+  risk, evidence files) needs mark-price and bracket series that no keyless source gives. The engine refuses
+  `perpetual_strict=True` instead of running with invented inputs. Funding uses the recorded Binance rate per bar; a
+  crypto run through the API charges **no funding on spot** (`funding_rate` 0) and the recorded rate on `.P` perps.
+- **Binance candles** (`binance_klines`, keyless): `BTCUSDT` / `BTC-USDT` spot from `data-api.binance.vision`;
+  `BTCUSDT.P` USD-M perpetual from `fapi.binance.com` with the mean funding rate of each daily or weekly bar. Binance
+  refuses some regions on `fapi` (HTTP 451): the perp then shows PROVIDER DOWN with that status. Funding history is paged
+  (1000 settlements per call, 12 pages at most); bars before the first recorded funding settlement are dropped from a
+  perp run, never filled. Volume goes through `Bars.v` as a whole number (BTC volume 459024.106 reads 459024).
+- **Spot uses the perpetual fee model** (taker 0.05% open, maker 0.02% close) because that is Vibe's crypto engine;
+  `FEES=<bps>` adds to it. Only `USDT` pairs: `BTC-USD` still comes from Yahoo and is a spot-like crypto run.
+- **Forex ignores `SLIP`** (its cost is a spread plus slippage in pips) and says so. **Composite refuses mixed
+  currencies** (no FX translation yet) and any symbol it cannot place in a built market.

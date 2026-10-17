@@ -24,7 +24,7 @@ from .userdata import UserData
 
 STARTED = time.time()
 DEFAULT_ORDER = {
-    "quotes": ["yahoo", "nasdaq"], "history": ["yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
+    "quotes": ["yahoo", "nasdaq"], "history": ["binance_klines", "yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
     "news_top": ["rss"], "news_symbol": ["yahoo_rss", "gdelt"], "news_keyword": ["gdelt"],
     "movers": ["nasdaq"], "crypto": ["coingecko", "binance"],
 }

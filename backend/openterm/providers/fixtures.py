@@ -27,6 +27,9 @@ PATHS = {
     "/api/marketmovers": "nasdaq_movers",
     "/api/v3/ticker/24hr": "binance_24hr",
 }
+# Phase 12: Binance klines / funding (BTCUSDT only; any other symbol is a 404, never invented data).
+BINANCE_KLINES = {"/api/v3/klines": "binance_spot_klines_btcusdt_1d", "/fapi/v1/klines": "binance_perp_klines_btcusdt_1d",
+                  "/fapi/v1/fundingRate": "binance_perp_funding_btcusdt"}
 YAHOO_RSS = {"AAPL": "yahoo_rss_aapl"}
 GDELT = {"nvidia": "gdelt_nvidia"}
 COINGECKO = {"usd": "coingecko_markets_usd"}
@@ -67,6 +70,8 @@ def _route(request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
     if p in PATHS:
         return _load(PATHS[p])
+    if p in BINANCE_KLINES:
+        return _load(BINANCE_KLINES[p]) if q.get("symbol") == "BTCUSDT" else httpx.Response(400, json={"code": -1121})
     if p == "/rss/2.0/headline":
         return _keyed(YAHOO_RSS, q.get("s", ""))
     if p == "/api/v2/doc/doc":

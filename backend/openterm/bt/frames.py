@@ -44,6 +44,9 @@ def from_bars(bars: dict) -> pd.DataFrame:
                        "volume": bars["v"]}, index=idx, dtype=float)
     if bars.get("adj") is not None:
         df["adj_close"] = np.asarray(bars["adj"], dtype=float)
+    if bars.get("fund") is not None:  # perpetual funding per bar: bars without one are dropped, as in from_binance_perp
+        df["funding_rate"] = np.asarray(bars["fund"], dtype=float)
+        df = df.dropna(subset=["funding_rate"])
     return _finish(df)
 
 

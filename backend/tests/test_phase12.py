@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-ENGINES = pytest.mark.xfail(strict=True, reason="Phase 12 step 5 (India, crypto, forex, futures, composite) not built")
 VALID = pytest.mark.xfail(strict=True, reason="Phase 12 step 6 (BT MC, BT WF) not built")
 RUNS = pytest.mark.xfail(strict=True, reason="Phase 12 step 7 (BT RUNS compare, BT EXPORT) not built")
 IMPORT = pytest.mark.xfail(strict=True, reason="Phase 12 step 8 (IMPORT) not built")
@@ -381,7 +380,6 @@ def test_keyring_is_installed():
 
 # --- 6. Other engines (step 5) -----------------------------------------------------------------------------------
 
-@ENGINES
 def test_india_cost_stack_by_hand():
     e = mod("openterm.bt.engines.india_equity").IndiaEquityEngine({})
     # notional 100,000: exchange 2.97 + SEBI 0.10 + GST 18% of 3.07 = 0.5526 + STT 100; buy adds stamp 15
@@ -408,7 +406,6 @@ def test_crypto_funding_on_a_daily_bar():
     assert fee == pytest.approx(200 * 0.0001 * 3)  # notional x bar rate x three 8-hour settlements
 
 
-@ENGINES
 @pytest.mark.parametrize(("name", "engine"), [("india_one_trade", "india"), ("forex_eurusd", "forex"),
                                               ("futures_es", "futures")])
 def test_engines_match_vibe_on_synthetic_bars(name, engine):
@@ -416,7 +413,6 @@ def test_engines_match_vibe_on_synthetic_bars(name, engine):
     assert_run(res, case)
 
 
-@ENGINES
 def test_reliance_rsi_matches_vibe():
     case = CASES["reliance_rsi14_lt_30"]
     data = {"RELIANCE.NS": mod("openterm.bt.frames").from_yahoo_chart(body(case["fixture"]))}
@@ -426,7 +422,6 @@ def test_reliance_rsi_matches_vibe():
     assert_run(res, case)
 
 
-@ENGINES
 def test_btc_perp_matches_vibe():
     case = CASES["btc_perp_sma_cross_short"]
     f = mod("openterm.bt.frames").from_binance_perp(body("binance_perp_klines_btcusdt_1d"),
@@ -439,7 +434,6 @@ def test_btc_perp_matches_vibe():
     assert_run(res, case)
 
 
-@ENGINES
 def test_composite_rebalance_matches_vibe():
     pd = mod("pandas")
     case = CASES["composite_aapl_spy_rebalance"]
@@ -450,7 +444,6 @@ def test_composite_rebalance_matches_vibe():
     assert_run(res, case)
 
 
-@ENGINES
 def test_bt_run_crypto_perp_through_the_api(client):
     case = CASES["btc_perp_sma_cross_short"]
     job = bt_run(client, rule="SMA20>SMA50", symbols=["BTCUSDT.P"], interval="1D", range="MAX",

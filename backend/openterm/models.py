@@ -46,6 +46,9 @@ class Bars(BaseModel):
     # --- Phase 9 ---
     adj: list[float | None] | None = None
     """Dividend/split-adjusted close (Yahoo daily+ bars only). None when the source has none."""
+    # --- Phase 12 ---
+    fund: list[float | None] | None = None
+    """Perpetual funding rate per bar (mean of the settlements inside the bar; Binance USD-M daily/weekly bars only)."""
 
 
 class SearchHit(BaseModel):

@@ -29,7 +29,7 @@ cache:
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
   quotes: [yahoo, nasdaq]
-  history: [yahoo, nasdaq]
+  history: [binance_klines, yahoo, nasdaq]
   search: [yahoo]
   profile: [yahoo, nasdaq]
   news_top: [rss]

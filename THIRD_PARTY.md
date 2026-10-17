@@ -16,6 +16,13 @@ Filled from Phase 12 onwards. One row per ported file.
 | `openterm/bt/engines/base.py` | `agent/backtest/engines/base.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/global_equity.py` | `agent/backtest/engines/global_equity.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/hooks.py` | `agent/backtest/engines/_market_hooks.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/india_equity.py` | `agent/backtest/engines/india_equity.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/crypto.py` | `agent/backtest/engines/crypto.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/forex.py` | `agent/backtest/engines/forex.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/futures_base.py` | `agent/backtest/engines/futures_base.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/global_futures.py` | `agent/backtest/engines/global_futures.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/composite.py` | `agent/backtest/engines/composite.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/bands.py` | `agent/backtest/engines/china_a (only `_blocked_by_limit`).py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 
 ### HKUDS/Vibe-Trading (MIT)
 
