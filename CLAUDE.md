@@ -105,6 +105,8 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   the chart with `key={id:range}`; GP may have the same stale-readout bug.
 - **Panel arg changes go through `replaceView(panelId, v => ({...v, args}))`** so ERN/ECO/FRED state survives layout save/load.
 - **In Playwright, assert on fetched requests with `expect.poll`:** the `.ph` title changes before the panel's fetch fires.
+- **`SETTINGS KEYS` means keyboard shortcuts** (Phase 10). API keys live in the `APIKEYS` panel (Phase 11 spec); a key is typed only in
+  its masked field, never on the command line, so it never reaches `/api/cmdhistory`.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
 ## Conventions

@@ -277,6 +277,22 @@ Panel tab shows the security only for functions that use it; charts skip the vol
 (55.4, 59.3 ms) and also missed (57.6 ms) with both fixes reverted, so the change is the machine, not the code; earlier
 the same day it ran 38-42 ms. Chart pan missed once (33.4 ms) and passed on the rerun (16.7 ms), as before. Bundle 95.6 KB.
 
+### Phase 11 baseline (2026-10-18, same machine; before any Phase 11 code, spec step `docs/specs/PHASE_11.md`)
+163 pytest, 169 vitest, 66 Playwright, tsc + ruff clean. Bench run 1: 15/17 (tick-to-pixel 60.5 ms, chart pan 33.4 ms);
+run 2: **17/17**. Run 2 is the baseline for Phase 11:
+
+| Metric | Value | Budget |
+|---|---|---|
+| Bundle (gzip) | 95.6 KB | 400 KB |
+| Backend p95 health / quote / history (server) | 0.8 / 1.0 / 3.2 ms (run 1) | 20 ms |
+| Cold start to command line | 130.0 ms | 1500 ms |
+| Keystroke echo p95 (idle / load) | 15.0 / 15.6 ms (run 1) | 16.7 ms |
+| Command to paint, cached / cold network | 16.0 / 17.1 ms (run 1) | 100 / 400 ms |
+| Tick to pixel p95 | 43.1 ms | 50 ms |
+| Frame p95, 50k-bar chart pan | 16.7 ms | 20 ms |
+| Layout load p95 | 39.4 ms | 100 ms |
+| JS heap, 9 panels + 200 symbols | 9.1 MB (run 1) | 500 MB |
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (all 10 phases on `main`, latest `626bddd`; post-merge fixes and browser start script done)._
+_Last updated: 2026-10-18, session 5 (Phases 11-19 started on branch `claude/openterm-phases-11-19-328938`; Phase 11 spec written, waiting for approval)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -203,8 +203,23 @@ Remaining:
 2. Tick-to-pixel bench budget: missed (55-59 ms vs 50) on every run of the post-merge session, including with the
    fixes reverted, so it is machine load or drift, not those fixes; earlier the same day it ran 38-42 ms. Re-run on a
    quiet machine before treating it as a regression.
-3. Phases 11-19 are planned, not built: [docs/ROADMAP_PHASES_11-19.md](docs/ROADMAP_PHASES_11-19.md) (order, keys,
-   open decisions) and [docs/FEATURE_GAP.md](docs/FEATURE_GAP.md) (gap list and what to port from Vibe-Trading).
+3. Phases 11-19: plan in [docs/ROADMAP_PHASES_11-19.md](docs/ROADMAP_PHASES_11-19.md) and
+   [docs/FEATURE_GAP.md](docs/FEATURE_GAP.md). Work happens in worktree branch `claude/openterm-phases-11-19-328938`
+   (fast-forwarded onto the roadmap commit `7d20e69` from `claude/openterm-bloomberg-feature-gap-badb0c`; not on `main` yet).
+   Steps (one commit each; a step is a spec, a tests set, or one function's code):
+
+   | Step | State |
+   |---|---|
+   | 11.1 Spec [docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) | **done**, waiting for the user's approval of the defaults table at its top |
+   | 11.2 Tests set (`tests/test_phase11.py`, vitest, `e2e/phase11.spec.ts`) | **next** (after approval) |
+   | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | pending |
+   | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets | pending |
+   | 11.5 LLM gateway + health | pending; **needs an OpenRouter key** to record one streamed answer (free model is enough) |
+   | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | pending |
+
+   Baseline before Phase 11 code: 163 pytest, 169 vitest, 66 Playwright, bench 17/17 on the rerun (see `docs/PERFORMANCE.md`
+   "Phase 11 baseline"). Open problem: port 8000 was held by the user's own `start.ps1` backend (system Python); stop it
+   (with the user's OK) before the bench.
 
 Done after the merge: `main` fast-forwarded; panel tab names the security only for functions that use it; charts skip
 the volume histogram when a series has no volume (FRED's flat line); `scripts/start.ps1` / `scripts/start` run the
