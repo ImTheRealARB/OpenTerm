@@ -743,3 +743,14 @@ export const btApi = {
   run: (body: BtRunRequest) => send<JobRec & { run_id: string; run?: BtRunFull }>("POST", "/api/bt/run", body),
   get: (id: string) => send<BtRunFull>("GET", `/api/bt/runs/${encodeURIComponent(id)}`),
 };
+
+// --- Phase 13: research functions (EE, EEO, ANR, MGMT, ...) and valuation (DCF, WACC, RV) ---
+import type { TablePayload } from "../research/tablePayload";
+
+/** One call for every table function: `fn` is the backend route name (ee, anr, ipo, ...). `fresh` (F5) skips the client cache. */
+export const researchApi = {
+  get: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
+    request<Envelope<TablePayload>>(`/api/research/${fn}?${qs(params)}`, fresh ? 0 : 120_000),
+  valuation: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
+    request<Envelope<TablePayload>>(`/api/valuation/${fn}?${qs(params)}`, fresh ? 0 : 30_000),
+};

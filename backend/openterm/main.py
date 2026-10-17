@@ -32,6 +32,11 @@ DEFAULT_ORDER = {
 # --- Phase 9 ---
 DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]})
 MAX_SUBS_PER_CLIENT = 2000
+# --- Phase 13: research functions (capability -> providers, keyless first) ---
+DEFAULT_ORDER |= {
+    "estimates": ["yahoo_research"], "ratings": ["yahoo_research"], "officers": ["yahoo_research"],
+    "keystats": ["yahoo_research"], "fund_info": ["yahoo_research"], "corp_events": ["yahoo_research"],
+}
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
@@ -62,6 +67,11 @@ async def lifespan(app: FastAPI):
     })
     # --- Phase 6: SEC / ownership TTLs ---
     service.ttl.update({k: c.get(f"{k}_ttl_s", v) for k, v in service.PHASE6_TTL.items()})
+
+    # --- Phase 13: research functions ---
+    from .research.service import Research
+
+    service.research = Research(service)
 
     # --- Phase 12: imported bars (IMPORT) ---
     service.local = LocalData(db)

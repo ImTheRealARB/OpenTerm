@@ -230,6 +230,18 @@ async def fa(request: Request, symbol: str = Query(..., max_length=24), period: 
         return error(e)
 
 
+# --- Phase 13: research functions (EE, EEO, ANR, MGMT, ...) ---
+@router.get("/research/{fn}")
+async def research(
+    request: Request, fn: str, symbol: str | None = Query(None, max_length=24), month: str | None = Query(None, max_length=7),
+    index: str | None = Query(None, max_length=24), manager: str | None = Query(None, max_length=60),
+):
+    try:
+        return await svc(request).research.run(fn, symbol=symbol, month=month, index=index, manager=manager)
+    except DataError as e:
+        return error(e)
+
+
 # --- Phase 9: screener (EQS) and peers (COMP) ---
 @router.get("/screener")
 async def screener(request: Request):

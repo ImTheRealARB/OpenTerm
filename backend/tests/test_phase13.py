@@ -20,7 +20,7 @@ def xf(group: str, step: int):
     return pytest.mark.xfail(strict=True, reason=f"Phase 13 step {step}: {group}")
 
 
-EST = xf("EST", 2)
+EST = lambda f: f  # step 2 landed
 CORP = xf("CORP", 3)
 VAL = xf("VAL", 4)
 FUND = xf("FUND", 5)
@@ -112,7 +112,7 @@ def test_anr_ratings_targets_and_actions(client):
     act = section(d, "actions")["rows"][0]
     assert act["firm"] == "JP Morgan" and act["pt_action"] == "Raises"
     assert (act["pt"], act["pt_prior"]) == (360.0, 340.0)
-    assert act["date"] == "2026-10-10"  # epoch 1791830866
+    assert act["date"] == "2026-10-12"  # epoch 1791830866
 
 
 @EST

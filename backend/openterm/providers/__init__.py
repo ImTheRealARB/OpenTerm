@@ -121,3 +121,8 @@ def keyed_status(settings: Settings, keys=None) -> list[dict]:
             rows.append({"name": spec.name, "status": "KEY REQUIRED",
                          "note": f"{spec.purpose}. Phase {spec.phase}. Set {spec.label} in APIKEYS."})
     return rows + _keyed_status_before_phase11(settings)
+
+# --- Phase 13: research (Yahoo quoteSummary modules for EE, EEO, ANR, MGMT, ETF info; dividend/split events) ---
+from .research_yahoo import YahooResearchProvider
+
+ADAPTERS["yahoo_research"] = YahooResearchProvider

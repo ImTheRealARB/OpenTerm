@@ -239,3 +239,32 @@ ROUTES.update({
     ("/v8/finance/chart/RELIANCE.NS", "10y", "1d"): "yahoo_chart_reliance_10y_1d",
     ("/v8/finance/chart/^NSEI", "10y", "1d"): "yahoo_chart_nsei_10y_1d",
 })
+
+# --- Phase 13: research (recorded 2026-10-18 by scripts/record_phase13.py) ---
+# Yahoo quoteSummary answers are matched on the exact module list a provider method asks for; the profile call
+# ("assetProfile,summaryDetail,...") never matches. yahoo_summary_aapl_ratings is trimmed to the newest 40 rating changes.
+YAHOO_RESEARCH = {
+    ("AAPL", "earningsTrend,earningsHistory"): "yahoo_summary_aapl_estimates",
+    ("AAPL", "recommendationTrend,upgradeDowngradeHistory,financialData"): "yahoo_summary_aapl_ratings",
+    ("AAPL", "assetProfile"): "yahoo_summary_aapl_profile",
+    ("AAPL", "defaultKeyStatistics,summaryDetail"): "yahoo_summary_aapl_keystats",
+    ("SPY", "topHoldings,fundProfile,quoteType"): "yahoo_summary_spy_fund",
+}
+_YAHOO_RESEARCH_MODULES = {m for _, m in YAHOO_RESEARCH}
+_route_before_phase13 = _route
+
+
+def _route_phase13(request: httpx.Request) -> httpx.Response | None:
+    p, q = request.url.path, request.url.params
+    if p.startswith("/v10/finance/quoteSummary/") and q.get("modules") in _YAHOO_RESEARCH_MODULES:
+        name = YAHOO_RESEARCH.get((p.rsplit("/", 1)[1], q.get("modules", "")))
+        if name:
+            return _load(name)
+        return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
+    if p.startswith("/v8/finance/chart/") and q.get("events") == "div,splits":
+        return _load("yahoo_chart_aapl_events") if p.endswith("/AAPL") else _load("yahoo_chart_404")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase13(request) or _route_before_phase13(request)
