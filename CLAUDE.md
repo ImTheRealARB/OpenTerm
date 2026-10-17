@@ -132,6 +132,11 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Any app error text goes through `redact()`** (`api.error`, SOURCES `last_error`, key-test detail). New error paths must too.
 - **LLM gateway (`openterm/llm/`) is imported on first use** (`api.llm_of`). Prompts and outputs are never logged. In fixture mode
   the Ollama port raises ConnectError (the generic fallback route would answer 200 and fake an `OK`); keep LLM hosts routed explicitly.
+- **BT cross-check values come from Vibe-Trading's own engine** (`scripts/vibe_crosscheck.py`, run in a throwaway venv
+  with Vibe's `agent/` on PYTHONPATH; never vendor Vibe into the repo). Its semantics: signals act one bar later at the
+  open; US sizes round to 0.01 shares; an open position closes at the last close (with slippage) as `end_of_backtest`.
+- **A strict-xfail API test can pass by accident on FastAPI's own 404** for a route that does not exist yet: assert on
+  the body (e.g. the symbol in the error), not only the status code.
 - **A session cannot write into another worktree** (hook). Bring the branch here with `git merge --ff-only <branch>` instead.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 

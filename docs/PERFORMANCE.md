@@ -332,6 +332,11 @@ command 17.0 ms, cold network 15.7 ms, tick-to-pixel 36.2 ms, heap 9.5 MB, layou
 J frame 57.4 ms via proxy, pool cold start 220.1 ms. Against the Phase 11 baseline (before any Phase 11 code) every gated
 number is inside its budget; the bundle grew 95.6 -> 98.0 KB (jobs store and `J` frame parser in the entry).
 
+### Phase 12 tests step (2026-10-19; tests, fixtures and scripts only, no app code)
+206 pytest + 75 xfail (74 Phase 12 + the Phase 11 recording), 187 vitest (6 `it.fails`), 77 Playwright (5 `test.fail`),
+tsc + ruff clean. Bench **21/21** first run: bundle 98.0 KB, cold start 113.4 ms, tick-to-pixel 36.1 ms, chart pan 16.8 ms,
+worker pool cold start 187.6 ms (INFO).
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

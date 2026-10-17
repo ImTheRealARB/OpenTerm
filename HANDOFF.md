@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 spec written, waiting for approval)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-2 done; next: step 12.3 engine core)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -20,11 +20,16 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
   marker in `backend/tests/test_phase11.py`).
 - **Step 6 closed Phase 11** (`THIRD_PARTY.md`, CLAUDE.md rule changes, `ADDING_A_PROVIDER.md` keyed section,
   `DATA_LIMITS.md`, `COMMANDS.md`); verification bench 21/21 on the first run.
-- **Phase 12 step 1 (spec) is written:** [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md), based on Vibe-Trading's
-  `agent/backtest` code at `d0db2e3` (read from a downloaded tarball, not vendored). **Exact next action: the user
-  approves or changes decisions A-M at its top**, then step 2 (tests set + recordings + Vibe cross-check values).
-  Key findings: Vibe's engine is a per-bar loop with next-bar-open fills (not vectorized); numpy + pandas become
-  worker-only dependencies; the sandbox is proposed as an allowlist (Vibe uses a denylist).
+- **Phase 12:** spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) approved as written (decisions A-M);
+  step 2 (tests set) done. **Exact next action: step 12.3, engine core** (`backend/openterm/bt/`: `frames.py`,
+  `engine.py` (`backtest(data_map, signal_map, config, engine=, bars_per_year=)` -> result with `.equity` Series,
+  `.trades` TradeRecords, `.metrics`), `models.py`, `metrics.py`, `engines/global_equity.py`, `rules.py`
+  (`parse`, `signals`, `parse_command`, `RuleError.col`), `sandbox.py` (`check`, `SandboxError`), job kinds, migration 9,
+  `/api/bt/*`, add numpy + pandas + psutil + keyring to `pyproject.toml`). Port from Vibe-Trading `d0db2e3`
+  (`agent/backtest/engines/base.py`, `global_equity.py`, `metrics.py`, `models.py`); download it again with
+  `Invoke-WebRequest https://codeload.github.com/HKUDS/Vibe-Trading/tar.gz/d0db2e3` into the scratchpad (not the repo).
+  Then delete the `@CORE` markers in `backend/tests/test_phase12.py`. Steps 3 (backend) and 4 (BT panel, frontend)
+  can run as two Sonnet subagents.
 - **Phase 11 finding (decision M in the Phase 12 spec):** `keyring` is not installed in the backend env, so APIKEYS
   saves keys to `.env`, not the OS keyring as Phase 11 decision B intended.
 - **Still open from Phase 11 (the user will set the key later):** once `OPENROUTER_API_KEY` is set (APIKEYS panel, or the
@@ -257,7 +262,8 @@ Remaining:
    | 11.5 LLM gateway + health | **done except the recording** (main session, no subagents); bench 21/21 on the third run. `test_recorded_openrouter_stream...` waits for the OpenRouter key (`scripts/record_llm.py`) |
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | **done** 2026-10-19; bench 21/21 first run |
    | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **written 2026-10-19, waiting for approval** |
-   | 12.2 Tests set + recordings + Vibe cross-check values | next after approval |
+   | 12.2 Tests set + recordings + Vibe cross-check values | **done** 2026-10-19: `backend/tests/test_phase12.py` (75; markers `CORE` step 3, `ENGINES` 5, `VALID` 6, `RUNS` 7, `IMPORT` 8), `frontend/src/bt/phase12.test.ts` (6), `frontend/e2e/phase12.spec.ts` (5); fixtures by `scripts/record_phase12.py`; expected values `bt_vibe_expected.json` by `scripts/vibe_crosscheck.py` |
+   | 12.3 Engine core, rules, sandbox, API, migration 9 | **next** |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
    (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,

@@ -1,6 +1,6 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **spec written 2026-10-19, waiting for approval.** Tests come next, then code.
+Status: **approved as written 2026-10-19; tests set written (step 2).** Next: step 3 (engine core).
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 12", [FEATURE_GAP.md](../FEATURE_GAP.md) rows for
 `agent/backtest/*`, and the Vibe-Trading code itself at commit `d0db2e3` (MIT; read 2026-10-19).
 
@@ -100,7 +100,7 @@ Frontend:
 
 ## Steps (each one a commit)
 1. Spec (this file). **Done when you approve it** (or change the defaults above).
-2. Tests set: all tests above failing for the right reason; fixtures recorded; Vibe cross-check values generated.
+2. Tests set: all tests above failing for the right reason; fixtures recorded; Vibe cross-check values generated. **Done 2026-10-19.**
 3. Engine core: `bt/engine.py`, `metrics.py`, global equity engine, rule syntax, sandbox, job kinds, migration 9, API
    (`keyring` dependency if decision M stands).
 4. `BT` panel (frontend) with chart, metrics, trades, code views and labels; bench budgets.
