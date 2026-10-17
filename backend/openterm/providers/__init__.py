@@ -58,3 +58,11 @@ def keyed_status(settings: Settings) -> list[dict]:
     ]
     out += [{"name": n, "status": "RETIRED", "note": why} for n, why in RETIRED.items()]
     return out
+
+
+# --- Phase 6: SEC EDGAR + Yahoo ownership ---
+from .ownership import YahooOwnProvider
+from .sec import SecProvider
+
+ADAPTERS["sec"] = SecProvider
+ADAPTERS["yahoo_own"] = YahooOwnProvider

@@ -269,3 +269,18 @@ export interface LogRecord {
   logger: string;
   msg: string;
 }
+
+// --- Phase 6: SEC fundamentals / filings / insiders, Yahoo holders ---
+import type { FaPayload, FaPeriod, FilingsPayload, HoldersPayload, InsidersPayload } from "../functions/secTables";
+
+/** `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope. */
+export const secApi = {
+  fa: (symbol: string, period: FaPeriod, fresh = false) =>
+    request<Envelope<FaPayload>>(`/api/fa?${qs({ symbol, period })}`, fresh ? 0 : 300_000),
+  filings: (symbol: string, form: string, fresh = false) =>
+    request<Envelope<FilingsPayload>>(`/api/filings?${qs({ symbol, form })}`, fresh ? 0 : 60_000),
+  insiders: (symbol: string, fresh = false) =>
+    request<Envelope<InsidersPayload>>(`/api/insiders?${qs({ symbol })}`, fresh ? 0 : 120_000),
+  holders: (symbol: string, fresh = false) =>
+    request<Envelope<HoldersPayload>>(`/api/holders?${qs({ symbol })}`, fresh ? 0 : 300_000),
+};

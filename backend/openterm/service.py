@@ -8,10 +8,11 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, ClassVar
 
 from .cache import Cache
 from .providers.crypto import VS
+from .providers.sec import US_ONLY, sec_ticker, store_from  # Phase 6
 from .ranges import normalize
 from .router import AllFailed, Router
 from .symbols import resolve
@@ -300,3 +301,52 @@ class DataService:
             "inflight": len(self._inflight),
             "mem_entries": len(self.cache.mem),
         }
+
+    # --- Phase 6: SEC fundamentals, filings, insiders; Yahoo holders ---------------------------
+    PHASE6_TTL: ClassVar[dict[str, float]] = {"facts": 21600.0, "filings": 900.0, "insiders": 3600.0, "holders": 21600.0}
+    FILINGS_MAX = 300
+
+    async def _sec(self, key: str, ttl: str, cap: str, symbol: str, call) -> dict:
+        async def fetch() -> dict:
+            out, failed = await self.router.call(cap, call, symbol)
+            return {"data": out, "fallback_from": failed}
+
+        try:
+            return await self._swr(key, self.ttl.get(ttl, self.PHASE6_TTL[ttl]), fetch)
+        except DataError as e:
+            not_filer = sec_ticker(symbol) is None or "no SEC filer" in (e.detail or "")
+            if e.kind == "not_found" and cap != "holders" and not_filer:
+                raise DataError("not_found", US_ONLY, e.detail or f"{symbol}: not an SEC filer") from e
+            raise
+
+    async def fundamentals(self, raw_symbol: str, period: str = "A") -> dict:
+        """FA. One upstream call (company facts) serves both views; the envelope carries only `period`."""
+        period = (period or "A").strip().upper()
+        if period not in ("A", "Q"):
+            raise DataError("bad_request", "PERIOD: A (ANNUAL) OR Q (QUARTERLY)")
+        symbol = resolve(raw_symbol)
+        env = await self._sec(f"fa:{symbol}", "facts", "fundamentals", symbol, lambda p: p.fundamentals(symbol))
+        d = env["data"]
+        view = {k: v for k, v in d.items() if k not in ("A", "Q")}
+        return {**env, "data": {**view, "period": period, **d[period]}}
+
+    async def filings(self, raw_symbol: str, form: str | None = None) -> dict:
+        """FIL. `form` filters exactly (10-K also matches 10-K/A)."""
+        symbol = resolve(raw_symbol)
+        env = await self._sec(f"fil:{symbol}", "filings", "filings", symbol, lambda p: p.filings(symbol))
+        want = (form or "").strip().upper()
+        rows = env["data"]["filings"]
+        if want:
+            rows = [f for f in rows if f["form"].upper() in (want, f"{want}/A")]
+        total = len(rows)
+        return {**env, "data": {**env["data"], "form": want or None, "total": total, "filings": rows[: self.FILINGS_MAX]}}
+
+    async def insiders(self, raw_symbol: str) -> dict:
+        """OWN. Form 4s parsed once per accession and kept in the cache table for good (filings are immutable)."""
+        symbol = resolve(raw_symbol)
+        store = store_from(self.cache.get, self.cache.put)
+        return await self._sec(f"own:{symbol}", "insiders", "insiders", symbol, lambda p: p.insiders(symbol, store))
+
+    async def holders(self, raw_symbol: str) -> dict:
+        symbol = resolve(raw_symbol)
+        return await self._sec(f"hds:{symbol}", "holders", "holders", symbol, lambda p: p.holders(symbol))

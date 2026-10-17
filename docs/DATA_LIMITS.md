@@ -59,3 +59,20 @@ show `FIXTURES` while it is on.
 ## Other
 - **Market open/closed lights ignore exchange holidays.** They follow regular weekday sessions only (NY, LN, IN, TK, HK, with lunch breaks for Tokyo and Hong Kong).
 - **Browser-reserved shortcuts.** In a normal browser tab, Ctrl+W, Ctrl+T, Ctrl+N and Ctrl+1..9 cannot be intercepted. Use Alt+W and Alt+1..9. The desktop (Tauri) build will not have this limit.
+
+## Phase 6 sources (FA, FIL/SEC, OWN, HDS)
+
+| Function | Source chain | Limits and caveats |
+|---|---|---|
+| FA | SEC EDGAR XBRL company facts (`data.sec.gov`), US filers only | One call per company serves annual and quarterly views (4-5 MB for large filers, 15 s timeout, backend TTL 6 h). Columns come from each filing's own fiscal labels. Q4 is not filed on its own: it is derived as the fiscal year minus the 9-month YTD and shown with `*`. Free cash flow is computed (operating cash flow minus capex), not reported. A line a company does not tag shows `—`; companies use different tags, so lines are not comparable across companies without care. |
+| FIL, SEC | SEC EDGAR submissions index | The most recent filings (a company's `recent` list, up to 300 shown). The document opens on sec.gov in a new tab; filing text is not downloaded or scraped. Backend TTL 15 min. |
+| OWN | SEC Form 4 XML (up to the 20 newest filings), Yahoo `insiderTransactions` as fallback | Each Form 4 is parsed once and kept forever (filings never change). Filings that fail to download or parse are counted as `FORM 4 NOT READ`. BOUGHT and SOLD total only open-market codes P and S; grants, option exercises and gifts are listed but not totalled. Yahoo's fallback has no Form 4 link for most rows and about 80 rows covering roughly two years. Backend TTL 1 h. |
+| HDS | Yahoo `quoteSummary` (institutionOwnership, fundOwnership, majorHoldersBreakdown) | Top 10 institutions and top 10 funds only. Holders come from 13F filings, which are quarterly and filed up to 45 days after quarter end, so positions can be months old; the `REPORTED` column shows each holder's date. Needs the Yahoo cookie + crumb (see Yahoo notes). Works for most US listings, thin elsewhere. Backend TTL 6 h. |
+
+- **SEC fair access:** at most 10 requests per second per client and a declared `User-Agent` with a contact. OpenTerm sends
+  at most 8 per second (token bucket, burst 8). Set `SEC_USER_AGENT="Your Name you@yourdomain"` in `.env`. Without it a
+  generic agent is sent, SEC may answer 403, and FA, FIL and OWN show `PROVIDER DOWN` with the instruction to set it.
+  The address is read from the environment only; it is never written to the repo.
+- **US filers only:** non-US listings (`.NS`, `.L`, ...), indices, FX, futures, crypto and funds without 10-K/10-Q show
+  `SEC DATA COVERS US FILERS ONLY`. That is a coverage limit, not an error. HDS and Yahoo-based OWN may still answer.
+- **Ticker to CIK** uses SEC's `company_tickers.json`, cached in memory for 24 h. Class shares map `BRK.B` and `BRK-B` to the same filer.

@@ -1,19 +1,56 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phase 5 verified; commit pending the user's OK)._
+_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phase 6 merged, awaiting commit)._
+
+> **Resuming in a new session or account?** Paste the prompt from [RESUME_PROMPT.md](RESUME_PROMPT.md)
+> and read "Parallel build of Phases 6-10" below.
+
+## Parallel build of Phases 6-10 (MERGING)
+Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
+6, 7, 8, 9, 10, one commit each; the user approves every commit. Phase 6 is merged and verified, awaiting commit.**
+The last column tracks the merge into this worktree.
+
+| Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
+|---|---|---|---|---|
+| 6 FA, FIL/SEC, OWN, HDS | `openterm-p6` | `claude/openterm-p6-wip` | `PHASE_6_NOTES.md` | **MERGED + verified here** (see Phase 6 details); commit pending user approval |
+| 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | Finished in worktree, not merged yet (next) |
+| 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | Finished in worktree, not merged yet |
+| 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | Finished in worktree, not merged yet; CSV-export hook wired into 6-8 panels after merge |
+| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | Finished in worktree, not merged yet |
+
+- All five branch from `4b3814c`; their changes are **uncommitted** in their worktrees. Rules they follow:
+  [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) (append-only "Phase N" blocks in shared files, no migrations except
+  Phase 8 at positions 6-7, notes kept current, no commits, light checks only; Playwright and bench run after the merge).
+- Each `PHASE_N_NOTES.md` (phase worktree root) has the details; the lead folds it into this file when merging that phase.
+- Phase 6 SEC fixtures: the user approved their Gmail as the SEC User-Agent **for fixture recording only**; it
+  must never be written into the repo. The app reads `SEC_USER_AGENT` from env.
+- Merge plan, in order 6→10, one phase per commit, each fully verified (pytest, ruff, tsc, vitest, all Playwright,
+  bench), and the user approves each commit: `git add -A; git diff --cached 4b3814c > pN.patch` in the phase
+  worktree, then `git apply --3way pN.patch` in this worktree. After 9: wire the CSV-export hook into 6-8 panels.
+  After 10: confirm release-notes bullets for 6-9, then the full perf pass.
+- **Backups (nothing is lost if a worktree disappears):** `wip-patches/pN.patch` in this worktree holds each
+  phase's full uncommitted diff vs `4b3814c` (incl. new files and fixtures; made with `git add -A` +
+  `git diff --cached --binary`). Restore with `git apply --3way wip-patches/pN.patch` on a checkout of `4b3814c`.
+  Fixture-recording and patch scripts the agents used are in `wip-patches/` (`p6rec/`, `p7/`, `p10/`, `rec/`,
+  `scripts/`). The worktrees' changes are staged (`git add -A`), not committed. Do not run worktree clean-up
+  tools or `git worktree remove` on `openterm-p6..p10` until each phase is merged.
+- **Use Sonnet subagents, not Opus** (user's request: Opus agents used ~55% of the 5-hour window in 15 min).
+  Run at most 2-3 at once and check plan usage between steps.
+- Usage rule from the user: when the 5-hour (or weekly) plan window reaches 90%, stop every subagent, update this
+  section and `RESUME_PROMPT.md`, and pause.
 
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
-- **Phase 5 is built and verified** in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (on top of `a8b7c6e`, so it contains Phases 1-4). Continue there.
+- **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
+  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phase 6 is merged into the working tree and verified, not yet committed.**
 - Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
   The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
   `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
   Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
-- Latest verification (Phase 5 tree):
-  - Backend: 66 pytest passed (4 xdist workers, ~9.5 s), ruff clean.
-  - Frontend: 36 vitest passed, tsc clean, 23 Playwright passed (`e2e/phase5.spec.ts` green on first run).
-  - Bench: 17/17 budgets PASS, none regressed (see `docs/PERFORMANCE.md` Phase 5).
+- Latest verification (Phase 6 tree):
+  - Backend: 90 pytest passed (`-n auto`, ~16 s), ruff clean.
+  - Frontend: 46 vitest passed, tsc clean, 29 Playwright passed (`--workers=8`, ~19 s).
+  - Bench: 17/17 budgets PASS, none regressed (see `docs/PERFORMANCE.md` Phase 6; one lone chart-pan miss on the first run was noise).
 
 ## Done
 | Phase | Contents |
@@ -23,6 +60,37 @@ _Last updated: 2026-10-17, session 4 (Phase 5 verified; commit pending the user'
 | 3 First functions | Yahoo protobuf streamer (hand-decoded), REST poll fallback, SYNTHETIC load stream, hub with one upstream subscription per symbol and per-client coalescing; `/api/profile`; frontend tick store (per-frame batching), canvas virtualized `Grid`, `Q` (live monitor), `DES`, `QR`, `GP` (lightweight-charts, indicators in a Web Worker, compare, log, crosshair, keyboard pan/zoom), `PERF GRID/CHART` load views |
 | 4 Workspace | SQLite migrations 3-4 (`layouts`, `history`), `backend/openterm/userdata.py`, `/api/layouts[/{name}]` GET/PUT/DELETE, `/api/cmdhistory` GET/POST; `LAYOUT`/`MONITOR` `SAVE|LOAD|DEL name` (bare name = LOAD, bare `LAYOUT` = list panel with J/K, Enter, Del-twice, S), `Ctrl+S` (re-save current named layout, else prompts) / `Ctrl+O` (prompts `LAYOUT LOAD ` with name autocomplete), layout name in the status bar; command history moved to SQLite (batched writes, `sendBeacon` on exit, one-time upload of the old localStorage history); Playwright tests for layouts, history and Ctrl+Shift+Arrows resizing; bench gate for layout load |
 | 5 Boards + lists | Watchlists (SQLite, `WL` grammar), news (`N`: RSS / Yahoo RSS / GDELT), `MOV` (Nasdaq movers), `CRYP` (CoinGecko, Binance), boards `WEI` `FX` `CMDTY`, `FXC` cross matrix, shared `quoteRows.ts`; pytest-xdist, fully parallel Playwright |
+| 6 SEC + ownership | `FA` (SEC EDGAR XBRL financials: IS/BS/CF, annual/quarterly), `FIL`/`SEC` (filings list), `OWN` (Form 4 insider transactions), `HDS` (institutional + fund holders); providers `sec`, `yahoo_own`; needs `SEC_USER_AGENT` in env |
+
+## Phase 6 details (FA, FIL/SEC, OWN, HDS)
+
+**Built and verified (merged from `openterm-p6`):**
+- Backend: **90 pytest passed, ruff clean** (66 old + 24 in `tests/test_phase6.py`).
+  - `providers/sec_parse.py` (pure parsers: `parse_companyfacts` with tag fallbacks per period, dedup by period + latest filed,
+    period labels from each filing's own fy/fp, derived quarters = YTD minus shorter YTD, FCF computed; `parse_submissions`;
+    `parse_form4`), `providers/sec.py` (`SecProvider`, name `sec`: fundamentals, filings, insiders; token bucket 8/s;
+    ticker to CIK from `company_tickers.json` cached 24 h in memory; non-US symbols unsupported),
+    `providers/ownership.py` (`YahooOwnProvider(YahooProvider)`, name `yahoo_own`: holders, insiders via quoteSummary; yahoo.py untouched).
+  - `service.py` Phase 6 block: `fundamentals`, `filings`, `insiders`, `holders`; parsed Form 4s cached per accession in `cache` (`f4:<accn>`).
+  - `/api/fa?symbol=&period=A|Q`, `/api/filings?symbol=&form=`, `/api/insiders?symbol=`, `/api/holders?symbol=`.
+    TTLs in `config.yaml`: facts 6 h, filings 15 min, insiders 1 h, holders 6 h.
+  - **SEC needs `SEC_USER_AGENT` in env** (default is empty; `config.py` changed from a placeholder; the old placeholder still counts as unset).
+    Empty means SEC may answer 403; the error text and SOURCES `terms` say so. The repo never contains an address.
+  - Fixtures (real responses, trimmed to the mapped tags / 60 recent filings): `sec_facts_aapl|msft`, `sec_company_tickers`,
+    `sec_subs_aapl|msft`, `sec_form4/*` (20 AAPL Form 4s), `yahoo_holders_aapl`, `yahoo_insiders_aapl`.
+  - Shared-file edits: `config.py` (1 line), `main.py` (2 lines under `# --- Phase 6`), `service.py` (import + appended methods),
+    `api.py`, `providers/__init__.py`, `fixtures.py` (2-line hook at top of `_route` + appended block), `config.yaml`, `test_api.py` (pinned provider set).
+- Frontend: **tsc clean; 46 vitest** (36 + 10 in `functions/secTables.test.ts`), **29 Playwright** (23 + 6 in `e2e/phase6.spec.ts`).
+  - `functions/secTables.ts` (payload types + shaping for all four panels), `functions/secPanel.tsx` (envelope hook, header,
+    `ErrorLine` with the `SEC_USER_AGENT` hint), panels `FA.tsx`, `FIL.tsx` (also serves `SEC`), `OWN.tsx`, `HDS.tsx`; `net/api.ts` `secApi` block; registry lines.
+  - FA keys: 1-3 / Tab statement (IS, BS, CF), A / Q annual or quarterly, H / L scroll older / newer periods, J/K, E CSV, F5.
+    Args: `AAPL FA Q CF`. Derived quarters carry `*`; negatives are red.
+  - FIL keys: 1-6 / Tab form filter (ALL, 10-K, 10-Q, 8-K, 4, DEF 14A), Enter / O opens the document, I the filing index, E CSV.
+    Any other form works as an argument (`AAPL FIL 424B2`).
+  - OWN keys: M toggles open-market (P/S) only, Enter opens the Form 4, E CSV; shows `N FORM 4 NOT READ` when some failed.
+  - HDS: cursor skips section header rows (`navKey` skip callback). No panel polls; F5 refreshes. US-only coverage note is warning-coloured.
+- Merge fix: `e2e/cmdline.spec.ts` asserted FA shows `NOT BUILT YET (PHASE 6)`; that line was removed (the header assertion stays).
+- Not run against the live network (tests use fixtures). Live SEC calls need `SEC_USER_AGENT`.
 
 ## Phase 5 details (WL, N, WEI, MOV, FX/FXC, CRYP, CMDTY)
 
@@ -52,14 +120,14 @@ _Last updated: 2026-10-17, session 4 (Phase 5 verified; commit pending the user'
   - `functions/registry.ts`: all eight wired with `load` and `argsSchema`.
   - `e2e/phase5.spec.ts` (8 tests, mocked routes + WebSocket), green.
 
-**Bench baseline for Phase 6** (Phase 5 tree, 2026-10-17): 17/17 PASS. Bundle 84.8 KB gz; backend p95
-health/quote/history 0.7/0.9/2.2 ms; cold start 92.5 ms; keystroke 14.4 ms (10.5 under load); cached / cold-network
-command to paint 17.5 / 12.6 ms; tick-to-pixel 37.5 ms; frame p95 16.7-16.8 ms everywhere; long tasks 0; heap 6.0 MB;
-ticks 3,992/s; layout load 35.8 ms.
+**Bench baseline for Phase 7** (Phase 6 tree, 2026-10-17): 17/17 PASS. Bundle 85.0 KB gz; backend p95
+health/quote/history 0.7/0.7/1.9 ms; cold start 92.3 ms; keystroke 14.4 ms (9.8 under load); cached / cold-network
+command to paint 18.5 / 18.1 ms; tick-to-pixel 38.2 ms; frame p95 16.7 ms everywhere; long tasks 0; heap 5.1 MB;
+ticks 4,000/s; layout load 36.3 ms. (Phase 5 baseline: 84.8 KB, 37.5 ms tick-to-pixel, 35.8 ms layout.)
 
 ## Next
 Phases 6-10 in order:
-- 6: FA via SEC EDGAR XBRL company facts (needs `SEC_USER_AGENT`), FIL filings, HDS/OWN.
+- 6: done (merged, see Phase 6 details).
 - 7: MACRO/FRED (key), ECO calendar, RATES curve, ERN.
 - 8: PORT (CSV import/export), ALRT with desktop notifications.
 - 9: EQS screener, CORR, COMP, HIST, CSV export everywhere.

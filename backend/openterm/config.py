@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     openterm_host: str = "127.0.0.1"
     openterm_port: int = 8000
     openterm_db_path: str = "data/openterm.db"
-    sec_user_agent: str = "OpenTerm/0.1 contact@example.com"
+    # SEC asks for "Name email". Empty = a generic agent plus a hint on SOURCES (providers/sec.py).
+    sec_user_agent: str = ""
     # Replay recorded provider responses instead of the network (tests, bench). Tagged in the UI.
     openterm_fixtures: bool = False
     # SYNxxxx random-walk instruments + tick stream for load testing. Labelled SYNTHETIC in the UI.

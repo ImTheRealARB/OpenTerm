@@ -209,3 +209,38 @@ async def delete_watchlist(request: Request, name: str):
         return {"deleted": await user(request).delete_watchlist(name)}
     except UserDataError as e:
         return error(e)
+
+
+# --- Phase 6: SEC fundamentals / filings / insiders, Yahoo holders ---
+@router.get("/fa")
+async def fa(request: Request, symbol: str = Query(..., max_length=24), period: str = Query("A", max_length=1)):
+    try:
+        return await svc(request).fundamentals(symbol, period)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/filings")
+async def filings(
+    request: Request, symbol: str = Query(..., max_length=24), form: str | None = Query(None, max_length=20)
+):
+    try:
+        return await svc(request).filings(symbol, form)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/insiders")
+async def insiders(request: Request, symbol: str = Query(..., max_length=24)):
+    try:
+        return await svc(request).insiders(symbol)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/holders")
+async def holders(request: Request, symbol: str = Query(..., max_length=24)):
+    try:
+        return await svc(request).holders(symbol)
+    except DataError as e:
+        return error(e)

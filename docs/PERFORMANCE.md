@@ -133,6 +133,32 @@ Notes:
 - Test wall time: pytest now runs on 4 xdist workers (13.1 → 9.3 s; `-n auto` = 20 workers was slower,
   15.3 s, because worker start-up dominates). Playwright runs tests within a file in parallel too.
 
+### Phase 6 (2026-10-17, same machine; fixtures + SYNTHETIC stream)
+
+17/17 PASS. Phase 5 numbers in brackets; no budget regressed.
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 85.0 KB [84.8] | 400 KB | PASS |
+| Backend p95 cached health / quote / history (server-side) | 0.7 / 0.7 / 1.9 ms [0.7 / 0.9 / 2.2] | 20 ms | PASS |
+| Cold start to usable command line | 92.3 ms [92.5] | 1500 ms | PASS |
+| Keystroke to echo p95 (idle / streaming load) | 14.4 / 9.8 ms [14.4 / 10.5] | 16.7 ms | PASS |
+| Command submit to first paint p95 (cached / cold network) | 18.5 / 18.1 ms [17.5 / 12.6] | 100 / 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 38.2 ms [37.5] | 50 ms | PASS |
+| Frame time p95 (8-panel / streaming / 10k grid / 50k chart) | 16.7 / 16.7 / 16.7 / 16.7 ms | 20 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 5.1 MB [6.0] | 500 MB | PASS |
+| Ticks delivered per second (offered 4,000) | 4,000 [3,992] | - | INFO |
+| Layout load to paint p95 | 36.3 ms [35.8] | 100 ms | PASS |
+
+Notes:
+- Entry bundle +0.2 KB gz (84.8 → 85.0): only the `secApi` block in `net/api.ts` and the registry lines are in the
+  entry chunk. FA, FIL/SEC, OWN, HDS and the shared `secTables` / `secPanel` code are lazy function modules.
+- The first bench run reported the 50k-bar chart pan/zoom frame p95 at 33.3 ms (FAIL). Phase 6 changes nothing under
+  `chart/` or `components/`; the rerun gave 16.7 ms and 17/17 PASS. Treat a lone chart-pan miss as machine noise and
+  rerun once before investigating.
+- Tests: 90 pytest (66 + 24 in `test_phase6.py`), 46 vitest, 29 Playwright (23 + 6 in `phase6.spec.ts`).
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

@@ -28,6 +28,8 @@ DEFAULT_ORDER = {
     "movers": ["nasdaq"], "crypto": ["coingecko", "binance"],
 }
 MAX_SUBS_PER_CLIENT = 2000
+# --- Phase 6: SEC / ownership ---
+DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
 
 @asynccontextmanager
@@ -54,6 +56,8 @@ async def lifespan(app: FastAPI):
         "daily": c.get("daily_ttl_s", 3600), "search": c.get("search_ttl_s", 86400),
         "news": c.get("news_ttl_s", 120), "movers": c.get("movers_ttl_s", 60), "crypto": c.get("crypto_ttl_s", 60),
     })
+    # --- Phase 6: SEC / ownership TTLs ---
+    service.ttl.update({k: c.get(f"{k}_ttl_s", v) for k, v in service.PHASE6_TTL.items()})
 
     # Streaming: one upstream subscription per symbol, whatever the number of clients and panels.
     hub_ref: list[Hub] = []

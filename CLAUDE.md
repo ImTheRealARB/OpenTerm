@@ -3,6 +3,12 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
+Phases 6-10 may be mid-flight in parallel worktrees (`.claude/worktrees/openterm-p6..p10`): see HANDOFF.md
+"Parallel build of Phases 6-10", [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) and [RESUME_PROMPT.md](RESUME_PROMPT.md).
+Uncommitted phase work is backed up in `wip-patches/pN.patch`; never delete the p6..p10 worktrees before merging.
+**Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
+5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md, RESUME_PROMPT.md and
+`wip-patches/` so another account can resume, and pause.
 
 ## Non-negotiables (from the spec)
 - Speed over looks. No shadows, gradients, radii, transitions or web fonts. Color only carries meaning.
@@ -16,7 +22,7 @@ are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what 
 
 ## Layout
 - `backend/` Python 3.12, FastAPI, httpx (HTTP/2), orjson, aiosqlite (WAL), apscheduler, websockets. Managed by `uv`.
-  - `providers/` adapters (yahoo, nasdaq, synthetic, fixtures, `news.py` = rss/yahoo_rss/gdelt, `crypto.py` = coingecko/binance).
+  - `providers/` adapters (yahoo, nasdaq, synthetic, fixtures, `news.py` = rss/yahoo_rss/gdelt, `crypto.py` = coingecko/binance, `sec.py`/`sec_parse.py` = SEC EDGAR, `ownership.py` = Yahoo holders/insiders).
     `router.py` (fallback + circuit breaker), `service.py` (SWR cache, coalescing), `streaming/` (Yahoo protobuf stream,
     poller, hub), `userdata.py` (layouts, command history, watchlists in SQLite), `api.py`, `main.py` (lifespan + `/ws`).
 - `frontend/` React 19 + TS + Vite 7. No UI kit and no state library: a tiny store in `state/store.ts`.
@@ -58,6 +64,13 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Fresh worktree:** run `uv sync` (backend) and `npm ci` (frontend) first. npm warns that the esbuild
   postinstall is blocked; builds still work.
 - **GDELT is slow and strict** (one call per 5 s, 8-12 s answers, frequent 429). Never call it from tests or probes.
+- **SEC EDGAR needs `SEC_USER_AGENT` in env** (default empty; SEC may 403 without it). Never write an address into the repo.
+  `providers/sec.py` + `sec_parse.py` (pure parsers) serve FA/FIL/OWN; `ownership.py` (`yahoo_own`) serves HDS/OWN.
+- **Playwright port 4173 is shared by every worktree.** If another worktree's preview is up, tests silently hit that build
+  (symptom: functions show "NOT BUILT YET"). Check the port is free; run with `CI=1` (PowerShell: `$env:CI='1'`).
+- **Don't assert "NOT BUILT YET" in e2e tests**; each phase makes it false for its own functions.
+- **Grid cursor below a header row:** call `grid.moveTo(1)` in an effect keyed on the payload (`initialSelected` is clamped to 0 while rows are empty).
+- **A lone bench miss on the 50k-bar chart pan (33 ms) has been noise;** rerun once before investigating.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
 ## Conventions

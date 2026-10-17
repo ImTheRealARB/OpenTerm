@@ -11,6 +11,11 @@ cache:
   news_ttl_s: 120
   movers_ttl_s: 60
   crypto_ttl_s: 60
+  # Phase 6: SEC company facts, filings list, insider trades, Yahoo holders
+  facts_ttl_s: 21600
+  filings_ttl_s: 900
+  insiders_ttl_s: 3600
+  holders_ttl_s: 21600
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
   quotes: [yahoo, nasdaq]
@@ -22,6 +27,11 @@ providers:
   news_keyword: [gdelt]
   movers: [nasdaq]
   crypto: [coingecko, binance]
+  # Phase 6
+  fundamentals: [sec]
+  filings: [sec]
+  insiders: [sec, yahoo_own]
+  holders: [yahoo_own]
   # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.
 news:
   # Market top-stories feeds for N. Leave unset to use the built-in list
