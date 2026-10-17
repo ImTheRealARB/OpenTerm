@@ -1,6 +1,10 @@
 # Roadmap: Phases 11-19
 
-Status: **plan only, nothing built.** Replaces the earlier `ROADMAP_PHASES_11-15.md` draft (which was written
+Status: **in progress** (Phase 11 done, Phase 12 steps 1-4 done). **Scope decided 2026-10-19:** full scope minus
+paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
+service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
+
+Original status: plan only. Replaces the earlier `ROADMAP_PHASES_11-15.md` draft (which was written
 from a partial README read). This version is based on the Vibe-Trading code itself (commit `d0db2e3`,
 2026-10-17) and a function-by-function gap list: [FEATURE_GAP.md](FEATURE_GAP.md).
 
@@ -141,7 +145,7 @@ Keyed data layer plus the missing company functions.
 | `DCF`, `WACC`, `RV` | Valuation from Vibe's engine: a missing input makes the model `NOT RUNNABLE`, never a silent default | FA + EQS data |
 | `ETF`, `MEMB` | ETF holdings look-through, index members via ETF proxies | SEC N-PORT, FMP |
 | `HDS` diffs | 13F quarter-over-quarter position changes | SEC (port Vibe's diff logic) |
-| `TRAN`, `SEG` | Transcripts, segment revenue (shown only with a paid FMP key) | FMP |
+| ~~`TRAN`, `SEG`~~ | **Removed 2026-10-19** (paid FMP only; the user takes no paid data APIs) | - |
 | Real-time L1 | Undelayed US quotes in Q / WL / GP; label `RT IEX` vs `DELAYED` | Alpaca, Finnhub websocket |
 | News upgrades | Finnhub/Alpaca news sources, keyword alerts | Finnhub, Alpaca |
 
@@ -244,7 +248,7 @@ In this order, each one a separate approval:
 2. **Default AI model** on OpenRouter, and the daily spend cap.
 3. **Market priority:** US first, or US + India together (the India cost model and Zerodha sync are ready to port).
 4. **Live orders:** in scope at all, or stop at paper + read-only sync.
-5. **Paid keys:** whether to build the FMP-paid functions (`TRAN`, `SEG`) or skip them.
+5. **Paid keys:** decided 2026-10-19: skip them (`TRAN`, `SEG` removed).
 
 ## Not reachable even with keys
 See the end of [FEATURE_GAP.md](FEATURE_GAP.md).

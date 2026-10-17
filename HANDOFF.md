@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-4 done; step 5 (engines) next)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-4 done; step 5 (engines) next; full scope, defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -20,6 +20,25 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
   (spec section 1: textarea + `BT SAVE/LOAD/DEL`); call it step 4B, before step 9.
 - **Next action: step 5, engines** (India, crypto spot + perps, forex, futures, composite; Binance klines adapter; delete
   the `ENGINES` markers in `tests/test_phase12.py`). Then 6 (MC/WF), 7 (RUNS/EXPORT), 8 (IMPORT), 4B (editor), 9 (docs).
+- **Scope and plan (decided by the user 2026-10-19; do not relitigate):**
+  - **Full scope, Phases 12-19, minus paid-only data.** Removed: `TRAN`, `SEG` (paid FMP). Keys: keyless sources
+    first; free sign-up keys are fine (Finnhub free tier for `EE`/`ANR` only as far as it covers them, Alpaca/Finnhub
+    for real-time L1, EIA, Telegram bot token, the user's own SMTP); the **only paid service is OpenRouter**, default
+    model a DeepSeek model chosen in `SETTINGS AI`, with the Phase 11 daily spend cap. Brokers: Alpaca paper first;
+    Zerodha only if its API is free when the Phase 18 spec is written. A source that turns out paid-only is dropped
+    and noted in DATA_LIMITS.md, never faked.
+  - **Roadmap defaults are pre-approved** for every phase: write each spec with its defaults, then go straight on to
+    tests and code. Stop only for a decision the roadmap did not foresee, a gate failure that needs a decision, or a
+    missing key (OpenRouter before Phase 16: ask the user to set it with `APIKEYS`; then finish the `@RECORDING` test).
+  - **Speed levers (approved):** (1) port Vibe modules in bulk by copy script with their tests converted to pytest
+    and cross-checked against Vibe's values, independent modules on 2 Sonnet agents at most; (2) pre-approved
+    defaults (above); (3) build shared templates first (keyed provider adapter, table panel, canvas heat grid) and
+    keep later functions thin; (4) spec + tests in one step per phase, all of a phase's fixtures in one recording
+    script run; (5) faster gates (test-suite audit running in its own session on its own branch, see below).
+    Quality, accuracy, terminal speed and bench budgets are never traded for pace.
+  - Estimate: about 9-13 hours of active work (4-5 sessions of one 5-hour window each). Re-check after Phase 12.
+  - **Test audit:** a separate session (branch off `976c7ad`) is combining duplicate tests and speeding up the suites.
+    It does not merge by itself; when it reports, review its branch and merge it into this branch if the gates pass.
 - **What step 3 added** (`backend/openterm/bt/`):
   - Ported verbatim from Vibe-Trading `d0db2e3` by a copy script (header line names the source): `models.py`,
     `metrics.py`, `rebalance_mask.py`, `engines/hooks.py` (= `_market_hooks.py`), `engines/global_equity.py`,
@@ -43,7 +62,8 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
   must not drop):
   1. Do a whole phase per turn, step by step in HANDOFF order, committing each step. Stop only on a gate failure that
      needs a decision, a missing key, or a real product decision.
-  2. Each phase starts with `docs/specs/PHASE_<n>.md` (proposed defaults at the top), then tests, then code.
+  2. Each phase starts with `docs/specs/PHASE_<n>.md` (defaults at the top, pre-approved: see "Scope and plan"),
+     written together with its tests in one step, then code.
   3. One fresh session per phase (HANDOFF.md carries the state). Sonnet subagents only, at most 2 at once, only for
      truly parallel pieces (backend and frontend halves).
   4. Every step: `uv run pytest -q`, `uv run ruff check .`, `npx tsc --noEmit`, `npx vitest run`, `npx playwright test`.

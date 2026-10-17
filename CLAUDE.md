@@ -4,7 +4,8 @@ Keyboard-first, open-source market terminal (amber on black, command line + tile
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
 All 10 phases are built and on `main`. **Phases 11-19 are in progress on branch `claude/openterm-phases-11-19-a99b2b`**
-(Phase 11 done except one OpenRouter recording; Phase 12 steps 1-4 done, step 5 (engines) next; HANDOFF.md "Resume here" has the next action and the user's step rules). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+(Phase 11 done except one OpenRouter recording; Phase 12 steps 1-4 done, step 5 (engines) next; HANDOFF.md "Resume here" has the next action, the user's step rules and the approved scope: full Phases 12-19 minus
+paid-only data, roadmap defaults pre-approved, OpenRouter (DeepSeek) the only paid service). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
 5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
@@ -19,6 +20,7 @@ so another account can resume, and pause.
   Record before/after numbers in `docs/PERFORMANCE.md`.
 - **Zero keys still works; a key unlocks more** (Phase 11 rule change). A function that needs a key shows
   `KEY REQUIRED: set X in APIKEYS` instead of failing. Paid keys are allowed, never required. Never bypass bot checks or captchas.
+  Scope decision 2026-10-19: no paid data APIs get built; the only paid service is OpenRouter (AI layer).
 - Keys live only in env, the OS keyring or `.env` (`keys.py`). Never in the repo, the command line, command history, a URL
   sent to the frontend or any API response; redacted from logs, `/api/perf`, `/api/log`, `/api/sources`, error text and AI traces.
 - AI output is model output, not data: every AI panel says `AI · <model> · <time>` and links the tool calls that grounded
