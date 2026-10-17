@@ -1,39 +1,34 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phases 1-10 committed on this branch, Phase 10 = `f0df226`)._
+_Last updated: 2026-10-17, session 4 (all 10 phases on `main`, latest `626bddd`; post-merge fixes and browser start script done)._
 
-> **Resuming in a new session or account?** Read "Parallel build of Phases 6-10" and "Where things stand" below.
+> **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
+> `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Parallel build of Phases 6-10 (MERGED)
-Status: **done. All five phases were finished in their own worktrees, then merged here in order, one commit each, every
-commit approved by the user: Phase 6 `96d40b9`, 7 `90bffb1`, 8 `1070230`, 9 `b5515ac`, CSV wiring `7e3ca69`, 10 `f0df226`,
-docs `1dfebe4`.** The `openterm-p6..p10` worktrees and their `-wip` branches are now redundant and can be removed.
-The last column tracks the merge into this worktree.
+## How Phases 6-10 were built (history)
+Built in parallel, one git worktree per phase (`openterm-p6..p10`, from `4b3814c`), by Sonnet sessions following
+[docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) (append-only "Phase N" blocks in shared files; only Phase 8 adds
+migrations, positions 6-7). Each phase was then merged in order with `git apply --3way`, fully verified (pytest, ruff,
+tsc, vitest, all Playwright, bench) and committed with the user's approval:
 
-| Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
-|---|---|---|---|---|
-| 6 FA, FIL/SEC, OWN, HDS | `openterm-p6` | `claude/openterm-p6-wip` | `PHASE_6_NOTES.md` | **COMMITTED** `96d40b9` |
-| 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **COMMITTED** `90bffb1` |
-| 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | **COMMITTED** `1070230` |
-| 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | **COMMITTED** `b5515ac`; CSV hook wired into the Phase 6-8 panels in the follow-up commit |
-| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | **COMMITTED** `f0df226` |
+| Phase | Commit |
+|---|---|
+| 6 FA, FIL/SEC, OWN, HDS | `96d40b9` |
+| 7 FRED, MACRO, RATES, ERN, ECO | `90bffb1` |
+| 8 PORT, ALRT (migrations 6-7) | `1070230` |
+| 9 EQS, HIST, CORR, COMP, CSV export | `b5515ac`; CSV hook wired into the Phase 6-8 panels in `7e3ca69` |
+| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `f0df226` |
+| Post-merge fixes + `scripts/start.ps1` | `626bddd` |
 
-- All five branch from `4b3814c`; their changes are **uncommitted** in their worktrees. Rules they follow:
-  [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) (append-only "Phase N" blocks in shared files, no migrations except
-  Phase 8 at positions 6-7, notes kept current, no commits, light checks only; Playwright and bench run after the merge).
-- Each `PHASE_N_NOTES.md` (phase worktree root) has the details; the lead folds it into this file when merging that phase.
+All phase worktrees, their `-wip` branches, the backups (`wip-patches/`, `RESUME_PROMPT.md`) and the finished build
+sessions are gone; everything is on `main`. Things that still apply from that build:
 - Phase 6 SEC fixtures: the user approved their Gmail as the SEC User-Agent **for fixture recording only**; it
   must never be written into the repo. The app reads `SEC_USER_AGENT` from env.
-- Merge plan, in order 6→10, one phase per commit, each fully verified (pytest, ruff, tsc, vitest, all Playwright,
-  bench), and the user approves each commit: `git add -A; git diff --cached 4b3814c > pN.patch` in the phase
-  worktree, then `git apply --3way pN.patch` in this worktree. After 9: wire the CSV-export hook into 6-8 panels.
-  After 10: confirm release-notes bullets for 6-9, then the full perf pass.
-- **Backups are gone:** `wip-patches/` and `RESUME_PROMPT.md` were deleted (user approved) after Phases 6-10 were committed. The `openterm-p6..p10`
-  worktrees still exist (staged, uncommitted copies of the same work); do not remove them unless the user asks.
-- **Use Sonnet subagents, not Opus** (user's request: Opus agents used ~55% of the 5-hour window in 15 min).
-  Run at most 2-3 at once and check plan usage between steps.
-- Usage rule from the user: when the 5-hour (or weekly) plan window reaches 90%, stop every subagent, update this
-  section, and pause.
+- **Use Sonnet subagents/sessions, not Opus** (user's request: Opus agents used ~55% of the 5-hour window in 15 min).
+  Run at most 2-3 at once and check plan usage between steps. When the 5-hour (or weekly) window reaches 90%, stop
+  them, write down exactly where each one is, and pause.
+- A session started in one worktree cannot write into another (a hook blocks Write/Edit). Work that belongs in
+  another worktree goes to a session started there; do not copy files in through a scratchpad.
 
 ## Where things stand
 - **All 10 phases are built, verified and on `main`** (Phases 1-4 `736d6d5`..`b72466a`, 5 `4b3814c`, 6-10
@@ -41,10 +36,11 @@ The last column tracks the merge into this worktree.
   phase worktrees and branches were removed. No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
 - The leftover uncommitted Phase 3 copies that sat on `main` were set aside in a stash
   (`main-phase3-leftovers-2026-10-17`); they were identical to `b6dca4e` apart from line endings, so the stash can be dropped.
-- Latest verification (Phase 10 tree):
-  - Backend: 163 pytest passed (`-n auto`, ~25 s), ruff clean.
-  - Frontend: 169 vitest passed, tsc clean, 66 Playwright passed (`--workers=8`, ~24 s).
-  - Bench: 17/17 budgets PASS on two of three runs, one lone chart-pan miss (see `docs/PERFORMANCE.md` Phase 10).
+- Latest verification (`626bddd`, post-merge fixes):
+  - Backend: 163 pytest passed (`-n auto`, ~26 s), ruff clean.
+  - Frontend: 169 vitest passed, tsc clean, 66 Playwright passed (`--workers=8`, ~29 s).
+  - Bench: 16/17 (tick-to-pixel 55-59 ms vs 50 on every run that evening, also with the fixes reverted; see
+    `docs/PERFORMANCE.md` "Post-merge fixes"). Phase 10 itself was 17/17 on two of three runs.
 
 ## Done
 | Phase | Contents |

@@ -5,7 +5,9 @@ Free data only; no key is needed to start (SEC EDGAR wants a contact string in `
 uses `FRED_API_KEY`, the keyless FRED CSV is used otherwise).
 
 ## Install and run
-- **From source:** `.\scripts\setup.ps1`, then `.\scripts\dev.ps1` and open <http://localhost:5173>.
+- **From source:** `.\scripts\setup.ps1`, then `.\scripts\start.ps1` (builds, serves on <http://localhost:8000>,
+  opens the browser). For development with hot reload: `.\scripts\dev.ps1` and <http://localhost:5173>.
+  Commands to try: [COMMANDS.md](COMMANDS.md).
 - **Docker** (unverified, see `docs/DESKTOP.md`): `docker compose up --build`, then <http://localhost:8000>.
 - **Desktop** (scaffold only, see `docs/DESKTOP.md`): Tauri window around the same backend.
 

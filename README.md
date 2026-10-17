@@ -123,6 +123,7 @@ Budgets are enforced in CI by `node scripts/bench.mjs`. See [docs/PERFORMANCE.md
 - [Adding a function](docs/ADDING_A_FUNCTION.md)
 - [Adding a provider](docs/ADDING_A_PROVIDER.md)
 - [Data limits](docs/DATA_LIMITS.md)
+- [Commands to try](docs/COMMANDS.md)
 - [Release notes](docs/RELEASE_NOTES.md) · [Changelog](CHANGELOG.md) · [Desktop build](docs/DESKTOP.md)
 - [Handoff / project status](HANDOFF.md)
 

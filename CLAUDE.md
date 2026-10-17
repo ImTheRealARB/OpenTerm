@@ -3,8 +3,8 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 6-10 were built in parallel worktrees (`.claude/worktrees/openterm-p6..p10`) and are merged and committed here: see HANDOFF.md
-"Parallel build of Phases 6-10" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md). Leave the p6..p10 worktrees alone until the user says to remove them.
+All 10 phases are built and on `main`. Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+"How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
 5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
 so another account can resume, and pause.
@@ -39,6 +39,7 @@ cd backend; uv run pytest -q; uv run ruff check .   # pytest runs on 4 xdist wor
 cd frontend; npx tsc --noEmit; npx vitest run; npx playwright test
 node scripts/bench.mjs          # from repo root; builds, starts servers in fixture+synthetic mode, prints PASS/FAIL
 .\scripts\dev.ps1               # backend :8000 + vite :5173 (vite binds to localhost / ::1, use http://localhost:5173)
+.\scripts\start.ps1             # user mode: builds frontend if stale, backend serves it on :8000, opens the browser
 ```
 Env flags: `OPENTERM_FIXTURES=1` (replay `backend/tests/fixtures`), `OPENTERM_SYNTHETIC=1` (SYN0000-SYN9999 + tick
 stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
@@ -69,6 +70,11 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   (symptom: functions show "NOT BUILT YET"). Check the port is free; run with `CI=1` (PowerShell: `$env:CI='1'`).
 - **Backend port 8000 and dev port 5173 are shared by every worktree too.** A second backend fails to bind 8000 and
   the Vite proxy silently talks to whichever worktree's backend is already up. Check the port before previewing.
+- **PowerShell 5.1 `Invoke-WebRequest` to `localhost` costs ~2 s** (tries IPv6 `::1` first; uvicorn listens on
+  127.0.0.1). Health probes in scripts use `http://127.0.0.1:<port>`, or a 2 s timeout fails every time.
+- **The panel tab names the sticky security only when the function uses it** (`needsSecurity`, or bare `N`).
+  The security itself stays on the panel, so `GP` after `FRED` still charts the last ticker.
+- **Charts with no volume skip the volume histogram** (`ChartView`): zero-height bars drew a flat line on FRED.
 - **Don't assert "NOT BUILT YET" in e2e tests**; each phase makes it false for its own functions.
 - **Grid cursor below a header row:** call `grid.moveTo(1)` in an effect keyed on the payload (`initialSelected` is clamped to 0 while rows are empty).
 - **A lone bench miss (50k-bar chart pan 33 ms, tick-to-pixel NaN / ~52 ms) has been noise;** rerun before investigating.

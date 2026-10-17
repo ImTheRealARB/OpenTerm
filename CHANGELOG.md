@@ -2,6 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## After Phase 10: fixes and browser start
+- Added `scripts/start.ps1` / `scripts/start`: build the frontend if stale, serve it from the backend on :8000, open the browser.
+- Added `docs/COMMANDS.md`, a list of commands to try.
+- Fixed: the panel tab named the last ticker on functions that do not use one (FRED, PORT, EQS, SETTINGS ...).
+- Fixed: charts of series without volume (FRED) drew a flat line along the bottom.
+
 ## Phase 10: settings and packaging
 - Added `SETTINGS` and `THEME`: themes (amber, green, white, light), number format, header clocks, chart defaults, poll intervals.
 - Added opt-in vim mode for the command line and vim list keys (`g`, `G`, `Ctrl+D`, `Ctrl+U`).
