@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commandInputRef } from "../components/CommandLine";
 import { Grid, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { navigate, replaceView } from "../state/workspace";
 import { liveSymbol, navKey, QUOTE_COLUMNS as COLUMNS, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 export const DEFAULT_LIST = ["SPY", "QQQ", "DIA", "^NSEI", "^BSESN", "AAPL", "MSFT", "RELIANCE.NS", "INFY.NS", "BTC-USD", "EURUSD=X", "GC=F", "CL=F"];
 
@@ -24,6 +24,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   const latest = useLatest({ rows, sort });
 
   useLiveRows(rows, grid, liveSymbol);
+  useCsvExport(panelId, () => gridCsv(`Q_${rows.map((r) => r.symbol).join("_").slice(0, 60)}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -58,9 +59,6 @@ export default function Q({ panelId, args, security }: FunctionProps) {
             setRows(sortRows(cur, next, inputs));
             return true;
           }
-          case "e":
-            downloadCsv(`Q_${cur.map((r) => r.symbol).join("_").slice(0, 60)}`, COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             setReload((n) => n + 1);
             return true;

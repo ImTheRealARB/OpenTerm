@@ -220,6 +220,15 @@ async def fa(request: Request, symbol: str = Query(..., max_length=24), period: 
         return error(e)
 
 
+# --- Phase 9: screener (EQS) and peers (COMP) ---
+@router.get("/screener")
+async def screener(request: Request):
+    try:
+        return await svc(request).screener()
+    except DataError as e:
+        return error(e)
+
+
 # --- Phase 7: macro ---
 @router.get("/fred")
 async def fred(request: Request, id: str = Query(..., max_length=40), range: str | None = Query(None, max_length=4)):
@@ -383,4 +392,12 @@ async def rearm_alert(request: Request, alert_id: int):
     try:
         return await alerts_store(request).rearm(alert_id)
     except UserDataError as e:
+        return error(e)
+
+
+@router.get("/peers")
+async def peers(request: Request, symbol: str = Query(..., max_length=24)):
+    try:
+        return await svc(request).peers(symbol)
+    except DataError as e:
         return error(e)

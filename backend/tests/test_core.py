@@ -152,12 +152,12 @@ async def test_coalescing_one_upstream_call():
 
 async def test_stale_while_revalidate():
     p = Fake("a")
-    svc, _ = make(p, ttl={"daily": 0.05})
+    svc, _ = make(p, ttl={"daily": 0.5})  # wide TTL: a 50 ms one flaked on a loaded machine
     await svc.history("AAPL", "1Y", None)
-    await asyncio.sleep(0.08)
+    await asyncio.sleep(0.55)
     r = await svc.history("AAPL", "1Y", None)
-    assert r["stale"] is True and r["age_s"] >= 0.05  # served instantly, marked stale
-    await asyncio.sleep(0.02)
+    assert r["stale"] is True and r["age_s"] >= 0.5  # served instantly, marked stale
+    await asyncio.sleep(0.05)
     assert p.calls == 2  # background refresh happened
     assert (await svc.history("AAPL", "1Y", None))["stale"] is False
 

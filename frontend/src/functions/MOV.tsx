@@ -1,13 +1,13 @@
 /** US market movers from Nasdaq.com: gainers, losers, most active (shares / dollars), Nasdaq-100. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, type Envelope, type Mover, type MoversPayload } from "../net/api";
 import { navigate } from "../state/workspace";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const TABS = [
   ["GAINERS", "GAINERS"],
@@ -60,6 +60,7 @@ export default function MOV({ panelId, args }: FunctionProps) {
 
   const rows = useMemo(() => env?.data.tables[tab] ?? [], [env, tab]);
   const latest = useLatest({ rows, tab });
+  useCsvExport(panelId, () => gridCsv(`MOV_${tab}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -84,9 +85,6 @@ export default function MOV({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "DES", security: { symbol: r.symbol }, args: [] });
             return true;
           }
-          case "e":
-            downloadCsv(`MOV_${t}`, COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             void load(true);
             return true;

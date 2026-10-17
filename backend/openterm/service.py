@@ -482,6 +482,68 @@ class DataService:
         }
         return env
 
+    # --- Phase 9: screener (EQS) and peers (COMP) ---
+    async def screener(self) -> dict:
+        """The whole US universe as one columnar table (see providers/screener.py). Filtered in the browser."""
+
+        async def fetch() -> dict:
+            data, failed = await self.router.call("screener", lambda p: p.screener())
+            return {"data": data, "fallback_from": failed}
+
+        return await self._swr("scr:us", self.ttl.get("screener", 900.0), fetch)
+
+    async def peers(self, raw_symbol: str, limit: int = 10) -> dict:
+        """Yahoo recommended symbols; if none, the largest same-industry names from the screener (US only)."""
+        symbol = resolve(raw_symbol)
+
+        async def fetch() -> dict:
+            peers: list[dict] = []
+            failed: list[str] = []
+            errors: list[str] = []
+            basis, source = "yahoo", None
+            try:
+                found, failed = await self.router.call("peers", lambda p: p.peers(symbol), symbol)
+                peers = [p for p in found["peers"] if p["symbol"] != symbol][:limit]
+                source = found["source"]
+            except AllFailed as e:
+                failed = [n for n, _ in e.errors]
+                errors = [f"{n}: {err.kind} ({err})" for n, err in e.errors]
+            uni = None
+            try:
+                uni = (await self.screener())["data"]
+            except DataError as e:
+                errors.append(f"screener: {e.kind} ({e})")
+            by_sym = {r[0]: r for r in uni["rows"]} if uni else {}
+
+            def info(sym: str) -> dict:
+                r = by_sym.get(sym)
+                if r is None:
+                    return {"name": None, "market_cap": None, "sector": None, "industry": None}
+                return {"name": r[1], "market_cap": r[6], "sector": uni["sectors"][r[9]] or None,
+                        "industry": uni["industries"][r[10]] or None}
+
+            me = by_sym.get(symbol)
+            if not peers:
+                if me is None or not me[10]:
+                    raise DataError("not_found", "NO PEERS FOUND", "; ".join(errors) or None)
+                same = sorted((r for r in uni["rows"] if r[10] == me[10] and r[0] != symbol and r[6]),
+                              key=lambda r: -r[6])
+                peers = [{"symbol": r[0], "score": None} for r in same[:limit]]
+                if not peers:
+                    raise DataError("not_found", "NO PEERS FOUND", "; ".join(errors) or None)
+                basis, source = "industry", f"{uni['source']}:industry"
+                failed = [*failed, *(["yahoo_peers"] if "yahoo_peers" not in failed else [])]
+            return {
+                "data": {
+                    "symbol": symbol, "basis": basis, "self": {"symbol": symbol, **info(symbol)},
+                    "peers": [{**p, **info(p["symbol"])} for p in peers],
+                },
+                "source": source,
+                "fallback_from": failed,
+            }
+
+        return await self._swr(f"peers:{symbol}", self.ttl.get("peers", 86400.0), fetch)
+
 
 # --- Phase 7 imports (appended at the end so merges with other phases stay additive) ---
 from datetime import date, timedelta

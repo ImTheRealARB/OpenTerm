@@ -4,7 +4,6 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtRate } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { subscribe } from "../net/socket";
@@ -13,6 +12,7 @@ import { navigate } from "../state/workspace";
 import { crossPair, crossRate, parseCurrencies, usdLeg } from "./boards";
 import { navKey, useLatest, useQuotes, type QRow } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 interface Row {
   ccy: string;
@@ -62,6 +62,7 @@ export default function FXC({ panelId, args }: FunctionProps) {
     ];
   }, [list, legState]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => gridCsv(`FXC_${list.join("_")}`, cols, rows));
 
   const legKey = quotes.filter((q) => !q.error).map((q) => q.symbol).join(",");
   useEffect(() => (legKey ? subscribe(legKey.split(",")) : undefined), [legKey]);
@@ -84,9 +85,6 @@ export default function FXC({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "GP", security: { symbol: crossPair(r.ccy, "USD") }, args: [] });
             return true;
           }
-          case "e":
-            downloadCsv(`FXC_${list.join("_")}`, cols.map((c) => c.title), cur.map((r) => cols.map((c) => c.text(r))));
-            return true;
           case "F5":
             setReload((n) => n + 1);
             return true;

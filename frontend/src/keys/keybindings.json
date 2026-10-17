@@ -18,5 +18,6 @@
   "saveWorkspace": ["Ctrl+S"],
   "openWorkspace": ["Ctrl+O"],
   "cheatsheet": ["?"],
-  "perfHud": ["Ctrl+Shift+P"]
+  "perfHud": ["Ctrl+Shift+P"],
+  "exportCsv": ["Alt+X"]
 }

@@ -1,13 +1,13 @@
 /** Crypto board: CoinGecko top 50 by market cap; Binance 24 h tickers (USDT) when CoinGecko is down. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtAge, fmtBig, fmtPct, fmtPrice, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, type Coin, type Envelope } from "../net/api";
 import { navigate } from "../state/workspace";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 30_000;
 
@@ -56,6 +56,7 @@ export default function CRYP({ panelId, args }: FunctionProps) {
 
   const rows = useMemo(() => env?.data.coins ?? [], [env]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => gridCsv(`CRYP_${vs}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -70,9 +71,6 @@ export default function CRYP({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "GP", security: { symbol: `${r.symbol}-USD` }, args: [] });
             return true;
           }
-          case "e":
-            downloadCsv(`CRYP_${vs}`, COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             void load(true);
             return true;

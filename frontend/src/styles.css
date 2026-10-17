@@ -108,3 +108,16 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .alrt-flash { background: var(--warn); color: var(--bg); padding: 0 4px; }
 .import { flex: none; border-top: 1px solid var(--line); max-height: 60%; overflow: auto; }
 .import textarea { width: 100%; height: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; resize: none; }
+
+/* --- Phase 9: CORR heat (colour carries the sign; strength steps with |r| 0.2 / 0.4 / 0.7) --- */
+.corr { position: relative; overflow: auto; flex: 1 1 auto; min-height: 0; }
+.corr-t { width: auto; }
+.corr-t th, .corr-t td { min-width: 6ch; padding: 0 6px; }
+.corr-t td.cur { outline: 1px solid var(--fg); outline-offset: -1px; }
+.corr-t td.h-na, .corr-t td.h-z { color: var(--fg-dim); }
+.corr-t td.h-p1 { color: var(--up); opacity: .6; }
+.corr-t td.h-p2 { color: var(--up); }
+.corr-t td.h-p3 { color: var(--up); font-weight: bold; background: var(--sel); }
+.corr-t td.h-m1 { color: var(--down); opacity: .6; }
+.corr-t td.h-m2 { color: var(--down); }
+.corr-t td.h-m3 { color: var(--down); font-weight: bold; background: var(--sel); }

@@ -1,13 +1,13 @@
 /** News: market top stories (RSS), a security's headlines (Yahoo RSS, GDELT) or a GDELT keyword search. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, type Envelope, type NewsItem, type NewsPayload } from "../net/api";
 import { newsQuery } from "./newsArgs";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 60_000;
 
@@ -66,6 +66,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
     return items.map((i) => ({ ...i, fresh: !!first && !first.has(i.id) }));
   }, [env]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => gridCsv("NEWS", COLUMNS, rows, [{ title: "URL", text: (r) => r.url }]));
 
   useEffect(
     () =>
@@ -79,9 +80,6 @@ export default function N({ panelId, args, security }: FunctionProps) {
             if (r) openArticle(r.url);
             return true;
           }
-          case "e":
-            downloadCsv("NEWS", ["TIME", "SOURCE", "HEADLINE", "URL"], cur.map((r) => [...COLUMNS.map((c) => c.text(r)), r.url]));
-            return true;
           case "F5":
             void load(true);
             return true;

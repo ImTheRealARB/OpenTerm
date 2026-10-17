@@ -1,11 +1,14 @@
 /** CSV export from any column set: what you see is what you get (formatted cells). */
-export function downloadCsv(name: string, header: string[], rows: string[][]): void {
-  const esc = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-  const body = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
-  const url = URL.createObjectURL(new Blob([body], { type: "text/csv" }));
+import { csvFileName, toCsv, type CsvCell } from "./csvText";
+
+export function downloadCsv(name: string, header: string[], rows: CsvCell[][]): string {
+  const file = csvFileName(name);
+  // BOM so spreadsheet apps read UTF-8 names (e.g. "Société Générale") correctly.
+  const url = URL.createObjectURL(new Blob(["﻿", toCsv(header, rows)], { type: "text/csv;charset=utf-8" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${name.replace(/[^\w.-]+/g, "_")}.csv`;
+  a.download = file;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return file;
 }

@@ -94,6 +94,7 @@ def bars_from_chart(result: dict[str, Any], range_: str, interval: str, source: 
         return v if v is not None and len(v) == n else [None] * n
 
     vol = col("volume")
+    adj = ((result.get("indicators", {}).get("adjclose") or [{}])[0] or {}).get("adjclose")  # Phase 9
     return Bars.model_construct(
         symbol=meta["symbol"],
         range=range_,
@@ -107,6 +108,7 @@ def bars_from_chart(result: dict[str, Any], range_: str, interval: str, source: 
         l=col("low"),
         c=col("close"),
         v=[int(x) if x is not None else None for x in vol],
+        adj=adj if adj is not None and len(adj) == n else None,
         source=source,
         as_of=as_of,
     )

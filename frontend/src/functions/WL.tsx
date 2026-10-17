@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type GridHandle } from "../components/Grid";
 import { deleteWatchlist, editWatchlist, putWatchlist, refreshWatchlists, watchlistList, watchlistVersion } from "../command/watchlists";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type ApiError } from "../net/api";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
@@ -11,6 +10,7 @@ import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import { liveSymbol, navKey, QUOTE_COLUMNS as COLUMNS, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const when = (t: number) => {
   const d = new Date(t * 1000);
@@ -64,6 +64,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   const latest = useLatest({ rows, sort, symbols });
 
   useLiveRows(rows, grid, liveSymbol);
+  useCsvExport(panelId, () => gridCsv(`WL_${name}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -100,9 +101,6 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
             setRows(sortRows(cur, next, inputs));
             return true;
           }
-          case "e":
-            downloadCsv(`WL_${name}`, COLUMNS.map((c) => c.title), cur.map((x) => COLUMNS.map((c) => c.text(x))));
-            return true;
           case "F5":
             setReload((n) => n + 1);
             return true;
@@ -134,6 +132,9 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const state = useLatest({ list, sel, confirm });
+  useCsvExport(panelId, () =>
+    list ? { name: "WATCHLISTS", header: ["NAME", "SYMBOLS", "UPDATED_UTC"], rows: list.map((w) => [w.name, w.count, new Date(w.updated_at * 1000).toISOString().slice(0, 16).replace("T", " ")]) } : null,
+  );
 
   const refresh = () =>
     refreshWatchlists()

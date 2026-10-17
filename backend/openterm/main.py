@@ -27,6 +27,8 @@ DEFAULT_ORDER = {
     "news_top": ["rss"], "news_symbol": ["yahoo_rss", "gdelt"], "news_keyword": ["gdelt"],
     "movers": ["nasdaq"], "crypto": ["coingecko", "binance"],
 }
+# --- Phase 9 ---
+DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]})
 MAX_SUBS_PER_CLIENT = 2000
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
@@ -58,6 +60,9 @@ async def lifespan(app: FastAPI):
     })
     # --- Phase 6: SEC / ownership TTLs ---
     service.ttl.update({k: c.get(f"{k}_ttl_s", v) for k, v in service.PHASE6_TTL.items()})
+
+    # --- Phase 9 ---
+    service.ttl.update({"screener": c.get("screener_ttl_s", 900), "peers": c.get("peers_ttl_s", 86400)})
 
     # Streaming: one upstream subscription per symbol, whatever the number of clients and panels.
     hub_ref: list[Hub] = []

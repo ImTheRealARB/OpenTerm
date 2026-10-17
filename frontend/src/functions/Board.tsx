@@ -1,7 +1,6 @@
 /** A fixed, sectioned live board (WEI, FX, CMDTY): REST snapshot, then streamed ticks. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtChg, fmtPct, fmtPrice, fmtRate, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { getLive } from "../state/ticks";
@@ -9,6 +8,7 @@ import { navigate } from "../state/workspace";
 import type { BoardDef } from "./boards";
 import { chg, dirColor, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 interface BRow extends QRow {
   label: string;
@@ -60,6 +60,7 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
     return out;
   }, [quotes, def]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => gridCsv(def.code, cols, rows.filter((r) => !r.section)));
 
   useLiveRows(rows, grid, liveOf);
 
@@ -75,9 +76,6 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
             if (r && !r.section) navigate(panelId, { fn: "GP", security: { symbol: r.symbol }, args: [] });
             return true;
           }
-          case "e":
-            downloadCsv(def.code, cols.map((c) => c.title), cur.filter((r) => !r.section).map((r) => cols.map((c) => c.text(r))));
-            return true;
           case "F5":
             setReload((n) => n + 1);
             return true;

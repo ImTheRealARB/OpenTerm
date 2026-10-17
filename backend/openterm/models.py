@@ -43,6 +43,9 @@ class Bars(BaseModel):
     v: list[int | None]
     source: str
     as_of: float
+    # --- Phase 9 ---
+    adj: list[float | None] | None = None
+    """Dividend/split-adjusted close (Yahoo daily+ bars only). None when the source has none."""
 
 
 class SearchHit(BaseModel):

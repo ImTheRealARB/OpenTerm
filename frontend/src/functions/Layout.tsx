@@ -6,6 +6,7 @@ import type { ApiError } from "../net/api";
 import { useStore } from "../state/store";
 import { workspace } from "../state/workspace";
 import type { FunctionProps } from "./registry";
+import { useCsvExport } from "./tableExport";
 
 const when = (t: number) => {
   const d = new Date(t * 1000);
@@ -22,6 +23,7 @@ export default function Layout({ panelId }: FunctionProps) {
   const [err, setErr] = useState<string | null>(null);
   const state = useRef({ list, sel, confirm });
   state.current = { list, sel, confirm };
+  useCsvExport(panelId, () => (list ? { name: "LAYOUTS", header: ["NAME", "PANELS", "SAVED"], rows: list.map((l) => [l.name, l.panels, when(l.updated_at)]) } : null));
 
   const refresh = () =>
     refreshLayouts()

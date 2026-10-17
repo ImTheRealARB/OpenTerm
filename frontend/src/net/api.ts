@@ -466,3 +466,46 @@ export const api8 = {
   rearmAlert: (id: number) => send<Alert>("POST", `/api/alerts/${id}/rearm`),
   clearAlerts: () => send<{ deleted: number }>("DELETE", "/api/alerts?status=triggered"),
 };
+
+// --- Phase 9: screener (EQS), peers (COMP) ---
+export interface ScreenerPayload {
+  columns: string[];
+  /** [symbol, name, last, chg, pct, volume, mcap, country_i, ipo, sector_i, industry_i] (see functions/eqsFilter.ts). */
+  rows: [string, string, number | null, number | null, number | null, number | null, number | null, number, number | null, number, number][];
+  sectors: string[];
+  industries: string[];
+  countries: string[];
+  count: number;
+  as_of_text: string | null;
+  market: string;
+  source: string;
+  as_of: number;
+}
+
+export interface PeerInfo {
+  symbol: string;
+  name: string | null;
+  market_cap: number | null;
+  sector: string | null;
+  industry: string | null;
+  score?: number | null;
+}
+
+export interface PeersPayload {
+  symbol: string;
+  /** "yahoo" = Yahoo recommended symbols; "industry" = same industry in the Nasdaq screener (US only). */
+  basis: "yahoo" | "industry";
+  self: PeerInfo;
+  peers: PeerInfo[];
+}
+
+/** Daily+ Yahoo bars carry dividend/split-adjusted closes (`adj`); other sources leave it out. */
+export type BarsAdj = Bars & { adj?: (number | null)[] | null };
+
+export const api9 = {
+  history: (symbol: string, range: string, interval?: string, fresh = false) =>
+    request<Envelope<BarsAdj>>(`/api/history?${qs({ symbol, range, interval })}`, fresh ? 0 : 60_000),
+  /** About 1 MB, cached server-side for 15 min; the client keeps it 5 min. */
+  screener: (fresh = false) => request<Envelope<ScreenerPayload>>("/api/screener", fresh ? 0 : 300_000),
+  peers: (symbol: string) => request<Envelope<PeersPayload>>(`/api/peers?${qs({ symbol })}`, 600_000),
+};

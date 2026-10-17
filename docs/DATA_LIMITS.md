@@ -107,3 +107,17 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
   the User-Agent names a contact (`SEC_USER_AGENT` in `.env`); BEA times are UTC and are shown in US Eastern. If one
   agency's feed is down the panel says which one is missing.
 - **Cache TTLs (config.yaml):** FRED values 1 h, FRED search 24 h, curve 30 min, earnings 15 min, calendar 6 h.
+
+## Phase 9: EQS, COMP, HIST, CORR
+- **EQS universe = Nasdaq screener download** (`api.nasdaq.com/api/screener/stocks?tableonly=true&download=true`): about 7,000 US-listed
+  rows (Nasdaq, NYSE, AMEX), roughly 2.2 MB and 2-3 s to fetch. Cached 15 min server-side (`screener_ttl_s`), 5 min in the browser;
+  the payload is reduced to a columnar form of about 1 MB. Prices are the last session's (not live). Rows with no market cap or sector
+  stay in the universe but never pass a numeric / sector filter on that field. Non-US markets are not covered.
+- **COMP peers = Yahoo `v6/finance/recommendationsbysymbol/SYM`** (keyless, no crumb): about 5 "people also viewed" symbols with a
+  score. An unknown symbol returns an empty list; then COMP falls back to the largest same-industry names in the screener (US only) and
+  says so (`SAME INDUSTRY, LARGEST FIRST`). Peers come from a recommender, not an official peer group. Cached 24 h.
+- **Period returns (COMP) and CORR use adjusted closes** when Yahoo sends them (daily and longer bars); other sources give raw closes and
+  the panel header says `RAW CLOSES`. A return is blank when the history does not reach that far back.
+- **CORR** needs the dates every symbol traded (exchange-local), so mixing exchanges with different holidays shrinks the sample; the panel
+  warns below 20 common returns and when time zones are mixed. At most 20 symbols (20 history calls).
+- **CSV export** is client-side only (what the grid shows, formatted); nothing is sent to a server.

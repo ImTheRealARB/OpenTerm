@@ -94,3 +94,8 @@ def keyed_status(settings: Settings) -> list[dict]:
             "Set FRED_API_KEY in .env (free).",
         })
     return out
+
+# --- Phase 9: screener (EQS) and peers (COMP) ---
+from .screener import NasdaqScreenerProvider, YahooPeersProvider
+
+ADAPTERS.update({"nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider})

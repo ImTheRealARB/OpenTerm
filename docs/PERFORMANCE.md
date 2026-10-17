@@ -213,6 +213,35 @@ Notes:
 - Tests: 126 pytest (116 + 10 in `test_phase8.py`), 91 vitest (66 + 25), 46 Playwright (40 + 6 in `phase8.spec.ts`).
 - One pytest (`test_core.py::test_stale_while_revalidate`) failed once under 4-worker load and passed on three solo runs and the rerun.
 
+### Phase 9 (2026-10-17, same machine; fixtures + SYNTHETIC stream)
+
+17/17 PASS on four of five runs; one run missed tick-to-pixel (56.1 ms). Phase 8 numbers in brackets.
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 90.3 KB [89.3] | 400 KB | PASS |
+| Backend p95 cached /api/health (server-side) | 0.6-0.8 ms [0.5] | 20 ms | PASS |
+| Cold start to usable command line | 106-255 ms [84-93] | 1500 ms | PASS |
+| Keystroke to echo p95 (idle / streaming load) | 14.0-14.8 / 10.8-15.5 ms [14.9 / 10.0-15.4] | 16.7 ms | PASS |
+| Command submit to first paint p95 (cached / cold network) | 17.1-17.6 / 11.1-25.3 ms [17.0 / 13.6] | 100 / 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 37.0-44.2 ms (one run 56.1 FAIL) [36.0-45.6] | 50 ms | PASS |
+| Frame time p95 (8-panel / streaming / 10k grid / 50k chart) | 16.7-16.8 ms each | 20 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 5.7-9.7 MB [5.6-8.8] | 500 MB | PASS |
+| Ticks delivered per second (offered 4,000) | 3,959-4,043 [4,010] | - | INFO |
+| Layout load to paint p95 | 39.2-48.3 ms [35.1-38.5] | 100 ms | PASS |
+
+Notes:
+- Entry bundle +1.0 KB gz (89.3 → 90.3): the `api9` block, the Alt+X export binding (`keybindings.json`, `keys.ts`, `App.tsx`) and
+  `tableExport` hook calls pulled into the entry. EQS, HIST, CORR, COMP and `eqsFilter` / `corrMath` / `returns` are lazy modules.
+- Cold start, layout load and tick-to-pixel were noisier than in earlier phases (cold start ranged 106-255 ms in back-to-back runs
+  with nothing changed between them), so the machine, not Phase 9, is the likely cause: nothing in Phase 9 runs on the cold path.
+  The one tick-to-pixel miss (56.1 ms, heap 9.7 MB, layout 48.3 ms in the same run) did not repeat in the next three runs.
+- Screener payload is ~1 MB: fetched only when EQS or COMP-fallback opens, cached server-side 15 min, parsed in the browser.
+  CORR math is under 1 ms for 20 symbols x 5 y, so there is no worker.
+- Tests: 139 pytest (126 + 13 in `test_phase9.py`), 119 vitest (91 + 28), 59 Playwright (46 + 13 in `phase9.spec.ts`).
+- `test_core.py::test_stale_while_revalidate` flaked twice under 4 xdist workers (50 ms TTL); its TTL is now 0.5 s.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

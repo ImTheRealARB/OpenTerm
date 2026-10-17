@@ -77,6 +77,13 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Alerts are evaluated in the frontend** on raw ticks (`onRawTicks` hook in `ticks.ingest`); the status-bar flash replaces the
   "ALRT n" count for 15 s, so do not assert the count right after a trigger. Only Phase 8 adds migrations (6-7: `portfolios`, `alerts`).
 - **FXC e2e needed `toPass` retry:** a tick lands on the next frame flush, so re-select the row until the mirrored text updates.
+- **Windows is case-insensitive for TS imports:** a panel `CORR.tsx` and a helper `corr.ts` in one folder break `tsc` (TS1149); name helpers
+  distinctly (`corrMath.ts`). CORR is a DOM table (canvas grid has no per-cell fills); `.sr` mirrors its cursor cell.
+- **CSV export:** `functions/tableExport.ts` `useCsvExport(panelId, () => gridCsv(name, COLUMNS, rows))`; global binding `exportCsv` = Alt+X,
+  plus the `E` panel key (`{ panelKey: false }` if the panel already uses E). E / Alt+X while a panel loads says NOTHING TO EXPORT: wait for content in e2e.
+- **Screener (`/api/screener`) is the whole US universe as one columnar ~1 MB payload,** filtered in the browser (`eqsFilter.ts`). COMP peers fall back to the
+  largest same-industry names in it (`basis: "industry"`). Bars carry an optional `adj` (adjusted close) read from Yahoo `adjclose`.
+- **Don't use a ~50 ms TTL in a timing test:** 4 xdist workers on this machine stall longer (`test_stale_while_revalidate` used to flake).
 - **fredgraph.csv hangs on a browser User-Agent; BLS ICS needs a UA with contact info** (403 otherwise). FRED API paths need `FRED_API_KEY`
   and are only fixture-tested; the keyless `fred_csv` / `treasury` / `nasdaq_earnings` / `agency_ics` (BLS + BEA) providers serve Phase 7.
 - **`ChartView` captures `writeReadout` in its create-once effect,** so the crosshair readout keeps the first render's data. FRED remounts

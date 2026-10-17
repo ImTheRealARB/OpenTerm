@@ -178,3 +178,13 @@ def _route_phase7(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase7(request) or _route_before_phase7(request)
+
+# --- Phase 9: screener + peers ---
+# nasdaq_screener_trimmed.json is the real 2026-10-17 answer (7,002 rows) trimmed to 476 rows: the 250 largest by
+# market cap plus every 30th of the rest, kept in the original order. Nothing else was edited.
+PATHS.update({
+    "/api/screener/stocks": "nasdaq_screener_trimmed",
+    "/v6/finance/recommendationsbysymbol/AAPL": "yahoo_recs_aapl",
+    # Real answer for an unknown symbol (ZZZZNOPE): 200 with an empty result list.
+    "/v6/finance/recommendationsbysymbol/ZZZZNOPE": "yahoo_recs_empty",
+})

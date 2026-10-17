@@ -7,6 +7,7 @@ import { TopBar } from "./components/TopBar";
 import { Workspace } from "./components/Workspace";
 import { match } from "./keys/keys";
 import { dispatchPanelKey } from "./keys/panelKeys";
+import { exportPanelCsv } from "./functions/tableExport";
 import { PerfTable } from "./perf/PerfTable";
 import { loadJSON, saveJSON } from "./state/store";
 import {
@@ -117,6 +118,10 @@ export function App() {
           break;
         case "perfHud":
           setHud((v) => !v);
+          break;
+        // --- Phase 9 ---
+        case "exportCsv":
+          exportPanelCsv(workspace.get().focus);
           break;
       }
     };

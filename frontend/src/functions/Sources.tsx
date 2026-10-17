@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
 import { ApiError, api, type SourcesPayload } from "../net/api";
 import { sources } from "../net/sources";
+import type { FunctionProps } from "./registry";
+import { useCsvExport } from "./tableExport";
 
 const ms = (v: number | null) => (v == null ? "—" : v.toFixed(0));
 const ago = (s: number | null) => (s == null ? "—" : s < 60 ? `${s.toFixed(0)}S` : `${(s / 60).toFixed(0)}M`);
 const cls = (status: string) =>
   status === "OK" ? "up" : status === "DOWN" ? "err" : status === "DEGRADED" ? "warn" : "dim";
 
-export default function Sources() {
+export default function Sources({ panelId }: FunctionProps) {
   const [s, setS] = useState<SourcesPayload | null>(null);
+  useCsvExport(panelId, () =>
+    s
+      ? {
+          name: "SOURCES",
+          header: ["PROVIDER", "STATUS", "P50_MS", "P95_MS", "CALLS", "ERRORS", "TOKENS", "RATE_PER_S", "LAST_OK_AGE_S", "LAST_ERROR"],
+          rows: s.providers.map((p) => [p.name, p.status, p.latency_p50_ms, p.latency_p95_ms, p.calls, p.errors, p.tokens_remaining, p.rate_per_s, p.last_ok_age_s, p.last_error]),
+        }
+      : null,
+  );
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {

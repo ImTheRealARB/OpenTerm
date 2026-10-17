@@ -22,6 +22,10 @@ cache:
   rates_ttl_s: 1800
   earnings_ttl_s: 900
   eco_ttl_s: 21600
+
+  # --- Phase 9 ---
+  screener_ttl_s: 900
+  peers_ttl_s: 86400
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
   quotes: [yahoo, nasdaq]
@@ -44,6 +48,10 @@ providers:
   yield_curve: [treasury, fred_csv]
   earnings: [nasdaq_earnings]
   eco_calendar: [agency_ics, fred]
+
+  # --- Phase 9 ---
+  screener: [nasdaq_screener]
+  peers: [yahoo_peers]
   # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.
 news:
   # Market top-stories feeds for N. Leave unset to use the built-in list

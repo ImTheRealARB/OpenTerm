@@ -36,6 +36,7 @@ export default function Shortcuts() {
       </table>
       <div className="dim">
         BROWSERS RESERVE CTRL+W AND CTRL+1..9 (USE ALT+W, ALT+1..9). THE DESKTOP BUILD HAS NO SUCH LIMIT.
+        ALT+X EXPORTS ANY TABLE PANEL (CTRL+E AND ALT+E ARE TAKEN BY BROWSERS).
         TYPING STARTS A COMMAND, EXCEPT IN GRIDS AND CHARTS WHERE LETTERS ARE PANEL KEYS: PRESS / FIRST.
       </div>
     </div>

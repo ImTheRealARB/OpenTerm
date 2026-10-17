@@ -1,0 +1,107 @@
+/** Historical price table: newest bar first, with change % and (when the source has it) adjusted close. */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Grid, type Column, type GridHandle } from "../components/Grid";
+import { fmtAge, fmtBig, fmtPct, fmtPrice } from "../format";
+import { registerPanelKeys } from "../keys/panelKeys";
+import { ApiError, api9, type BarsAdj, type Envelope } from "../net/api";
+import { navigate } from "../state/workspace";
+import { dayKey } from "./corrMath";
+import { dirColor, navKey, useLatest } from "./quoteRows";
+import type { FunctionProps } from "./registry";
+import { histArgs, histRows, type HistRow } from "./returns";
+import { gridCsv, useCsvExport } from "./tableExport";
+
+const INTERVALS: Record<string, string> = { D: "1d", W: "1wk", MO: "1mo" };
+const INTERVAL_LABEL: Record<string, string> = { D: "DAILY", W: "WEEKLY", MO: "MONTHLY" };
+
+export default function HIST({ panelId, security, args }: FunctionProps) {
+  const symbol = security!.symbol;
+  const { range, interval, bad } = useMemo(() => histArgs(args), [args]);
+  const [env, setEnv] = useState<Envelope<BarsAdj> | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [loading, setLoading] = useState(true);
+  const grid = useRef<GridHandle>(null);
+
+  const load = useCallback(
+    (fresh: boolean) => {
+      setLoading(true);
+      return api9
+        .history(symbol, range, INTERVALS[interval], fresh)
+        .then((e) => {
+          setEnv(e);
+          setError(null);
+        })
+        .catch((e: ApiError) => setError(e))
+        .finally(() => setLoading(false));
+    },
+    [symbol, range, interval],
+  );
+
+  useEffect(() => {
+    setEnv(null);
+    void load(false);
+  }, [load]);
+
+  const tz = env?.data.tz ?? null;
+  const rows = useMemo(() => (env ? histRows(env.data) : []), [env]);
+  const hasAdj = rows.some((r) => r.adj != null);
+  const latest = useLatest(rows);
+
+  const columns = useMemo<Column<HistRow>[]>(() => {
+    const cols: Column<HistRow>[] = [
+      { title: "DATE", width: 10, text: (r) => dayKey(r.t, tz), color: () => "acc" },
+      { title: "OPEN", width: 11, align: "right", text: (r) => fmtPrice(r.open) },
+      { title: "HIGH", width: 11, align: "right", text: (r) => fmtPrice(r.high) },
+      { title: "LOW", width: 11, align: "right", text: (r) => fmtPrice(r.low) },
+      { title: "CLOSE", width: 11, align: "right", text: (r) => fmtPrice(r.close) },
+    ];
+    if (hasAdj) cols.push({ title: "ADJ CLOSE", width: 11, align: "right", text: (r) => fmtPrice(r.adj), color: () => "dim" });
+    cols.push(
+      { title: "CHG%", width: 8, align: "right", text: (r) => fmtPct(r.changePct), color: (r) => dirColor(r.changePct) },
+      { title: "VOLUME", width: 8, align: "right", text: (r) => fmtBig(r.volume) },
+    );
+    return cols;
+  }, [tz, hasAdj]);
+
+  useCsvExport(panelId, () => (rows.length ? gridCsv(`HIST_${symbol}_${range}_${interval}`, columns, rows) : null));
+
+  useEffect(
+    () =>
+      registerPanelKeys(panelId, (e) => {
+        if (navKey(e, grid.current, latest.current.length)) return true;
+        switch (e.key) {
+          case "Enter":
+            navigate(panelId, { fn: "GP", security: { symbol }, args: [range, ...(interval === "D" ? [] : [interval])] });
+            return true;
+          case "F5":
+            void load(true);
+            return true;
+        }
+        return false;
+      }),
+    [panelId, latest, load, symbol, range, interval],
+  );
+
+  return (
+    <div className="fn">
+      <div className="line">
+        <span className="acc">{symbol}</span> · HISTORY {range} {INTERVAL_LABEL[interval]}
+        {env && ` · ${rows.length} BARS${env.data.currency ? ` · ${env.data.currency}` : ""} · ${(env.source ?? "").toUpperCase()}`}
+        {env && !hasAdj && rows.length > 0 && <span className="dim"> · NO ADJ CLOSE FROM THIS SOURCE</span>}
+        {env && env.fallback_from.length > 0 && <span className="warn"> · FALLBACK FROM {env.fallback_from.join(",").toUpperCase()}</span>}
+        {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
+        {loading && <span className="dim"> · LOADING…</span>}
+        <span className="dim"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
+      </div>
+      {bad.length > 0 && <div className="err">CANNOT READ {bad.join(" ")} · USAGE: HIST [1M|3M|6M|YTD|1Y|2Y|5Y|10Y|MAX] [D|W|MO]</div>}
+      {error && (
+        <div className="err">
+          {error.message}
+          {error.detail && <span className="dim"> ({error.detail})</span>}
+        </div>
+      )}
+      {env && !rows.length && !error && <div className="warn">NO BARS RETURNED FOR {symbol} {range}</div>}
+      <Grid ref={grid} columns={columns} rows={rows} />
+    </div>
+  );
+}
