@@ -392,6 +392,9 @@ and 285.6 / 72.1 on run 3; `import pandas` and the 100-symbol run slowed by the 
 36.5 ms, **BT 10-year rule run 285.6 ms** (< 300; step 5 233.2), cached run 5.2 ms, BT open 72.1 ms (< 100), cold worker
 2.2 s, 100 symbols x 10 years 1.6 s. The BT run budget has little headroom on this machine: watch it in steps 7-9.
 
+### Phase 12 step 7: BT RUNS compare, BT EXPORT (2026-10-19)
+326 pytest + 6 xfail, 193 vitest, 85 Playwright, tsc + ruff clean. Bench: every gate except one passes (bundle 98.5 KB, tick-to-pixel 36-45 ms, BT cached run 6 ms, BT open 77-88 ms); the BT 10-year rule run read 383 / 493 / 403 / 399 ms on four runs in a row (budget 300; 230 and 286 in steps 5-6) with no change in the run path (step 7 only adds two read-only endpoints). The same in-process engine run measures 160-170 ms cool and 250-320 ms after a dozen back-to-back runs, so the machine is throttling (Google Drive sync is also busy). NOT closed: re-measure on a rested machine at the end of the phase; if it still misses, profile the run path.
+
 ## Test suite speed (2026-10-19, on top of Phase 12 step 4)
 Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
 

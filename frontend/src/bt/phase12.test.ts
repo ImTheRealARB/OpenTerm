@@ -116,3 +116,11 @@ describe("BT MC / WF (step 6)", () => {
     expect(fmtP(NaN)).toBe("—");
   });
 });
+
+describe("BT OPEN / EXPORT (step 7)", () => {
+  it("are subcommands with their arguments", () => {
+    expect(parseBtArgs(["OPEN", "abc123"])).toMatchObject({ ok: true, sub: "OPEN", args: ["abc123"] });
+    expect(parseBtArgs(["export", "abc123", "pine"])).toMatchObject({ ok: true, sub: "EXPORT", args: ["abc123", "pine"] });
+    expect(parseBtArgs(["RUNS"])).toMatchObject({ ok: true, sub: "RUNS", args: [] });
+  });
+});

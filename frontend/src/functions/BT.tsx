@@ -13,6 +13,7 @@ import { BT_USAGE, isBtRun, parseBtArgs, type BtRun } from "../bt/ruleParse";
 import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
+import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, btApi, type BtMcResult, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
@@ -20,6 +21,7 @@ import { isActive, progressText } from "../net/jobFrames";
 import { adoptJob, cancelJob, fetchJob, useJob } from "../net/jobs";
 import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
 import { navKey, useLatest } from "./quoteRows";
+import BtRuns from "./BtRuns";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
 
@@ -29,13 +31,15 @@ type View = (typeof BASE_VIEWS)[number] | "MC" | "WF";
 const LATER: Record<string, string> = {
   s: "S: SAVING STRATEGIES ARRIVES WITH THE STRATEGY EDITOR (PHASE 12 STEP 4B)",
 };
-const SUB_STEP: Record<string, string> = { RUNS: "7", EXPORT: "7", SAVE: "4B", LOAD: "4B", DEL: "4B" };
+const SUB_STEP: Record<string, string> = { SAVE: "4B", LOAD: "4B", DEL: "4B" };
+const EXPORT_USAGE = "USAGE: BT EXPORT <RUNID> [PINE|TRADES|EQUITY|METRICS]  (PINE: rule strategies only; the default is PINE)";
 const VAL_NAME = { MC: "MONTE CARLO", WF: "WALK-FORWARD" } as const;
 
 type State =
   | { k: "usage" }
   | { k: "bad"; error: string; rule?: string; col?: number }
   | { k: "later"; text: string }
+  | { k: "note"; text: string }
   | { k: "submitting" }
   | { k: "running"; jobId: string }
   | { k: "loading"; runId: string }
@@ -162,6 +166,20 @@ export default function BT({ panelId, args }: FunctionProps) {
       );
   };
 
+  /** Server-built export (Pine for rule runs, CSV parts), saved as a file. */
+  const exportRun = (id: string | undefined, what = "PINE") => {
+    const w = what.toUpperCase();
+    if (!id || !(w === "PINE" || ["TRADES", "EQUITY", "METRICS"].includes(w))) return setState({ k: "bad", error: EXPORT_USAGE });
+    setState({ k: "note", text: `EXPORTING ${w} OF ${id}…` });
+    btApi
+      .exportText(id, w === "PINE" ? "pine" : "csv", w.toLowerCase())
+      .then((text) => {
+        const file = downloadText(w === "PINE" ? `BT_${id}.pine` : `BT_${id}_${w.toLowerCase()}.csv`, text);
+        setState({ k: "note", text: `EXPORTED ${file}` });
+      })
+      .catch((e) => setState({ k: "failed", error: errText(e) }));
+  };
+
   // The command's arguments: validate locally, then submit. A remount (maximize, layout load) re-submits; the
   // backend answers an identical request from its cache at once.
   useEffect(() => {
@@ -169,7 +187,13 @@ export default function BT({ panelId, args }: FunctionProps) {
     t0.current = started !== undefined && performance.now() - started < 2000 ? started : null;
     if (!args.length) return setState({ k: "usage" });
     if (!parsed.ok) return setState({ k: "bad", error: parsed.error, rule: parsed.rule, col: parsed.col });
-    if (!isBtRun(parsed)) return setState({ k: "later", text: `BT ${parsed.sub}: NOT BUILT YET (PHASE 12 STEP ${SUB_STEP[parsed.sub] ?? "?"})` });
+    if (!isBtRun(parsed)) {
+      const id = parsed.args[0];
+      if (parsed.sub === "RUNS") return setState({ k: "usage" }); // drawn by BtRuns
+      if (parsed.sub === "OPEN") return id ? load(id) : setState({ k: "bad", error: "USAGE: BT OPEN <RUNID> (BT RUNS LISTS THE IDS)" });
+      if (parsed.sub === "EXPORT") return exportRun(id, parsed.args[1]);
+      return setState({ k: "later", text: `BT ${parsed.sub}: NOT BUILT YET (PHASE 12 STEP ${SUB_STEP[parsed.sub] ?? "?"})` });
+    }
     submit(parsed);
     // args identity changes only when the command changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -322,6 +346,16 @@ export default function BT({ panelId, args }: FunctionProps) {
           submit(p);
           return true;
         }
+        if (k === "p" && r) {
+          if (!r.rule) setMsg("P: PINE EXPORT NEEDS A RULE STRATEGY (PYTHON CODE CANNOT BE TRANSLATED FAITHFULLY; E EXPORTS CSV)");
+          else {
+            btApi
+              .exportText(r.id, "pine")
+              .then((text) => setMsg(`EXPORTED ${downloadText(`BT_${r.id}.pine`, text)}`))
+              .catch((err) => setMsg(`ERR: ${errText(err)}`));
+          }
+          return true;
+        }
         if ((k === "m" || k === "w") && r) {
           const kind = k === "m" ? "MC" : "WF";
           if (vr) setMsg(`${VAL_NAME[vr.kind]} IS STILL RUNNING`);
@@ -351,6 +385,7 @@ export default function BT({ panelId, args }: FunctionProps) {
     [panelId, latest],
   );
 
+  if (parsed.ok && parsed.sub === "RUNS") return <BtRuns panelId={panelId} />;
   return (
     <div className="fn">
       <Head parsed={isBtRun(parsed) ? parsed : null} run={run} />
@@ -359,11 +394,13 @@ export default function BT({ panelId, args }: FunctionProps) {
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
+          <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|TRADES|EQUITY|METRICS]</div>
           <div className="dim">BT MC|WF &lt;SYMBOLS&gt; &lt;RULE&gt; … RUNS IT, THEN SHUFFLES ITS TRADES (MC) OR SPLITS IT INTO WINDOWS (WF) · M / W ON AN OPEN RUN DO THE SAME</div>
         </>
       )}
       {state.k === "bad" && <BadRule {...state} />}
       {state.k === "later" && <div className="warn">{state.text}</div>}
+      {state.k === "note" && <div className="dim">{state.text}</div>}
       {state.k === "submitting" && <div className="dim">FETCHING BARS AND SUBMITTING…</div>}
       {state.k === "running" && (
         <div className="line">
@@ -386,7 +423,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <Headline run={run} />
           <div className="line">
             VIEW <span className="bt-view acc">{shown}</span>
-            <span className="dim"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
+            <span className="dim"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
           </div>
           {shown === "CHART" && chartBits && (
             <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />

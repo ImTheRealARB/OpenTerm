@@ -823,6 +823,47 @@ async def bt_run_wf(request: Request, run_id: str):
     return await _bt_validate(request, run_id, "bt.wf")
 
 
+@router.get("/bt/runs/{run_id}/export")
+async def bt_run_export(request: Request, run_id: str, fmt: str = "csv", part: str = "trades"):
+    from .bt import export
+    from .bt.store import BtError
+
+    try:
+        run = await bt_of(request).run(run_id)
+        if fmt == "csv":
+            if part not in export.PARTS:
+                raise BtError("bad_request", f"PART MUST BE {', '.join(export.PARTS).upper()}")
+            body, name = export.run_csv(run, part), f"BT_{run_id}_{part}.csv"
+        elif fmt == "pine":
+            if not run.get("rule"):
+                raise BtError("bad_request", "PINE EXPORT NEEDS A RULE STRATEGY",
+                              detail="PYTHON STRATEGIES CANNOT BE TRANSLATED FAITHFULLY: EXPORT CSV, OR WRITE IT AS A RULE")
+            lab = run["labels"] or {}
+            body = export.pine_script(run["rule"], short=bool(lab.get("short")), cash=float(run["config"].get("initial_cash", 100_000)),
+                                      fees_bps=float(lab.get("fees_bps") or 0), symbols=run["symbols"], interval=str(run["interval"]))
+            name = f"BT_{run_id}.pine"
+        else:
+            raise BtError("bad_request", "FMT MUST BE CSV OR PINE")
+    except BtError as e:
+        return bt_error(e)
+    return Response(body, media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+@router.get("/bt/compare")
+async def bt_compare(request: Request, a: str = "", b: str = ""):
+    from .bt.store import BtError
+
+    try:
+        if not a or not b:
+            raise BtError("bad_request", "COMPARE NEEDS TWO RUN IDS (a= AND b=)")
+        ra, rb = await bt_of(request).run(a), await bt_of(request).run(b)
+    except BtError as e:
+        return bt_error(e)
+    num = lambda v: isinstance(v, int | float) and not isinstance(v, bool)
+    diff = {k: rb["metrics"][k] - v for k, v in ra["metrics"].items() if num(v) and num(rb["metrics"].get(k))}
+    return Orjson({"a": ra, "b": rb, "diff": diff})  # b minus a
+
+
 @router.delete("/bt/runs/{run_id}")
 async def bt_run_delete(request: Request, run_id: str):
     from .bt.store import BtError

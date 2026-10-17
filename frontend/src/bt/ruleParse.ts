@@ -14,7 +14,7 @@ export const INTERVALS = ["1D", "1W"];
 const RANGE_RE = /^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$/;
 const TOKEN_RE = /\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))/iy;
 /** `BT <SUB> ...` forms; anything else is `BT <SYMBOLS> <RULE> ...`. */
-export const SUBCOMMANDS = new Set(["RUNS", "EXPORT", "SAVE", "LOAD", "DEL"]);
+export const SUBCOMMANDS = new Set(["RUNS", "OPEN", "EXPORT", "SAVE", "LOAD", "DEL"]);
 /** `BT MC|WF <SYMBOLS> <RULE> ...` runs the backtest, then validates it. */
 const VALIDATIONS = new Set(["MC", "WF"]);
 

@@ -65,6 +65,9 @@ async function setup(page: Page) {
     if (req.method() === "POST") posts.push({ url: path, body: req.postDataJSON?.() ?? req.postData() });
     if (path === "/api/bt/run") return r.fulfill({ json: { id: "j1", kind: "bt.run", state: "queued", progress: 0, msg: "", cached: false } });
     if (path === "/api/bt/runs") return r.fulfill({ json: { runs: [...runs.values()].map(({ equity, benchmark, trades, ...card }) => card) } });
+    if (/\/export$/.test(path)) {
+      return r.fulfill({ contentType: "text/plain", body: path.includes("/r1/") ? "//@version=5\nstrategy(\"OpenTerm BT\")\n" : "x" });
+    }
     const v = /^\/api\/bt\/runs\/(\w+)\/(mc|wf)$/.exec(path);
     if (v) {
       const kind = v[2] === "mc" ? "bt.mc" : "bt.wf";
@@ -139,7 +142,6 @@ test("BT: a bad rule shows the parser error at its column and sends nothing", as
 });
 
 test("BT RUNS: lists run cards and C compares two", async ({ page }) => {
-  test.fail();
   await setup(page);
   await cmd(page, "BT RUNS");
   const p = panel(page);
@@ -218,4 +220,63 @@ test("BT MC: a failed validation job says why and keeps the run on screen", asyn
     await expect(p).toContainText("ERR: SEED MUST BE AN INTEGER", { timeout: 500 });
   }).toPass();
   await expect(p.locator(".bt-view")).toHaveText("CHART");
+});
+
+test("BT OPEN: shows a stored run with its labels", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT OPEN r1");
+  await expect(panel(page)).toContainText("HISTORICAL SIMULATION, NOT A FORECAST");
+  await expect(panel(page)).toContainText("SMA20>SMA50");
+});
+
+test("BT RUNS: Enter opens the selected run in the same panel", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT RUNS");
+  const p = panel(page);
+  await expect(p.locator(".grid .sr")).toContainText("SMA20>SMA50");
+  await expect(async () => {
+    await page.keyboard.press("j");
+    await page.keyboard.press("Enter");
+    await expect(p).toContainText("HISTORICAL SIMULATION", { timeout: 500 });
+  }).toPass();
+  await expect(p).toContainText("CLOSE>SMA200");
+});
+
+test("BT RUNS: V switches the comparison to the two equity lines and Backspace returns to the list", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT RUNS");
+  const p = panel(page);
+  await expect(p.locator(".grid .sr")).toContainText("SMA20>SMA50");
+  await expect(async () => {
+    await page.keyboard.press("c");
+    await expect(p).toContainText("MARKED 1", { timeout: 500 });
+  }).toPass();
+  await page.keyboard.press("j");
+  await page.keyboard.press("c");
+  await expect(p.locator(".bt-view")).toHaveText("METRICS");
+  await page.keyboard.press("v");
+  await expect(p.locator(".bt-view")).toHaveText("CHART");
+  await page.keyboard.press("Backspace");
+  await expect(p).toContainText("STORED (LAST 200)");
+});
+
+test("BT EXPORT: saves the Pine Script of a rule run", async ({ page }) => {
+  await setup(page);
+  const [dl]: [Download, void] = await Promise.all([page.waitForEvent("download"), cmd(page, "BT EXPORT r1 PINE")]);
+  expect(dl.suggestedFilename()).toBe("BT_r1.pine");
+  expect(await readFile((await dl.path())!, "utf-8")).toContain("//@version=5");
+  await expect(panel(page)).toContainText("EXPORTED BT_r1.pine");
+});
+
+test("BT: P on an open run saves its Pine Script, a bad export command shows the usage", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y");
+  frame("done", 1, "", { run_id: "r1" });
+  await expect(panel(page)).toContainText("HISTORICAL SIMULATION");
+  await expect(async () => {
+    const [dl]: [Download, void] = await Promise.all([page.waitForEvent("download", { timeout: 600 }), page.keyboard.press("p")]);
+    expect(dl.suggestedFilename()).toBe("BT_r1.pine");
+  }).toPass();
+  await cmd(page, "BT EXPORT");
+  await expect(panel(page)).toContainText("USAGE: BT EXPORT <RUNID>");
 });

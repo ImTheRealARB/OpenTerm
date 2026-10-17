@@ -1,6 +1,6 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; steps 1-6 done.**
+Status: **approved as written 2026-10-19; steps 1-7 done.**
 
 Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
 symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.
@@ -17,6 +17,11 @@ Job kinds `bt.mc` / `bt.wf` are server-submitted only (`POST /api/bt/runs/{id}/m
 travel in the job params, so the worker never reads the database. Equity is the stored 4-decimal curve, so a bootstrap
 interval can differ from a run on the unrounded curve in the 5th digit; the Monte Carlo numbers use trades only and match
 Vibe exactly.
+Changes made in step 7: `BT OPEN <runid>` opens a stored run (Enter in `BT RUNS` uses it); `BT EXPORT <runid> [PINE|TRADES|EQUITY|METRICS]`
+and the `P` key save the server-built Pine Script / CSV; `GET /api/bt/runs/{id}/export?fmt=csv|pine&part=` and
+`GET /api/bt/compare?a=&b=` (B minus A for every shared numeric metric). The Pine translation is labelled an approximation
+(next-bar-open fills like OpenTerm, but EMA / RSI seeding, share rounding and the per-market cost stack differ); `CROSS>` /
+`CROSS<` become persistent flags. There is no delete key in `BT RUNS` yet (the API has `DELETE`).
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 12", [FEATURE_GAP.md](../FEATURE_GAP.md) rows for
 `agent/backtest/*`, and the Vibe-Trading code itself at commit `d0db2e3` (MIT; read 2026-10-19).
 
@@ -123,7 +128,7 @@ Frontend:
 4. `BT` panel (frontend) with chart, metrics, trades, code views and labels; bench budgets.
 5. Engines: India, crypto (spot + perps), forex, futures, composite; Binance klines adapter. **Done 2026-10-19.**
 6. `BT MC`, `BT WF`. **Done 2026-10-19.**
-7. `BT RUNS` compare and `BT EXPORT` (CSV, Pine).
+7. `BT RUNS` compare and `BT EXPORT` (CSV, Pine). **Done 2026-10-19.**
 8. `IMPORT` (CSV, `LOCAL DATA`).
 9. `THIRD_PARTY.md` rows, docs (`DATA_LIMITS.md`, `COMMANDS.md`, `ADDING_A_FUNCTION.md` if needed), phase verification.
 

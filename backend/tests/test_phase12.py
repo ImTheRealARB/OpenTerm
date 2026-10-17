@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-RUNS = pytest.mark.xfail(strict=True, reason="Phase 12 step 7 (BT RUNS compare, BT EXPORT) not built")
 IMPORT = pytest.mark.xfail(strict=True, reason="Phase 12 step 8 (IMPORT) not built")
 
 FIX = Path(__file__).parent / "fixtures"
@@ -501,7 +500,6 @@ def test_bt_mc_and_wf_jobs(client):
 
 # --- 8. Runs compare and export (step 7) -------------------------------------------------------------------------
 
-@RUNS
 def test_export_csv_and_pine(client):
     run = bt_run(client, rule="SMA20>SMA50", symbols=["AAPL"], interval="1D", range="10Y")
     rid = run["result"]["run_id"]
@@ -512,7 +510,6 @@ def test_export_csv_and_pine(client):
     assert "HISTORICAL SIMULATION, NOT A FORECAST" in pine.text
 
 
-@RUNS
 def test_pine_refused_for_python_strategies(client):
     client.put("/api/bt/strategies/mysma", json={"code": GOOD})
     run = bt_run(client, strategy="mysma", symbols=["AAPL"], interval="1D", range="10Y")
@@ -520,7 +517,6 @@ def test_pine_refused_for_python_strategies(client):
     assert r.status_code == 400 and "RULE" in r.json()["detail"]
 
 
-@RUNS
 def test_compare_two_runs(client):
     a = bt_run(client, rule="SMA20>SMA50", symbols=["AAPL"], interval="1D", range="10Y")["result"]["run_id"]
     b = bt_run(client, rule="CLOSE>SMA200", symbols=["AAPL"], interval="1D", range="10Y")["result"]["run_id"]
