@@ -1,27 +1,23 @@
 # Handoff
 
-_Last updated: 2026-10-18, session 5 (Phases 11-19 on branch `claude/openterm-phases-11-19-328938`; Phase 11 steps 1-4 done; next: step 11.5 LLM gateway, needs an OpenRouter key)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 steps 1-5 done except one recording; next: record the OpenRouter stream once the key is set, then step 11.6)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (paused 2026-10-18, end of session 5)
-- **Where the work is:** branch `claude/openterm-phases-11-19-328938`, checked out in the worktree
-  `.claude/worktrees/openterm-phases-11-19-328938` (under the main checkout `C:\Users\Asus\Documents\OpenTerm`). Not merged
-  into `main`; no remote. The tree is clean: the last code commit is Phase 11 step 4 (`308835b`), followed by this docs commit.
-  Nothing is running: no subagents, no servers.
-- **Open the new session in that worktree** (or `git checkout claude/openterm-phases-11-19-328938` elsewhere). In a fresh
-  checkout, run `cd backend; uv sync` and `cd frontend; npm ci` first.
-- **Exact next action: Phase 11 step 5, the LLM gateway** ([docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) section 3).
-  It is blocked on an **OpenRouter key**. The user sets `OPENROUTER_API_KEY` in the APIKEYS panel or in the worktree's `.env`
-  (gitignored). Never paste a key into chat or the repo. Then:
-  1. Record one real streamed answer from a free `:free` model to `backend/tests/fixtures/llm_openrouter_stream.txt`
-     (raw SSE text; keep the key out of the file).
-  2. Build `openterm/llm/` (`sse.py`, `openai_compat.py`, `anthropic.py`, `spend.py`, `client.py`), `/api/llm/health`, the
-     `ollama` SOURCES row and the APIKEYS spend-cap edit (`C`).
-  3. Delete the `@LLM` markers in `backend/tests/test_phase11.py` (7 tests) and make those tests pass.
-
-  Step 6 then closes Phase 11: `THIRD_PARTY.md`, the CLAUDE.md rule changes, docs, and the phase verification.
+## Resume here (2026-10-19, end of session 6)
+- **Where the work is now:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`.
+  Session 6 was opened in that worktree, and a hook blocks writes to other worktrees, so its branch was fast-forwarded to
+  `claude/openterm-phases-11-19-328938` (`a19f325`, no merge commit) and step 5 was committed on top. The 328938 branch is
+  now behind; `git -C <328938 worktree> merge --ff-only claude/openterm-phases-11-19-a99b2b` brings it level if you want to
+  continue there. Not merged into `main`; no remote. Nothing is running.
+- **Step 5 (LLM gateway) is built except one recording.** The OpenRouter key was not found (not in env, the Windows
+  keyring or any `.env`), so `test_recorded_openrouter_stream_gives_tokens_usage_and_cost` stays strict-xfail (`RECORDING`
+  marker in `backend/tests/test_phase11.py`).
+- **Exact next action:** once `OPENROUTER_API_KEY` is set (APIKEYS panel, or the worktree's `.env`), run from `backend/`
+  `uv run python ../scripts/record_llm.py` (picks the first `:free` model, US$0; never prints the key), check the
+  fixture has no key in it, delete the `@RECORDING` line and run the gates. Then step 6 closes Phase 11: `THIRD_PARTY.md`,
+  the CLAUDE.md rule changes, docs (`ADDING_A_PROVIDER.md` keyed section, `DATA_LIMITS.md`) and the phase verification.
 - **The user's working rules for Phases 11-19** (from their prompt; keep following them):
   1. Do one step per turn, in HANDOFF order. A step is a spec, a tests set, or one function's code.
   2. Each phase starts with `docs/specs/PHASE_<n>.md`, with the roadmap's proposed defaults listed at the top for approval.
@@ -243,7 +239,7 @@ Remaining:
    | 11.2 Tests set: `backend/tests/test_phase11.py` (39), `frontend/src/net/phase11.test.ts` (5), `frontend/e2e/phase11.spec.ts` (4) | **done**; all marked expected-to-fail per step (see CLAUDE.md) |
    | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | **done** (backend by the main session, frontend by one Sonnet subagent) |
    | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **done** (backend main session, frontend one Sonnet subagent); bench 21/21 |
-   | 11.5 LLM gateway + health | **next**; **needs an OpenRouter key** (`OPENROUTER_API_KEY`) to record one streamed answer (a free model is enough). Remove the `@LLM` markers |
+   | 11.5 LLM gateway + health | **done except the recording** (main session, no subagents); bench 21/21 on the third run. `test_recorded_openrouter_stream...` waits for the OpenRouter key (`scripts/record_llm.py`) |
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | pending |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
@@ -265,6 +261,17 @@ Remaining:
    `WORKER DIED`, 10 frames/s/job). Hub `Client.push` / `Hub.broadcast` carry `J` frames. `/api/jobs` POST/GET, `/{id}` GET/DELETE,
    `DELETE /api/jobs?state=finished`. Frontend: `net/jobFrames.ts`, `net/jobs.ts`, `functions/JOBS.tsx`, `jobsArgs.ts`, status bar `JOBS n`.
    The job budget is split (user's choice): frame-to-paint and server time gated, end to end through the bench proxy is INFO.
+   Step 5 notes: `backend/openterm/llm/` = `sse.py` (incremental `SSEParser` + `parse_sse`), `events.py` (`Event`), `openai_compat.py`
+   (`OpenAIStream`, tool-call deltas assembled per `index`, emitted on `finish_reason`), `anthropic.py` (`AnthropicStream`, OpenAI-shaped
+   messages/tools converted to the Messages API), `spend.py` (`check`/`cost`, per-day spend in `kv` `llm_spend:<date>` added in one SQL
+   statement, cap in `kv` `llm_cap`, default US$1), `client.py` (`Gateway.chat(messages, model, provider="openrouter", tools,
+   max_tokens, temperature)`: KEY REQUIRED / PRICE UNKNOWN / SPEND CAP REACHED before any network call, OpenRouter prices from its
+   `/models` list (cached 1 h, `:free` = 0), OpenAI/Anthropic prices from `config.yaml` `llm.prices` (left empty on purpose), worst case
+   charged if a stream ends without usage; `health()`, Ollama probe 300 ms cached 10 s). API: `GET /api/llm/health`,
+   `PUT /api/llm/cap` (loopback, 0-1000), `/api/keys` `spend` is real, SOURCES has an `ollama` row. The gateway is built on first use
+   (`api.llm_of`; `app.state.llm` reset in the lifespan). Fixture mode: Ollama port refuses, OpenRouter chat replays
+   `llm_openrouter_stream.txt` if present, other LLM hosts 404. No AI function calls `chat()` yet (Phase 16). Frontend: APIKEYS `C`
+   edits the cap (`functions/spendCap.ts`). The `client` fixture now clears every KEY_SPECS env var.
    Baseline before Phase 11 code: 163 pytest, 169 vitest, 66 Playwright, bench 17/17 on the rerun (see `docs/PERFORMANCE.md`
    "Phase 11 baseline"). Open problem: port 8000 was held by the user's own `start.ps1` backend (system Python); stop it
    (with the user's OK) before the bench.

@@ -14,7 +14,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-LLM = pytest.mark.xfail(strict=True, reason="Phase 11 step 5 (LLM gateway) not built")
+RECORDING = pytest.mark.xfail(strict=True, reason="needs fixtures/llm_openrouter_stream.txt, recorded with the "
+                              "OpenRouter key (scripts/record_llm.py)")
 
 SECRET = "sk-test-0123456789abcdefSECRET"
 SPEC_NAMES = {"openrouter", "openai", "anthropic", "finnhub", "alpaca", "fmp", "fred", "eia", "openfigi", "tradier",
@@ -413,13 +414,11 @@ OPENAI_CHUNKS = [
 ]
 
 
-@LLM
 def test_sse_parser_handles_split_chunks_and_comments():
     payloads = mod("openterm.llm.sse").parse_sse(OPENAI_CHUNKS)
     assert payloads[0].startswith('{"choices"') and payloads[-1] == "[DONE]" and len(payloads) == 6
 
 
-@LLM
 def test_openai_compatible_events():
     llm = mod("openterm.llm.openai_compat")
     events = list(llm.events_from_payloads(mod("openterm.llm.sse").parse_sse(OPENAI_CHUNKS)))
@@ -446,7 +445,6 @@ ANTHROPIC_PAYLOADS = [
 ]
 
 
-@LLM
 def test_anthropic_events_map_to_the_same_shape():
     events = list(mod("openterm.llm.anthropic").events_from_payloads(ANTHROPIC_PAYLOADS))
     assert "".join(e.text for e in events if e.type == "token") == "Hi"
@@ -457,7 +455,7 @@ def test_anthropic_events_map_to_the_same_shape():
     assert events[-1].type == "done"
 
 
-@LLM
+@RECORDING
 def test_recorded_openrouter_stream_gives_tokens_usage_and_cost():
     # One real streamed answer (raw SSE text), recorded in step 5 with the OpenRouter key.
     raw = (Path(__file__).parent / "fixtures" / "llm_openrouter_stream.txt").read_bytes().decode("utf-8")
@@ -468,7 +466,6 @@ def test_recorded_openrouter_stream_gives_tokens_usage_and_cost():
     assert usage.completion_tokens > 0 and usage.cost is not None and events[-1].type == "done"
 
 
-@LLM
 def test_spend_cap_and_cost():
     spend = mod("openterm.llm.spend")
     price = {"input": 3.0, "output": 15.0}  # US$ per million tokens
@@ -479,7 +476,6 @@ def test_spend_cap_and_cost():
     assert spend.cost(prompt_tokens=1_000_000, completion_tokens=100_000, price=price) == pytest.approx(4.5)
 
 
-@LLM
 def test_spend_is_stored_per_day(client):
     spend = mod("openterm.llm.spend")
     db = client.app.state.userdata.db
@@ -493,7 +489,6 @@ def test_spend_is_stored_per_day(client):
     assert today == pytest.approx(0.35) and tomorrow == 0.0
 
 
-@LLM
 def test_llm_health_without_keys(client):
     r = client.get("/api/llm/health")
     assert r.status_code == 200
@@ -503,3 +498,95 @@ def test_llm_health_without_keys(client):
     assert r.json()["spend"] == {"today": 0.0, "cap": 1.0}
     keyed = {k["name"]: k for k in client.get("/api/sources").json()["keyed"]}
     assert keyed["ollama"]["status"] == "DOWN"
+
+
+# --- 3b. Gateway end to end (added in step 5; mocked transport, no network) ---
+
+def _gateway(tmp_path, handler, keys_env=None):
+    import aiosqlite
+
+    client_mod, keys = mod("openterm.llm.client"), mod("openterm.keys")
+    store = keys.KeyStore(env=keys_env or {}, dotenv=tmp_path / "k.env", keyring=keys.MemoryKeyring())
+
+    async def make():
+        db = await aiosqlite.connect(tmp_path / "g.db")
+        await db.execute("CREATE TABLE kv (key TEXT PRIMARY KEY, value BLOB NOT NULL)")
+        http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        prices = {"openai": {"gpt-test": {"input": 1.0, "output": 2.0}}}
+        return client_mod.Gateway(store, http, db, {"prices": prices}), db
+
+    return make
+
+
+def _run(make, fn):
+    async def go():
+        gw, db = await make()
+        try:
+            return await fn(gw, db)
+        finally:
+            await gw.http.aclose()
+            await db.close()
+
+    return asyncio.run(go())
+
+
+async def _collect(gw, **kw):
+    return [e async for e in gw.chat([{"role": "user", "content": "hi"}], **kw)]
+
+
+def test_gateway_key_required_before_any_call(tmp_path):
+    calls = []
+    make = _gateway(tmp_path, lambda r: calls.append(r) or httpx.Response(500))
+    events = _run(make, lambda gw, db: _collect(gw, model="x/y"))
+    assert [e.type for e in events] == ["error"] and events[0].kind == "key_required"
+    assert "OPENROUTER" in events[0].text and calls == []
+
+
+def test_gateway_streams_and_charges_the_real_cost(tmp_path):
+    seen = {}
+
+    def handler(r: httpx.Request) -> httpx.Response:
+        seen["auth"] = r.headers.get("authorization")
+        seen["body"] = r.content
+        return httpx.Response(200, content=b"".join(OPENAI_CHUNKS), headers={"content-type": "text/event-stream"})
+
+    make = _gateway(tmp_path, handler, keys_env={"OPENAI_API_KEY": SECRET})
+
+    async def fn(gw, db):
+        events = await _collect(gw, model="gpt-test", provider="openai", max_tokens=100)
+        return events, await mod("openterm.llm.spend").today(db)
+
+    events, spent = _run(make, fn)
+    assert "".join(e.text for e in events if e.type == "token") == "Hello" and events[-1].type == "done"
+    assert seen["auth"] == f"Bearer {SECRET}" and b'"include_usage":true' in seen["body"]
+    assert spent == pytest.approx(0.00042)  # the provider's own cost wins over the price table
+
+
+def test_gateway_refuses_over_the_cap_and_maps_401(tmp_path):
+    calls = []
+
+    def handler(r):
+        calls.append(r)
+        return httpx.Response(401, json={"error": {"message": f"bad key {SECRET}"}})
+
+    make = _gateway(tmp_path, handler, keys_env={"OPENAI_API_KEY": SECRET})
+
+    async def fn(gw, db):
+        spend = mod("openterm.llm.spend")
+        await spend.set_cap(db, 0.0)
+        refused = await _collect(gw, model="gpt-test", provider="openai")
+        unknown = await _collect(gw, model="gpt-unpriced", provider="openai")
+        await spend.set_cap(db, 1.0)
+        bad = await _collect(gw, model="gpt-test", provider="openai")
+        return refused, unknown, bad, await spend.today(db)
+
+    refused, unknown, bad, spent = _run(make, fn)
+    assert refused[0].kind == "spend_cap" and unknown[0].kind == "price_unknown" and len(calls) == 1
+    assert bad[0].kind == "invalid" and SECRET not in bad[0].text and spent == 0.0
+
+
+def test_spend_cap_endpoint(client):
+    assert client.put("/api/llm/cap", json={"cap": 2.5}).json() == {"today": 0.0, "cap": 2.5}
+    assert client.get("/api/keys").json()["spend"] == {"today": 0.0, "cap": 2.5}
+    assert client.put("/api/llm/cap", json={"cap": -1}).status_code == 400
+    assert client.put("/api/llm/cap", json={"cap": "1"}).status_code == 400

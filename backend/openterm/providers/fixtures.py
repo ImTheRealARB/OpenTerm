@@ -206,3 +206,23 @@ def _route(request: httpx.Request) -> httpx.Response:
     if (name := KEY_TESTS.get((request.url.host, request.url.path))) is not None:
         return _load(name)
     return _route_before_phase11(request)
+
+
+# --- Phase 11 step 5: LLM gateway ---
+# Nothing listens for Ollama in fixture mode. OpenRouter chat replays the one recorded stream when it exists
+# (llm_openrouter_stream.txt, raw SSE); every other LLM call is "not recorded".
+LLM_HOSTS = {"openrouter.ai", "api.openai.com", "api.anthropic.com"}
+_route_before_llm = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    url = request.url
+    if url.host in ("127.0.0.1", "localhost") and url.port == 11434:
+        raise httpx.ConnectError("fixture mode: nothing listens on the Ollama port", request=request)
+    if url.host == "openrouter.ai" and url.path == "/api/v1/chat/completions":
+        rec = FIXTURES / "llm_openrouter_stream.txt"
+        if rec.exists():
+            return httpx.Response(200, content=rec.read_bytes(), headers={"content-type": "text/event-stream"})
+    if url.host in LLM_HOSTS and (url.host, url.path) not in KEY_TESTS:
+        return httpx.Response(404, text="not recorded")
+    return _route_before_llm(request)

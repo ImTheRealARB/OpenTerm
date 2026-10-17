@@ -185,5 +185,5 @@ Frontend:
 2. Tests set: all tests above, failing for the right reason.
 3. Key store, redaction, `/api/keys`, `KEY REQUIRED` state, `APIKEYS` panel, SOURCES rows.
 4. Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets.
-5. LLM gateway + health (needs the OpenRouter key to record).
+5. LLM gateway + health (needs the OpenRouter key to record). **Built 2026-10-19; the recording waits for the key.**
 6. `THIRD_PARTY.md`, CLAUDE.md rule changes, docs (`ADDING_A_PROVIDER.md` keyed section, `DATA_LIMITS.md`), phase verification.

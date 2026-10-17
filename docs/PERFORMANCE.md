@@ -315,6 +315,15 @@ heap 5.2 MB, layout 38.7 ms; job frame-to-paint 33.3 ms, job submit server 2.0 m
 1.3 ms, JOBS/APIKEYS open 23.0 ms, worker pool cold start 157-207 ms (INFO). Chart pan missed once (33.4 ms) in an earlier
 run, as before.
 
+### Phase 11 step 5: LLM gateway (2026-10-19)
+205 pytest + 1 xfail (the recorded OpenRouter stream, waiting for the key), 184 vitest, 72 Playwright, tsc + ruff clean.
+No new budget: the gateway is imported on first use (`api.llm_of`), so startup is unchanged. Bundle 98.0 KB (unchanged;
+the cap edit lives in the lazy APIKEYS chunk). Run 1 missed tick-to-pixel (56.0 ms) and chart pan (33.4 ms); run 2 missed
+chart pan only (33.4 ms; an unrelated Astro dev server was using CPU); run 3 **21/21**. Run 2 otherwise: backend p95
+0.7 / 1.0 / 2.8 ms, cold start 122.4 ms, keystroke 14.9 ms, cached command 17.3 ms, tick-to-pixel 43.7 ms, heap 5.9 MB,
+layout 40.8 ms, job frame-to-paint 31.8 ms, job submit 2.6 ms, cached job 1.9 ms, JOBS/APIKEYS open 24.7 ms. Run 3: chart
+pan 16.8 ms, tick-to-pixel 47.0 ms.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

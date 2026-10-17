@@ -20,6 +20,11 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENTERM_KEYRING", "memory")
     monkeypatch.setenv("OPENTERM_DOTENV_PATH", str(tmp_path / "keys.env"))
     monkeypatch.setenv("OPENTERM_JOB_WORKERS", "2")
+    from openterm.keys import KEY_SPECS
+
+    for spec in KEY_SPECS.values():  # a key in the developer's own environment must not change test results
+        for name in spec.fields:
+            monkeypatch.delenv(name, raising=False)
     from openterm.config import get_settings
 
     get_settings.cache_clear()

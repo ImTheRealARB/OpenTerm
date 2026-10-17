@@ -90,6 +90,7 @@ async def lifespan(app: FastAPI):
     app.state.keys = store = keys.from_settings(settings)
     keys_http = httpx.AsyncClient(transport=providers.fixture_transport()) if settings.openterm_fixtures else http
     app.state.keys_http = keys_http
+    app.state.llm = None  # LLM gateway: built on first use (api.llm_of)
 
     def on_key_change(name: str) -> None:
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.

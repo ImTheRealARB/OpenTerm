@@ -122,7 +122,8 @@ async def sources(request: Request):
     return {
         "providers": [{**p, "last_error": redact(p["last_error"])} if p.get("last_error") else p
                       for p in s.router.summary()],
-        "keyed": await asyncio.to_thread(keyed_status, request.app.state.settings, request.app.state.keys),
+        "keyed": await asyncio.to_thread(keyed_status, request.app.state.settings, request.app.state.keys)
+        + [await ollama_row(request)],
         "order": s.router.order,
         "cache": s.stats(),
         "fixtures": request.app.state.settings.openterm_fixtures,
@@ -457,7 +458,7 @@ def loopback(request: Request) -> bool:
 @router.get("/keys")
 async def keys_list(request: Request):
     rows = await asyncio.to_thread(keys_of(request).statuses)
-    return {"keys": [key_row(r) for r in rows], "spend": {"today": 0.0, "cap": 1.0}}
+    return {"keys": [key_row(r) for r in rows], "spend": await llm_of(request).spend_status()}
 
 
 async def _test(request: Request, name: str) -> dict:
@@ -548,3 +549,42 @@ async def jobs_clear(request: Request, state: str = "finished"):
     if state != "finished":
         return error(DataError("bad_request", "ONLY state=finished CAN BE CLEARED"))
     return {"cleared": await jobs_of(request).clear_finished()}
+
+
+# --- Phase 11: LLM gateway (no AI functions yet: health, spend and the cap) ---
+def llm_of(request: Request):
+    """The gateway is built on first use, so cold start never imports it."""
+    app = request.app
+    if getattr(app.state, "llm", None) is None:
+        from .llm.client import Gateway
+
+        app.state.llm = Gateway(app.state.keys, app.state.keys_http, user(request).db,
+                                app.state.settings.yaml.get("llm") or {})
+    return app.state.llm
+
+
+async def ollama_row(request: Request) -> dict:
+    state, detail = await llm_of(request).ollama_status()
+    return {"name": "ollama", "status": state, "note": f"Local AI models, no key. {detail}"}
+
+
+@router.get("/llm/health")
+async def llm_health(request: Request):
+    return await llm_of(request).health()
+
+
+@router.put("/llm/cap")
+async def llm_cap(request: Request):
+    from .llm import spend
+
+    if not loopback(request):
+        return key_error("forbidden", "THE SPEND CAP CAN ONLY BE CHANGED FROM THIS MACHINE")
+    try:
+        body = await json_object(request)
+    except UserDataError as e:
+        return error(e)
+    cap = body.get("cap")
+    if isinstance(cap, bool) or not isinstance(cap, int | float) or not 0 <= cap <= spend.MAX_CAP:
+        return key_error("bad_request", f"CAP MUST BE A NUMBER FROM 0 TO {spend.MAX_CAP:.0f} (US$ PER DAY)")
+    await spend.set_cap(user(request).db, round(float(cap), 2))
+    return await llm_of(request).spend_status()

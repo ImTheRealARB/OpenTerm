@@ -12,6 +12,7 @@ import { api, type ApiError, type KeyRow, type KeysPayload } from "../net/api";
 import { apiKeysSignup } from "./apikeysSignup";
 import { maskKey } from "./apikeysMask";
 import { navKey, useLatest } from "./quoteRows";
+import { parseCap, spendLine } from "./spendCap";
 import type { FunctionProps } from "./registry";
 import { openUrl } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -49,10 +50,12 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
   const [edit, setEdit] = useState<Edit | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [msg, setMsg] = useState<Msg | null>(null);
+  const [capEdit, setCapEdit] = useState(false);
+  const capInput = useRef<HTMLInputElement | null>(null);
   const grid = useRef<GridHandle>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const rows = data?.keys ?? [];
-  const latest = useLatest({ rows, edit, confirm });
+  const latest = useLatest({ rows, edit, confirm, capEdit });
   useCsvExport(panelId, () => gridCsv("APIKEYS", COLUMNS, rows)); // status only, never a value
 
   const refresh = useCallback(
@@ -135,12 +138,34 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
     }
   };
 
+  const saveCap = async () => {
+    const text = capInput.current?.value ?? "";
+    const cap = parseCap(text);
+    if (cap === null) {
+      setMsg({ text: "CAP MUST BE US$0-1000, E.G. 2.50", cls: "err" });
+      return;
+    }
+    setCapEdit(false);
+    try {
+      const spend = await api.putLlmCap(cap);
+      setData((d) => (d ? { ...d, spend } : d));
+      setMsg({ text: `AI SPEND CAP SET: US$${spend.cap.toFixed(2)} PER DAY`, cls: "up" });
+    } catch (e) {
+      const a = e as ApiError;
+      setMsg({ text: `CAP NOT SAVED: ${a.message}${a.detail ? ` (${a.detail})` : ""}`, cls: "err" });
+    }
+  };
+
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         const g = grid.current;
-        const { rows: cur, edit: ed, confirm: c } = latest.current;
+        const { rows: cur, edit: ed, confirm: c, capEdit: ce } = latest.current;
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
+        if (ce) {
+          if (e.key === "Escape") setCapEdit(false);
+          return e.key === "Escape";
+        }
         if (ed) {
           // The field normally holds focus and handles its own keys; this covers focus that was clicked away.
           if (e.key === "Escape") {
@@ -180,6 +205,10 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
             else setMsg({ text: "NO SIGN-UP PAGE FOR THIS PROVIDER", cls: "dim" });
             return true;
           }
+          case "c":
+            setMsg(null);
+            setCapEdit(true);
+            return true;
           case "F5":
             void refresh();
             return true;
@@ -213,6 +242,18 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
   const onFieldChange = () =>
     setEdit((ed) => (ed ? { ...ed, masks: ed.fields.map((_, i) => maskKey(inputs.current[i]?.value ?? "")) } : ed));
 
+  const onCapKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!(e.ctrlKey || e.altKey || e.metaKey) || e.key === "Escape") e.stopPropagation();
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setCapEdit(false);
+      setMsg({ text: "CAP UNCHANGED", cls: "dim" });
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      void saveCap();
+    }
+  };
+
   const set = rows.filter((r) => r.present).length;
   const spend = data?.spend;
   return (
@@ -222,7 +263,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
         {data === null && !err && <span className="dim"> · LOADING…</span>}
         {err && <span className="err"> · STALE: {err}</span>}
         {confirm && <span className="err"> · DELETE {confirm.toUpperCase()} KEY? PRESS D AGAIN</span>}
-        <span className="dim"> · J/K MOVE · ENTER EDIT · T TEST · D DELETE · O SIGN UP · E EXPORT · F5</span>
+        <span className="dim"> · J/K MOVE · ENTER EDIT · T TEST · D DELETE · O SIGN UP · C SPEND CAP · E EXPORT · F5</span>
       </div>
       {msg && <div className={msg.cls}>{msg.text}</div>}
       {edit && (
@@ -252,7 +293,24 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
       {data?.keys.length === 0 && <div className="dim">NO KEYED PROVIDERS REPORTED BY THE BACKEND.</div>}
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
       <div className="summary" data-testid="apikeys-spend">
-        {spend ? `AI SPEND TODAY US$${spend.today.toFixed(2)} / ${spend.cap.toFixed(2)} CAP` : "AI SPEND TODAY —"}
+        {spendLine(spend)}
+        {capEdit && (
+          <label className="keyfield">
+            {" "}
+            <span className="acc">NEW DAILY CAP US$</span>{" "}
+            <input
+              ref={capInput}
+              type="text"
+              inputMode="decimal"
+              defaultValue={spend ? spend.cap.toFixed(2) : ""}
+              autoFocus
+              aria-label="AI spend cap in US dollars per day"
+              data-testid="apikeys-cap"
+              onKeyDown={onCapKey}
+            />{" "}
+            <span className="dim">ENTER SAVE · ESC CANCEL</span>
+          </label>
+        )}
       </div>
     </div>
   );

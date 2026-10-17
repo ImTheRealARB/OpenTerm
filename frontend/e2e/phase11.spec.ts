@@ -136,3 +136,51 @@ test("JOBS: JOBS TEST streams progress, Esc cancels, status bar counts running j
   await expect(selected(page)).toContainText("CANCELLED");
   await expect(page.locator("footer.status")).not.toContainText("JOBS 1");
 });
+
+test("APIKEYS: C edits the daily AI spend cap", async ({ page }) => {
+  await setup(page);
+  const caps: unknown[] = [];
+  await page.route("**/api/llm/cap", (r) => {
+    caps.push(r.request().postDataJSON());
+    return r.fulfill({ json: { today: 0, cap: 2.5 } });
+  });
+  await run(page, "APIKEYS");
+  const spend = panel(page).getByTestId("apikeys-spend");
+  await expect(spend).toContainText("US$0.00 / 1.00 CAP");
+  await expect(selected(page)).toContainText("OPENROUTER");
+  await expect(async () => {
+    await page.keyboard.press("c"); // panel keys register after the lazy module loads
+    await expect(page.getByTestId("apikeys-cap")).toBeFocused({ timeout: 500 });
+  }).toPass();
+  await page.keyboard.press("Control+a");
+  await page.keyboard.type("2.5");
+  await page.keyboard.press("Enter");
+  await expect(spend).toContainText("US$0.00 / 2.50 CAP");
+  expect(caps).toEqual([{ cap: 2.5 }]);
+  await expect(page.locator("#cmdline")).toHaveValue("");
+});
+
+test("SOURCES shows the LLM rows", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/sources", (r) =>
+    r.fulfill({
+      json: {
+        providers: [
+          { name: "nasdaq", label: "Nasdaq", source: "nasdaq", capabilities: ["quotes"], markets: "US", terms: "Public",
+            status: "OK", down_for_s: 0, latency_p50_ms: 300, latency_p95_ms: 400, calls: 3, errors: 0,
+            last_error: null, last_error_age_s: null, last_ok_age_s: 2, tokens_remaining: 3, rate_per_s: 2 },
+        ],
+        keyed: [
+          { name: "openrouter", status: "KEY REQUIRED", note: "AI models through one key. Phase 16. Set OPENROUTER in APIKEYS." },
+          { name: "ollama", status: "DOWN", note: "Local AI models, no key. NOTHING ANSWERS AT http://127.0.0.1:11434" },
+        ],
+        order: { quotes: ["nasdaq"] },
+        cache: { fresh_hits: 1, stale_hits: 0, misses: 1, hit_pct: 50, inflight: 0, mem_entries: 2 },
+        fixtures: false,
+      },
+    }),
+  );
+  await run(page, "SOURCES");
+  await expect(panel(page)).toContainText("Set OPENROUTER in APIKEYS");
+  await expect(panel(page)).toContainText("NOTHING ANSWERS AT http://127.0.0.1:11434");
+});

@@ -121,6 +121,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   and heavy libraries (import those inside a kind's `fn`). Migration tests that fake an old DB must also `DROP TABLE jobs`.
   Bench job budgets are split like backend latency: the Vite preview proxy adds ~16 ms on Windows, so end to end is INFO.
 - **Any app error text goes through `redact()`** (`api.error`, SOURCES `last_error`, key-test detail). New error paths must too.
+- **LLM gateway (`openterm/llm/`) is imported on first use** (`api.llm_of`). Prompts and outputs are never logged. In fixture mode
+  the Ollama port raises ConnectError (the generic fallback route would answer 200 and fake an `OK`); keep LLM hosts routed explicitly.
+- **A session cannot write into another worktree** (hook). Bring the branch here with `git merge --ff-only <branch>` instead.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
 ## Conventions

@@ -169,6 +169,7 @@ export const api = {
   putKey: (name: string, fields: Record<string, string>) => send<KeyRow>("PUT", `/api/keys/${encodeURIComponent(name)}`, { fields }),
   testKey: (name: string) => send<KeyRow>("POST", `/api/keys/${encodeURIComponent(name)}/test`),
   deleteKey: (name: string) => send<KeyRow>("DELETE", `/api/keys/${encodeURIComponent(name)}`),
+  putLlmCap: (cap: number) => send<KeysPayload["spend"]>("PUT", "/api/llm/cap", { cap }),
   // Phase 11 job runner (uncached). `job` carries the result; the list does not.
   jobs: () => send<{ jobs: JobRec[] }>("GET", "/api/jobs"),
   job: (id: string) => send<JobRec>("GET", `/api/jobs/${encodeURIComponent(id)}`),
