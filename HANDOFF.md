@@ -1,13 +1,13 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-9 merged; Phase 9 awaiting commit)._
+_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-9 committed; CSV-hook wiring awaiting commit)._
 
 > **Resuming in a new session or account?** Paste the prompt from [RESUME_PROMPT.md](RESUME_PROMPT.md)
 > and read "Parallel build of Phases 6-10" below.
 
 ## Parallel build of Phases 6-10 (MERGING)
 Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
-6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-8 are committed (`96d40b9`, `90bffb1`, `1070230`); Phase 9 is merged and verified, awaiting commit.**
+6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV-hook wiring is done and awaiting commit; Phase 10 is next.**
 The last column tracks the merge into this worktree.
 
 | Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
@@ -15,7 +15,7 @@ The last column tracks the merge into this worktree.
 | 6 FA, FIL/SEC, OWN, HDS | `openterm-p6` | `claude/openterm-p6-wip` | `PHASE_6_NOTES.md` | **COMMITTED** `96d40b9` |
 | 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **COMMITTED** `90bffb1` |
 | 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | **COMMITTED** `1070230` |
-| 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | **MERGED + verified here** (see Phase 9 details); commit pending user approval; CSV-export hook still to be wired into the Phase 6-8 panels (next step) |
+| 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | **COMMITTED** `b5515ac`; CSV hook wired into the Phase 6-8 panels in the follow-up commit |
 | 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | Finished in worktree, not merged yet |
 
 - All five branch from `4b3814c`; their changes are **uncommitted** in their worktrees. Rules they follow:
@@ -42,14 +42,14 @@ The last column tracks the merge into this worktree.
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
 - **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-8 are committed (`96d40b9`, `90bffb1`, `1070230`); Phase 9 is merged into the working tree and verified, not yet committed.**
+  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV-hook wiring for Phase 6-8 panels is verified and uncommitted.**
 - Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
   The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
   `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
   Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
-- Latest verification (Phase 9 tree):
+- Latest verification (Phase 9 tree + CSV wiring):
   - Backend: 139 pytest passed (`-n auto`, ~21 s), ruff clean.
-  - Frontend: 119 vitest passed, tsc clean, 59 Playwright passed (`--workers=8`, ~25 s).
+  - Frontend: 119 vitest passed, tsc clean, 60 Playwright passed (`--workers=8`, ~17 s; +1 FA export test in `phase6.spec.ts`).
   - Bench: 17/17 budgets PASS on four of five runs, one noisy tick-to-pixel miss (see `docs/PERFORMANCE.md` Phase 9).
 
 ## Done
@@ -79,7 +79,7 @@ The last column tracks the merge into this worktree.
   - Panels: `HIST.tsx` (D/W/MO, Enter = GP), `EQS.tsx` (Enter = DES; parse errors shown in red, the parsed clauses still run), `COMP.tsx` (SELF, peers, `MEDIAN OF n PEERS`),
     `CORR.tsx` (DOM table up to 20x20, H/J/K/L cursor, Enter = GP pair).
   - CSV export: `functions/tableExport.ts` (`useCsvExport`, `gridCsv`, `exportPanelCsv`), binding `exportCsv` = **Alt+X** + `E` panel key. Migrated: Q, WL, MOV, CRYP, Board (WEI/FX/CMDTY), FXC, N, Layout, Sources + the 4 new panels.
-- **CSV-hook recipe for Phase 6-8 panels:** `import { gridCsv, useCsvExport } from "./tableExport";`, then after `rows` is computed
+- **CSV hook (now applied to the Phase 6-8 panels; recipe for new panels):** `import { gridCsv, useCsvExport } from "./tableExport";`, then after `rows` is computed
   `useCsvExport(panelId, () => gridCsv("FA_AAPL", COLUMNS, rows));` (non-`Grid` panels return `{ name, header, rows }`, `null` while loading;
   `{ panelKey: false }` as 3rd arg if the panel already uses E); add `E CSV` to the hint line; e2e: press `e`, `waitForEvent("download")`.
 - Merge resolution: api.py (screener route joined to the Phase 6 start, peers appended), service.py (Phase 9 methods kept inside `DataService`, the Phase 7 imports
@@ -190,7 +190,7 @@ Phases 6-10 in order:
 - 6: done (merged, see Phase 6 details).
 - 7: done (merged, see Phase 7 details).
 - 8: done (merged, see Phase 8 details). Desktop notifications were not part of the build: alerts flash in the status bar.
-- 9: done (merged, see Phase 9 details). CSV export is wired into Phase 5 and 9 panels; Phase 6-8 panels (FA, FIL, OWN, HDS, FRED, MACRO, RATES, ERN, ECO, PORT, ALRT) are the next step.
+- 9: done (merged, see Phase 9 details). CSV export (`E` / Alt+X) is wired into every table panel, Phase 6-8 included (FA, FIL, OWN, HDS, FRED, MACRO, RATES, ERN, ECO, ALRT via `useCsvExport`); PORT keeps its own `E`/EXPORT, which writes a re-importable portfolio CSV.
 - 10: Themes UI, vim mode, keybinding overrides, SETTINGS, Docker, Tauri, release notes, full perf pass.
 
 ## Decisions already made (don't relitigate)

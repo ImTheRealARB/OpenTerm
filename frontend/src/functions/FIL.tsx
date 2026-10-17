@@ -1,13 +1,13 @@
 /** SEC filings index (SEC is an alias): newest first, form filter, Enter opens the document on sec.gov. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { secApi } from "../net/api";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
 import { filingForm, type Filing, type FilingsPayload } from "./secTables";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const QUICK = ["", "10-K", "10-Q", "8-K", "4", "DEF 14A"];
 const label = (f: string) => f || "ALL";
@@ -28,6 +28,7 @@ export default function FIL({ panelId, security, args }: FunctionProps) {
   const { env, error, loading, reload } = useEnvelope<FilingsPayload>(`${symbol}|${form}`, (fresh) => secApi.filings(symbol, form, fresh));
   const rows = useMemo(() => env?.data.filings ?? [], [env]);
   const latest = useLatest({ rows, form });
+  useCsvExport(panelId, () => gridCsv(`FIL_${symbol}_${label(form)}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -59,9 +60,6 @@ export default function FIL({ panelId, security, args }: FunctionProps) {
             if (r) openUrl(r.url);
             return true;
           }
-          case "e":
-            downloadCsv(`FIL_${symbol}_${label(f)}`, COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             void reload(true);
             return true;

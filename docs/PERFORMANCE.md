@@ -240,6 +240,7 @@ Notes:
 - Screener payload is ~1 MB: fetched only when EQS or COMP-fallback opens, cached server-side 15 min, parsed in the browser.
   CORR math is under 1 ms for 20 symbols x 5 y, so there is no worker.
 - Tests: 139 pytest (126 + 13 in `test_phase9.py`), 119 vitest (91 + 28), 59 Playwright (46 + 13 in `phase9.spec.ts`).
+- CSV-hook wiring of the Phase 6-8 panels (follow-up commit): bundle unchanged at 90.3 KB, bench 17/17 on two more runs (cold start 90-111 ms, tick-to-pixel 36-40 ms); 60 Playwright.
 - `test_core.py::test_stale_while_revalidate` flaked twice under 4 xdist workers (50 ms TTL); its TTL is now 0.5 s.
 
 Phase 3 optimizations (before → after):

@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, macroApi, type Envelope, type MacroPayload, type MacroRow } from "../net/api";
 import { navigate } from "../state/workspace";
@@ -10,6 +9,7 @@ import { fmtSeriesChange, fmtSeriesValue, parseMacroArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 300_000;
 
@@ -54,6 +54,7 @@ export default function MACRO({ panelId, args }: FunctionProps) {
 
   const rows = useMemo(() => env?.data.rows ?? [], [env]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => gridCsv("MACRO", COLUMNS, rows));
 
   useEffect(
     () =>
@@ -70,9 +71,6 @@ export default function MACRO({ panelId, args }: FunctionProps) {
           case "s":
           case "/":
             prefillCommand("MACRO ");
-            return true;
-          case "e":
-            downloadCsv("MACRO", COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
             return true;
           case "F5":
             void load(true);

@@ -1,13 +1,13 @@
 /** FRED series plot: any FRED series by id, drawn with the shared chart component (line / area, log scale). */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, macroApi, type Envelope, type FredSeries } from "../net/api";
 import { navigate, replaceView } from "../state/workspace";
 import { FRED_RANGES, fmtSeriesChange, fmtSeriesValue, parseFredArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import type { FunctionProps } from "./registry";
+import { useCsvExport } from "./tableExport";
 
 const INTERVAL: Record<string, string> = { Daily: "1d", Weekly: "1wk" };
 const NO_INDICATORS: never[] = [];
@@ -58,6 +58,7 @@ export default function FRED({ panelId, args }: FunctionProps) {
 
   const setRange = (range: string) => replaceView(panelId, (v) => ({ ...v, args: [pRef.current.id ?? "", range].filter(Boolean) }));
   const latest = useRef({ cur, crossOn });
+  useCsvExport(panelId, () => cur && { name: `FRED_${cur.data.id}`, header: ["date", cur.data.id], rows: cur.data.t.map((t, i) => [new Date(t * 1000).toISOString().slice(0, 10), cur.data.v[i] == null ? "" : String(cur.data.v[i])]) });
   latest.current = { cur, crossOn };
 
   useEffect(
@@ -99,13 +100,6 @@ export default function FRED({ panelId, args }: FunctionProps) {
           case "m":
             navigate(panelId, { fn: "MACRO", args: [], security: undefined });
             return true;
-          case "e": {
-            const d = latest.current.cur?.data;
-            if (d) {
-              downloadCsv(`FRED_${d.id}`, ["date", d.id], d.t.map((t, i) => [new Date(t * 1000).toISOString().slice(0, 10), d.v[i] == null ? "" : String(d.v[i])]));
-            }
-            return true;
-          }
           case "F5":
             setReload((r) => r + 1);
             return true;

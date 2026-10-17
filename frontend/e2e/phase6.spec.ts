@@ -248,3 +248,17 @@ test("HDS: provider failure shows the error with its cause", async ({ page }) =>
   await expect(panel(page)).toContainText("PROVIDER DOWN");
   await expect(panel(page)).toContainText("yahoo_own: rate_limited");
 });
+
+test("FA: E and Alt+X export the statement shown (CSV hook)", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/fa?**", (r) => r.fulfill({ json: env(FA(new URL(r.request().url()).searchParams.get("period") as "A" | "Q")) }));
+  await run(page, "AAPL FA");
+  await expect(selected(page)).toContainText("FY2025 416,000");
+  for (const press of ["e", "Alt+x"]) {
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.keyboard.press(press)]);
+    expect(dl.suggestedFilename()).toMatch(/^FA_AAPL_IS_A.*\.csv$/);
+    const text = (await (await dl.createReadStream()).toArray()).join("");
+    expect(text).toContain("LINE,FY2025,FY2024,FY2023");
+    expect(text).toContain("Revenue");
+  }
+});

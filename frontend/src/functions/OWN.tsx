@@ -1,7 +1,6 @@
 /** Insider trades (SEC Form 4, Yahoo as fallback) with buy/sell totals over open-market trades. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtBig, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { secApi } from "../net/api";
@@ -9,6 +8,7 @@ import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
 import { fmtShares, insiderTotals, type InsiderTrade, type InsidersPayload } from "./secTables";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const codeColor = (r: InsiderTrade): CellColor => (r.code === "P" ? "up" : r.code === "S" ? "down" : "dim");
 
@@ -33,6 +33,7 @@ export default function OWN({ panelId, security }: FunctionProps) {
   const rows = useMemo(() => (openOnly ? all.filter((t) => t.code === "P" || t.code === "S") : all), [all, openOnly]);
   const totals = useMemo(() => insiderTotals(rows), [rows]);
   const latest = useLatest({ rows });
+  useCsvExport(panelId, () => gridCsv(`OWN_${symbol}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -50,9 +51,6 @@ export default function OWN({ panelId, security }: FunctionProps) {
             if (r?.url) openUrl(r.url);
             return true;
           }
-          case "e":
-            downloadCsv(`OWN_${symbol}`, COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             void reload(true);
             return true;

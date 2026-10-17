@@ -1,7 +1,6 @@
 /** Holders: ownership breakdown, top institutional holders and top funds (Yahoo Finance, 13F-based). */
 import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtBig } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { secApi } from "../net/api";
@@ -9,6 +8,7 @@ import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, useEnvelope } from "./secPanel";
 import { fmtFrac, fmtShares, holderRows, type HolderRow, type HoldersPayload } from "./secTables";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const COLUMNS: Column<HolderRow>[] = [
   { title: "HOLDER", width: 40, text: (r) => r.section ?? r.holder, color: (r) => (r.section ? "acc" : "fg") },
@@ -25,6 +25,7 @@ export default function HDS({ panelId, security }: FunctionProps) {
   const { env, error, loading, reload } = useEnvelope<HoldersPayload>(symbol, (fresh) => secApi.holders(symbol, fresh));
   const rows = useMemo(() => (env ? holderRows(env.data) : []), [env]);
   const latest = useLatest({ rows });
+  useCsvExport(panelId, () => gridCsv(`HDS_${symbol}`, COLUMNS, rows.filter((r) => !r.section)));
   const isHeader = (i: number) => !!latest.current.rows[i]?.section;
 
   // Row 0 is a section header: start the cursor on the first data row once a payload arrives.
@@ -39,9 +40,6 @@ export default function HDS({ panelId, security }: FunctionProps) {
         const cur = latest.current.rows;
         if (navKey(e, g, cur.length, isHeader)) return true;
         switch (e.key) {
-          case "e":
-            downloadCsv(`HDS_${symbol}`, COLUMNS.map((c) => c.title), cur.filter((r) => !r.section).map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             void reload(true);
             return true;

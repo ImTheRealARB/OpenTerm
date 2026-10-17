@@ -1,7 +1,6 @@
 /** Economic calendar: US data releases from the BLS and BEA official schedules, Eastern times. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, macroApi, type EcoEvent, type EcoPayload, type Envelope } from "../net/api";
 import { replaceView } from "../state/workspace";
@@ -9,6 +8,7 @@ import { ECO_WINDOWS, addDays, dayLabel, nyToday, parseEcoArgs } from "./macroAr
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { useCsvExport } from "./tableExport";
 
 const POLL_MS = 300_000;
 
@@ -62,6 +62,7 @@ export default function ECO({ panelId, args }: FunctionProps) {
 
   const rows = useMemo(() => toRows((env?.data.events ?? []).filter((e) => !p.major || e.major)), [env, p.major]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => ({ name: "ECO", header: COLUMNS.map((c) => c.title), rows: rows.map((r) => [r.date, r.time ?? "", r.major ? "MAJOR" : "", r.name, r.agency]) }));
 
   useEffect(
     () =>
@@ -90,9 +91,6 @@ export default function ECO({ panelId, args }: FunctionProps) {
             return true;
           case "m":
             set({ major: !pRef.current.major });
-            return true;
-          case "e":
-            downloadCsv("ECO", COLUMNS.map((c) => c.title), cur.map((r) => [r.date, r.time ?? "", r.major ? "MAJOR" : "", r.name, r.agency]));
             return true;
           case "F5":
             void load(true);

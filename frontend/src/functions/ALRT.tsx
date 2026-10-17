@@ -10,6 +10,7 @@ import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import { dirColor, lastColor, lastFlash, navKey, pct, price, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 interface ARow {
   a: Alert;
@@ -56,6 +57,7 @@ export default function ALRT({ panelId }: FunctionProps) {
   }, [list, quotes]);
   useLiveRows(rows, grid, (r: ARow) => r.a.symbol);
   const latest = useLatest({ rows, confirm });
+  useCsvExport(panelId, () => gridCsv("ALRT", COLUMNS, rows));
 
   useEffect(
     () =>

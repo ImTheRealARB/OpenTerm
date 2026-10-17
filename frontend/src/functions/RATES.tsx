@@ -1,7 +1,6 @@
 /** US Treasury par yield curve with 1D / 1W / 1M / 1Y changes in basis points, and the usual curve spreads. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, macroApi, type Envelope, type YieldCurve } from "../net/api";
 import { navigate } from "../state/workspace";
@@ -9,6 +8,7 @@ import { bpChange, curveShape, fmtBp, fredIdForTenor, nyToday, spreadBp, yieldBa
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 120_000;
 const HORIZONS = ["1D", "1W", "1M", "1Y"] as const;
@@ -75,6 +75,7 @@ export default function RATES({ panelId }: FunctionProps) {
   const curve = env?.data ?? null;
   const rows = useMemo(() => (curve ? buildRows(curve) : []), [curve]);
   const latest = useLatest(rows);
+  useCsvExport(panelId, () => gridCsv("RATES", COLUMNS, rows));
 
   useEffect(
     () =>
@@ -92,9 +93,6 @@ export default function RATES({ panelId }: FunctionProps) {
             else setHint(`FRED HAS NO DAILY SERIES FOR THE ${r.tenor} TENOR`);
             return true;
           }
-          case "e":
-            downloadCsv("RATES", COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
-            return true;
           case "F5":
             void load(true);
             return true;

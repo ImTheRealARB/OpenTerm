@@ -1,13 +1,13 @@
 /** Financial analysis: income statement, balance sheet and cash flow from SEC XBRL company facts (annual or quarterly). */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { secApi } from "../net/api";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, useEnvelope } from "./secPanel";
 import { STATEMENT_TABS, faArgs, faRows, unitNote, type FaGridRow, type FaPayload, type FaPeriod, type StatementTab } from "./secTables";
+import { useCsvExport } from "./tableExport";
 
 const MAX_COLS = 12;
 
@@ -41,12 +41,13 @@ export default function FA({ panelId, security, args }: FunctionProps) {
   }, [shaped]);
 
   const latest = useLatest({ rows, shaped, tab, period, env, offset });
+  useCsvExport(panelId, () => shaped && { name: `FA_${symbol}_${tab}_${period}`, header: ["LINE", ...shaped.periods.map((p) => p.label)], rows: rows.map((r) => [r.label, ...r.cells]) });
 
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         const g = grid.current;
-        const { rows: cur, tab: t, period: per, env: en, offset: off } = latest.current;
+        const { rows: cur, tab: t, env: en, offset: off } = latest.current;
         if (navKey(e, g, cur.length)) return true;
         const n = Number(e.key);
         if (n >= 1 && n <= STATEMENT_TABS.length) {
@@ -74,11 +75,6 @@ export default function FA({ panelId, security, args }: FunctionProps) {
           case "ArrowRight":
             setOffset(Math.max(0, off - 1));
             return true;
-          case "e": {
-            const sh = latest.current.shaped;
-            if (sh) downloadCsv(`FA_${en?.data.symbol}_${t}_${per}`, ["LINE", ...sh.periods.map((p) => p.label)], cur.map((r) => [r.label, ...r.cells]));
-            return true;
-          }
           case "F5":
             void reload(true);
             return true;

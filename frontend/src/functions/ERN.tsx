@@ -1,7 +1,6 @@
 /** Earnings calendar (Nasdaq.com): estimates for upcoming days, reported EPS and surprise for past days. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
-import { downloadCsv } from "../csv";
 import { fmtBig, fmtNum, fmtPct } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, macroApi, type Earning, type EarningsPayload, type Envelope } from "../net/api";
@@ -10,6 +9,7 @@ import { addDays, dayLabel, isWeekend, nyToday, parseErnArgs } from "./macroArgs
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 120_000;
 const eps = (v: number | null) => (v == null ? "-" : fmtNum(v, 2));
@@ -67,6 +67,7 @@ export default function ERN({ panelId, args }: FunctionProps) {
   const cur = env && env.data.date === date ? env : null;
   const rows = useMemo(() => cur?.data.rows ?? [], [cur]);
   const latest = useLatest({ rows, date });
+  useCsvExport(panelId, () => gridCsv(`ERN_${date ?? ""}`, COLUMNS, rows));
 
   useEffect(
     () =>
@@ -90,9 +91,6 @@ export default function ERN({ panelId, args }: FunctionProps) {
             if (row) navigate(panelId, { fn: "DES", security: { symbol: row.symbol }, args: [] });
             return true;
           }
-          case "e":
-            downloadCsv(`ERN_${d ?? ""}`, COLUMNS.map((c) => c.title), r.map((row) => COLUMNS.map((c) => c.text(row))));
-            return true;
           case "F5":
             void load(true);
             return true;
