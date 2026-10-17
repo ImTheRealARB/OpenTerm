@@ -1,28 +1,24 @@
 import { FUNCTIONS, isFunction } from "../functions/registry";
 import { commandStart } from "../perf/metrics";
-import { createStore } from "../state/store";
 import { currentView, navigate, split, workspace } from "../state/workspace";
 import { history } from "./history";
+import { layoutCommand } from "./layouts";
 import { parseCommand } from "./parser";
+import { fail, statusMsg } from "./status";
 
-export interface StatusMsg {
-  text: string;
-  kind: "err" | "info";
-}
-
-/** One-line message shown in the top bar next to the command line. */
-export const statusMsg = createStore<StatusMsg | null>(null);
-
-const fail = (text: string) => {
-  statusMsg.set(() => ({ text, kind: "err" }));
-  return false;
-};
+export { statusMsg, type StatusMsg } from "./status";
 
 /** Parses and runs a command. Returns true on success (command line clears). */
 export function execute(input: string, opts: { newPanel?: boolean } = {}): boolean {
   const parsed = parseCommand(input, isFunction);
   if (!parsed.ok) return fail(parsed.error);
   history.push(parsed.raw.toUpperCase());
+
+  if (parsed.fn === "LAYOUT" || parsed.fn === "MONITOR") {
+    statusMsg.set(() => null);
+    const done = layoutCommand(parsed.args);
+    if (done !== null) return done;
+  }
 
   const s = workspace.get();
   let panelId = parsed.target ?? s.focus;

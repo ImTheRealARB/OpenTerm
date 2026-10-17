@@ -20,8 +20,8 @@ export const ACTION_LABELS: Record<Action, string> = {
   historyBack: "Panel history back",
   historyForward: "Panel history forward",
   refresh: "Refresh panel data",
-  saveWorkspace: "Save workspace",
-  openWorkspace: "Open workspace",
+  saveWorkspace: "Save layout (re-saves the current named layout)",
+  openWorkspace: "Open a saved layout",
   cheatsheet: "Shortcut cheatsheet",
   perfHud: "Toggle PERF HUD",
 };

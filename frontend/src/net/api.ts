@@ -105,6 +105,23 @@ async function request<T>(path: string, maxAgeMs: number): Promise<T> {
   }
 }
 
+/** Uncached write (or read that must be fresh). Errors carry the backend's message. */
+async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, "BACKEND DOWN");
+  }
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind);
+  return json as T;
+}
+
 const qs = (o: Record<string, string | undefined>) =>
   new URLSearchParams(Object.entries(o).filter((e): e is [string, string] => !!e[1])).toString();
 
@@ -117,7 +134,20 @@ export const api = {
   profile: (symbol: string) => request<Envelope<unknown>>(`/api/profile?${qs({ symbol })}`, 600_000),
   sources: () => request<SourcesPayload>("/api/sources", 1000),
   log: (after: number) => request<{ records: LogRecord[] }>(`/api/log?after=${after}`, 0),
+  layouts: () => send<{ layouts: LayoutInfo[] }>("GET", "/api/layouts"),
+  layout: (name: string) => send<{ name: string; state: unknown; updated_at: number }>("GET", `/api/layouts/${encodeURIComponent(name)}`),
+  saveLayout: (name: string, state: unknown) =>
+    send<{ name: string; updated_at: number }>("PUT", `/api/layouts/${encodeURIComponent(name)}`, { state }),
+  deleteLayout: (name: string) => send<{ deleted: string }>("DELETE", `/api/layouts/${encodeURIComponent(name)}`),
+  cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
+  pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
 };
+
+export interface LayoutInfo {
+  name: string;
+  panels: number;
+  updated_at: number;
+}
 
 /** Warm the most likely next call for a highlighted security: its quote and 1Y daily bars. */
 export function prefetch(symbol: string): void {

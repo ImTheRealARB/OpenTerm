@@ -80,6 +80,32 @@ Notes:
 - Tick-to-pixel is measured from WebSocket receive to *after* the frame is painted, for the oldest
   tick in each frame (the worst case), so it includes up to one frame of batching by design.
 
+### Phase 4 (2026-10-17, same machine; fixtures + SYNTHETIC stream)
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS (gzip) | 83.4 KB | 400 KB | PASS |
+| Backend p95 cached /api/health, /api/quote, /api/history | 0.4 / 0.6 / 1.8 ms | 20 ms | PASS |
+| Cold start to command line | 80.7 ms | 1500 ms | PASS |
+| Keystroke echo p95 (idle / under streaming load) | 14.9 / 10.3 ms | 16.7 ms | PASS |
+| Command to paint, cached / cold network, p95 | 15.5 / 16.8 ms | 100 / 400 ms | PASS |
+| Tick received to pixel p95 (200 symbols x 20/s, 9 panels) | 37.2 ms | 50 ms | PASS |
+| Frame p95: 8 panels / streaming / 10k-row grid / 50k-bar chart | 16.7 / 16.8 / 16.8 / 16.7 ms | 20 ms | PASS |
+| Long tasks during streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 5.2 MB | 500 MB | PASS |
+| **New:** layout load to paint p95 (real backend + SQLite, alternating 9-panel and 1-panel layouts) | 35.5 ms | 100 ms | PASS |
+
+Notes:
+- **Layout load is gated at the cached-command budget (100 ms).** The layout lives in local SQLite, so
+  it is a cached command that repaints every panel. Measured from submit, through the
+  `/api/layouts/{name}` fetch (browser → vite preview proxy → backend), to after the frame that
+  shows the new panels. Data inside the panels then loads as usual (skeleton first).
+- Entry bundle +1.9 KB gz (81.5 → 83.4): layout commands, layout validation and the SQLite-backed
+  history are in the entry chunk because the command line needs them at once. The `LAYOUT` list
+  panel is a lazy function module.
+- Command history writes are batched (500 ms) and sent off the command path, so running a command
+  never waits on the network. Cached command to paint did not move (16.9 → 15.5 ms, noise).
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

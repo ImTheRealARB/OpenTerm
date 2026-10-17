@@ -17,7 +17,7 @@ are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what 
 ## Layout
 - `backend/` Python 3.12, FastAPI, httpx (HTTP/2), orjson, aiosqlite (WAL), apscheduler, websockets. Managed by `uv`.
   - `providers/` adapters (yahoo, nasdaq, synthetic, fixtures). `router.py` (fallback + circuit breaker),
-    `service.py` (SWR cache, coalescing), `streaming/` (Yahoo protobuf stream, poller, hub), `api.py`, `main.py` (lifespan + `/ws`).
+    `service.py` (SWR cache, coalescing), `streaming/` (Yahoo protobuf stream, poller, hub), `userdata.py` (layouts + command history in SQLite), `api.py`, `main.py` (lifespan + `/ws`).
 - `frontend/` React 19 + TS + Vite 7. No UI kit and no state library: a tiny store in `state/store.ts`.
   - Function modules in `src/functions/`, registered in `functions/registry.ts` (one file per function).
   - `components/Grid.tsx`: canvas virtualized grid. `chart/ChartView.tsx`: lightweight-charts 5.2.1, indicators in a Web Worker.
@@ -43,6 +43,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Browsers reserve Ctrl+W / Ctrl+T / Ctrl+1..9.** Alt+W and Alt+1..9 are the web bindings.
 - **Panel keys:** the focused panel gets unmodified keys first (`keys/panelKeys.ts`). In grids and charts letters are panel keys, so commands start with `/`.
 - **Long multi-line bash heredocs containing `'''` or backslashes sometimes fail to parse** in this harness. Write a patch script with the Write tool and run it with `python <file>`.
+- **`/api/history` is price bars.** Command history is `/api/cmdhistory`; layouts are `/api/layouts`.
+- **Python's `read_text()`/`write_text()` default to cp1252 and CRLF on Windows.** Patch scripts must use
+  `encoding="utf-8"` and `write_bytes` (or `newline="\n"`), or they corrupt UTF-8 docs and line endings.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
 ## Conventions

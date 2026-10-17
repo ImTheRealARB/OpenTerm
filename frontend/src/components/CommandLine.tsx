@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { execute, statusMsg } from "../command/execute";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
+import { layoutList, refreshLayouts } from "../command/layouts";
 import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
@@ -9,12 +10,27 @@ import { keyDown, keyEchoed } from "../perf/metrics";
 interface Suggestion {
   value: string;
   label: string;
-  kind: "FUNC" | "RECENT" | "SEC";
+  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT";
 }
 
 const SEARCH_DEBOUNCE_MS = 80;
 
 export const commandInputRef: { current: HTMLInputElement | null } = { current: null };
+const prefillRef: { current: ((text: string) => void) | null } = { current: null };
+
+/** Puts text in the command line, focuses it and shows its suggestions (Ctrl+O: "LAYOUT LOAD "). */
+export function prefillCommand(text: string): void {
+  prefillRef.current?.(text);
+}
+
+/** `LAYOUT [SAVE|LOAD|DEL] <name>` (or MONITOR): the partial name, else null. */
+const LAYOUT_ARG = /^\s*(?:[1-9]\s*:\s*)?(?:LAYOUT|MONITOR)\s+(?:(?:SAVE|LOAD|DEL|DELETE)\s+)?(\S*)$/i;
+
+function layoutSuggestions(token: string): Suggestion[] {
+  const names = layoutList.get() ?? [];
+  const ranked = token ? fuzzyRank(token, names, (l) => l.name, 10) : names.slice(0, 10);
+  return ranked.map((l) => ({ value: l.name, label: `${l.panels} PANELS`, kind: "LAYOUT" }));
+}
 
 /** The token under the cursor (always the last one) and whether it sits in the security slot. */
 function lastToken(text: string): { token: string; securitySlot: boolean } {
@@ -132,15 +148,24 @@ export function CommandLine() {
     }
   };
 
-  const onInput = (e: React.FormEvent<HTMLInputElement>) => {
-    keyEchoed();
-    const v = e.currentTarget.value;
-    if (statusMsg.get()) statusMsg.set(() => null);
-    history.resetCursor();
-    // Suggestion work is low priority: the native input echo never waits on it.
+  const suggest = (v: string) => {
     // Intent-based prefetch: the chart chunk is skipped at idle (it is big), so fetch it the
     // moment GP appears in the command line instead of after Enter.
     if (/(^|\s)GP(\s|$)/i.test(v)) void loadModule("GP").catch(() => {});
+    const layoutArg = LAYOUT_ARG.exec(v);
+    if (layoutArg) {
+      searchSeq.current++;
+      const show = () => {
+        if (input.current?.value !== v) return;
+        startTransition(() => {
+          setItems(layoutSuggestions(layoutArg[1]));
+          setSel(-1);
+        });
+      };
+      show();
+      void refreshLayouts(5000).then(show, () => {});
+      return;
+    }
     const { token, securitySlot } = lastToken(v);
     startTransition(() => {
       setItems(merge(token, securitySlot));
@@ -148,6 +173,22 @@ export function CommandLine() {
     });
     if (securitySlot && token) searchSecurities(v, token);
     else searchSeq.current++;
+  };
+
+  const onInput = (e: React.FormEvent<HTMLInputElement>) => {
+    keyEchoed();
+    if (statusMsg.get()) statusMsg.set(() => null);
+    history.resetCursor();
+    // Suggestion work is low priority: the native input echo never waits on it.
+    suggest(e.currentTarget.value);
+  };
+
+  prefillRef.current = (text: string) => {
+    const el = input.current;
+    if (!el) return;
+    el.focus();
+    setValue(text);
+    suggest(text);
   };
 
   return (

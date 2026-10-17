@@ -19,6 +19,7 @@ from .service import DataService
 from .streaming.hub import Client, Hub
 from .streaming.upstream import NullStream, Poller, SyntheticStream, YahooStream
 from .symbols import resolve
+from .userdata import UserData
 
 STARTED = time.time()
 DEFAULT_ORDER = {
@@ -69,6 +70,7 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.service = service
     app.state.hub = hub
+    app.state.userdata = UserData(db)
     sched = scheduler.start(router)
     try:
         yield

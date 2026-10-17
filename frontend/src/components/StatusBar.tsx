@@ -27,6 +27,7 @@ export function StatusBar() {
   const focus = useStore(workspace, (s) => s.focus);
   const count = useStore(workspace, (s) => Object.keys(s.panels).length);
   const max = useStore(workspace, (s) => s.maximized);
+  const layout = useStore(workspace, (s) => s.name);
   const cls = l.status === "OK" ? "up" : l.status === "DOWN" ? "err" : "warn";
   return (
     <footer className="status">
@@ -38,6 +39,9 @@ export function StatusBar() {
       <span>
         PANEL {focus}/{count}
         {max ? " MAX" : ""}
+      </span>
+      <span>
+        LAYOUT <span className={layout ? "acc" : "dim"}>{layout ?? "NONE"}</span>
       </span>
       <span>MODE CMD</span>
       <span className="sp" />

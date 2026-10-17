@@ -1,4 +1,5 @@
 import type { SecurityRef } from "../command/markets";
+import { MAX_PANELS } from "./layoutState";
 import { createStore, loadJSON, saveJSON } from "./store";
 
 export interface View {
@@ -23,10 +24,11 @@ export interface WorkspaceState {
   panels: Record<number, PanelState>;
   focus: number;
   maximized: number | null;
+  /** Named layout this workspace was last saved as or loaded from (Ctrl+S re-saves it). */
+  name?: string;
 }
 
 const KEY = "openterm.workspace";
-const MAX_PANELS = 9;
 
 const initial: WorkspaceState = {
   layout: { t: "leaf", id: 1 },
@@ -139,6 +141,15 @@ export function resizeFocused(dir: "left" | "right" | "up" | "down", step = 0.05
     const layout = walk(s.layout);
     return changed ? { ...s, layout } : s;
   });
+}
+
+/** Replaces the whole workspace (layout load). */
+export function applyLayout(next: WorkspaceState): void {
+  workspace.set(() => next);
+}
+
+export function setLayoutName(name: string | undefined): void {
+  workspace.set((s) => (s.name === name ? s : { ...s, name }));
 }
 
 export function navigate(id: number, view: View): void {

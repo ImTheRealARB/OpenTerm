@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { statusMsg } from "./command/execute";
-import { commandInputRef } from "./components/CommandLine";
+import { saveLayout } from "./command/layouts";
+import { info } from "./command/status";
+import { commandInputRef, prefillCommand } from "./components/CommandLine";
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
 import { Workspace } from "./components/Workspace";
@@ -16,8 +17,6 @@ import {
 const ALWAYS_GLOBAL = new Set(["focusCommand", "escape", "nextPanel", "prevPanel", "cheatsheet"]);
 
 import Shortcuts from "./functions/Shortcuts";
-
-const info = (text: string) => statusMsg.set(() => ({ text, kind: "info" }));
 
 export function App() {
   const [cheatsheet, setCheatsheet] = useState(false);
@@ -103,9 +102,15 @@ export function App() {
         case "refresh":
           if (!dispatchPanelKey(workspace.get().focus, e)) info("NOTHING TO REFRESH IN THIS PANEL");
           break;
-        case "saveWorkspace":
+        case "saveWorkspace": {
+          // Re-save the named layout in use; otherwise ask for a name on the command line.
+          const name = workspace.get().name;
+          if (name) void saveLayout(name);
+          else prefillCommand("LAYOUT SAVE ");
+          break;
+        }
         case "openWorkspace":
-          info("WORKSPACE AUTOSAVES. NAMED LAYOUTS ARRIVE IN PHASE 4");
+          prefillCommand("LAYOUT LOAD ");
           break;
         case "cheatsheet":
           setCheatsheet((v) => !v);

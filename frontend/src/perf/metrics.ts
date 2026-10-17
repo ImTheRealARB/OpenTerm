@@ -39,6 +39,7 @@ export const series = {
   tickToPixel: new Ring(1024),
   frame: new Ring(600),
   wsRtt: new Ring(64),
+  layoutLoad: new Ring(64),
 };
 export type SeriesName = keyof typeof series;
 
@@ -169,6 +170,7 @@ export function snapshot() {
     cmdToPaint: s(series.cmdToPaint),
     tickToPixel: s(series.tickToPixel),
     wsRtt: s(series.wsRtt),
+    layoutLoad: s(series.layoutLoad),
     gauges: Object.fromEntries(gauges),
     panels: Object.fromEntries([...panelRender].map(([id, r]) => [id, r.percentile(95)])),
   };

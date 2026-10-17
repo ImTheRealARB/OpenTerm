@@ -185,6 +185,30 @@ async function browserBench() {
       await page.context().close();
     }
 
+    // F. Named layouts through the real backend (SQLite): alternate a 9-panel and a 1-panel layout.
+    {
+      const page = await freshPage(browser);
+      const fns = ["HELP", "PERF", "SOURCES", "LOG", "AAPL DES", "AAPL QR", "Q SYN0001 SYN0002 SYN0003", "SHORTCUTS", "LAYOUT"];
+      await run(page, fns[0]);
+      for (let i = 1; i < 9; i++) {
+        await page.keyboard.press(i % 2 ? "Control+\\" : "Control+-");
+        await run(page, fns[i]);
+        await page.waitForTimeout(100);
+      }
+      await run(page, "LAYOUT SAVE BENCH9");
+      await page.waitForTimeout(300);
+      for (let i = 0; i < 8; i++) await page.keyboard.press("Alt+w");
+      await run(page, "LAYOUT SAVE BENCH1");
+      await page.waitForTimeout(300);
+      out.layout = await measure(page, async () => {
+        for (let i = 0; i < 20; i++) {
+          await run(page, `LAYOUT LOAD ${i % 2 ? "BENCH1" : "BENCH9"}`);
+          await page.waitForTimeout(250);
+        }
+      });
+      await page.context().close();
+    }
+
     // D. 10,000-row canvas grid: keyboard paging + wheel scrolling.
     {
       const page = await freshPage(browser);
@@ -259,6 +283,7 @@ async function main() {
   add("Long tasks (>50 ms), streaming load", st.longTasks, 0, "", "UI never freezes");
   add("JS heap, 9 panels + 200 streaming symbols", st.heapMB, 500, "MB", "JS heap only (see PERFORMANCE.md)");
   add("Ticks delivered to the page per second", st.gauges["ws.ticksPerSec"] ?? 0, null, "/s", "offered: 200 x 20 = 4000/s");
+  add("Layout load to paint p95 (SQLite, 9 / 1 panels)", r.layout.layoutLoad.p95, 100, "ms", `n=${r.layout.layoutLoad.n}; frame p95 ${r.layout.frameP95.toFixed(1)} ms`);
   add("Frame time p95, 10k-row grid scroll", r.grid.frameP95, 20, "ms", "keys + wheel");
   add("Frame time p95, 50k-bar chart pan/zoom", r.chart.frameP95, 20, "ms", "keys");
 

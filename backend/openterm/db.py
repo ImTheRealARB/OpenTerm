@@ -9,6 +9,10 @@ MIGRATIONS: list[str] = [
     "CREATE TABLE cache (key TEXT PRIMARY KEY, value BLOB NOT NULL, stored_at REAL NOT NULL)",
     # 2: generic key/value settings
     "CREATE TABLE kv (key TEXT PRIMARY KEY, value BLOB NOT NULL)",
+    # 3: named workspace layouts (state is the frontend's WorkspaceState as JSON)
+    "CREATE TABLE layouts (name TEXT PRIMARY KEY, state BLOB NOT NULL, updated_at REAL NOT NULL)",
+    # 4: command line history, oldest first by id
+    "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, cmd TEXT NOT NULL, at REAL NOT NULL)",
 ]
 
 

@@ -68,7 +68,7 @@ Read [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) before relying on any of it: the
 endpoints for personal use, and they change.
 
 API: `/api/quote?symbols=`, `/api/history?symbol=&range=&interval=`, `/api/profile?symbol=`, `/api/search?q=`,
-`/api/sources`, `/api/log`, and one WebSocket `/ws` (`["sub", [symbols]]` → `["T", [[symbol, price, chg, pct,
+`/api/sources`, `/api/log`, `/api/layouts[/{name}]` (GET/PUT/DELETE), `/api/cmdhistory` (GET/POST), and one WebSocket `/ws` (`["sub", [symbols]]` → `["T", [[symbol, price, chg, pct,
 volume, high, low, time_ms, src], ...]]`). However many panels watch a symbol, the server holds one
 upstream subscription for it.
 
@@ -80,6 +80,8 @@ Copyright © TradingView, Inc. The logo is disabled; attribution is shown in the
 Defined in [`frontend/src/keys/keybindings.json`](frontend/src/keys/keybindings.json) and listed by `SHORTCUTS` or `?`.
 Panels: `Alt+1..9` focus · `Tab` cycle · `Ctrl+\` / `Ctrl+-` split · `Alt+W` close · `Ctrl+Shift+Arrows` resize ·
 `Ctrl+Shift+F` maximize · `Ctrl+[` / `Ctrl+]` history · `Ctrl+Shift+P` PERF HUD.
+Layouts: `LAYOUT SAVE|LOAD|DEL name` (alias `MONITOR`), `LAYOUT` lists them · `Ctrl+S` save · `Ctrl+O` open.
+Named layouts and command history are stored in SQLite (`data/openterm.db`).
 
 ## Performance
 
