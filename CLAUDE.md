@@ -67,6 +67,8 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `providers/sec.py` + `sec_parse.py` (pure parsers) serve FA/FIL/OWN; `ownership.py` (`yahoo_own`) serves HDS/OWN.
 - **Playwright port 4173 is shared by every worktree.** If another worktree's preview is up, tests silently hit that build
   (symptom: functions show "NOT BUILT YET"). Check the port is free; run with `CI=1` (PowerShell: `$env:CI='1'`).
+- **Backend port 8000 and dev port 5173 are shared by every worktree too.** A second backend fails to bind 8000 and
+  the Vite proxy silently talks to whichever worktree's backend is already up. Check the port before previewing.
 - **Don't assert "NOT BUILT YET" in e2e tests**; each phase makes it false for its own functions.
 - **Grid cursor below a header row:** call `grid.moveTo(1)` in an effect keyed on the payload (`initialSelected` is clamped to 0 while rows are empty).
 - **A lone bench miss (50k-bar chart pan 33 ms, tick-to-pixel NaN / ~52 ms) has been noise;** rerun before investigating.

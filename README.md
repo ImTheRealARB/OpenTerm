@@ -3,9 +3,10 @@
 A keyboard-first, open-source market terminal for one power user: a command line on top, tiled panels,
 mnemonic function codes, and free data sources. Dense, dark, amber on black. Speed over looks.
 
-> Status: **Phase 3 of 10**. Shell, command system and perf instrumentation (1); data core with
-> Yahoo + Nasdaq, cache, rate limits and fallback (2); live streaming, `GP`, `DES`, `Q`, `QR` (3).
-> Data may be delayed. Not investment advice.
+> Status: **all 10 phases built**: shell and command system, data core, live quotes and charts, saved
+> layouts, watchlists/news/boards, SEC fundamentals and ownership, macro (FRED, rates, calendars),
+> portfolios and alerts, screener/peers/correlation with CSV export, settings/themes/vim and packaging.
+> See [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md). Data may be delayed. Not investment advice.
 
 ![OpenTerm: live quote monitor, BTC chart with SMA20 + RSI, Infosys description](docs/screenshot-phase3.png)
 
@@ -29,6 +30,24 @@ macOS/Linux:
 
 Open http://localhost:5173. The backend runs on :8000.
 
+Docker (one container, backend serves the built frontend; written but not yet built on this machine):
+
+```sh
+docker compose up --build      # then open http://localhost:8000
+```
+
+Optional environment variables:
+
+| Variable | Effect |
+|---|---|
+| `SEC_USER_AGENT` | `"Your Name you@example.com"`. Needed for `FA`, `FIL`, `OWN` (SEC EDGAR rejects anonymous requests). |
+| `FRED_API_KEY` | Free key. Adds FRED titles/units and full `MACRO` search; without it FRED uses the keyless CSV feed. |
+| `OPENTERM_FIXTURES=1` | Replay recorded responses from `backend/tests/fixtures` (no network; good for demos). |
+| `OPENTERM_SYNTHETIC=1` | Synthetic symbols and ticks for load testing. |
+| `OPENTERM_STATIC_DIR` | Serve a built frontend from the backend (used by Docker). |
+
+A desktop (Tauri) shell is scaffolded in `desktop/`; see [docs/DESKTOP.md](docs/DESKTOP.md).
+
 ## Command line
 
 Focus it with `/`, `` ` ``, `Ctrl+K`, or just start typing.
@@ -45,7 +64,7 @@ Focus it with `/`, `` ` ``, `Ctrl+K`, or just start typing.
 
 ## Functions
 
-`HELP` lists every function and the phase it ships in. Ready now:
+`HELP` lists every function. All of them are ready:
 
 | Code | What it does |
 |---|---|
@@ -53,6 +72,14 @@ Focus it with `/`, `` ` ``, `Ctrl+K`, or just start typing.
 | `DES` | Description: profile, valuation, 52-week range, live price. |
 | `Q` | Live quote monitor. `Q AAPL MSFT INFY.NS BTC-USD`; no args = default world list. Keys: `j/k`, `Enter` (DES), `a` add, `d` delete, `s` sort, `e` CSV, `F5`. |
 | `QR` | Quote recap for one security, live. |
+| `WL`, `N`, `MOV` | Watchlists (`WL TECH ADD AAPL MSFT`), news (`N`, `AAPL N`, `N words`), top movers. |
+| `WEI`, `FX`, `FXC`, `CMDTY`, `CRYP` | World indices, currencies, FX cross matrix, commodities, crypto boards. |
+| `FA`, `FIL`/`SEC`, `OWN`, `HDS` | SEC financial statements (annual/quarterly), filings, insider trades (Form 4), holders. |
+| `FRED`, `MACRO`, `RATES`, `ERN`, `ECO` | FRED series chart and browser, Treasury yield curve, earnings and economic calendars. |
+| `PORT`, `ALRT` | Portfolios (`PORT MAIN ADD AAPL 50 180`, live P&L, CSV import/export), price/percent alerts (`ALRT AAPL > 350`). |
+| `EQS`, `HIST`, `COMP`, `CORR` | Screener, historical price table, peer comparison, correlation matrix. `E` / `Alt+X` exports any table to CSV. |
+| `SETTINGS`, `THEME` | Settings panel (vim mode, number format, clocks, refresh rates, key rebinding), themes `AMBER` `GREEN` `WHITE` `LIGHT`. |
+| `LAYOUT`/`MONITOR` | Save and load named workspaces. |
 | `HELP`, `SHORTCUTS`, `PERF`, `SOURCES`, `LOG` | Help, key list, performance HUD/panel (`PERF GRID 10000`, `PERF CHART 50000` load tests), provider health, backend log. |
 
 In grids and charts, letters are panel keys; press `/` (or Ctrl+K) to type a command there.
@@ -92,6 +119,7 @@ Budgets are enforced in CI by `node scripts/bench.mjs`. See [docs/PERFORMANCE.md
 - [Adding a function](docs/ADDING_A_FUNCTION.md)
 - [Adding a provider](docs/ADDING_A_PROVIDER.md)
 - [Data limits](docs/DATA_LIMITS.md)
+- [Release notes](docs/RELEASE_NOTES.md) · [Changelog](CHANGELOG.md) · [Desktop build](docs/DESKTOP.md)
 - [Handoff / project status](HANDOFF.md)
 
 ## Layout
@@ -100,6 +128,7 @@ Budgets are enforced in CI by `node scripts/bench.mjs`. See [docs/PERFORMANCE.md
 backend/   FastAPI, orjson, async; /api/*, one multiplexed /ws
 frontend/  React + TS + Vite; canvas for live grids/charts; plain CSS
 scripts/   setup, dev, bench
+desktop/   Tauri scaffold
 docs/
 ```
 

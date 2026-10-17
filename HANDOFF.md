@@ -5,8 +5,9 @@ _Last updated: 2026-10-17, session 4 (Phases 1-10 committed on this branch, Phas
 > **Resuming in a new session or account?** Read "Parallel build of Phases 6-10" and "Where things stand" below.
 
 ## Parallel build of Phases 6-10 (MERGED)
-Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
-6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV wiring is committed (`7e3ca69`); Phase 10 is committed (`f0df226`).**
+Status: **done. All five phases were finished in their own worktrees, then merged here in order, one commit each, every
+commit approved by the user: Phase 6 `96d40b9`, 7 `90bffb1`, 8 `1070230`, 9 `b5515ac`, CSV wiring `7e3ca69`, 10 `f0df226`,
+docs `1dfebe4`.** The `openterm-p6..p10` worktrees and their `-wip` branches are now redundant and can be removed.
 The last column tracks the merge into this worktree.
 
 | Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
@@ -37,7 +38,8 @@ The last column tracks the merge into this worktree.
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
 - **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); CSV wiring `7e3ca69`; Phase 10 is merged and verified, not yet committed.**
+  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-10 are committed on the same branch
+  (`96d40b9` .. `f0df226`, docs `1dfebe4`). All 10 phases are built; this branch is the complete app, not yet on `main`.**
 - Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
   The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
   `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
@@ -201,7 +203,15 @@ Phases 6-10 in order:
 - 7: done (merged, see Phase 7 details).
 - 8: done (merged, see Phase 8 details). Desktop notifications were not part of the build: alerts flash in the status bar.
 - 9: done (merged, see Phase 9 details). CSV export (`E` / Alt+X) is wired into every table panel, Phase 6-8 included (FA, FIL, OWN, HDS, FRED, MACRO, RATES, ERN, ECO, ALRT via `useCsvExport`); PORT keeps its own `E`/EXPORT, which writes a re-importable portfolio CSV.
-- 10: done (merged, see Phase 10 details). Backups were deleted; remaining: merge this branch to `main` (see the notes below).
+- 10: done (merged, see Phase 10 details). Backups were deleted.
+
+Remaining:
+1. Bring `main` up to date: it is still at Phase 2 (`3815fdd`). This branch contains everything (Phases 1-10), so
+   `main` can fast-forward to it once the leftover Phase 3 files on `main` are discarded (see "Where things stand").
+2. Remove the redundant worktrees `openterm-p6..p10`, `openterm-phase-3-4-621f59`, `openterm-phases-5-10-89f06f`,
+   `openterm-phases-6-10-build-c8be5c` and their branches once `main` has the work.
+3. Small UI fixes seen in the post-merge preview (see Risks): stale security in the panel tab, stray line on FRED charts.
+4. First real Docker build and Tauri build (neither tool is installed on the dev machine).
 
 ## Decisions already made (don't relitigate)
 - Stooq is dropped (bot check). The zero-key chain is Yahoo, then Nasdaq (US only, daily history only).
@@ -239,10 +249,17 @@ Phases 6-10 in order:
   while probing; `gdelt_429.json` is its real throttle text.
 - Yahoo screeners (`v1/finance/screener/predefined/saved`) should be re-checked on a weekday; if they return rows,
   they could become MOV's primary source (record a weekday fixture first).
+- Seen in the fixture-mode preview after the merge (not fixed): the panel tab keeps showing the last security (e.g.
+  "AAPL") on functions that take none (PORT, EQS, SETTINGS, RATES); `FRED` charts draw a flat green line near the
+  bottom of the plot that is not part of the series.
+- `Dockerfile`/`docker-compose.yml` and the Tauri scaffold (`desktop/`) have never been built (no Docker or Rust here).
+- The 50k-bar chart-pan bench budget misses occasionally (about one run in three); the other 16 budgets are stable.
 - The fixtures were recorded with a one-off script that is not in the repo. To refresh one, fetch the same URL the
   provider builds and save `{"status", "body"}` (JSON) or `{"status", "content_type", "text"}` (XML/text).
 
 ## How to look at the app
-Run `.\scripts\dev.ps1`, then open http://localhost:5173. To get a screenshot without the preview pane,
+Run `.\scripts\dev.ps1`, then open http://localhost:5173. For a no-network demo with recorded data, set
+`$env:OPENTERM_FIXTURES = '1'` before starting the backend. For `FA`/`FIL`/`OWN` against live SEC data, set
+`$env:SEC_USER_AGENT = 'Your Name you@example.com'` first. To get a screenshot without the preview pane,
 run a small Playwright script against a production build (`npx vite preview --port 4173 --host 127.0.0.1`).
 The pattern is in `frontend/e2e/*.spec.ts`. Current look: `docs/screenshot-phase3.png`.
