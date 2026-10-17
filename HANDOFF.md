@@ -5,7 +5,11 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-19, end of session 6)
+## Resume here (paused 2026-10-19 at the user's request, end of session 6)
+- **Open the new session in the worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`** (a session cannot write into
+  another worktree). Its `backend/.venv` and `frontend/node_modules` are installed. The tree is clean; the last commits are
+  step 5 (`74d01e4`), step 6 (`8814c35`) and this pause note. Nothing is running: no subagents, no servers, ports
+  4173 / 5173 / 8000 free.
 - **Where the work is now:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`.
   Session 6 was opened in that worktree, and a hook blocks writes to other worktrees, so its branch was fast-forwarded to
   `claude/openterm-phases-11-19-328938` (`a19f325`, no merge commit) and step 5 was committed on top. The 328938 branch is

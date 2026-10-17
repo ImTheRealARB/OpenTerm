@@ -1,6 +1,6 @@
 # Phase 11 spec: keys, jobs, LLM gateway
 
-Status: **built 2026-10-19** (defaults approved 2026-10-18). Open: the recorded OpenRouter stream (needs the key).
+Status: **built 2026-10-19** (defaults approved 2026-10-18). Open: the recorded OpenRouter stream (needs the key; `scripts/record_llm.py`, then delete `@RECORDING` in `backend/tests/test_phase11.py`). Next phase: write `docs/specs/PHASE_12.md`.
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 11" and "Rule changes".
 
 ## Decisions (proposed defaults; change any of them before the tests step)
