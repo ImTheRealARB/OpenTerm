@@ -3,12 +3,11 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 6-10 may be mid-flight in parallel worktrees (`.claude/worktrees/openterm-p6..p10`): see HANDOFF.md
-"Parallel build of Phases 6-10", [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) and [RESUME_PROMPT.md](RESUME_PROMPT.md).
-Uncommitted phase work is backed up in `wip-patches/pN.patch`; never delete the p6..p10 worktrees before merging.
+Phases 6-10 were built in parallel worktrees (`.claude/worktrees/openterm-p6..p10`) and are merged and committed here: see HANDOFF.md
+"Parallel build of Phases 6-10" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md). Leave the p6..p10 worktrees alone until the user says to remove them.
 **Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
-5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md, RESUME_PROMPT.md and
-`wip-patches/` so another account can resume, and pause.
+5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
+so another account can resume, and pause.
 
 ## Non-negotiables (from the spec)
 - Speed over looks. No shadows, gradients, radii, transitions or web fonts. Color only carries meaning.

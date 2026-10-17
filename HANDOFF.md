@@ -1,13 +1,12 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-9 and the CSV wiring committed; Phase 10 merged, awaiting commit)._
+_Last updated: 2026-10-17, session 4 (Phases 1-10 committed on this branch, Phase 10 = `f0df226`)._
 
-> **Resuming in a new session or account?** Paste the prompt from [RESUME_PROMPT.md](RESUME_PROMPT.md)
-> and read "Parallel build of Phases 6-10" below.
+> **Resuming in a new session or account?** Read "Parallel build of Phases 6-10" and "Where things stand" below.
 
-## Parallel build of Phases 6-10 (MERGING)
+## Parallel build of Phases 6-10 (MERGED)
 Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
-6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV wiring is committed (`7e3ca69`); Phase 10 is merged and verified, awaiting commit.**
+6, 7, 8, 9, 10, one commit each; the user approves every commit. Phases 6-9 are committed (`96d40b9`, `90bffb1`, `1070230`, `b5515ac`); the CSV wiring is committed (`7e3ca69`); Phase 10 is committed (`f0df226`).**
 The last column tracks the merge into this worktree.
 
 | Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
@@ -16,7 +15,7 @@ The last column tracks the merge into this worktree.
 | 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **COMMITTED** `90bffb1` |
 | 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | **COMMITTED** `1070230` |
 | 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | **COMMITTED** `b5515ac`; CSV hook wired into the Phase 6-8 panels in the follow-up commit |
-| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | **MERGED + verified here** (see Phase 10 details); commit pending user approval |
+| 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | **COMMITTED** `f0df226` |
 
 - All five branch from `4b3814c`; their changes are **uncommitted** in their worktrees. Rules they follow:
   [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) (append-only "Phase N" blocks in shared files, no migrations except
@@ -28,16 +27,12 @@ The last column tracks the merge into this worktree.
   bench), and the user approves each commit: `git add -A; git diff --cached 4b3814c > pN.patch` in the phase
   worktree, then `git apply --3way pN.patch` in this worktree. After 9: wire the CSV-export hook into 6-8 panels.
   After 10: confirm release-notes bullets for 6-9, then the full perf pass.
-- **Backups (nothing is lost if a worktree disappears):** `wip-patches/pN.patch` in this worktree holds each
-  phase's full uncommitted diff vs `4b3814c` (incl. new files and fixtures; made with `git add -A` +
-  `git diff --cached --binary`). Restore with `git apply --3way wip-patches/pN.patch` on a checkout of `4b3814c`.
-  Fixture-recording and patch scripts the agents used are in `wip-patches/` (`p6rec/`, `p7/`, `p10/`, `rec/`,
-  `scripts/`). The worktrees' changes are staged (`git add -A`), not committed. Do not run worktree clean-up
-  tools or `git worktree remove` on `openterm-p6..p10` until each phase is merged.
+- **Backups are gone:** `wip-patches/` and `RESUME_PROMPT.md` were deleted (user approved) after Phases 6-10 were committed. The `openterm-p6..p10`
+  worktrees still exist (staged, uncommitted copies of the same work); do not remove them unless the user asks.
 - **Use Sonnet subagents, not Opus** (user's request: Opus agents used ~55% of the 5-hour window in 15 min).
   Run at most 2-3 at once and check plan usage between steps.
 - Usage rule from the user: when the 5-hour (or weekly) plan window reaches 90%, stop every subagent, update this
-  section and `RESUME_PROMPT.md`, and pause.
+  section, and pause.
 
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
@@ -206,7 +201,7 @@ Phases 6-10 in order:
 - 7: done (merged, see Phase 7 details).
 - 8: done (merged, see Phase 8 details). Desktop notifications were not part of the build: alerts flash in the status bar.
 - 9: done (merged, see Phase 9 details). CSV export (`E` / Alt+X) is wired into every table panel, Phase 6-8 included (FA, FIL, OWN, HDS, FRED, MACRO, RATES, ERN, ECO, ALRT via `useCsvExport`); PORT keeps its own `E`/EXPORT, which writes a re-importable portfolio CSV.
-- 10: done (merged, see Phase 10 details). Remaining: ask the user to delete `wip-patches/` and `RESUME_PROMPT.md`, then merge to `main` (see the notes below).
+- 10: done (merged, see Phase 10 details). Backups were deleted; remaining: merge this branch to `main` (see the notes below).
 
 ## Decisions already made (don't relitigate)
 - Stooq is dropped (bot check). The zero-key chain is Yahoo, then Nasdaq (US only, daily history only).
