@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; next: Phase 12 spec)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 spec written, waiting for approval)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -20,8 +20,13 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
   marker in `backend/tests/test_phase11.py`).
 - **Step 6 closed Phase 11** (`THIRD_PARTY.md`, CLAUDE.md rule changes, `ADDING_A_PROVIDER.md` keyed section,
   `DATA_LIMITS.md`, `COMMANDS.md`); verification bench 21/21 on the first run.
-- **Exact next action: Phase 12 step 1, the spec** `docs/specs/PHASE_12.md` (roadmap "Phase 12"), with the roadmap's
-  proposed defaults listed at the top for approval. Then tests, then code.
+- **Phase 12 step 1 (spec) is written:** [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md), based on Vibe-Trading's
+  `agent/backtest` code at `d0db2e3` (read from a downloaded tarball, not vendored). **Exact next action: the user
+  approves or changes decisions A-M at its top**, then step 2 (tests set + recordings + Vibe cross-check values).
+  Key findings: Vibe's engine is a per-bar loop with next-bar-open fills (not vectorized); numpy + pandas become
+  worker-only dependencies; the sandbox is proposed as an allowlist (Vibe uses a denylist).
+- **Phase 11 finding (decision M in the Phase 12 spec):** `keyring` is not installed in the backend env, so APIKEYS
+  saves keys to `.env`, not the OS keyring as Phase 11 decision B intended.
 - **Still open from Phase 11 (the user will set the key later):** once `OPENROUTER_API_KEY` is set (APIKEYS panel, or the
   worktree's `.env`), run from `backend/` `uv run python ../scripts/record_llm.py` (first `:free` model, US$0; never prints
   the key), check the fixture has no key in it, delete the `@RECORDING` line and run the gates.
@@ -251,7 +256,8 @@ Remaining:
    | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **done** (backend main session, frontend one Sonnet subagent); bench 21/21 |
    | 11.5 LLM gateway + health | **done except the recording** (main session, no subagents); bench 21/21 on the third run. `test_recorded_openrouter_stream...` waits for the OpenRouter key (`scripts/record_llm.py`) |
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | **done** 2026-10-19; bench 21/21 first run |
-   | 12.1 Spec `docs/specs/PHASE_12.md` | **next** |
+   | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **written 2026-10-19, waiting for approval** |
+   | 12.2 Tests set + recordings + Vibe cross-check values | next after approval |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
    (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,
