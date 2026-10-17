@@ -1,5 +1,27 @@
+import httpx._transports.default as httpx_transport
 import pytest
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture(scope="session", autouse=True)
+def shared_ssl_context():
+    """Every app start builds an httpx client, and loading certifi's CA bundle for it costs ~0.35 s on
+    Windows (most of each `client` setup). Tests never open a TLS connection (fixture transport), so each
+    xdist worker builds the default context once. Custom `verify`/`cert` arguments still get their own."""
+    real = httpx_transport.create_ssl_context
+    built: dict[tuple, object] = {}
+
+    def create_ssl_context(verify=True, cert=None, trust_env=True):
+        if not isinstance(verify, bool) or cert:
+            return real(verify=verify, cert=cert, trust_env=trust_env)
+        key = (verify, trust_env)
+        if key not in built:
+            built[key] = real(verify=verify, cert=cert, trust_env=trust_env)
+        return built[key]
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(httpx_transport, "create_ssl_context", create_ssl_context)
+        yield
 
 
 @pytest.fixture(autouse=True)

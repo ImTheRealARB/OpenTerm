@@ -49,7 +49,7 @@ and pause.
 
 ## Commands (Windows PowerShell 5.1: no `&&`)
 ```
-cd backend; uv run pytest -q; uv run ruff check .   # pytest runs on 4 xdist workers (addopts); -n 0 to debug
+cd backend; uv run pytest -q; uv run ruff check .   # pytest: 6 xdist workers, worksteal (addopts); -n 0 to debug
 cd frontend; npx tsc --noEmit; npx vitest run; npx playwright test
 node scripts/bench.mjs          # from repo root; builds, starts servers in fixture+synthetic mode, prints PASS/FAIL
 .\scripts\dev.ps1               # backend :8000 + vite :5173 (vite binds to localhost / ::1, use http://localhost:5173)

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openApp } from "./app";
 
 // All payloads below are test data served by mocked routes; nothing here reaches the network.
 const now = () => Date.now() / 1000;
@@ -74,10 +75,7 @@ async function setup(page: Page) {
     const q = (s: string) => ({ symbol: s, name: s, currency: "USD", exchange: "X", tz: "America/New_York", price: 100, prev_close: 99, change: 1, change_pct: 1, open: null, high: 101, low: 98, volume: 1, high_52w: null, low_52w: null, market_time: Math.floor(now()), source: "yahoo", as_of: now() });
     return r.fulfill({ json: { results: Object.fromEntries(syms.map((s) => [s, env(q(s), { source: "yahoo" })])) } });
   });
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
 }
 
 const run = async (page: Page, t: string) => {

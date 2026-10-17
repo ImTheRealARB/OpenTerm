@@ -1,4 +1,5 @@
 import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import { openApp } from "./app";
 
 const env = (data: unknown, extra = {}) => ({ data, source: "yahoo", as_of: Date.now() / 1000, age_s: 1, stale: false, fallback_from: [], ...extra });
 const quote = (symbol: string, price: number) => ({
@@ -34,10 +35,7 @@ async function setup(page: Page) {
     const c = t.map((_, i) => 100 + Math.sin(i / 4) * 5);
     return r.fulfill({ json: env({ symbol: "AAPL", range: "1y", interval: "1d", currency: "USD", exchange: "NasdaqGS", tz: "America/New_York", t, o: c, h: c.map((x) => x + 1), l: c.map((x) => x - 1), c, v: c.map(() => 1000), source: "yahoo", as_of: 0 }) });
   });
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
 }
 
 const run = async (page: Page, t: string) => {

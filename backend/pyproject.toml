@@ -41,7 +41,7 @@ packages = ["openterm"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-n 4"  # pytest-xdist; 4 beats auto on Windows (worker startup dominates). Debug serially with -n 0.
+addopts = "-n 6 --dist worksteal"  # pytest-xdist; 6 + worksteal beats 4 and auto here (docs/PERFORMANCE.md). Debug serially with -n 0.
 
 [tool.ruff]
 line-length = 100

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openApp } from "./app";
 
 const cmd = async (page: Page, text: string, key = "Enter") => {
   await page.keyboard.press("Control+k");
@@ -48,16 +49,9 @@ async function fakeBackend(page: Page, storedHistory: string[] = []) {
   return { layouts, calls, posted };
 }
 
-async function open(page: Page) {
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
-}
-
 test("LAYOUT SAVE, LOAD by Ctrl+O, Ctrl+S re-save, survives a reload", async ({ page }) => {
   const be = await fakeBackend(page);
-  await open(page);
+  await openApp(page);
   await expect(page.locator(".status")).toContainText("LAYOUT NONE");
 
   await cmd(page, "AAPL DES");
@@ -90,8 +84,9 @@ test("LAYOUT SAVE, LOAD by Ctrl+O, Ctrl+S re-save, survives a reload", async ({ 
   await expect(msg(page)).toHaveText("LAYOUT DESK SAVED (2 PANELS)");
   expect(be.calls.filter((c) => c === "PUT DESK").length).toBe(puts + 1);
 
-  // Fresh session: loading by name rebuilds the same panels.
-  await open(page);
+  // Fresh session (the workspace lives in localStorage): loading by name rebuilds the same panels.
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
   await expect(panels(page)).toHaveCount(1);
   await cmd(page, "MONITOR desk");
   await expect(panels(page)).toHaveCount(2);
@@ -100,7 +95,7 @@ test("LAYOUT SAVE, LOAD by Ctrl+O, Ctrl+S re-save, survives a reload", async ({ 
 
 test("Ctrl+S without a layout name asks for one; bad names and missing layouts are errors", async ({ page }) => {
   await fakeBackend(page);
-  await open(page);
+  await openApp(page);
   await page.keyboard.press("Escape");
   await page.keyboard.press("Control+s");
   await expect(page.locator("#cmdline")).toHaveValue("LAYOUT SAVE ");
@@ -115,7 +110,7 @@ test("Ctrl+S without a layout name asks for one; bad names and missing layouts a
 
 test("LAYOUT panel: list, keyboard load, delete needs a second press", async ({ page }) => {
   const be = await fakeBackend(page);
-  await open(page);
+  await openApp(page);
   await cmd(page, "LAYOUT SAVE ALPHA");
   await expect(msg(page)).toContainText("SAVED");
   await page.keyboard.press("Control+\\");
@@ -149,7 +144,7 @@ test("LAYOUT panel: list, keyboard load, delete needs a second press", async ({ 
 
 test("command history comes from and goes to the SQLite API", async ({ page }) => {
   const be = await fakeBackend(page, ["AAPL DES", "Q"]);
-  await open(page);
+  await openApp(page);
   await page.keyboard.press("Control+k");
   await page.keyboard.press("ArrowUp");
   await expect(page.locator("#cmdline")).toHaveValue("Q");
@@ -164,7 +159,7 @@ test("command history comes from and goes to the SQLite API", async ({ page }) =
 
 test("Ctrl+Shift+Arrows resize the focused panel without a mouse", async ({ page }) => {
   await fakeBackend(page);
-  await open(page);
+  await openApp(page);
   await page.keyboard.press("Control+\\");
   await page.keyboard.press("Control+-"); // panel 3 under panel 2
   await expect(panels(page)).toHaveCount(3);

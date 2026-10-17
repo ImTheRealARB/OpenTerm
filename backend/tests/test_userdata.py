@@ -1,4 +1,4 @@
-import asyncio
+import pytest
 
 from openterm.db import MIGRATIONS, open_db
 from openterm.userdata import HISTORY_MAX
@@ -14,30 +14,38 @@ STATE = {
 }
 
 
-def test_migrations_upgrade_an_existing_db(tmp_path):
-    async def run():
-        path = tmp_path / "old.db"
-        db = await open_db(path)
-        await db.execute("PRAGMA user_version=2")  # a phase 2/3 database: cache + kv only
-        await db.execute("DROP TABLE IF EXISTS layouts")
-        await db.execute("DROP TABLE IF EXISTS history")
-        await db.execute("DROP TABLE IF EXISTS watchlists")
-        await db.execute("DROP TABLE IF EXISTS portfolios")
-        await db.execute("DROP TABLE IF EXISTS alerts")
-        await db.execute("DROP TABLE IF EXISTS jobs")
-        await db.execute("DROP TABLE IF EXISTS strategies")
-        await db.execute("DROP TABLE IF EXISTS bt_runs")
-        await db.commit()
-        await db.close()
-        db = await open_db(path)
-        async with db.execute("PRAGMA user_version") as cur:
-            assert (await cur.fetchone())[0] == len(MIGRATIONS)
-        async with db.execute("SELECT name FROM sqlite_master WHERE type='table'") as cur:
-            tables = {r[0] for r in await cur.fetchall()}
-        await db.close()
-        return tables
+# Tables each migration creates, by schema version (independent of db.py's SQL, so a renamed table fails here).
+TABLES_BY_VERSION = {1: {"cache"}, 2: {"kv"}, 3: {"layouts"}, 4: {"history"}, 5: {"watchlists"}, 6: {"portfolios"},
+                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}}
+ALERT_COLUMNS = ["id", "symbol", "op", "unit", "value", "status", "created_at", "triggered_at", "trigger_price"]
 
-    assert {"cache", "kv", "layouts", "history", "watchlists", "portfolios", "alerts"} <= asyncio.run(run())
+
+def test_tables_by_version_lists_every_migration():
+    assert sorted(TABLES_BY_VERSION) == list(range(1, len(MIGRATIONS) + 1))
+
+
+@pytest.mark.parametrize("version", range(len(MIGRATIONS) + 1))
+async def test_migrations_upgrade_a_db_from_every_version(tmp_path, version):
+    """A database left at `version` (0 = new, len = current) upgrades to the current schema with every table."""
+    path = tmp_path / "old.db"
+    db = await open_db(path)
+    await db.execute(f"PRAGMA user_version={version}")
+    for v in range(version + 1, len(MIGRATIONS) + 1):
+        for table in TABLES_BY_VERSION.get(v, ()):
+            await db.execute(f"DROP TABLE {table}")
+    await db.commit()
+    await db.close()
+    db = await open_db(path)
+    async with db.execute("PRAGMA user_version") as cur:
+        assert (await cur.fetchone())[0] == len(MIGRATIONS)
+    async with db.execute("SELECT name FROM sqlite_master WHERE type='table'") as cur:
+        tables = {r[0] for r in await cur.fetchall()}
+    async with db.execute("PRAGMA table_info(alerts)") as cur:
+        cols = [r[1] for r in await cur.fetchall()]
+    await db.close()
+    assert {"cache", "kv", "layouts", "history", "watchlists", "portfolios", "alerts", "jobs", "strategies",
+            "bt_runs"} <= tables
+    assert cols == ALERT_COLUMNS
 
 
 def test_layout_crud(client):
@@ -85,13 +93,29 @@ def test_history_round_trip_and_cap(client):
     assert client.post("/api/cmdhistory", json={"cmds": "Q"}).status_code == 400
 
 
-def test_history_survives_restart(tmp_path, monkeypatch):
+def test_user_data_survives_restart(tmp_path, monkeypatch):
+    """History, layouts (Phase 4), watchlists (Phase 5), portfolios and alerts (Phase 8) all live in SQLite."""
     from fastapi.testclient import TestClient
 
     from openterm.config import get_settings
 
     monkeypatch.setenv("OPENTERM_FIXTURES", "1")
     monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "persist.db"))
+    get_settings.cache_clear()
+    from openterm.main import app
+
+    with TestClient(app) as c:
+        c.post("/api/cmdhistory", json={"cmds": ["AAPL DES"]})
+        c.put("/api/layouts/KEEP", json={"state": STATE})
+        c.put("/api/watchlists/KEEP", json={"symbols": ["AAPL", "GC=F"]})
+        c.put("/api/portfolios/KEEP", json={"positions": [{"symbol": "VOD.L", "qty": 100, "cost": 72.5, "currency": "GBp"}]})
+        c.post("/api/alerts", json={"symbol": "AAPL", "op": ">", "unit": "price", "value": 200})
+    with TestClient(app) as c:
+        assert c.get("/api/cmdhistory").json()["items"] == ["AAPL DES"]
+        assert c.get("/api/layouts/KEEP").json()["state"] == STATE
+        assert c.get("/api/watchlists/KEEP").json()["symbols"] == ["AAPL", "GC=F"]
+        assert c.get("/api/portfolios/KEEP").json()["positions"][0]["currency"] == "GBp"
+        assert c.get("/api/alerts").json()["alerts"][0]["symbol"] == "AAPL"
     get_settings.cache_clear()
     from openterm.main import app
 

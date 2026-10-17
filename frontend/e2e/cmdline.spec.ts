@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openApp } from "./app";
 
 const cmd = async (page: Page, text: string, key = "Enter") => {
   await page.keyboard.press("Control+k");
@@ -8,10 +9,7 @@ const cmd = async (page: Page, text: string, key = "Enter") => {
 const panel = (page: Page, id: number) => page.locator(`[data-panel="${id}"]`);
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
 });
 
 test("HELP lists functions", async ({ page }) => {

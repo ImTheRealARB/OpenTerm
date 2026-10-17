@@ -346,8 +346,9 @@ def test_python_strategy_save_run_delete(client):
      "NO SIGNALS"),
 ])
 def test_runtime_limits_fail_closed(client, code, error):
+    limit = 3 if error == "TIME LIMIT" else 60  # the limit also covers the worker's pandas import (seconds under load)
     job = bt_run(client, code=code, symbols=["AAPL"], interval="1D", range="10Y",
-                 options={"time_limit_s": 3, "memory_limit_mb": 300})
+                 options={"time_limit_s": limit, "memory_limit_mb": 300})
     assert job["state"] == "error" and error in job["error"]
     ok = bt_run(client, rule="SMA20>SMA50", symbols=["AAPL"], interval="1D", range="10Y")
     assert ok["state"] == "done"  # the pool recovered
