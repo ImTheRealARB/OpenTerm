@@ -184,14 +184,17 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: 
     main.current = s;
     last.current = n ? { t: data.t[n - 1], o: data.o[n - 1], h: data.h[n - 1], l: data.l[n - 1], c: data.c[n - 1], v: data.v[n - 1] } : null;
 
-    if (!compare) {
+    // Series without volume (FRED, indices on some feeds) get no histogram: zero bars draw as a flat line.
+    let hasVolume = false;
+    for (let i = 0; i < n && !hasVolume; i++) hasVolume = data.v[i] > 0;
+    if (!compare && hasVolume) {
       const v = chart.addSeries(HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       const bars = new Array(n);
       for (let i = 0; i < n; i++) bars[i] = { time: toTime(data.t[i]), value: Number.isFinite(data.v[i]) ? data.v[i] : 0, color: data.c[i] >= data.o[i] ? c.up : c.down };
       v.setData(bars);
       vol.current = v;
-    } else {
+    } else if (compare) {
       const cs = chart.addSeries(LineSeries, { color: c.acc, lineWidth: 1, title: compare.symbol });
       const pts = [];
       for (let i = 0; i < compare.t.length; i++) if (Number.isFinite(compare.c[i])) pts.push({ time: toTime(compare.t[i]), value: compare.c[i] });

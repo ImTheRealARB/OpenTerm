@@ -271,6 +271,12 @@ Notes:
   long tasks 0. No budget regressed; all moves are within the machine's run-to-run spread except the bundle, which grew with 5 phases of features.
 - Not measured: Docker image and Tauri shell (neither tool is installed here).
 
+### Post-merge fixes (2026-10-17, same machine, later the same evening)
+Panel tab shows the security only for functions that use it; charts skip the volume histogram for series without volume.
+163 pytest, 169 vitest, 66 Playwright, tsc + ruff clean. Bench: 15/17 then 16/17. Tick-to-pixel missed on every run
+(55.4, 59.3 ms) and also missed (57.6 ms) with both fixes reverted, so the change is the machine, not the code; earlier
+the same day it ran 38-42 ms. Chart pan missed once (33.4 ms) and passed on the rerun (16.7 ms), as before. Bundle 95.6 KB.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+# Runs OpenTerm as one app in the browser: builds the frontend when it is missing or out of date,
+# serves it from the backend on :8000 and opens the default browser. Ctrl+C stops it.
+# Usage: ./scripts/start [--rebuild] [--no-browser]
+set -e
+root="$(cd "$(dirname "$0")/.." && pwd)"
+fe="$root/frontend"
+index="$fe/dist/index.html"
+rebuild=0; browser=1
+for a in "$@"; do
+  case "$a" in --rebuild) rebuild=1 ;; --no-browser) browser=0 ;; esac
+done
+if [ "$rebuild" = 1 ] || [ ! -f "$index" ] || [ -n "$(find "$fe/src" "$fe/index.html" "$fe/package.json" -newer "$index" -type f | head -n 1)" ]; then
+  echo "Building the frontend..."
+  (cd "$fe" && npm run build)
+fi
+
+port="${OPENTERM_PORT:-8000}"
+url="http://localhost:$port"
+export OPENTERM_STATIC_DIR="$fe/dist"
+(cd "$root/backend" && uv run python -m openterm) &
+be=$!
+trap 'kill $be 2>/dev/null' EXIT INT TERM
+i=0
+until curl -fs "http://127.0.0.1:$port/api/sources" >/dev/null 2>&1; do
+  i=$((i + 1)); [ "$i" -ge 60 ] && { echo "backend did not start on $url (is the port in use?)"; exit 1; }
+  kill -0 $be 2>/dev/null || exit 1
+  sleep 0.5
+done
+echo "OpenTerm is running at $url  (Ctrl+C to stop)"
+if [ "$browser" = 1 ]; then
+  if command -v open >/dev/null 2>&1; then open "$url"; elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$url"; fi
+fi
+wait $be

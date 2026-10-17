@@ -36,14 +36,11 @@ The last column tracks the merge into this worktree.
   section, and pause.
 
 ## Where things stand
-- **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
-- **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phases 6-10 are committed on the same branch
-  (`96d40b9` .. `f0df226`, docs `1dfebe4`). All 10 phases are built; this branch is the complete app, not yet on `main`.**
-- Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
-  The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
-  `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
-  Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
+- **All 10 phases are built, verified and on `main`** (Phases 1-4 `736d6d5`..`b72466a`, 5 `4b3814c`, 6-10
+  `96d40b9`..`f0df226`, then docs and the post-merge fixes). `main` was fast-forwarded on 2026-10-17; the old
+  phase worktrees and branches were removed. No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
+- The leftover uncommitted Phase 3 copies that sat on `main` were set aside in a stash
+  (`main-phase3-leftovers-2026-10-17`); they were identical to `b6dca4e` apart from line endings, so the stash can be dropped.
 - Latest verification (Phase 10 tree):
   - Backend: 163 pytest passed (`-n auto`, ~25 s), ruff clean.
   - Frontend: 169 vitest passed, tsc clean, 66 Playwright passed (`--workers=8`, ~24 s).
@@ -206,12 +203,14 @@ Phases 6-10 in order:
 - 10: done (merged, see Phase 10 details). Backups were deleted.
 
 Remaining:
-1. Bring `main` up to date: it is still at Phase 2 (`3815fdd`). This branch contains everything (Phases 1-10), so
-   `main` can fast-forward to it once the leftover Phase 3 files on `main` are discarded (see "Where things stand").
-2. Remove the redundant worktrees `openterm-p6..p10`, `openterm-phase-3-4-621f59`, `openterm-phases-5-10-89f06f`,
-   `openterm-phases-6-10-build-c8be5c` and their branches once `main` has the work.
-3. Small UI fixes seen in the post-merge preview (see Risks): stale security in the panel tab, stray line on FRED charts.
-4. First real Docker build and Tauri build (neither tool is installed on the dev machine).
+1. First real Docker build and Tauri build (neither tool is installed on the dev machine). Deferred by the user.
+2. Tick-to-pixel bench budget: missed (55-59 ms vs 50) on every run of the post-merge session, including with the
+   fixes reverted, so it is machine load or drift, not those fixes; earlier the same day it ran 38-42 ms. Re-run on a
+   quiet machine before treating it as a regression.
+
+Done after the merge: `main` fast-forwarded; panel tab names the security only for functions that use it; charts skip
+the volume histogram when a series has no volume (FRED's flat line); `scripts/start.ps1` / `scripts/start` run the
+built app from the backend on :8000 and open the browser.
 
 ## Decisions already made (don't relitigate)
 - Stooq is dropped (bot check). The zero-key chain is Yahoo, then Nasdaq (US only, daily history only).
@@ -249,16 +248,14 @@ Remaining:
   while probing; `gdelt_429.json` is its real throttle text.
 - Yahoo screeners (`v1/finance/screener/predefined/saved`) should be re-checked on a weekday; if they return rows,
   they could become MOV's primary source (record a weekday fixture first).
-- Seen in the fixture-mode preview after the merge (not fixed): the panel tab keeps showing the last security (e.g.
-  "AAPL") on functions that take none (PORT, EQS, SETTINGS, RATES); `FRED` charts draw a flat green line near the
-  bottom of the plot that is not part of the series.
 - `Dockerfile`/`docker-compose.yml` and the Tauri scaffold (`desktop/`) have never been built (no Docker or Rust here).
 - The 50k-bar chart-pan bench budget misses occasionally (about one run in three); the other 16 budgets are stable.
 - The fixtures were recorded with a one-off script that is not in the repo. To refresh one, fetch the same URL the
   provider builds and save `{"status", "body"}` (JSON) or `{"status", "content_type", "text"}` (XML/text).
 
 ## How to look at the app
-Run `.\scripts\dev.ps1`, then open http://localhost:5173. For a no-network demo with recorded data, set
+To use it: `.\scripts\start.ps1` (builds if needed, serves on http://localhost:8000, opens the browser).
+To develop: `.\scripts\dev.ps1`, then open http://localhost:5173 (hot reload). For a no-network demo with recorded data, set
 `$env:OPENTERM_FIXTURES = '1'` before starting the backend. For `FA`/`FIL`/`OWN` against live SEC data, set
 `$env:SEC_USER_AGENT = 'Your Name you@example.com'` first. To get a screenshot without the preview pane,
 run a small Playwright script against a production build (`npx vite preview --port 4173 --host 127.0.0.1`).

@@ -30,6 +30,10 @@ macOS/Linux:
 
 Open http://localhost:5173. The backend runs on :8000.
 
+To just use it in the browser (no dev server): `.\scripts\start.ps1` (macOS/Linux: `./scripts/start`). It builds
+the frontend when it is missing or out of date, serves everything from http://localhost:8000 and opens your browser.
+Flags: `-Rebuild` / `--rebuild`, `-NoBrowser` / `--no-browser`.
+
 Docker (one container, backend serves the built frontend; written but not yet built on this machine):
 
 ```sh

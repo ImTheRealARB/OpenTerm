@@ -64,7 +64,10 @@ export function Panel({ id }: { id: number }) {
   const panel = useStore(workspace, (s) => s.panels[id]);
   const focused = useStore(workspace, (s) => s.focus === id);
   const view = currentView(panel);
-  const title = [view.security?.symbol, view.fn].filter(Boolean).join(" | ") || "—";
+  // The sticky security stays on the panel, but the tab only names it when this function uses it
+  // (bare `N` shows that security's news).
+  const usesSecurity = (view.fn && FUNCTIONS.get(view.fn)?.needsSecurity) || (view.fn === "N" && view.args.length === 0);
+  const title = [usesSecurity ? view.security?.symbol : undefined, view.fn].filter(Boolean).join(" | ") || "—";
   // New command = new history entry = remount. In-place edits (timeframe, list) keep the instance.
   const mountKey = `${panel.pos}:${view.fn}:${view.security?.symbol}`;
   const resetKey = `${mountKey}:${view.args.join(" ")}`;
