@@ -588,3 +588,242 @@ async def llm_cap(request: Request):
         return key_error("bad_request", f"CAP MUST BE A NUMBER FROM 0 TO {spend.MAX_CAP:.0f} (US$ PER DAY)")
     await spend.set_cap(user(request).db, round(float(cap), 2))
     return await llm_of(request).spend_status()
+
+# --- Phase 12: backtester (BT). The server parses and checks; bars are fetched here; the job runs in a worker. ---
+BT_HEADLINE = "HISTORICAL SIMULATION, NOT A FORECAST"
+
+
+def bt_of(request: Request):
+    """BtStore, built on first use; also registers the bt.run on-done hook (stores the run before 'done' shows)."""
+    app = request.app
+    if getattr(app.state, "bt", None) is None:
+        from pathlib import Path
+
+        from .bt.store import CARD_METRICS, BtStore
+
+        db_path = app.state.settings.openterm_db_path
+        data_dir = (Path(db_path).parent if db_path != ":memory:" else Path("data")) / "bt_data"
+        store = BtStore(user(request).db, data_dir)
+
+        async def on_done(job: dict, result: dict) -> dict:
+            p = job["params"]
+            await store.save_run(result, p["meta"], p["config"], p["data_sha"], job["hash"])
+            return {"run_id": result["run_id"], "metrics": {k: result["metrics"].get(k) for k in CARD_METRICS}}
+
+        jobs_of(request).on_done["bt.run"] = on_done
+        app.state.bt = store
+    return app.state.bt
+
+
+def bt_error(e) -> Response:
+    body = {"error": redact(str(e)), "kind": getattr(e, "kind", "bad_request")}
+    if getattr(e, "detail", None):
+        body["detail"] = redact(e.detail)
+    if getattr(e, "col", None) is not None and e.col >= 0:
+        body["col"] = e.col
+    return Orjson(body, status_code=STATUS.get(body["kind"], 400))
+
+
+def _opt_num(opts: dict, key: str, lo: float, hi: float, default=None):
+    v = opts.get(key, default)
+    if v is None:
+        return None
+    if isinstance(v, bool) or not isinstance(v, int | float) or not lo <= v <= hi:
+        from .bt.store import BtError
+
+        raise BtError("bad_request", f"OPTION {key.upper()} MUST BE A NUMBER {lo:g}-{hi:g}")
+    return v
+
+
+async def _bt_params(request: Request, body: dict) -> dict:
+    import hashlib
+
+    from .bt import catalog, rules, sandbox
+    from .bt.store import BtError
+
+    syms = body.get("symbols")
+    if not isinstance(syms, list) or not 1 <= len(syms) <= 100 or not all(isinstance(s, str) and s.strip() for s in syms):
+        raise BtError("bad_request", "SYMBOLS MUST BE A LIST OF 1-100 SYMBOLS")
+    symbols = list(dict.fromkeys(resolve(s.strip().upper()) for s in syms))
+    interval = str(body.get("interval") or "1D").upper()
+    if interval not in rules.INTERVALS:
+        raise BtError("bad_request", f"BT INTERVAL MUST BE {' OR '.join(rules.INTERVALS)}")
+    range_ = str(body.get("range") or "5Y").upper()
+    opts = body.get("options") or {}
+    if not isinstance(opts, dict):
+        raise BtError("bad_request", "OPTIONS MUST BE AN OBJECT")
+    cash = _opt_num(opts, "cash", 1, 1e12, 100_000)
+    fees = _opt_num(opts, "fees_bps", 0, 1000, 0)
+    slip = _opt_num(opts, "slip_bps", 0, 1000)
+    limit_s = _opt_num(opts, "time_limit_s", 1, 60, 60)
+    mem_mb = _opt_num(opts, "memory_limit_mb", 64, 1024, 1024)
+    warmup = _opt_num(opts, "warmup_bars", 0, 10_000)
+    short, adjusted = bool(opts.get("short", False)), bool(opts.get("adjusted", True))
+    bench = opts.get("bench")
+    if bench is not None and (not isinstance(bench, str) or not bench.strip()):
+        raise BtError("bad_request", "OPTION BENCH MUST BE A SYMBOL")
+
+    sources = [k for k in ("rule", "code", "strategy") if body.get(k)]
+    if len(sources) != 1:
+        raise BtError("bad_request", "SEND EXACTLY ONE OF RULE, CODE OR STRATEGY")
+    rule = code = None
+    strategy = None
+    if body.get("rule"):
+        rule = str(body["rule"])
+        rules.parse(rule)
+    else:
+        if body.get("strategy"):
+            saved = await bt_of(request).strategy(str(body["strategy"]))
+            strategy = saved["name"]
+            rule, code = (saved["code"], None) if saved["kind"] == "rule" else (None, saved["code"])
+        else:
+            code = str(body["code"])
+        if code is not None:
+            try:
+                sandbox.check(code)
+            except sandbox.SandboxError as e:
+                raise BtError("bad_request", "STRATEGY REJECTED", detail=str(e)) from None
+        else:
+            rules.parse(rule)
+
+    engine = catalog.engine_for(symbols, opts.get("engine"))
+    if engine not in catalog.BUILT:
+        raise BtError("bad_request", f"ENGINE {engine.upper()} IS NOT BUILT YET (PHASE 12 STEP 5)")
+
+    s = svc(request)
+    wanted = symbols + ([resolve(bench.strip().upper())] if bench else [])
+    results = await asyncio.gather(*(s.history(x, range_, interval) for x in wanted), return_exceptions=True)
+    for sym, r in zip(wanted, results, strict=True):
+        if isinstance(r, DataError):
+            raise DataError(r.kind, f"{sym}: {r}") from None
+        if isinstance(r, BaseException):
+            raise r
+    envs = dict(zip(wanted, results, strict=True))
+    payload = {"bars": {x: envs[x]["data"] for x in symbols}, "bench": envs[wanted[-1]]["data"] if bench else None,
+               "bench_symbol": wanted[-1] if bench else None}
+    store = bt_of(request)
+    sha, path = await asyncio.to_thread(store.write_data, payload)
+
+    config: dict = {"initial_cash": float(cash)}
+    if slip is not None and engine in catalog.SLIPPAGE_KEY:
+        config[catalog.SLIPPAGE_KEY[engine]] = slip / 1e4
+    if fees:
+        config["fees_bps"] = fees
+    if warmup:
+        config["warmup_bars"] = int(warmup)
+    fixtures = request.app.state.settings.openterm_fixtures
+    labels = {
+        "headline": BT_HEADLINE, "engine": engine, "fees_bps": fees or 0,
+        "slip_bps": slip if slip is not None else catalog.DEFAULT_SLIP_BPS.get(engine, 0), "costs": catalog.COSTS.get(engine, ""),
+        "warmup_bars": int(warmup or 0), "short": short, "prices": "ADJ" if adjusted else "RAW",
+        "sources": [{"symbol": x, "name": envs[x].get("source"), "as_of": envs[x].get("as_of"),
+                     "age_s": envs[x].get("age_s"), "stale": envs[x].get("stale", False)} for x in wanted],
+        "benchmark": wanted[-1] if bench else "EQUAL-WEIGHT BUY AND HOLD OF THE TRADED SYMBOLS",
+        "data_note": "RECORDED FIXTURE DATA" if fixtures else "",
+    }
+    meta = {"rule": rule, "strategy": strategy, "code": code, "symbols": symbols, "interval": interval,
+            "range": range_, "engine": engine, "short": short, "bench": wanted[-1] if bench else None}
+    params = {"data_path": str(path), "data_sha": sha, "short": short, "engine": engine, "config": config,
+              "bars_per_year": catalog.BARS_PER_YEAR.get(engine, 252 if interval == "1D" else 52),
+              "adjusted": adjusted, "time_limit_s": limit_s, "memory_limit_mb": int(mem_mb), "labels": labels,
+              "meta": meta, **({"rule": rule} if rule else {"code": code})}
+    stable = {k: v for k, v in params.items() if k != "labels"}  # labels carry data age: not part of the identity
+    params["run_id"] = hashlib.sha256(orjson.dumps(stable, option=orjson.OPT_SORT_KEYS)).hexdigest()[:16]
+    return params
+
+
+@router.post("/bt/run")
+async def bt_run(request: Request):
+    from .bt.rules import RuleError
+    from .bt.store import BtError
+
+    try:
+        params = await _bt_params(request, await json_object(request))
+    except (BtError, RuleError) as e:
+        return bt_error(e)
+    except (DataError, UserDataError) as e:
+        return error(e)
+    jobs, store = jobs_of(request), bt_of(request)
+    if not await store.has_run(params["run_id"]):  # a deleted or trimmed run must not come back from the job cache
+        await jobs.store.forget(jobs.hash_for("bt.run", params))
+    return await jobs.submit("bt.run", params, internal=True)
+
+
+@router.get("/bt/runs")
+async def bt_runs(request: Request):
+    return {"runs": await bt_of(request).runs()}
+
+
+@router.get("/bt/runs/{run_id}")
+async def bt_run_get(request: Request, run_id: str):
+    from .bt.store import BtError
+
+    try:
+        return await bt_of(request).run(run_id)
+    except BtError as e:
+        return bt_error(e)
+
+
+@router.delete("/bt/runs/{run_id}")
+async def bt_run_delete(request: Request, run_id: str):
+    from .bt.store import BtError
+
+    try:
+        h = await bt_of(request).delete_run(run_id)
+    except BtError as e:
+        return bt_error(e)
+    if h:
+        await jobs_of(request).store.forget(h)
+    return {"deleted": run_id}
+
+
+@router.get("/bt/strategies")
+async def bt_strategies(request: Request):
+    return {"strategies": await bt_of(request).strategies()}
+
+
+@router.get("/bt/strategies/{name}")
+async def bt_strategy_get(request: Request, name: str):
+    from .bt.store import BtError
+
+    try:
+        return await bt_of(request).strategy(name)
+    except BtError as e:
+        return bt_error(e)
+
+
+@router.put("/bt/strategies/{name}")
+async def bt_strategy_put(request: Request, name: str):
+    from .bt import rules, sandbox
+    from .bt.store import BtError
+
+    if not loopback(request):
+        return key_error("forbidden", "STRATEGIES CAN ONLY BE CHANGED FROM THIS MACHINE")
+    try:
+        body = await json_object(request)
+        if isinstance(body.get("rule"), str) and body["rule"].strip():
+            rules.parse(body["rule"])
+            return await bt_of(request).put_strategy(name, body["rule"].strip(), "rule")
+        code = body.get("code")
+        try:
+            sandbox.check(code)
+        except sandbox.SandboxError as e:
+            raise BtError("bad_request", "STRATEGY REJECTED", detail=str(e)) from None
+        return await bt_of(request).put_strategy(name, code, "python")
+    except (BtError, rules.RuleError) as e:
+        return bt_error(e)
+    except UserDataError as e:
+        return error(e)
+
+
+@router.delete("/bt/strategies/{name}")
+async def bt_strategy_delete(request: Request, name: str):
+    from .bt.store import BtError
+
+    if not loopback(request):
+        return key_error("forbidden", "STRATEGIES CAN ONLY BE CHANGED FROM THIS MACHINE")
+    try:
+        await bt_of(request).delete_strategy(name)
+    except BtError as e:
+        return bt_error(e)
+    return {"deleted": name}

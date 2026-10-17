@@ -14,7 +14,7 @@ import threading
 import time
 import uuid
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from multiprocessing.connection import wait
 
 from ..redact import redact
@@ -79,6 +79,9 @@ class JobRunner:
         self._last_frame: dict[str, float] = {}
         self._pending_frame: dict[str, asyncio.TimerHandle] = {}
         self._timers: dict[str, list[asyncio.TimerHandle]] = {}
+        # kind -> async hook(job, result) -> result to keep, run before a done job becomes visible (bt.run stores
+        # its run here, so GET /api/bt/runs/{id} works the moment the job says done)
+        self.on_done: dict[str, Callable[[dict, object], Awaitable[object]]] = {}
 
     # --- pool --------------------------------------------------------------------------------------------------
     def _start_pool(self) -> None:
@@ -153,13 +156,25 @@ class JobRunner:
             self._frame(job)
             return
         w.job = None
-        if kind == "done":
+        if kind == "done" and job["kind"] in self.on_done:
+            job["msg"] = "STORING"
+            self.loop.create_task(self._finish_hooked(job, payload[0]))
+        elif kind == "done":
             self._finish(job, "done", result=payload[0])
         elif kind == "error":
             self._finish(job, "error", error=redact(payload[0]))
         else:
             self._finish(job, "cancelled")
         self._dispatch()
+
+    async def _finish_hooked(self, job: dict, result) -> None:
+        try:
+            result = await self.on_done[job["kind"]](job, result)
+        except Exception as e:  # noqa: BLE001 - reported on the job
+            log.exception("on_done hook failed for job %s", job["id"])
+            self._finish(job, "error", error=redact(f"COULD NOT STORE THE RESULT: {type(e).__name__}: {e}"[:300]))
+        else:
+            self._finish(job, "done", result=result)
 
     def _on_death(self, w: Worker) -> None:
         if w.retired or w not in self.workers:
@@ -197,6 +212,8 @@ class JobRunner:
                     self.queue.appendleft(job["id"])
                     continue
                 limit = KINDS[job["kind"]].time_limit_s
+                if isinstance(job["params"], dict) and isinstance(job["params"].get("time_limit_s"), int | float):
+                    limit = max(0.5, min(limit, float(job["params"]["time_limit_s"])))
                 self._timers.setdefault(job["id"], []).append(
                     self.loop.call_later(limit, self._kill, job["id"], "error", "TIME LIMIT"))
                 self._frame(job, force=True)
@@ -246,12 +263,17 @@ class JobRunner:
             self._done.pop(job["id"], None)
 
     # --- public API ------------------------------------------------------------------------------------------
-    async def submit(self, kind: str, params) -> dict:
-        if kind not in KINDS:
+    @staticmethod
+    def hash_for(kind: str, params: dict) -> str:
+        k = KINDS[kind]
+        return job_hash(kind, k.version, k.hash_view(params), k.fingerprint(params))
+
+    async def submit(self, kind: str, params, internal: bool = False) -> dict:
+        if kind not in KINDS or (KINDS[kind].internal and not internal):
             raise BadParams(f"UNKNOWN JOB KIND {str(kind).upper()}")
         k = KINDS[kind]
         params = k.validate(params)
-        h = job_hash(kind, k.version, params, k.fingerprint(params))
+        h = job_hash(kind, k.version, k.hash_view(params), k.fingerprint(params))
         for job in self.jobs.values():
             if job["hash"] == h:
                 return self.public(job)  # the same work is already queued or running

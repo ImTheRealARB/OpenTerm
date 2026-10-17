@@ -17,6 +17,10 @@ dependencies = [
   "apscheduler>=3.10,<4",
   # uvloop has no Windows build; asyncio's default loop is used there.
   "uvloop>=0.19; sys_platform != 'win32'",
+  "numpy>=1.26",
+  "pandas>=2.2,<3",
+  "psutil>=5.9",
+  "keyring>=25",
 ]
 
 [dependency-groups]

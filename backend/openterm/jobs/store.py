@@ -30,6 +30,12 @@ class JobStore:
         )
         await self.db.commit()
 
+    async def forget(self, h: str) -> None:
+        """Drops finished jobs with this hash, so the next identical submit runs again (e.g. its BT run was deleted)."""
+        await self._index()
+        await self.db.execute("DELETE FROM jobs WHERE hash=?", (h,))
+        await self.db.commit()
+
     @staticmethod
     def _row(r, with_result: bool = True) -> dict:
         d = dict(zip(COLS, r, strict=True))

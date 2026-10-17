@@ -226,3 +226,11 @@ def _route(request: httpx.Request) -> httpx.Response:
     if url.host in LLM_HOSTS and (url.host, url.path) not in KEY_TESTS:
         return httpx.Response(404, text="not recorded")
     return _route_before_llm(request)
+
+# --- Phase 12: BT (10-year daily bars, recorded 2026-10-19 by scripts/record_phase12.py) ---
+ROUTES.update({
+    ("/v8/finance/chart/AAPL", "10y", "1d"): "yahoo_chart_aapl_10y_1d",
+    ("/v8/finance/chart/SPY", "10y", "1d"): "yahoo_chart_spy_10y_1d",
+    ("/v8/finance/chart/RELIANCE.NS", "10y", "1d"): "yahoo_chart_reliance_10y_1d",
+    ("/v8/finance/chart/^NSEI", "10y", "1d"): "yahoo_chart_nsei_10y_1d",
+})

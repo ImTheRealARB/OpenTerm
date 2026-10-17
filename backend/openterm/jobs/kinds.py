@@ -27,6 +27,10 @@ class Kind:
     validate: Callable[[dict], dict]
     time_limit_s: float = 300.0
     fingerprint: Callable[[dict], str] = field(default=lambda _params: "")
+    internal: bool = False
+    hash_view: Callable[[dict], dict] = field(default=lambda params: params)
+    """The part of params that identifies the work (bt.run leaves out its display labels, e.g. data age)."""
+    """Submitted only by the server (e.g. bt.run via /api/bt/run), never through POST /api/jobs."""
 
 
 def _int(params: dict, key: str, lo: int, hi: int, default: int | None = None) -> int | None:
@@ -77,6 +81,30 @@ def sleep_job(params: dict, progress: Callable[[float, str], None]) -> dict:
     return {"steps": steps, "step_ms": params["step_ms"]}
 
 
+# --- bt.run: one backtest (Phase 12). Params are built by /api/bt/run; the data file hash is the fingerprint. ----
+
+BT_KEYS = {"data_path", "data_sha", "rule", "code", "short", "engine", "config", "bars_per_year", "adjusted",
+           "time_limit_s", "memory_limit_mb", "labels", "meta", "run_id"}
+
+
+def validate_bt(params: dict) -> dict:
+    if not isinstance(params, dict) or set(params) - BT_KEYS or not {"data_path", "data_sha", "engine", "config",
+                                                                     "run_id"} <= set(params):
+        raise BadParams("BT.RUN PARAMS ARE BUILT BY /api/bt/run")
+    if bool(params.get("rule")) == bool(params.get("code")):
+        raise BadParams("BT.RUN NEEDS EXACTLY ONE OF RULE OR CODE")
+    return params
+
+
+def bt_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..bt.job import run  # pandas loads here, in the worker
+
+    return run(params, progress)
+
+
 KINDS: dict[str, Kind] = {
     "sleep": Kind("sleep", "1", "TEST JOB", sleep_job, validate_sleep),
+    "bt.run": Kind("bt.run", "1", "BACKTEST", bt_job, validate_bt, time_limit_s=60.0,
+                   fingerprint=lambda p: p["data_sha"], internal=True,
+                   hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"}),
 }

@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-CORE = pytest.mark.xfail(strict=True, reason="Phase 12 step 3 (engine core, rules, sandbox, API) not built")
 ENGINES = pytest.mark.xfail(strict=True, reason="Phase 12 step 5 (India, crypto, forex, futures, composite) not built")
 VALID = pytest.mark.xfail(strict=True, reason="Phase 12 step 6 (BT MC, BT WF) not built")
 RUNS = pytest.mark.xfail(strict=True, reason="Phase 12 step 7 (BT RUNS compare, BT EXPORT) not built")
@@ -125,7 +124,6 @@ def test_server_never_imports_pandas(tmp_path):
 
 # --- 1. Frames from the recorded fixtures ------------------------------------------------------------------------
 
-@CORE
 def test_yahoo_frame_matches_the_crosscheck_input():
     f = mod("openterm.bt.frames").from_yahoo_chart(body("yahoo_chart_aapl_10y_1d"))
     assert list(f.columns[:5]) == ["open", "high", "low", "close", "volume"] and "adj_close" in f.columns
@@ -138,7 +136,6 @@ def test_yahoo_frame_matches_the_crosscheck_input():
 
 # --- 2. Engine core (global equity, US) --------------------------------------------------------------------------
 
-@CORE
 @pytest.mark.parametrize("name", ["us_long_then_short", "us_two_symbols_hold", "us_two_symbols_rebalance",
                                   "us_warmup_3"])
 def test_us_engine_matches_vibe_on_synthetic_bars(name):
@@ -146,7 +143,6 @@ def test_us_engine_matches_vibe_on_synthetic_bars(name):
     assert_run(res, case)
 
 
-@CORE
 def test_us_long_then_short_by_hand():
     # signals [0,1,1,1,0,-1,-1,0] act one bar later at the open; opens 100..107, closes open+0.5, slippage 0.1%.
     res, _ = run_case("us_long_then_short", "us")
@@ -159,7 +155,6 @@ def test_us_long_then_short_by_hand():
     assert short.exit_reason == "end_of_backtest" and short.exit_price == pytest.approx(107.5 * 1.001)  # last close
 
 
-@CORE
 def test_aapl_sma_cross_matches_vibe():
     case = CASES["aapl_sma20_gt_sma50"]
     data = {"AAPL": mod("openterm.bt.frames").from_yahoo_chart(body(case["fixture"]))}
@@ -169,7 +164,6 @@ def test_aapl_sma_cross_matches_vibe():
     assert_run(res, case)
 
 
-@CORE
 def test_metrics_on_a_fixed_curve():
     pd = mod("pandas")
     m = EXPECTED["metrics_fixed_curve"]
@@ -182,14 +176,12 @@ def test_metrics_on_a_fixed_curve():
 
 # --- 3. Rule syntax ----------------------------------------------------------------------------------------------
 
-@CORE
 @pytest.mark.parametrize("text", ["SMA20>SMA50", "CLOSE>SMA200", "RSI14<30", "EMA12 CROSS> EMA26",
                                   "RSI14<30 AND CLOSE>SMA200", "RET20>0.05 OR HIGH20<=CLOSE", "sma20 > sma50"])
 def test_rule_parser_accepts(text):
     mod("openterm.bt.rules").parse(text)
 
 
-@CORE
 @pytest.mark.parametrize(("text", "col"), [
     ("SMA20>>SMA50", 6),     # second '>' (0-based column of the offending character)
     ("FOO>1", 0),            # unknown term
@@ -205,7 +197,6 @@ def test_rule_parser_rejects_with_column(text, col):
     assert e.value.col == col and str(e.value)
 
 
-@CORE
 def test_bt_command_arguments():
     parse = mod("openterm.bt.rules").parse_command
     a = parse(["AAPL", "SMA20>SMA50", "1D", "5Y"])
@@ -216,7 +207,6 @@ def test_bt_command_arguments():
         parse(["AAPL", "SMA20>SMA50", "FEES=-1"])
 
 
-@CORE
 def test_rule_signals_match_hand_written_indicators():
     pd = mod("pandas")
     np = mod("numpy")
@@ -234,7 +224,6 @@ def test_rule_signals_match_hand_written_indicators():
     assert set(short.iloc[60:].unique()) <= {1.0, -1.0} and (short.iloc[:49] == 0).all()  # NaN warm-up stays flat
 
 
-@CORE
 def test_cross_waits_for_an_actual_cross():
     pd = mod("pandas")
     idx = pd.bdate_range("2024-01-01", periods=8)
@@ -262,7 +251,6 @@ class SignalEngine:
 '''
 
 
-@CORE
 @pytest.mark.parametrize("snippet", [
     "import os", "import socket", "import subprocess", "from pathlib import Path", "import importlib",
     "x = open('C:/Windows/win.ini').read()", "__import__('os')", "eval('1')", "exec('x=1')",
@@ -276,14 +264,12 @@ def test_sandbox_rejects(snippet):
         sb.check(snippet + "\n" + GOOD)
 
 
-@CORE
 def test_sandbox_accepts_a_plain_strategy():
     mod("openterm.bt.sandbox").check(GOOD)
 
 
 # --- 5. API, jobs and storage ------------------------------------------------------------------------------------
 
-@CORE
 def test_bt_run_rule_through_the_api_matches_vibe(client):
     case = CASES["aapl_sma20_gt_sma50"]
     job = bt_run(client, rule="SMA20>SMA50", symbols=["AAPL"], interval="1D", range="10Y",
@@ -303,7 +289,6 @@ def test_bt_run_rule_through_the_api_matches_vibe(client):
     assert again["cached"] is True and again["state"] == "done" and (time.perf_counter() - t0) < 0.5
 
 
-@CORE
 def test_bt_run_default_uses_adjusted_closes(client):
     job = bt_run(client, rule="SMA20>SMA50", symbols=["AAPL"], interval="1D", range="10Y")
     run = client.get(f"/api/bt/runs/{job['result']['run_id']}").json()
@@ -311,20 +296,17 @@ def test_bt_run_default_uses_adjusted_closes(client):
     assert run["metrics"]["final_value"] != pytest.approx(CASES["aapl_sma20_gt_sma50"]["metrics"]["final_value"])
 
 
-@CORE
 def test_bt_run_bad_rule_is_a_400_with_the_column(client):
     r = client.post("/api/bt/run", json={"rule": "SMA20>>SMA50", "symbols": ["AAPL"], "interval": "1D", "range": "5Y"})
     assert r.status_code == 400 and r.json()["col"] == 6
 
 
-@CORE
 def test_bt_run_unknown_symbol_fails_before_the_job(client):
     r = client.post("/api/bt/run", json={"rule": "SMA20>SMA50", "symbols": ["ZZZZNOPE"], "interval": "1D",
                                          "range": "5Y"})
     assert r.status_code == 404 and "ZZZZNOPE" in r.text and client.get("/api/jobs").json()["jobs"] == []
 
 
-@CORE
 def test_python_strategy_save_run_delete(client):
     assert client.put("/api/bt/strategies/mysma", json={"code": GOOD}).status_code == 200
     assert "mysma" in [s["name"] for s in client.get("/api/bt/strategies").json()["strategies"]]
@@ -339,7 +321,6 @@ def test_python_strategy_save_run_delete(client):
     assert client.delete("/api/bt/strategies/mysma").status_code == 200
 
 
-@CORE
 @pytest.mark.parametrize(("code", "error"), [
     ("class SignalEngine:\n    def generate(self, data_map):\n        while True:\n            pass\n", "TIME LIMIT"),
     ("class SignalEngine:\n    def generate(self, data_map):\n        x = bytearray(600_000_000)\n        return {}\n",
@@ -356,7 +337,6 @@ def test_runtime_limits_fail_closed(client, code, error):
     assert ok["state"] == "done"  # the pool recovered
 
 
-@CORE
 def test_runs_are_listed_fetched_and_deleted(client):
     job = bt_run(client, rule="CLOSE>SMA200", symbols=["AAPL"], interval="1D", range="10Y")
     rid = job["result"]["run_id"]
@@ -368,7 +348,6 @@ def test_runs_are_listed_fetched_and_deleted(client):
     assert client.get(f"/api/bt/runs/{rid}").status_code == 404
 
 
-@CORE
 def test_migration_9_tables(client):
     async def tables():
         async with client.app.state.userdata.db.execute("SELECT name FROM sqlite_master WHERE type='table'") as cur:
@@ -377,7 +356,6 @@ def test_migration_9_tables(client):
     assert {"strategies", "bt_runs"} <= client.portal.call(tables)
 
 
-@CORE
 def test_keyring_is_installed():
     import importlib.util
 
@@ -395,7 +373,6 @@ def test_india_cost_stack_by_hand():
     assert e.round_size(10.7, 100.0) == 10.0
 
 
-@ENGINES
 def test_uk_sdrt_rounds_half_up_on_purchases_only():
     e = mod("openterm.bt.engines.global_equity").GlobalEquityEngine({}, market="uk")
     assert e.calc_commission(333, 3.015, 1, True) == 5.02     # 1,003.995 x 0.5% = 5.019975 -> 5.02
@@ -403,7 +380,6 @@ def test_uk_sdrt_rounds_half_up_on_purchases_only():
     assert e.calc_commission(333, 3.015, -1, False) == 5.02   # buying to cover a short pays it
 
 
-@ENGINES
 def test_crypto_funding_on_a_daily_bar():
     pd = mod("pandas")
     hooks = mod("openterm.bt.engines.hooks")
@@ -546,7 +522,6 @@ def test_compare_two_runs(client):
     assert r["diff"]["total_return"] == pytest.approx(r["b"]["metrics"]["total_return"] - r["a"]["metrics"]["total_return"])
 
 
-@RUNS
 def test_runs_trimmed_to_200(client):
     store = mod("openterm.bt.store")
     assert store.KEEP_RUNS == 200

@@ -1,42 +1,46 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-2 done; next: step 12.3 engine core)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-2 done, step 3 code written (WIP commit), not verified)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (paused 2026-10-19 at the user's request, end of session 6)
-- **Open the new session in the worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`** (a session cannot write into
-  another worktree). Its `backend/.venv` and `frontend/node_modules` are installed. The tree is clean; the last commits are
-  step 5 (`74d01e4`), step 6 (`8814c35`) and this pause note. Nothing is running: no subagents, no servers, ports
-  4173 / 5173 / 8000 free.
-- **Where the work is now:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`.
-  Session 6 was opened in that worktree, and a hook blocks writes to other worktrees, so its branch was fast-forwarded to
-  `claude/openterm-phases-11-19-328938` (`a19f325`, no merge commit) and step 5 was committed on top. The 328938 branch is
-  now behind; `git -C <328938 worktree> merge --ff-only claude/openterm-phases-11-19-a99b2b` brings it level if you want to
-  continue there. Not merged into `main`; no remote. Nothing is running.
-- **Step 5 (LLM gateway) is built except one recording.** The OpenRouter key was not found (not in env, the Windows
-  keyring or any `.env`), so `test_recorded_openrouter_stream_gives_tokens_usage_and_cost` stays strict-xfail (`RECORDING`
-  marker in `backend/tests/test_phase11.py`).
-- **Step 6 closed Phase 11** (`THIRD_PARTY.md`, CLAUDE.md rule changes, `ADDING_A_PROVIDER.md` keyed section,
-  `DATA_LIMITS.md`, `COMMANDS.md`); verification bench 21/21 on the first run.
-- **Phase 12:** spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) approved as written (decisions A-M);
-  step 2 (tests set) done. **Exact next action: step 12.3, engine core** (`backend/openterm/bt/`: `frames.py`,
-  `engine.py` (`backtest(data_map, signal_map, config, engine=, bars_per_year=)` -> result with `.equity` Series,
-  `.trades` TradeRecords, `.metrics`), `models.py`, `metrics.py`, `engines/global_equity.py`, `rules.py`
-  (`parse`, `signals`, `parse_command`, `RuleError.col`), `sandbox.py` (`check`, `SandboxError`), job kinds, migration 9,
-  `/api/bt/*`, add numpy + pandas + psutil + keyring to `pyproject.toml`). Port from Vibe-Trading `d0db2e3`
-  (`agent/backtest/engines/base.py`, `global_equity.py`, `metrics.py`, `models.py`); download it again with
-  `Invoke-WebRequest https://codeload.github.com/HKUDS/Vibe-Trading/tar.gz/d0db2e3` into the scratchpad (not the repo).
-  Then delete the `@CORE` markers in `backend/tests/test_phase12.py`. Steps 3 (backend) and 4 (BT panel, frontend)
-  can run as two Sonnet subagents.
-- **Phase 11 finding (decision M in the Phase 12 spec):** `keyring` is not installed in the backend env, so APIKEYS
-  saves keys to `.env`, not the OS keyring as Phase 11 decision B intended.
-- **Still open from Phase 11 (the user will set the key later):** once `OPENROUTER_API_KEY` is set (APIKEYS panel, or the
-  worktree's `.env`), run from `backend/` `uv run python ../scripts/record_llm.py` (first `:free` model, US$0; never prints
-  the key), check the fixture has no key in it, delete the `@RECORDING` line and run the gates.
-- **For the user to confirm:** the roadmap says Qlib Alpha158 parts are Apache-2.0, but Qlib's own `LICENSE` is MIT
-  (Microsoft). `THIRD_PARTY.md` says so; check the ported file's header when Alpha158 is ported in Phase 12.
+## Resume here (paused 2026-10-19 mid step 12.3, user's request: context half full)
+- **Where the work is:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`
+  (open the new session there; a session cannot write into another worktree). `backend/.venv` and `frontend/node_modules`
+  are installed. Last commit: **"Phase 12 step 3 (WIP)"**. Nothing is running. Not merged into `main`; no remote.
+- **Step 12.3 state (engine core, rules, sandbox, API, migration 9): code written, `tests/test_phase12.py` green
+  (57 passed, 18 xfailed for steps 5-8).** `@CORE` markers are deleted; `test_uk_sdrt...`, `test_crypto_funding...`
+  and `test_runs_trimmed_to_200` lost their markers too (they pass early). Not yet done for step 3:
+  1. **ruff: 153 findings**, almost all in the ported Vibe files (`bt/engines/base.py` 80, `engines/hooks.py` 37,
+     `metrics.py` 23; 133 auto-fixable). Run `uv run ruff check . --fix`, then fix the rest by hand (B023 loop
+     variables, BLE001, etc.) without changing behaviour; re-run `tests/test_phase12.py` after (the Vibe cross-checks
+     catch any drift). A few are in our own files (`limits.py`, `sandbox.py`, `rules.py`, `db.py`, `runner.py`).
+  2. Full gates: `uv run pytest -q` (whole suite; job runner and migrations changed), `npx tsc --noEmit`,
+     `npx vitest run`, `npx playwright test`, `node scripts/bench.mjs` (port 8000 free). Record in `docs/PERFORMANCE.md`.
+     The BT bench budgets (10-year run < 300 ms, cached < 20 ms, BT open < 100 ms) are added in step 4 with the panel.
+  3. `THIRD_PARTY.md` table rows for the ported files (list below), then the step 3 commit.
+- **What step 3 added** (`backend/openterm/bt/`):
+  - Ported verbatim from Vibe-Trading `d0db2e3` by a copy script (header line names the source): `models.py`,
+    `metrics.py`, `rebalance_mask.py`, `engines/hooks.py` (= `_market_hooks.py`), `engines/global_equity.py`,
+    `engines/base.py` (cut: loaders, optimizer, fundamentals/events, run card, artifacts; `run_backtest` replaced by an
+    in-memory `run(data_map, signal_map, bars_per_year, bench_ret, benchmark_metadata)`; the rest unchanged).
+  - Ours: `engine.py` (`backtest()`, `FEES=` overlay on `calc_commission`), `frames.py` (Yahoo chart / router `Bars` /
+    Binance perp -> frames; `adjusted()`), `rules.py` (pure parser + `signals()` + `parse_command`), `sandbox.py`
+    (AST allowlist + restricted builtins + guarded import + sockets off), `limits.py` (memory cap: Windows Job Object
+    per worker, `RLIMIT_AS` elsewhere), `catalog.py` (engine per symbol, built engines, default costs), `job.py`
+    (worker side of `bt.run`), `store.py` (data files, strategies, runs; keep 200).
+  - Jobs: `Kind.internal` (bt.run only via `/api/bt/run`), `Kind.hash_view` (bt.run hashes without its labels),
+    per-job `time_limit_s`, `JobRunner.on_done` hooks (store the run before the job shows done), `JobStore.forget(hash)`.
+  - Migration 9 (`strategies`, `bt_runs`; a migration may now be a list of statements). API: `POST /api/bt/run`,
+    `GET /api/bt/runs`, `GET|DELETE /api/bt/runs/{id}`, `GET /api/bt/strategies`, `GET|PUT|DELETE /api/bt/strategies/{name}`.
+    Fixture routes for the 10y charts. Dependencies added: numpy, pandas (<3), psutil, keyring (decision M: APIKEYS now
+    uses the Windows keyring).
+- **Changed from the spec (tell the user):** default benchmark is Vibe's (equal-weight buy and hold of the traded
+  symbols), not SPY; `BENCH=SPY` compares with an index. Needed so API runs match the Vibe cross-check exactly.
+- **Next after step 3:** step 4, the `BT` panel (frontend; `src/bt/ruleParse.ts`, `metricsFormat.ts`; delete the
+  `it.fails` / `test.fail()` markers for step 4) plus the BT bench budgets. Steps 3-cleanup and 4 can run in parallel.
+- **Still open from Phase 11:** the OpenRouter recording (`scripts/record_llm.py`, then delete `@RECORDING`).
 - **The user's working rules for Phases 11-19** (from their prompt; keep following them):
   1. Do one step per turn, in HANDOFF order. A step is a spec, a tests set, or one function's code.
   2. Each phase starts with `docs/specs/PHASE_<n>.md`, with the roadmap's proposed defaults listed at the top for approval.
@@ -263,7 +267,7 @@ Remaining:
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | **done** 2026-10-19; bench 21/21 first run |
    | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **written 2026-10-19, waiting for approval** |
    | 12.2 Tests set + recordings + Vibe cross-check values | **done** 2026-10-19: `backend/tests/test_phase12.py` (75; markers `CORE` step 3, `ENGINES` 5, `VALID` 6, `RUNS` 7, `IMPORT` 8), `frontend/src/bt/phase12.test.ts` (6), `frontend/e2e/phase12.spec.ts` (5); fixtures by `scripts/record_phase12.py`; expected values `bt_vibe_expected.json` by `scripts/vibe_crosscheck.py` |
-   | 12.3 Engine core, rules, sandbox, API, migration 9 | **next** |
+   | 12.3 Engine core, rules, sandbox, API, migration 9 | **in progress**: code + Phase 12 tests green (WIP commit); ruff cleanup, full gates, THIRD_PARTY rows left |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
    (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,

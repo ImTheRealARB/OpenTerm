@@ -4,7 +4,7 @@ Keyboard-first, open-source market terminal (amber on black, command line + tile
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
 All 10 phases are built and on `main`. **Phases 11-19 are in progress on branch `claude/openterm-phases-11-19-a99b2b`**
-(Phase 11 done except one OpenRouter recording; Phase 12 spec waiting for approval; HANDOFF.md "Resume here" has the next action and the user's step rules). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+(Phase 11 done except one OpenRouter recording; Phase 12 step 3 in progress; HANDOFF.md "Resume here" has the next action and the user's step rules). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
 5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
@@ -137,6 +137,15 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   open; US sizes round to 0.01 shares; an open position closes at the last close (with slippage) as `end_of_backtest`.
 - **A strict-xfail API test can pass by accident on FastAPI's own 404** for a route that does not exist yet: assert on
   the body (e.g. the symbol in the error), not only the status code.
+- **BT jobs:** `bt.run` is an internal job kind (only `/api/bt/run` submits it). The server fetches bars, writes a
+  content-addressed data file and passes its path + hash; the job hash leaves out `labels` (they carry data age).
+  `JobRunner.on_done["bt.run"]` saves the run to `bt_runs` before the job shows done. Deleting a run forgets its job hash.
+- **Never import pandas/numpy in the server process** (`test_server_never_imports_pandas`): `bt.rules` parsing,
+  `bt.sandbox.check`, `bt.catalog` and `bt.store` are pure; pandas code lives in `bt.engine`, `frames`, `job`.
+- **Ported Vibe files stay verbatim apart from imports and the listed cuts**; their header line names the source file.
+  Behaviour changes there break the cross-check tests, which is the point.
+- **Strategy sandbox is defence in depth:** allowlisted imports, no dunder/`format` attribute access, no file or network
+  entry points of numpy/pandas, restricted builtins, sockets off in the worker, memory cap via a Windows Job Object.
 - **A session cannot write into another worktree** (hook). Bring the branch here with `git merge --ff-only <branch>` instead.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 

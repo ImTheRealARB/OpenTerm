@@ -1,6 +1,9 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; tests set written (step 2).** Next: step 3 (engine core).
+Status: **approved as written 2026-10-19; tests set written (step 2); step 3 in progress.**
+
+Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
+symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 12", [FEATURE_GAP.md](../FEATURE_GAP.md) rows for
 `agent/backtest/*`, and the Vibe-Trading code itself at commit `d0db2e3` (MIT; read 2026-10-19).
 
