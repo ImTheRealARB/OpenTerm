@@ -3,11 +3,11 @@
 _Last updated: 2026-10-17, session 2._
 
 ## Where things stand
-- **Phases 1-4 of 10 are built and verified.** Phases 1-3 are committed (`736d6d5`, `3815fdd`, `b6dca4e`).
-  **Phase 4 is NOT committed** yet: commit when the user approves.
-- Session 2 worked in the git worktree branch `claude/openterm-phase-3-4-621f59` (Phase 3 + 4 live there,
-  not on `main` yet). The main checkout still had the Phase 3 files uncommitted on `main`; they are
-  identical to commit `b6dca4e`. No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
+- **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`).
+- Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
+  The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
+  `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
+  Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
 - Latest verification (Phase 4 tree):
   - Backend: 42 pytest passed, ruff clean.
   - Frontend: 24 vitest passed, tsc clean, 15 Playwright passed.
