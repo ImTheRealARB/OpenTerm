@@ -16,6 +16,12 @@ cache:
   filings_ttl_s: 900
   insiders_ttl_s: 3600
   holders_ttl_s: 21600
+  # Phase 7
+  fred_ttl_s: 3600
+  fred_search_ttl_s: 86400
+  rates_ttl_s: 1800
+  earnings_ttl_s: 900
+  eco_ttl_s: 21600
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
   quotes: [yahoo, nasdaq]
@@ -32,9 +38,19 @@ providers:
   filings: [sec]
   insiders: [sec, yahoo_own]
   holders: [yahoo_own]
+  # Phase 7. fred = official API, only active with FRED_API_KEY; fred_csv = keyless CSV.
+  fred_series: [fred, fred_csv]
+  fred_search: [fred]
+  yield_curve: [treasury, fred_csv]
+  earnings: [nasdaq_earnings]
+  eco_calendar: [agency_ics, fred]
   # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.
 news:
   # Market top-stories feeds for N. Leave unset to use the built-in list
   # (CNBC, MarketWatch, BBC Business, Economic Times markets, Mint markets). Example:
   # feeds:
   #   - {name: CNBC, url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"}
+# --- Phase 7: macro ---
+macro:
+  # MACRO's keyless list. Leave unset for the built-in list (providers/macro.py CURATED). Example:
+  # curated: [GDP, CPIAUCSL, UNRATE, FEDFUNDS, DGS10, DGS2, T10Y2Y]

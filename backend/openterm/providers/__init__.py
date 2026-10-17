@@ -66,3 +66,31 @@ from .sec import SecProvider
 
 ADAPTERS["sec"] = SecProvider
 ADAPTERS["yahoo_own"] = YahooOwnProvider
+
+# --- Phase 7: macro (FRED, Treasury curve, earnings and release calendars) ---
+from .macro import (
+    AgencyCalendarProvider,
+    FredApiProvider,
+    FredCsvProvider,
+    NasdaqEarningsProvider,
+    TreasuryProvider,
+)
+
+ADAPTERS.update({
+    "fred": FredApiProvider, "fred_csv": FredCsvProvider, "treasury": TreasuryProvider,
+    "nasdaq_earnings": NasdaqEarningsProvider, "agency_ics": AgencyCalendarProvider,
+})
+# FRED is built now: a real adapter (inactive without FRED_API_KEY), no longer a planned keyed entry.
+KEYED.pop("fred", None)
+_keyed_status_before_phase7 = keyed_status
+
+
+def keyed_status(settings: Settings) -> list[dict]:
+    out = _keyed_status_before_phase7(settings)
+    if not settings.fred_api_key:
+        out.insert(0, {
+            "name": "fred", "status": "KEY REQUIRED",
+            "note": "FRED API: series titles/units, MACRO search, ECO fallback. Values work keyless via fred_csv. "
+            "Set FRED_API_KEY in .env (free).",
+        })
+    return out

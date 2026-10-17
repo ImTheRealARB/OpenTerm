@@ -142,3 +142,10 @@ async def ws(socket: WebSocket) -> None:
         with contextlib.suppress(asyncio.CancelledError, Exception):
             await sender
         await hub.disconnect(client)
+
+
+# --- Phase 7: macro ---
+DEFAULT_ORDER.update({
+    "fred_series": ["fred", "fred_csv"], "fred_search": ["fred"], "yield_curve": ["treasury", "fred_csv"],
+    "earnings": ["nasdaq_earnings"], "eco_calendar": ["agency_ics", "fred"],
+})

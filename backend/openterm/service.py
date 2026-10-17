@@ -350,3 +350,141 @@ class DataService:
     async def holders(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)
         return await self._sec(f"hds:{symbol}", "holders", "holders", symbol, lambda p: p.holders(symbol))
+
+    # --- Phase 7: macro (FRED, MACRO list/search, RATES curve, ERN, ECO) ------------------------
+    def _ttl7(self, name: str, default: float) -> float:
+        if name in self.ttl:
+            return self.ttl[name]
+        return float((load_yaml().get("cache") or {}).get(f"{name}_ttl_s", default))
+
+    def fred_key_set(self) -> bool:
+        p = self.router.providers.get("fred")
+        return bool(getattr(p, "has_key", False))
+
+    async def fred_series(self, raw_id: str, range_: str | None = None) -> dict:
+        sid = (raw_id or "").strip().upper()
+        if not _macro.SERIES_ID.match(sid):
+            raise DataError("bad_request", "SERIES ID: LETTERS, DIGITS, _ AND . (E.G. UNRATE)")
+        r = (range_ or _macro.FRED_DEFAULT_RANGE).strip().upper()
+        if r not in _macro.FRED_RANGES:
+            raise DataError("bad_request", f"BAD RANGE: {r}. USE {' '.join(_macro.FRED_RANGES)}")
+        start = _macro.range_start(r)
+
+        async def fetch() -> dict:
+            s, failed = await self.router.call("fred_series", lambda p: p.fred_series(sid, start), sid)
+            return {"data": {**s.model_dump(), "range": r, "key_set": self.fred_key_set()}, "fallback_from": failed}
+
+        try:
+            return await self._swr(f"fred:{sid}:{r}", self._ttl7("fred", 3600), fetch)
+        except DataError as e:
+            if e.kind != "not_found":
+                raise
+            raise DataError("not_found", f"NO FRED SERIES {sid}", e.detail) from e
+
+    async def macro(self, query: str | None = None) -> dict:
+        """With FRED_API_KEY and a query: FRED search. Otherwise the curated list with latest values; a query then
+        filters that list locally and the envelope carries needs_key so the panel can say search needs the key."""
+        q = " ".join((query or "").split())
+        if len(q) > 80:
+            raise DataError("bad_request", "QUERY TOO LONG")
+        key = self.fred_key_set()
+        if q and key:
+            async def fetch() -> dict:
+                rows, failed = await self.router.call("fred_search", lambda p: p.fred_search(q), q)
+                return {"data": {"mode": "search", "query": q, "needs_key": None, "rows": rows},
+                        "source": self.router.providers["fred"].source, "fallback_from": failed}
+
+            try:
+                return await self._swr(f"macro:q:{q.upper()}", self._ttl7("fred_search", 86400), fetch)
+            except DataError as e:
+                if e.kind != "not_found":
+                    raise
+                raise DataError("not_found", f"NO FRED SERIES MATCH {q.upper()}", e.detail) from e
+
+        wanted = [str(x).upper() for x in ((load_yaml().get("macro") or {}).get("curated") or [])] or [
+            c[0] for c in _macro.CURATED]
+        if q:
+            ql = q.lower()
+            wanted = [i for i in wanted if ql in " ".join(map(str, _macro.CURATED_META.get(i, (i,)))).lower()]
+        results = await asyncio.gather(*(self.fred_series(i) for i in wanted), return_exceptions=True)
+        rows, sources, ages, stale, fallback = [], [], [], False, set()
+        for sid, env in zip(wanted, results):
+            meta = _macro.CURATED_META.get(sid)
+            row = {"id": sid, "label": meta[1] if meta else sid, "title": meta[2] if meta else None,
+                   "units": meta[3] if meta else None, "frequency": meta[4] if meta else None}
+            if isinstance(env, BaseException):
+                row["error"] = str(env)
+            else:
+                d = env["data"]
+                row.update(title=d.get("title") or row["title"], units=d.get("units") or row["units"],
+                           frequency=d.get("frequency") or row["frequency"], last_value=d["last_value"],
+                           last_date=d["last_date"], prev_value=d.get("prev_value"), change=d.get("change"),
+                           source=env["source"], age_s=env["age_s"], stale=env["stale"])
+                sources.append(env["source"])
+                ages.append((env["as_of"], env["age_s"]))
+                stale = stale or env["stale"]
+                fallback.update(env["fallback_from"])
+            rows.append(row)
+        if wanted and not sources:
+            first = next((r for r in results if isinstance(r, DataError)), None)
+            raise DataError("unavailable", "PROVIDER DOWN", first.detail if first else None)
+        oldest = min(ages) if ages else (time.time(), 0.0)
+        return {
+            "data": {"mode": "curated", "query": q or None, "needs_key": None if key else "FRED_API_KEY", "rows": rows},
+            "source": sources[0] if sources else None, "as_of": oldest[0], "age_s": oldest[1], "stale": stale,
+            "fallback_from": sorted(fallback),
+        }
+
+    async def rates(self) -> dict:
+        async def fetch() -> dict:
+            c, failed = await self.router.call("yield_curve", lambda p: p.yield_curve())
+            return {"data": c.model_dump(), "fallback_from": failed}
+
+        return await self._swr("rates:us", self._ttl7("rates", 1800), fetch)
+
+    async def earnings(self, day: str | None = None) -> dict:
+        today = _macro.ny_today()
+        try:
+            d = date.fromisoformat(day.strip()) if day and day.strip() else today
+        except ValueError as e:
+            raise DataError("bad_request", "DATE: YYYY-MM-DD") from e
+        if abs((d - today).days) > 400:
+            raise DataError("bad_request", "DATE MUST BE WITHIN 400 DAYS OF TODAY")
+
+        async def fetch() -> dict:
+            out, failed = await self.router.call("earnings", lambda p: p.earnings(d))
+            return {"data": out, "fallback_from": failed}
+
+        return await self._swr(f"ern:{d.isoformat()}", self._ttl7("earnings", 900), fetch)
+
+    async def eco(self, start: str | None = None, days: int = 14) -> dict:
+        try:
+            s = date.fromisoformat(start.strip()) if start and start.strip() else _macro.ny_today()
+        except ValueError as e:
+            raise DataError("bad_request", "DATE: YYYY-MM-DD") from e
+        if not 1 <= days <= 62:
+            raise DataError("bad_request", "DAYS: 1-62")
+
+        async def fetch() -> dict:
+            since = _macro.ny_today() - timedelta(days=62)
+            out, failed = await self.router.call("eco_calendar", lambda p: p.eco_calendar(since))
+            events = sorted((e.model_dump() for e in out["events"]), key=lambda e: (e["ts"], e["agency"], e["name"]))
+            return {"data": {"events": events, "failed": out["failed"]},
+                    "source": events[0]["source"] if events else None, "fallback_from": failed}
+
+        env = await self._swr("eco:us", self._ttl7("eco", 21600), fetch)
+        lo, hi = s.isoformat(), (s + timedelta(days=days)).isoformat()
+        events = env["data"]["events"]
+        env["data"] = {
+            "start": lo, "days": days, "events": [e for e in events if lo <= e["date"] < hi],
+            "failed": env["data"]["failed"], "coverage_end": max((e["date"] for e in events), default=None),
+            "key_set": self.fred_key_set(),
+        }
+        return env
+
+
+# --- Phase 7 imports (appended at the end so merges with other phases stay additive) ---
+from datetime import date, timedelta
+
+from .config import load_yaml
+from .providers import macro as _macro

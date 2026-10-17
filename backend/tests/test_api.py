@@ -25,6 +25,7 @@ def test_search_and_sources(client):
     s = client.get("/api/sources").json()
     assert {p["name"] for p in s["providers"]} == {
         "yahoo", "nasdaq", "synthetic", "rss", "yahoo_rss", "gdelt", "coingecko", "binance", "sec", "yahoo_own",
+        "fred", "fred_csv", "treasury", "nasdaq_earnings", "agency_ics",  # Phase 7
     }
     assert s["fixtures"] is True
     keyed = {k["name"]: k["status"] for k in s["keyed"]}

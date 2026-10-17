@@ -76,3 +76,34 @@ show `FIXTURES` while it is on.
 - **US filers only:** non-US listings (`.NS`, `.L`, ...), indices, FX, futures, crypto and funds without 10-K/10-Q show
   `SEC DATA COVERS US FILERS ONLY`. That is a coverage limit, not an error. HDS and Yahoo-based OWN may still answer.
 - **Ticker to CIK** uses SEC's `company_tickers.json`, cached in memory for 24 h. Class shares map `BRK.B` and `BRK-B` to the same filer.
+
+## Phase 7: macro (FRED, MACRO, RATES, ERN, ECO)
+Probed 2026-10-17. All of it works with zero keys except FRED search and series titles.
+- **FRED values (keyless).** `fred.stlouisfed.org/graph/fredgraph.csv?id=X[&cosd=YYYY-MM-DD]`. Values only: no
+  title, units or frequency (OpenTerm adds built-in titles for the ~20 series in MACRO's list; any other id shows
+  "no title or units"). Missing observations are empty fields and stay missing (shown as a count, never filled).
+  Unknown id = 404. **A browser User-Agent makes this host hang**, so the adapter sends `OpenTerm/0.1`. Several ids of
+  mixed frequency come back as a zip and same-frequency ids ignore `cosd`; the adapter fetches one id per call and
+  slices to the range itself. Updated by FRED on each series' release schedule: daily series lag by about a day,
+  monthly ones by weeks.
+- **FRED API (`FRED_API_KEY`, free).** Adds titles/units/frequency, MACRO search across ~800k series and a release
+  calendar fallback. 120 requests/min upstream; OpenTerm paces at 2/s. The key travels in the query string, so error
+  text is redacted before it reaches the UI or the log. No recorded answers exist for the keyed paths (no key was
+  available): the `fred_api_docshape_*` fixtures are built from the documented response shape, labelled as such in
+  `providers/fixtures.py`. Treat the keyed path as untested against the live API.
+- **RATES (Treasury).** `home.treasury.gov` par yield curve CSV, one file per calendar year, newest row first. The
+  curve date is the last business day published (usually yesterday), shown on the panel with a day count when it is
+  more than 4 days old. 1.5M exists only since 2025-02. The 1Y comparison needs last year's file; if that file fails
+  the panel says so and drops the 1Y column. Fallback when Treasury is down: FRED `DGS*` series (fewer tenors,
+  same par yields), flagged on screen.
+- **ERN (Nasdaq).** `api.nasdaq.com/api/calendar/earnings?date=`: one call per day, 1-4 s. Future days carry the
+  consensus EPS and last year's figure; past days carry reported EPS and surprise. Weekends and holidays answer
+  `rows: null`, shown as an empty day. Times are only pre-market / after-hours / not supplied. Estimates come from
+  Nasdaq's data vendor and are not verified by OpenTerm. Days further than 400 days from today are refused.
+- **ECO (BLS + BEA).** Official ICS schedules, keyless: BLS `bls.ics` (current through 2026-12 when probed) and BEA's
+  subscription feed (through 2027-12). They list **release dates and times only: no forecasts, no actuals, no
+  previous values**. Not covered: FOMC and Fed releases, Census, ISM and other private surveys. "MAJOR" is a name
+  match on a short list of market-moving releases, not an importance rating from the agencies. BLS returns 403 unless
+  the User-Agent names a contact (`SEC_USER_AGENT` in `.env`); BEA times are UTC and are shown in US Eastern. If one
+  agency's feed is down the panel says which one is missing.
+- **Cache TTLs (config.yaml):** FRED values 1 h, FRED search 24 h, curve 30 min, earnings 15 min, calendar 6 h.

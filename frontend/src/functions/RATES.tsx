@@ -1,0 +1,149 @@
+/** US Treasury par yield curve with 1D / 1W / 1M / 1Y changes in basis points, and the usual curve spreads. */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Grid, type Column, type GridHandle } from "../components/Grid";
+import { downloadCsv } from "../csv";
+import { registerPanelKeys } from "../keys/panelKeys";
+import { ApiError, macroApi, type Envelope, type YieldCurve } from "../net/api";
+import { navigate } from "../state/workspace";
+import { bpChange, curveShape, fmtBp, fredIdForTenor, nyToday, spreadBp, yieldBar } from "./macroArgs";
+import { EnvStatus, ErrorLine } from "./macroUi";
+import { navKey, useLatest } from "./quoteRows";
+import type { FunctionProps } from "./registry";
+
+const POLL_MS = 120_000;
+const HORIZONS = ["1D", "1W", "1M", "1Y"] as const;
+const SPREADS: [string, string][] = [["2Y", "10Y"], ["3M", "10Y"], ["5Y", "30Y"]];
+const BAR_W = 34;
+
+interface Row {
+  tenor: string;
+  y: number | null;
+  d: (number | null)[];
+  max: number;
+}
+
+const COLUMNS: Column<Row>[] = [
+  { title: "TENOR", width: 6, text: (r) => r.tenor, color: () => "acc" },
+  { title: "YIELD %", width: 9, align: "right", text: (r) => (r.y == null ? "-" : r.y.toFixed(2)) },
+  ...HORIZONS.map(
+    (h, i): Column<Row> => ({
+      title: `${h} BP`,
+      width: 7,
+      align: "right",
+      text: (r) => fmtBp(r.d[i]),
+      color: (r) => ((r.d[i] ?? 0) > 0 ? "up" : (r.d[i] ?? 0) < 0 ? "down" : "dim"),
+    }),
+  ),
+  { title: "CURVE", width: BAR_W, text: (r) => yieldBar(r.y, r.max, BAR_W), color: () => "dim" },
+];
+
+function buildRows(c: YieldCurve): Row[] {
+  const max = Math.max(0, ...c.yields.map((y) => y ?? 0));
+  return c.tenors.map((tenor, i) => ({
+    tenor,
+    y: c.yields[i],
+    d: HORIZONS.map((h) => bpChange(c.yields[i], c.compare[h]?.yields[i])),
+    max,
+  }));
+}
+
+export default function RATES({ panelId }: FunctionProps) {
+  const [env, setEnv] = useState<Envelope<YieldCurve> | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [hint, setHint] = useState<string | null>(null);
+  const grid = useRef<GridHandle>(null);
+
+  const load = useCallback((fresh: boolean) => {
+    setLoading(true);
+    return macroApi
+      .rates(fresh)
+      .then((e) => {
+        setEnv(e);
+        setError(null);
+      })
+      .catch((e: ApiError) => setError(e))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    void load(false);
+    const t = setInterval(() => void load(false), POLL_MS);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const curve = env?.data ?? null;
+  const rows = useMemo(() => (curve ? buildRows(curve) : []), [curve]);
+  const latest = useLatest(rows);
+
+  useEffect(
+    () =>
+      registerPanelKeys(panelId, (e) => {
+        const g = grid.current;
+        const cur = latest.current;
+        setHint(null);
+        if (navKey(e, g, cur.length)) return true;
+        switch (e.key) {
+          case "Enter": {
+            const r = cur[g?.selected() ?? -1];
+            if (!r) return true;
+            const id = fredIdForTenor(r.tenor);
+            if (id) navigate(panelId, { fn: "FRED", security: undefined, args: [id, "5Y"] });
+            else setHint(`FRED HAS NO DAILY SERIES FOR THE ${r.tenor} TENOR`);
+            return true;
+          }
+          case "e":
+            downloadCsv("RATES", COLUMNS.map((c) => c.title), cur.map((r) => COLUMNS.map((c) => c.text(r))));
+            return true;
+          case "F5":
+            void load(true);
+            return true;
+        }
+        return false;
+      }),
+    [panelId, latest, load],
+  );
+
+  const today = nyToday();
+  const daysOld = curve ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${curve.date}T00:00:00Z`)) / 86_400_000) : 0;
+  const shape = curveShape(curve ? spreadBp(curve.tenors, curve.yields, "2Y", "10Y") : null);
+  return (
+    <div className="fn">
+      <div className="line">
+        <span className="acc">US TREASURY PAR YIELD CURVE</span>
+        {curve && ` · ${curve.date}`}
+        {daysOld > 4 && <span className="warn"> ({daysOld} DAYS OLD)</span>}
+        <EnvStatus env={env} loading={loading} />
+        <span className="dim"> · J/K MOVE · ENTER PLOT HISTORY · E CSV · F5 REFRESH</span>
+      </div>
+      {curve && (
+        <>
+          {SPREADS.map(([a, b]) => {
+            const now = spreadBp(curve.tenors, curve.yields, a, b);
+            if (now == null) return null;
+            return (
+              <div className="line" key={a + b}>
+                {a}{b} <span className={now < 0 ? "down" : "up"}>{fmtBp(now)} BP</span>
+                {a === "2Y" && b === "10Y" && shape && <span className={shape === "INVERTED" ? "down" : "dim"}> {shape}</span>}
+                <span className="dim">
+                  {HORIZONS.map((h) => {
+                    const c = curve.compare[h];
+                    const then = c ? spreadBp(curve.tenors, c.yields, a, b) : null;
+                    return ` · ${h} ${fmtBp(then == null ? null : now - then)}`;
+                  })}
+                </span>
+              </div>
+            );
+          })}
+          {curve.note && <div className="warn">{curve.note.toUpperCase()}</div>}
+          {env?.fallback_from.includes("treasury") && (
+            <div className="warn">TREASURY.GOV DID NOT ANSWER: FRED CONSTANT-MATURITY SERIES SHOWN (SAME PAR YIELDS, FEWER TENORS).</div>
+          )}
+        </>
+      )}
+      {hint && <div className="warn">{hint}</div>}
+      <ErrorLine error={error} hasData={!!env} />
+      <Grid ref={grid} columns={COLUMNS} rows={rows} />
+    </div>
+  );
+}

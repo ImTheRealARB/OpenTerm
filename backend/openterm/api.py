@@ -220,12 +220,29 @@ async def fa(request: Request, symbol: str = Query(..., max_length=24), period: 
         return error(e)
 
 
+# --- Phase 7: macro ---
+@router.get("/fred")
+async def fred(request: Request, id: str = Query(..., max_length=40), range: str | None = Query(None, max_length=4)):
+    try:
+        return await svc(request).fred_series(id, range)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/filings")
 async def filings(
     request: Request, symbol: str = Query(..., max_length=24), form: str | None = Query(None, max_length=20)
 ):
     try:
         return await svc(request).filings(symbol, form)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/macro")
+async def macro(request: Request, q: str | None = Query(None, max_length=80)):
+    try:
+        return await svc(request).macro(q)
     except DataError as e:
         return error(e)
 
@@ -238,9 +255,33 @@ async def insiders(request: Request, symbol: str = Query(..., max_length=24)):
         return error(e)
 
 
+@router.get("/rates")
+async def rates(request: Request):
+    try:
+        return await svc(request).rates()
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/holders")
 async def holders(request: Request, symbol: str = Query(..., max_length=24)):
     try:
         return await svc(request).holders(symbol)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/earnings")
+async def earnings(request: Request, date: str | None = Query(None, max_length=10)):
+    try:
+        return await svc(request).earnings(date)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/eco")
+async def eco(request: Request, start: str | None = Query(None, max_length=10), days: int = Query(14, ge=1, le=62)):
+    try:
+        return await svc(request).eco(start, days)
     except DataError as e:
         return error(e)

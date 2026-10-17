@@ -141,3 +141,66 @@ class Coin(BaseModel):
     """Epoch seconds of the source's last update."""
     source: str
     as_of: float
+
+
+# --- Phase 7: macro -------------------------------------------------------------------------------
+class MacroSeries(BaseModel):
+    id: str
+    title: str | None = None
+    units: str | None = None
+    frequency: str | None = None
+    seasonal_adjustment: str | None = None
+    last_updated: str | None = None
+    meta_source: str = "none"
+    """fred_api | curated (built-in metadata for well-known ids) | none (keyless CSV: values only)."""
+    t: list[int]
+    """Observation dates as epoch seconds (UTC midnight)."""
+    v: list[float | None]
+    """Values; None = missing observation (holiday, not yet published)."""
+    last_value: float
+    last_date: str
+    prev_value: float | None = None
+    change: float | None = None
+    missing: int = 0
+    source: str
+    as_of: float
+
+
+class YieldCurve(BaseModel):
+    date: str
+    tenors: list[str]
+    years: list[float]
+    yields: list[float | None]
+    spread_2s10s: float | None = None
+    compare: dict[str, dict] = {}
+    """"1D" / "1W" / "1M" / "1Y" -> {date, yields (same tenor order), spread_2s10s}."""
+    note: str | None = None
+    source: str
+    as_of: float
+
+
+class Earning(BaseModel):
+    symbol: str
+    name: str | None = None
+    time: str | None = None
+    """PRE (before the open) | POST (after the close) | None (not supplied)."""
+    fiscal_quarter: str | None = None
+    eps_forecast: float | None = None
+    n_ests: int | None = None
+    last_year_eps: float | None = None
+    last_year_date: str | None = None
+    eps: float | None = None
+    """Reported EPS (days already reported)."""
+    surprise_pct: float | None = None
+    market_cap: float | None = None
+
+
+class EcoEvent(BaseModel):
+    date: str
+    time: str | None = None
+    """HH:MM US Eastern, None when the source gives only a date."""
+    ts: float
+    name: str
+    agency: str
+    major: bool = False
+    source: str

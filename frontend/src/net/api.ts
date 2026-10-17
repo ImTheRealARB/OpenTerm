@@ -284,3 +284,129 @@ export const secApi = {
   holders: (symbol: string, fresh = false) =>
     request<Envelope<HoldersPayload>>(`/api/holders?${qs({ symbol })}`, fresh ? 0 : 300_000),
 };
+
+// --- Phase 7: macro (FRED, MACRO, RATES, ERN, ECO) ---
+export interface FredSeries {
+  id: string;
+  title: string | null;
+  units: string | null;
+  frequency: string | null;
+  seasonal_adjustment: string | null;
+  last_updated: string | null;
+  /** fred_api | curated (built-in metadata for well-known ids) | none (keyless CSV: values only). */
+  meta_source: string;
+  /** Observation dates, epoch seconds (UTC midnight). */
+  t: number[];
+  /** Values; null = missing observation. */
+  v: (number | null)[];
+  last_value: number;
+  last_date: string;
+  prev_value: number | null;
+  change: number | null;
+  missing: number;
+  source: string;
+  as_of: number;
+  range: string;
+  key_set: boolean;
+}
+
+export interface MacroRow {
+  id: string;
+  label?: string;
+  title: string | null;
+  units: string | null;
+  frequency: string | null;
+  seasonal_adjustment?: string | null;
+  last_value?: number;
+  last_date?: string;
+  prev_value?: number | null;
+  change?: number | null;
+  source?: string;
+  age_s?: number;
+  stale?: boolean;
+  error?: string;
+  /** Search mode only. */
+  observation_end?: string | null;
+  popularity?: number | null;
+}
+
+export interface MacroPayload {
+  mode: "curated" | "search";
+  query: string | null;
+  /** "FRED_API_KEY" when search across all of FRED is unavailable without a key. */
+  needs_key: string | null;
+  rows: MacroRow[];
+}
+
+export interface CurveCompare {
+  date: string;
+  yields: (number | null)[];
+  spread_2s10s: number | null;
+}
+
+export interface YieldCurve {
+  date: string;
+  tenors: string[];
+  years: number[];
+  yields: (number | null)[];
+  spread_2s10s: number | null;
+  compare: Record<string, CurveCompare>;
+  note: string | null;
+  source: string;
+  as_of: number;
+}
+
+export interface Earning {
+  symbol: string;
+  name: string | null;
+  time: "PRE" | "POST" | null;
+  fiscal_quarter: string | null;
+  eps_forecast: number | null;
+  n_ests: number | null;
+  last_year_eps: number | null;
+  last_year_date: string | null;
+  eps: number | null;
+  surprise_pct: number | null;
+  market_cap: number | null;
+}
+
+export interface EarningsPayload {
+  date: string;
+  as_of_text: string | null;
+  rows: Earning[];
+  source: string;
+  as_of: number;
+}
+
+export interface EcoEvent {
+  date: string;
+  /** HH:MM US Eastern; null when the agency gives only a date. */
+  time: string | null;
+  ts: number;
+  name: string;
+  agency: string;
+  major: boolean;
+  source: string;
+}
+
+export interface EcoPayload {
+  start: string;
+  days: number;
+  events: EcoEvent[];
+  /** Agencies whose feed did not answer. */
+  failed: string[];
+  /** Last date the source feeds cover. */
+  coverage_end: string | null;
+  key_set: boolean;
+}
+
+export const macroApi = {
+  fred: (id: string, range: string, fresh = false) =>
+    request<Envelope<FredSeries>>(`/api/fred?${qs({ id, range })}`, fresh ? 0 : 60_000),
+  macro: (q: string, fresh = false) => request<Envelope<MacroPayload>>(`/api/macro?${qs({ q })}`, fresh ? 0 : 60_000),
+  rates: (fresh = false) => request<Envelope<YieldCurve>>("/api/rates", fresh ? 0 : 60_000),
+  earnings: (date: string, fresh = false) =>
+    request<Envelope<EarningsPayload>>(`/api/earnings?${qs({ date })}`, fresh ? 0 : 30_000),
+  eco: (start: string | null, days: number, fresh = false) =>
+    request<Envelope<EcoPayload>>(`/api/eco?${qs({ start: start ?? undefined, days: String(days) })}`, fresh ? 0 : 60_000),
+};

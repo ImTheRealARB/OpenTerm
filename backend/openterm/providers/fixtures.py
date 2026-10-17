@@ -128,3 +128,53 @@ def _route_phase6(request: httpx.Request) -> httpx.Response | None:
                 return _load(name)
             return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
     return None
+
+# --- Phase 7: macro (FRED CSV + API, Treasury curve, Nasdaq earnings, BLS/BEA ICS) ---
+# Recorded 2026-10-17. fred_csv_<ID>: real fredgraph.csv answers (cosd=2021-10-01, GDP full history);
+# fred_csv_dgs_curve: real multi-series answer trimmed to rows since 2025-09-01; fred_csv_404: real 404, body trimmed.
+# fred_api_no_key: real answer without a key. fred_api_docshape_*: BUILT from the documented API shape (no key was
+# available to record), with values copied from the real CSV / BLS recordings. Routed only when a key is sent.
+_PHASE7_DGS = "DGS1MO,DGS3MO,DGS6MO,DGS1,DGS2,DGS3,DGS5,DGS7,DGS10,DGS20,DGS30"
+_PHASE7_API = {
+    ("series", "GDP"): "fred_api_docshape_series_GDP",
+    ("series/observations", "GDP"): "fred_api_docshape_observations_GDP",
+    ("releases/dates", None): "fred_api_docshape_releases_dates",
+}
+_route_before_phase7 = _route
+
+
+def _route_phase7(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "fred.stlouisfed.org" and p == "/graph/fredgraph.csv":
+        sid = q.get("id", "")
+        name = "fred_csv_dgs_curve" if sid == _PHASE7_DGS else f"fred_csv_{sid}"
+        return _load(name if (FIXTURES / f"{name}.json").exists() else "fred_csv_404")
+    if host == "api.stlouisfed.org" and p.startswith("/fred/"):
+        if not q.get("api_key"):
+            return _load("fred_api_no_key")
+        path = p.removeprefix("/fred/")
+        if path == "series/search":
+            if "inflation" in (q.get("search_text") or "").lower():
+                return _load("fred_api_docshape_search_inflation")
+            return httpx.Response(200, json={"count": 0, "offset": 0, "limit": 50, "seriess": []})
+        name = _PHASE7_API.get((path, q.get("series_id")))
+        if name:
+            return _load(name)
+        # Documented FRED error shape for an unknown series id.
+        return httpx.Response(400, json={"error_code": 400, "error_message": "Bad Request.  The series does not exist."})
+    if host == "home.treasury.gov" and "/daily-treasury-rates.csv/" in p:
+        year = p.split("/daily-treasury-rates.csv/", 1)[1].split("/", 1)[0]
+        return _keyed({"2025": "treasury_curve_2025", "2026": "treasury_curve_2026"}, year)
+    if p == "/api/calendar/earnings":
+        day = q.get("date", "")
+        name = f"nasdaq_earnings_{day}"
+        return _load(name) if (FIXTURES / f"{name}.json").exists() else httpx.Response(404, text="not recorded")
+    if host == "www.bls.gov" and p == "/schedule/news_release/bls.ics":
+        return _load("bls_schedule_ics")
+    if host == "www.bea.gov" and p == "/news/schedule/ics/online-calendar-subscription.ics":
+        return _load("bea_schedule_ics")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase7(request) or _route_before_phase7(request)

@@ -41,6 +41,8 @@ interface Props {
   type: ChartType;
   log: boolean;
   indicators: IndicatorName[];
+  /** Single-value series (FRED): the readout shows `<date> <label> <value>` instead of O/H/L/C/V. */
+  readoutLabel?: string;
 }
 
 const INTERVAL_S: Record<string, number> = {
@@ -71,7 +73,7 @@ function formatters(tz: string, intraday: boolean) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, indicators }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, indicators, readoutLabel }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -91,6 +93,11 @@ function ChartViewInner({ data, compare, type, log, indicators }: Props, ref: Re
     if (!el || i < 0 || i >= data.c.length) return;
     const prev = i > 0 ? data.c[i - 1] : NaN;
     const chg = Number.isFinite(prev) ? ((data.c[i] - prev) / prev) * 100 : NaN;
+    if (readoutLabel) {
+      el.textContent = `${fmt.current.full(toTime(data.t[i]))}  ${readoutLabel} ${fmtPrice(data.c[i])}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "");
+      el.className = "line " + (chg > 0 ? "up" : chg < 0 ? "down" : "");
+      return;
+    }
     el.textContent =
       `${fmt.current.full(toTime(data.t[i]))}  O ${fmtPrice(data.o[i])}  H ${fmtPrice(data.h[i])}  L ${fmtPrice(data.l[i])}  ` +
       `C ${fmtPrice(data.c[i])}  V ${fmtBig(data.v[i])}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "");

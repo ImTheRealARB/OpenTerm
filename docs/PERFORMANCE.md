@@ -159,6 +159,33 @@ Notes:
   rerun once before investigating.
 - Tests: 90 pytest (66 + 24 in `test_phase6.py`), 46 vitest, 29 Playwright (23 + 6 in `phase6.spec.ts`).
 
+### Phase 7 (2026-10-17, same machine; fixtures + SYNTHETIC stream)
+
+17/17 PASS on the last two runs. Phase 6 numbers in brackets. This machine was noisier than for Phase 6 (see notes).
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 85.4 KB [85.0] | 400 KB | PASS |
+| Backend p95 cached health / quote / history (server-side) | 0.5-0.6 / 0.7-0.8 / 2.3 ms [0.7 / 0.7 / 1.9] | 20 ms | PASS |
+| Cold start to usable command line | 94-112 ms [92.3] | 1500 ms | PASS |
+| Keystroke to echo p95 (idle / streaming load) | 14.3-14.7 / 12.1-15.1 ms [14.4 / 9.8] | 16.7 ms | PASS |
+| Command submit to first paint p95 (cached / cold network) | 16.6-17.6 / 15.6-17.7 ms [18.5 / 18.1] | 100 / 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 38.5-44.2 ms [38.2] | 50 ms | PASS |
+| Frame time p95 (8-panel / streaming / 10k grid / 50k chart) | 16.7-16.8 ms each | 20 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 5.1 MB [5.1] | 500 MB | PASS |
+| Ticks delivered per second (offered 4,000) | 3,969-4,026 [4,000] | - | INFO |
+| Layout load to paint p95 | 35.5-39.9 ms [36.3] | 100 ms | PASS |
+
+Notes:
+- Entry bundle +0.4 KB gz (85.0 → 85.4): `macroApi` in `net/api.ts` and the registry lines. FRED, MACRO, RATES, ERN, ECO and
+  `macroUi` / `macroArgs` are lazy function modules.
+- Four complete bench runs back to back: the first failed tick-to-pixel (NaN, 0 ticks delivered: the stream did not start), the
+  second failed tick-to-pixel (51.7 ms; keystroke under load 15.2 ms) and the 50k-bar chart pan (33.3 ms), the last two were
+  17/17. None reproduced and the code on those paths is unchanged by Phase 7 except the optional `readoutLabel` prop on
+  `ChartView`. If the streaming gate fails alone, rerun twice before investigating.
+- Tests: 116 pytest (90 + 26 in `test_phase7.py`), 66 vitest (46 + 20 `macroArgs`), 40 Playwright (29 + 11 in `phase7.spec.ts`).
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

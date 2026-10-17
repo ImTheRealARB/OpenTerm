@@ -1,19 +1,19 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phase 6 merged, awaiting commit)._
+_Last updated: 2026-10-17, session 4 (Phase 5 committed `4b3814c`; Phases 6-10 built in parallel worktrees, being merged here one phase per commit; Phases 6-7 merged; Phase 7 awaiting commit)._
 
 > **Resuming in a new session or account?** Paste the prompt from [RESUME_PROMPT.md](RESUME_PROMPT.md)
 > and read "Parallel build of Phases 6-10" below.
 
 ## Parallel build of Phases 6-10 (MERGING)
 Status: **all five phases were finished in their worktrees (each green in isolation). The lead is merging them here in order
-6, 7, 8, 9, 10, one commit each; the user approves every commit. Phase 6 is merged and verified, awaiting commit.**
+6, 7, 8, 9, 10, one commit each; the user approves every commit. Phase 6 is committed (`96d40b9`); Phase 7 is merged and verified, awaiting commit.**
 The last column tracks the merge into this worktree.
 
 | Phase | Worktree (under `.claude/worktrees/`) | Branch | Notes file | Merge |
 |---|---|---|---|---|
-| 6 FA, FIL/SEC, OWN, HDS | `openterm-p6` | `claude/openterm-p6-wip` | `PHASE_6_NOTES.md` | **MERGED + verified here** (see Phase 6 details); commit pending user approval |
-| 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | Finished in worktree, not merged yet (next) |
+| 6 FA, FIL/SEC, OWN, HDS | `openterm-p6` | `claude/openterm-p6-wip` | `PHASE_6_NOTES.md` | **COMMITTED** `96d40b9` |
+| 7 FRED, MACRO, RATES, ERN, ECO | `openterm-p7` | `claude/openterm-p7-wip` | `PHASE_7_NOTES.md` | **MERGED + verified here** (see Phase 7 details); commit pending user approval |
 | 8 PORT, ALRT (migrations 6-7) | `openterm-p8` | `claude/openterm-p8-wip` | `PHASE_8_NOTES.md` | Finished in worktree, not merged yet |
 | 9 EQS, HIST, CORR, COMP, CSV export | `openterm-p9` | `claude/openterm-p9-wip` | `PHASE_9_NOTES.md` | Finished in worktree, not merged yet; CSV-export hook wired into 6-8 panels after merge |
 | 10 SETTINGS, themes, vim, keybinding overrides, Docker, Tauri, release notes | `openterm-p10` | `claude/openterm-p10-wip` | `PHASE_10_NOTES.md` | Finished in worktree, not merged yet |
@@ -42,15 +42,15 @@ The last column tracks the merge into this worktree.
 ## Where things stand
 - **Phases 1-4 of 10 are built, verified and committed** (`736d6d5`, `3815fdd`, `b6dca4e`, `b72466a`, docs `a8b7c6e`).
 - **Phase 5 is committed** (`4b3814c`) in worktree `.claude/worktrees/openterm-phases-5-10-a49ca4`, branch
-  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phase 6 is merged into the working tree and verified, not yet committed.**
+  `claude/openterm-phases-5-10-a49ca4` (contains Phases 1-4). **Phase 6 is committed (`96d40b9`); Phase 7 is merged into the working tree and verified, not yet committed.**
 - Phases 3 and 4 live on branch `claude/openterm-phase-3-4-621f59` (worktree), **not on `main` yet**.
   The main checkout has the Phase 3 files uncommitted on `main` (identical to `b6dca4e`). To bring
   `main` up to date: discard those local copies on `main` (`git checkout -- .` and delete the untracked
   Phase 3 files), then `git merge claude/openterm-phase-3-4-621f59` (fast-forward). No git remote. The git identity (ankithrbharadwaj) is set for this repo only.
-- Latest verification (Phase 6 tree):
-  - Backend: 90 pytest passed (`-n auto`, ~16 s), ruff clean.
-  - Frontend: 46 vitest passed, tsc clean, 29 Playwright passed (`--workers=8`, ~19 s).
-  - Bench: 17/17 budgets PASS, none regressed (see `docs/PERFORMANCE.md` Phase 6; one lone chart-pan miss on the first run was noise).
+- Latest verification (Phase 7 tree):
+  - Backend: 116 pytest passed (`-n auto`, ~21 s), ruff clean.
+  - Frontend: 66 vitest passed, tsc clean, 40 Playwright passed (`--workers=8`, ~15 s).
+  - Bench: 17/17 budgets PASS on the last two runs; earlier runs each missed one noisy metric (see `docs/PERFORMANCE.md` Phase 7).
 
 ## Done
 | Phase | Contents |
@@ -61,6 +61,27 @@ The last column tracks the merge into this worktree.
 | 4 Workspace | SQLite migrations 3-4 (`layouts`, `history`), `backend/openterm/userdata.py`, `/api/layouts[/{name}]` GET/PUT/DELETE, `/api/cmdhistory` GET/POST; `LAYOUT`/`MONITOR` `SAVE|LOAD|DEL name` (bare name = LOAD, bare `LAYOUT` = list panel with J/K, Enter, Del-twice, S), `Ctrl+S` (re-save current named layout, else prompts) / `Ctrl+O` (prompts `LAYOUT LOAD ` with name autocomplete), layout name in the status bar; command history moved to SQLite (batched writes, `sendBeacon` on exit, one-time upload of the old localStorage history); Playwright tests for layouts, history and Ctrl+Shift+Arrows resizing; bench gate for layout load |
 | 5 Boards + lists | Watchlists (SQLite, `WL` grammar), news (`N`: RSS / Yahoo RSS / GDELT), `MOV` (Nasdaq movers), `CRYP` (CoinGecko, Binance), boards `WEI` `FX` `CMDTY`, `FXC` cross matrix, shared `quoteRows.ts`; pytest-xdist, fully parallel Playwright |
 | 6 SEC + ownership | `FA` (SEC EDGAR XBRL financials: IS/BS/CF, annual/quarterly), `FIL`/`SEC` (filings list), `OWN` (Form 4 insider transactions), `HDS` (institutional + fund holders); providers `sec`, `yahoo_own`; needs `SEC_USER_AGENT` in env |
+| 7 Macro | `FRED` (series chart), `MACRO` (curated list + search), `RATES` (Treasury yield curve + spreads), `ERN` (earnings calendar), `ECO` (BLS + BEA release dates); providers `fred`, `fred_csv`, `treasury`, `nasdaq_earnings`, `agency_ics` |
+
+## Phase 7 details (FRED, MACRO, RATES, ERN, ECO)
+
+**Built and verified (merged from `openterm-p7`):**
+- Backend: **116 pytest passed, ruff clean** (90 + 26 in `tests/test_phase7.py`, which pins "today" to 2026-10-17 via `macro.ny_today`).
+  - `providers/macro.py`: parsers + providers `fred` (official API, needs `FRED_API_KEY`; inactive without it, SOURCES shows KEY REQUIRED),
+    `fred_csv` (keyless `fredgraph.csv`), `treasury` (par yield curve CSV, one file per year), `nasdaq_earnings`, `agency_ics` (BLS + BEA ICS feeds).
+  - `/api/fred?id=&range=`, `/api/macro?q=`, `/api/rates`, `/api/earnings?date=`, `/api/eco?start=&days=`. Capabilities and orders in `config.yaml`
+    (`fred_series` [fred, fred_csv], `fred_search` [fred], `yield_curve` [treasury, fred_csv], `earnings` [nasdaq_earnings], `eco_calendar` [agency_ics, fred]).
+  - `providers/__init__.py` re-binds `keyed_status` (adds a `fred` KEY REQUIRED row) and pops `fred` from `KEYED`; `fixtures.py` wraps `_route`.
+  - 38 fixtures recorded 2026-10-17 from the live sites (FRED CSV x20, Treasury 2025/2026, Nasdaq earnings x3, BLS/BEA ICS, real FRED 400);
+    the keyed FRED API shapes are built from the docs (no key available), so live behaviour with a key is untested.
+- Frontend: **66 vitest** (+20 `macroArgs.test.ts`), **40 Playwright** (+11 `e2e/phase7.spec.ts`), tsc clean.
+  - `FRED.tsx` plots through `ChartView` (o=h=l=c=value; gaps skipped and counted); `MACRO.tsx` without a key shows the built-in list
+    and filters locally; `RATES.tsx` derives 3M10Y / 5S30S / 2S10S spreads, Enter plots the matching `DGS*` series;
+    `ERN.tsx` args TODAY/TOMORROW/YESTERDAY/+N/-N/YYYY-MM-DD, Left/Right change the day; `ECO.tsx` has dates and times only (BLS + BEA), MAJOR is a name match;
+    `macroUi.tsx` shared status/error pieces; `macroApi` block in `net/api.ts`.
+  - `ChartView.tsx` got an optional `readoutLabel` prop (crosshair readout `<date> <label> <value> <pct>`), used by FRED.
+- Merge resolution: api.py hunks interleaved (6 then 7), `test_api.py` pin lists both phases, registry keeps Phase 6 HDS/OWN and Phase 7 RATES/ERN loads,
+  `net/api.ts` needed the closing `};` of `secApi` restored.
 
 ## Phase 6 details (FA, FIL/SEC, OWN, HDS)
 
@@ -120,7 +141,7 @@ The last column tracks the merge into this worktree.
   - `functions/registry.ts`: all eight wired with `load` and `argsSchema`.
   - `e2e/phase5.spec.ts` (8 tests, mocked routes + WebSocket), green.
 
-**Bench baseline for Phase 7** (Phase 6 tree, 2026-10-17): 17/17 PASS. Bundle 85.0 KB gz; backend p95
+**Bench baseline for Phase 8** (Phase 7 tree figures are in `docs/PERFORMANCE.md`; this is the Phase 6 tree, 2026-10-17): 17/17 PASS. Bundle 85.0 KB gz; backend p95
 health/quote/history 0.7/0.7/1.9 ms; cold start 92.3 ms; keystroke 14.4 ms (9.8 under load); cached / cold-network
 command to paint 18.5 / 18.1 ms; tick-to-pixel 38.2 ms; frame p95 16.7 ms everywhere; long tasks 0; heap 5.1 MB;
 ticks 4,000/s; layout load 36.3 ms. (Phase 5 baseline: 84.8 KB, 37.5 ms tick-to-pixel, 35.8 ms layout.)
@@ -128,7 +149,7 @@ ticks 4,000/s; layout load 36.3 ms. (Phase 5 baseline: 84.8 KB, 37.5 ms tick-to-
 ## Next
 Phases 6-10 in order:
 - 6: done (merged, see Phase 6 details).
-- 7: MACRO/FRED (key), ECO calendar, RATES curve, ERN.
+- 7: done (merged, see Phase 7 details).
 - 8: PORT (CSV import/export), ALRT with desktop notifications.
 - 9: EQS screener, CORR, COMP, HIST, CSV export everywhere.
 - 10: Themes UI, vim mode, keybinding overrides, SETTINGS, Docker, Tauri, release notes, full perf pass.

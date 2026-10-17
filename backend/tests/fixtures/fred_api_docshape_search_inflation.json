@@ -1,0 +1,32 @@
+{
+ "status": 200,
+ "note": "BUILT from the documented FRED API response shape, not recorded (no key)",
+ "body": {
+  "realtime_start": "2026-10-17",
+  "realtime_end": "2026-10-17",
+  "order_by": "search_rank",
+  "sort_order": "desc",
+  "count": 1,
+  "offset": 0,
+  "limit": 50,
+  "seriess": [
+   {
+    "id": "CPIAUCSL",
+    "realtime_start": "2026-10-17",
+    "realtime_end": "2026-10-17",
+    "title": "Consumer Price Index for All Urban Consumers: All Items in U.S. City Average",
+    "observation_start": "1947-01-01",
+    "observation_end": "2026-09-01",
+    "frequency": "Monthly",
+    "frequency_short": "M",
+    "units": "Index 1982-1984=100",
+    "units_short": "Index 1982-1984=100",
+    "seasonal_adjustment": "Seasonally Adjusted",
+    "seasonal_adjustment_short": "SA",
+    "last_updated": "2026-10-14 07:38:02-05",
+    "popularity": 95,
+    "notes": ""
+   }
+  ]
+ }
+}
