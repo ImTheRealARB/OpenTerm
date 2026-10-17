@@ -40,6 +40,11 @@ MIGRATIONS: list[str | list[str]] = [
             " created_at REAL NOT NULL, job_hash TEXT, meta BLOB NOT NULL)"
         ),
     ],
+    # 10: IMPORT (Phase 12 step 8): the user's own daily bars, one row per symbol (msgpack + zlib columns)
+    (
+        "CREATE TABLE local_bars (symbol TEXT PRIMARY KEY, bars BLOB NOT NULL, rows INTEGER NOT NULL,"
+        " first_date TEXT NOT NULL, last_date TEXT NOT NULL, created_at REAL NOT NULL)"
+    ),
 ]
 
 

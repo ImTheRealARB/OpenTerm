@@ -1,6 +1,6 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; steps 1-7 done.**
+Status: **approved as written 2026-10-19; steps 1-8 done.**
 
 Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
 symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.
@@ -22,6 +22,14 @@ and the `P` key save the server-built Pine Script / CSV; `GET /api/bt/runs/{id}/
 `GET /api/bt/compare?a=&b=` (B minus A for every shared numeric metric). The Pine translation is labelled an approximation
 (next-bar-open fills like OpenTerm, but EMA / RSI seeding, share rounding and the per-market cost stack differ); `CROSS>` /
 `CROSS<` become persistent flags. There is no delete key in `BT RUNS` yet (the API has `DELETE`).
+Changes made in step 8: migration 10 `local_bars` (one row per symbol: msgpack + zlib columns); `POST /api/bt/import?symbol=` (body = the CSV text;
+a re-import replaces), `GET /api/bt/import`, `DELETE /api/bt/import/{symbol}`; `DataService.history` answers a stored symbol from
+`bt/localdata.py` before the router (source `local`, `exchange` LOCAL DATA, never cached, weekly / monthly bars built from the daily
+ones, ranges counted back from the LAST imported bar, intraday refused). A stored symbol shadows a real ticker of the same name.
+Rules (backend authority, browser mirror for the preview): columns date/open/high/low/close[/volume], `YYYY-MM-DD` dates, positive
+prices, high >= low, no duplicate dates, at least 2 rows, 200,000 rows and 20 MB at most; one bad row rejects the file with its
+row number. `IMPORT` lists stored symbols (`D` twice removes), `IMPORT DEL SYM`. The spec test's `data.bars` key was corrected to
+the columnar `data.t` that `/api/history` has always used. GP says LOCAL DATA (IMPORTED BY YOU); BT puts it in the data note.
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 12", [FEATURE_GAP.md](../FEATURE_GAP.md) rows for
 `agent/backtest/*`, and the Vibe-Trading code itself at commit `d0db2e3` (MIT; read 2026-10-19).
 
@@ -129,7 +137,7 @@ Frontend:
 5. Engines: India, crypto (spot + perps), forex, futures, composite; Binance klines adapter. **Done 2026-10-19.**
 6. `BT MC`, `BT WF`. **Done 2026-10-19.**
 7. `BT RUNS` compare and `BT EXPORT` (CSV, Pine). **Done 2026-10-19.**
-8. `IMPORT` (CSV, `LOCAL DATA`).
+8. `IMPORT` (CSV, `LOCAL DATA`). **Done 2026-10-19.**
 9. `THIRD_PARTY.md` rows, docs (`DATA_LIMITS.md`, `COMMANDS.md`, `ADDING_A_FUNCTION.md` if needed), phase verification.
 
 Steps 3 and 4 (backend and frontend halves) can run as two Sonnet subagents at once; so can 5 and 6.

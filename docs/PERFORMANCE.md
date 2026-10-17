@@ -395,6 +395,11 @@ and 285.6 / 72.1 on run 3; `import pandas` and the 100-symbol run slowed by the 
 ### Phase 12 step 7: BT RUNS compare, BT EXPORT (2026-10-19)
 326 pytest + 6 xfail, 193 vitest, 85 Playwright, tsc + ruff clean. Bench: every gate except one passes (bundle 98.5 KB, tick-to-pixel 36-45 ms, BT cached run 6 ms, BT open 77-88 ms); the BT 10-year rule run read 383 / 493 / 403 / 399 ms on four runs in a row (budget 300; 230 and 286 in steps 5-6) with no change in the run path (step 7 only adds two read-only endpoints). The same in-process engine run measures 160-170 ms cool and 250-320 ms after a dozen back-to-back runs, so the machine is throttling (Google Drive sync is also busy). NOT closed: re-measure on a rested machine at the end of the phase; if it still misses, profile the run path.
 
+### Phase 12 step 8: IMPORT (2026-10-19)
+354 pytest + 1 xfail, 196 vitest, 87 Playwright, tsc + ruff clean (`node scripts/gates.mjs`: all five gates in 50 s). Bench not
+run for this step: it adds one set lookup (`symbol in service.local.symbols`) to `DataService.history` and a lazy `IMPORT`
+panel chunk; the phase bench at step 9 gates `/api/history` and the bundle.
+
 ## Test suite speed (2026-10-19, on top of Phase 12 step 4)
 Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
 

@@ -62,7 +62,15 @@ async function setup(page: Page) {
   await page.route("**/api/bt/**", (r) => {
     const req = r.request();
     const path = new URL(req.url()).pathname;
-    if (req.method() === "POST") posts.push({ url: path, body: req.postDataJSON?.() ?? req.postData() });
+    if (req.method() === "POST") {
+      let body: unknown = req.postData();
+      try {
+        body = req.postDataJSON();
+      } catch {
+        // a CSV body is plain text
+      }
+      posts.push({ url: path, body });
+    }
     if (path === "/api/bt/run") return r.fulfill({ json: { id: "j1", kind: "bt.run", state: "queued", progress: 0, msg: "", cached: false } });
     if (path === "/api/bt/runs") return r.fulfill({ json: { runs: [...runs.values()].map(({ equity, benchmark, trades, ...card }) => card) } });
     if (/\/export$/.test(path)) {
@@ -76,7 +84,11 @@ async function setup(page: Page) {
     const m = /^\/api\/bt\/runs\/(\w+)$/.exec(path);
     if (m) return r.fulfill({ json: runs.get(m[1]) });
     if (path === "/api/bt/compare") return r.fulfill({ json: { a: runs.get("r1"), b: runs.get("r2"), diff: { total_return: -1.8 } } });
-    if (path === "/api/bt/import") return r.fulfill({ json: { symbol: "MYBARS", rows: 3, label: "LOCAL DATA" } });
+    if (path === "/api/bt/import" && req.method() === "GET") {
+      return r.fulfill({ json: { symbols: [{ symbol: "MYBARS", rows: 3, first_date: "2024-01-02", last_date: "2024-01-04", created_at: now(), label: "LOCAL DATA" }] } });
+    }
+    if (path === "/api/bt/import/MYBARS") return r.fulfill({ json: { deleted: "MYBARS" } });
+    if (path === "/api/bt/import") return r.fulfill({ json: { symbol: "MYBARS", rows: 3, first_date: "2024-01-02", last_date: "2024-01-04", label: "LOCAL DATA" } });
     return r.fulfill({ status: 404, json: { error: "not mocked" } });
   });
   await page.route("**/api/jobs/j1", (r) => r.fulfill({ json: { id: "j1", kind: "bt.run", state: "done", progress: 1, msg: "", cached: false, result: { run_id: "r1" } } }));
@@ -157,8 +169,7 @@ test("BT RUNS: lists run cards and C compares two", async ({ page }) => {
   await expect(p).toContainText("-180.00%"); // the total-return difference
 });
 
-test("IMPORT: paste CSV, preview, Enter stores it as LOCAL DATA", async ({ page }) => {
-  test.fail();
+test("IMPORT: paste CSV, preview, Ctrl+Enter stores it as LOCAL DATA", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "IMPORT MYBARS");
   const box = panel(page).locator("textarea");
@@ -279,4 +290,33 @@ test("BT: P on an open run saves its Pine Script, a bad export command shows the
   }).toPass();
   await cmd(page, "BT EXPORT");
   await expect(panel(page)).toContainText("USAGE: BT EXPORT <RUNID>");
+});
+
+test("IMPORT: a bad CSV lists the problems by row and stores nothing", async ({ page }) => {
+  const { posts } = await setup(page);
+  await cmd(page, "IMPORT BADBARS");
+  await panel(page).locator("textarea").fill("date,open,high,low,close\n2024-01-02,1,1,1,1\n2024-13-02,1,1,1,1\n2024-01-04,1,1,2,1\n");
+  await expect(panel(page)).toContainText("2 PROBLEMS, NOTHING WILL BE STORED");
+  await expect(panel(page)).toContainText("ROW 2: BAD DATE");
+  await expect(panel(page)).toContainText("ROW 3: HIGH BELOW LOW");
+  await panel(page).locator("textarea").press("Control+Enter");
+  expect(posts.filter((x) => x.url === "/api/bt/import")).toHaveLength(0);
+});
+
+test("IMPORT: lists stored symbols and D twice removes one", async ({ page }) => {
+  const { posts } = await setup(page);
+  await page.route("**/api/bt/import/MYBARS", (r) => {
+    posts.push({ url: "DELETE /api/bt/import/MYBARS", body: null });
+    return r.fulfill({ json: { deleted: "MYBARS" } });
+  });
+  await cmd(page, "IMPORT");
+  const p = panel(page);
+  await expect(p.locator(".grid .sr")).toContainText("MYBARS");
+  await expect(p).toContainText("LOCAL DATA");
+  await expect(async () => {
+    await page.keyboard.press("d");
+    await expect(p).toContainText("REMOVE MYBARS? PRESS D AGAIN", { timeout: 500 });
+  }).toPass();
+  await page.keyboard.press("d");
+  await expect.poll(() => posts.some((x) => x.url === "DELETE /api/bt/import/MYBARS")).toBe(true);
 });

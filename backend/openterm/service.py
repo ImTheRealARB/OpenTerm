@@ -10,6 +10,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any, ClassVar
 
+from .bt.localdata import LocalData, LocalError
 from .cache import Cache
 from .providers.crypto import VS
 from .providers.sec import US_ONLY, sec_ticker, store_from  # Phase 6
@@ -49,6 +50,7 @@ def envelope(value: dict, stored_at: float, stale: bool) -> dict:
 class DataService:
     def __init__(self, router: Router, cache: Cache, ttl: dict[str, float] | None = None):
         self.router = router
+        self.local: LocalData | None = None  # IMPORT: set by the lifespan (bars the user imported)
         self.cache = cache
         self.ttl = {
             "quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, "profile": 86400.0,
@@ -115,6 +117,12 @@ class DataService:
             r, i = normalize(range_, interval)
         except ValueError as e:
             raise DataError("bad_request", str(e)) from e
+        if self.local is not None and symbol in self.local.symbols:  # IMPORT: the user's own bars win, labelled LOCAL DATA
+            try:
+                data, imported_at = await self.local.history(symbol, r, i)
+            except LocalError as e:
+                raise DataError("bad_request", str(e)) from e
+            return envelope({"data": data, "source": "local"}, imported_at, stale=False)
         ttl = self.ttl["intraday"] if i in INTRADAY else self.ttl["daily"]
 
         async def fetch() -> dict:

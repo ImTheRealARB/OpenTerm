@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { parseBarsCsv } from "./csvImport";
 import { fmtMetric, METRIC_ROWS } from "./metricsFormat";
 import { parseBtArgs, parseRule } from "./ruleParse";
 import { fmtP, histogram } from "./validationFormat";
 
 /*
  * Phase 12 pure modules (spec: docs/specs/PHASE_12.md), written before the code.
- * ruleParse and metricsFormat landed in step 4 (static imports, plain `it`). csvImport keeps `it.fails` + a
- * variable-path import until step 8 (tsc would reject a missing module).
+ * ruleParse and metricsFormat landed in step 4, csvImport in step 8.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const load = (p: string): Promise<any> => import(/* @vite-ignore */ p);
-const CSV = "./csvImport";
 
 describe("ruleParse (step 4): same grammar and columns as backend bt/rules.py", () => {
   it("accepts the rule forms", () => {
@@ -59,8 +56,7 @@ describe("metricsFormat (step 4)", () => {
 });
 
 describe("csvImport (step 8)", () => {
-  it.fails("parses bars, sorts them and reports bad rows by number", async () => {
-    const { parseBarsCsv } = await load(CSV);
+  it("parses bars, sorts them and reports bad rows by number", () => {
     const ok = parseBarsCsv("Date,Open,High,Low,Close,Volume\n2024-01-03,2,3,1,2.5,10\n2024-01-02,1,2,0.5,1.5,5\n");
     expect(ok.errors).toEqual([]);
     expect(ok.bars.map((b: { t: string }) => b.t)).toEqual(["2024-01-02", "2024-01-03"]);
@@ -122,5 +118,34 @@ describe("BT OPEN / EXPORT (step 7)", () => {
     expect(parseBtArgs(["OPEN", "abc123"])).toMatchObject({ ok: true, sub: "OPEN", args: ["abc123"] });
     expect(parseBtArgs(["export", "abc123", "pine"])).toMatchObject({ ok: true, sub: "EXPORT", args: ["abc123", "pine"] });
     expect(parseBtArgs(["RUNS"])).toMatchObject({ ok: true, sub: "RUNS", args: [] });
+  });
+});
+
+describe("csvImport extra rules (step 8)", () => {
+  it("rejects the same files the backend rejects", () => {
+    const head = "date,open,high,low,close\n2024-01-02,1,1,1,1\n";
+    expect(parseBarsCsv(head + "2024-01-02,1,1,1,1\n").errors[0]).toMatch(/ROW 2: DUPLICATE DATE/);
+    expect(parseBarsCsv(head + "2024-01-03,0,1,1,1\n").errors[0]).toMatch(/ROW 2: PRICES MUST BE POSITIVE/);
+    expect(parseBarsCsv(head + "2024-01-03,1,1,2,1\n").errors[0]).toMatch(/ROW 2: HIGH BELOW LOW/);
+    expect(parseBarsCsv(head + "2024-01-03,1,1,1,NaN\n").errors[0]).toMatch(/ROW 2: BAD NUMBER IN close/);
+    expect(parseBarsCsv(head + "2024-02-30,1,1,1,1\n").errors[0]).toMatch(/ROW 2: BAD DATE/);
+    expect(parseBarsCsv(head + "2024-01-03,1,1,1\n").errors[0]).toMatch(/ROW 2: HAS 4 COLUMNS/);
+    expect(parseBarsCsv(head).errors).toEqual(["NEEDS AT LEAST 2 ROWS"]);
+    expect(parseBarsCsv("").errors).toEqual(["EMPTY FILE"]);
+  });
+
+  it("reads any column order, a BOM, CRLF and a time after the date", () => {
+    const got = parseBarsCsv("\uFEFFClose,DATE,low,High,open,Volume\r\n3,2024-01-03 00:00:00,1,4,2,\r\n2,2024-01-02T09:30,0.5,3,1,7\r\n");
+    expect(got.errors).toEqual([]);
+    expect(got.bars).toEqual([
+      { t: "2024-01-02", o: 1, h: 3, l: 0.5, c: 2, v: 7 },
+      { t: "2024-01-03", o: 2, h: 4, l: 1, c: 3 },
+    ]);
+    expect(got.hasVolume).toBe(true);
+  });
+
+  it("collects at most 20 problems", () => {
+    const rows = Array.from({ length: 50 }, () => "x,1,1,1,1").join("\n");
+    expect(parseBarsCsv("date,open,high,low,close\n" + rows).errors).toHaveLength(20);
   });
 });

@@ -2,6 +2,8 @@
 // The suites are mostly waiting (worker spawns, browser start-up), so running them side by side is about 2x faster than
 // one after another. Port 8000 / 4173 must be free (Playwright). Usage: node scripts/gates.mjs [--skip=e2e,pytest]
 import { spawn } from "node:child_process";
+
+process.noDeprecation = true; // `shell: true` is only for the .cmd shims on Windows; the arguments are fixed
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 

@@ -681,7 +681,30 @@ export interface BtCompare {
   diff: Record<string, number>;
 }
 
+export interface BtImported {
+  symbol: string;
+  rows: number;
+  first_date: string;
+  last_date: string;
+  created_at: number;
+  label: string;
+}
+
 export const btApi = {
+  imports: () => send<{ symbols: BtImported[] }>("GET", "/api/bt/import"),
+  deleteImport: (symbol: string) => send<{ deleted: string }>("DELETE", `/api/bt/import/${encodeURIComponent(symbol)}`),
+  /** Stores the CSV text as the symbol's daily bars (replaces an earlier import). */
+  importBars: async (symbol: string, csv: string): Promise<BtImported & { volume: boolean }> => {
+    let res: Response;
+    try {
+      res = await fetch(`/api/bt/import?symbol=${encodeURIComponent(symbol)}`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: csv });
+    } catch {
+      throw new ApiError(0, "BACKEND DOWN");
+    }
+    const json = await res.json().catch(() => null);
+    if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
+    return json;
+  },
   runs: () => send<{ runs: BtRunCard[] }>("GET", "/api/bt/runs"),
   compare: (a: string, b: string) => send<BtCompare>("GET", `/api/bt/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   /** The server-built export: a CSV part (`trades`, `equity`, `metrics`) or the Pine Script of a rule run. */

@@ -11,6 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, scheduler
 from .api import router as api_router
+from .bt.localdata import LocalData
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
@@ -61,6 +62,10 @@ async def lifespan(app: FastAPI):
     })
     # --- Phase 6: SEC / ownership TTLs ---
     service.ttl.update({k: c.get(f"{k}_ttl_s", v) for k, v in service.PHASE6_TTL.items()})
+
+    # --- Phase 12: imported bars (IMPORT) ---
+    service.local = LocalData(db)
+    await service.local.load()
 
     # --- Phase 9 ---
     service.ttl.update({"screener": c.get("screener_ttl_s", 900), "peers": c.get("peers_ttl_s", 86400)})

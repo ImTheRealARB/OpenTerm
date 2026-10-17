@@ -20,8 +20,6 @@ from pathlib import Path
 
 import pytest
 
-IMPORT = pytest.mark.xfail(strict=True, reason="Phase 12 step 8 (IMPORT) not built")
-
 FIX = Path(__file__).parent / "fixtures"
 EXPECTED = json.loads((FIX / "bt_vibe_expected.json").read_bytes().decode("utf-8"))
 CASES = EXPECTED["cases"]
@@ -536,15 +534,13 @@ CSV = "date,open,high,low,close,volume\n2024-01-02,10,11,9,10.5,100\n2024-01-03,
       "2024-01-04,11.5,12,11,11,90\n"
 
 
-@IMPORT
 def test_import_csv_round_trip(client):
     r = client.post("/api/bt/import", params={"symbol": "MYBARS"}, content=CSV.encode())
     assert r.status_code == 200 and r.json()["rows"] == 3 and r.json()["label"] == "LOCAL DATA"
     h = client.get("/api/history", params={"symbol": "MYBARS", "range": "MAX", "interval": "1d"}).json()
-    assert h["source"] == "local" and len(h["data"]["bars"]) == 3
+    assert h["source"] == "local" and len(h["data"]["t"]) == 3  # columnar Bars: t, o, h, l, c, v
 
 
-@IMPORT
 @pytest.mark.parametrize(("text", "msg"), [
     ("date,close\n2024-01-02,10\n", "NEEDS"),                                    # missing columns
     ("date,open,high,low,close\n2024-13-02,1,1,1,1\n", "ROW 1"),               # bad date
@@ -555,7 +551,6 @@ def test_import_rejects_bad_csv(client, text, msg):
     assert r.status_code == 400 and msg in r.json()["detail"]
 
 
-@IMPORT
 def test_bt_on_local_data_is_labelled(client):
     client.post("/api/bt/import", params={"symbol": "MYBARS"}, content=CSV.encode())
     job = bt_run(client, rule="CLOSE>10.6", symbols=["MYBARS"], interval="1D", range="MAX")

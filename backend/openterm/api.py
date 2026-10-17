@@ -726,7 +726,10 @@ async def _bt_params(request: Request, body: dict) -> dict:
         "sources": [{"symbol": x, "name": envs[x].get("source"), "as_of": envs[x].get("as_of"),
                      "age_s": envs[x].get("age_s"), "stale": envs[x].get("stale", False)} for x in wanted],
         "benchmark": wanted[-1] if bench else "EQUAL-WEIGHT BUY AND HOLD OF THE TRADED SYMBOLS",
-        "data_note": "RECORDED FIXTURE DATA" if fixtures else "",
+        "data_note": " ".join(n for n in (
+            "RECORDED FIXTURE DATA" if fixtures else "",
+            "LOCAL DATA (IMPORTED BY YOU, NOT FROM A MARKET SOURCE)" if any(
+                str(envs[x].get("source")) == "local" for x in wanted) else "") if n),
     }
     meta = {"rule": rule, "strategy": strategy, "code": code, "symbols": symbols, "interval": interval,
             "range": range_, "engine": engine, "short": short, "bench": wanted[-1] if bench else None}
@@ -821,6 +824,50 @@ async def bt_run_mc(request: Request, run_id: str):
 @router.post("/bt/runs/{run_id}/wf")
 async def bt_run_wf(request: Request, run_id: str):
     return await _bt_validate(request, run_id, "bt.wf")
+
+
+def local_of(request: Request):
+    return svc(request).local
+
+
+@router.post("/bt/import")
+async def bt_import(request: Request, symbol: str = ""):
+    """Body: the CSV text (date,open,high,low,close[,volume]). Replaces any earlier import of the symbol."""
+    from .bt import csvimport
+    from .bt.store import BtError
+
+    try:
+        sym = csvimport.symbol_name(symbol)
+        raw = await request.body()
+        if len(raw) > 20_000_000:
+            raise BtError("too_large", "CSV IS OVER 20 MB")
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            raise BtError("bad_request", "CSV REJECTED", detail="THE FILE IS NOT UTF-8 TEXT") from None
+        try:
+            cols = csvimport.parse_bars(text)
+        except csvimport.CsvError as e:
+            raise BtError("bad_request", "CSV REJECTED", detail=str(e)) from None
+    except csvimport.CsvError as e:
+        return bt_error(BtError("bad_request", str(e)))
+    except BtError as e:
+        return bt_error(e)
+    return await local_of(request).save(sym, cols)
+
+
+@router.get("/bt/import")
+async def bt_import_list(request: Request):
+    return {"symbols": await local_of(request).listing()}
+
+
+@router.delete("/bt/import/{symbol}")
+async def bt_import_delete(request: Request, symbol: str):
+    from .bt.store import BtError
+
+    if not await local_of(request).delete(symbol.strip().upper()):
+        return bt_error(BtError("not_found", f"NO LOCAL DATA FOR {symbol.upper()}"))
+    return {"deleted": symbol.upper()}
 
 
 @router.get("/bt/runs/{run_id}/export")

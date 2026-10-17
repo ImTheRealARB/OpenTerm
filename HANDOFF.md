@@ -1,11 +1,11 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; Phase 12 steps 1-7 done; step 8 (IMPORT) next; full scope, defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; Phase 12 steps 1-8 done; step 4B (strategy editor) next, then 9; full scope, defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-19, after step 12.7)
+## Resume here (2026-10-19, after step 12.8)
 - **Where the work is:** branch `claude/openterm-phases-12-19-5ebe04`, worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`
   (a session cannot write into another worktree). It was fast-forwarded from `claude/openterm-phases-11-19-a99b2b` (that
   worktree is clean and now stale: do not work there) and `claude/test-speedup` is merged. `backend/.venv` and
@@ -43,9 +43,12 @@ _Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-ph
   when cool and 250-320 ms after a dozen back-to-back runs (throttling / Google Drive sync in the background). Four runs in a row read 383-493 ms at step 7 (budget 300), so
   this is OPEN: re-measure after a rest at step 9 and profile the run path if it still misses. `node scripts/gates.mjs` runs the five
   gates in parallel (55 s instead of ~70 s; `--skip=e2e,pytest` to leave some out).
-- **Next action: step 8, `IMPORT`** (CSV bars stored per symbol, `LOCAL DATA` label; backend `POST /api/bt/import`, history source `local`,
-  `csvImport.ts`, panel with textarea + preview); delete the `IMPORT` marker in `tests/test_phase12.py`, `it.fails` in
-  `phase12.test.ts` and `test.fail()` in the e2e IMPORT test. Then 4B (editor), 9 (docs, `COMMANDS.md`, phase bench, browser smoke run).
+- **What step 8 added:** migration 10 `local_bars`, `bt/csvimport.py` + `bt/localdata.py`, `DataService.local` (set in the lifespan), `/api/bt/import`
+  (POST/GET/DELETE), `bt/csvImport.ts`, `functions/IMPORT.tsx` (paste box with live preview, list, `D` twice). Tests: `tests/test_phase12_import.py`,
+  vitest, 4 Playwright. Gates after step 8: 354 pytest + 1 xfail (the Phase 11 recording), 196 vitest, 87 Playwright, all green.
+- **Next action: step 4B, the Python strategy editor** (spec section 1: a `<textarea>` in the BT panel, `BT SAVE name` / `BT LOAD name` /
+  `BT DEL name`; API already there: `GET|PUT|DELETE /api/bt/strategies/{name}`; the `S` key says it arrives with 4B). Then step 9 (docs,
+  `COMMANDS.md`, THIRD_PARTY check, phase bench incl. the open BT-run budget, browser smoke run in fixture mode).
 - **Scope and plan (decided by the user 2026-10-19; do not relitigate):**
   - **Full scope, Phases 12-19, minus paid-only data.** Removed: `TRAN`, `SEG` (paid FMP). Keys: keyless sources
     first; free sign-up keys are fine (Finnhub free tier for `EE`/`ANR` only as far as it covers them, Alpaca/Finnhub

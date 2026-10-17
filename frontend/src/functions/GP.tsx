@@ -189,7 +189,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         {L && (
           <span className="dim">
             {" · "}
-            {L.source?.toUpperCase()} AS OF {fmtAge(Math.max(0, Date.now() / 1000 - L.asOf))} AGO
+            {L.source === "local" ? "LOCAL DATA (IMPORTED BY YOU)" : L.source?.toUpperCase()} AS OF {fmtAge(Math.max(0, Date.now() / 1000 - L.asOf))} AGO
             {live && ` · LIVE ${SRC_LABEL[live.src] ?? ""}`}
           </span>
         )}

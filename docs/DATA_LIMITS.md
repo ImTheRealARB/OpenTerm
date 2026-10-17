@@ -157,3 +157,8 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
   `FEES=<bps>` adds to it. Only `USDT` pairs: `BTC-USD` still comes from Yahoo and is a spot-like crypto run.
 - **Forex ignores `SLIP`** (its cost is a spread plus slippage in pips) and says so. **Composite refuses mixed
   currencies** (no FX translation yet) and any symbol it cannot place in a built market.
+
+## Imported bars (Phase 12 step 8)
+- `IMPORT` stores daily bars you provide; they are never from a market source and are labelled LOCAL DATA in GP and BT. There is no
+  adjusted close: a CSV with split-adjusted prices is used as given. Intraday bars are refused. A stored symbol shadows a real ticker
+  of the same name everywhere (history, GP, BT) until you `IMPORT DEL` it; quotes and streaming still come from the market sources.
