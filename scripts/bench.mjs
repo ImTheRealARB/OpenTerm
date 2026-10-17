@@ -8,7 +8,8 @@
  *   node scripts/bench.mjs --no-build reuse frontend/dist
  */
 import { spawn, execSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,8 +33,8 @@ const add = (metric, value, budget, unit, note = "") => {
 };
 const p95 = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.round(0.95 * (a.length - 1))] : NaN);
 
-function start(cmd, cwd) {
-  const child = spawn(cmd, { cwd, shell: true, stdio: "ignore" });
+function start(cmd, cwd, env = {}) {
+  const child = spawn(cmd, { cwd, shell: true, stdio: "ignore", env: { ...process.env, ...env } });
   children.push(child);
   return child;
 }
@@ -68,17 +69,17 @@ function bundleSize() {
   return refs.reduce((sum, f) => sum + gzipSync(readFileSync(join(dist, f))).length, 0) / 1024;
 }
 
-async function backendP95() {
+async function backendP95(path = "/api/health") {
   const lat = [];
-  for (let i = 0; i < 50; i++) await fetch(`${BACKEND}/api/health`); // warm
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 20; i++) await (await fetch(`${BACKEND}${path}`)).arrayBuffer(); // warm
+  for (let i = 0; i < 300; i++) {
     const t0 = performance.now();
-    await (await fetch(`${BACKEND}/api/health`)).arrayBuffer();
+    await (await fetch(`${BACKEND}${path}`)).arrayBuffer();
     lat.push(performance.now() - t0);
   }
   // Server-side time is the gate: Node fetch on Windows loopback adds a ~15.6 ms timer-tick
   // artifact (a keep-alive Python client sees <1 ms), so client time is reported as a note only.
-  const server = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/health"].p95;
+  const server = (await (await fetch(`${BACKEND}/api/perf`)).json())[path.split("?")[0]].p95;
   return { server, client: p95(lat) };
 }
 
@@ -143,14 +144,18 @@ async function main() {
   }
   if (!existsSync(join(FE, "dist", "index.html"))) throw new Error("frontend/dist missing");
 
-  start("uv run python -m openterm", BE);
+  // Fixture mode: recorded provider responses, so the bench never depends on (or hammers) Yahoo.
+  const dbDir = mkdtempSync(join(tmpdir(), "openterm-bench-"));
+  start("uv run python -m openterm", BE, { OPENTERM_FIXTURES: "1", OPENTERM_DB_PATH: join(dbDir, "bench.db") });
   start("npm run preview -- --host 127.0.0.1", FE);
   await waitFor(`${BACKEND}/api/health`);
   await waitFor(FRONTEND);
 
   add("Initial JS+CSS bundle (gzip)", bundleSize(), 400, "KB");
-  const be = await backendP95();
-  add("Backend p95, cached endpoint (/api/health)", be.server, 20, "ms", `server-side; node client ${be.client.toFixed(1)} ms`);
+  for (const path of ["/api/health", "/api/quote?symbols=AAPL,MSFT,RELIANCE.NS", "/api/history?symbol=AAPL&range=1Y"]) {
+    const be = await backendP95(path);
+    add(`Backend p95, cached ${path.split("?")[0]}`, be.server, 20, "ms", `server-side; node client ${be.client.toFixed(1)} ms`);
+  }
 
   const { cold, snap } = await browserBench();
   add("Cold start to usable command line (web)", cold, 1500, "ms", "p95 of 5 fresh contexts");
@@ -158,7 +163,7 @@ async function main() {
   add("Command submit to first paint, cached, p95", snap.cmdToPaint.p95, 100, "ms", `n=${snap.cmdToPaint.n}`);
   add("Frame time p95 under 8-panel workload", snap.frameP95, 20, "ms", "60Hz vsync = 16.7; >25 = dropped frame");
   add("JS heap with 8 panels", snap.heapMB, 500, "MB", "no streaming yet");
-  add("Command submit to first paint, cold network", null, 400, "ms", "needs data layer (phase 2)");
+  add("Command submit to first paint, cold network", null, 400, "ms", "needs a data-rendering function (phase 3)");
   add("Tick received to pixel p95", null, 50, "ms", "needs streaming (phase 3)");
   add("60 fps scroll, 10k-row grid", null, 16.7, "ms", "needs canvas grid (phase 3)");
   add("60 fps pan, 50k-bar chart", null, 16.7, "ms", "needs GP (phase 3)");

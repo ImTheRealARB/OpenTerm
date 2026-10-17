@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     openterm_port: int = 8000
     openterm_db_path: str = "data/openterm.db"
     sec_user_agent: str = "OpenTerm/0.1 contact@example.com"
+    # Replay recorded provider responses instead of the network (tests, bench). Tagged in the UI.
+    openterm_fixtures: bool = False
 
     finnhub_api_key: str = ""
     twelvedata_api_key: str = ""

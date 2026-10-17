@@ -3,7 +3,9 @@
 A keyboard-first, open-source market terminal for one power user: a command line on top, tiled panels,
 mnemonic function codes, and free data sources. Dense, dark, amber on black. Speed over looks.
 
-> Status: **Phase 1 of 10** (shell, command system, workspace keys, perf instrumentation). No market data yet.
+> Status: **Phase 2 of 10**. Shell, command system, workspace keys and perf instrumentation (phase 1);
+> data core with Yahoo + Nasdaq adapters, cache, rate limits, fallback and symbol search (phase 2).
+> Charts, quotes and descriptions arrive in phase 3.
 > Data may be delayed. Not investment advice.
 
 ## Quick start (zero API keys)
@@ -42,7 +44,20 @@ Focus it with `/`, `` ` ``, `Ctrl+K`, or just start typing.
 
 ## Functions
 
-`HELP` lists every function and the phase it ships in. Ready now: `HELP`, `PERF`, `SHORTCUTS`.
+`HELP` lists every function and the phase it ships in. Ready now: `HELP`, `PERF`, `SHORTCUTS`,
+`SOURCES` (provider health, latency, quota, key status), `LOG` (backend log).
+
+Typing a ticker in the command line searches symbols live (`relian` → `RELIANCE.NS`). Highlighting a
+result prefetches its quote and 1Y bars. Aliases: `SPX`, `NDX`, `NIFTY`, `SENSEX`, `EURUSD`, `BTCUSD` ...
+
+## Data
+
+Works with **zero API keys** (Yahoo Finance + Nasdaq.com public endpoints). Every value carries its
+`source` and `as_of`; when a provider fails you see `STALE` or `PROVIDER DOWN`, never invented numbers.
+Read [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) before relying on any of it: these are unofficial
+endpoints for personal use, and they change.
+
+API: `/api/quote?symbols=`, `/api/history?symbol=&range=&interval=`, `/api/search?q=`, `/api/sources`, `/api/log`.
 
 ## Shortcuts
 
@@ -57,6 +72,7 @@ Budgets are enforced in CI by `node scripts/bench.mjs`. See [docs/PERFORMANCE.md
 ## Docs
 
 - [Adding a function](docs/ADDING_A_FUNCTION.md)
+- [Adding a provider](docs/ADDING_A_PROVIDER.md)
 - [Data limits](docs/DATA_LIMITS.md)
 
 ## Layout

@@ -1,7 +1,26 @@
 import { DISCLAIMER } from "../config";
 import { link } from "../net/socket";
+import { sources } from "../net/sources";
 import { useStore } from "../state/store";
 import { workspace } from "../state/workspace";
+
+const PCLS: Record<string, string> = { OK: "up", DEGRADED: "warn", DOWN: "err", IDLE: "dim" };
+
+function Providers() {
+  const s = useStore(sources, (v) => v);
+  if (!s) return <span>PROVIDERS <span className="err">UNKNOWN</span></span>;
+  return (
+    <span>
+      {s.fixtures && <span className="warn">FIXTURES </span>}
+      {s.providers.map((p) => (
+        <span key={p.name}>
+          {p.name.toUpperCase()} <span className={PCLS[p.status]}>{p.status}</span>
+          {p.latency_p50_ms != null && ` ${p.latency_p50_ms.toFixed(0)}MS`}{" "}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function StatusBar() {
   const l = useStore(link, (s) => s);
@@ -15,7 +34,7 @@ export function StatusBar() {
         BACKEND <span className={cls}>{l.status}</span>
         {l.status === "OK" && <> {l.rttMs.toFixed(0)}MS</>}
       </span>
-      <span>PROVIDERS: NONE YET</span>
+      <Providers />
       <span>
         PANEL {focus}/{count}
         {max ? " MAX" : ""}

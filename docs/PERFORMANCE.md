@@ -37,6 +37,25 @@ need features from later phases and turn into hard gates as soon as those land.
 | Frame p95, 8 panels | 16.8 ms | 20 ms | PASS |
 | JS heap, 8 panels | 5.9 MB | 500 MB | PASS |
 
-Optimizations this phase (before → after):
+### Phase 2 (2026-10-17, same machine; backend in fixture mode)
+
+| Metric | Value | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS (gzip) | 79.4 KB | 400 KB | PASS |
+| Backend p95 cached /api/health | 0.4 ms | 20 ms | PASS |
+| Backend p95 cached /api/quote (3 symbols) | 0.8 ms | 20 ms | PASS |
+| Backend p95 cached /api/history (AAPL 1Y, 251 bars) | 2.5 ms | 20 ms | PASS |
+| Cold start to command line | 83.8 ms | 1500 ms | PASS |
+| Keystroke echo p95 | 15.2 ms | 16.7 ms | PASS |
+| Command to paint, cached, p95 | 16.3 ms | 100 ms | PASS |
+| Frame p95, 8 panels | 16.7 ms | 20 ms | PASS |
+| JS heap, 8 panels | 6.0 MB | 500 MB | PASS |
+
+Live network (not gated; real Yahoo from India, keep-alive client): first `AAPL 1Y` history 231 ms
+then 1.9 ms cached; 6-symbol batch quote 687 ms cold then 1.3 ms; search 648 ms cold.
+Search is the slowest cold path, so autocomplete shows functions and recent symbols instantly
+and merges search hits when they arrive (80 ms debounce, stale replies dropped).
+
+Phase 1 optimizations (before → after):
 - Cheatsheet overlay moved to a lazy chunk; it was pulled into the entry chunk by a static import (entry 79.2 → 78.4 KB gz).
 - Clock writes `textContent` once per second instead of re-rendering React (no measurable cost now; avoids a 1 Hz render of the top bar).

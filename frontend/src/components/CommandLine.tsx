@@ -1,37 +1,58 @@
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { execute, statusMsg } from "../command/execute";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { FUNCTION_LIST } from "../functions/registry";
+import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
 
 interface Suggestion {
   value: string;
   label: string;
-  kind: "FUNC" | "RECENT";
+  kind: "FUNC" | "RECENT" | "SEC";
 }
+
+const SEARCH_DEBOUNCE_MS = 80;
 
 export const commandInputRef: { current: HTMLInputElement | null } = { current: null };
 
-/** Suggestions for the token under the cursor (always the last token). */
-function suggest(text: string): Suggestion[] {
+/** The token under the cursor (always the last one) and whether it sits in the security slot. */
+function lastToken(text: string): { token: string; securitySlot: boolean } {
   const tokens = text.trimStart().split(/\s+/);
-  const last = tokens[tokens.length - 1] ?? "";
-  if (!last || /^[1-9]:$/.test(last)) return [];
-  const isFirst = tokens.length === 1 || (tokens.length === 2 && /^[1-9]:$/.test(tokens[0]));
-  const fns = fuzzyRank(last, FUNCTION_LIST, (f) => `${f.code} ${f.title}`, 8).map<Suggestion>((f) => ({
+  const token = tokens[tokens.length - 1] ?? "";
+  const securitySlot = tokens.length === 1 || (tokens.length === 2 && /^[1-9]:$/.test(tokens[0]));
+  return { token: /^[1-9]:$/.test(token) ? "" : token, securitySlot };
+}
+
+function functionSuggestions(token: string): Suggestion[] {
+  return fuzzyRank(token, FUNCTION_LIST, (f) => `${f.code} ${f.title}`, 8).map((f) => ({
     value: f.code,
     label: f.title + (f.load ? "" : ` (P${f.phase})`),
     kind: "FUNC",
   }));
-  if (!isFirst) return fns;
-  // Ticker search provider arrives in phase 2; until then, recent securities only.
-  const recent = fuzzyRank(last, history.recentSecurities(), (s) => s, 5).map<Suggestion>((s) => ({
+}
+
+/** Merges the three sources. Short tokens that prefix a function code list functions first. */
+function merge(token: string, securitySlot: boolean, hits: SearchHit[] = []): Suggestion[] {
+  if (!token) return [];
+  const fns = functionSuggestions(token);
+  if (!securitySlot) return fns;
+  const recent = fuzzyRank(token, history.recentSecurities(), (s) => s, 4).map<Suggestion>((s) => ({
     value: s,
-    label: "recent security",
+    label: "recent",
     kind: "RECENT",
   }));
-  return [...recent, ...fns].slice(0, 10);
+  const seen = new Set(recent.map((r) => r.value));
+  const secs = hits
+    .filter((h) => !seen.has(h.symbol))
+    .slice(0, 6)
+    .map<Suggestion>((h) => ({
+      value: h.symbol,
+      label: `${h.name ?? ""}  ${h.exchange ?? ""} ${h.type ?? ""}`.trim(),
+      kind: "SEC",
+    }));
+  const fnFirst = token.length <= 4 && fns.some((f) => f.value.startsWith(token.toUpperCase()));
+  return (fnFirst ? [...fns.slice(0, 4), ...recent, ...secs] : [...recent, ...secs, ...fns]).slice(0, 10);
 }
 
 export function CommandLine() {
@@ -40,6 +61,30 @@ export function CommandLine() {
   const [sel, setSel] = useState(-1);
   const [focused, setFocused] = useState(false);
   const [, startTransition] = useTransition();
+  const searchSeq = useRef(0);
+  const searchTimer = useRef(0);
+
+  // Predictive prefetch: a highlighted security will most likely be charted or quoted next.
+  useEffect(() => {
+    const s = items[sel];
+    if (s && s.kind !== "FUNC") prefetch(s.value);
+  }, [items, sel]);
+
+  const searchSecurities = (text: string, token: string) => {
+    clearTimeout(searchTimer.current);
+    const seq = ++searchSeq.current;
+    if (!/^[A-Za-z0-9.^=-]{1,20}$/.test(token)) return;
+    searchTimer.current = window.setTimeout(() => {
+      api
+        .search(token)
+        .then((env) => {
+          // Drop replies for text the user has already changed.
+          if (seq !== searchSeq.current || input.current?.value !== text) return;
+          startTransition(() => setItems(merge(token, true, env.data)));
+        })
+        .catch(() => {});
+    }, SEARCH_DEBOUNCE_MS);
+  };
 
   const setValue = (v: string) => {
     const el = input.current!;
@@ -93,10 +138,13 @@ export function CommandLine() {
     if (statusMsg.get()) statusMsg.set(() => null);
     history.resetCursor();
     // Suggestion work is low priority: the native input echo never waits on it.
+    const { token, securitySlot } = lastToken(v);
     startTransition(() => {
-      setItems(suggest(v));
+      setItems(merge(token, securitySlot));
       setSel(-1);
     });
+    if (securitySlot && token) searchSecurities(v, token);
+    else searchSeq.current++;
   };
 
   return (

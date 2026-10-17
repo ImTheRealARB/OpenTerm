@@ -58,8 +58,8 @@ const defs: FunctionDef[] = [
   { code: "LAYOUT", title: "Save / load workspaces", needsSecurity: false, argsSchema: "SAVE|LOAD|DEL name", phase: 4 },
   { code: "MONITOR", title: "Alias of LAYOUT", needsSecurity: false, phase: 4 },
   { code: "SETTINGS", title: "Settings", needsSecurity: false, phase: 10 },
-  { code: "SOURCES", title: "Data sources health", needsSecurity: false, phase: 2 },
-  { code: "LOG", title: "Debug log", needsSecurity: false, phase: 2 },
+  { code: "SOURCES", title: "Data sources: health, latency, quota", needsSecurity: false, phase: 2, load: () => import("./Sources") },
+  { code: "LOG", title: "Backend log", needsSecurity: false, phase: 2, load: () => import("./Log") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

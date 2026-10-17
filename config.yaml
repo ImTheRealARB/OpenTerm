@@ -5,8 +5,11 @@ app:
 cache:
   lru_entries: 5000
   quote_ttl_s: 5
-  history_ttl_s: 3600
+  intraday_ttl_s: 60
+  daily_ttl_s: 3600
+  search_ttl_s: 86400
 providers:
-  # Order = fallback order per capability (phase 2).
-  quotes: [yahoo, stooq]
-  history: [yahoo, stooq]
+  # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
+  quotes: [yahoo, nasdaq]
+  history: [yahoo, nasdaq]
+  search: [yahoo]
