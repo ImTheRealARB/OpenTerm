@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     sec_user_agent: str = "OpenTerm/0.1 contact@example.com"
     # Replay recorded provider responses instead of the network (tests, bench). Tagged in the UI.
     openterm_fixtures: bool = False
+    # SYNxxxx random-walk instruments + tick stream for load testing. Labelled SYNTHETIC in the UI.
+    openterm_synthetic: bool = False
+    openterm_synthetic_tps: float = 20.0
 
     finnhub_api_key: str = ""
     twelvedata_api_key: str = ""

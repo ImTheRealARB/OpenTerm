@@ -22,11 +22,12 @@ test("HELP lists functions", async ({ page }) => {
 });
 
 test("security + function, sticky security, unknown function", async ({ page }) => {
-  await cmd(page, "aapl gp");
-  await expect(panel(page, 1).locator(".ph")).toContainText("AAPL | GP");
-  await expect(panel(page, 1)).toContainText("NOT BUILT YET (PHASE 3)");
-  await cmd(page, "DES");
-  await expect(panel(page, 1).locator(".ph")).toContainText("AAPL | DES");
+  await cmd(page, "aapl fa");
+  await expect(panel(page, 1).locator(".ph")).toContainText("AAPL | FA");
+  await expect(panel(page, 1)).toContainText("NOT BUILT YET (PHASE 6)");
+  await cmd(page, "WEI");
+  await cmd(page, "FIL");
+  await expect(panel(page, 1).locator(".ph")).toContainText("AAPL | FIL");
   await cmd(page, "AAPL XYZ");
   await expect(page.locator(".msg.err")).toHaveText("UNKNOWN FUNCTION: XYZ");
 });

@@ -4,12 +4,13 @@ from typing import Any, ClassVar
 import httpx
 import orjson
 
-from ..models import Bars, Quote, SearchHit
+from ..models import Bars, Profile, Quote, SearchHit
 from ..ratelimit import RateLimited, TokenBucket
 
 QUOTES = "quotes"
 HISTORY = "history"
 SEARCH = "search"
+PROFILE = "profile"
 
 
 class ProviderError(Exception):
@@ -77,6 +78,9 @@ class Provider:
         raise ProviderError("unsupported")
 
     async def search(self, query: str) -> list[SearchHit]:
+        raise ProviderError("unsupported")
+
+    async def profile(self, symbol: str) -> Profile:
         raise ProviderError("unsupported")
 
     async def probe(self) -> None:

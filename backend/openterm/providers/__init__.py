@@ -6,6 +6,7 @@ from ..config import Settings
 from .base import Provider
 from .fixtures import fixture_transport
 from .nasdaq import NasdaqProvider
+from .synthetic import SyntheticProvider
 from .yahoo import YahooProvider
 
 ADAPTERS: dict[str, type[Provider]] = {"yahoo": YahooProvider, "nasdaq": NasdaqProvider}
@@ -27,12 +28,18 @@ RETIRED = {
 }
 
 
-def build(settings: Settings, http: httpx.AsyncClient, fixtures: bool = False) -> dict[str, Provider]:
+def build(
+    settings: Settings, http: httpx.AsyncClient, fixtures: bool = False, synthetic: bool = False
+) -> dict[str, Provider]:
     if fixtures:
         # Offline replay of recorded responses for tests and the bench. Tagged so the UI shows it.
         fx = httpx.AsyncClient(transport=fixture_transport())
-        return {name: cls(fx, source=f"{name}:fixture") for name, cls in ADAPTERS.items()}
-    return {name: cls(http) for name, cls in ADAPTERS.items()}
+        out: dict[str, Provider] = {name: cls(fx, source=f"{name}:fixture") for name, cls in ADAPTERS.items()}
+    else:
+        out = {name: cls(http) for name, cls in ADAPTERS.items()}
+    if synthetic:
+        out["synthetic"] = SyntheticProvider()
+    return out
 
 
 def keyed_status(settings: Settings) -> list[dict]:

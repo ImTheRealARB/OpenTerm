@@ -1,7 +1,9 @@
 """Replays responses recorded from the real endpoints (backend/tests/fixtures). Exact matches only:
 anything not recorded is a 404, so fixture mode can never invent data for an unknown symbol."""
 
+import asyncio
 import json
+import os
 from pathlib import Path
 
 import httpx
@@ -14,6 +16,9 @@ ROUTES = {
     ("/v1/finance/search", "relian"): "yahoo_search_relian",
     ("/api/quote/AAPL/info", "stocks"): "nasdaq_info_aapl",
 }
+SUMMARIES = {"AAPL": "yahoo_summary_aapl", "RELIANCE.NS": "yahoo_summary_reliance_ns"}
+# Simulated upstream latency (bench "cold network" budget). 0 = instant.
+LATENCY_S = float(os.environ.get("OPENTERM_FIXTURE_LATENCY_MS", "0")) / 1000
 
 
 def _load(name: str) -> httpx.Response:
@@ -21,9 +26,26 @@ def _load(name: str) -> httpx.Response:
     return httpx.Response(rec["status"], json=rec["body"])
 
 
-def _handler(request: httpx.Request) -> httpx.Response:
+async def _handler(request: httpx.Request) -> httpx.Response:
+    if LATENCY_S:
+        await asyncio.sleep(LATENCY_S)
+    return _route(request)
+
+
+def _route(request: httpx.Request) -> httpx.Response:
     p = request.url.path
     q = request.url.params
+    if request.url.host == "fc.yahoo.com":
+        return httpx.Response(404, text="")
+    if p == "/v1/test/getcrumb":
+        return httpx.Response(200, text="fixturecrumb")
+    if p.startswith("/v10/finance/quoteSummary/"):
+        sym = p.rsplit("/", 1)[1]
+        if sym in SUMMARIES:
+            return _load(SUMMARIES[sym])
+        return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
+    if p == "/api/company/AAPL/company-profile":
+        return _load("nasdaq_profile_aapl")
     if p == "/v7/finance/spark":
         rec = json.loads((FIXTURES / "yahoo_spark.json").read_text(encoding="utf-8"))
         wanted = set(q.get("symbols", "").split(","))

@@ -45,7 +45,9 @@ class DataService:
     def __init__(self, router: Router, cache: Cache, ttl: dict[str, float] | None = None):
         self.router = router
         self.cache = cache
-        self.ttl = {"quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, **(ttl or {})}
+        self.ttl = {
+            "quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, "profile": 86400.0, **(ttl or {})
+        }
         self._inflight: dict[str, asyncio.Future] = {}
         self._bg: set[asyncio.Task] = set()
         self.fresh_hits = 0
@@ -113,6 +115,34 @@ class DataService:
             return {"data": bars.model_dump(), "fallback_from": failed}
 
         return await self._swr(f"h:{symbol}:{r}:{i}", ttl, fetch)
+
+    async def profile(self, raw_symbol: str) -> dict:
+        symbol = resolve(raw_symbol)
+
+        async def fetch() -> dict:
+            prof, failed = await self.router.call("profile", lambda p: p.profile(symbol), symbol)
+            return {"data": prof.model_dump(), "fallback_from": failed}
+
+        return await self._swr(f"p:{symbol}", self.ttl["profile"], fetch)
+
+    def apply_tick(self, tick) -> None:
+        """Fold a streamed tick into the cached quote so REST snapshots match the stream."""
+        key = f"q:{tick.symbol}"
+        entry = self.cache.mem.get(key)
+        if entry is None:
+            return
+        value, _ = entry
+        q = value["data"]
+        q["price"] = tick.price
+        for k, v in (("change", tick.change), ("change_pct", tick.change_pct), ("volume", tick.volume),
+                     ("high", tick.high), ("low", tick.low)):
+            if v is not None:
+                q[k] = v
+        q["market_time"] = tick.time_ms // 1000
+        q["as_of"] = time.time()
+        if tick.source == "y":
+            q["source"] = "yahoo:stream"
+        self.cache.mem[key] = (value, time.time())
 
     async def search(self, query: str) -> dict:
         q = query.strip().upper()

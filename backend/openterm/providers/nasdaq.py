@@ -5,10 +5,10 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
-from ..models import Bars, Quote
+from ..models import Bars, Profile, Quote
 from ..ranges import range_days
 from ..symbols import is_us_plain
-from .base import HISTORY, QUOTES, Provider, ProviderError
+from .base import HISTORY, PROFILE, QUOTES, Provider, ProviderError
 from .yahoo import UA
 
 BASE = "https://api.nasdaq.com/api/quote"
@@ -96,7 +96,7 @@ def bars_from_rows(symbol: str, rows: list[dict[str, Any]], range_: str, source:
 class NasdaqProvider(Provider):
     name = "nasdaq"
     label = "Nasdaq.com public API"
-    capabilities = frozenset({QUOTES, HISTORY})
+    capabilities = frozenset({QUOTES, HISTORY, PROFILE})
     markets = "US-listed stocks and ETFs (plain tickers only); daily history only"
     terms = "Public website API; personal use. Quotes are delayed. Undocumented: may change."
     rate = (2.0, 4)
@@ -139,6 +139,21 @@ class NasdaqProvider(Provider):
         if not rows:
             raise ProviderError("not_found", "no rows")
         return bars_from_rows(symbol, rows, range_, self.source, self.now())
+
+    async def profile(self, symbol: str) -> Profile:
+        body = await self.get_json(f"https://api.nasdaq.com/api/company/{symbol}/company-profile")
+        d = (body or {}).get("data") if isinstance(body, dict) else None
+        if not d:
+            raise ProviderError("not_found", "no profile")
+
+        def v(k: str) -> str | None:
+            return ((d.get(k) or {}).get("value")) or None
+
+        return Profile(
+            symbol=symbol, name=v("CompanyName"), sector=v("Sector"), industry=v("Industry"),
+            country=v("Region"), website=v("CompanyUrl"), description=v("CompanyDescription"),
+            currency="USD", source=self.source, as_of=self.now(),
+        )
 
     async def probe(self) -> None:
         if not await self._one("AAPL"):

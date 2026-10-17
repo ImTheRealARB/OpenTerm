@@ -1,0 +1,718 @@
+{
+ "status": 200,
+ "body": {
+  "quoteSummary": {
+   "result": [
+    {
+     "assetProfile": {
+      "address1": "One Apple Park Way",
+      "city": "Cupertino",
+      "state": "CA",
+      "zip": "95014",
+      "country": "United States",
+      "phone": "(408) 996-1010",
+      "website": "https://www.apple.com",
+      "industry": "Consumer Electronics",
+      "industryKey": "consumer-electronics",
+      "industryDisp": "Consumer Electronics",
+      "sector": "Technology",
+      "sectorKey": "technology",
+      "sectorDisp": "Technology",
+      "longBusinessSummary": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, a line of smartphones; Mac, a line of personal computers; iPad, a line of multi-purpose tablets; and wearables, home, and accessories comprising AirPods, Apple Vision Pro, Apple TV, Apple Watch, Beats products, and HomePod, as well as Apple branded and third-party accessories. It also provides AppleCare support and cloud services; and operates various platforms, including the App Store that allows customers to discover and download applications and digital content, such as books, music, video, games, and podcasts, as well as advertising services include third-party licensing arrangements and its own advertising platforms. In addition, the company offers various subscription-based services, such as Apple Arcade, a game subscription service; Apple Fitness+, a personalized fitness service; Apple Music, which offers users a curated listening experience with on-demand radio stations; Apple News+, a subscription news and magazine service; Apple TV, which offers original content and live sports; Apple Card, a co-branded credit card; and Apple Pay, a cashless payment service, as well as licenses its intellectual property. The company serves consumers, and small and mid-sized businesses; and the education, enterprise, and government markets. It distributes third-party applications for its products through the App Store. The company also sells its products through its retail and online stores, and direct sales force; and third-party cellular network carriers and resellers. The company was formerly known as Apple Computer, Inc. and changed its name to Apple Inc. in January 2007. Apple Inc. was founded in 1976 and is headquartered in Cupertino, California.",
+      "fullTimeEmployees": 150000,
+      "companyOfficers": [
+       {
+        "maxAge": 1,
+        "name": "Mr. Timothy D. Cook",
+        "age": 64,
+        "title": "Executive Chairman of the Board",
+        "yearBorn": 1961,
+        "fiscalYear": 2025,
+        "totalPay": {
+         "raw": 16759518,
+         "fmt": "16.76M",
+         "longFmt": "16,759,518"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Kevan  Parekh",
+        "age": 53,
+        "title": "Senior VP & CFO",
+        "yearBorn": 1972,
+        "fiscalYear": 2025,
+        "totalPay": {
+         "raw": 4034174,
+         "fmt": "4.03M",
+         "longFmt": "4,034,174"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Sabih  Khan",
+        "age": 58,
+        "title": "Senior VP & Chief Operating Officer",
+        "yearBorn": 1967,
+        "fiscalYear": 2025,
+        "totalPay": {
+         "raw": 5021905,
+         "fmt": "5.02M",
+         "longFmt": "5,021,905"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Ms. Deirdre  O'Brien",
+        "age": 58,
+        "title": "Senior Vice President of Retail & People",
+        "yearBorn": 1967,
+        "fiscalYear": 2025,
+        "totalPay": {
+         "raw": 5037867,
+         "fmt": "5.04M",
+         "longFmt": "5,037,867"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Ms. Katherine L. Adams",
+        "age": 61,
+        "title": "Secretary",
+        "yearBorn": 1964,
+        "fiscalYear": 2025,
+        "totalPay": {
+         "raw": 5022482,
+         "fmt": "5.02M",
+         "longFmt": "5,022,482"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. John  Ternus",
+        "age": 49,
+        "title": "CEO & Director",
+        "yearBorn": 1976,
+        "fiscalYear": 2025,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Ben  Borders",
+        "age": 44,
+        "title": "Principal Accounting Officer",
+        "yearBorn": 1981,
+        "fiscalYear": 2025,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Suhasini  Chandramouli",
+        "title": "Director of Investor Relations",
+        "fiscalYear": 2025,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Ms. Jennifer G. Newstead J.D.",
+        "age": 55,
+        "title": "Senior VP of Government Affairs & General Counsel",
+        "yearBorn": 1970,
+        "fiscalYear": 2025,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Ms. Kristin Huguet Quayle",
+        "title": "Vice President of Worldwide Communications",
+        "fiscalYear": 2025,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       }
+      ],
+      "auditRisk": 2,
+      "boardRisk": 3,
+      "compensationRisk": 6,
+      "shareHolderRightsRisk": 1,
+      "overallRisk": 1,
+      "governanceEpochDate": 1790812800,
+      "compensationAsOfEpochDate": 1767139200,
+      "irWebsite": "http://investor.apple.com/",
+      "executiveTeam": [],
+      "maxAge": 86400
+     },
+     "summaryDetail": {
+      "maxAge": 1,
+      "priceHint": {
+       "raw": 2,
+       "fmt": "2",
+       "longFmt": "2"
+      },
+      "previousClose": {
+       "raw": 342.0,
+       "fmt": "342.00"
+      },
+      "open": {
+       "raw": 346.085,
+       "fmt": "346.08"
+      },
+      "dayLow": {
+       "raw": 340.46,
+       "fmt": "340.46"
+      },
+      "dayHigh": {
+       "raw": 347.82,
+       "fmt": "347.82"
+      },
+      "regularMarketPreviousClose": {
+       "raw": 342.0,
+       "fmt": "342.00"
+      },
+      "regularMarketOpen": {
+       "raw": 346.085,
+       "fmt": "346.08"
+      },
+      "regularMarketDayLow": {
+       "raw": 340.46,
+       "fmt": "340.46"
+      },
+      "regularMarketDayHigh": {
+       "raw": 347.82,
+       "fmt": "347.82"
+      },
+      "dividendRate": {
+       "raw": 1.08,
+       "fmt": "1.08"
+      },
+      "dividendYield": {
+       "raw": 0.0031,
+       "fmt": "0.31%"
+      },
+      "exDividendDate": {
+       "raw": 1786320000,
+       "fmt": "2026-08-10"
+      },
+      "payoutRatio": {
+       "raw": 0.1204,
+       "fmt": "12.04%"
+      },
+      "fiveYearAvgDividendYield": {
+       "raw": 0.47,
+       "fmt": "0.47"
+      },
+      "beta": {
+       "raw": 1.069,
+       "fmt": "1.07"
+      },
+      "trailingPE": {
+       "raw": 39.38761,
+       "fmt": "39.39"
+      },
+      "forwardPE": {
+       "raw": 35.85982,
+       "fmt": "35.86"
+      },
+      "volume": {
+       "raw": 59852690,
+       "fmt": "59.85M",
+       "longFmt": "59,852,690"
+      },
+      "regularMarketVolume": {
+       "raw": 59852690,
+       "fmt": "59.85M",
+       "longFmt": "59,852,690"
+      },
+      "averageVolume": {
+       "raw": 44451085,
+       "fmt": "44.45M",
+       "longFmt": "44,451,085"
+      },
+      "averageVolume10days": {
+       "raw": 38681950,
+       "fmt": "38.68M",
+       "longFmt": "38,681,950"
+      },
+      "averageDailyVolume10Day": {
+       "raw": 38681950,
+       "fmt": "38.68M",
+       "longFmt": "38,681,950"
+      },
+      "bid": {
+       "raw": 340.0,
+       "fmt": "340.00"
+      },
+      "ask": {
+       "raw": 344.48,
+       "fmt": "344.48"
+      },
+      "bidSize": {
+       "raw": 500,
+       "fmt": "500",
+       "longFmt": "500"
+      },
+      "askSize": {
+       "raw": 400,
+       "fmt": "400",
+       "longFmt": "400"
+      },
+      "marketCap": {
+       "raw": 5012516765696,
+       "fmt": "5.01T",
+       "longFmt": "5,012,516,765,696"
+      },
+      "nonDilutedMarketCap": {
+       "raw": 4918530543600,
+       "fmt": "4.92T",
+       "longFmt": "4,918,530,543,600"
+      },
+      "yield": {},
+      "ytdReturn": {},
+      "qtdReturn": {},
+      "totalAssets": {},
+      "expireDate": {},
+      "strikePrice": {},
+      "openInterest": {},
+      "fiftyTwoWeekLow": {
+       "raw": 243.42,
+       "fmt": "243.42"
+      },
+      "fiftyTwoWeekHigh": {
+       "raw": 348.15,
+       "fmt": "348.15"
+      },
+      "allTimeHigh": {
+       "raw": 348.15,
+       "fmt": "348.15"
+      },
+      "allTimeLow": {
+       "raw": 0.049107,
+       "fmt": "0.05"
+      },
+      "fulldayPrice": {
+       "raw": 343.46,
+       "fmt": "343.46"
+      },
+      "fulldayChange": {
+       "raw": 0.6199951,
+       "fmt": "0.62"
+      },
+      "fulldayChangePercent": {
+       "raw": 0.0018128513,
+       "fmt": "0.18%"
+      },
+      "priceToSalesTrailing12Months": {
+       "raw": 10.737511,
+       "fmt": "10.74"
+      },
+      "fiftyDayAverage": {
+       "raw": 325.6994,
+       "fmt": "325.70"
+      },
+      "twoHundredDayAverage": {
+       "raw": 292.4647,
+       "fmt": "292.46"
+      },
+      "trailingAnnualDividendRate": {
+       "raw": 1.05,
+       "fmt": "1.05"
+      },
+      "trailingAnnualDividendYield": {
+       "raw": 0.0030701754,
+       "fmt": "0.31%"
+      },
+      "navPrice": {},
+      "currency": "USD",
+      "fromCurrency": null,
+      "toCurrency": null,
+      "lastMarket": null,
+      "coinMarketCapLink": null,
+      "volume24Hr": {},
+      "volumeAllCurrencies": {},
+      "circulatingSupply": {},
+      "algorithm": null,
+      "maxSupply": {},
+      "totalSupply": {},
+      "startDate": {},
+      "tradeable": false,
+      "fullyDilutedValue": {},
+      "volume24HrMarketCapPercent": {}
+     },
+     "defaultKeyStatistics": {
+      "maxAge": 1,
+      "priceHint": {
+       "raw": 2,
+       "fmt": "2",
+       "longFmt": "2"
+      },
+      "enterpriseValue": {
+       "raw": 5034461888512,
+       "fmt": "5.03T",
+       "longFmt": "5,034,461,888,512"
+      },
+      "forwardPE": {
+       "raw": 35.85982,
+       "fmt": "35.86"
+      },
+      "profitMargins": {
+       "raw": 0.27618998,
+       "fmt": "27.62%"
+      },
+      "floatShares": {
+       "raw": 14569078010,
+       "fmt": "14.57B",
+       "longFmt": "14,569,078,010"
+      },
+      "sharesOutstanding": {
+       "raw": 14594180000,
+       "fmt": "14.59B",
+       "longFmt": "14,594,180,000"
+      },
+      "sharesShort": {
+       "raw": 120763539,
+       "fmt": "120.76M",
+       "longFmt": "120,763,539"
+      },
+      "sharesShortPriorMonth": {
+       "raw": 139749097,
+       "fmt": "139.75M",
+       "longFmt": "139,749,097"
+      },
+      "sharesShortPreviousMonthDate": {
+       "raw": 1788134400,
+       "fmt": "2026-08-31"
+      },
+      "dateShortInterest": {
+       "raw": 1790726400,
+       "fmt": "2026-09-30"
+      },
+      "sharesPercentSharesOut": {
+       "raw": 0.0083,
+       "fmt": "0.83%"
+      },
+      "heldPercentInsiders": {
+       "raw": 0.01648,
+       "fmt": "1.65%"
+      },
+      "heldPercentInstitutions": {
+       "raw": 0.6635,
+       "fmt": "66.35%"
+      },
+      "shortRatio": {
+       "raw": 2.82,
+       "fmt": "2.82"
+      },
+      "shortPercentOfFloat": {
+       "raw": 0.0083,
+       "fmt": "0.83%"
+      },
+      "beta": {
+       "raw": 1.069,
+       "fmt": "1.07"
+      },
+      "impliedSharesOutstanding": {
+       "raw": 14594180000,
+       "fmt": "14.59B",
+       "longFmt": "14,594,180,000"
+      },
+      "morningStarOverallRating": {},
+      "morningStarRiskRating": {},
+      "category": null,
+      "bookValue": {
+       "raw": 7.36,
+       "fmt": "7.36"
+      },
+      "priceToBook": {
+       "raw": 46.66576,
+       "fmt": "46.67"
+      },
+      "annualReportExpenseRatio": {},
+      "ytdReturn": {},
+      "qtdReturn": {},
+      "beta3Year": {},
+      "totalAssets": {},
+      "yield": {},
+      "fundFamily": null,
+      "fundInceptionDate": {},
+      "legalType": null,
+      "threeYearAverageReturn": {},
+      "fiveYearAverageReturn": {},
+      "priceToSalesTrailing12Months": {},
+      "lastFiscalYearEnd": {
+       "raw": 1758931200,
+       "fmt": "2025-09-27"
+      },
+      "nextFiscalYearEnd": {
+       "raw": 1790467200,
+       "fmt": "2026-09-27"
+      },
+      "mostRecentQuarter": {
+       "raw": 1782518400,
+       "fmt": "2026-06-27"
+      },
+      "earningsQuarterlyGrowth": {
+       "raw": 0.271,
+       "fmt": "27.10%"
+      },
+      "revenueQuarterlyGrowth": {},
+      "netIncomeToCommon": {
+       "raw": 128929996800,
+       "fmt": "128.93B",
+       "longFmt": "128,929,996,800"
+      },
+      "trailingEps": {
+       "raw": 8.72,
+       "fmt": "8.72"
+      },
+      "forwardEps": {
+       "raw": 9.57785,
+       "fmt": "9.58"
+      },
+      "pegRatio": {
+       "raw": 2.74,
+       "fmt": "2.74"
+      },
+      "lastSplitFactor": "4:1",
+      "lastSplitDate": {
+       "raw": 1598832000,
+       "fmt": "2020-08-31"
+      },
+      "enterpriseToRevenue": {
+       "raw": 10.785,
+       "fmt": "10.78"
+      },
+      "enterpriseToEbitda": {
+       "raw": 29.974,
+       "fmt": "29.97"
+      },
+      "52WeekChange": {
+       "raw": 0.30971634,
+       "fmt": "30.97%"
+      },
+      "SandP52WeekChange": {
+       "raw": 0.13723719,
+       "fmt": "13.72%"
+      },
+      "lastDividendValue": {
+       "raw": 0.27,
+       "fmt": "0.27"
+      },
+      "lastDividendDate": {
+       "raw": 1786320000,
+       "fmt": "2026-08-10"
+      },
+      "lastCapGain": {},
+      "annualHoldingsTurnover": {},
+      "latestFundingDate": {},
+      "latestAmountRaised": {},
+      "latestImpliedValuation": {},
+      "latestShareClass": null,
+      "leadInvestor": null,
+      "fundingToDate": {},
+      "totalFundingRounds": {}
+     },
+     "price": {
+      "maxAge": 1,
+      "preMarketChange": {},
+      "preMarketPrice": {},
+      "preMarketSource": "FREE_REALTIME",
+      "postMarketChangePercent": {
+       "raw": -0.002445689,
+       "fmt": "-0.24%"
+      },
+      "postMarketChange": {
+       "raw": -0.83999634,
+       "fmt": "-0.84"
+      },
+      "postMarketTime": 1792195184,
+      "postMarketPrice": {
+       "raw": 342.62,
+       "fmt": "342.62"
+      },
+      "postMarketSource": "FREE_REALTIME",
+      "regularMarketChangePercent": {
+       "raw": 0.00426898,
+       "fmt": "0.43%"
+      },
+      "regularMarketChange": {
+       "raw": 1.45999,
+       "fmt": "1.46"
+      },
+      "regularMarketTime": 1792180801,
+      "priceHint": {
+       "raw": 2,
+       "fmt": "2",
+       "longFmt": "2"
+      },
+      "regularMarketPrice": {
+       "raw": 343.46,
+       "fmt": "343.46"
+      },
+      "regularMarketDayHigh": {
+       "raw": 347.82,
+       "fmt": "347.82"
+      },
+      "regularMarketDayLow": {
+       "raw": 340.46,
+       "fmt": "340.46"
+      },
+      "regularMarketVolume": {
+       "raw": 59852690,
+       "fmt": "59.85M",
+       "longFmt": "59,852,690.00"
+      },
+      "averageDailyVolume10Day": {
+       "raw": 38681950,
+       "fmt": "38.68M",
+       "longFmt": "38,681,950"
+      },
+      "averageDailyVolume3Month": {
+       "raw": 44451085,
+       "fmt": "44.45M",
+       "longFmt": "44,451,085"
+      },
+      "regularMarketPreviousClose": {
+       "raw": 342.0,
+       "fmt": "342.00"
+      },
+      "regularMarketSource": "FREE_REALTIME",
+      "regularMarketOpen": {
+       "raw": 346.085,
+       "fmt": "346.08"
+      },
+      "strikePrice": {},
+      "openInterest": {},
+      "fulldayChangePercent": {
+       "raw": 0.0018128513,
+       "fmt": "0.18%"
+      },
+      "fulldayChange": {
+       "raw": 0.6199951,
+       "fmt": "0.62"
+      },
+      "fulldayPrice": {
+       "raw": 343.46,
+       "fmt": "343.46"
+      },
+      "exchange": "NMS",
+      "exchangeName": "NasdaqGS",
+      "exchangeDataDelayedBy": 15,
+      "marketState": "CLOSED",
+      "quoteType": "EQUITY",
+      "symbol": "AAPL",
+      "underlyingSymbol": null,
+      "shortName": "Apple Inc.",
+      "longName": "Apple Inc.",
+      "currency": "USD",
+      "quoteSourceName": "Nasdaq Real Time Price",
+      "currencySymbol": "$",
+      "fromCurrency": null,
+      "toCurrency": null,
+      "lastMarket": null,
+      "volume24Hr": {},
+      "volumeAllCurrencies": {},
+      "circulatingSupply": {},
+      "marketCap": {
+       "raw": 5012516765696,
+       "fmt": "5.01T",
+       "longFmt": "5,012,516,765,696.00"
+      }
+     }
+    }
+   ],
+   "error": null
+  }
+ }
+}

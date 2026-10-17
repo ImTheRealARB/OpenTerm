@@ -114,6 +114,7 @@ export const api = {
   history: (symbol: string, range?: string, interval?: string) =>
     request<Envelope<Bars>>(`/api/history?${qs({ symbol, range, interval })}`, 60_000),
   search: (q: string) => request<Envelope<SearchHit[]>>(`/api/search?${qs({ q })}`, 600_000),
+  profile: (symbol: string) => request<Envelope<unknown>>(`/api/profile?${qs({ symbol })}`, 600_000),
   sources: () => request<SourcesPayload>("/api/sources", 1000),
   log: (after: number) => request<{ records: LogRecord[] }>(`/api/log?after=${after}`, 0),
 };

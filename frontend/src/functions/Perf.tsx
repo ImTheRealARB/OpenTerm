@@ -1,8 +1,25 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { commandLog } from "../perf/metrics";
 import { PerfTable } from "../perf/PerfTable";
+import type { FunctionProps } from "./registry";
 
-export default function Perf() {
+// Separate chunk: only load-test sessions pay for the chart library and generated data.
+const TestGrid = lazy(() => import("./PerfViews").then((m) => ({ default: m.TestGrid })));
+const TestChart = lazy(() => import("./PerfViews").then((m) => ({ default: m.TestChart })));
+
+export default function Perf({ panelId, args }: FunctionProps) {
+  const mode = args[0]?.toUpperCase();
+  const n = Math.min(1_000_000, Math.max(1, Number(args[1]) || (mode === "CHART" ? 50_000 : 10_000)));
+  if (mode === "GRID" || mode === "CHART")
+    return (
+      <Suspense fallback={<div className="dim">LOADING TEST VIEW…</div>}>
+        {mode === "GRID" ? <TestGrid panelId={panelId} rows={n} /> : <TestChart panelId={panelId} bars={n} />}
+      </Suspense>
+    );
+  return <PerfMonitor />;
+}
+
+function PerfMonitor() {
   const [, tick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 1000);
@@ -13,6 +30,7 @@ export default function Perf() {
     <div>
       <h2>PERF</h2>
       <PerfTable detailed />
+      <div className="dim">LOAD TESTS: PERF GRID [ROWS] · PERF CHART [BARS]</div>
       <h2>RECENT COMMANDS (SUBMIT → PAINT)</h2>
       <table className="t">
         <tbody>

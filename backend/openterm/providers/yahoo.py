@@ -4,8 +4,10 @@ v7/quote needs a session crumb (401 without), so quotes are built from spark/cha
 import asyncio
 from typing import Any, ClassVar
 
-from ..models import Bars, Quote, SearchHit
-from .base import HISTORY, QUOTES, SEARCH, Provider, ProviderError
+import httpx
+
+from ..models import Bars, Profile, Quote, SearchHit
+from .base import HISTORY, PROFILE, QUOTES, SEARCH, Provider, ProviderError
 
 BASE = "https://query1.finance.yahoo.com"
 SEARCH_BASE = "https://query2.finance.yahoo.com"
@@ -36,6 +38,46 @@ def quote_from_meta(meta: dict[str, Any], source: str, as_of: float, day_open: f
         high_52w=meta.get("fiftyTwoWeekHigh"),
         low_52w=meta.get("fiftyTwoWeekLow"),
         market_time=meta.get("regularMarketTime"),
+        source=source,
+        as_of=as_of,
+    )
+
+
+def _raw(module: dict[str, Any] | None, key: str) -> Any:
+    v = (module or {}).get(key)
+    return v.get("raw") if isinstance(v, dict) else v
+
+
+def profile_from_summary(symbol: str, r: dict[str, Any], source: str, as_of: float) -> Profile:
+    ap, sd, ks, pr = (r.get(m) or {} for m in ("assetProfile", "summaryDetail", "defaultKeyStatistics", "price"))
+    emp = ap.get("fullTimeEmployees")
+    return Profile(
+        symbol=symbol,
+        name=pr.get("longName") or pr.get("shortName"),
+        exchange=pr.get("exchangeName"),
+        currency=pr.get("currency") or sd.get("currency"),
+        quote_type=pr.get("quoteType"),
+        sector=ap.get("sector"),
+        industry=ap.get("industry"),
+        country=ap.get("country"),
+        website=ap.get("website"),
+        employees=int(emp) if isinstance(emp, (int, float)) else None,
+        description=ap.get("longBusinessSummary"),
+        market_cap=_raw(sd, "marketCap") or _raw(pr, "marketCap"),
+        enterprise_value=_raw(ks, "enterpriseValue"),
+        pe=_raw(sd, "trailingPE"),
+        forward_pe=_raw(sd, "forwardPE") or _raw(ks, "forwardPE"),
+        eps=_raw(ks, "trailingEps"),
+        forward_eps=_raw(ks, "forwardEps"),
+        dividend_yield=_raw(sd, "dividendYield"),
+        beta=_raw(sd, "beta") or _raw(ks, "beta"),
+        shares_out=_raw(ks, "sharesOutstanding"),
+        float_shares=_raw(ks, "floatShares"),
+        high_52w=_raw(sd, "fiftyTwoWeekHigh"),
+        low_52w=_raw(sd, "fiftyTwoWeekLow"),
+        avg_volume=_raw(sd, "averageVolume"),
+        price_to_book=_raw(ks, "priceToBook"),
+        delay_min=pr.get("exchangeDataDelayedBy"),
         source=source,
         as_of=as_of,
     )
@@ -73,11 +115,52 @@ def bars_from_chart(result: dict[str, Any], range_: str, interval: str, source: 
 class YahooProvider(Provider):
     name = "yahoo"
     label = "Yahoo Finance (unofficial)"
-    capabilities = frozenset({QUOTES, HISTORY, SEARCH})
+    capabilities = frozenset({QUOTES, HISTORY, SEARCH, PROFILE})
     markets = "Global equities/ETFs (suffixes .NS .BO .L .T .HK ...), indices (^), FX (=X), crypto (-USD)"
     terms = "Unofficial endpoints; personal use. Data delayed per exchange. May break or block without notice."
     rate = (4.0, 8)
     headers: ClassVar[dict[str, str]] = {"User-Agent": UA, "Accept": "application/json"}
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self._crumb: str | None = None
+        self._crumb_lock = asyncio.Lock()
+
+    async def _get_crumb(self, refresh: bool = False) -> str:
+        """quoteSummary needs the session crumb a browser gets: a cookie from fc.yahoo.com, then getcrumb."""
+        async with self._crumb_lock:
+            if self._crumb and not refresh:
+                return self._crumb
+            try:
+                # Answers 404 but sets the session cookie; only network errors matter here.
+                # getcrumb returns text/plain and answers 406 to "Accept: application/json".
+                plain = {"User-Agent": UA, "Accept": "*/*"}
+                await self.http.get("https://fc.yahoo.com", headers=plain, timeout=6.0)
+                r = await self.http.get(f"{BASE}/v1/test/getcrumb", headers=plain, timeout=6.0)
+            except httpx.HTTPError as e:
+                raise ProviderError("unavailable", f"crumb: {type(e).__name__}") from e
+            if r.status_code != 200 or not r.text or "<" in r.text:
+                raise ProviderError("unavailable", f"crumb HTTP {r.status_code}")
+            self._crumb = r.text.strip()
+            return self._crumb
+
+    async def profile(self, symbol: str) -> Profile:
+        modules = "assetProfile,summaryDetail,defaultKeyStatistics,price"
+        for attempt in range(2):
+            crumb = await self._get_crumb(refresh=attempt > 0)
+            try:
+                body = await self.get_json(
+                    f"{SEARCH_BASE}/v10/finance/quoteSummary/{symbol}", {"modules": modules, "crumb": crumb}
+                )
+                break
+            except ProviderError as e:
+                if attempt == 0 and "401" in str(e):
+                    continue  # crumb expired: fetch a new one once
+                raise
+        result = (body.get("quoteSummary") or {}).get("result")
+        if not result:
+            raise ProviderError("not_found", "no summary")
+        return profile_from_summary(symbol, result[0], self.source, self.now())
 
     async def _chart(self, symbol: str, range_: str, interval: str) -> dict[str, Any]:
         body = await self.get_json(

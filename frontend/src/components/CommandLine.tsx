@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { execute, statusMsg } from "../command/execute";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
-import { FUNCTION_LIST } from "../functions/registry";
+import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
 
@@ -138,6 +138,9 @@ export function CommandLine() {
     if (statusMsg.get()) statusMsg.set(() => null);
     history.resetCursor();
     // Suggestion work is low priority: the native input echo never waits on it.
+    // Intent-based prefetch: the chart chunk is skipped at idle (it is big), so fetch it the
+    // moment GP appears in the command line instead of after Enter.
+    if (/(^|\s)GP(\s|$)/i.test(v)) void loadModule("GP").catch(() => {});
     const { token, securitySlot } = lastToken(v);
     startTransition(() => {
       setItems(merge(token, securitySlot));

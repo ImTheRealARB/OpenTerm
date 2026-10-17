@@ -1,21 +1,3 @@
-import pytest
-from fastapi.testclient import TestClient
-
-
-@pytest.fixture
-def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("OPENTERM_FIXTURES", "1")
-    monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "api.db"))
-    from openterm.config import get_settings
-
-    get_settings.cache_clear()
-    from openterm.main import app
-
-    with TestClient(app) as c:
-        yield c
-    get_settings.cache_clear()
-
-
 def test_history_envelope(client):
     r = client.get("/api/history", params={"symbol": "aapl", "range": "1Y"})
     assert r.status_code == 200
@@ -41,7 +23,7 @@ def test_search_and_sources(client):
     hits = client.get("/api/search", params={"q": "relian"}).json()
     assert hits["data"][0]["symbol"] == "RELIANCE.NS"
     s = client.get("/api/sources").json()
-    assert {p["name"] for p in s["providers"]} == {"yahoo", "nasdaq"}
+    assert {p["name"] for p in s["providers"]} == {"yahoo", "nasdaq", "synthetic"}
     assert s["fixtures"] is True
     keyed = {k["name"]: k["status"] for k in s["keyed"]}
     assert keyed["fred"] in ("KEY REQUIRED", "NOT BUILT") and keyed["stooq"] == "RETIRED"

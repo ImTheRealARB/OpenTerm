@@ -3,10 +3,11 @@
 A keyboard-first, open-source market terminal for one power user: a command line on top, tiled panels,
 mnemonic function codes, and free data sources. Dense, dark, amber on black. Speed over looks.
 
-> Status: **Phase 2 of 10**. Shell, command system, workspace keys and perf instrumentation (phase 1);
-> data core with Yahoo + Nasdaq adapters, cache, rate limits, fallback and symbol search (phase 2).
-> Charts, quotes and descriptions arrive in phase 3.
+> Status: **Phase 3 of 10**. Shell, command system and perf instrumentation (1); data core with
+> Yahoo + Nasdaq, cache, rate limits and fallback (2); live streaming, `GP`, `DES`, `Q`, `QR` (3).
 > Data may be delayed. Not investment advice.
+
+![OpenTerm: live quote monitor, BTC chart with SMA20 + RSI, Infosys description](docs/screenshot-phase3.png)
 
 ## Quick start (zero API keys)
 
@@ -44,8 +45,17 @@ Focus it with `/`, `` ` ``, `Ctrl+K`, or just start typing.
 
 ## Functions
 
-`HELP` lists every function and the phase it ships in. Ready now: `HELP`, `PERF`, `SHORTCUTS`,
-`SOURCES` (provider health, latency, quota, key status), `LOG` (backend log).
+`HELP` lists every function and the phase it ships in. Ready now:
+
+| Code | What it does |
+|---|---|
+| `GP` | Price chart. `AAPL GP 5Y W LOG`, `RELIANCE.NS GP 5D 15MIN VWAP`, `AAPL GP VS SPY` (rebased %). Keys: `1-8` range, `c` type, `i` indicators (SMA20/50, EMA20, BB, RSI, MACD, VWAP), `l` log, `←/→` pan, `+/-` zoom, `x` keyboard crosshair with OHLCV readout. |
+| `DES` | Description: profile, valuation, 52-week range, live price. |
+| `Q` | Live quote monitor. `Q AAPL MSFT INFY.NS BTC-USD`; no args = default world list. Keys: `j/k`, `Enter` (DES), `a` add, `d` delete, `s` sort, `e` CSV, `F5`. |
+| `QR` | Quote recap for one security, live. |
+| `HELP`, `SHORTCUTS`, `PERF`, `SOURCES`, `LOG` | Help, key list, performance HUD/panel (`PERF GRID 10000`, `PERF CHART 50000` load tests), provider health, backend log. |
+
+In grids and charts, letters are panel keys; press `/` (or Ctrl+K) to type a command there.
 
 Typing a ticker in the command line searches symbols live (`relian` → `RELIANCE.NS`). Highlighting a
 result prefetches its quote and 1Y bars. Aliases: `SPX`, `NDX`, `NIFTY`, `SENSEX`, `EURUSD`, `BTCUSD` ...
@@ -57,7 +67,13 @@ Works with **zero API keys** (Yahoo Finance + Nasdaq.com public endpoints). Ever
 Read [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) before relying on any of it: these are unofficial
 endpoints for personal use, and they change.
 
-API: `/api/quote?symbols=`, `/api/history?symbol=&range=&interval=`, `/api/search?q=`, `/api/sources`, `/api/log`.
+API: `/api/quote?symbols=`, `/api/history?symbol=&range=&interval=`, `/api/profile?symbol=`, `/api/search?q=`,
+`/api/sources`, `/api/log`, and one WebSocket `/ws` (`["sub", [symbols]]` → `["T", [[symbol, price, chg, pct,
+volume, high, low, time_ms, src], ...]]`). However many panels watch a symbol, the server holds one
+upstream subscription for it.
+
+Charts use [TradingView Lightweight Charts™](https://www.tradingview.com/lightweight-charts/) (Apache-2.0).
+Copyright © TradingView, Inc. The logo is disabled; attribution is shown in the `GP` status line and here.
 
 ## Shortcuts
 
@@ -74,6 +90,7 @@ Budgets are enforced in CI by `node scripts/bench.mjs`. See [docs/PERFORMANCE.md
 - [Adding a function](docs/ADDING_A_FUNCTION.md)
 - [Adding a provider](docs/ADDING_A_PROVIDER.md)
 - [Data limits](docs/DATA_LIMITS.md)
+- [Handoff / project status](HANDOFF.md)
 
 ## Layout
 

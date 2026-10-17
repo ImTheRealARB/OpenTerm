@@ -51,3 +51,37 @@ class SearchHit(BaseModel):
     exchange: str | None = None
     type: str | None = None
     source: str
+
+
+class Profile(BaseModel):
+    """Company / instrument description for DES. Numbers stay None when the source lacks them."""
+
+    symbol: str
+    name: str | None = None
+    exchange: str | None = None
+    currency: str | None = None
+    quote_type: str | None = None
+    sector: str | None = None
+    industry: str | None = None
+    country: str | None = None
+    website: str | None = None
+    employees: int | None = None
+    description: str | None = None
+    market_cap: float | None = None
+    enterprise_value: float | None = None
+    pe: float | None = None
+    forward_pe: float | None = None
+    eps: float | None = None
+    forward_eps: float | None = None
+    dividend_yield: float | None = None
+    beta: float | None = None
+    shares_out: float | None = None
+    float_shares: float | None = None
+    high_52w: float | None = None
+    low_52w: float | None = None
+    avg_volume: float | None = None
+    price_to_book: float | None = None
+    delay_min: int | None = None
+    """Exchange data delay in minutes, as reported by the source."""
+    source: str
+    as_of: float

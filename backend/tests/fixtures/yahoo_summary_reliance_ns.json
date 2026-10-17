@@ -1,0 +1,669 @@
+{
+ "status": 200,
+ "body": {
+  "quoteSummary": {
+   "result": [
+    {
+     "assetProfile": {
+      "address1": "Maker Chambers IV",
+      "address2": "3rd Floor 222 Nariman Point",
+      "city": "Mumbai",
+      "zip": "400021",
+      "country": "India",
+      "phone": "91 22 3555 5000",
+      "fax": "91 22 2204 2268",
+      "website": "https://www.ril.com",
+      "industry": "Oil & Gas Refining & Marketing",
+      "industryKey": "oil-gas-refining-marketing",
+      "industryDisp": "Oil & Gas Refining & Marketing",
+      "sector": "Energy",
+      "sectorKey": "energy",
+      "sectorDisp": "Energy",
+      "longBusinessSummary": "Reliance Industries Limited engages in hydrocarbon exploration and production, petroleum refining and marketing, petrochemicals, advanced materials and composites, renewable, financial services, retail, and digital services worldwide. It operates through the Oil to Chemicals, Oil and Gas, Retail, Digital Services, and Others segments. The company is involved in refining and marketing products, including liquefied petroleum gas, propylene, naphtha, gasoline, jet/aviation turbine fuel, kerosine oil, diesel, sulfur, and petroleum coke. It also provides polymers comprising high-density and low-density polyethylene (PE), linear low-density PE, homopolymer, random and impact copolymer, and polyvinyl chloride; fiber intermediates that include purified terephthalic acid, and ethylene glycols and oxide; aromatics, such as paraxylene, ortho xylene, benzene, and linear alkyl benzene and paraffin; and textiles that consist of fabrics, apparel, and auto furnishings. In addition, the company offers elastomers, such as polybutadiene rubber, styrene butadiene rubber, and butyl rubber; fiber and yarn polyesters; and bioenergy solutions, including compressed biogas, and pellets and briquettes. Further, it engages in oil and gas exploration and production activities; operation of various stores comprising supermarkets, hypermarket, wholesale cash and carry, specialty, and online stores; operation of media and entertainment platforms, and Network18 and television channels; and publishing of magazines. Additionally, the company provides highway hospitality and fleet management services, as well as digital services, such as connectivity, fiber, mobile devices, apps, business, and other digital solutions. Reliance Industries Limited was founded in 1957 and is based in Mumbai, India.",
+      "fullTimeEmployees": 419911,
+      "companyOfficers": [
+       {
+        "maxAge": 1,
+        "name": "Mr. Mukesh Dhirubhai Ambani",
+        "age": 68,
+        "title": "Chairman & MD",
+        "yearBorn": 1957,
+        "fiscalYear": 2026,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Nikhil Rasiklal Meswani",
+        "age": 59,
+        "title": "Executive Director",
+        "yearBorn": 1966,
+        "fiscalYear": 2026,
+        "totalPay": {
+         "raw": 250000000,
+         "fmt": "250M",
+         "longFmt": "250,000,000"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Hital Rasiklal Meswani",
+        "age": 57,
+        "title": "Executive Director",
+        "yearBorn": 1968,
+        "fiscalYear": 2026,
+        "totalPay": {
+         "raw": 250000000,
+         "fmt": "250M",
+         "longFmt": "250,000,000"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Panda Madhusudana Siva Prasad",
+        "age": 73,
+        "title": "Executive Director",
+        "yearBorn": 1952,
+        "fiscalYear": 2026,
+        "totalPay": {
+         "raw": 205800000,
+         "fmt": "205.8M",
+         "longFmt": "205,800,000"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Anant Mukesh Ambani",
+        "age": 30,
+        "title": "Whole-Time Director",
+        "yearBorn": 1995,
+        "fiscalYear": 2026,
+        "totalPay": {
+         "raw": 123900000,
+         "fmt": "123.9M",
+         "longFmt": "123,900,000"
+        },
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Ms. Parul  Sharma",
+        "title": "Group President",
+        "fiscalYear": 2026,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Srikanth  Venkatachari",
+        "age": 59,
+        "title": "Chief Financial Officer",
+        "yearBorn": 1966,
+        "fiscalYear": 2026,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Mahesh  Marve",
+        "title": "Head of Research & Technology",
+        "fiscalYear": 2026,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Mr. Hemen Kanu Modi",
+        "title": "Vice President of Investor Relations",
+        "fiscalYear": 2026,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       },
+       {
+        "maxAge": 1,
+        "name": "Ms. Savithri  Parekh",
+        "age": 59,
+        "title": "Company Secretary & Compliance Officer",
+        "yearBorn": 1966,
+        "fiscalYear": 2026,
+        "exercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        },
+        "unexercisedValue": {
+         "raw": 0,
+         "fmt": null,
+         "longFmt": "0"
+        }
+       }
+      ],
+      "compensationAsOfEpochDate": 1798675200,
+      "irWebsite": "http://ril.com/html/investor/investor.html",
+      "executiveTeam": [],
+      "maxAge": 86400
+     },
+     "summaryDetail": {
+      "maxAge": 1,
+      "priceHint": {
+       "raw": 2,
+       "fmt": "2",
+       "longFmt": "2"
+      },
+      "previousClose": {
+       "raw": 1215.0,
+       "fmt": "1,215.00"
+      },
+      "open": {
+       "raw": 1215.0,
+       "fmt": "1,215.00"
+      },
+      "dayLow": {
+       "raw": 1193.0,
+       "fmt": "1,193.00"
+      },
+      "dayHigh": {
+       "raw": 1215.4,
+       "fmt": "1,215.40"
+      },
+      "regularMarketPreviousClose": {
+       "raw": 1215.0,
+       "fmt": "1,215.00"
+      },
+      "regularMarketOpen": {
+       "raw": 1215.0,
+       "fmt": "1,215.00"
+      },
+      "regularMarketDayLow": {
+       "raw": 1193.0,
+       "fmt": "1,193.00"
+      },
+      "regularMarketDayHigh": {
+       "raw": 1215.4,
+       "fmt": "1,215.40"
+      },
+      "dividendRate": {
+       "raw": 6.0,
+       "fmt": "6.00"
+      },
+      "dividendYield": {
+       "raw": 0.005,
+       "fmt": "0.50%"
+      },
+      "exDividendDate": {
+       "raw": 1780617600,
+       "fmt": "2026-06-05"
+      },
+      "payoutRatio": {
+       "raw": 0.2083,
+       "fmt": "20.83%"
+      },
+      "fiveYearAvgDividendYield": {
+       "raw": 0.34,
+       "fmt": "0.34"
+      },
+      "beta": {
+       "raw": 0.194,
+       "fmt": "0.19"
+      },
+      "trailingPE": {
+       "raw": 21.93408,
+       "fmt": "21.93"
+      },
+      "forwardPE": {
+       "raw": 17.045551,
+       "fmt": "17.05"
+      },
+      "volume": {
+       "raw": 17221171,
+       "fmt": "17.22M",
+       "longFmt": "17,221,171"
+      },
+      "regularMarketVolume": {
+       "raw": 17221171,
+       "fmt": "17.22M",
+       "longFmt": "17,221,171"
+      },
+      "averageVolume": {
+       "raw": 11953879,
+       "fmt": "11.95M",
+       "longFmt": "11,953,879"
+      },
+      "averageVolume10days": {
+       "raw": 14101355,
+       "fmt": "14.1M",
+       "longFmt": "14,101,355"
+      },
+      "averageDailyVolume10Day": {
+       "raw": 14101355,
+       "fmt": "14.1M",
+       "longFmt": "14,101,355"
+      },
+      "bid": {
+       "raw": 0.0,
+       "fmt": "0.00"
+      },
+      "ask": {
+       "raw": 0.0,
+       "fmt": "0.00"
+      },
+      "bidSize": {
+       "raw": 0,
+       "fmt": null,
+       "longFmt": "0"
+      },
+      "askSize": {
+       "raw": 0,
+       "fmt": null,
+       "longFmt": "0"
+      },
+      "marketCap": {
+       "raw": 16390529482752,
+       "fmt": "16.39T",
+       "longFmt": "16,390,529,482,752"
+      },
+      "nonDilutedMarketCap": {
+       "raw": 16888525847232,
+       "fmt": "16.89T",
+       "longFmt": "16,888,525,847,232"
+      },
+      "yield": {},
+      "ytdReturn": {},
+      "qtdReturn": {},
+      "totalAssets": {},
+      "expireDate": {},
+      "strikePrice": {},
+      "openInterest": {},
+      "fiftyTwoWeekLow": {
+       "raw": 1152.2,
+       "fmt": "1,152.20"
+      },
+      "fiftyTwoWeekHigh": {
+       "raw": 1611.8,
+       "fmt": "1,611.80"
+      },
+      "allTimeHigh": {
+       "raw": 1611.8,
+       "fmt": "1,611.80"
+      },
+      "allTimeLow": {
+       "raw": 5.428648,
+       "fmt": "5.43"
+      },
+      "fulldayPrice": {
+       "raw": 1211.2,
+       "fmt": "1,211.20"
+      },
+      "fulldayChange": {
+       "raw": -3.8000488,
+       "fmt": "-3.80"
+      },
+      "fulldayChangePercent": {
+       "raw": -0.0031276122,
+       "fmt": "-0.31%"
+      },
+      "priceToSalesTrailing12Months": {
+       "raw": 1.4509965,
+       "fmt": "1.45"
+      },
+      "fiftyDayAverage": {
+       "raw": 1258.288,
+       "fmt": "1,258.29"
+      },
+      "twoHundredDayAverage": {
+       "raw": 1335.362,
+       "fmt": "1,335.36"
+      },
+      "trailingAnnualDividendRate": {
+       "raw": 0.0,
+       "fmt": "0.00"
+      },
+      "trailingAnnualDividendYield": {
+       "raw": 0.0,
+       "fmt": "0.00%"
+      },
+      "navPrice": {},
+      "currency": "INR",
+      "fromCurrency": null,
+      "toCurrency": null,
+      "lastMarket": null,
+      "coinMarketCapLink": null,
+      "volume24Hr": {},
+      "volumeAllCurrencies": {},
+      "circulatingSupply": {},
+      "algorithm": null,
+      "maxSupply": {},
+      "totalSupply": {},
+      "startDate": {},
+      "tradeable": false,
+      "fullyDilutedValue": {},
+      "volume24HrMarketCapPercent": {}
+     },
+     "defaultKeyStatistics": {
+      "maxAge": 1,
+      "priceHint": {
+       "raw": 2,
+       "fmt": "2",
+       "longFmt": "2"
+      },
+      "enterpriseValue": {
+       "raw": 20645230411776,
+       "fmt": "20.65T",
+       "longFmt": "20,645,230,411,776"
+      },
+      "forwardPE": {
+       "raw": 17.045551,
+       "fmt": "17.05"
+      },
+      "profitMargins": {
+       "raw": 0.066149995,
+       "fmt": "6.61%"
+      },
+      "floatShares": {
+       "raw": 6638219126,
+       "fmt": "6.64B",
+       "longFmt": "6,638,219,126"
+      },
+      "sharesOutstanding": {
+       "raw": 13532472634,
+       "fmt": "13.53B",
+       "longFmt": "13,532,472,634"
+      },
+      "sharesShort": {},
+      "sharesShortPriorMonth": {},
+      "sharesShortPreviousMonthDate": {},
+      "dateShortInterest": {},
+      "sharesPercentSharesOut": {},
+      "heldPercentInsiders": {
+       "raw": 0.51798,
+       "fmt": "51.80%"
+      },
+      "heldPercentInstitutions": {
+       "raw": 0.28224,
+       "fmt": "28.22%"
+      },
+      "shortRatio": {},
+      "shortPercentOfFloat": {},
+      "beta": {
+       "raw": 0.194,
+       "fmt": "0.19"
+      },
+      "impliedSharesOutstanding": {
+       "raw": 13532472635,
+       "fmt": "13.53B",
+       "longFmt": "13,532,472,635"
+      },
+      "morningStarOverallRating": {},
+      "morningStarRiskRating": {},
+      "category": null,
+      "bookValue": {
+       "raw": 668.045,
+       "fmt": "668.04"
+      },
+      "priceToBook": {
+       "raw": 1.8130515,
+       "fmt": "1.81"
+      },
+      "annualReportExpenseRatio": {},
+      "ytdReturn": {},
+      "qtdReturn": {},
+      "beta3Year": {},
+      "totalAssets": {},
+      "yield": {},
+      "fundFamily": null,
+      "fundInceptionDate": {},
+      "legalType": null,
+      "threeYearAverageReturn": {},
+      "fiveYearAverageReturn": {},
+      "priceToSalesTrailing12Months": {},
+      "lastFiscalYearEnd": {
+       "raw": 1774915200,
+       "fmt": "2026-03-31"
+      },
+      "nextFiscalYearEnd": {
+       "raw": 1806451200,
+       "fmt": "2027-03-31"
+      },
+      "mostRecentQuarter": {
+       "raw": 1782777600,
+       "fmt": "2026-06-30"
+      },
+      "earningsQuarterlyGrowth": {
+       "raw": -0.224,
+       "fmt": "-22.40%"
+      },
+      "revenueQuarterlyGrowth": {},
+      "netIncomeToCommon": {
+       "raw": 747269980160,
+       "fmt": "747.27B",
+       "longFmt": "747,269,980,160"
+      },
+      "trailingEps": {
+       "raw": 55.22,
+       "fmt": "55.22"
+      },
+      "forwardEps": {
+       "raw": 71.05666,
+       "fmt": "71.06"
+      },
+      "pegRatio": {
+       "raw": 0.82,
+       "fmt": "0.82"
+      },
+      "lastSplitFactor": "2:1",
+      "lastSplitDate": {
+       "raw": 1730073600,
+       "fmt": "2024-10-28"
+      },
+      "enterpriseToRevenue": {
+       "raw": 1.828,
+       "fmt": "1.83"
+      },
+      "enterpriseToEbitda": {
+       "raw": 11.424,
+       "fmt": "11.42"
+      },
+      "52WeekChange": {
+       "raw": -0.1716662,
+       "fmt": "-17.17%"
+      },
+      "SandP52WeekChange": {
+       "raw": 0.13723719,
+       "fmt": "13.72%"
+      },
+      "lastDividendValue": {
+       "raw": 6.0,
+       "fmt": "6.00"
+      },
+      "lastDividendDate": {
+       "raw": 1780617600,
+       "fmt": "2026-06-05"
+      },
+      "lastCapGain": {},
+      "annualHoldingsTurnover": {},
+      "latestFundingDate": {},
+      "latestAmountRaised": {},
+      "latestImpliedValuation": {},
+      "latestShareClass": null,
+      "leadInvestor": null,
+      "fundingToDate": {},
+      "totalFundingRounds": {}
+     },
+     "price": {
+      "maxAge": 1,
+      "preMarketChange": {},
+      "preMarketPrice": {},
+      "postMarketChange": {},
+      "postMarketPrice": {},
+      "regularMarketChangePercent": {
+       "raw": -0.0031276122,
+       "fmt": "-0.31%"
+      },
+      "regularMarketChange": {
+       "raw": -3.8000488,
+       "fmt": "-3.80"
+      },
+      "regularMarketTime": 1792144735,
+      "priceHint": {
+       "raw": 2,
+       "fmt": "2",
+       "longFmt": "2"
+      },
+      "regularMarketPrice": {
+       "raw": 1211.2,
+       "fmt": "1,211.20"
+      },
+      "regularMarketDayHigh": {
+       "raw": 1215.4,
+       "fmt": "1,215.40"
+      },
+      "regularMarketDayLow": {
+       "raw": 1193.0,
+       "fmt": "1,193.00"
+      },
+      "regularMarketVolume": {
+       "raw": 17221171,
+       "fmt": "17.22M",
+       "longFmt": "17,221,171.00"
+      },
+      "averageDailyVolume10Day": {
+       "raw": 14101355,
+       "fmt": "14.1M",
+       "longFmt": "14,101,355"
+      },
+      "averageDailyVolume3Month": {
+       "raw": 11953879,
+       "fmt": "11.95M",
+       "longFmt": "11,953,879"
+      },
+      "regularMarketPreviousClose": {
+       "raw": 1215.0,
+       "fmt": "1,215.00"
+      },
+      "regularMarketSource": "FREE_REALTIME",
+      "regularMarketOpen": {
+       "raw": 1215.0,
+       "fmt": "1,215.00"
+      },
+      "strikePrice": {},
+      "openInterest": {},
+      "fulldayChangePercent": {
+       "raw": -0.0031276122,
+       "fmt": "-0.31%"
+      },
+      "fulldayChange": {
+       "raw": -3.8000488,
+       "fmt": "-3.80"
+      },
+      "fulldayPrice": {
+       "raw": 1211.2,
+       "fmt": "1,211.20"
+      },
+      "exchange": "NSI",
+      "exchangeName": "NSE",
+      "exchangeDataDelayedBy": 15,
+      "marketState": "CLOSED",
+      "quoteType": "EQUITY",
+      "symbol": "RELIANCE.NS",
+      "underlyingSymbol": null,
+      "shortName": "RELIANCE INDUSTRIES LTD",
+      "longName": "Reliance Industries Limited",
+      "currency": "INR",
+      "currencySymbol": "\u20b9",
+      "fromCurrency": null,
+      "toCurrency": null,
+      "lastMarket": null,
+      "volume24Hr": {},
+      "volumeAllCurrencies": {},
+      "circulatingSupply": {},
+      "marketCap": {
+       "raw": 16390529482752,
+       "fmt": "16.39T",
+       "longFmt": "16,390,529,482,752.00"
+      }
+     }
+    }
+   ],
+   "error": null
+  }
+ }
+}

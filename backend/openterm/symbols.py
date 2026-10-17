@@ -13,6 +13,8 @@ CURRENCIES = {
 CRYPTO = {"BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "BNB", "LTC", "DOT", "AVAX"}
 CRYPTO_QUOTES = ("USDT", "USD", "EUR", "INR")
 _US_PLAIN = re.compile(r"^[A-Z]{1,5}$")
+SYNTHETIC_RE = re.compile(r"^SYN\d{4}$")
+"""Load-test instruments; only exist when OPENTERM_SYNTHETIC=1."""
 
 
 def resolve(raw: str) -> str:

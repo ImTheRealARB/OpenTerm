@@ -13,3 +13,5 @@ providers:
   quotes: [yahoo, nasdaq]
   history: [yahoo, nasdaq]
   search: [yahoo]
+  profile: [yahoo, nasdaq]
+  # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.

@@ -85,3 +85,16 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .overlay { position: absolute; inset: 0; z-index: 30; background: var(--bg); border: 1px solid var(--fg); padding: 4px 8px; overflow: auto; }
 .hud { position: fixed; right: 4px; bottom: 22px; z-index: 40; width: 300px; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; pointer-events: none; }
 .hud .t td:last-child { text-align: right; }
+
+/* Canvas grid fills the rest of its panel */
+.fn { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.fn > .grid { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+.grid canvas { display: block; }
+.line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+.big { font-size: 20px; line-height: 24px; }
+.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); column-gap: 16px; }
+.kv div { display: flex; justify-content: space-between; white-space: nowrap; overflow: hidden; }
+.kv span:first-child { color: var(--fg-dim); }
+.desc { color: var(--fg); white-space: pre-wrap; margin-top: 4px; max-width: 120ch; }
+.chart { flex: 1 1 auto; min-height: 0; position: relative; }
+.picker { position: absolute; top: 4px; left: 4px; z-index: 5; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; }

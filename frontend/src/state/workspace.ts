@@ -149,6 +149,17 @@ export function navigate(id: number, view: View): void {
   });
 }
 
+/** Updates the panel's current view in place (timeframe switch, list edit): no history entry. */
+export function replaceView(id: number, update: (v: View) => View): void {
+  workspace.set((s) => {
+    const p = s.panels[id];
+    if (!p) return s;
+    const views = p.views.slice();
+    views[p.pos] = update(views[p.pos] ?? { args: [] });
+    return { ...s, panels: { ...s.panels, [id]: { ...p, views } } };
+  });
+}
+
 export function historyStep(dir: -1 | 1): void {
   workspace.set((s) => {
     const p = s.panels[s.focus];

@@ -36,6 +36,14 @@ async def history(request: Request, symbol: str, range: str | None = None, inter
         return error(e)
 
 
+@router.get("/profile")
+async def profile(request: Request, symbol: str):
+    try:
+        return await svc(request).profile(symbol)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/search")
 async def search(request: Request, q: str = Query(..., max_length=64)):
     try:
@@ -58,6 +66,8 @@ async def sources(request: Request):
         "order": s.router.order,
         "cache": s.stats(),
         "fixtures": request.app.state.settings.openterm_fixtures,
+        "synthetic": request.app.state.settings.openterm_synthetic,
+        "stream": request.app.state.hub.stats(),
     }
 
 

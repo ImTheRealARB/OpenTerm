@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,8 +16,15 @@ from .db import open_db
 from .responses import Orjson
 from .router import Router
 from .service import DataService
+from .streaming.hub import Client, Hub
+from .streaming.upstream import NullStream, Poller, SyntheticStream, YahooStream
+from .symbols import resolve
 
 STARTED = time.time()
+DEFAULT_ORDER = {
+    "quotes": ["yahoo", "nasdaq"], "history": ["yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
+}
+MAX_SUBS_PER_CLIENT = 2000
 
 
 @asynccontextmanager
@@ -28,20 +37,46 @@ async def lifespan(app: FastAPI):
     http = httpx.AsyncClient(
         http2=True, limits=httpx.Limits(max_connections=50, max_keepalive_connections=20), timeout=6.0
     )
-    order = cfg.get("providers") or {"quotes": ["yahoo", "nasdaq"], "history": ["yahoo", "nasdaq"], "search": ["yahoo"]}
-    router = Router(providers.build(settings, http, fixtures=settings.openterm_fixtures), order)
+    order = {**DEFAULT_ORDER, **(cfg.get("providers") or {})}
+    if settings.openterm_synthetic:
+        order = {k: [*v, "synthetic"] if k in ("quotes", "history") else v for k, v in order.items()}
+    router = Router(
+        providers.build(settings, http, fixtures=settings.openterm_fixtures, synthetic=settings.openterm_synthetic),
+        order,
+    )
     c = cfg.get("cache") or {}
     cache = Cache(db, max_entries=c.get("lru_entries", 5000))
-    app.state.settings = settings
-    app.state.service = DataService(router, cache, ttl={
+    service = DataService(router, cache, ttl={
         "quote": c.get("quote_ttl_s", 5), "intraday": c.get("intraday_ttl_s", 60),
         "daily": c.get("daily_ttl_s", 3600), "search": c.get("search_ttl_s", 86400),
     })
+
+    # Streaming: one upstream subscription per symbol, whatever the number of clients and panels.
+    hub_ref: list[Hub] = []
+
+    def emit(tick):
+        hub_ref[0].emit(tick)
+
+    yahoo = NullStream() if settings.openterm_fixtures else YahooStream(emit)
+    poller = Poller(emit, service.quotes, active=lambda: yahoo.status != "OK" and not settings.openterm_fixtures)
+    synthetic = SyntheticStream(emit, settings.openterm_synthetic_tps) if settings.openterm_synthetic else None
+    hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick)
+    hub_ref.append(hub)
+    for part in (yahoo, poller, synthetic, hub):
+        if part:
+            part.start()
+
+    app.state.settings = settings
+    app.state.service = service
+    app.state.hub = hub
     sched = scheduler.start(router)
     try:
         yield
     finally:
         sched.shutdown(wait=False)
+        for part in (hub, synthetic, poller, yahoo):
+            if part:
+                await part.stop()
         await cache.flush()
         await http.aclose()
         await db.close()
@@ -64,15 +99,37 @@ async def perf_summary() -> dict:
 
 @app.websocket("/ws")
 async def ws(socket: WebSocket) -> None:
-    """Multiplexed stream. Phase 1-2: ping/pong only; subscribe/unsubscribe land in phase 3.
+    """One multiplexed socket per browser. Frames are compact JSON arrays.
 
-    Frames are compact JSON arrays: ["pong", client_ts, server_ts].
+    client -> ["sub", [symbols]] | ["unsub", [symbols]] | ["ping", client_ts]
+    server -> ["T", [[symbol, price, change, change_pct, volume, high, low, time_ms, src], ...]]
+              ["pong", client_ts, server_ts_ms]
+    src: y = Yahoo stream, p = REST poll fallback, s = SYNTHETIC test data.
     """
     await socket.accept()
+    hub: Hub = socket.app.state.hub
+    client = Client(socket)
+    hub.clients.add(client)
+    sender = asyncio.create_task(client.sender())
     try:
         while True:
             msg = orjson.loads(await socket.receive_text())
-            if msg and msg[0] == "ping":
-                await socket.send_text(orjson.dumps(["pong", msg[1], time.time() * 1000]).decode())
-    except WebSocketDisconnect:
+            if not isinstance(msg, list) or not msg:
+                continue
+            op = msg[0]
+            if op == "ping":
+                await client.send_json(["pong", msg[1], time.time() * 1000])
+            elif op in ("sub", "unsub") and len(msg) > 1 and isinstance(msg[1], list):
+                symbols = [resolve(str(s)) for s in msg[1][:MAX_SUBS_PER_CLIENT]]
+                if op == "sub":
+                    room = MAX_SUBS_PER_CLIENT - len(client.symbols)
+                    await hub.subscribe(client, symbols[: max(0, room)])
+                else:
+                    await hub.unsubscribe(client, symbols)
+    except (WebSocketDisconnect, orjson.JSONDecodeError):
         pass
+    finally:
+        sender.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await sender
+        await hub.disconnect(client)

@@ -20,10 +20,23 @@ export default function Shortcuts() {
             <td className="acc">↑ ↓ / TAB / ENTER / SHIFT+ENTER</td>
             <td>COMMAND LINE: HISTORY OR SUGGESTIONS / ACCEPT / RUN / RUN IN NEW PANEL</td>
           </tr>
+          <tr>
+            <td className="acc">J K ↑ ↓ PGUP PGDN G SHIFT+G</td>
+            <td>TABLES: MOVE / PAGE / TOP / BOTTOM</td>
+          </tr>
+          <tr>
+            <td className="acc">ENTER A D S E F5</td>
+            <td>TABLES: DRILL DOWN (DES) / ADD / DELETE / SORT / EXPORT CSV / REFRESH</td>
+          </tr>
+          <tr>
+            <td className="acc">1..8 C I L X ← → + -</td>
+            <td>CHARTS: 1D 5D 1M 6M YTD 1Y 5Y MAX / TYPE / INDICATORS / LOG / CROSSHAIR / PAN / ZOOM</td>
+          </tr>
         </tbody>
       </table>
       <div className="dim">
-        BROWSERS RESERVE CTRL+W AND CTRL+1..9 (USE ALT+W, ALT+1..9). THE DESKTOP BUILD HAS NO SUCH LIMIT. TYPING ANY LETTER STARTS A COMMAND.
+        BROWSERS RESERVE CTRL+W AND CTRL+1..9 (USE ALT+W, ALT+1..9). THE DESKTOP BUILD HAS NO SUCH LIMIT.
+        TYPING STARTS A COMMAND, EXCEPT IN GRIDS AND CHARTS WHERE LETTERS ARE PANEL KEYS: PRESS / FIRST.
       </div>
     </div>
   );

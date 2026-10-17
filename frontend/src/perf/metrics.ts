@@ -94,8 +94,9 @@ export function panelPainted(panelId: number): void {
 }
 
 // --- Keystroke echo: keydown timestamp to the start of the frame that draws the character.
-// The native input has already updated its value by then, so that frame paints it.
-// (Timing to after-paint would add a task hop and is not what "one frame" means.)
+// The native input has already updated its value by then, so that frame paints it. We use the
+// rAF timestamp (frame start), not performance.now() inside the callback: other callbacks in the
+// same frame (tick flushes) would otherwise be billed to the keystroke.
 let lastKeyDown = 0;
 export function keyDown(ts: number): void {
   lastKeyDown = ts;
@@ -104,7 +105,7 @@ export function keyEchoed(): void {
   const t0 = lastKeyDown;
   if (!t0) return;
   lastKeyDown = 0;
-  requestAnimationFrame(() => series.keyEcho.push(performance.now() - t0));
+  requestAnimationFrame((frameStart) => series.keyEcho.push(Math.max(0, frameStart - t0)));
 }
 
 // --- Frame sampler: runs only while someone watches (HUD, PERF panel, bench).
@@ -173,9 +174,17 @@ export function snapshot() {
   };
 }
 
+/** Clears every measurement window (bench uses it between scenarios). */
+export function reset(): void {
+  for (const r of Object.values(series)) r.clear();
+  panelRender.clear();
+  longTasks = 0;
+  commandLog.length = 0;
+}
+
 declare global {
   interface Window {
-    __openterm_perf?: { snapshot: typeof snapshot; watchFrames: typeof watchFrames; ready?: number };
+    __openterm_perf?: { snapshot: typeof snapshot; watchFrames: typeof watchFrames; reset: typeof reset; commandLog: typeof commandLog; ready?: number };
   }
 }
-window.__openterm_perf = { snapshot, watchFrames };
+window.__openterm_perf = { snapshot, watchFrames, reset, commandLog };

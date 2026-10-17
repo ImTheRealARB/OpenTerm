@@ -18,17 +18,19 @@ export interface FunctionDef {
   phase: number;
   /** Lazy module. Absent until implemented. */
   load?: () => Promise<{ default: ComponentType<FunctionProps> }>;
+  /** Warm during idle time after startup. Off for heavy modules (GP pulls in the chart library). */
+  idlePreload?: boolean;
 }
 
 const defs: FunctionDef[] = [
   // P0
   { code: "HELP", title: "Function list / help for one function", needsSecurity: false, argsSchema: "[CODE]", phase: 1, load: () => import("./Help") },
-  { code: "PERF", title: "Performance monitor", needsSecurity: false, phase: 1, load: () => import("./Perf") },
+  { code: "PERF", title: "Performance monitor", needsSecurity: false, argsSchema: "[GRID rows | CHART bars]", phase: 1, load: () => import("./Perf") },
   { code: "SHORTCUTS", title: "Keyboard shortcuts", needsSecurity: false, phase: 1, load: () => import("./Shortcuts") },
-  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D|5D|1M|6M|YTD|1Y|5Y|MAX] [interval] [vs SYM]", phase: 3 },
-  { code: "DES", title: "Security description", needsSecurity: true, phase: 3 },
-  { code: "Q", title: "Quote monitor", needsSecurity: false, argsSchema: "[SYM...]", phase: 3 },
-  { code: "QR", title: "Quote recap", needsSecurity: true, phase: 3 },
+  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP]", phase: 3, load: () => import("./GP"), idlePreload: false },
+  { code: "DES", title: "Security description", needsSecurity: true, phase: 3, load: () => import("./DES") },
+  { code: "Q", title: "Quote monitor (live)", needsSecurity: false, argsSchema: "[SYM...]", phase: 3, load: () => import("./Q") },
+  { code: "QR", title: "Quote recap (live)", needsSecurity: true, phase: 3, load: () => import("./QR") },
   { code: "N", title: "News", needsSecurity: false, argsSchema: "[keyword]", phase: 5 },
   { code: "WL", title: "Watchlists", needsSecurity: false, argsSchema: "[list name]", phase: 5 },
   { code: "WEI", title: "World equity indices", needsSecurity: false, phase: 5 },
@@ -63,5 +65,28 @@ const defs: FunctionDef[] = [
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));
+
+const loaded = new Map<string, ComponentType<FunctionProps>>();
+const loading = new Map<string, Promise<ComponentType<FunctionProps>>>();
+
+/** Loads (once) and remembers a function module so later renders are synchronous. */
+export function loadModule(code: string): Promise<ComponentType<FunctionProps>> {
+  const hit = loaded.get(code);
+  if (hit) return Promise.resolve(hit);
+  let p = loading.get(code);
+  if (!p) {
+    const def = FUNCTIONS.get(code);
+    if (!def?.load) return Promise.reject(new Error("not built"));
+    p = def.load().then((m) => {
+      loaded.set(code, m.default);
+      return m.default;
+    });
+    p.catch(() => loading.delete(code)); // allow a retry after a failed chunk download
+    loading.set(code, p);
+  }
+  return p;
+}
+
+export const loadedModule = (code: string) => loaded.get(code);
 export const FUNCTION_LIST = defs;
 export const isFunction = (code: string) => FUNCTIONS.has(code);

@@ -1,17 +1,21 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { statusMsg } from "./command/execute";
 import { commandInputRef } from "./components/CommandLine";
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
 import { Workspace } from "./components/Workspace";
 import { match } from "./keys/keys";
+import { dispatchPanelKey } from "./keys/panelKeys";
 import { PerfTable } from "./perf/PerfTable";
 import { loadJSON, saveJSON } from "./state/store";
 import {
-  closePanel, cyclePanel, focusPanel, historyStep, resizeFocused, split, toggleMaximize,
+  closePanel, cyclePanel, focusPanel, historyStep, resizeFocused, split, toggleMaximize, workspace,
 } from "./state/workspace";
 
-const Shortcuts = lazy(() => import("./functions/Shortcuts"));
+/** Bindings that always win over panel-local keys. */
+const ALWAYS_GLOBAL = new Set(["focusCommand", "escape", "nextPanel", "prevPanel", "cheatsheet"]);
+
+import Shortcuts from "./functions/Shortcuts";
 
 const info = (text: string) => statusMsg.set(() => ({ text, kind: "info" }));
 
@@ -30,6 +34,14 @@ export function App() {
       const m = match(e);
       const modified = e.ctrlKey || e.altKey || e.metaKey;
 
+      // The focused panel gets first shot at plain keys (grid j/k, chart 1..8, ...).
+      if (!inInput && !modified && !cheatsheet && !(m && ALWAYS_GLOBAL.has(m.action))) {
+        if (dispatchPanelKey(workspace.get().focus, e)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
       if (!m) {
         // Typing anywhere starts a command.
         if (!inInput && !modified && e.key.length === 1 && input) input.focus();
@@ -47,6 +59,7 @@ export function App() {
         case "escape":
           if (cheatsheet) setCheatsheet(false);
           else if (inInput) input?.blur();
+          else dispatchPanelKey(workspace.get().focus, e); // e.g. close a panel's picker
           break;
         case "focusPanel":
           if (!focusPanel(m.n!)) info(`NO PANEL ${m.n}`);
@@ -88,7 +101,7 @@ export function App() {
           historyStep(1);
           break;
         case "refresh":
-          info("NOTHING TO REFRESH: LIVE DATA ARRIVES IN PHASE 2-3");
+          if (!dispatchPanelKey(workspace.get().focus, e)) info("NOTHING TO REFRESH IN THIS PANEL");
           break;
         case "saveWorkspace":
         case "openWorkspace":
@@ -113,7 +126,7 @@ export function App() {
         overlay={
           cheatsheet && (
             <div className="overlay">
-              <Suspense fallback={null}><Shortcuts /></Suspense>
+              <Shortcuts />
               <div className="dim">ESC TO CLOSE</div>
             </div>
           )
