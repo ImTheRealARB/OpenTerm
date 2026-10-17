@@ -293,6 +293,11 @@ run 2: **17/17**. Run 2 is the baseline for Phase 11:
 | Layout load p95 | 39.4 ms | 100 ms |
 | JS heap, 9 panels + 200 symbols | 9.1 MB (run 1) | 500 MB |
 
+### Phase 11 tests step (2026-10-18; tests only, no app code changed, bundle still 95.6 KB)
+164 pytest + 38 strict-xfail, 174 vitest (5 `it.fails`), 70 Playwright (4 `test.fail`), tsc + ruff clean.
+Bench 16/17 on both runs, each missing a different known-noisy budget: run 1 long tasks 1 (budget 0; tick-to-pixel 39.6 ms),
+run 2 chart pan 33.4 ms (long tasks 0, tick-to-pixel 50.0 ms). Neither can come from this step.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

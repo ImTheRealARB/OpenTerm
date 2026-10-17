@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-18, session 5 (Phases 11-19 started on branch `claude/openterm-phases-11-19-328938`; Phase 11 spec written, waiting for approval)._
+_Last updated: 2026-10-18, session 5 (Phases 11-19 on branch `claude/openterm-phases-11-19-328938`; Phase 11 spec approved, tests set written; next: step 11.3)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -210,13 +210,19 @@ Remaining:
 
    | Step | State |
    |---|---|
-   | 11.1 Spec [docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) | **done**, waiting for the user's approval of the defaults table at its top |
-   | 11.2 Tests set (`tests/test_phase11.py`, vitest, `e2e/phase11.spec.ts`) | **next** (after approval) |
-   | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | pending |
+   | 11.1 Spec [docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) | **done**, defaults approved 2026-10-18 |
+   | 11.2 Tests set: `backend/tests/test_phase11.py` (39), `frontend/src/net/phase11.test.ts` (5), `frontend/e2e/phase11.spec.ts` (4) | **done**; all marked expected-to-fail per step (see CLAUDE.md) |
+   | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | **next**: remove the `@KEYS` markers, the step-3 `it.fails` and the APIKEYS / KEY REQUIRED `test.fail()` calls, then make them pass |
    | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets | pending |
    | 11.5 LLM gateway + health | pending; **needs an OpenRouter key** to record one streamed answer (free model is enough) |
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | pending |
 
+   The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
+   (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,
+   `DataError(..., key=)`, `jobs.job_hash`, `jobs.store.JobStore`, sleep params `ignore_cancel` / `fail_at` / `crash_at` / `tag`,
+   `llm.sse.parse_sse`, `events_from_payloads`, `llm.spend.check/cost/add/today`, `/api/llm/health`, settings `OPENTERM_KEYRING`
+   (`auto|memory|none`), `OPENTERM_DOTENV_PATH`, `OPENTERM_JOB_WORKERS`; frontend `jobFrames.ts` (`parseJobFrame`, `applyJobFrame`,
+   `progressText`), `keyRequired.ts`, `functions/apikeysMask.ts` (`maskKey`), `.keyreq` line class.
    Baseline before Phase 11 code: 163 pytest, 169 vitest, 66 Playwright, bench 17/17 on the rerun (see `docs/PERFORMANCE.md`
    "Phase 11 baseline"). Open problem: port 8000 was held by the user's own `start.ps1` backend (system Python); stop it
    (with the user's OK) before the bench.

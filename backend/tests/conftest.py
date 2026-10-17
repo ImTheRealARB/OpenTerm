@@ -9,11 +9,15 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENTERM_SYNTHETIC", "1")
     monkeypatch.setenv("OPENTERM_SYNTHETIC_TPS", "50")
     monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "api.db"))
+    # Phase 11: never touch the real OS keyring or the repo's .env from tests; 2 job workers per xdist worker.
+    monkeypatch.setenv("OPENTERM_KEYRING", "memory")
+    monkeypatch.setenv("OPENTERM_DOTENV_PATH", str(tmp_path / "keys.env"))
+    monkeypatch.setenv("OPENTERM_JOB_WORKERS", "2")
     from openterm.config import get_settings
 
     get_settings.cache_clear()
     from openterm.main import app
 
-    with TestClient(app) as c:
+    with TestClient(app, client=("127.0.0.1", 50000)) as c:
         yield c
     get_settings.cache_clear()
