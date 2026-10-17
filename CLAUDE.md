@@ -149,8 +149,11 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Ported Vibe files stay verbatim apart from imports and the listed cuts**; their header line names the source file.
   Behaviour changes there break the cross-check tests, which is the point. Lint: only ruff's safe autofixes plus
   `# noqa` (TRY004, BLE001, B023, UP040) where a fix would change Vibe's behaviour; the header's `Changes:` line says so.
-- **A new migration breaks the old migration tests** (`test_userdata`, `test_phase8`, `test_phase11`): they roll
-  `user_version` back and drop the later tables, so add the new tables to their DROP lists.
+- **A new migration needs its tables in the migration test.** Before `claude/test-speedup` is merged: add them to the
+  DROP lists in `test_userdata`, `test_phase8`, `test_phase11`. After the merge: one test upgrades from every schema
+  version; list the new tables in `TABLES_BY_VERSION` (`test_userdata.py`), or it fails.
+- **After `claude/test-speedup` is merged:** pytest runs `-n 6 --dist worksteal`; new e2e specs use `openApp()` from
+  `e2e/app.ts` (one page load); unmocked e2e requests still reach port 8000, so keep it free while Playwright runs.
 - **Tab never reaches a panel:** it is the global next-panel key (`ALWAYS_GLOBAL`). Panel views cycle with another key
   (BT uses `V` / `Shift+V` and `1`-`4`); the `Tab` cases in FA, FIL and MOV are dead code.
 - **Big JSON routes must return `Orjson(...)`, not a dict:** FastAPI runs `jsonable_encoder` over a returned dict even with

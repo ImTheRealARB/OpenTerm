@@ -37,8 +37,18 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
     script run; (5) faster gates (test-suite audit running in its own session on its own branch, see below).
     Quality, accuracy, terminal speed and bench budgets are never traded for pace.
   - Estimate: about 9-13 hours of active work (4-5 sessions of one 5-hour window each). Re-check after Phase 12.
-  - **Test audit:** a separate session (branch off `976c7ad`) is combining duplicate tests and speeding up the suites.
-    It does not merge by itself; when it reports, review its branch and merge it into this branch if the gates pass.
+  - **Test audit: finished, NOT merged yet.** Branch `refs/heads/claude/test-speedup`, commit `5347a9b` (off `976c7ad`,
+    23 files). **First action of the next session:** merge it into this branch (`git merge claude/test-speedup`; expect
+    conflicts only in docs: keep both sides), run all five gates, commit. What it does: pytest 39-41 s -> 20-29 s
+    (httpx client / CA bundle built once per worker in `conftest.py`; `addopts` `-n 6 --dist worksteal`), Playwright
+    30-45 s -> 18-27 s (shared `openApp()` in `e2e/app.ts` loads the page once; web server builds without the type check),
+    vitest 2.1 -> 1.3-1.6 s (`threads` pool). Merged duplicates: four migration-upgrade tests -> one test upgrading from
+    every schema version 0-9 (`test_userdata.py`), three restart-survival tests -> one. Fixed flake:
+    `test_runtime_limits_fail_closed` (3 s limit only on the time-limit case). Every old assertion kept.
+    After merging: a new migration must list its tables in `TABLES_BY_VERSION` (`test_userdata.py`), or a check fails;
+    `phase12.spec.ts` can switch its setup to `openApp()`. Left as is: ~700 unmocked Playwright requests
+    (`/api/cmdhistory`, `/api/sources`, `/api/alerts`, `/api/settings`) reach port 8000, so keep port 8000 free during
+    e2e; two Phase 6 insider tests wait ~1.7 s each on the real SEC rate limit (by design).
 - **What step 3 added** (`backend/openterm/bt/`):
   - Ported verbatim from Vibe-Trading `d0db2e3` by a copy script (header line names the source): `models.py`,
     `metrics.py`, `rebalance_mask.py`, `engines/hooks.py` (= `_market_hooks.py`), `engines/global_equity.py`,
