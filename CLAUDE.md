@@ -7,9 +7,11 @@ All 10 phases are built and on `main`. **Phases 11-19 are in progress on branch 
 (Phase 11 done except one OpenRouter recording; Phase 12 steps 1-4 done, step 5 (engines) next; HANDOFF.md "Resume here" has the next action, the user's step rules and the approved scope: full Phases 12-19 minus
 paid-only data, roadmap defaults pre-approved, OpenRouter (DeepSeek) the only paid service). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
-**Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
-5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
-so another account can resume, and pause.
+**Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
+2026-10-19), subagents at most 2 at a time. If the same gate fails twice on the same problem, stop, write the state and
+exact next action to HANDOFF.md, commit, and tell the user (they may switch to Opus for that one problem). When the
+5-hour or weekly plan window reaches 95%, stop all subagents, update HANDOFF.md so another account can resume, commit,
+and pause.
 
 ## Non-negotiables (from the spec)
 - Speed over looks. No shadows, gradients, radii, transitions or web fonts. Color only carries meaning.

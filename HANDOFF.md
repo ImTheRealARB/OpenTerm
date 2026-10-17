@@ -72,6 +72,8 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
   5. Docs (HANDOFF.md, CLAUDE.md): only the changed sections.
   6. At 95% of the 5-hour or weekly limit: stop subagents, write the state to HANDOFF.md, commit, and stop.
   7. Keep output small. If a key is needed, stop and say which one.
+  8. **Sonnet for everything** (main session and subagents; decided 2026-10-19, no model switching). If the same gate
+     fails twice on the same problem: stop, write the state and exact next action here, commit, and tell the user.
 - **Before the bench:** port 8000 must be free. The user's own `start.ps1` backend sometimes holds it; ask before stopping it.
 
 ## How Phases 6-10 were built (history)
