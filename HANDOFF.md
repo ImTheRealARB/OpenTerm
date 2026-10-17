@@ -203,6 +203,8 @@ Remaining:
 2. Tick-to-pixel bench budget: missed (55-59 ms vs 50) on every run of the post-merge session, including with the
    fixes reverted, so it is machine load or drift, not those fixes; earlier the same day it ran 38-42 ms. Re-run on a
    quiet machine before treating it as a regression.
+3. Phases 11-19 are planned, not built: [docs/ROADMAP_PHASES_11-19.md](docs/ROADMAP_PHASES_11-19.md) (order, keys,
+   open decisions) and [docs/FEATURE_GAP.md](docs/FEATURE_GAP.md) (gap list and what to port from Vibe-Trading).
 
 Done after the merge: `main` fast-forwarded; panel tab names the security only for functions that use it; charts skip
 the volume histogram when a series has no volume (FRED's flat line); `scripts/start.ps1` / `scripts/start` run the
