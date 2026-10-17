@@ -400,6 +400,17 @@ and 285.6 / 72.1 on run 3; `import pandas` and the 100-symbol run slowed by the 
 run for this step: it adds one set lookup (`symbol in service.local.symbols`) to `DataService.history` and a lazy `IMPORT`
 panel chunk; the phase bench at step 9 gates `/api/history` and the bundle.
 
+### Phase 12 final: strategy editor, docs, phase bench (2026-10-19)
+354 pytest + 1 xfail (the Phase 11 OpenRouter recording), 198 vitest, 92 Playwright, tsc + ruff clean (`node scripts/gates.mjs`: 61 s for all
+five). Bench **24/24** on a rested machine, first run: bundle 98.8 KB (Phase 11 end 98.0), cold start 104.6 ms, backend p95 cached
+/api/history 2.7 ms, keystroke 14.9 ms, tick-to-pixel 36.9 ms, chart pan 16.7 ms, layout load 33.0 ms; BT: **10-year rule run 233.6 ms**
+(< 300), cached 5.1 ms (< 20), open to first paint 69.5 ms (< 100); INFO: cold worker 2.4 s, 100 symbols x 10 years 1.7 s (< 5 s target).
+The step-7 misses of the BT run budget (383-493 ms, four runs in a row) were the machine: the same in-process engine run is 160-170 ms
+cool and 250-320 ms after a dozen back-to-back runs; after a rest the bench reads 233 ms again. Real-backend smoke run (fixture mode,
+Playwright against the built frontend served by the backend): BT, M, W, P, `BT MC <run>`, `BT RUNS` compare, IMPORT then BT and GP on the
+imported symbol, `BT EDIT` save + run in the real sandbox, sandbox refusal: all 10 steps pass. It found one bug the mocked tests could not
+(Ctrl+K swallowed while a textarea has focus), fixed in IMPORT and the editor.
+
 ## Test suite speed (2026-10-19, on top of Phase 12 step 4)
 Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
 

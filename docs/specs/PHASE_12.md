@@ -1,6 +1,6 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; steps 1-8 done.**
+Status: **approved as written 2026-10-19; steps 1-9 done: PHASE 12 COMPLETE (2026-10-19).**
 
 Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
 symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.
@@ -138,6 +138,8 @@ Frontend:
 6. `BT MC`, `BT WF`. **Done 2026-10-19.**
 7. `BT RUNS` compare and `BT EXPORT` (CSV, Pine). **Done 2026-10-19.**
 8. `IMPORT` (CSV, `LOCAL DATA`). **Done 2026-10-19.**
-9. `THIRD_PARTY.md` rows, docs (`DATA_LIMITS.md`, `COMMANDS.md`, `ADDING_A_FUNCTION.md` if needed), phase verification.
+9. `THIRD_PARTY.md` rows, docs (`DATA_LIMITS.md`, `COMMANDS.md`, `ADDING_A_FUNCTION.md` if needed), phase verification. **Done 2026-10-19.**
+4B. Python strategy editor (done 2026-10-19): `BT EDIT [name]` (list / editor, Ctrl+S, Ctrl+Enter save and run, Tab indents), `BT SAVE name RULE`,
+    `BT DEL name`, `BT <SYMBOLS> @name ...` runs a saved strategy (rule or Python).
 
 Steps 3 and 4 (backend and frontend halves) can run as two Sonnet subagents at once; so can 5 and 6.

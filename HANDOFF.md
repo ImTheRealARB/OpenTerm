@@ -1,11 +1,11 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; Phase 12 steps 1-8 done; step 4B (strategy editor) next, then 9; full scope, defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; PHASE 12 COMPLETE (steps 1-9 and 4B); Phase 13 next; full scope, defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-19, after step 12.8)
+## Resume here (2026-10-19, Phase 12 complete)
 - **Where the work is:** branch `claude/openterm-phases-12-19-5ebe04`, worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`
   (a session cannot write into another worktree). It was fast-forwarded from `claude/openterm-phases-11-19-a99b2b` (that
   worktree is clean and now stale: do not work there) and `claude/test-speedup` is merged. `backend/.venv` and
@@ -39,16 +39,19 @@ _Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-ph
 - **What step 7 added:** `bt/export.py` (CSV parts, Pine v5 translation of rule runs), `GET /api/bt/runs/{id}/export`, `GET /api/bt/compare`,
   frontend `functions/BtRuns.tsx` (`BT RUNS`: list, `C` marks two, comparison with metric diffs and the two equity lines),
   `BT OPEN`, `BT EXPORT`, `P` key, `csv.ts` `downloadText`. Tests: `tests/test_phase12_export.py`, vitest, 5 Playwright.
-- **Bench note:** the `BT 10-year rule run` budget (300 ms) is flaky on this machine: the same in-process run takes 160-170 ms
-  when cool and 250-320 ms after a dozen back-to-back runs (throttling / Google Drive sync in the background). Four runs in a row read 383-493 ms at step 7 (budget 300), so
-  this is OPEN: re-measure after a rest at step 9 and profile the run path if it still misses. `node scripts/gates.mjs` runs the five
-  gates in parallel (55 s instead of ~70 s; `--skip=e2e,pytest` to leave some out).
+- **Bench note (closed):** the step-7 misses of the BT-run budget were machine throttling; the phase bench after a rest reads 233.6 ms (see below and `docs/PERFORMANCE.md`).
 - **What step 8 added:** migration 10 `local_bars`, `bt/csvimport.py` + `bt/localdata.py`, `DataService.local` (set in the lifespan), `/api/bt/import`
   (POST/GET/DELETE), `bt/csvImport.ts`, `functions/IMPORT.tsx` (paste box with live preview, list, `D` twice). Tests: `tests/test_phase12_import.py`,
   vitest, 4 Playwright. Gates after step 8: 354 pytest + 1 xfail (the Phase 11 recording), 196 vitest, 87 Playwright, all green.
-- **Next action: step 4B, the Python strategy editor** (spec section 1: a `<textarea>` in the BT panel, `BT SAVE name` / `BT LOAD name` /
-  `BT DEL name`; API already there: `GET|PUT|DELETE /api/bt/strategies/{name}`; the `S` key says it arrives with 4B). Then step 9 (docs,
-  `COMMANDS.md`, THIRD_PARTY check, phase bench incl. the open BT-run budget, browser smoke run in fixture mode).
+- **What step 4B and 9 added:** `functions/BtEditor.tsx` (`BT EDIT`/`LOAD`: list or editor), `BT SAVE name RULE`, `BT DEL name`, `@name` in the rule
+  position (`bt/ruleParse.ts` `strategy`), docs (`COMMANDS.md`, `CHANGELOG.md`, `DATA_LIMITS.md`, `PERFORMANCE.md`), real-backend browser
+  smoke run (all green; found the Ctrl+K-in-textarea bug). Final Phase 12 gates: 354 pytest + 1 xfail, 198 vitest, 92 Playwright, bench 24/24.
+- **Next action: Phase 13 (equity research gaps)**: read `docs/ROADMAP_PHASES_11-19.md` "Phase 13", write `docs/specs/PHASE_13.md` with its
+  defaults plus the tests in one step, then code (fresh session per phase). **Before Phase 16: ask the user to set the OpenRouter key with
+  `APIKEYS`**, then finish the Phase 11 `@RECORDING` test (`scripts/record_llm.py`). Phase 12 is not merged into `main` (no remote).
+- **Bench rule of thumb:** after many back-to-back runs this machine throttles and the BT 10-year run reads 380-490 ms against 233 ms when
+  rested. Run the bench once after a rest; do not chase a lone BT-run miss before re-measuring. `node scripts/gates.mjs` runs the five gates
+  in parallel (`--skip=e2e,pytest`).
 - **Scope and plan (decided by the user 2026-10-19; do not relitigate):**
   - **Full scope, Phases 12-19, minus paid-only data.** Removed: `TRAN`, `SEG` (paid FMP). Keys: keyless sources
     first; free sign-up keys are fine (Finnhub free tier for `EE`/`ANR` only as far as it covers them, Alpaca/Finnhub

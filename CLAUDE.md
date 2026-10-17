@@ -166,6 +166,15 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **A session cannot write into another worktree** (hook). Bring the branch here with `git merge --ff-only <branch>` instead.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
+- **Vibe-Trading's symbol detector (`bt/engines/hooks.py` `_detect_market`) reads Yahoo-style `BTCUSDT.P`, `BRK-B`, `^GSPC` as China A** (its catch-all).
+  Composite runs go through `composite.market_of`, which fails closed. Vibe's crypto `perpetual_strict` mode is not ported.
+- **A textarea that stops key propagation also swallows Ctrl+K.** IMPORT and BT EDIT let Ctrl+K through; copy that if you add another text box.
+  The mocked Playwright suites cannot see this: run the real-backend smoke (build the frontend, `OPENTERM_FIXTURES=1 OPENTERM_STATIC_DIR=frontend/dist`).
+- **Bench throttling:** the BT 10-year run (budget 300 ms) reads 230 ms rested and 380-490 ms after several back-to-back bench runs. Rest, then rerun once.
+- **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;
+  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs pytest, ruff, tsc, vitest, Playwright at once.
+- **`POST /api/bt/import` takes the CSV as the raw body;** `/api/history` is columnar (`data.t/o/h/l/c/v`), never `data.bars`. A stored symbol shadows a real ticker.
+
 ## Conventions
 - Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Commit only when the user says so. The repo has no remote yet.
 - LF line endings (`.gitattributes`), except `*.ps1`.
