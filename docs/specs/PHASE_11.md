@@ -1,6 +1,6 @@
 # Phase 11 spec: keys, jobs, LLM gateway
 
-Status: **spec written 2026-10-18, waiting for approval.** Tests come next, then code.
+Status: **built 2026-10-19** (defaults approved 2026-10-18). Open: the recorded OpenRouter stream (needs the key).
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 11" and "Rule changes".
 
 ## Decisions (proposed defaults; change any of them before the tests step)
@@ -186,4 +186,4 @@ Frontend:
 3. Key store, redaction, `/api/keys`, `KEY REQUIRED` state, `APIKEYS` panel, SOURCES rows.
 4. Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets.
 5. LLM gateway + health (needs the OpenRouter key to record). **Built 2026-10-19; the recording waits for the key.**
-6. `THIRD_PARTY.md`, CLAUDE.md rule changes, docs (`ADDING_A_PROVIDER.md` keyed section, `DATA_LIMITS.md`), phase verification.
+6. `THIRD_PARTY.md`, CLAUDE.md rule changes, docs (`ADDING_A_PROVIDER.md` keyed section, `DATA_LIMITS.md`), phase verification. **Done 2026-10-19.** Qlib's own licence is MIT, not Apache-2.0 as assumed above (see `THIRD_PARTY.md`).

@@ -121,3 +121,21 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - **CORR** needs the dates every symbol traded (exchange-local), so mixing exchanges with different holidays shrinks the sample; the panel
   warns below 20 common returns and when time zones are mixed. At most 20 symbols (20 history calls).
 - **CSV export** is client-side only (what the grid shows, formatted); nothing is sent to a server.
+
+## Phase 11: keys, jobs, LLM gateway (2026-10-19)
+- **No data source changes.** Every function still works with zero keys. Keyed rows on SOURCES show `KEY REQUIRED`,
+  `UNTESTED`, `OK`, `INVALID`, `QUOTA` or `ERROR` from the key store; a key test only reports the state, never data.
+- **Key tests cost one call each**, made only when you save a key or press `T` in APIKEYS (none on a timer). Endpoints:
+  OpenRouter `/api/v1/key`, OpenAI and Anthropic `/v1/models`, Finnhub `/quote?symbol=AAPL`, Alpaca paper `/v2/account`,
+  FMP `/stable/quote`, FRED `series`, EIA `/v2/`, OpenFIGI one mapping, Tradier sandbox clock, Telegram `getMe`,
+  SMTP `EHLO` + `AUTH` (no mail sent).
+- **LLM gateway:** no AI functions yet (Phase 16), so nothing calls a model on its own. OpenRouter reports the real cost per
+  answer (usage accounting); `:free` models cost US$0 but have their own low rate limits. OpenAI and Anthropic direct
+  need a price in `config.yaml` `llm.prices` (none shipped: prices change), else the call is refused (`PRICE UNKNOWN`).
+  Daily spend cap US$1.00 by default (APIKEYS `C`), checked before each call against the worst case (`max_tokens` at the
+  output price) and reset at local midnight.
+- **Ollama** (local, free, no key): SOURCES shows `OK` with the model count if `http://127.0.0.1:11434/api/tags` answers in
+  300 ms, else `DOWN`. Probed at most every 10 s.
+- **Background jobs** run in local worker processes; no upstream calls. Phase 11 ships only the `sleep` TEST JOB.
+- **Fixture mode:** key tests replay recorded 401s (and a doc-shaped OpenRouter success); the Ollama port refuses; OpenRouter
+  chat replays `llm_openrouter_stream.txt` once it is recorded (not yet: waits for the key); other LLM calls are 404.

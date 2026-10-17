@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 steps 1-5 done except one recording; next: record the OpenRouter stream once the key is set, then step 11.6)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; next: Phase 12 spec)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
@@ -14,10 +14,15 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
 - **Step 5 (LLM gateway) is built except one recording.** The OpenRouter key was not found (not in env, the Windows
   keyring or any `.env`), so `test_recorded_openrouter_stream_gives_tokens_usage_and_cost` stays strict-xfail (`RECORDING`
   marker in `backend/tests/test_phase11.py`).
-- **Exact next action:** once `OPENROUTER_API_KEY` is set (APIKEYS panel, or the worktree's `.env`), run from `backend/`
-  `uv run python ../scripts/record_llm.py` (picks the first `:free` model, US$0; never prints the key), check the
-  fixture has no key in it, delete the `@RECORDING` line and run the gates. Then step 6 closes Phase 11: `THIRD_PARTY.md`,
-  the CLAUDE.md rule changes, docs (`ADDING_A_PROVIDER.md` keyed section, `DATA_LIMITS.md`) and the phase verification.
+- **Step 6 closed Phase 11** (`THIRD_PARTY.md`, CLAUDE.md rule changes, `ADDING_A_PROVIDER.md` keyed section,
+  `DATA_LIMITS.md`, `COMMANDS.md`); verification bench 21/21 on the first run.
+- **Exact next action: Phase 12 step 1, the spec** `docs/specs/PHASE_12.md` (roadmap "Phase 12"), with the roadmap's
+  proposed defaults listed at the top for approval. Then tests, then code.
+- **Still open from Phase 11 (the user will set the key later):** once `OPENROUTER_API_KEY` is set (APIKEYS panel, or the
+  worktree's `.env`), run from `backend/` `uv run python ../scripts/record_llm.py` (first `:free` model, US$0; never prints
+  the key), check the fixture has no key in it, delete the `@RECORDING` line and run the gates.
+- **For the user to confirm:** the roadmap says Qlib Alpha158 parts are Apache-2.0, but Qlib's own `LICENSE` is MIT
+  (Microsoft). `THIRD_PARTY.md` says so; check the ported file's header when Alpha158 is ported in Phase 12.
 - **The user's working rules for Phases 11-19** (from their prompt; keep following them):
   1. Do one step per turn, in HANDOFF order. A step is a spec, a tests set, or one function's code.
   2. Each phase starts with `docs/specs/PHASE_<n>.md`, with the roadmap's proposed defaults listed at the top for approval.
@@ -231,6 +236,7 @@ Remaining:
 3. Phases 11-19: plan in [docs/ROADMAP_PHASES_11-19.md](docs/ROADMAP_PHASES_11-19.md) and
    [docs/FEATURE_GAP.md](docs/FEATURE_GAP.md). Work happens in worktree branch `claude/openterm-phases-11-19-328938`
    (fast-forwarded onto the roadmap commit `7d20e69` from `claude/openterm-bloomberg-feature-gap-badb0c`; not on `main` yet).
+   Since session 6 the work continues on `claude/openterm-phases-11-19-a99b2b` (fast-forwarded from 328938; see "Resume here").
    Steps (one commit each; a step is a spec, a tests set, or one function's code):
 
    | Step | State |
@@ -240,7 +246,8 @@ Remaining:
    | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | **done** (backend by the main session, frontend by one Sonnet subagent) |
    | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **done** (backend main session, frontend one Sonnet subagent); bench 21/21 |
    | 11.5 LLM gateway + health | **done except the recording** (main session, no subagents); bench 21/21 on the third run. `test_recorded_openrouter_stream...` waits for the OpenRouter key (`scripts/record_llm.py`) |
-   | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | pending |
+   | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | **done** 2026-10-19; bench 21/21 first run |
+   | 12.1 Spec `docs/specs/PHASE_12.md` | **next** |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
    (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,

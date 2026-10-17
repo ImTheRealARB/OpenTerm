@@ -83,6 +83,8 @@ LAYOUT SAVE MYDESK    save panels (LAYOUT lists, LAYOUT MYDESK loads, Ctrl+S / C
 THEME GREEN           AMBER GREEN WHITE LIGHT
 SETTINGS              vim mode, clocks, number format, refresh rates, key rebinding
 SOURCES               data source health and latency
+APIKEYS               optional API keys: Enter edit (masked), T test, D twice delete, O sign-up page, C AI spend cap
+JOBS                  background jobs: Esc/X cancel, R re-run, C clear finished (JOBS TEST 20 100 runs a test job)
 LOG                   backend log
 PERF                  performance monitor (PERF GRID 10000, PERF CHART 50000 load tests)
 ```

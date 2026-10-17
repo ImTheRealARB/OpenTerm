@@ -316,13 +316,21 @@ heap 5.2 MB, layout 38.7 ms; job frame-to-paint 33.3 ms, job submit server 2.0 m
 run, as before.
 
 ### Phase 11 step 5: LLM gateway (2026-10-19)
-205 pytest + 1 xfail (the recorded OpenRouter stream, waiting for the key), 184 vitest, 72 Playwright, tsc + ruff clean.
+205 pytest + 1 xfail (the recorded OpenRouter stream, waiting for the key), 181 vitest, 72 Playwright, tsc + ruff clean.
 No new budget: the gateway is imported on first use (`api.llm_of`), so startup is unchanged. Bundle 98.0 KB (unchanged;
 the cap edit lives in the lazy APIKEYS chunk). Run 1 missed tick-to-pixel (56.0 ms) and chart pan (33.4 ms); run 2 missed
 chart pan only (33.4 ms; an unrelated Astro dev server was using CPU); run 3 **21/21**. Run 2 otherwise: backend p95
 0.7 / 1.0 / 2.8 ms, cold start 122.4 ms, keystroke 14.9 ms, cached command 17.3 ms, tick-to-pixel 43.7 ms, heap 5.9 MB,
 layout 40.8 ms, job frame-to-paint 31.8 ms, job submit 2.6 ms, cached job 1.9 ms, JOBS/APIKEYS open 24.7 ms. Run 3: chart
 pan 16.8 ms, tick-to-pixel 47.0 ms.
+
+### Phase 11 verification (2026-10-19, step 6: docs only, no app code)
+205 pytest + 1 xfail (recording), 181 vitest, 72 Playwright, tsc + ruff clean. Bench **21/21 on the first run**: bundle
+98.0 KB, backend p95 0.7 / 1.0 / 1.9 ms, cold start 112.0 ms, keystroke 14.8 ms (9.6 ms under streaming load), cached
+command 17.0 ms, cold network 15.7 ms, tick-to-pixel 36.2 ms, heap 9.5 MB, layout 41.0 ms, grid scroll 16.8 ms, chart pan
+16.8 ms, job frame-to-paint 32.6 ms, job submit 2.1 ms, cached job 1.6 ms, JOBS/APIKEYS open 21.4 ms; INFO: submit to first
+J frame 57.4 ms via proxy, pool cold start 220.1 ms. Against the Phase 11 baseline (before any Phase 11 code) every gated
+number is inside its budget; the bundle grew 95.6 -> 98.0 KB (jobs store and `J` frame parser in the entry).
 
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms

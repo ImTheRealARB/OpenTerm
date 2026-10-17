@@ -31,8 +31,7 @@ fallback, health tracking and the SOURCES screen all work from the adapter's dec
            ...  # cheap liveness call; raise ProviderError on failure
    ```
 
-2. Register it in `ADAPTERS` in `providers/__init__.py` (if it needs a key, read it from `Settings`
-   and leave it out when the key is empty, so SOURCES shows `KEY REQUIRED`).
+2. Register it in `ADAPTERS` in `providers/__init__.py`. A provider that needs a key follows "Keyed providers" below.
 3. Add it to the fallback order in `config.yaml`.
 4. Record real responses into `backend/tests/fixtures/` and write adapter tests against them
    (see `tests/test_adapters.py`). Tests never hit the network.
@@ -48,3 +47,31 @@ Rules:
 - Raise `not_found` for unknown symbols. It does not count against provider health. Everything else does.
 - Never fill gaps with estimates. Missing fields stay `None`; the UI shows them as blank.
 - Do not work around bot checks, captchas or terms of service.
+
+## Keyed providers (Phase 11)
+
+Zero keys must still work; a key unlocks more. A keyed provider never fails the request just because its key is missing.
+
+1. **Declare the key** in `KEY_SPECS` (`backend/openterm/keys.py`): `name`, env var `fields`, `phase`, `purpose`, `signup`
+   URL, and `secret_fields` if only some fields are secret (SMTP host and port are not). Add the provider's cheapest
+   authenticated call to `TESTS` (or `None`); `classify()` maps 401/403 to `INVALID`, 429 or a quota body to `QUOTA`.
+   The key then appears in APIKEYS and in SOURCES automatically.
+2. **Read the key from the store, at call time**: `app.state.keys.get("<name>")` returns the field dict or `None` (lookup
+   order env > OS keyring > `.env`). Never cache it in `Settings` at startup: a key saved in APIKEYS must work without a
+   restart (`app.state.on_key_change` is the hook for adapters built at startup; see the FRED case in `main.py`).
+3. **No key: raise `ProviderError("key_required", ...)` before any network call** and set the class attribute
+   `key_name = "<LABEL>"`. The router does not count it against health (no breaker strike), tries the next provider, and
+   only answers HTTP 424 `{"error": "KEY REQUIRED", "key": "<LABEL>"}` when no keyless provider can serve the capability.
+   The frontend shows the amber `KEY REQUIRED: set <LABEL> in APIKEYS` line (`KeyRequiredLine.tsx`); `Enter` opens APIKEYS.
+4. **Never let the key escape.** Prefer headers to query strings. Every secret the store has seen is registered with
+   `redact.py`, which masks it in log records (the `openterm`, `httpx` and `httpcore` loggers), `/api/log`, `/api/perf`,
+   `/api/sources` and error details, plus common shapes (`token=`, `apikey=`, `Bearer ...`, `sk-...`). Run any new error
+   text you build through `redact.redact()`. No endpoint returns a key value.
+5. **Fixtures:** record a real 401 with a made-up key (no account needed) and, when you have a key, one real success.
+   Without a key, a success body built from the provider's docs is allowed only if it is marked doc-shaped in the
+   fixture and in `fixtures.py` (like `keytest_openrouter_ok` and Phase 7's FRED API files). Tests use
+   `OPENTERM_KEYRING=memory` and a temp `OPENTERM_DOTENV_PATH`; the `client` fixture clears every `KEY_SPECS` env var.
+
+LLM providers are not data providers: they go through the gateway in `backend/openterm/llm/` (`Gateway.chat`), which adds
+the price lookup and the daily spend cap. A new OpenAI-compatible host is one entry in `openai_compat.BASES` plus a
+`KEY_SPECS` row; its prices go in `config.yaml` `llm.prices` (unknown price = refused while a cap is set).

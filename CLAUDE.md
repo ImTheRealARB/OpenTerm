@@ -17,7 +17,16 @@ so another account can resume, and pause.
 - Every action works from the keyboard. Mouse is optional.
 - Performance budgets are gated by `node scripts/bench.mjs`. A phase is not done if a budget regresses.
   Record before/after numbers in `docs/PERFORMANCE.md`.
-- Free data only, zero keys must work. Never bypass bot checks or captchas.
+- **Zero keys still works; a key unlocks more** (Phase 11 rule change). A function that needs a key shows
+  `KEY REQUIRED: set X in APIKEYS` instead of failing. Paid keys are allowed, never required. Never bypass bot checks or captchas.
+- Keys live only in env, the OS keyring or `.env` (`keys.py`). Never in the repo, the command line, command history, a URL
+  sent to the frontend or any API response; redacted from logs, `/api/perf`, `/api/log`, `/api/sources`, error text and AI traces.
+- AI output is model output, not data: every AI panel says `AI · <model> · <time>` and links the tool calls that grounded
+  it; an answer that used no tool data says `UNGROUNDED`. Backtests say `HISTORICAL SIMULATION, NOT A FORECAST` with source,
+  adjusted vs raw closes, fees and slippage.
+- Orders: paper first. Live orders only if the user turns them on, behind a mandate (symbol allowlist, size and daily caps)
+  and a kill switch. Order tools never appear in the MCP server or the AI agent.
+- Ported code keeps its licence notice in [THIRD_PARTY.md](THIRD_PARTY.md) and names its source file and commit.
 - No Bloomberg name, logo or assets. The product name lives in `frontend/src/config.ts` and `backend/openterm/__init__.py`.
 
 ## Layout
