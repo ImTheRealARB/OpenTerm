@@ -22,6 +22,8 @@ def test_migrations_6_and_7_create_portfolios_and_alerts(tmp_path):
         await db.execute("DROP TABLE portfolios")
         await db.execute("DROP TABLE alerts")
         await db.execute("DROP TABLE jobs")  # Phase 11
+        await db.execute("DROP TABLE strategies")  # Phase 12
+        await db.execute("DROP TABLE bt_runs")
         await db.commit()
         await db.close()
         db = await open_db(path)

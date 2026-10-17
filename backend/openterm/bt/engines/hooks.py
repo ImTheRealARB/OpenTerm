@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/_market_hooks.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths.
+# Changes: import paths; ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
 """Extracted per-bar market hooks and symbol-classification helpers.
 
 Both the original engines (CryptoEngine, ForexEngine) and CompositeEngine
@@ -15,7 +15,6 @@ GlobalFutures because composite.py used a suffix-only check) cannot recur.
 from __future__ import annotations
 
 import re
-from typing import Dict, List
 
 import pandas as pd
 
@@ -95,34 +94,34 @@ _CN_FUTURES_MAIN_PATTERN = r"^(?:{})0$".format(
 )
 
 _MARKET_PATTERNS = [
-    (re.compile(r"^\d{6}\.(SZ|SH|BJ)$", re.I), "a_share"),
-    (re.compile(r"^(51|15|56)\d{4}\.(SZ|SH)$", re.I), "a_share"),
+    (re.compile(r"^\d{6}\.(SZ|SH|BJ)$", re.IGNORECASE), "a_share"),
+    (re.compile(r"^(51|15|56)\d{4}\.(SZ|SH)$", re.IGNORECASE), "a_share"),
     # US equities: tickers may carry a class-share dot (BRK.B.US, BF.B.US)
     # and a hyphen (e.g. BF-B.US) — same characters as ca/india/uk below.
-    (re.compile(r"^[A-Z0-9&.\-]+\.US$", re.I), "us_equity"),
-    (re.compile(r"^\d{3,5}\.HK$", re.I), "hk_equity"),
+    (re.compile(r"^[A-Z0-9&.\-]+\.US$", re.IGNORECASE), "us_equity"),
+    (re.compile(r"^\d{3,5}\.HK$", re.IGNORECASE), "hk_equity"),
     # India equities: NSE (RELIANCE.NS) / BSE (500325.BO); tickers may carry
     # '&' and '-' (e.g. M&M.NS, BAJAJ-AUTO.NS).
-    (re.compile(r"^[A-Z0-9&.\-]+\.(NS|BO)$", re.I), "india_equity"),
+    (re.compile(r"^[A-Z0-9&.\-]+\.(NS|BO)$", re.IGNORECASE), "india_equity"),
     # Korea equities: KOSPI (005930.KS) / KOSDAQ (247540.KQ), 6-digit codes.
-    (re.compile(r"^\d{6}\.(KS|KQ)$", re.I), "kr_equity"),
+    (re.compile(r"^\d{6}\.(KS|KQ)$", re.IGNORECASE), "kr_equity"),
     # Canada equities: Toronto Stock Exchange (TD.TO) and TSX Venture
     # (PNG.V). Yahoo carries both suffixes verbatim.
-    (re.compile(r"^[A-Z0-9&.\-]+\.(TO|V)$", re.I), "ca_equity"),
+    (re.compile(r"^[A-Z0-9&.\-]+\.(TO|V)$", re.IGNORECASE), "ca_equity"),
     # Argentina: BYMA listings use Yahoo's canonical .BA suffix. Keep this
     # as a distinct market so ARS can never be mixed with USD/CNY accounting.
-    (re.compile(r"^[A-Z0-9&.\-]+\.BA$", re.I), "ar_equity"),
+    (re.compile(r"^[A-Z0-9&.\-]+\.BA$", re.IGNORECASE), "ar_equity"),
     # Brazil: B3 listings (PETR4.SA, BOVA11.SA, HGLG11.SA, AAPL34.SA) use
     # Yahoo's canonical .SA suffix; every line settles in BRL.
-    (re.compile(r"^[A-Z0-9]+\.SA$", re.I), "br_equity"),
+    (re.compile(r"^[A-Z0-9]+\.SA$", re.IGNORECASE), "br_equity"),
     # UK equities: London Stock Exchange (VOD.L, SHEL.L). Yahoo carries the
     # suffix verbatim.
-    (re.compile(r"^[A-Z0-9&.\-]+\.L$", re.I), "uk_equity"),
+    (re.compile(r"^[A-Z0-9&.\-]+\.L$", re.IGNORECASE), "uk_equity"),
     # Vietnam equities: HOSE (VIC.VN). Tickers are three letters in practice;
     # the class stays broad to admit fund certificates and ETF codes.
-    (re.compile(r"^[A-Z0-9]+\.VN$", re.I), "vietnam_equity"),
-    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+-USDT$", re.I), "crypto"),
-    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+/USDT$", re.I), "crypto"),
+    (re.compile(r"^[A-Z0-9]+\.VN$", re.IGNORECASE), "vietnam_equity"),
+    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+-USDT$", re.IGNORECASE), "crypto"),
+    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+/USDT$", re.IGNORECASE), "crypto"),
     # USD-M perpetuals in their documented BASE-USDT-PERP spelling
     # (ccxt_loader._parse_ccxt_symbol / binance_loader). Without this entry
     # the symbol matched nothing above and fell through to the a_share
@@ -130,35 +129,35 @@ _MARKET_PATTERNS = [
     # (100-share board-lot rounding) and every computed size rounded to a
     # zero_size rejection (#1863). Base alphabet matches the loader's own
     # ``([A-Z0-9]+)-USDT-PERP`` fullmatch.
-    (re.compile(r"^[A-Z0-9]+-USDT-PERP$", re.I), "crypto"),
+    (re.compile(r"^[A-Z0-9]+-USDT-PERP$", re.IGNORECASE), "crypto"),
     # yfinance's native crypto spelling (BTC-USD, ETH-USD). Distinct from
     # USDT pairs only in the quote currency; both belong to CryptoEngine.
-    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+-USD$", re.I), "crypto"),
+    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+-USD$", re.IGNORECASE), "crypto"),
     # Concatenated spot pairs (BTCUSDT, ETHUSDC) with no separator. Same
     # quote-asset table the trade-journal parser uses; without it these fell
     # through every pattern and got a_share rules (T+1, no shorting) on a
     # perpetual. Bare metals/FX (XAUUSD) end in USD, not USDT/USDC/BUSD, so
     # they still reach the forex whitelist below.
-    (re.compile(r"^(?!\d+(?:USDT|USDC|BUSD)$)[A-Z0-9]{2,}(?:USDT|USDC|BUSD)$", re.I), "crypto"),
+    (re.compile(r"^(?!\d+(?:USDT|USDC|BUSD)$)[A-Z0-9]{2,}(?:USDT|USDC|BUSD)$", re.IGNORECASE), "crypto"),
     # Separated USDC/BUSD-quoted pairs (BTC-USDC, ETH/USDC). Only the USDT
     # spellings above were separator-aware, so these fell through to the
     # a_share default even though the unseparated BTCUSDC is crypto.
-    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+[-/](?:USDC|BUSD)$", re.I), "crypto"),
+    (re.compile(r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+[-/](?:USDC|BUSD)$", re.IGNORECASE), "crypto"),
     # China futures: product+delivery.exchange (e.g. IF2406.CFFEX, rb2410.SHFE)
     # Tushare suffix spellings (SHF/CZC/CFX/GFE) classify here too.
     (
         re.compile(
             r"^[A-Za-z]{1,2}\d{3,4}\.(ZCE|DCE|SHFE|INE|CFFEX|GFEX|SHF|CZC|CFX|GFE)$",
-            re.I,
+            re.IGNORECASE,
         ),
         "futures",
     ),
     # Global futures: product+month-code (e.g. ESZ4, CLF25, GCM2025)
-    (re.compile(r"^[A-Z]{2,4}[FGHJKMNQUVXZ]\d{1,2}$", re.I), "futures"),
+    (re.compile(r"^[A-Z]{2,4}[FGHJKMNQUVXZ]\d{1,2}$", re.IGNORECASE), "futures"),
     # Global futures: product+YYMM (e.g. CL2412, ES2503)
-    (re.compile(r"^[A-Z]{2,4}\d{4}$", re.I), "futures"),
+    (re.compile(r"^[A-Z]{2,4}\d{4}$", re.IGNORECASE), "futures"),
     # Global futures: bare product code with exchange (e.g. ES.CME)
-    (re.compile(r"^[A-Z]{2,4}\.(CME|CBOT|NYMEX|COMEX|ICE|EUREX)$", re.I), "futures"),
+    (re.compile(r"^[A-Z]{2,4}\.(CME|CBOT|NYMEX|COMEX|ICE|EUREX)$", re.IGNORECASE), "futures"),
     # Global futures: dated contract carrying its venue (ESZ4.CME, CL2412.NYMEX,
     # GCM2025.COMEX). The bare dated forms above matched, and the continuous
     # form with a venue matched, but the combination fell through every pattern
@@ -171,7 +170,7 @@ _MARKET_PATTERNS = [
     (
         re.compile(
             r"^[A-Z]{1,4}(?:[FGHJKMNQUVXZ]\d{1,2}|\d{4})\.(CME|CBOT|NYMEX|COMEX|ICE|EUREX)$",
-            re.I,
+            re.IGNORECASE,
         ),
         "futures",
     ),
@@ -180,10 +179,10 @@ _MARKET_PATTERNS = [
     # than a contract cycle has to name the rolled series. It fell through to
     # the a_share default, which put a leveraged futures series under T+1 and
     # no shorting, and kept it out of the futures loader chain entirely.
-    (re.compile(_CN_FUTURES_MAIN_PATTERN, re.I), "futures"),
+    (re.compile(_CN_FUTURES_MAIN_PATTERN, re.IGNORECASE), "futures"),
     # Known crypto bases quoted in USD must precede the generic XXX/YYY FX rule.
     # ETH/USD is the public correlation API spelling; fiat GBP/USD remains FX.
-    (re.compile(r"^(?:BTC|ETH|BNB|SOL|ADA|DOGE)/USD$", re.I), "crypto"),
+    (re.compile(r"^(?:BTC|ETH|BNB|SOL|ADA|DOGE)/USD$", re.IGNORECASE), "crypto"),
     # Forex pairs: XXX/YYY or XXXXXX.FX
     (re.compile(r"^[A-Z]{3}/[A-Z]{3}$"), "forex"),
     (re.compile(r"^[A-Z]{6}\.FX$"), "forex"),
@@ -196,8 +195,8 @@ _MARKET_PATTERNS = [
     # The ``=X`` width stays {3,6} as it was on main: this PR only asserts
     # 6-character pairs, so narrowing it to {6} would drop shorter forms
     # already covered here for no gain.
-    (re.compile(r"^[A-Z]{3,6}=X$", re.I), "forex"),
-    (re.compile(r"^[A-Z]{2,5}=F$", re.I), "futures"),
+    (re.compile(r"^[A-Z]{3,6}=X$", re.IGNORECASE), "forex"),
+    (re.compile(r"^[A-Z]{2,5}=F$", re.IGNORECASE), "futures"),
     # Bare 6-character precious-metal / FX symbols (``XAUUSD``, ``XAGUSD``,
     # ``XPTUSD``, ``XPDUSD``, ``EURUSD``, ``GBPUSD``, ``USDJPY``, ``USDCHF``,
     # ``AUDUSD``, ``NZDUSD``, ``USDCAD``). Whitelist-restricted to a small
@@ -208,7 +207,7 @@ _MARKET_PATTERNS = [
     (
         re.compile(
             r"^(?:XAU|XAG|XPT|XPD|EUR|GBP|JPY|CHF|CAD|AUD|NZD|USD)[A-Z]{3}$",
-            re.I,
+            re.IGNORECASE,
         ),
         "forex",
     ),
@@ -222,7 +221,7 @@ _MARKET_PATTERNS = [
     # ``{1,5}`` covers every standard US ticker length while 6-char bare
     # forex/metals (caught by the whitelist above) and longer unknown codes
     # fall through to the a_share default.
-    (re.compile(r"^[A-Z]{1,5}$", re.I), "us_equity"),
+    (re.compile(r"^[A-Z]{1,5}$", re.IGNORECASE), "us_equity"),
 ]
 
 _CHINA_EXCHANGES = {"CFFEX", "SHFE", "DCE", "ZCE", "INE", "GFEX"}
@@ -280,7 +279,7 @@ _HK_COUNTER_CURRENCY_RANGES: tuple[tuple[int, int, str], ...] = (
     (10900, 10999, "USD"),  # derivative warrants
     (41500, 41599, "USD"),  # ETFs
 )
-_HK_CODE = re.compile(r"^(\d{3,5})\.HK$", re.I)
+_HK_CODE = re.compile(r"^(\d{3,5})\.HK$", re.IGNORECASE)
 
 
 def hk_counter_currency(code: str) -> str | None:
@@ -328,10 +327,8 @@ def code_currency(code: str) -> str:
         return _MARKET_CURRENCY[market]
     if market == "forex":
         pair = code.upper().replace("/", "")
-        if pair.endswith(".FX"):
-            pair = pair[:-3]
-        if pair.endswith("=X"):
-            pair = pair[:-2]
+        pair = pair.removesuffix(".FX")
+        pair = pair.removesuffix("=X")
         return pair[3:6] if len(pair) == 6 else "UNKNOWN:forex"
     if market == "futures":
         if _is_china_futures(code):
@@ -411,7 +408,7 @@ def _is_china_futures(code: str) -> bool:
     return False
 
 
-def _detect_submarket(codes: List[str]) -> str:
+def _detect_submarket(codes: list[str]) -> str:
     """Detect US, HK, Canada, or UK from symbol suffixes.
 
     Args:
@@ -479,7 +476,7 @@ def calc_crypto_funding_fee(
     symbol: str,
     bar: pd.Series,
     timestamp: pd.Timestamp,
-    positions: Dict[str, Position],
+    positions: dict[str, Position],
     funding_rate: float,
     applied_set: set,
     daily_done_set: set,
@@ -565,7 +562,7 @@ def _liquidation_mark(bar: pd.Series, pos: Position) -> float:
 def check_crypto_liquidation(
     symbol: str,
     bar: pd.Series,
-    positions: Dict[str, Position],
+    positions: dict[str, Position],
 ) -> bool:
     """Check if a crypto position should be liquidated.
 
@@ -625,7 +622,7 @@ def _normalize_symbol(symbol: str) -> str:
 def calc_forex_swap(
     symbol: str,
     timestamp: pd.Timestamp,
-    positions: Dict[str, Position],
+    positions: dict[str, Position],
     lot_size: float,
     last_swap_dates: dict,
 ) -> float:

@@ -337,6 +337,13 @@ number is inside its budget; the bundle grew 95.6 -> 98.0 KB (jobs store and `J`
 tsc + ruff clean. Bench **21/21** first run: bundle 98.0 KB, cold start 113.4 ms, tick-to-pixel 36.1 ms, chart pan 16.8 ms,
 worker pool cold start 187.6 ms (INFO).
 
+### Phase 12 step 3: BT engine core, rules, sandbox, API, migration 9 (2026-10-19; backend only)
+262 pytest + 19 xfail (18 Phase 12 steps 5-8 + the Phase 11 recording), 187 vitest, 77 Playwright, tsc + ruff clean.
+Bench **21/21** first run: cold start 124.8 ms, keystroke echo 14.7 ms, command to paint 17.8 ms, tick-to-pixel 36.2 ms,
+streaming frame 16.7 ms, layout load 36.6 ms, job frame-to-paint 27.9 ms, job submit 1.8 ms, cached job 1.7 ms,
+JOBS/APIKEYS open 19.5 ms; INFO: worker pool cold start 278.0 ms (was 187.6 ms; not gated).
+The BT budgets (10-year run < 300 ms, cached < 20 ms, BT open < 100 ms) are gated from step 4.
+
 Phase 3 optimizations (before → after):
 - **React 19 Suspense throttle.** First use of every lazy function cost ~300 ms
   (DES 323 ms, QR 315 ms, GP 318 ms, Q 326 ms) even with the chunk already downloaded: React holds

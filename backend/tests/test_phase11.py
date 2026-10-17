@@ -296,7 +296,7 @@ def _wait(client, job_id, states=("done", "error", "cancelled"), timeout=30.0) -
 def test_migration_8_adds_jobs_table():
     from openterm.db import MIGRATIONS
 
-    assert len(MIGRATIONS) == 8 and "CREATE TABLE jobs" in MIGRATIONS[7]
+    assert len(MIGRATIONS) >= 8 and "CREATE TABLE jobs" in MIGRATIONS[7]
 
 
 def test_job_hash_is_stable_and_order_free():

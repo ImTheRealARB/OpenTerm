@@ -25,6 +25,8 @@ def test_migrations_upgrade_an_existing_db(tmp_path):
         await db.execute("DROP TABLE IF EXISTS portfolios")
         await db.execute("DROP TABLE IF EXISTS alerts")
         await db.execute("DROP TABLE IF EXISTS jobs")
+        await db.execute("DROP TABLE IF EXISTS strategies")
+        await db.execute("DROP TABLE IF EXISTS bt_runs")
         await db.commit()
         await db.close()
         db = await open_db(path)

@@ -25,7 +25,7 @@ def _win_set(limit_bytes: int | None) -> None:
     global _job
     k32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
-    class IO_COUNTERS(ctypes.Structure):  # noqa: N801 - Win32 names
+    class IO_COUNTERS(ctypes.Structure):
         _fields_ = [(n, ctypes.c_ulonglong) for n in ("ReadOps", "WriteOps", "OtherOps", "ReadBytes", "WriteBytes",
                                                      "OtherBytes")]
 
@@ -65,13 +65,13 @@ def memory_cap(extra_mb: int):
     if sys.platform == "win32":
         base = me.memory_info().private
         _win_set(base + extra_mb * 1024 * 1024)
-        undo = lambda: _win_set(None)  # noqa: E731
+        undo = lambda: _win_set(None)
     else:
         import resource
 
         old = resource.getrlimit(resource.RLIMIT_AS)
         resource.setrlimit(resource.RLIMIT_AS, (me.memory_info().vms + extra_mb * 1024 * 1024, old[1]))
-        undo = lambda: resource.setrlimit(resource.RLIMIT_AS, old)  # noqa: E731
+        undo = lambda: resource.setrlimit(resource.RLIMIT_AS, old)
     try:
         yield
     except MemoryError as e:

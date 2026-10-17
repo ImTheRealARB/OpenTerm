@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/models.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths.
+# Changes: import paths; ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
 """Shared data models for backtest engines.
 
 Immutable dataclasses for positions, fills, trades, and equity snapshots.

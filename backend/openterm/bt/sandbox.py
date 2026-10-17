@@ -29,7 +29,7 @@ class SandboxError(ValueError):
 
 
 def _blocked_attr(name: str) -> bool:
-    return name.startswith("_") or name.startswith("read_") or name in BLOCKED_ATTRS
+    return name.startswith(("_", "read_")) or name in BLOCKED_ATTRS
 
 
 class _Checker(ast.NodeVisitor):
@@ -129,7 +129,7 @@ def load(code: str):
     disable_network()
     real_import = builtins.__import__
 
-    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):  # noqa: A002 - mirrors __import__
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
         if level or name not in ALLOWED_MODULES:
             raise ImportError(f"IMPORT {name} IS NOT ALLOWED")
         return real_import(name, globals, locals, fromlist, level)

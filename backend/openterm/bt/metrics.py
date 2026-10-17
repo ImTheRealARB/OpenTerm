@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/metrics.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths.
+# Changes: import paths; ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
 """Shared backtest metrics, extracted from daily_portfolio.py for reuse.
 
 Provides annualisation helpers, trade statistics, and full metric calculation.
@@ -8,7 +8,7 @@ Provides annualisation helpers, trade statistics, and full metric calculation.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -308,7 +308,7 @@ def bar_returns(close: Any, *, label: str = "") -> Any:
     return ret.replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
 
-def buy_and_hold_return(close: Any) -> Optional[float]:
+def buy_and_hold_return(close: Any) -> float | None:
     """Total buy-and-hold return as a price relative, not a compounded product.
 
     ``(1 + close.pct_change()).prod() - 1`` telescopes to ``P_end / P_start - 1``
@@ -336,7 +336,7 @@ def buy_and_hold_return(close: Any) -> Optional[float]:
     return last / first - 1.0
 
 
-def win_rate_and_stats(trades: List[TradeRecord]) -> Dict[str, Optional[float]]:
+def win_rate_and_stats(trades: list[TradeRecord]) -> dict[str, float | None]:
     """Win rate and P&L statistics from completed trades.
 
     Args:
@@ -398,7 +398,7 @@ def win_rate_and_stats(trades: List[TradeRecord]) -> Dict[str, Optional[float]]:
     }
 
 
-def by_symbol_stats(trades: List[TradeRecord]) -> Dict[str, Dict[str, Any]]:
+def by_symbol_stats(trades: list[TradeRecord]) -> dict[str, dict[str, Any]]:
     """Per-symbol trade statistics.
 
     Args:
@@ -407,7 +407,7 @@ def by_symbol_stats(trades: List[TradeRecord]) -> Dict[str, Dict[str, Any]]:
     Returns:
         {symbol: {count, win_rate, total_pnl, avg_pnl}}.
     """
-    groups: Dict[str, list] = {}
+    groups: dict[str, list] = {}
     for t in trades:
         groups.setdefault(t.symbol, []).append(t)
 
@@ -424,7 +424,7 @@ def by_symbol_stats(trades: List[TradeRecord]) -> Dict[str, Dict[str, Any]]:
     return result
 
 
-def by_exit_reason_stats(trades: List[TradeRecord]) -> Dict[str, Dict[str, Any]]:
+def by_exit_reason_stats(trades: list[TradeRecord]) -> dict[str, dict[str, Any]]:
     """Per-exit-reason trade statistics.
 
     Args:
@@ -433,7 +433,7 @@ def by_exit_reason_stats(trades: List[TradeRecord]) -> Dict[str, Dict[str, Any]]
     Returns:
         {reason: {count, total_pnl}}.
     """
-    groups: Dict[str, list] = {}
+    groups: dict[str, list] = {}
     for t in trades:
         groups.setdefault(t.exit_reason, []).append(t)
 
@@ -473,7 +473,7 @@ def calc_turnover_series(positions: pd.DataFrame) -> pd.Series:
 
 
 def calc_trade_turnover_series(
-    trades: List[TradeRecord],
+    trades: list[TradeRecord],
     equity_curve: pd.Series,
 ) -> pd.Series:
     """Per-bar turnover from actual entry and exit allocations.
@@ -516,7 +516,7 @@ def calc_trade_turnover_series(
 
 
 def calc_fill_turnover_series(
-    fills: List[FillRecord],
+    fills: list[FillRecord],
     equity_curve: pd.Series,
 ) -> pd.Series:
     """Per-bar turnover from immutable execution-fill evidence."""
@@ -558,13 +558,13 @@ def period_returns(equity_curve: pd.Series, initial_cash: float) -> pd.Series:
 
 def calc_metrics(
     equity_curve: pd.Series,
-    trades: List[TradeRecord],
+    trades: list[TradeRecord],
     initial_cash: float,
-    bars_per_year: Optional[int] = 252,
-    bench_ret: Optional[pd.Series] = None,
-    positions: Optional[pd.DataFrame] = None,
-    turnover_series: Optional[pd.Series] = None,
-) -> Dict[str, Any]:
+    bars_per_year: int | None = 252,
+    bench_ret: pd.Series | None = None,
+    positions: pd.DataFrame | None = None,
+    turnover_series: pd.Series | None = None,
+) -> dict[str, Any]:
     """Full set of performance metrics.
 
     Args:
@@ -724,7 +724,7 @@ def calc_metrics(
     }
 
 
-def _empty_metrics(initial_cash: float) -> Dict[str, Any]:
+def _empty_metrics(initial_cash: float) -> dict[str, Any]:
     """Return zero-valued metrics when no data is available."""
     return {
         "final_value": initial_cash,

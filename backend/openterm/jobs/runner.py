@@ -170,7 +170,7 @@ class JobRunner:
     async def _finish_hooked(self, job: dict, result) -> None:
         try:
             result = await self.on_done[job["kind"]](job, result)
-        except Exception as e:  # noqa: BLE001 - reported on the job
+        except Exception as e:
             log.exception("on_done hook failed for job %s", job["id"])
             self._finish(job, "error", error=redact(f"COULD NOT STORE THE RESULT: {type(e).__name__}: {e}"[:300]))
         else:

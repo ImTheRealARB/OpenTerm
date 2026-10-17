@@ -10,7 +10,12 @@ Filled from Phase 12 onwards. One row per ported file.
 
 | OpenTerm file | Source file | Project @ commit | Licence |
 |---|---|---|---|
-| _(none yet)_ | | | |
+| `openterm/bt/models.py` | `agent/backtest/models.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/metrics.py` | `agent/backtest/metrics.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/rebalance_mask.py` | `agent/backtest/rebalance_mask.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/base.py` | `agent/backtest/engines/base.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/global_equity.py` | `agent/backtest/engines/global_equity.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/hooks.py` | `agent/backtest/engines/_market_hooks.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 
 ### HKUDS/Vibe-Trading (MIT)
 

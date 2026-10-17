@@ -30,11 +30,15 @@ MIGRATIONS: list[str | list[str]] = [
     # 9: backtester (Phase 12). A migration may be a list of statements. strategies.kind 'python' | 'rule';
     # bt_runs blobs are msgpack + zlib (equity holds equity and benchmark), trimmed to the newest 200 by bt/store.py
     [
-        "CREATE TABLE strategies (name TEXT PRIMARY KEY, code TEXT NOT NULL, kind TEXT NOT NULL,"
-        " created_at REAL NOT NULL, updated_at REAL NOT NULL)",
-        "CREATE TABLE bt_runs (id TEXT PRIMARY KEY, strategy TEXT, config BLOB NOT NULL, data_fingerprint TEXT NOT NULL,"
-        " metrics BLOB NOT NULL, equity BLOB NOT NULL, trades BLOB NOT NULL, created_at REAL NOT NULL,"
-        " job_hash TEXT, meta BLOB NOT NULL)",
+        (
+            "CREATE TABLE strategies (name TEXT PRIMARY KEY, code TEXT NOT NULL, kind TEXT NOT NULL,"
+            " created_at REAL NOT NULL, updated_at REAL NOT NULL)"
+        ),
+        (
+            "CREATE TABLE bt_runs (id TEXT PRIMARY KEY, strategy TEXT, config BLOB NOT NULL,"
+            " data_fingerprint TEXT NOT NULL, metrics BLOB NOT NULL, equity BLOB NOT NULL, trades BLOB NOT NULL,"
+            " created_at REAL NOT NULL, job_hash TEXT, meta BLOB NOT NULL)"
+        ),
     ],
 ]
 

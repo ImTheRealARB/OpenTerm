@@ -1,6 +1,6 @@
 # Phase 12 spec: backtester (`BT`)
 
-Status: **approved as written 2026-10-19; tests set written (step 2); step 3 in progress.**
+Status: **approved as written 2026-10-19; steps 1-3 done; step 4 (BT panel) next.**
 
 Change made while building step 3: the default benchmark is Vibe's (equal-weight buy and hold of the traded
 symbols), not SPY, so API runs match the Vibe cross-check; `BENCH=SPY` (option `bench`) compares with an index.

@@ -1,25 +1,21 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-2 done, step 3 code written (WIP commit), not verified)._
+_Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-phases-11-19-a99b2b`; Phase 11 done except one recording; Phase 12 steps 1-3 done; step 4 (BT panel) next, waiting for the user's go-ahead)._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (paused 2026-10-19 mid step 12.3, user's request: context half full)
+## Resume here (2026-10-19, after step 12.3)
 - **Where the work is:** branch `claude/openterm-phases-11-19-a99b2b`, worktree `.claude/worktrees/openterm-phases-11-19-a99b2b`
   (open the new session there; a session cannot write into another worktree). `backend/.venv` and `frontend/node_modules`
-  are installed. Last commit: **"Phase 12 step 3 (WIP)"**. Nothing is running. Not merged into `main`; no remote.
-- **Step 12.3 state (engine core, rules, sandbox, API, migration 9): code written, `tests/test_phase12.py` green
-  (57 passed, 18 xfailed for steps 5-8).** `@CORE` markers are deleted; `test_uk_sdrt...`, `test_crypto_funding...`
-  and `test_runs_trimmed_to_200` lost their markers too (they pass early). Not yet done for step 3:
-  1. **ruff: 153 findings**, almost all in the ported Vibe files (`bt/engines/base.py` 80, `engines/hooks.py` 37,
-     `metrics.py` 23; 133 auto-fixable). Run `uv run ruff check . --fix`, then fix the rest by hand (B023 loop
-     variables, BLE001, etc.) without changing behaviour; re-run `tests/test_phase12.py` after (the Vibe cross-checks
-     catch any drift). A few are in our own files (`limits.py`, `sandbox.py`, `rules.py`, `db.py`, `runner.py`).
-  2. Full gates: `uv run pytest -q` (whole suite; job runner and migrations changed), `npx tsc --noEmit`,
-     `npx vitest run`, `npx playwright test`, `node scripts/bench.mjs` (port 8000 free). Record in `docs/PERFORMANCE.md`.
-     The BT bench budgets (10-year run < 300 ms, cached < 20 ms, BT open < 100 ms) are added in step 4 with the panel.
-  3. `THIRD_PARTY.md` table rows for the ported files (list below), then the step 3 commit.
+  are installed. Last commit: **"Phase 12 step 3: BT engine core..."**. Nothing is running. Not merged into `main`; no remote.
+- **Step 12.3 is done and committed.** Gates: 262 pytest + 19 xfail (18 for steps 5-8, 1 Phase 11 recording), ruff clean,
+  tsc clean, 187 vitest, 77 Playwright, bench 21/21 (numbers in `docs/PERFORMANCE.md`). Ruff cleanup: safe autofixes
+  (annotations, re flags, imports) plus `# noqa` where a fix would change Vibe behaviour; `pairwise` in `rebalance_mask.py`.
+  Three old migration tests needed migration 9's tables in their DROP lists. `THIRD_PARTY.md` has the six ported files.
+- **Next action: step 4, the `BT` panel** (frontend; `src/bt/ruleParse.ts`, `metricsFormat.ts`; delete the step 4
+  `it.fails` / `test.fail()` markers) plus the BT bench budgets (10-year run < 300 ms, cached < 20 ms, BT open < 100 ms).
+  The user asked to be asked before step 4 starts.
 - **What step 3 added** (`backend/openterm/bt/`):
   - Ported verbatim from Vibe-Trading `d0db2e3` by a copy script (header line names the source): `models.py`,
     `metrics.py`, `rebalance_mask.py`, `engines/hooks.py` (= `_market_hooks.py`), `engines/global_equity.py`,
@@ -38,8 +34,6 @@ _Last updated: 2026-10-19, session 6 (Phases 11-19 on branch `claude/openterm-ph
     uses the Windows keyring).
 - **Changed from the spec (tell the user):** default benchmark is Vibe's (equal-weight buy and hold of the traded
   symbols), not SPY; `BENCH=SPY` compares with an index. Needed so API runs match the Vibe cross-check exactly.
-- **Next after step 3:** step 4, the `BT` panel (frontend; `src/bt/ruleParse.ts`, `metricsFormat.ts`; delete the
-  `it.fails` / `test.fail()` markers for step 4) plus the BT bench budgets. Steps 3-cleanup and 4 can run in parallel.
 - **Still open from Phase 11:** the OpenRouter recording (`scripts/record_llm.py`, then delete `@RECORDING`).
 - **The user's working rules for Phases 11-19** (from their prompt; keep following them):
   1. Do one step per turn, in HANDOFF order. A step is a spec, a tests set, or one function's code.
@@ -265,9 +259,9 @@ Remaining:
    | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **done** (backend main session, frontend one Sonnet subagent); bench 21/21 |
    | 11.5 LLM gateway + health | **done except the recording** (main session, no subagents); bench 21/21 on the third run. `test_recorded_openrouter_stream...` waits for the OpenRouter key (`scripts/record_llm.py`) |
    | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | **done** 2026-10-19; bench 21/21 first run |
-   | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **written 2026-10-19, waiting for approval** |
+   | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **approved** 2026-10-19 |
    | 12.2 Tests set + recordings + Vibe cross-check values | **done** 2026-10-19: `backend/tests/test_phase12.py` (75; markers `CORE` step 3, `ENGINES` 5, `VALID` 6, `RUNS` 7, `IMPORT` 8), `frontend/src/bt/phase12.test.ts` (6), `frontend/e2e/phase12.spec.ts` (5); fixtures by `scripts/record_phase12.py`; expected values `bt_vibe_expected.json` by `scripts/vibe_crosscheck.py` |
-   | 12.3 Engine core, rules, sandbox, API, migration 9 | **in progress**: code + Phase 12 tests green (WIP commit); ruff cleanup, full gates, THIRD_PARTY rows left |
+   | 12.3 Engine core, rules, sandbox, API, migration 9 | **done** 2026-10-19: all gates green, bench 21/21, THIRD_PARTY rows added |
 
    The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
    (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,

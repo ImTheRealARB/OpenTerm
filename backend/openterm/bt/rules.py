@@ -25,7 +25,7 @@ INDICATORS = {"SMA", "EMA", "RSI", "HIGH", "LOW", "RET"}
 OPS = {">", "<", ">=", "<=", "CROSS>", "CROSS<"}
 INTERVALS = {"1D": "1d", "1W": "1wk"}
 RANGE_RE = re.compile(r"^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$")
-TOKEN_RE = re.compile(r"\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))", re.I)
+TOKEN_RE = re.compile(r"\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))", re.IGNORECASE)
 
 
 class RuleError(ValueError):

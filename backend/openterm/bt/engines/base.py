@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/base.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths, loaders/run card/artifacts removed, run_backtest -> run().
+# Changes: import paths, loaders/run card/artifacts removed, run_backtest -> run(); ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
 """Base backtest engine with shared bar-by-bar execution loop.
 
 All market engines inherit from BaseEngine and override market-rule methods.
@@ -9,19 +9,14 @@ market rule enforcement, metrics. Loading, signals and artifacts live outside.
 
 from __future__ import annotations
 
-import importlib
-import json
 import logging
 import math
 import re as _re
-import sys
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -32,7 +27,6 @@ from ..metrics import (
     by_symbol_stats,
     calc_fill_turnover_series,
     calc_metrics,
-    period_returns,
 )
 from ..models import EquitySnapshot, FillRecord, Position, TradeRecord
 from ..rebalance_mask import (
@@ -42,7 +36,7 @@ from ..rebalance_mask import (
 )
 
 
-def _json_safe_scalar_metrics(metrics: Dict[str, Any]) -> Dict[str, Any]:
+def _json_safe_scalar_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
     """Scalar metrics for stdout JSON; non-finite floats become null."""
     return {
         k: (None if isinstance(v, float) and not math.isfinite(v) else v)
@@ -86,7 +80,7 @@ class _ReductionOrder:
 
 
 _CRYPTO_RE = _re.compile(
-    r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+-USDT$|^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+/USDT$", _re.I
+    r"^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+-USDT$|^(?=[A-Z0-9]*[A-Z])[A-Z0-9]+/USDT$", _re.IGNORECASE
 )
 # Forex / metals in their explicit Yahoo notations, plus the bare-6-char
 # whitelist for XAUUSD / XAGUSD / XPTUSD / XPDUSD and G10 currencies. Mirrors
@@ -98,7 +92,7 @@ _FX_RE = _re.compile(
     r"|^[A-Z]{6}\.FX$"
     r"|^[A-Z]{6}=X$"
     r"|^(?:XAU|XAG|XPT|XPD|EUR|GBP|JPY|CHF|CAD|AUD|NZD|USD)[A-Z]{3}$",
-    _re.I,
+    _re.IGNORECASE,
 )
 
 
@@ -142,7 +136,7 @@ def _ffill_2d(arr: np.ndarray, limit: int = 5) -> np.ndarray:
 # ─── Signal alignment (reused from daily_portfolio logic) ───
 
 
-def evaluation_start_index(config: Dict[str, Any], dates: pd.DatetimeIndex) -> int:
+def evaluation_start_index(config: dict[str, Any], dates: pd.DatetimeIndex) -> int:
     """Return the first bar index that counts as performance.
 
     A long-lookback indicator needs history before the period the user asked
@@ -213,10 +207,10 @@ def evaluation_start_index(config: Dict[str, Any], dates: pd.DatetimeIndex) -> i
 
 
 def _align(
-    data_map: Dict[str, pd.DataFrame],
-    signal_map: Dict[str, pd.Series],
-    codes: List[str],
-    optimizer: Optional[Callable] = None,
+    data_map: dict[str, pd.DataFrame],
+    signal_map: dict[str, pd.Series],
+    codes: list[str],
+    optimizer: Callable | None = None,
 ) -> tuple:
     """Build aligned date index, close matrix, target-position matrix, return matrix.
 
@@ -384,15 +378,15 @@ class BaseEngine(ABC):
         #: the previous settlement, not the previous close.
         self.base_price_fields: tuple[str, ...] = ("pre_close",)
         self.capital: float = self.initial_capital
-        self.positions: Dict[str, Position] = {}
-        self.fill_records: List[FillRecord] = []
-        self.trades: List[TradeRecord] = []
-        self.equity_snapshots: List[EquitySnapshot] = []
+        self.positions: dict[str, Position] = {}
+        self.fill_records: list[FillRecord] = []
+        self.trades: list[TradeRecord] = []
+        self.equity_snapshots: list[EquitySnapshot] = []
         # Per-bar, post-fill portfolio weights.  These are deliberately kept
         # separate from ``target_pos``: market rules, lot rounding, fees, and
         # insufficient cash can all make the executed book differ from the
         # optimiser's request.
-        self.actual_position_snapshots: List[tuple[pd.Timestamp, Dict[str, float]]] = []
+        self.actual_position_snapshots: list[tuple[pd.Timestamp, dict[str, float]]] = []
         # Hold mode executes a target change only when the direction flips or
         # the target reaches zero, so a same-direction resize is dropped. That
         # is a legitimate mode -- it is what "enter once, hold to exit" means --
@@ -400,8 +394,8 @@ class BaseEngine(ABC):
         # (#918). The previous target is what makes the difference visible:
         # comparing against the CURRENT weight would fire on every bar of a
         # buy-and-hold position, whose weight drifts with price by design.
-        self._last_target_weight: Dict[str, float] = {}
-        self.dropped_target_adjustments: List[Dict[str, Any]] = []
+        self._last_target_weight: dict[str, float] = {}
+        self.dropped_target_adjustments: list[dict[str, Any]] = []
         # Opening plans the engine wanted but could not take, keyed
         # (symbol, reason). A sleeve whose target notional rounds below one
         # lot trades zero times while the run reports a normal result
@@ -464,7 +458,7 @@ class BaseEngine(ABC):
             Slipped price.
         """
 
-    def historical_base_price(self, symbol: str, bar: pd.Series) -> Optional[float]:
+    def historical_base_price(self, symbol: str, bar: pd.Series) -> float | None:
         """Return a reference price that is known before this bar's fill.
 
         Price-limit bands must be derived from a base price the market already
@@ -513,7 +507,7 @@ class BaseEngine(ABC):
                     return float(close) / denominator
         return None
 
-    def prospective_fill_price(self, bar: pd.Series, direction: int) -> Optional[float]:
+    def prospective_fill_price(self, bar: pd.Series, direction: int) -> float | None:
         """Return the price this engine would fill at on this bar.
 
         Mirrors the sizing path: the bar's open, with slippage applied in the
@@ -537,7 +531,7 @@ class BaseEngine(ABC):
 
     def limit_band(
         self, symbol: str, bar: pd.Series, limit: float
-    ) -> Optional[tuple[float, float]]:
+    ) -> tuple[float, float] | None:
         """Return the (lower, upper) legal price band for this bar.
 
         Args:
@@ -563,8 +557,8 @@ class BaseEngine(ABC):
     def before_rebalance_bar(
         self,
         timestamp: pd.Timestamp,
-        data_map: Dict[str, pd.DataFrame],
-        codes: List[str],
+        data_map: dict[str, pd.DataFrame],
+        codes: list[str],
     ) -> bool:
         """Run pre-execution hooks; return True to stop after this snapshot."""
         return False
@@ -572,8 +566,8 @@ class BaseEngine(ABC):
     def after_rebalance_bar(
         self,
         timestamp: pd.Timestamp,
-        data_map: Dict[str, pd.DataFrame],
-        codes: List[str],
+        data_map: dict[str, pd.DataFrame],
+        codes: list[str],
     ) -> bool:
         """Run the legacy post-fill bar hooks; return True to stop."""
         for code in codes:
@@ -594,7 +588,7 @@ class BaseEngine(ABC):
         released_margin: float = 0.0,
     ) -> None:
         """Allow engines to update risk state/evidence after a committed delta fill."""
-        return None
+        return
 
     #: Rejection causes that mean the engine WANTED a position and could not
     #: take it. ``no_target_weight`` and ``already_held`` are excluded: they
@@ -608,7 +602,7 @@ class BaseEngine(ABC):
         "insufficient_capital",
     )
 
-    def _plan_rejection_metrics(self) -> Dict[str, Any]:
+    def _plan_rejection_metrics(self) -> dict[str, Any]:
         """Summarise opening plans the engine wanted but could not take.
 
         A rejected plan is invisible in the result otherwise: the run reports a
@@ -622,7 +616,7 @@ class BaseEngine(ABC):
             ``unfilled_plan_rejections_by_symbol`` (``{symbol: {reason: n}}``),
             the latter empty when nothing was rejected.
         """
-        by_symbol: Dict[str, Dict[str, int]] = {}
+        by_symbol: dict[str, dict[str, int]] = {}
         total = 0
         for (symbol, reason), count in self.plan_rejections.items():
             if reason not in self.UNFILLED_PLAN_REASONS:
@@ -634,7 +628,7 @@ class BaseEngine(ABC):
             "unfilled_plan_rejections_by_symbol": by_symbol,
         }
 
-    def _engine_diagnostics(self) -> Dict[str, Any]:
+    def _engine_diagnostics(self) -> dict[str, Any]:
         """Per-engine facts about how this run was priced.
 
         Default empty. An engine overrides this to state something the metrics
@@ -722,12 +716,12 @@ class BaseEngine(ABC):
 
     def run(
         self,
-        data_map: Dict[str, pd.DataFrame],
-        signal_map: Dict[str, pd.Series],
+        data_map: dict[str, pd.DataFrame],
+        signal_map: dict[str, pd.Series],
         bars_per_year: int | None = 252,
-        bench_ret: Optional[pd.Series] = None,
-        benchmark_metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        bench_ret: pd.Series | None = None,
+        benchmark_metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """In-memory core of Vibe's ``run_backtest`` (OpenTerm: data loading, signal generation, artifacts and the
         run card live outside the engine). Steps 3-6 are unchanged: align, warm-up cut, bar loop, metrics.
 
@@ -735,7 +729,7 @@ class BaseEngine(ABC):
         """
         for code, sig in signal_map.items():
             if not isinstance(sig, pd.Series):
-                raise ValueError(f"SignalEngine.generate() returned {type(sig).__name__} for {code!r}, expected a Series")
+                raise ValueError(f"SignalEngine.generate() returned {type(sig).__name__} for {code!r}, expected a Series")  # noqa: TRY004
         valid_codes = sorted(c for c in signal_map if c in data_map)
         if not valid_codes:
             raise ValueError("NO SIGNALS: the strategy returned no series for the loaded symbols")
@@ -792,11 +786,11 @@ class BaseEngine(ABC):
     def _execute_bars(
         self,
         dates: pd.DatetimeIndex,
-        data_map: Dict[str, pd.DataFrame],
+        data_map: dict[str, pd.DataFrame],
         close_df: pd.DataFrame,
         target_pos: pd.DataFrame,
-        codes: List[str],
-        close_val_df: Optional[pd.DataFrame] = None,
+        codes: list[str],
+        close_val_df: pd.DataFrame | None = None,
     ) -> None:
         """Bar-by-bar execution with market rule enforcement."""
         # Pre-extract numpy arrays for O(1) indexed access instead of DataFrame.at[]
@@ -826,7 +820,7 @@ class BaseEngine(ABC):
             # Rebalances happen at the bar open, so using close_df[ts] here
             # would let the yet-unknown decision-bar close affect order size.
             equity = self._calc_open_equity(data_map, close_df, ts)
-            target_weights: Dict[str, Optional[float]] = {}
+            target_weights: dict[str, float | None] = {}
             for c in codes:
                 try:
                     val = _target_arr[i, _code_to_col[c]]
@@ -835,7 +829,7 @@ class BaseEngine(ABC):
                         if stop_run or not execute_targets
                         else (float(val) if not np.isnan(val) else 0.0)
                     )
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     target_weights[c] = None
                     logger.warning("Target weight failed for %s at %s: %s", c, ts, exc)
 
@@ -862,7 +856,7 @@ class BaseEngine(ABC):
                 if target_dir == 0 or target_dir != current_pos.direction:
                     try:
                         self._rebalance(c, 0.0, data_map.get(c), ts, equity)
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001
                         logger.warning(
                             "Rebalance close failed for %s at %s: %s", c, ts, exc
                         )
@@ -872,7 +866,7 @@ class BaseEngine(ABC):
             # one common scale factor to all target weights.  This preserves
             # portfolio proportions and makes fills independent of input code
             # order; sequential cash clipping would privilege the first name.
-            open_targets: list[tuple[str, float, Optional[pd.DataFrame]]] = []
+            open_targets: list[tuple[str, float, pd.DataFrame | None]] = []
             for c in sorted(codes):
                 target_w = target_weights.get(c)
                 if target_w is None:
@@ -888,16 +882,16 @@ class BaseEngine(ABC):
 
             def _plans(scale: float, *, observe: bool) -> list[_OpenOrder]:
                 result: list[_OpenOrder] = []
-                for c, target_w, frame in open_targets:
+                for c, target_w, frame in open_targets:  # noqa: B023
                     try:
                         order = self._plan_open_order(
-                            c, target_w * scale, frame, ts, equity, observe=observe
+                            c, target_w * scale, frame, ts, equity, observe=observe  # noqa: B023
                         )
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001
                         logger.warning(
                             "Rebalance open plan failed for %s at %s: %s",
                             c,
-                            ts,
+                            ts,  # noqa: B023
                             exc,
                         )
                         continue
@@ -1015,7 +1009,7 @@ class BaseEngine(ABC):
 
     def _calc_open_equity(
         self,
-        data_map: Dict[str, pd.DataFrame],
+        data_map: dict[str, pd.DataFrame],
         close_df: pd.DataFrame,
         ts: pd.Timestamp,
     ) -> float:
@@ -1110,7 +1104,7 @@ class BaseEngine(ABC):
         self,
         symbol: str,
         target_weight: float,
-        df: Optional[pd.DataFrame],
+        df: pd.DataFrame | None,
         ts: pd.Timestamp,
         equity: float,
     ) -> None:
@@ -1147,13 +1141,13 @@ class BaseEngine(ABC):
         self,
         symbol: str,
         target_weight: float,
-        df: Optional[pd.DataFrame],
+        df: pd.DataFrame | None,
         ts: pd.Timestamp,
         equity: float,
         *,
         allow_existing: bool = False, require_positive_price: bool = False,
         observe: bool = True,
-    ) -> Optional[_OpenOrder]:
+    ) -> _OpenOrder | None:
         """Price an opening order without mutating portfolio state.
 
         ``observe=False`` plans a trial inside a capital-fit search: a rejection
@@ -1222,7 +1216,7 @@ class BaseEngine(ABC):
     _DROPPED_ADJUSTMENT_LOG_LIMIT = 3
 
     def _record_dropped_target_adjustments(
-        self, target_weights: Dict[str, Optional[float]], ts: pd.Timestamp
+        self, target_weights: dict[str, float | None], ts: pd.Timestamp
     ) -> None:
         """Note every same-direction resize that hold mode is about to drop.
 
@@ -1273,8 +1267,8 @@ class BaseEngine(ABC):
 
     def _execute_target_rebalance(
         self,
-        target_weights: Dict[str, Optional[float]], data_map: Dict[str, pd.DataFrame],
-        ts: pd.Timestamp, equity: float, codes: List[str],
+        target_weights: dict[str, float | None], data_map: dict[str, pd.DataFrame],
+        ts: pd.Timestamp, equity: float, codes: list[str],
     ) -> None:
         """Plan every target delta, preflight capital, then commit the basket."""
         reductions: list[_ReductionOrder] = []
@@ -1429,7 +1423,7 @@ class BaseEngine(ABC):
         opens: list[_OpenOrder],
         reductions: list[_ReductionOrder],
         ts: pd.Timestamp,
-    ) -> Optional[list[_OpenOrder]]:
+    ) -> list[_OpenOrder] | None:
         """Scale the open sleeve by one common factor so the basket fits.
 
         #1274: a fully invested target basket plus commission overdrafts by a
@@ -1491,7 +1485,7 @@ class BaseEngine(ABC):
                 scaled.append(candidate)
             return scaled
 
-        fitted: Optional[list[_OpenOrder]] = None
+        fitted: list[_OpenOrder] | None = None
         low, high = 0.0, 1.0
         for _ in range(50):
             mid = (low + high) / 2.0
@@ -1684,9 +1678,9 @@ class BaseEngine(ABC):
         self,
         close_df: pd.DataFrame,
         ts: pd.Timestamp,
-        codes: List[str],
+        codes: list[str],
         equity: float,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Return post-fill, mark-to-market weights for the currently held book."""
         weights = {code: 0.0 for code in codes}
         if abs(equity) <= 1e-12:
@@ -1708,7 +1702,7 @@ class BaseEngine(ABC):
             weights[symbol] = pos.direction * margin_value / equity
         return weights
 
-    def _actual_positions_frame(self, codes: List[str]) -> pd.DataFrame:
+    def _actual_positions_frame(self, codes: list[str]) -> pd.DataFrame:
         """Materialize recorded post-fill weights as an artifact-ready frame."""
         if not self.actual_position_snapshots:
             return pd.DataFrame(columns=codes, dtype=float)
@@ -1854,10 +1848,10 @@ class BaseEngine(ABC):
         symbol: str,
         fallback: float,
         *,
-        _arr: "np.ndarray | None" = None,
-        _row: "int | None" = None,
-        _col: "int | None" = None,
-        _val_arr: "np.ndarray | None" = None,
+        _arr: np.ndarray | None = None,
+        _row: int | None = None,
+        _col: int | None = None,
+        _val_arr: np.ndarray | None = None,
     ) -> float:
         """Get close price with fallback. Uses array fast-path when available.
 

@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/global_equity.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths.
+# Changes: import paths; ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
 """Global equity (US / HK / Canada / UK) backtest engine.
 
 Market rules:
@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import logging
 import math
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 import pandas as pd

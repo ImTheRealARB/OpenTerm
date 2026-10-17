@@ -1,17 +1,18 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/rebalance_mask.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths.
+# Changes: import paths; zip(x, x[1:]) -> itertools.pairwise (same pairs); ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
 """Execution-date contract for calendar-triggered portfolio rebalancing."""
 
 from __future__ import annotations
 
 from bisect import bisect_left
 from datetime import date
+from itertools import pairwise
 from typing import TypeAlias, cast
 
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
-RebalanceMask: TypeAlias = str | list[str] | None
+RebalanceMask: TypeAlias = str | list[str] | None  # noqa: UP040
 
 
 def validate_rebalance_mask(value: RebalanceMask) -> RebalanceMask:
@@ -34,7 +35,7 @@ def validate_rebalance_mask(value: RebalanceMask) -> RebalanceMask:
         )
     for item in value:
         if not isinstance(item, str):
-            raise ValueError("rebalance_mask date entries must be ISO date strings")
+            raise ValueError("rebalance_mask date entries must be ISO date strings")  # noqa: TRY004
         try:
             parsed = date.fromisoformat(item)
         except ValueError:
@@ -67,7 +68,7 @@ def resolve_rebalance_dates(
         bounds: list[int] = dates.as_unit("ns").asi8.tolist()
         spacings = [
             current - previous
-            for previous, current in zip(bounds, bounds[1:])
+            for previous, current in pairwise(bounds)
             if current > previous
         ]
         if spacings:
