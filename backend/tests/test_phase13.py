@@ -21,7 +21,7 @@ def xf(group: str, step: int):
 
 
 EST = lambda f: f  # step 2 landed
-CORP = xf("CORP", 3)
+CORP = lambda f: f  # step 3 landed
 VAL = xf("VAL", 4)
 FUND = xf("FUND", 5)
 KEYED = xf("KEYED", 6)

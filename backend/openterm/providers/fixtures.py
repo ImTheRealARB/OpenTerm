@@ -261,6 +261,16 @@ def _route_phase13(request: httpx.Request) -> httpx.Response | None:
         if name:
             return _load(name)
         return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
+    if request.url.host == "api.nasdaq.com":
+        quote = {"/api/quote/AAPL/dividends": "nasdaq_dividends_aapl", "/api/quote/AAPL/short-interest": "nasdaq_shortinterest_aapl"}
+        if p in quote:
+            return _load(quote[p])
+        if p == "/api/ipo/calendar":
+            name = f"nasdaq_ipo_{q.get('date')}"
+            return _load(name) if (FIXTURES / f"{name}.json").exists() else httpx.Response(200, json={"data": None, "status": {"rCode": 400}})
+    if request.url.host == "cdn.finra.org" and p.startswith("/equity/regsho/daily/CNMSshvol"):
+        name = "finra_shvol_" + p.rsplit("CNMSshvol", 1)[1].removesuffix(".txt")
+        return _load(name) if (FIXTURES / f"{name}.json").exists() else httpx.Response(404, text="not recorded")
     if p.startswith("/v8/finance/chart/") and q.get("events") == "div,splits":
         return _load("yahoo_chart_aapl_events") if p.endswith("/AAPL") else _load("yahoo_chart_404")
     return None

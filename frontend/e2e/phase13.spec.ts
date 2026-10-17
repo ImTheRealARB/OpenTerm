@@ -147,6 +147,64 @@ test("a section that needs a key shows KEY REQUIRED next to the data", async ({ 
   await expect(selected(page)).toContainText("CURRENT QTR");
 });
 
+test("IPO: month argument, four sections, bad month shows usage", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/research/ipo?**", (r) => {
+    asked.push(new URL(r.request().url()).search);
+    return r.fulfill({
+      json: env(
+        payload(
+          "IPO · 2026-10",
+          [
+            { id: "upcoming", title: "UPCOMING", note: "NONE SCHEDULED IN THIS MONTH", columns: [c("symbol", "SYMBOL")], rows: [] },
+            { id: "priced", title: "PRICED", note: null, columns: [c("symbol", "SYMBOL"), c("company", "COMPANY"), c("price", "PRICE", "price"), c("amount", "OFFER", "money")], rows: [{ symbol: "IAM", company: "Iambic Therapeutics, Inc.", price: 16, amount: 150000000 }] },
+          ],
+          [{ label: "MONTH", value: "2026-10" }],
+          { symbol: null },
+        ),
+        { source: "nasdaq_research" },
+      ),
+    });
+  });
+  await run(page, "IPO 2026-10");
+  await expect(panel(page)).toContainText("IPO · 2026-10");
+  await expect(panel(page)).toContainText("NONE SCHEDULED IN THIS MONTH");
+  expect(asked[0]).toContain("month=2026-10");
+  await page.keyboard.press("2");
+  await expect(selected(page)).toContainText("Iambic Therapeutics, Inc.");
+  await expect(selected(page)).toContainText("16.00");
+  await expect(selected(page)).toContainText("150.00M");
+  await run(page, "IPO 2026-13");
+  await expect(panel(page)).toContainText("USAGE: IPO [YYYY-MM]");
+});
+
+test("SI: interest change is coloured, the volume section lists FINRA days, an unavailable FINRA says so", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/research/si?**", (r) =>
+    r.fulfill({
+      json: env(
+        payload(
+          "SI AAPL · SHORT INTEREST",
+          [
+            { id: "interest", title: "SHORT INTEREST BY SETTLEMENT DATE", note: null, columns: [c("date", "SETTLED", "date"), c("interest", "SHORT INTEREST", "int"), c("change", "CHANGE", "pct")], rows: [{ date: "2026-09-30", interest: 120763539, change: -0.062 }] },
+            { id: "volume", title: "FINRA DAILY SHORT SALE VOLUME (REG SHO)", note: "NO FINRA DAILY FILE FOUND IN THE LOOK-BACK WINDOW", columns: [c("date", "DATE", "date")], rows: [] },
+          ],
+          [{ label: "SHORT % OF FLOAT", value: "0.83%", raw: 0.0083 }],
+          { notes: ["FINRA DAILY SHORT VOLUME UNAVAILABLE (finra: unavailable)"] },
+        ),
+        { source: "nasdaq_research" },
+      ),
+    }),
+  );
+  await run(page, "AAPL SI");
+  await expect(panel(page)).toContainText("SHORT % OF FLOAT 0.83%");
+  await expect(selected(page)).toContainText("120,763,539");
+  await expect(selected(page)).toContainText("-6.20%");
+  await expect(panel(page)).toContainText("FINRA DAILY SHORT VOLUME UNAVAILABLE");
+  await page.keyboard.press("v");
+  await expect(panel(page)).toContainText("NO FINRA DAILY FILE FOUND IN THE LOOK-BACK WINDOW");
+});
+
 test("a missing key from the backend (424) shows the shared KEY REQUIRED line", async ({ page }) => {
   await setup(page);
   await page.route("**/api/research/ee?**", (r) =>

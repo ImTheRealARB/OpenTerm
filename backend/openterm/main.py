@@ -36,6 +36,8 @@ MAX_SUBS_PER_CLIENT = 2000
 DEFAULT_ORDER |= {
     "estimates": ["yahoo_research"], "ratings": ["yahoo_research"], "officers": ["yahoo_research"],
     "keystats": ["yahoo_research"], "fund_info": ["yahoo_research"], "corp_events": ["yahoo_research"],
+    "dividends": ["nasdaq_research", "yahoo_research"], "splits": ["yahoo_research"], "ipo": ["nasdaq_research"],
+    "short_interest": ["nasdaq_research", "yahoo_research"], "short_volume": ["finra"],
 }
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}

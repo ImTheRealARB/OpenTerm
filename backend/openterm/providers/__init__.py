@@ -126,3 +126,7 @@ def keyed_status(settings: Settings, keys=None) -> list[dict]:
 from .research_yahoo import YahooResearchProvider
 
 ADAPTERS["yahoo_research"] = YahooResearchProvider
+from .finra import FinraProvider
+from .research_nasdaq import NasdaqResearchProvider
+
+ADAPTERS.update({"nasdaq_research": NasdaqResearchProvider, "finra": FinraProvider})
