@@ -538,6 +538,8 @@ async function main() {
   add("Pattern scan (candles + SMC) 5,000 bars p95", r.p19["p19.patternsMs"] ?? null, 40, "ms", "PERF CALC, TEST DATA");
   add("SEAS MONTH+WOY+DOM 10,000 daily bars p95", r.p19["p19.seasMs"] ?? null, 15, "ms", "PERF CALC, TEST DATA");
   add("Drawing hit test, 200 drawings p95", r.p19["p19.hitMs"] ?? null, 1, "ms", "PERF CALC, TEST DATA");
+  add("IMAP treemap layout, 5,000 tiles p95", r.p19["p19.treemapMs"] ?? null, 30, "ms", "PERF CALC, TEST DATA");
+  add("IMAP canvas paint, 5,000 tiles p95", r.p19["p19.imapPaintMs"] ?? null, 16, "ms", "PERF CALC, 1600x900, TEST DATA");
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

@@ -15,6 +15,7 @@ import orjson
 from fastapi import WebSocket
 
 from ..symbols import SYNTHETIC_RE
+from ..world.tickbuf import TickBuffers
 from .tick import Tick
 
 log = logging.getLogger("openterm.hub")
@@ -65,6 +66,7 @@ class Hub:
         self.iex = iex  # Phase 13: real-time IEX trades (Alpaca keys); None or keyless = Yahoo only
         self.kite = kite  # Phase 15: Kite ticker (login); None, logged out or fixture mode = Yahoo only
         self.on_tick = on_tick
+        self.tickbuf = TickBuffers()  # Phase 19: GIP reads the ticks seen since the session began
         self.clients: set[Client] = set()
         self.refs: dict[str, int] = {}
         self._pending: dict[str, Tick] = {}
@@ -93,6 +95,7 @@ class Hub:
         if self.kite is not None and tick.source in ("y", "p") and self.kite.covers(tick.symbol):
             return  # likewise for the Kite ticker on Indian symbols
         self.ticks_in += 1
+        self.tickbuf.add(tick)
         self._pending[tick.symbol] = tick
         if self.on_tick:
             self.on_tick(tick)

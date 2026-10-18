@@ -54,6 +54,8 @@ const defs: FunctionDef[] = [
   { code: "HDS", title: "Holders (13F)", needsSecurity: true, phase: 6, load: () => import("./HDS") },
   { code: "OWN", title: "Ownership / insiders", needsSecurity: true, phase: 6, load: () => import("./OWN") },
   { code: "EQS", title: "Equity screener", needsSecurity: false, argsSchema: "[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]", phase: 9, load: () => import("./EQS") },
+  { code: "GIP", title: "Intraday tick chart (candles built from the live ticks seen since the session began)", needsSecurity: true, argsSchema: "[1S|5S|15S|1M]", phase: 19, load: () => import("./GIP"), idlePreload: false },
+  { code: "IMAP", title: "Heat map of the equity universe (size = market cap, colour = % change)", needsSecurity: false, argsSchema: "[SECTOR|INDUSTRY|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]", phase: 19, load: () => import("./IMAP") },
   { code: "SEAS", title: "Seasonality (average return by month, weekday, day of month, ISO week)", needsSecurity: true, argsSchema: "[MONTH|WEEKDAY|DOM|WOY]", phase: 19, load: () => import("./SEAS") },
   { code: "CORR", title: "Correlation matrix", needsSecurity: false, argsSchema: "SYM SYM... [1M..MAX]", phase: 9, load: () => import("./CORR") },
   { code: "COMP", title: "Peer comparison", needsSecurity: true, phase: 9, load: () => import("./COMP") },

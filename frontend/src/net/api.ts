@@ -828,7 +828,26 @@ export interface ChartEvents {
   source: string;
 }
 
+/** GIP: bars built from the ticks the server has seen. `v` is null when no tick carried volume. */
+export interface TickBars {
+  symbol: string;
+  bar_s: number;
+  ticks: number;
+  since_ms: number | null;
+  last_ms: number | null;
+  synthetic: boolean;
+  sessions: number;
+  source_code: string | null;
+  t: number[];
+  o: number[];
+  h: number[];
+  l: number[];
+  c: number[];
+  v: number[] | null;
+}
+
 export const worldApi = {
+  ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
   events: (symbol: string, fresh = false) =>
     request<Envelope<ChartEvents>>(`/api/world/events?${qs({ symbol })}`, fresh ? 0 : 120_000),

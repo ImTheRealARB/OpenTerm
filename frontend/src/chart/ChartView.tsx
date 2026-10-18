@@ -79,7 +79,7 @@ interface Props {
 }
 
 export const INTERVAL_S: Record<string, number> = {
-  "1m": 60, "2m": 120, "5m": 300, "15m": 900, "30m": 1800, "60m": 3600, "90m": 5400,
+  "1s": 1, "5s": 5, "15s": 15, "1m": 60, "2m": 120, "5m": 300, "15m": 900, "30m": 1800, "60m": 3600, "90m": 5400,
   "1d": 86400, "1wk": 7 * 86400, "1mo": 31 * 86400,
 };
 
@@ -91,13 +91,14 @@ function themeColors() {
 
 const toTime = (s: number) => s as UTCTimestamp;
 
-function formatters(tz: string, intraday: boolean) {
+function formatters(tz: string, intraday: boolean, seconds = false) {
   const opts = { timeZone: tz } as const;
-  const time = new Intl.DateTimeFormat("en-GB", { ...opts, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const sec = seconds ? ({ second: "2-digit" } as const) : {};
+  const time = new Intl.DateTimeFormat("en-GB", { ...opts, hour: "2-digit", minute: "2-digit", ...sec, hourCycle: "h23" });
   const day = new Intl.DateTimeFormat("en-GB", { ...opts, day: "2-digit", month: "short" });
   const month = new Intl.DateTimeFormat("en-GB", { ...opts, month: "short" });
   const year = new Intl.DateTimeFormat("en-GB", { ...opts, year: "numeric" });
-  const full = new Intl.DateTimeFormat("en-GB", { ...opts, day: "2-digit", month: "short", year: "numeric", ...(intraday ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } : {}) });
+  const full = new Intl.DateTimeFormat("en-GB", { ...opts, day: "2-digit", month: "short", year: "numeric", ...(intraday ? { hour: "2-digit", minute: "2-digit", ...sec, hourCycle: "h23" } : {}) });
   const ms = (t: Time) => (t as number) * 1000;
   return {
     tick: (t: Time, type: TickMarkType) =>
@@ -115,7 +116,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const extra = useRef<ISeriesApi<SeriesType>[]>([]);
   const last = useRef<{ t: number; o: number; h: number; l: number; c: number; v: number } | null>(null);
   const cross = useRef({ on: false, idx: -1 });
-  const fmt = useRef(formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400));
+  const fmt = useRef(formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400, (INTERVAL_S[data.interval] ?? 86400) < 60));
   const worker = useRef<Worker | null>(null);
   const reqId = useRef(0);
   // Phase 19 refs: the overlay canvas, the marker plugin of the price series, the latest props the overlay paints from.
@@ -222,9 +223,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const chart = chartRef.current;
     if (!chart) return;
     const c = colors.current;
-    fmt.current = formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400);
+    fmt.current = formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400, (INTERVAL_S[data.interval] ?? 86400) < 60);
     chart.applyOptions({
-      timeScale: { timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, tickMarkFormatter: fmt.current.tick },
+      timeScale: { timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: (INTERVAL_S[data.interval] ?? 86400) < 60, tickMarkFormatter: fmt.current.tick },
     });
     for (const s of [main.current, vol.current, ...extra.current]) if (s) chart.removeSeries(s);
     extra.current = [];

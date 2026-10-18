@@ -11,6 +11,8 @@ import { candlePatterns, smc } from "../chart/patterns";
 import { gauges } from "../perf/metrics";
 import { seasonality } from "./seasMath";
 import { hitTest, type Drawing, type Geo } from "../chart/drawings";
+import { paintTreemap } from "./imapPaint";
+import { treemap } from "./treemap";
 
 function rng(seed: number) {
   return () => {
@@ -159,10 +161,31 @@ export function CalcBench() {
       for (let j = 0; j < 20; j++) hitTest(ds, 300 + j * 7, 930 + (j % 5), geo, 6);
       hit.push((performance.now() - t0) / 20);
     }
+    // IMAP: 5,000 tiles in 12 groups on a 1600 x 900 canvas, layout then one paint pass.
+    const groups = Array.from({ length: 12 }, (_, g) => ({ key: `G${g}`, items: [] as { id: number; value: number }[] }));
+    const rows = Array.from({ length: 5000 }, (_, i) => ({ sym: `T${i}`, pct: (r() - 0.5) * 8 }));
+    rows.forEach((_, i) => groups[i % 12].items.push({ id: i, value: Math.exp(r() * 7) }));
+    const cv = document.createElement("canvas");
+    cv.width = 1600;
+    cv.height = 900;
+    const ctx = cv.getContext("2d")!;
+    const palette = { bg: "#000", fg: "#fa0", dim: "#a60", up: "#0c0", down: "#e22", sel: "#210", line: "#430", font: "monospace" };
+    const lay: number[] = [];
+    const paint: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      let t0 = performance.now();
+      const l = treemap(groups, 1600, 900, { header: 14, pad: 1 });
+      lay.push(performance.now() - t0);
+      t0 = performance.now();
+      paintTreemap(ctx, 1600, 900, l, rows, palette, 0);
+      paint.push(performance.now() - t0);
+    }
+    gauges.set("p19.treemapMs", p95(lay));
+    gauges.set("p19.imapPaintMs", p95(paint));
     gauges.set("p19.hitMs", p95(hit));
     gauges.set("p19.patternsMs", p95(pat));
     gauges.set("p19.seasMs", p95(seas));
-    return { pat: p95(pat), seas: p95(seas), hit: p95(hit), n, dn };
+    return { pat: p95(pat), seas: p95(seas), hit: p95(hit), lay: p95(lay), paint: p95(paint), n, dn };
   }, []);
   return (
     <div>
@@ -170,6 +193,7 @@ export function CalcBench() {
       <div>PATTERNS + SMC, {res.n} BARS: {res.pat.toFixed(2)} MS P95</div>
       <div>SEAS MONTH + WOY + DOM, {res.dn} DAILY BARS: {res.seas.toFixed(2)} MS P95</div>
       <div>HIT TEST OVER 200 DRAWINGS: {res.hit.toFixed(3)} MS P95</div>
+      <div>IMAP 5000 TILES: LAYOUT {res.lay.toFixed(2)} MS · PAINT {res.paint.toFixed(2)} MS P95</div>
     </div>
   );
 }

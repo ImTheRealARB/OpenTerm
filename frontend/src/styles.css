@@ -152,3 +152,9 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .keyfield { display: block; white-space: nowrap; }
 .keyedit input { background: var(--bg); color: var(--fg); border: 1px solid var(--fg-dim); font: inherit; width: 44ch; padding: 0 4px; outline: none; }
 .keyedit input:focus { border-color: var(--accent); }
+
+/* --- Phase 19 --- */
+.imap { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+.imap canvas { display: block; }
+.imap-legend { flex: none; display: flex; gap: 1px; margin: 2px 0; }
+.imap-legend span { color: var(--bg); padding: 0 6px; }

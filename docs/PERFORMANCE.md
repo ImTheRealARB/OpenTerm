@@ -488,3 +488,17 @@ Fixture mode replays a recorded OpenRouter answer (`llm_tool_turn1.txt` / `llm_t
 Re-bench on a rested machine before calling the phase closed.
 
 **Phase 16 close (2026-10-18, rested machine): 31 of 31 pass.** BT 10-year 191.3 ms (limit 300), AI request to first SSE event p95 8.3 ms (limit 60; it was 1.2 ms before the audit manifest was hashed per request, still far inside), AI panel open to first paint p95 19.4 ms (limit 100), RISK 20 names 35.4 ms, PORT OPT HRP 7.8 ms, keystroke echo 15.0 ms, frame p95 16.8 ms. The earlier BT miss was throttling, as controlled above. SWARM, THESIS, AUDIT and AI AUTO have no latency budget: their cost is the model's own time, and the ledger write happens at the final event.
+
+## Phase 19 bench (charting, discovery, macro, crypto)
+New budgets are added per step (spec `docs/specs/PHASE_19.md`). The chart-maths ones run in the page through `PERF CALC` (generated TEST DATA, p95 of 15 runs) so no network or backend is involved.
+
+| Budget | Limit | Measured | Method |
+|---|---|---|---|
+| Pattern scan (candles + SMC) 5,000 bars p95 | 40 ms | 5.8 ms | `PERF CALC`, `candlePatterns` + `smc` |
+| SEAS MONTH + WOY + DOM, 10,000 daily bars p95 | 15 ms | 9.1 ms | `PERF CALC`, three tables |
+| Drawing hit test, 200 drawings p95 | 1 ms | 0.2 ms | `PERF CALC`, per call, mixed kinds |
+| IMAP treemap layout, 5,000 tiles p95 | 30 ms | 2.9 ms | `PERF CALC`, 12 groups, 1600 x 900 |
+| IMAP canvas paint, 5,000 tiles p95 | 16 ms | 4.9 ms | `PERF CALC`, one canvas pass |
+
+**Step 3 (2026-10-18): 36 of 36 pass on the rested rerun.** The first run right after the full gate missed twice: tick received to pixel 59.5 ms (limit 50; the rerun after a minute's rest reads 37.3 ms, the known throttle noise) and the IMAP paint at 17.5 ms (a real miss: one `fillRect` and one fill-style change per tile).
+The painter now batches the tile fills into nine colour-band paths (4.9 ms). Step 3 puts a per-tick `TickBuffers.add` on the hub's emit path (three array appends); the streaming budgets did not move (frame p95 16.8 ms, long tasks 0, 4,027 ticks/s delivered of 4,000 offered).
