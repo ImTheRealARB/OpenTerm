@@ -2,6 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 16: AI layer (in progress)
+- Added `AI`: a chat panel over an agent that calls 14 read-only tools in-process (quotes, history, profile, financials, filings, news, screener, research tables, options chain, rates, macro, portfolio, backtest, quant jobs).
+  Every answer lists its tool calls (source, age, STALE / FAILED / EMPTY), cites them as [T1], and carries `AI · model · time · MODEL OUTPUT, NOT DATA`; no tool data = `UNGROUNDED`, figures no tool returned = `UNSOURCED NUMBERS`.
+  Loop guard (3 failed or empty calls in a row, or the same call twice), context budget, daily spend cap. No order tools exist. No key = `KEY REQUIRED`. `SETTINGS AI` picks the model.
+- Recorded with the real OpenRouter key: one plain stream and a tool-call round (the pending Phase 11 recording is done).
+
 ## Phase 15: risk, quant library, alphas, Kite
 - Added `RISK` (VaR / ES by history, normal and EVT, beta, drawdown, contributions, stress replays of 2008, 2020 and 2022 with COVERAGE, Kupiec / Christoffersen / Basel backtest),
   `PORT OPT` (EQVOL, RP, MV, MAXDIV, HRP, TURN preview; `A` saves `<NAME>.OPT`, never edits the original), `PORT ATTR` (Brinson-Fachler plus TWR / MWR / Dietz / XIRR from a stored valuation table),

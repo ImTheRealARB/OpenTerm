@@ -14,6 +14,11 @@ export const DECIMALS = [".", ","] as const;
 export const POLL_BOUNDS = { news: [30, 600], movers: [30, 600], crypto: [15, 600], sources: [5, 120] } as const;
 export type PollKey = keyof typeof POLL_BOUNDS;
 export const MAX_CLOCKS = 3;
+export const AI_PROVIDERS = ["openrouter", "openai", "anthropic", "ollama"] as const;
+/** Models the AI rows cycle through (any other id works via `SETTINGS AI MODEL <id>`). */
+export const AI_MODEL_CHOICES = ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5", "google/gemma-4-31b-it:free"] as const;
+export const AI_VISION_CHOICES = ["deepseek/deepseek-v4.1-flash", "anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "google/gemma-4-31b-it:free"] as const;
+export const AI_MODEL_RE = /^[A-Za-z0-9._:/-]{1,80}$/;
 
 export interface Settings {
   theme: ThemeName;
@@ -25,6 +30,8 @@ export interface Settings {
   poll: Record<PollKey, number>;
   /** Keybinding overrides: action -> chords (replaces that action's defaults). */
   keys: Record<string, string[]>;
+  /** Phase 16: which model the AI panels call (OpenRouter by default; the key lives in APIKEYS, never here). */
+  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number] };
 }
 
 export const DEFAULTS: Settings = Object.freeze({
@@ -35,6 +42,7 @@ export const DEFAULTS: Settings = Object.freeze({
   chart: { range: "1Y", type: "CANDLE" },
   poll: { news: 60, movers: 60, crypto: 30, sources: 10 },
   keys: {},
+  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter" },
 }) as Settings;
 
 const ZONE_RE = /^(LOCAL|UTC|[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){1,2})$/;
@@ -104,6 +112,19 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
     }
   } else if (r.keys !== undefined) errors.push("keys");
 
+  const ai = isObj(r.ai) ? r.ai : {};
+  const aiOut = { ...d.ai };
+  for (const k of ["model", "visionModel"] as const) {
+    if (ai[k] === undefined) continue;
+    if (typeof ai[k] === "string" && AI_MODEL_RE.test(ai[k] as string)) aiOut[k] = ai[k] as string;
+    else errors.push(`ai.${k}`);
+  }
+  if (ai.provider !== undefined) {
+    if (oneOf(AI_PROVIDERS, ai.provider)) aiOut.provider = ai.provider;
+    else errors.push("ai.provider");
+  }
+  if (r.ai !== undefined && !isObj(r.ai)) errors.push("ai");
+
   return {
     settings: {
       theme: pick("theme", isTheme(r.theme), r.theme as ThemeName, d.theme),
@@ -113,6 +134,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
       chart,
       poll,
       keys,
+      ai: aiOut,
     },
     errors,
   };

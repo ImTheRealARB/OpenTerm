@@ -2,10 +2,10 @@
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
  *   SETTINGS THEME name | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
- *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | KEYS RESET | RESET
+ *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
  */
 import {
-  CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
+  AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
 } from "./schema";
 import { THEMES, isTheme } from "./themes";
 
@@ -71,12 +71,28 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       if (!Number.isInteger(v) || v < lo || v > hi) return fail(`POLL ${word}: ${lo}-${hi} SECONDS`);
       return { ok: true, next: { ...cur, poll: { ...cur.poll, [k]: v } }, message: `POLL ${word} ${v}S (APPLIES WHEN THE PANEL REOPENS)` };
     }
+    case "AI": {
+      const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | RESET";
+      if (word === "RESET") return { ok: true, next: { ...cur, ai: { ...DEFAULTS.ai } }, message: "AI SETTINGS RESET TO DEFAULTS" };
+      if (word === "PROVIDER") {
+        const p = (rest[1] ?? "").toLowerCase();
+        if (!(AI_PROVIDERS as readonly string[]).includes(p)) return fail(usage);
+        return { ok: true, next: { ...cur, ai: { ...cur.ai, provider: p as Settings["ai"]["provider"] } }, message: `AI PROVIDER ${p.toUpperCase()}` };
+      }
+      if (word === "MODEL" || word === "VISION") {
+        const id = rest[1] ?? "";
+        if (!AI_MODEL_RE.test(id) || rest.length > 2) return fail(usage);
+        const field = word === "MODEL" ? "model" : "visionModel";
+        return { ok: true, next: { ...cur, ai: { ...cur.ai, [field]: id } }, message: `AI ${word} ${id}` };
+      }
+      return fail(usage);
+    }
     case "KEYS":
       if (word !== "RESET") return fail("SETTINGS KEYS RESET (EDIT SHORTCUTS IN THE SETTINGS PANEL)");
       return { ok: true, next: { ...cur, keys: {} }, message: "SHORTCUTS RESET TO DEFAULTS" };
     case "RESET":
       return { ok: true, next: { ...DEFAULTS, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
     default:
-      return fail("SETTINGS THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|KEYS|RESET ...");
+      return fail("SETTINGS THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
   }
 }

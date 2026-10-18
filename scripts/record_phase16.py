@@ -3,7 +3,8 @@
 Run from backend/:  uv run python ../scripts/record_phase16.py [model]
 The key comes from the key store (as set in APIKEYS) and is never printed or written; a recording that contains it is discarded.
 Writes tests/fixtures/llm_tool_turn1.txt (the model asks for the `quote` tool) and llm_tool_turn2.txt (the answer that uses the result).
-The tool result in turn 2 is a fixed, labelled test payload, not market data.
+Tools and system prompt are the real ones (`openterm.ai`); the tool result in turn 2 is what the `quote` tool returns for AAPL in fixture mode
+(yahoo:fixture, 343.46), so the recorded answer matches the data the app shows in fixture mode. Fixture mode replays these two turns for any question.
 """
 
 import asyncio
@@ -15,19 +16,19 @@ import httpx
 
 from openterm.config import get_settings
 from openterm.keys import from_settings
+from openterm.ai.agent import SYSTEM
+from openterm.ai.tools import openai_tools
 from openterm.llm import openai_compat
 
 FIX = Path(__file__).resolve().parents[1] / "backend" / "tests" / "fixtures"
-SYSTEM = "You are a research assistant inside a market terminal. Use the tools for any market number. Cite tool results as [T1]."
-USER = "What is AAPL trading at? Use the quote tool."
-TOOLS = [{"type": "function", "function": {
-    "name": "quote", "description": "Latest quote for one ticker.",
-    "parameters": {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]}}}]
-RESULT = {"symbol": "AAPL", "price": 123.45, "change_pct": 1.23, "source": "TEST FIXTURE"}
+USER = "What is AAPL trading at?"
+TOOLS = openai_tools()
+RESULT = {"AAPL": {"symbol": "AAPL", "name": "Apple Inc.", "currency": "USD", "price": 343.46, "prev_close": 342.0, "change": 1.46, "change_pct": 0.4269,
+                   "source": "yahoo:fixture", "age_s": 0.1, "stale": False}}
 
 
 async def stream(http: httpx.AsyncClient, key: str, messages: list[dict], model: str, tools) -> str:
-    url, headers, body = openai_compat.request("openrouter", key, messages, model, tools, 400, 0.0)
+    url, headers, body = openai_compat.request("openrouter", key, messages, model, tools, 1500, 0.2)
     raw = b""
     async with http.stream("POST", url, headers=headers, json=body) as r:
         async for chunk in r.aiter_bytes():
@@ -63,7 +64,7 @@ async def main() -> int:
         return 1
     key = values["OPENROUTER_API_KEY"]
     model = sys.argv[1] if len(sys.argv) > 1 else "deepseek/deepseek-v4-pro"
-    msgs: list[dict] = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": USER}]
+    msgs: list[dict] = [{"role": "system", "content": SYSTEM.format(today="2026-10-18")}, {"role": "user", "content": USER}]
     async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=5.0)) as http:
         t1 = await stream(http, key, msgs, model, TOOLS)
         call = tool_call_from(t1)

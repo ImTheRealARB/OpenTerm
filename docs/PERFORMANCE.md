@@ -473,3 +473,16 @@ nothing new runs on the hot path.
 **Rerun (2026-10-18, commit `df5325e`, rested machine): 29 of 29 pass.** BT 10-year rule run 208 ms against 300, so the earlier 323 ms miss was machine throttling, as suspected.
 New budgets: RISK 37.0 ms, PORT OPT HRP 7.0 ms / RP 16.6 ms, CORR REGIME 54.9 ms, ALPHA SYN 673.4 ms. Interaction budgets: tick-to-pixel 38.3 ms, keystroke echo 14.5 ms,
 frame p95 16.8 ms. Measured before the ALPHA Enter formula line (`info` per row: one docstring read per factor inside the worker, nothing on the hot path); the next gate re-checks ALPHA.
+
+## Phase 16 bench (AI layer)
+Two new budgets (spec `docs/specs/PHASE_16.md`, "First-token budget"), so the bench has 29 + 2 = 31. The model's own latency is network and is not gated; these are what this server and panel control.
+Fixture mode replays a recorded OpenRouter answer (`llm_tool_turn1.txt` / `llm_tool_turn2.txt`) with a fake key, set through `PUT /api/keys/openrouter` into a memory keyring (the bench never touches the real key store).
+
+| Budget | Limit | Measured | Method |
+|---|---|---|---|
+| AI request to first SSE event p95, server-side | 60 ms | 1.2 ms | `POST /api/ai/chat` in to first event out (`/api/ai/first_event` in `/api/perf`), n=12, the `start` event leaves before any key, price or model work |
+| AI panel open to first paint p95 | 100 ms | 18.0 ms | typed `AI` to painted panel, n=10 |
+
+**Result (2026-10-18, step 2): 30 of 31 pass; the one miss is the old BT 10-year rule run (368 ms and 374 ms in two runs, against 300).** Same-hour control: the Phase 15 commit `df5325e` benched on this machine right after reads
+410 ms for BT 10-year, 84.7 ms for RISK and 1247 ms for ALPHA (the rested run recorded above read 208 / 37 / 673 ms), so the machine is throttled today (everything reads about 2x slower) and Phase 16 changes nothing on that path.
+Re-bench on a rested machine before calling the phase closed.

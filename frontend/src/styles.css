@@ -119,6 +119,12 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .alrt-flash { background: var(--warn); color: var(--bg); padding: 0 4px; }
 .import { flex: none; border-top: 1px solid var(--line); max-height: 60%; overflow: auto; }
 .import.editor textarea { height: 22em; tab-size: 4; white-space: pre; overflow: auto; }
+.ai-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px 0; }
+.ai-turn { margin-bottom: 8px; }
+.ai-answer { white-space: pre-wrap; word-break: break-word; }
+.ai-in { flex: none; display: flex; gap: 6px; border-top: 1px solid var(--line); padding-top: 2px; }
+.ai-input { flex: 1; min-width: 0; background: var(--bg); color: var(--fg); font: inherit; }
+.ai-input::placeholder { color: var(--fg-dim); }
 .runline { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; width: 40ch; }
 .import textarea { width: 100%; height: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; resize: none; }
 

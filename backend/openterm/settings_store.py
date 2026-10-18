@@ -103,6 +103,27 @@ def _keys(raw) -> dict:
     return out
 
 
+AI_PROVIDERS = ("openrouter", "openai", "anthropic", "ollama")
+AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}$")
+
+
+def _ai(raw) -> dict:
+    if not isinstance(raw, dict):
+        raise _bad("ai MUST BE AN OBJECT")
+    extra = sorted(set(raw) - {"model", "visionModel", "provider"})
+    if extra:
+        raise _bad(f"ai KEYS: model visionModel provider (NOT {extra[0][:20]!r})")
+    out = {}
+    for k in ("model", "visionModel"):
+        if k in raw:
+            if not isinstance(raw[k], str) or not AI_MODEL_RE.match(raw[k]):
+                raise _bad(f"ai.{k} MUST BE A MODEL ID LIKE vendor/name")
+            out[k] = raw[k]
+    if "provider" in raw:
+        out["provider"] = _choice(raw["provider"], AI_PROVIDERS, "ai.provider")
+    return out
+
+
 def _vim(raw) -> bool:
     if not isinstance(raw, bool):
         raise _bad("vim MUST BE true OR false")
@@ -117,6 +138,7 @@ FIELDS = {
     "chart": _chart,
     "poll": _poll,
     "keys": _keys,
+    "ai": _ai,
 }
 
 

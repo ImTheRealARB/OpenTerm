@@ -227,7 +227,18 @@ def _route(request: httpx.Request) -> httpx.Response:
     url = request.url
     if url.host in ("127.0.0.1", "localhost") and url.port == 11434:
         raise httpx.ConnectError("fixture mode: nothing listens on the Ollama port", request=request)
+    if url.host == "openrouter.ai" and url.path == "/api/v1/models" and (FIXTURES / "llm_openrouter_models.json").exists():
+        # Phase 16: the price list the gateway needs before any call, cut to the five models SETTINGS AI offers (recorded 2026-10-18).
+        return httpx.Response(200, content=(FIXTURES / "llm_openrouter_models.json").read_bytes(), headers={"content-type": "application/json"})
     if url.host == "openrouter.ai" and url.path == "/api/v1/chat/completions":
+        # Phase 16: a request that offers tools replays the recorded tool turn (call, then the answer once a tool result is in the messages);
+        # anything else replays the plain stream. The recordings are real OpenRouter answers about AAPL, labelled RECORDED in the panel.
+        body = json.loads(request.content or b"{}")
+        if body.get("tools"):
+            done = any(m.get("role") == "tool" for m in body.get("messages") or [])
+            tool_rec = FIXTURES / ("llm_tool_turn2.txt" if done else "llm_tool_turn1.txt")
+            if tool_rec.exists():
+                return httpx.Response(200, content=tool_rec.read_bytes(), headers={"content-type": "text/event-stream"})
         rec = FIXTURES / "llm_openrouter_stream.txt"
         if rec.exists():
             return httpx.Response(200, content=rec.read_bytes(), headers={"content-type": "text/event-stream"})

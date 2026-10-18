@@ -324,17 +324,17 @@ def test_recorded_openrouter_turns_drive_a_tool_call_and_a_grounded_answer(tmp_p
     async def go():
         gw, db, served = await make()
         try:
-            tools = Tools(ok({"symbol": "AAPL", "price": 123.45, "change_pct": 1.23, "source": "TEST FIXTURE"}))
-            ev = await collect(gw, tools, question="What is AAPL trading at? Use the quote tool.")
+            tools = Tools(ok({"AAPL": {"symbol": "AAPL", "price": 343.46, "prev_close": 342.0, "change": 1.46, "change_pct": 0.4269, "source": "yahoo:fixture"}}))
+            ev = await collect(gw, tools, question="What is AAPL trading at?")
             return ev, tools, served
         finally:
             await gw.http.aclose()
             await db.close()
 
     ev, tools, served = run(go())
-    assert tools.seen[0][0] == "quote" and tools.seen[0][1].get("symbol") == "AAPL"  # recorded against a test tool whose argument is `symbol`
+    assert tools.seen[0] == ("quote", {"symbols": "AAPL"})
     done = ev[-1]
-    assert done["type"] == "done" and done["tool_calls"] == 1 and "123.45" in done["answer"] and done["unsourced"] == []
+    assert done["type"] == "done" and done["tool_calls"] == 1 and "343.46" in done["answer"] and done["unsourced"] == []
     assert done["cost"] > 0 and served[1]["messages"][-1]["role"] == "tool"
     assert SECRET not in json.dumps(ev) and SECRET not in json.dumps(served)
 

@@ -168,6 +168,24 @@ async function btBench() {
 /** Phase 15: RISK, PORT OPT, ALPHA and CORR REGIME on SYN names (fixture + synthetic mode), through POST /api/quant/{fn}.
  * Like the BT budgets, the figure is server-side: `server-timing` of the POST (parse, cached bars, data file, submit) plus the job's own
  * created_at -> finished_at, on warm workers. Every measured run uses a distinct parameter (conf, rf, edge, h) so none is a cache hit. */
+async function aiBench() {
+  const key = await fetch(`${BACKEND}/api/keys/openrouter`, {
+    method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ fields: { OPENROUTER_API_KEY: "sk-or-bench-0000000000000000" } }),
+  });
+  if (!key.ok) throw new Error(`bench could not set the fake AI key: HTTP ${key.status}`);
+  const N = 12;
+  for (let i = 0; i < N; i++) {
+    const res = await fetch(`${BACKEND}/api/ai/chat`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: `What is AAPL trading at? (${i})` }),
+    });
+    const text = await res.text();
+    const done = text.split("\n\n").map((b) => b.replace(/^data: /, "")).filter((b) => b.startsWith("{")).map((b) => JSON.parse(b)).find((e) => e.type === "done");
+    if (!done || !done.grounded) throw new Error(`AI bench turn ${i} did not finish grounded: ${text.slice(0, 200)}`);
+  }
+  const p = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/ai/first_event"];
+  return { firstEvent: p?.p95 ?? null, n: p?.n ?? 0 };
+}
+
 async function quantBench() {
   const post = async (fn, body) => {
     const res = await fetch(`${BACKEND}/api/quant/${fn}`, {
@@ -369,6 +387,18 @@ async function browserBench() {
       await page.context().close();
     }
 
+    // G2. Phase 16: AI panel open (typed command to the input ready).
+    {
+      const page = await freshPage(browser);
+      out.p16 = await measure(page, async () => {
+        for (let i = 0; i < 10; i++) {
+          await run(page, "AI");
+          await page.waitForTimeout(200);
+        }
+      });
+      await page.context().close();
+    }
+
     // H. Phase 12: BT result open (cached runs from btBench) to the painted, labelled result.
     {
       const page = await freshPage(browser);
@@ -432,6 +462,8 @@ async function main() {
     OPENTERM_SYNTHETIC_TPS: "20",
     OPENTERM_FIXTURE_LATENCY_MS: "300",
     OPENTERM_DB_PATH: join(dbDir, "bench.db"),
+    OPENTERM_KEYRING: "memory", // the bench sets a fake OpenRouter key for the AI budget: never the real keyring
+    OPENTERM_DOTENV_PATH: join(dbDir, "keys.env"),
   });
   start("npm run preview -- --host 127.0.0.1", FE);
   await waitFor(`${BACKEND}/api/health`);
@@ -469,6 +501,7 @@ async function main() {
   const jobsServer = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/jobs"].p95;
   // Phase 15 server-side job times. Run AFTER the line above: quantBench polls GET /api/jobs/{id}, which /api/perf files under /api/jobs.
   const q15 = await quantBench();
+  const ai16 = await aiBench();
   add("Job J frame received to paint p95", ftp.n ? ftp.p95 : null, 50, "ms", `JOBS TEST; n=${ftp.n}`);
   add("Job submit p95, server-side (new + cached)", jobsServer, 20, "ms", "POST /api/jobs");
   add("Job submit to first J frame painted p95", jf.n ? jf.p95 : null, null, "ms", `via proxy; p50 ${jf.p50?.toFixed(1)} ms; n=${jf.n}`);
@@ -488,6 +521,10 @@ async function main() {
   add("PORT OPT RP 20 names p95, server-side", q15.rp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
   add("CORR REGIME 20 names x 2 years p95, server-side", q15.regime, 300, "ms", "POST /api/quant/regime + job, warm, n=12");
   add("ALPHA SYN 100 names x 2 years, server-side", q15.alpha, 8000, "ms", `POST /api/quant/alpha + job, all 29 factors, warm; n=${q15.alphaN} (p95 = slowest)`);
+
+  // Phase 16 (spec: decisions on the first-token budget): what this server controls. Fixture mode replays a recorded model.
+  add("AI request to first SSE event p95, server-side", ai16.firstEvent, 60, "ms", `POST /api/ai/chat, recorded model, n=${ai16.n}`);
+  add("AI panel open to first paint p95", r.p16.cmdToPaint.p95, 100, "ms", `n=${r.p16.cmdToPaint.n}`);
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

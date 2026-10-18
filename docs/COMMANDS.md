@@ -131,6 +131,11 @@ opinion: a missing input shows `NOT RUNNABLE: MISSING ...`.
 `BT <UNDERLYING> MKT=options` runs the last `OSA` structure for that symbol (API: `engine="options"` plus `structure`). Option prices are Black-Scholes marks on trailing historical vol
 (`MODEL-PRICED OPTIONS (BLACK-SCHOLES ON HISTORICAL VOL), NOT MARKET QUOTES`). A missing structure field gives `NOT RUNNABLE: MISSING <fields>`. `FEES=` is bps of premium; slippage is not modelled.
 
+## Phase 16: AI (needs your OpenRouter key in `APIKEYS`; without one it says KEY REQUIRED)
+`AI [question]` research assistant. It answers from tools (quotes, history, filings, news, screener, options, rates, macro, your portfolio, backtests, quant jobs), shows every tool call with source and age,
+cites them as [T1], and says UNGROUNDED when no tool returned data or UNSOURCED NUMBERS for figures no tool returned. `I` types, Enter sends, Esc cancels, `X` clears. AI output is model output, not data.
+`SETTINGS AI MODEL <id>` / `VISION <id>` / `PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA` / `RESET` (default `deepseek/deepseek-v4-pro`; the AI rows in `SETTINGS` cycle common models).
+
 ## Phase 15: risk, quant library, alphas, Kite
 `RISK [PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` VaR / ES (historical, normal, EVT), beta, drawdown, contributions, stress replays (2008, 2020, 2022), VaR backtest ·
 `PORT OPT [PORTFOLIO] [METHOD=EQVOL|RP|MV|MAXDIV|HRP|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` trades and before/after preview; key `A` saves the proposal as a new portfolio `<NAME>.OPT`

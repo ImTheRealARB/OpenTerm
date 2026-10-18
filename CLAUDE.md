@@ -182,6 +182,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   the WebSocket ticker and the login flow have never run against a real key. Tokens last one trading day (`KITE LOGIN EXPIRED`).
 - **Yahoo `range=max` is monthly:** history needing daily bars back to 2006 uses `20Y` (`range=20y&interval=1d`). Yahoo's burst limit paces many-symbol fetches inside `_bars`.
 - **Bench Phase 15 budgets (5, server-side like BT):** RISK 20 names x 3Y <= 400 ms, PORT OPT HRP and RP 20 names <= 400 ms each, CORR REGIME 20 names <= 300 ms, ALPHA SYN 100 names x 2Y <= 8 s; total 29 with the older 24.
+- **AI (Phase 16):** `openterm/ai/` (tools via in-process ASGI to the app's own routes, agent loop, guard, context, grounding) behind `POST /api/ai/chat` (SSE). Fixture mode replays two recorded OpenRouter turns for ANY question (labelled RECORDED);
+  tests inject a scripted gateway (`FakeGateway` in `test_phase16_agent.py`). The default model `deepseek/deepseek-v4-pro` is a reasoning model: give it >= 400 output tokens or it answers nothing. The bench sets a fake key into a memory keyring (`OPENTERM_KEYRING=memory`).
+  A job-based tool (`quant`, `backtest_run`) cannot be probed from a bare script on Windows (worker spawn re-imports `__main__`: guard with `if __name__ == "__main__"`).
 - **Command line keeps focus after a run:** in a manual or browser-driven check press `Esc` before a panel key (`Enter`, `A`, `J`); Playwright's `keyboard.press` already lands on the panel.
   `ResearchPanel` `onKey(e, props, data, say, row)` gets the selected row as 5th argument (ALPHA Enter shows the row's `info`: ported module docstring + inputs).
 - **Manual smoke without keys:** `OPENTERM_DB_PATH=<temp>` keeps the user's DB out; portfolio positions are `{symbol, qty, cost}` (`PUT /api/portfolios/<name>`), not `quantity`/`avg_cost`.

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import re
+import time
 
 import orjson
 from fastapi import APIRouter, Request
 from fastapi.responses import Response, StreamingResponse
 
 from .. import api as api_mod
+from .. import perf
 from ..responses import Orjson
 from . import agent, tools
 
@@ -41,6 +43,7 @@ async def list_tools():
 
 @router.post("/chat")
 async def chat(request: Request):
+    t0 = time.perf_counter()
     if not api_mod.loopback(request):
         return _err(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
     try:
@@ -63,8 +66,14 @@ async def chat(request: Request):
 
     async def stream():
         events = agent.run(gateway, runner, question.strip(), history, model=model, provider=provider)
+        first = True
         try:
             async for ev in events:
+                if first:  # request in to the first event out: what this server controls (the model's own latency is not ours)
+                    first = False
+                    perf.record("/api/ai/first_event", (time.perf_counter() - t0) * 1000)
+                if ev["type"] == "start":
+                    ev["fixtures"] = bool(request.app.state.settings.openterm_fixtures)  # the panel says RECORDED when the model is a recording
                 yield sse(ev)
         finally:
             await events.aclose()
