@@ -1,18 +1,23 @@
 # Handoff
 
-_Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-15-65e1da`; Phase 11 done except one recording; PHASES 12, 13, 14 and 15 COMPLETE; PHASE 16 COMPLETE (2026-10-18); Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-16-9d4534`; Phase 11 done except one recording; PHASES 12, 13, 14 and 15 COMPLETE; PHASE 16 COMPLETE (2026-10-18); Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-18, Phase 15 closed, Phase 16 started)
-- **Branch:** `claude/openterm-phase-16-9d4534` (worktree `.claude/worktrees/openterm-phase-16-9d4534`), fast-forwarded from `claude/openterm-phase-15-65e1da` (`df5325e`). Not merged to `main`. The OpenRouter key is set in APIKEYS.
-- **Phase 15 is closed.** Bench **29/29** on `df5325e` (BT 10-year run 208 ms vs 300, so the earlier 323 ms miss was machine throttling; numbers in `docs/PERFORMANCE.md` "Phase 15 bench"). Done and checked in the real app:
-  fixture + synthetic smoke run (`RISK`, `PORT OPT ... METHOD=RP` then `A`, `PORT ATTR`, `FACT`, `QL GARCH`, `ALPHA UNIVERSE=SYN`, `CORR REGIME LIST:...`, `KITE` = KEY REQUIRED), live keyless `FACT AAPL`, `RISK` on a 4-name portfolio and
-  `ALPHA` (TOP100: 96 names, 29 factors, about 40 s; 4 tickers had too few bars and are listed as dropped), and `ALPHA` Enter (shows the factor's formula via `ResearchPanel` `onKey` 5th argument `row`; backend row field `info`).
-  Nothing needed fixing besides the Enter gap. **Still open: item 4, real Kite recordings** (waiting for the user's Kite key and redirect URL; do not start it).
-- **Phase 16 (AI layer):** see `docs/specs/PHASE_16.md` for the defaults and the step plan; its "Progress log" says which steps are done. **All 7 steps are done and pushed (2026-10-18): Phase 16 is CLOSED.** Gate green (pytest 1287, e2e 143), bench 31/31, live smoke of SWARM and AI AUTO done with the real key (details in the spec's progress log). Not built (listed in the roadmap and `docs/DATA_LIMITS.md`): `ai.store_text`, SignalEngine code drafts in AI BT, OCR, parallel SWARM roles. **Next action:** the user decides: Phase 19 (the only unpaused phase left), merging this branch to `main`, or the Kite recordings (needs the user's Kite key). Phases 17 and 18 stay paused. Fresh session for the next phase.
-- **Usage rule:** Sonnet only, at most 2 subagents with targeted tests, one full gate per step (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`), pause at 60% of the 5h window: update this file, commit, push.
+## Resume here (2026-10-18, Phase 16 closed, Phase 19 next)
+- **State:** Phases 1-16 are done. Phase 16 (AI layer) closed 2026-10-18 on branch `claude/openterm-phase-16-9d4534`, head at or after `384f5c0`, pushed to origin, **not merged to `main`** (main is still at Phase 10, `26891f1`).
+  Full gate green (pytest 1287, ruff, tsc, vitest, e2e 143), bench 31/31, live smoke with the real OpenRouter key done (SWARM, AI AUTO). Details: `docs/specs/PHASE_16.md` "Progress log".
+- **Next action: Phase 19** (`docs/ROADMAP_PHASES_11-19.md` "Phase 19": GP drawing tools and studies, GIP, IMAP, SECF, ECST/WECO/CENB, NRG/WETR, crypto depth/funding/DeFi, PRED, non-US zero-key data). It has NO spec yet: first write `docs/specs/PHASE_19.md`
+  (defaults pre-approved, tests-first step plan like `docs/specs/PHASE_16.md`, zero-key sources first, no paid APIs), then build step by step. A first attempt in a worktree session (`claude/openterm-phase-19-8ad9bb`, cut from `384f5c0`) was stopped by the user before any work: that branch is empty, ignore or delete it.
+- **How to start (user decision 2026-10-18: new session in the plain project folder, not a worktree):** in `C:\Users\Asus\Documents\OpenTerm` (checkout of `main`, must be clean) run
+  `git fetch origin; git switch -c claude/openterm-phase-19 --no-track origin/claude/openterm-phase-16-9d4534`, then `cd backend; uv sync` and `cd ..\frontend; npm ci`. Do NOT `git switch` to `claude/openterm-phase-16-9d4534` itself: git refuses a branch that is checked out in a worktree.
+  Push the working branch to origin after each step. Do not merge to `main` unless the user says so. Ports 8000, 4173, 5173 must be free (other worktrees may hold them).
+- **Still open (not Phase 19):** real Kite recordings (needs the user's Kite key and redirect URL; do not start); Phases 17 and 18 stay paused by the user; first real Docker / Tauri builds. Not built in Phase 16 (see `docs/DATA_LIMITS.md`): `ai.store_text`, SignalEngine code drafts in AI BT, OCR, parallel SWARM roles.
+- **Usage rule:** Sonnet only, at most 2 subagents with targeted tests, one full gate per step (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`), pause at 60% of the 5h window when the user is away: update this file, commit, push. If the user is present and says continue, continue.
+
+## Resume here (2026-10-18, Phase 15 closed, Phase 16 started; superseded, kept for history)
+- Phase 15 closed on `df5325e` (bench 29/29, real-backend smoke and live keyless checks done, ALPHA Enter shows the factor formula).
 
 ## Resume here (2026-10-18, Phase 15 complete)
 - **Phase 15 is built** on branch `claude/openterm-phase-15-65e1da` (spec `docs/specs/PHASE_15.md`, steps 1-8). Functions: `RISK`, `PORT OPT` (`A` saves `<NAME>.OPT`), `PORT ATTR` (+ `ADD`/`DEL` valuations),

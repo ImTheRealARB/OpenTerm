@@ -246,6 +246,8 @@ In this order, each one a separate approval:
    Paper vs live decided by a structural broker check (host or account type), never a flag the AI can set.
 
 ## Phase 19: Charting, discovery, macro, crypto
+**Status: NEXT (not started, 2026-10-18).** No spec yet: write `docs/specs/PHASE_19.md` first (zero-key sources first; no paid APIs). Start per HANDOFF.md "How to start".
+
 | Area | Items |
 |---|---|
 | `GP` | Drawing tools (trend line, horizontal, fib), event markers (earnings, dividends, splits), multi-pane compare, more studies, pattern overlays (candlestick, Ichimoku, SMC), `SEAS` seasonality |
