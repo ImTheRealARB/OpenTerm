@@ -10,6 +10,7 @@ Format: newest first, one section per phase. Details for each release are in `do
 - The math is the new worker-only `quantlib` package ported from Vibe-Trading (MIT, `THIRD_PARTY.md`); every function runs as a job through `POST /api/quant/{fn}`. History accepts a `20Y` range of daily bars.
 - Added `KITE` (Zerodha Kite Connect), READ-ONLY: daily `KITE LOGIN`, status, Indian bars, NFO / MCX chains with OI (`OMON NIFTY.NFO R= Q=`), ticker decoder. Inert without your own key; no order surface exists.
   Its fixtures are doc-shaped, NOT recordings.
+- `ALPHA`: `Enter` on a factor shows its formula line (the ported module's docstring, inputs, warm-up). Bench 29 of 29. Checked in the real app: fixture smoke run of every Phase 15 function, and live keyless `FACT AAPL`, `RISK` and `ALPHA TOP100`.
 
 ## Phase 14: options, rates, futures
 - Added `OMON` (chain with Greeks, OI, volume), `PCR`, `OV` (Black-Scholes, binomial, Heston, barrier, IV solver) and `OSA` (multi-leg payoff, scenario

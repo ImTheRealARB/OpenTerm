@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source; Phase 16 next; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 IN PROGRESS; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
@@ -88,7 +88,7 @@ off the screen (push, MCP, brokers). 19 is breadth.
 12, 13 and 14 touch different files and can run in parallel worktrees (they were built one after another instead).
 
 **Current order (2026-10-18): 11, 12, 13 done; next 14, then 15, 16, 19. 17 and 18 are PAUSED by the user and nothing in 14, 15, 16 or 19
-depends on them.** Phase 16 needs the OpenRouter key (ask the user to set it in `APIKEYS` first).
+depends on them.** Phase 16 needs the OpenRouter key (set in `APIKEYS` by the user).
 
 ---
 
@@ -181,7 +181,7 @@ with and without its key (`KEY REQUIRED` path), bench unchanged.
 for the surface render recorded.
 
 ## Phase 15: Risk, quant library, alphas (DONE 2026-10-18)
-**Built** (spec `docs/specs/PHASE_15.md`, steps 1-8; bench budgets in `docs/PERFORMANCE.md`). Kite is built read-only; its fixtures are doc-shaped, a real recording is pending a key (`scripts/record_phase15.py --kite`). `ALPHA` ships 29 factors; the other ~450 of the 478 are not ported.
+**Built and closed 2026-10-18** (real-app smoke run, live keyless `FACT` / `ALPHA TOP100` / `RISK` checks and `ALPHA` Enter done; bench 29/29; KITE read-only, real recordings pending; spec `docs/specs/PHASE_15.md`, steps 1-8; bench budgets in `docs/PERFORMANCE.md`). Kite is built read-only; its fixtures are doc-shaped, a real recording is pending a key (`scripts/record_phase15.py --kite`). `ALPHA` ships 29 factors; the other ~450 of the 478 are not ported.
 
 | Function | What |
 |---|---|
@@ -198,6 +198,7 @@ for the surface render recorded.
 jobs with a bench budget, lookahead sentinel test ported, e2e.
 
 ## Phase 16: AI layer (OpenRouter key)
+**Status: in progress** (started 2026-10-18; spec `docs/specs/PHASE_16.md`).
 Off until a key is set. The agent calls OpenTerm's own backend APIs as tools, so answers rest on the same data
 the panels show.
 

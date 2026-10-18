@@ -31,7 +31,7 @@ export interface ResearchOptions {
   /** Called with each loaded payload (OSA remembers its structure for BT MKT=options). */
   onData?: (d: TablePayload, p: FunctionProps) => void;
   /** An extra panel key; return true when handled. `say` shows a one-line note above the table. */
-  onKey?: (e: KeyboardEvent, p: FunctionProps, d: TablePayload | undefined, say: (text: string) => void) => boolean;
+  onKey?: (e: KeyboardEvent, p: FunctionProps, d: TablePayload | undefined, say: (text: string) => void, row?: TableRow) => boolean;
   /** Phase 15: replaces the GET (quant jobs: POST, wait for the job, return its result). `ctx` carries progress and note callbacks. */
   loader?: (params: Record<string, string | string[]>, ctx: RunCtx) => Promise<Envelope<TablePayload>>;
 }
@@ -100,7 +100,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
           if (e.ctrlKey || e.altKey || e.metaKey) return false;
           if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
           const { rows: cur, count, visuals: nvis, heat: heatShown, d: data, props: pp } = latest.current;
-          if (opts.onKey?.(e, pp, data, setFlash)) return true;
+          if (opts.onKey?.(e, pp, data, setFlash, cur[grid.current?.selected() ?? -1])) return true;
           if (heatShown && e.shiftKey && "HJKL".includes(e.key)) {
             heatRef.current?.move(e.key === "J" ? 1 : e.key === "K" ? -1 : 0, e.key === "L" ? 1 : e.key === "H" ? -1 : 0);
             return true;

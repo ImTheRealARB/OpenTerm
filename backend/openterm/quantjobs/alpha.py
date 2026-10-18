@@ -8,6 +8,7 @@ skipped and listed in the notes with its reason, never faked. pandas / numpy loa
 
 from __future__ import annotations
 
+import importlib
 import warnings
 from collections.abc import Callable
 
@@ -88,6 +89,18 @@ def _stats(ic: np.ndarray) -> dict | None:
     return {"ic_mean": mean, "ic_std": std, "ic_count": int(v.size), "ic_positive_ratio": float((v > 0).mean())}
 
 
+def factor_info(z: dict) -> str:
+    """One line for ALPHA Enter: the ported module's own docstring (formula and source), plus inputs and warm-up."""
+    try:
+        mod = importlib.import_module(z["file"].removesuffix(".py").replace("/", "."))
+        doc = " ".join((mod.__doc__ or "").split())
+    except Exception:  # noqa: BLE001  the formula line is a convenience, never a reason to drop a factor
+        doc = ""
+    needs = ",".join(z.get("columns_required") or [])
+    tail = f"INPUTS {needs.upper()} · WARM-UP {z.get('min_warmup_bars')} BARS · DECAY HORIZON {z.get('decay_horizon')}"
+    return f"{doc[:260]} | {tail}" if doc else tail
+
+
 def scan(panel: dict[str, pd.DataFrame], family: str | None, horizons: list[int], progress: Callable[[float, str], None]):
     """(rows, skipped [(id, reason)]). The first horizon is the primary one the label and t-stat use."""
     close = panel["close"]
@@ -110,7 +123,7 @@ def scan(panel: dict[str, pd.DataFrame], family: str | None, horizons: list[int]
             skipped.append((z["id"], f"NO IC DAY (WARM-UP {z.get('min_warmup_bars')} BARS, PANEL HAS {len(close)})"))
             continue
         t = t_stat(st["ic_mean"], st["ic_std"], st["ic_count"])
-        row = {"id": z["id"], "family": z["family"], "ic_mean": st["ic_mean"], "ic_std": st["ic_std"],
+        row = {"id": z["id"], "family": z["family"], "info": factor_info(z), "ic_mean": st["ic_mean"], "ic_std": st["ic_std"],
                "ir": st["ic_mean"] / st["ic_std"] if st["ic_std"] > 0 else None, "t": t, "pos_ratio": st["ic_positive_ratio"],
                "coverage": float(np.isfinite(fac.to_numpy(dtype=float)).mean()), "label": categorise(st)}
         for h in horizons:

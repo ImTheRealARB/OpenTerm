@@ -5,6 +5,15 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-15-65e1da`; 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
+## Resume here (2026-10-18, Phase 15 closed, Phase 16 started)
+- **Branch:** `claude/openterm-phase-16-9d4534` (worktree `.claude/worktrees/openterm-phase-16-9d4534`), fast-forwarded from `claude/openterm-phase-15-65e1da` (`df5325e`). Not merged to `main`. The OpenRouter key is set in APIKEYS.
+- **Phase 15 is closed.** Bench **29/29** on `df5325e` (BT 10-year run 208 ms vs 300, so the earlier 323 ms miss was machine throttling; numbers in `docs/PERFORMANCE.md` "Phase 15 bench"). Done and checked in the real app:
+  fixture + synthetic smoke run (`RISK`, `PORT OPT ... METHOD=RP` then `A`, `PORT ATTR`, `FACT`, `QL GARCH`, `ALPHA UNIVERSE=SYN`, `CORR REGIME LIST:...`, `KITE` = KEY REQUIRED), live keyless `FACT AAPL`, `RISK` on a 4-name portfolio and
+  `ALPHA` (TOP100: 96 names, 29 factors, about 40 s; 4 tickers had too few bars and are listed as dropped), and `ALPHA` Enter (shows the factor's formula via `ResearchPanel` `onKey` 5th argument `row`; backend row field `info`).
+  Nothing needed fixing besides the Enter gap. **Still open: item 4, real Kite recordings** (waiting for the user's Kite key and redirect URL; do not start it).
+- **Phase 16 (AI layer):** see `docs/specs/PHASE_16.md` for the defaults and the step plan; progress is logged below it. Phases 17 and 18 stay paused.
+- **Usage rule:** Sonnet only, at most 2 subagents with targeted tests, one full gate per step (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`), pause at 60% of the 5h window: update this file, commit, push.
+
 ## Resume here (2026-10-18, Phase 15 complete)
 - **Phase 15 is built** on branch `claude/openterm-phase-15-65e1da` (spec `docs/specs/PHASE_15.md`, steps 1-8). Functions: `RISK`, `PORT OPT` (`A` saves `<NAME>.OPT`), `PORT ATTR` (+ `ADD`/`DEL` valuations),
   `FACT`, `QL`, `ALPHA` (29 factors), `CORR REGIME`, and read-only `KITE` (`LOGIN`/`STATUS`/`LOGOUT`, Indian bars, NFO/MCX chains with OI via `OMON NIFTY.NFO R= Q=`). Pieces: `quant_routes.py`
@@ -14,12 +23,12 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-15-65e1da`; 
   the same hour, so it is machine throttling (earlier phases read 195-285 ms), not a regression. Next phase: rest ~4 min before the bench, rerun once, and if BT run misses again compare against the previous commit before blaming the change.
   The bench found two real bugs, both fixed: a Windows rename race in `bt/store.py write_data` (concurrent identical quant POSTs gave HTTP 500) and `quantBench` polluting the `/api/jobs` perf key (it now runs after that read).
 - **Known limits, not verified live:** Kite is entirely unverified against a real key (login, REST, WebSocket decoder; fixtures are doc-shaped, run `scripts/record_phase15.py --kite` once a key exists);
-  Ken French and `ALPHA TOP100` live shapes are fixture-only; `CORR REGIME` with no list is answered by the server (the CORR panel keeps no default basket); Enter-opens-factor-formula in `ALPHA` is not built.
+  Ken French and `ALPHA TOP100` live shapes are fixture-only; `CORR REGIME` with no list is answered by the server (the CORR panel keeps no default basket); ALPHA Enter (factor formula) was built 2026-10-18.
   Details: `docs/DATA_LIMITS.md` "Phase 15 limits".
 - **Next action: Phase 16 (AI layer).** BEFORE starting it, ask the user to set the OpenRouter key in APIKEYS (the one pending Phase 11 OpenRouter recording needs it too). Order tools never appear in the AI agent; Kite has no order surface at all. Reuse the Phase 11 gateway (`openterm/llm/`), the job runner and `quant_routes.py` as tool backends. Phases 17 and 18 stay paused. Fresh session, tests first; read `docs/ROADMAP_PHASES_11-19.md` "Phase 16".
 - **Usage rule:** Sonnet only, at most 2 agents with targeted tests only, one full gate per step, pause at 95% of the 5h window when the user asked for unattended work, else 60%.
 
-## Open items to close Phase 15 (do these first, before Phase 16)
+## Open items to close Phase 15 (items 1, 2, 3 and 5 DONE 2026-10-18; only item 4, real Kite recordings, is open)
 1. **Bench 29/29.** Free port 8000, rest ~4 min (longer if the machine is hot), run `node scripts/bench.mjs` once. The only miss on 2026-10-18 was the BT 10-year run (323 ms vs 300; the Phase 14 commit `edb3292` read 322 ms the same hour). If it still misses, check out `edb3292` and bench it the same way: equal numbers mean machine throttling; update the "Phase 15 bench" result paragraph in `docs/PERFORMANCE.md` either way.
 2. **Real-backend smoke run:** `cd frontend; npm run build`, then start the backend with `OPENTERM_FIXTURES=1 OPENTERM_SYNTHETIC=1 OPENTERM_STATIC_DIR=frontend/dist`, open http://127.0.0.1:8000 and try `RISK`, `PORT OPT <name> METHOD=RP` then `A`, `PORT ATTR`, `FACT AAPL`, `QL GARCH AAPL`, `ALPHA UNIVERSE=SYN`, `CORR REGIME LIST:SYN0001,SYN0002,SYN0003`, `KITE`. The mocked Playwright suites cannot see real-browser problems (e.g. the textarea / Ctrl+K gotcha). Fix what breaks.
 3. **Live checks (keyless):** run `FACT AAPL`, `ALPHA` (default `TOP100`, the screener universe) and `RISK` on a real portfolio with the app started via `.\scripts\start.ps1`; fix shape drift (Ken French zips, screener sectors, Yahoo pacing in `quant_routes._bars`).

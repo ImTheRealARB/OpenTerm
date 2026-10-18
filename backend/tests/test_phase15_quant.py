@@ -213,3 +213,14 @@ def test_zoo_factor_matches_vibes_values(zoo):
     g = got.to_numpy(float)
     assert np.array_equal(np.isnan(g), np.isnan(want)), f"{zoo['id']}: NaN positions differ"
     assert np.allclose(g, want, rtol=1e-8, atol=1e-10, equal_nan=True), zoo["id"]
+
+
+def test_alpha_factor_info_carries_formula_and_inputs():
+    """ALPHA Enter shows `info`: the ported module's docstring (formula, source) plus inputs and warm-up."""
+    from openterm.quantjobs.alpha import factor_info
+    from openterm.quantlib.alpha import ZOO
+
+    z = next(f for f in ZOO if f["id"] == "alpha101_001")
+    info = factor_info(z)
+    assert "Kakushadze Alpha #1" in info and "INPUTS CLOSE" in info and "WARM-UP 25 BARS" in info
+    assert all(factor_info(f) for f in ZOO)

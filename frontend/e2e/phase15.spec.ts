@@ -176,7 +176,7 @@ test.describe("Phase 15", () => {
     await page.route("**/api/jobs/j1", (r) => {
       polls++;
       const done = job(env(payload("ALPHA SYN", [{ id: "zoo", title: "ALPHA ZOO", note: null, columns: [c("id", "FACTOR"), c("family", "FAMILY"), c("ic_mean", "IC", "num4"), c("ir", "IR", "num"), c("label", "LABEL")], rows: [
-        { id: "alpha101_001", family: "alpha101", ic_mean: 0.0312, ir: 0.41, label: "alive" }, { id: "qlib158_ROC5", family: "qlib158", ic_mean: -0.025, ir: -0.3, label: "reversed" }] }],
+        { id: "alpha101_001", family: "alpha101", ic_mean: 0.0312, ir: 0.41, label: "alive", info: "Kakushadze Alpha #1. Formula: rank(ts_argmax(x, 5)) | INPUTS CLOSE" }, { id: "qlib158_ROC5", family: "qlib158", ic_mean: -0.025, ir: -0.3, label: "reversed" }] }],
         [{ label: "UNIVERSE", value: "SYNTHETIC DATA, NOT A MARKET" }], { charts: [{ id: "decay", title: "IC DECAY", xlabel: "H", ylabel: "IC", series: [{ name: "alpha101_001", points: [[1, 0.03], [5, 0.01]] }] }] })), { kind: "alpha.scan" });
       return r.fulfill({ json: polls < 2 ? { ...done, state: "running", progress: 0.8, msg: "factor 20/24", result: null } : done });
     });
@@ -185,6 +185,10 @@ test.describe("Phase 15", () => {
     await expect(panel(page)).toContainText("SYNTHETIC DATA, NOT A MARKET");
     await expect(selected(page)).toContainText("alpha101_001");
     await expect(selected(page)).toContainText("alive");
+    await expect(async () => {
+      await page.keyboard.press("Enter");
+      await expect(page.getByTestId("research-flash")).toContainText("alpha101_001: Kakushadze Alpha #1");
+    }).toPass();
     await page.keyboard.press("j");
     await expect(selected(page)).toContainText("reversed");
     await expect.poll(() => bodies.alpha?.[0]).toEqual({ universe: "SYN", range: "1y", h: [1, 5] });

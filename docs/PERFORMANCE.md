@@ -469,3 +469,7 @@ earlier phases (195-285 ms rested), not a Phase 15 change; it is recorded, not h
 after that read; (2) four concurrent identical `POST /api/quant/risk` calls raced on the content-addressed data file's temp name and rename on Windows (HTTP 500):
 `bt/store.py` `write_data` now uses a unique temp file and tolerates a concurrent replace. The Phase 15 panels share `ResearchPanel` and load on demand, so
 nothing new runs on the hot path.
+
+**Rerun (2026-10-18, commit `df5325e`, rested machine): 29 of 29 pass.** BT 10-year rule run 208 ms against 300, so the earlier 323 ms miss was machine throttling, as suspected.
+New budgets: RISK 37.0 ms, PORT OPT HRP 7.0 ms / RP 16.6 ms, CORR REGIME 54.9 ms, ALPHA SYN 673.4 ms. Interaction budgets: tick-to-pixel 38.3 ms, keystroke echo 14.5 ms,
+frame p95 16.8 ms. Measured before the ALPHA Enter formula line (`info` per row: one docstring read per factor inside the worker, nothing on the hot path); the next gate re-checks ALPHA.
