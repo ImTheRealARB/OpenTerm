@@ -18,6 +18,7 @@ Filled from Phase 12 onwards. One row per ported file.
 | `openterm/valuation/contracts.py` | `agent/src/quantlib/valuation/contracts.py` (+ `normalize_currency` from `agent/src/entities/models.py`) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/valuation/dcf.py` | `agent/src/quantlib/valuation/dcf.py` (numpy/pandas removed) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/valuation/comps.py` | `agent/src/quantlib/valuation/comps.py` (numpy removed) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/research/fund_parse.py` (`diff_13f` only) | logic of `_diff_positions` in `agent/src/tools/institutional_holdings_tool.py`; written fresh, not copied | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/hooks.py` | `agent/backtest/engines/_market_hooks.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/india_equity.py` | `agent/backtest/engines/india_equity.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/crypto.py` | `agent/backtest/engines/crypto.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |

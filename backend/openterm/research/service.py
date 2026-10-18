@@ -15,6 +15,7 @@ from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
 from . import corp_parse as cp
+from . import fund_parse as fp
 from . import valuation as vp
 
 if TYPE_CHECKING:
@@ -25,8 +26,9 @@ class Research:
     TTL: ClassVar[dict[str, float]] = {
         "ee": 21600.0, "eeo": 21600.0, "anr": 21600.0, "mgmt": 86400.0, "dvd": 21600.0, "splt": 21600.0, "si": 21600.0,
         "ipo": 3600.0,
+        "etf": 21600.0, "memb": 21600.0, "mgr": 86400.0,
     }
-    SYMBOL_FUNCTIONS: ClassVar[set[str]] = {"ee", "eeo", "anr", "mgmt", "dvd", "splt", "cacs", "si", "evts"}
+    SYMBOL_FUNCTIONS: ClassVar[set[str]] = {"ee", "eeo", "anr", "mgmt", "dvd", "splt", "cacs", "si", "evts", "etf"}
 
     EXTRA_PARAMS: ClassVar[dict[str, tuple[str, ...]]] = {"ipo": ("month",), "memb": ("index",), "mgr": ("manager",)}
 
@@ -169,6 +171,49 @@ class Research:
         data = cp.evts_payload(symbol, d["filings"], d["total"], env.get("source") or "sec")
         return {**env, "data": data}
 
+
+    # --- FUND: ETF, MEMB, MGR (Yahoo fund data, SEC N-PORT, SEC 13F-HR) --------------------------
+    async def _fund(self, name: str, symbol: str, **kw) -> dict:
+        async def fetch() -> dict:
+            summary, failed = await self._raw_call(symbol, "fund_info", lambda p: p.fund(symbol))
+            nport = None
+            try:
+                nport, _ = await self._raw_call(symbol, "etf_holdings", lambda p: p.holdings(symbol))
+            except AllFailed as e:
+                failed = [*failed, *(n for n, _ in e.errors)]
+            source = nport["source"] if nport else "yahoo_research"
+            return {"data": fp.etf_payload(symbol, summary, nport, source, **kw), "fallback_from": failed}
+
+        return await self.svc._swr(f"r:{name}:{symbol}", self.ttl(name), fetch)
+
+    async def fn_etf(self, raw: str) -> dict:
+        return await self._fund("etf", resolve(raw))
+
+    async def fn_memb(self, index: str | None = None) -> dict:
+        key = (index or "").strip().upper()
+        proxy = fp.INDEX_PROXY.get(key, key)
+        usage = f"INDEX: {' '.join(fp.INDEX_PROXY)} OR AN ETF TICKER"
+        if not key or not proxy.isalpha() or len(proxy) > 5:
+            raise DataError("bad_request", usage)
+        try:
+            return await self._fund("memb", proxy, title_prefix="MEMB", proxy=proxy, index_label=key)
+        except DataError as e:
+            if e.kind == "not_found":
+                raise DataError("bad_request", usage, e.detail) from e
+            raise
+
+    async def fn_mgr(self, manager: str | None = None) -> dict:
+        key = (manager or "").strip()
+        if not key:
+            raise DataError("bad_request", "MANAGER: A NAME (" + " ".join(sorted(fp.MANAGERS)) + ") OR A CIK NUMBER")
+
+        async def fetch() -> dict:
+            out, failed = await self._raw_call(None, "manager_13f", lambda p: p.manager(key))
+            now, before = out["now"], out["before"]
+            rows = fp.diff_13f(now["table"], before["table"] if before else None)
+            return {"data": fp.mgr_payload(key.upper(), out["name"], now, before, rows, out["source"]), "fallback_from": failed}
+
+        return await self.svc._swr(f"r:mgr:{key.upper()}", self.ttl("mgr"), fetch)
 
     # --- VAL: DCF, WACC, RV ---------------------------------------------------------------------
     VALUATION: ClassVar[set[str]] = {"dcf", "wacc", "rv"}

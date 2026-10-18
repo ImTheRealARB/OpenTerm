@@ -229,6 +229,46 @@ test("DCF: NOT RUNNABLE lists what is missing and sends the typed arguments; a r
   await expect(panel(page)).toContainText("USAGE: <SYM> DCF ERP=5.5");
 });
 
+test("ETF, MEMB and MGR: holdings with matched tickers, proxy ETF, 13F status colours and usage", async ({ page }) => {
+  await setup(page);
+  const holdings = (rows: unknown[]) => ({ id: "holdings", title: "HOLDINGS", note: null, columns: [c("rank", "#", "int"), c("name", "NAME"), c("symbol", "SYMBOL"), c("weight", "WEIGHT", "pct")], rows });
+  await page.route("**/api/research/etf?**", (r) =>
+    r.fulfill({ json: env(payload("ETF SPY · FUND HOLDINGS", [holdings([{ rank: 1, name: "Apple Inc", symbol: "AAPL", weight: 0.0735 }, { rank: 2, name: "Aflac Inc", symbol: null, weight: 0.0008 }])], [{ label: "NET ASSETS", value: "781.19B" }], { notes: ["TICKERS MATCHED BY NAME: 1 OF 2 (APPROXIMATE)"] }), { source: "sec_nport", fallback_from: [] }) }),
+  );
+  await page.route("**/api/research/memb?**", (r) => {
+    asked.push(new URL(r.request().url()).search);
+    return r.fulfill({ json: env(payload("MEMB SPX · INDEX MEMBERS", [{ ...holdings([{ rank: 1, name: "Apple Inc", symbol: "AAPL", weight: 0.0735 }]), id: "members" }], [{ label: "PROXY ETF", value: "SPY" }])) });
+  });
+  await page.route("**/api/research/mgr?**", (r) => {
+    asked.push(new URL(r.request().url()).search);
+    return r.fulfill({
+      json: env(
+        payload("MGR BERKSHIRE · 13F POSITIONS", [{ id: "changes", title: "POSITIONS AND CHANGES", note: null, columns: [c("status", "STATUS"), c("issuer", "ISSUER"), c("shares_change_pct", "SHARE CHG", "pct")], rows: [{ status: "TRIMMED", issuer: "APPLE INC", shares_change_pct: -0.25 }] }], [{ label: "MANAGER", value: "BERKSHIRE HATHAWAY INC" }, { label: "PERIOD", value: "2026-06-30" }], { symbol: null }),
+        { source: "sec_13f" },
+      ),
+    });
+  });
+  await run(page, "SPY ETF");
+  await expect(panel(page)).toContainText("ETF SPY · FUND HOLDINGS");
+  await expect(panel(page)).toContainText("NET ASSETS 781.19B");
+  await expect(selected(page)).toContainText("AAPL");
+  await expect(selected(page)).toContainText("+7.35%");
+  await expect(panel(page)).toContainText("TICKERS MATCHED BY NAME: 1 OF 2 (APPROXIMATE)");
+  await page.keyboard.press("j");
+  await expect(selected(page)).toContainText("Aflac Inc");
+  await expect(selected(page)).toContainText("—");
+  await run(page, "MEMB SPX");
+  await expect(panel(page)).toContainText("PROXY ETF SPY");
+  expect(asked.at(-1)).toContain("index=SPX");
+  await run(page, "MEMB");
+  await expect(panel(page)).toContainText("USAGE: MEMB SPX");
+  await run(page, "MGR BERKSHIRE");
+  await expect(panel(page)).toContainText("MANAGER BERKSHIRE HATHAWAY INC");
+  await expect(selected(page)).toContainText("TRIMMED");
+  await expect(selected(page)).toContainText("-25.00%");
+  expect(asked.at(-1)).toContain("manager=BERKSHIRE");
+});
+
 test("a missing key from the backend (424) shows the shared KEY REQUIRED line", async ({ page }) => {
   await setup(page);
   await page.route("**/api/research/ee?**", (r) =>

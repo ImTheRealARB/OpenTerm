@@ -38,6 +38,7 @@ DEFAULT_ORDER |= {
     "keystats": ["yahoo_research"], "fund_info": ["yahoo_research"], "corp_events": ["yahoo_research"],
     "dividends": ["nasdaq_research", "yahoo_research"], "splits": ["yahoo_research"], "ipo": ["nasdaq_research"],
     "short_interest": ["nasdaq_research", "yahoo_research"], "short_volume": ["finra"],
+    "etf_holdings": ["sec_nport"], "manager_13f": ["sec_13f"],
 }
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}

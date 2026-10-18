@@ -23,7 +23,7 @@ def xf(group: str, step: int):
 EST = lambda f: f  # step 2 landed
 CORP = lambda f: f  # step 3 landed
 VAL = lambda f: f  # step 4 landed
-FUND = xf("FUND", 5)
+FUND = lambda f: f  # step 5 landed
 KEYED = xf("KEYED", 6)
 
 
@@ -281,7 +281,7 @@ def test_etf_profile_holdings_and_sectors(client):
     assert_table_payload(d)
     assert headline(d, "EXPENSE RATIO")["raw"] == pytest.approx(0.000945)
     assert headline(d, "NET ASSETS")["raw"] == pytest.approx(781188872106.76)
-    assert headline(d, "HOLDINGS AS OF")["value"] == "2026-09-30"
+    assert headline(d, "HOLDINGS AS OF")["value"] == "2026-06-30"  # genInfo repPdDate; repPdEnd (09-30) is the fiscal year end
     rows = section(d, "holdings")["rows"]
     assert len(rows) == 60  # the recorded N-PORT is trimmed to 60 positions
     assert [r["weight"] for r in rows] == sorted((r["weight"] for r in rows), reverse=True)

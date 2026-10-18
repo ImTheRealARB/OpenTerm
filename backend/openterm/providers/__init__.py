@@ -130,3 +130,6 @@ from .finra import FinraProvider
 from .research_nasdaq import NasdaqResearchProvider
 
 ADAPTERS.update({"nasdaq_research": NasdaqResearchProvider, "finra": FinraProvider})
+from .sec_funds import Sec13fProvider, SecNportProvider
+
+ADAPTERS.update({"sec_nport": SecNportProvider, "sec_13f": Sec13fProvider})

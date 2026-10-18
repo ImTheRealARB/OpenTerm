@@ -103,7 +103,7 @@ def fixture_transport() -> httpx.MockTransport:
 # sec_subs_*: filings.recent cut to the first 60 entries. sec_company_tickers: AAPL, MSFT, BRK-B only.
 # sec_form4/<accession>: raw Form 4 XML of the 20 latest AAPL Form 4s in sec_subs_aapl.
 SEC_FACTS = {320193: "sec_facts_aapl", 789019: "sec_facts_msft", 1326801: "sec_facts_meta"}
-SEC_SUBS = {320193: "sec_subs_aapl", 789019: "sec_subs_msft"}
+SEC_SUBS = {320193: "sec_subs_aapl", 789019: "sec_subs_msft", 884394: "sec_subs_spy_trust", 1067983: "sec_subs_berkshire"}
 YAHOO_OWN = {("AAPL", "holders"): "yahoo_holders_aapl", ("AAPL", "insiders"): "yahoo_insiders_aapl"}
 
 
@@ -268,6 +268,22 @@ def _route_phase13(request: httpx.Request) -> httpx.Response | None:
         if p == "/api/ipo/calendar":
             name = f"nasdaq_ipo_{q.get('date')}"
             return _load(name) if (FIXTURES / f"{name}.json").exists() else httpx.Response(200, json={"data": None, "status": {"rCode": 400}})
+    if request.url.host == "www.sec.gov":
+        # Archives: N-PORT primary_doc (SPY trust) and 13F information tables (Berkshire), looked up by accession
+        parts = p.split("/")
+        if p == "/files/company_tickers_mf.json":
+            return _load("sec_company_tickers_mf")
+        if p.startswith("/Archives/edgar/data/") and len(parts) > 6:
+            acc, doc = parts[5], parts[6]
+            dashed = f"{acc[:10]}-{acc[10:12]}-{acc[12:]}" if len(acc) == 18 else ""
+            hits = sorted(FIXTURES.glob(f"sec_nport_*_{dashed}.json")) if dashed else []
+            if doc == "primary_doc.xml" and hits:
+                return _load(hits[0].stem)
+            if doc == "index.json" and (FIXTURES / f"sec_index_{dashed}.json").exists():
+                return _load(f"sec_index_{dashed}")
+            for name in ((f"sec_13f_primary_{dashed}",) if doc == "primary_doc.xml" else (f"sec_13f_{dashed}",)):
+                if dashed and (FIXTURES / f"{name}.json").exists():
+                    return _load(name)
     if request.url.host == "cdn.finra.org" and p.startswith("/equity/regsho/daily/CNMSshvol"):
         name = "finra_shvol_" + p.rsplit("CNMSshvol", 1)[1].removesuffix(".txt")
         return _load(name) if (FIXTURES / f"{name}.json").exists() else httpx.Response(404, text="not recorded")
