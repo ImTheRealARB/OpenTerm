@@ -41,6 +41,10 @@ MAX_SUBS_PER_CLIENT = 2000
 DEFAULT_ORDER["figi"] = ["openfigi"]
 DEFAULT_ORDER |= {"holidays": ["nager"], "worldstats": ["worldbank", "dbnomics"], "worldstats_latest": ["worldbank"],
                   "worldstats_countries": ["worldbank"], "worldstats_dbn": ["dbnomics"], "policy_rates": ["policy_rates"]}
+DEFAULT_ORDER |= {"weather_geocode": ["openmeteo"], "weather_forecast": ["openmeteo"], "nws_alerts": ["nws"]}
+# Step 9: the NSE archive is the LAST history source (Yahoo answers first; it only serves `.NS` at `1d`); AMFI NAV for the SECF fund rows
+DEFAULT_ORDER["history"] = [*DEFAULT_ORDER["history"], "nse_archive"]
+DEFAULT_ORDER["mfnav"] = ["amfi"]
 # --- Phase 13: research functions (capability -> providers, keyless first) ---
 DEFAULT_ORDER |= {
     "estimates": ["yahoo_research"], "ratings": ["yahoo_research"], "officers": ["yahoo_research"],
@@ -64,6 +68,9 @@ DEFAULT_ORDER |= {"curve_eur": ["ecb"], "curve_gbp": ["boe"], "curve_cad": ["boc
 DEFAULT_ORDER |= {"futures_contract": ["yahoo_futures"], "cot_history": ["cftc"], "cot_markets": ["cftc"], "fomc_dates": ["fomc"]}
 # --- Phase 15: Fama-French factors (FACT) ---
 DEFAULT_ORDER["factors"] = ["kenfrench"]
+# --- Phase 19 step 8: PRED ---
+DEFAULT_ORDER |= {"pred_poly": ["polymarket"], "pred_poly_market": ["polymarket"], "pred_poly_history": ["polymarket"],
+                  "pred_kalshi": ["kalshi"], "pred_kalshi_market": ["kalshi"], "pred_kalshi_candles": ["kalshi"]}
 # --- Phase 19: GP event markers ---
 DEFAULT_ORDER["earnings_history"] = ["nasdaq_research"]
 # --- Phase 6: SEC / ownership ---
@@ -144,6 +151,7 @@ async def lifespan(app: FastAPI):
     store = keys.from_settings(settings)
     kite = router.providers["kite"]
     kite.attach(KiteSession(store), db)
+    router.providers["nse_archive"].attach(db)  # Phase 19 step 9: day files are kept in the kv table
     ticker = KiteTicker(emit, kite.session, kite.instruments, prev_close) if not settings.openterm_fixtures else None
     hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick, iex=iex, kite=ticker)
     hub_ref.append(hub)
@@ -202,6 +210,7 @@ async def lifespan(app: FastAPI):
         for part in (hub, ticker, iex, synthetic, poller, yahoo):
             if part:
                 await part.stop()
+        await router.providers["nse_archive"].close()
         await cache.flush()
         await http.aclose()
         await db.close()

@@ -82,6 +82,50 @@ async def central_banks(request: Request):
         return error(e)
 
 
+@router.get("/nrg")
+async def energy_board(request: Request):
+    """NRG: crude, natural gas, refined products and retail fuel prices from FRED's keyless CSV."""
+    from .world.commodity import nrg
+
+    try:
+        return await nrg(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/wetr")
+async def weather_board(request: Request, place: str = Query("", max_length=80)):
+    """WETR: demand-city degree-day basket; with a place name or `lat,lon`, its 7-day forecast and (US, with SEC_USER_AGENT) NWS alerts."""
+    from .world.commodity import wetr
+
+    try:
+        return await wetr(svc(request), place)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/pred")
+async def pred_markets(request: Request, q: str = Query("", max_length=120)):
+    """PRED: Polymarket and Kalshi markets (read only), filtered by the words of `q`, biggest volume first. Labelled MARKET-IMPLIED PROBABILITY, NOT A FORECAST."""
+    from .world.pred import pred
+
+    try:
+        return await pred(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/pred/detail")
+async def pred_market_detail(request: Request, source: str = Query(..., max_length=12), id: str = Query(..., max_length=160)):
+    """PRED `Enter`: one market's outcome table and, where the source gives one, its price history."""
+    from .world.pred import pred_detail
+
+    try:
+        return await pred_detail(svc(request), source.strip().lower(), id.strip())
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/ticks/{symbol}")
 async def ticks(request: Request, symbol: str, bar: str = Query("5s", max_length=4)):
     """GIP: time-bucketed bars built from the live ticks this server has seen for the symbol (nothing is invented: no ticks = empty)."""
@@ -107,3 +151,14 @@ async def ticks(request: Request, symbol: str, bar: str = Query("5s", max_length
             "synthetic": ring.src == "s", "sessions": ring.sessions, "source_code": ring.src, **bars}
     age = max(0.0, now - last)
     return {"data": data, "source": f"TICKS · {label}", "as_of": last, "age_s": round(age, 2), "stale": age > STALE_TICKS_S, "fallback_from": []}
+
+
+@router.get("/mfnav")
+async def mf_nav(request: Request, q: str = Query(..., max_length=80)):
+    """SECF fund rows: Indian mutual fund schemes from AMFI's daily NAV file, by name words, ISIN (INF...) or scheme code."""
+    from .world.mf import lookup
+
+    try:
+        return await lookup(svc(request), q)
+    except DataError as e:
+        return error(e)

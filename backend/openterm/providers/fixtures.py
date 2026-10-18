@@ -592,3 +592,86 @@ def _route_phase19b(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase19b(request) or _route_before_phase19b(request)
+
+
+# --- Phase 19 step 6: Open-Meteo, NWS alerts (recordings from scripts/record_phase19.py 6; FRED energy CSVs go through the fred_csv_<ID> route) ---
+_route_before_phase19c = _route
+_NWS_POINTS = {(29.76, -95.37): "nws_alerts_houston", (34.1471, -98.5971): "nws_alerts_point"}  # matched within 0.01 degrees
+
+
+def _route_phase19c(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "api.open-meteo.com" and p == "/v1/forecast":
+        lat = q.get("latitude", "")
+        if "," in lat:
+            return _load("openmeteo_forecast_basket")
+        return _load("openmeteo_forecast_houston") if lat.startswith("29.76") else httpx.Response(404, text="not recorded")
+    if host == "geocoding-api.open-meteo.com":
+        name = q.get("name", "").strip().lower()
+        return _load({"houston": "openmeteo_geocode_houston", "zzqqxxvv": "openmeteo_geocode_nowhere"}[name]) if name in ("houston", "zzqqxxvv") else httpx.Response(404, text="not recorded")
+    if host == "api.weather.gov" and p == "/alerts/active":
+        try:
+            lat, lon = (float(x) for x in q.get("point", "").split(","))
+        except ValueError:
+            return httpx.Response(404, text="not recorded")
+        name = next((n for (a, b), n in _NWS_POINTS.items() if abs(a - lat) < 0.01 and abs(b - lon) < 0.01), None)
+        return _load(name) if name else httpx.Response(404, text="not recorded")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase19c(request) or _route_before_phase19c(request)
+
+
+# --- Phase 19 step 8: Polymarket and Kalshi (recordings from scripts/record_phase19.py 8; one market and its history each, anything else is not recorded) ---
+_route_before_phase19e = _route
+_POLY_ID, _POLY_TOKEN_OF = "665374", "polymarket_market_665374"
+_KALSHI_TICKER = "KXOAIANTH-40-ANTH"
+
+
+def _route_phase19e(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "gamma-api.polymarket.com":
+        if p == "/markets":
+            return _load("polymarket_markets_closed" if q.get("closed") == "true" else "polymarket_markets")
+        if p == f"/markets/{_POLY_ID}":
+            return _load(_POLY_TOKEN_OF)
+        return httpx.Response(404, text="not recorded")
+    if host == "clob.polymarket.com" and p == "/prices-history":
+        token = json.loads(json.loads((FIXTURES / f"{_POLY_TOKEN_OF}.json").read_text(encoding="utf-8"))["body"]["clobTokenIds"])[0]
+        return _load("polymarket_prices_history") if q.get("market") == token else httpx.Response(404, text="not recorded")
+    if host == "api.elections.kalshi.com":
+        if p == "/trade-api/v2/markets":
+            return _load("kalshi_markets")
+        if p == f"/trade-api/v2/markets/{_KALSHI_TICKER}":
+            return _load(f"kalshi_market_{_KALSHI_TICKER}")
+        if p == f"/trade-api/v2/series/KXOAIANTH/markets/{_KALSHI_TICKER}/candlesticks":
+            return _load("kalshi_candlesticks")
+        return httpx.Response(404, text="not recorded")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase19e(request) or _route_before_phase19e(request)
+
+
+# --- Phase 19 step 9: NSE bhavcopy day files and AMFI NAVAll.txt (recordings from scripts/record_phase19.py 9). A day with no recording answers
+# the recorded 404 (so it reads as a holiday: fixture mode never invents a day file). NAVAll.txt answers 302 first, as the real host does. ---
+_route_before_phase19f = _route
+
+
+def _route_phase19f(request: httpx.Request) -> httpx.Response | None:
+    host, p = request.url.host, request.url.path
+    if host == "nsearchives.nseindia.com":
+        stem = p.rsplit("/", 1)[-1]  # BhavCopy_NSE_CM_0_0_0_<YYYYMMDD>_F_0000.csv.zip
+        ymd = stem[len("BhavCopy_NSE_CM_0_0_0_"):][:8] if stem.startswith("BhavCopy_NSE_CM_0_0_0_") else ""
+        return _load(f"nse_bhavcopy_{ymd}") if ymd.isdigit() and (FIXTURES / f"nse_bhavcopy_{ymd}.json").exists() else _load("nse_bhavcopy_404")
+    if host == "www.amfiindia.com" and p == "/spages/NAVAll.txt":
+        return httpx.Response(302, headers={"location": "https://portal.amfiindia.com/spages/NAVAll.txt"}, text="Object moved")
+    if host == "portal.amfiindia.com" and p == "/spages/NAVAll.txt":
+        return _load("amfi_navall")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase19f(request) or _route_before_phase19f(request)

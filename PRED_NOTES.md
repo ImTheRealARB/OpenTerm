@@ -1,0 +1,20 @@
+# PRED (Phase 19 step 8): notes for the Progress log (delete this file after folding)
+
+Recorded 2026-10-18 with `python scripts/record_phase19.py 8` (all keyless, all answered; nothing invented):
+- `polymarket_markets` (gamma `/markets?limit=100&active=true&closed=false&order=volumeNum`, trimmed from ~560 KB to ~98 KB: images, descriptions, order-book fields dropped, every field PRED reads kept untouched),
+  `polymarket_markets_closed` (5 real resolved markets, for the closed filter), `polymarket_market_665374` (`/markets/<id>`), `polymarket_prices_history` (CLOB `prices-history?interval=1m&fidelity=240`, 180 points).
+- `kalshi_markets` (top 100 by volume of two merged 1000-market pages, ~117 KB), `kalshi_market_KXOAIANTH-40-ANTH` (`/markets/<ticker>`), `kalshi_candlesticks` (`/series/<series>/markets/<ticker>/candlesticks`, 60-minute, 7 days, 82 candles, ~31 KB).
+
+Findings that shaped the code:
+- Polymarket `outcomes`, `outcomePrices`, `clobTokenIds` are JSON-encoded strings (parsed with orjson). RESOLVED markets still say `active: true`; only `closed: true` (and `archived`) tell them apart, so the filter keys on `closed`/`archived`, not `active`.
+- Kalshi answers have NO integer-cent fields any more: prices are dollar strings (`last_price_dollars: "0.9100"`, `yes_bid_dollars`), volume is `volume_fp` (contracts of US$1, not USD), `status` is `active` for open markets. The parser still reads legacy cents (`yes_bid: 91`) and prefers dollars when both exist (unit-tested).
+- Kalshi `/markets` has more than 12,000 open markets, NO volume ordering, nearest close first (page one = today's sports props, 1.5 s and ~2 MB per 1000). Multivariate combo markets (zero volume, empty books) are excluded with `mve_filter=exclude`. PRED reads two pages concurrently (nearest-closing, and `min_close_ts` = now + 30 days for elections/macro/long bets), merges by ticker, sorts by volume. So PRED shows the top markets of 2000, not every market; the panel says so.
+- Kalshi YES probability = last traded price, else bid/ask midpoint when the book is not empty and not wider than 50 cents (an empty 0/1 book gives no row). `basis` says which.
+- Kalshi candlesticks need the SERIES ticker (`event_ticker` up to the first dash), not just the market ticker (`/markets/<t>/candlesticks` is a 404). Candles of periods with no trades have no `price` close: they are gaps, not zeros. A market created today has 1-2 candles.
+- Polymarket history is on the YES token (`clobTokenIds[0]`, or the "Yes" index). Volume units differ (USD vs contracts), so the list says so in a `unit_note` line and every volume cell carries `$` or `ct`; sorting is by the raw number (labelled, not converted).
+- Rate limits: none hit. No rate-limit headers on either; adapters use 4 req/s burst 8. Kalshi list is cached 120 s server side.
+
+Design: capabilities `pred_poly|pred_poly_market|pred_poly_history|pred_kalshi|pred_kalshi_market|pred_kalshi_candles` (DEFAULT_ORDER one provider each; sources are merged by `world/pred.py`, not failed over). One source down: rows from the other plus a `failed` entry and a note; both down: DataError (HTTP 5xx), never an empty table. Detail history failure still returns the outcome table with `history_note`.
+Files: `providers/polymarket.py`, `providers/kalshi.py` (class `KalshiMarketsProvider`, name `kalshi`), `world/pred.py`, routes `GET /api/world/pred?q=` and `GET /api/world/pred/detail?source=&id=`, fixtures route `_route_phase19e`, `PRED.tsx`, `predArgs.ts` (+ test), api.ts types `Pred*` and `worldApi.pred / predDetail`, `e2e/phase19e.spec.ts` (written, NOT run), `tests/test_phase19_pred.py` (47 tests), vitest `predArgs.test.ts` (11).
+
+Deviations: none from the spec. Added panel arg `SRC=POLY|KALSHI|ALL` (client-side filter). Text filter is applied server side over the fetched top markets (Polymarket top 200 by volume, Kalshi top of 2 pages), not a search of the whole exchange. test_api.py provider-name set gained `polymarket`, `kalshi`. Kalshi fixture mode serves one market detail (KXOAIANTH-40-ANTH) and Polymarket one (665374); any other id is "not recorded" (404), never invented.

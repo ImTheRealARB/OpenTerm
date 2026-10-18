@@ -929,6 +929,81 @@ export interface CenbPayload {
   notes: string[];
 }
 
+/** NRG: one energy price row (FRED CSV). `error` set = this series did not answer. */
+export interface NrgRow {
+  id: string;
+  alias: string;
+  label: string;
+  group: string;
+  unit: string;
+  freq: string;
+  last: number | null;
+  date: string | null;
+  chg: number | null;
+  pct: number | null;
+  lo: number | null;
+  hi: number | null;
+  pos: number | null;
+  n: number;
+  stale: boolean;
+  error: string | null;
+}
+export interface NrgPayload {
+  rows: NrgRow[];
+  spread: { value: number; date: string; label: string; unit: string } | null;
+  failed: string[];
+  groups: string[];
+  note: string;
+}
+/** WETR: Open-Meteo forecast day (temperatures in C, degree days in F-days). */
+export interface WxDay {
+  date: string;
+  tmax: number | null;
+  tmin: number | null;
+  tmean: number | null;
+  precip: number | null;
+  wind: number | null;
+  code: number | null;
+  sky: string | null;
+  hdd: number | null;
+  cdd: number | null;
+}
+export interface WxForecast {
+  lat: number | null;
+  lon: number | null;
+  tz: string | null;
+  days: WxDay[];
+  hdd: number;
+  cdd: number;
+  days_counted: number;
+}
+export interface WxBasketRow {
+  city: string;
+  hdd: number;
+  cdd: number;
+  days: number;
+  tmean: number | null;
+  tmax: number | null;
+  tmin: number | null;
+}
+export interface WxAlert {
+  event: string;
+  severity: string;
+  urgency: string | null;
+  area: string | null;
+  headline: string | null;
+  onset: string | null;
+  ends: string | null;
+}
+export interface WetrPayload {
+  basket: { rows: WxBasketRow[]; average: { hdd: number; cdd: number } | null; weighting: string };
+  place: { name: string; lat: number; lon: number; cc?: string | null; tz?: string | null; others?: string[] } | null;
+  forecast: WxForecast | null;
+  alerts: { status: "OK" | "NONE" | "SKIPPED" | "UNAVAILABLE" | "OUTSIDE"; items: WxAlert[]; note: string | null } | null;
+  base_f: number;
+  note: string;
+}
+
 /** Market-light holidays (`basis`: NYSE rules or Nager public holidays). */
 export interface HolidayCalendar {
   mkt: string;
@@ -940,11 +1015,68 @@ export interface HolidayCalendar {
   source: string;
 }
 
+/** PRED (Phase 19 step 8): prediction-market rows. `prob` is 0..1; Polymarket volume is USD, Kalshi's is contracts of US$1. */
+export interface PredRow {
+  id: string;
+  source: "polymarket" | "kalshi";
+  question: string;
+  outcome: string;
+  prob: number;
+  pct: number;
+  volume: number;
+  vol_unit: "USD" | "contracts";
+  close: string | null;
+  history: boolean;
+  ref: string;
+  event: string | null;
+  basis?: string;
+}
+export interface PredPayload {
+  rows: PredRow[];
+  label: string;
+  q: string;
+  counts: Record<string, number>;
+  failed: { source: string; reason: string }[];
+  notes: string[];
+  sources: string[];
+  unit_note: string;
+}
+export interface PredOutcome {
+  name: string;
+  prob: number | null;
+  pct: number | null;
+  bid: number | null;
+  ask: number | null;
+}
+export interface PredDetail {
+  source: "polymarket" | "kalshi";
+  id: string;
+  question: string;
+  label: string;
+  open: boolean;
+  volume: number;
+  vol_unit: "USD" | "contracts";
+  liquidity: number | null;
+  open_interest?: number | null;
+  close: string | null;
+  series?: string;
+  outcomes: PredOutcome[];
+  lead: string;
+  history: { t: number[]; p: number[] } | null;
+  history_outcome: string;
+  history_note: string | null;
+  basis: string;
+}
+
 export const worldApi = {
   stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
   weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
   cenb: (fresh = false) => request<Envelope<CenbPayload>>("/api/world/cenb", fresh ? 0 : 300_000),
+  nrg: (fresh = false) => request<Envelope<NrgPayload>>("/api/world/nrg", fresh ? 0 : 300_000),
+  wetr: (place: string, fresh = false) => request<Envelope<WetrPayload>>(`/api/world/wetr?${qs({ place })}`, fresh ? 0 : 300_000),
   holidays: (mkt: string, year: number) => request<Envelope<HolidayCalendar>>(`/api/world/holidays?${qs({ mkt, year: String(year) })}`, 3_600_000),
+  pred: (q: string, fresh = false) => request<Envelope<PredPayload>>(`/api/world/pred?${qs({ q })}`, fresh ? 0 : 60_000),
+  predDetail: (source: string, id: string, fresh = false) => request<Envelope<PredDetail>>(`/api/world/pred/detail?${qs({ source, id })}`, fresh ? 0 : 60_000),
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */

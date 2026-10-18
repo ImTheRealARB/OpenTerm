@@ -185,3 +185,19 @@ from .policy_rates import PolicyRatesProvider
 from .worldstats import DbnomicsProvider, WorldBankProvider
 
 ADAPTERS.update({"nager": NagerProvider, "worldbank": WorldBankProvider, "dbnomics": DbnomicsProvider, "policy_rates": PolicyRatesProvider})
+from .nws import NwsProvider
+from .openmeteo import OpenMeteoProvider
+
+ADAPTERS.update({"openmeteo": OpenMeteoProvider, "nws": NwsProvider})
+
+# --- Phase 19 step 8: PRED (prediction markets, read only) ---
+from .kalshi import KalshiMarketsProvider
+from .polymarket import PolymarketProvider
+
+ADAPTERS.update({"polymarket": PolymarketProvider, "kalshi": KalshiMarketsProvider})
+
+# --- Phase 19 step 9: non-US zero-key data (NSE archive end-of-day bars, AMFI mutual fund NAV) ---
+from .amfi import AmfiProvider
+from .nse_archive import NseArchiveProvider
+
+ADAPTERS.update({"nse_archive": NseArchiveProvider, "amfi": AmfiProvider})
