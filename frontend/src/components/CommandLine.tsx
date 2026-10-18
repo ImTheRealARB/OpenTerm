@@ -207,8 +207,9 @@ export function CommandLine() {
 
   const suggest = (v: string) => {
     // Intent-based prefetch: the chart chunk is skipped at idle (it is big), so fetch it the
-    // moment GP appears in the command line instead of after Enter.
-    if (/(^|\s)GP(\s|$)/i.test(v)) void loadModule("GP").catch(() => {});
+    // moment GP (or BT, which draws its equity curve with the same chart) appears in the command line, not after Enter.
+    const intent = /(?:^|\s)(GP|BT)(?:\s|$)/i.exec(v);
+    if (intent) void loadModule(intent[1].toUpperCase()).catch(() => {});
     const layoutArg = LAYOUT_ARG.exec(v);
     const wlArg = layoutArg ? null : WL_ARG.exec(v);
     if (layoutArg || wlArg) {

@@ -6,10 +6,17 @@ import type { FunctionProps } from "./registry";
 // Separate chunk: only load-test sessions pay for the chart library and generated data.
 const TestGrid = lazy(() => import("./PerfViews").then((m) => ({ default: m.TestGrid })));
 const TestChart = lazy(() => import("./PerfViews").then((m) => ({ default: m.TestChart })));
+const CalcBench = lazy(() => import("./PerfViews").then((m) => ({ default: m.CalcBench })));
 
 export default function Perf({ panelId, args }: FunctionProps) {
   const mode = args[0]?.toUpperCase();
   const n = Math.min(1_000_000, Math.max(1, Number(args[1]) || (mode === "CHART" ? 50_000 : 10_000)));
+  if (mode === "CALC")
+    return (
+      <Suspense fallback={<div className="dim">LOADING TEST VIEW…</div>}>
+        <CalcBench />
+      </Suspense>
+    );
   if (mode === "GRID" || mode === "CHART")
     return (
       <Suspense fallback={<div className="dim">LOADING TEST VIEW…</div>}>
@@ -30,7 +37,7 @@ function PerfMonitor() {
     <div>
       <h2>PERF</h2>
       <PerfTable detailed />
-      <div className="dim">LOAD TESTS: PERF GRID [ROWS] · PERF CHART [BARS]</div>
+      <div className="dim">LOAD TESTS: PERF GRID [ROWS] · PERF CHART [BARS] · PERF CALC</div>
       <h2>RECENT COMMANDS (SUBMIT → PAINT)</h2>
       <table className="t">
         <tbody>

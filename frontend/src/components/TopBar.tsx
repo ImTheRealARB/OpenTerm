@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { statusMsg } from "../command/execute";
 import { APP_NAME } from "../config";
-import { MARKETS, isOpen } from "../markets/hours";
+import { MARKETS, basisOf, lightOf } from "../markets/hours";
+import { loadHolidays, unavailable } from "../markets/holidays";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { CommandLine } from "./CommandLine";
@@ -39,10 +40,16 @@ function Clock() {
       });
       MARKETS.forEach((m, i) => {
         const el = lights.current[i];
-        if (el) el.className = isOpen(m, now) ? "mk open" : "mk";
+        if (!el) return;
+        const light = lightOf(m, now);
+        el.className = light === "closed" ? "mk" : `mk ${light}`;
+        el.textContent = light === "hol" ? `${m.code} HOL` : light === "early" ? `${m.code} EARLY` : m.code;
+        const basis = basisOf(m, now);
+        el.title = `${m.code} ${m.tz} · ` + (basis === "rules" ? "HOLIDAYS BY NYSE RULE" : basis === "public" ? "PUBLIC HOLIDAYS (EXCHANGE MAY DIFFER)" : unavailable.has(m.code) ? "NO HOLIDAY DATA: WEEKDAY SESSIONS ONLY" : "HOLIDAYS LOADING");
       });
     };
     tick();
+    void loadHolidays();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [zones]);
@@ -50,7 +57,7 @@ function Clock() {
   return (
     <div className="clock">
       {MARKETS.map((m, i) => (
-        <span key={m.code} ref={(el) => void (lights.current[i] = el)} className="mk" title={`${m.code} ${m.tz} (holidays not modelled)`}>
+        <span key={m.code} ref={(el) => void (lights.current[i] = el)} className="mk" title={`${m.code} ${m.tz}`}>
           {m.code}
         </span>
       ))}

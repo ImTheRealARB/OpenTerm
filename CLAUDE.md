@@ -3,11 +3,14 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-All 10 phases are built and on `main`. Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+Phases 1-10 are on `main`. **Phases 11-16 and 19 are DONE (2026-10-18) on branch `claude/openterm-phase-19-step-4-c5c695` (pushed to origin = private GitHub repo ImTheRealARB/OpenTerm), not yet merged into `main`: the user paused before the merge for a demo. The Windows full gate passed (pytest 1567, e2e 181). Next action and the open items: HANDOFF.md "Resume here".** **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
-**Usage rule:** Sonnet subagents only (Opus drains the Pro 5-hour window in minutes), 2-3 at a time. When the
-5-hour or weekly plan window reaches 90%, stop all subagents, update HANDOFF.md
-so another account can resume, and pause.
+**Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
+2026-10-19). Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
+Pause at 95% of the 5-hour window when the user asked for unattended work, else at 60%. If the same gate fails twice on the same problem, stop, write the state and
+exact next action to HANDOFF.md, commit, and tell the user (they may switch to Opus for that one problem). When the
+5-hour or weekly plan window reaches the pause level, stop all subagents, update HANDOFF.md so another account can resume, commit,
+and pause.
 
 ## Non-negotiables (from the spec)
 - Speed over looks. No shadows, gradients, radii, transitions or web fonts. Color only carries meaning.
@@ -16,7 +19,17 @@ so another account can resume, and pause.
 - Every action works from the keyboard. Mouse is optional.
 - Performance budgets are gated by `node scripts/bench.mjs`. A phase is not done if a budget regresses.
   Record before/after numbers in `docs/PERFORMANCE.md`.
-- Free data only, zero keys must work. Never bypass bot checks or captchas.
+- **Zero keys still works; a key unlocks more** (Phase 11 rule change). A function that needs a key shows
+  `KEY REQUIRED: set X in APIKEYS` instead of failing. Paid keys are allowed, never required. Never bypass bot checks or captchas.
+  Scope decision 2026-10-19: no paid data APIs get built; the only paid service is OpenRouter (AI layer).
+- Keys live only in env, the OS keyring or `.env` (`keys.py`). Never in the repo, the command line, command history, a URL
+  sent to the frontend or any API response; redacted from logs, `/api/perf`, `/api/log`, `/api/sources`, error text and AI traces.
+- AI output is model output, not data: every AI panel says `AI · <model> · <time>` and links the tool calls that grounded
+  it; an answer that used no tool data says `UNGROUNDED`. Backtests say `HISTORICAL SIMULATION, NOT A FORECAST` with source,
+  adjusted vs raw closes, fees and slippage.
+- Orders: paper first. Live orders only if the user turns them on, behind a mandate (symbol allowlist, size and daily caps)
+  and a kill switch. Order tools never appear in the MCP server or the AI agent.
+- Ported code keeps its licence notice in [THIRD_PARTY.md](THIRD_PARTY.md) and names its source file and commit.
 - No Bloomberg name, logo or assets. The product name lives in `frontend/src/config.ts` and `backend/openterm/__init__.py`.
 
 ## Layout
@@ -35,7 +48,7 @@ so another account can resume, and pause.
 
 ## Commands (Windows PowerShell 5.1: no `&&`)
 ```
-cd backend; uv run pytest -q; uv run ruff check .   # pytest runs on 4 xdist workers (addopts); -n 0 to debug
+cd backend; uv run pytest -q; uv run ruff check .   # pytest: 6 xdist workers, worksteal (addopts); -n 0 to debug
 cd frontend; npx tsc --noEmit; npx vitest run; npx playwright test
 node scripts/bench.mjs          # from repo root; builds, starts servers in fixture+synthetic mode, prints PASS/FAIL
 .\scripts\dev.ps1               # backend :8000 + vite :5173 (vite binds to localhost / ::1, use http://localhost:5173)
@@ -105,9 +118,88 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   the chart with `key={id:range}`; GP may have the same stale-readout bug.
 - **Panel arg changes go through `replaceView(panelId, v => ({...v, args}))`** so ERN/ECO/FRED state survives layout save/load.
 - **In Playwright, assert on fetched requests with `expect.poll`:** the `.ph` title changes before the panel's fetch fires.
+- **`SETTINGS KEYS` means keyboard shortcuts** (Phase 10). API keys live in the `APIKEYS` panel (Phase 11 spec); a key is typed only in
+  its masked field, never on the command line, so it never reaches `/api/cmdhistory`.
+- **Tests-first steps mark new tests expected-to-fail** so every suite stays green: pytest `xfail(strict=True)` per step group (`KEYS`,
+  `JOBS`, `LLM` in `test_phase11.py`), vitest `it.fails` with a variable-path `import()` (tsc would reject a missing module), Playwright
+  `test.fail()`. The build step deletes the markers (and switches vitest to static imports). Strict xfail turns an accidental pass red.
+- **`conftest.py` `client` sets `OPENTERM_KEYRING=memory`, `OPENTERM_DOTENV_PATH` (tmp) and `OPENTERM_JOB_WORKERS=2`** and connects
+  as `127.0.0.1` (key writes are loopback-only). Tests must never touch the real OS keyring or the repo `.env`.
+- **Key store (`keys.py`):** env > keyring > `.env`; `keyring` is never imported at startup (a pinned test checks it); keyring-stored
+  keys are applied 2 s after startup in a thread. A keyed adapter must read its key from `app.state.keys` (or be refreshed by
+  `on_key_change`), not only from `Settings`, or a key set in APIKEYS does nothing until restart. `KeyStore.set` shadows the builtin
+  `set` in the class body: keep `from __future__ import annotations` at the top of `keys.py`.
+- **Jobs:** `openterm/jobs/__init__.py` and `kinds.py` are imported by every worker process: keep them free of FastAPI, aiosqlite
+  and heavy libraries (import those inside a kind's `fn`). Migration tests that fake an old DB must also `DROP TABLE jobs`.
+  Bench job budgets are split like backend latency: the Vite preview proxy adds ~16 ms on Windows, so end to end is INFO.
+- **Any app error text goes through `redact()`** (`api.error`, SOURCES `last_error`, key-test detail). New error paths must too.
+- **LLM gateway (`openterm/llm/`) is imported on first use** (`api.llm_of`). Prompts and outputs are never logged. In fixture mode
+  the Ollama port raises ConnectError (the generic fallback route would answer 200 and fake an `OK`); keep LLM hosts routed explicitly.
+- **BT cross-check values come from Vibe-Trading's own engine** (`scripts/vibe_crosscheck.py`, run in a throwaway venv
+  with Vibe's `agent/` on PYTHONPATH; never vendor Vibe into the repo). Its semantics: signals act one bar later at the
+  open; US sizes round to 0.01 shares; an open position closes at the last close (with slippage) as `end_of_backtest`.
+- **A strict-xfail API test can pass by accident on FastAPI's own 404** for a route that does not exist yet: assert on
+  the body (e.g. the symbol in the error), not only the status code.
+- **BT jobs:** `bt.run` is an internal job kind (only `/api/bt/run` submits it). The server fetches bars, writes a
+  content-addressed data file and passes its path + hash; the job hash leaves out `labels` (they carry data age).
+  `JobRunner.on_done["bt.run"]` saves the run to `bt_runs` before the job shows done. Deleting a run forgets its job hash.
+- **Never import pandas/numpy in the server process** (`test_server_never_imports_pandas`): `bt.rules` parsing,
+  `bt.sandbox.check`, `bt.catalog` and `bt.store` are pure; pandas code lives in `bt.engine`, `frames`, `job`.
+- **Ported Vibe files stay verbatim apart from imports and the listed cuts**; their header line names the source file.
+  Behaviour changes there break the cross-check tests, which is the point. Lint: only ruff's safe autofixes plus
+  `# noqa` (TRY004, BLE001, B023, UP040) where a fix would change Vibe's behaviour; the header's `Changes:` line says so.
+- **A new migration needs its tables in the migration test.** Before `claude/test-speedup` is merged: add them to the
+  DROP lists in `test_userdata`, `test_phase8`, `test_phase11`. After the merge: one test upgrades from every schema
+  version; list the new tables in `TABLES_BY_VERSION` (`test_userdata.py`), or it fails.
+- **After `claude/test-speedup` is merged:** pytest runs `-n 6 --dist worksteal`; new e2e specs use `openApp()` from
+  `e2e/app.ts` (one page load); unmocked e2e requests still reach port 8000, so keep it free while Playwright runs.
+- **Tab never reaches a panel:** it is the global next-panel key (`ALWAYS_GLOBAL`). Panel views cycle with another key
+  (BT uses `V` / `Shift+V` and `1`-`4`); the `Tab` cases in FA, FIL and MOV are dead code.
+- **Big JSON routes must return `Orjson(...)`, not a dict:** FastAPI runs `jsonable_encoder` over a returned dict even with
+  `default_response_class=Orjson` (~30 ms for a 10-year equity curve).
+- **BT panel:** POST `/api/bt/run` answers with `run_id` (and the stored `run` when cached); `net/jobs.ts` `adoptJob` puts
+  the job in the store so `J` frames update it. A done frame can arrive before the POST answer: the job effect handles it.
+  `BaseEngine._bar_row` (our addition to the ported engine) caches `df.loc[ts]` per bar; hooks must not mutate rows.
+- **Strategy sandbox is defence in depth:** allowlisted imports, no dunder/`format` attribute access, no file or network
+  entry points of numpy/pandas, restricted builtins, sockets off in the worker, memory cap via a Windows Job Object.
+- **A session cannot write into another worktree** (hook). Bring the branch here with `git merge --ff-only <branch>` instead.
 - **The app's preview tool may still point at an old folder.** Start servers yourself and screenshot via a Playwright script (see HANDOFF.md).
 
+- **Vibe-Trading's symbol detector (`bt/engines/hooks.py` `_detect_market`) reads Yahoo-style `BTCUSDT.P`, `BRK-B`, `^GSPC` as China A** (its catch-all).
+  Composite runs go through `composite.market_of`, which fails closed. Vibe's crypto `perpetual_strict` mode is not ported.
+- **A textarea that stops key propagation also swallows Ctrl+K.** IMPORT and BT EDIT let Ctrl+K through; copy that if you add another text box.
+  The mocked Playwright suites cannot see this: run the real-backend smoke (build the frontend, `OPENTERM_FIXTURES=1 OPENTERM_STATIC_DIR=frontend/dist`).
+- **Bench throttling:** the BT 10-year run (budget 300 ms) reads 230 ms rested and 380-490 ms after several back-to-back bench runs. Rest, then rerun once.
+- **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;
+  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs pytest, ruff, tsc, vitest, Playwright at once.
+- **`POST /api/bt/import` takes the CSV as the raw body;** `/api/history` is columnar (`data.t/o/h/l/c/v`), never `data.bars`. A stored symbol shadows a real ticker.
+- **`quantlib` is worker-only:** scipy, statsmodels and arch are imported only inside job kinds and tests, never by the server process (`test_server_never_imports_scipy` guards it).
+  `openterm/quant/` (Phase 14) stays pure Python.
+- **Phase 15 job pattern:** `POST /api/quant/{fn}` (`quant_routes.py`; fn = risk opt attr fact ql alpha regime) parses args, fetches bars (`_bars`), writes a content-addressed data file and submits an internal
+  job (`quantjobs/`: `risk.run opt.run attr.run fact.run ql.run alpha.scan corr.regime`); the job never touches the network and returns the Phase 13/14 table payload for `ResearchPanel`.
+  A repeat is a cache hit, so benches and tests vary a parameter. Kite lives in `kite/` + `kite_routes.py`.
+- **Kite is read-only with no order surface** (a test scans route paths, tools and module names for `order`, `gtt`, `margins`, holdings). Its `kite_*` fixtures are doc-shaped, NOT recordings;
+  the WebSocket ticker and the login flow have never run against a real key. Tokens last one trading day (`KITE LOGIN EXPIRED`).
+- **Yahoo `range=max` is monthly:** history needing daily bars back to 2006 uses `20Y` (`range=20y&interval=1d`). Yahoo's burst limit paces many-symbol fetches inside `_bars`.
+- **Bench Phase 15 budgets (5, server-side like BT):** RISK 20 names x 3Y <= 400 ms, PORT OPT HRP and RP 20 names <= 400 ms each, CORR REGIME 20 names <= 300 ms, ALPHA SYN 100 names x 2Y <= 8 s; total 29 with the older 24.
+- **Swarm, runs, theses, audit (Phase 16 steps 5-6):** `ai/swarm.py` (presets, roles run one after another, one retry, chair numbers checked against the analysts' notes), `ai/routes_run.py` (swarm, auto, stored runs and replay, `/api/theses`),
+  `ai/store.py` (`ai_runs` keeps non-token events for replay with no model call; `theses`), `ai/audit.py` (BT run ids are 16 hex characters, the AI/thesis run ids 12; `ai_ledger` hash chain, written at the final event; hashes and metadata only; `audit_of` rebuilds its log when the DB object changes because tests reuse the app).
+  The installed FastAPI wraps routers in `_IncludedRouter`: list paths with `app.openapi()["paths"]`, not `app.routes`. A model answering nothing makes `agent.run` make a second (closing) gateway call: scripted tests need an extra entry.
+- **AI (Phase 16):** `openterm/ai/` (tools via in-process ASGI to the app's own routes, agent loop, guard, context, grounding) behind `POST /api/ai/chat` (SSE). Fixture mode replays two recorded OpenRouter turns for ANY question (labelled RECORDED);
+  tests inject a scripted gateway (`FakeGateway` in `test_phase16_agent.py`). The default model `deepseek/deepseek-v4-pro` is a reasoning model: give it >= 400 output tokens or it answers nothing. The bench sets a fake key into a memory keyring (`OPENTERM_KEYRING=memory`).
+  A job-based tool (`quant`, `backtest_run`) cannot be probed from a bare script on Windows (worker spawn re-imports `__main__`: guard with `if __name__ == "__main__"`).
+- **Inputs inside a panel (AI question box) must let Ctrl/Alt/Meta chords bubble** (`if (!e.ctrlKey && !e.altKey && !e.metaKey) e.stopPropagation()`), or Ctrl+K stops working there and the next command is typed into the box.
+  `AI DOC` documents are in memory only (`app.state.ai_docs`, last 5); the filing text path is only unit-tested (fixture mode has no filing documents).
+- **Command line keeps focus after a run:** in a manual or browser-driven check press `Esc` before a panel key (`Enter`, `A`, `J`); Playwright's `keyboard.press` already lands on the panel.
+  `ResearchPanel` `onKey(e, props, data, say, row)` gets the selected row as 5th argument (ALPHA Enter shows the row's `info`: ported module docstring + inputs).
+- **Manual smoke without keys:** `OPENTERM_DB_PATH=<temp>` keeps the user's DB out; portfolio positions are `{symbol, qty, cost}` (`PUT /api/portfolios/<name>`), not `quantity`/`avg_cost`.
+
+- **Phase 19 (in progress, spec `docs/specs/PHASE_19.md`; new pure code in `backend/openterm/world/`: `energy.py weather.py commodity.py pred.py cryptodepth.py crypto.py india*.py`; the PRED agent used `SRC=` filter; fixtures for NRG / WETR / PRED / crypto / India recorded by `record_phase19.py 6|7|8|9`; crypto panels share `functions/cryptoLoad.ts`):** new backend routes live in `world_routes.py` (`/api/world/...`) with pure code in `backend/openterm/world/` (`tickbuf.py`); drawings in `drawings.py` (kv `drawings:<SYMBOL>`). Frontend: `chart/studies.ts`, `chart/patterns.ts`, `chart/drawings.ts`, `functions/gpArgs.ts`, `seasMath.ts`, `treemap.ts`, `imapData.ts`, `imapPaint.ts`, `gipArgs.ts`.
+  `ChartView` takes `draw`, `events`, `comparePanes`; it publishes gauges `chart.extraSeries / markers / events / drawSegs` that e2e reads (canvas is invisible to the DOM). `PERF CALC` feeds the Phase 19 bench lines. Shared e2e helpers: `frontend/e2e/p19util.ts`. Recorder: `scripts/record_phase19.py <step>`.
+  `config.yaml` `providers:` OVERRIDES `DEFAULT_ORDER` per capability: a new provider for an existing capability (`history`) must be added there too. On Linux cloud sessions the pinned Playwright wants a newer headless shell than `/opt/pw-browsers` has: point `PLAYWRIGHT_BROWSERS_PATH` at a scratch dir with a `chromium_headless_shell-<rev>/chrome-headless-shell-linux64/chrome-headless-shell` symlink to the installed one.
+  Tool gotchas: the Bash tool cannot parse heredocs containing `'''` (use the Write tool + `python file.py`); the PowerShell tool keeps its cwd between calls (use absolute `Set-Location`).
+
 ## Conventions
-- Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Commit only when the user says so. The repo has no remote yet.
+- Commits end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Commit only when the user says so. Remote `origin` is a private GitHub repo; push the working branch after each step.
 - LF line endings (`.gitattributes`), except `*.ps1`.
 - Tests never hit the network: record fixtures with real responses, and add a route in `providers/fixtures.py`.

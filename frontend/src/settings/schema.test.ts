@@ -124,3 +124,32 @@ describe("command arguments", () => {
     expect(settingsArgs([], DEFAULTS)).toBeNull();
   });
 });
+
+describe("AI settings", () => {
+  it("defaults to the Phase 16 models and keeps valid ai fields, dropping bad ones", () => {
+    expect(DEFAULTS.ai).toEqual({ model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter" });
+    expect(normalize({ ai: { model: "anthropic/claude-sonnet-5.5", provider: "anthropic" } }).settings.ai).toEqual({ ...DEFAULTS.ai, model: "anthropic/claude-sonnet-5.5", provider: "anthropic" });
+    const bad = normalize({ ai: { model: "bad model!", provider: "skynet", visionModel: 5 } });
+    expect(bad.settings.ai).toEqual(DEFAULTS.ai);
+    expect(bad.errors).toEqual(expect.arrayContaining(["ai.model", "ai.provider", "ai.visionModel"]));
+  });
+
+  it("stores only a changed ai block", () => {
+    expect(diffFromDefaults(DEFAULTS).ai).toBeUndefined();
+    expect(diffFromDefaults({ ...DEFAULTS, ai: { ...DEFAULTS.ai, model: "x/y" } }).ai).toEqual({ ...DEFAULTS.ai, model: "x/y" });
+  });
+
+  it("SETTINGS AI MODEL / VISION / PROVIDER / RESET", () => {
+    const m = settingsArgs(["AI", "MODEL", "deepseek/deepseek-v4-flash"], DEFAULTS);
+    expect(m && m.ok && m.next.ai.model).toBe("deepseek/deepseek-v4-flash");
+    const v = settingsArgs(["AI", "VISION", "google/gemma-4-31b-it:free"], DEFAULTS);
+    expect(v && v.ok && v.next.ai.visionModel).toBe("google/gemma-4-31b-it:free");
+    const p = settingsArgs(["AI", "PROVIDER", "ollama"], DEFAULTS);
+    expect(p && p.ok && p.next.ai.provider).toBe("ollama");
+    expect(settingsArgs(["AI", "PROVIDER", "skynet"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["AI", "MODEL", "not a model"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["AI", "MODEL"], DEFAULTS)).toMatchObject({ ok: false });
+    const r = settingsArgs(["AI", "RESET"], { ...DEFAULTS, ai: { ...DEFAULTS.ai, model: "x/y" } });
+    expect(r && r.ok && r.next.ai).toEqual(DEFAULTS.ai);
+  });
+});

@@ -10,8 +10,11 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any, ClassVar
 
+from .bt.localdata import LocalData, LocalError
 from .cache import Cache
+from .providers.base import ProviderError
 from .providers.crypto import VS
+from .providers.news import merge
 from .providers.sec import US_ONLY, sec_ticker, store_from  # Phase 6
 from .ranges import normalize
 from .router import AllFailed, Router
@@ -23,12 +26,14 @@ INTRADAY = {"1m", "2m", "5m", "15m", "30m", "60m", "90m"}
 
 
 class DataError(Exception):
-    """kind: bad_request | not_found | unavailable. `detail` names each provider's reason."""
+    """kind: bad_request | not_found | unavailable | key_required. `detail` names each provider's reason;
+    `key` names the missing key (key_required only)."""
 
-    def __init__(self, kind: str, message: str, detail: str | None = None):
+    def __init__(self, kind: str, message: str, detail: str | None = None, key: str | None = None):
         super().__init__(message)
         self.kind = kind
         self.detail = detail
+        self.key = key
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
@@ -47,6 +52,10 @@ def envelope(value: dict, stored_at: float, stale: bool) -> dict:
 class DataService:
     def __init__(self, router: Router, cache: Cache, ttl: dict[str, float] | None = None):
         self.router = router
+        self.local: LocalData | None = None  # IMPORT: set by the lifespan (bars the user imported)
+        self.research = None  # Phase 13 research functions: set by the lifespan (research/service.py)
+        self.derivs = None  # Phase 14 options, rates and futures: set by the lifespan (derivs/service.py)
+        self.rates_views = None  # Phase 14 RATES views (EUR, GBP, CAD, JPY, SPRD, AUCT, NS): set by the lifespan (rates/service.py)
         self.cache = cache
         self.ttl = {
             "quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, "profile": 86400.0,
@@ -103,7 +112,7 @@ class DataService:
             value = await self._once(key, fetch)
         except AllFailed as e:
             detail = "; ".join(f"{name}: {err.kind} ({err})" for name, err in e.errors) or None
-            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e), detail) from e
+            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e), detail, e.key) from e
         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
 
     # --- public API ---------------------------------------------------------------------------
@@ -113,13 +122,21 @@ class DataService:
             r, i = normalize(range_, interval)
         except ValueError as e:
             raise DataError("bad_request", str(e)) from e
+        if self.local is not None and symbol in self.local.symbols:  # IMPORT: the user's own bars win, labelled LOCAL DATA
+            try:
+                data, imported_at = await self.local.history(symbol, r, i)
+            except LocalError as e:
+                raise DataError("bad_request", str(e)) from e
+            return envelope({"data": data, "source": "local"}, imported_at, stale=False)
         ttl = self.ttl["intraday"] if i in INTRADAY else self.ttl["daily"]
 
         async def fetch() -> dict:
             bars, failed = await self.router.call("history", lambda p: p.history(symbol, r, i), symbol)
             return {"data": bars.model_dump(), "fallback_from": failed}
 
-        return await self._swr(f"h:{symbol}:{r}:{i}", ttl, fetch)
+        # Phase 15: a Kite login changes who answers Indian symbols, so the cache key says whether Kite is in the chain right now
+        kite = ":k" if any(p.name == "kite" for p in self.router.candidates("history", symbol)) else ""
+        return await self._swr(f"h:{symbol}:{r}:{i}{kite}", ttl, fetch)
 
     async def profile(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)
@@ -145,11 +162,23 @@ class DataService:
             cap, call = "news_top", lambda p: p.news_top()
 
         async def fetch() -> dict:
-            out, failed = await self.router.call(cap, call, arg)
-            items = out["items"]
+            # Phase 13: a keyed source (Finnhub, Alpaca) adds its headlines to the first keyless answer instead of
+            # waiting to be a fallback. Without a key it does not support the capability and nothing changes.
+            extras = [p for p in self.router.candidates(cap, arg) if getattr(p, "has_key", False)] if kind != "keyword" else []
+            extra_results = await asyncio.gather(*(self._extra_news(p, call) for p in extras)) if extras else []
+            try:
+                out, failed = await self.router.call(cap, call, arg)
+            except AllFailed:
+                if not any(items for items, _ in extra_results):
+                    raise
+                out, failed = {"items": [], "failed": []}, []
+            items = [*out["items"], *(i for found, _ in extra_results for i in found)]
+            feeds = [*out["failed"], *(n.upper() for _, n in extra_results if n)]
+            if extra_results:
+                items = merge(items)
             return {
-                "data": {"kind": kind, "query": arg, "items": [i.model_dump() for i in items], "failed": out["failed"]},
-                "source": items[0].source if items else None,
+                "data": {"kind": kind, "query": arg, "items": [i.model_dump() for i in items], "failed": feeds},
+                "source": "+".join(sorted({i.source.split(":")[0] for i in items})) if extra_results else (items[0].source if items else None),
                 "fallback_from": failed,
             }
 
@@ -159,6 +188,13 @@ class DataService:
             if e.kind != "not_found":
                 raise
             raise DataError("not_found", "NO HEADLINES FOUND", e.detail) from e
+
+    async def _extra_news(self, provider, call) -> tuple[list, str | None]:
+        """One keyed news source: (its items, None) or ([], its name when it failed)."""
+        try:
+            return (await self.router._attempt(provider, call))["items"], None
+        except ProviderError:
+            return [], provider.name
 
     async def movers(self) -> dict:
         async def fetch() -> dict:
@@ -468,8 +504,19 @@ class DataService:
         async def fetch() -> dict:
             since = _macro.ny_today() - timedelta(days=62)
             out, failed = await self.router.call("eco_calendar", lambda p: p.eco_calendar(since))
-            events = sorted((e.model_dump() for e in out["events"]), key=lambda e: (e["ts"], e["agency"], e["name"]))
-            return {"data": {"events": events, "failed": out["failed"]},
+            events = [e.model_dump() for e in out["events"]]
+            notes: list[str] = []
+            try:  # Phase 19: the Fed's own FOMC decision dates (Phase 14 provider) join the calendar; the page being down is said, not hidden
+                from .world.fomc_eco import fomc_events
+
+                if getattr(self, "derivs", None) is None:
+                    raise DataError("unavailable", "no futures service")
+                have = {(e["date"], e["agency"]) for e in events}
+                events += [e for e in fomc_events(await self.derivs.fomc_dates(), since.isoformat()) if (e["date"], e["agency"]) not in have]
+            except (AllFailed, DataError):
+                notes.append("FOMC: STALE (federalreserve.gov DID NOT ANSWER)")
+            events.sort(key=lambda e: (e["ts"], e["agency"], e["name"]))
+            return {"data": {"events": events, "failed": out["failed"], "notes": notes},
                     "source": events[0]["source"] if events else None, "fallback_from": failed}
 
         env = await self._swr("eco:us", self._ttl7("eco", 21600), fetch)
@@ -477,7 +524,7 @@ class DataService:
         events = env["data"]["events"]
         env["data"] = {
             "start": lo, "days": days, "events": [e for e in events if lo <= e["date"] < hi],
-            "failed": env["data"]["failed"], "coverage_end": max((e["date"] for e in events), default=None),
+            "failed": env["data"]["failed"], "notes": env["data"].get("notes", []), "coverage_end": max((e["date"] for e in events), default=None),
             "key_set": self.fred_key_set(),
         }
         return env

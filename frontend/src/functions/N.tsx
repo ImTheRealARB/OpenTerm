@@ -1,6 +1,7 @@
 /** News: market top stories (RSS), a security's headlines (Yahoo RSS, GDELT) or a GDELT keyword search. */
 import { pollMs } from "../settings/runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { checkNewsItems } from "../command/alerts";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -44,6 +45,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
         .then((e) => {
           setEnv(e);
           setError(null);
+          if (query.kind !== "keyword") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
         })
         .catch((e: ApiError) => setError(e))
         .finally(() => setLoading(false));

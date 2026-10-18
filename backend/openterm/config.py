@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     openterm_synthetic_tps: float = 20.0
 
     finnhub_api_key: str = ""
+    tradier_token: str = ""
     twelvedata_api_key: str = ""
     alphavantage_api_key: str = ""
     fred_api_key: str = ""
@@ -34,6 +35,14 @@ class Settings(BaseSettings):
     # Serve a built frontend (frontend/dist) from the backend at "/". Empty = off (dev mode uses Vite).
     # Docker and the desktop build set it.
     openterm_static_dir: str = ""
+
+    # --- Phase 11 ---
+    # Key store backend: auto (OS keyring if one exists, else .env) | memory (tests) | none (.env only).
+    openterm_keyring: str = "auto"
+    # File the key store reads and, without a keyring, writes. Empty = .env at the repo root.
+    openterm_dotenv_path: str = ""
+    # Job worker processes. 0 = min(4, cpu_count - 1).
+    openterm_job_workers: int = 0
 
     @property
     def yaml(self) -> dict:

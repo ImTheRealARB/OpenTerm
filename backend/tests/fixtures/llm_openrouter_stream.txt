@@ -1,0 +1,274 @@
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"We","reasoning_details":[{"type":"reasoning.text","text":"We","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" need to answer","reasoning_details":[{"type":"reasoning.text","text":" need to answer","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":": \"In one","reasoning_details":[{"type":"reasoning.text","text":": \"In one","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" short sentence: what does a","reasoning_details":[{"type":"reasoning.text","text":" short sentence: what does a","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" bond's yield measure?\" \n\n","reasoning_details":[{"type":"reasoning.text","text":" bond's yield measure?\" \n\n","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"The user","reasoning_details":[{"type":"reasoning.text","text":"The user","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" asks for one","reasoning_details":[{"type":"reasoning.text","text":" asks for one","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" short sentence. So","reasoning_details":[{"type":"reasoning.text","text":" short sentence. So","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" I need to succinct","reasoning_details":[{"type":"reasoning.text","text":" I need to succinct","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"ly define what a bond's","reasoning_details":[{"type":"reasoning.text","text":"ly define what a bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield measures. Yield","reasoning_details":[{"type":"reasoning.text","text":" yield measures. Yield","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" is the","reasoning_details":[{"type":"reasoning.text","text":" is the","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" return an","reasoning_details":[{"type":"reasoning.text","text":" return an","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" investor receives","reasoning_details":[{"type":"reasoning.text","text":" investor receives","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" on","reasoning_details":[{"type":"reasoning.text","text":" on","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" the bond. Usually, it","reasoning_details":[{"type":"reasoning.text","text":" the bond. Usually, it","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"'s the annual income","reasoning_details":[{"type":"reasoning.text","text":"'s the annual income","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" (","reasoning_details":[{"type":"reasoning.text","text":" (","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"cou","reasoning_details":[{"type":"reasoning.text","text":"cou","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"pon) relative to its","reasoning_details":[{"type":"reasoning.text","text":"pon) relative to its","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" current market","reasoning_details":[{"type":"reasoning.text","text":" current market","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" price, but also might","reasoning_details":[{"type":"reasoning.text","text":" price, but also might","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" incorporate","reasoning_details":[{"type":"reasoning.text","text":" incorporate","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" capital","reasoning_details":[{"type":"reasoning.text","text":" capital","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" gains if","reasoning_details":[{"type":"reasoning.text","text":" gains if","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" held to maturity (","reasoning_details":[{"type":"reasoning.text","text":" held to maturity (","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"yield to","reasoning_details":[{"type":"reasoning.text","text":"yield to","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" maturity). So I","reasoning_details":[{"type":"reasoning.text","text":" maturity). So I","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" can say","reasoning_details":[{"type":"reasoning.text","text":" can say","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":": \"A bond's","reasoning_details":[{"type":"reasoning.text","text":": \"A bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield measures the return an investor","reasoning_details":[{"type":"reasoning.text","text":" yield measures the return an investor","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" can","reasoning_details":[{"type":"reasoning.text","text":" can","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" expect to","reasoning_details":[{"type":"reasoning.text","text":" expect to","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" earn on","reasoning_details":[{"type":"reasoning.text","text":" earn on","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" that","reasoning_details":[{"type":"reasoning.text","text":" that","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" bond, expressed","reasoning_details":[{"type":"reasoning.text","text":" bond, expressed","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" as an annual","reasoning_details":[{"type":"reasoning.text","text":" as an annual","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" percentage.\" But","reasoning_details":[{"type":"reasoning.text","text":" percentage.\" But","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" maybe more","reasoning_details":[{"type":"reasoning.text","text":" maybe more","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" precise: \"It measures","reasoning_details":[{"type":"reasoning.text","text":" precise: \"It measures","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" the annual return an investor earns","reasoning_details":[{"type":"reasoning.text","text":" the annual return an investor earns","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" from a","reasoning_details":[{"type":"reasoning.text","text":" from a","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" bond's coupon payments","reasoning_details":[{"type":"reasoning.text","text":" bond's coupon payments","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" relative","reasoning_details":[{"type":"reasoning.text","text":" relative","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" to its current","reasoning_details":[{"type":"reasoning.text","text":" to its current","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" market price.\" However, yield","reasoning_details":[{"type":"reasoning.text","text":" market price.\" However, yield","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" can be current","reasoning_details":[{"type":"reasoning.text","text":" can be current","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield, yield to","reasoning_details":[{"type":"reasoning.text","text":" yield, yield to","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" maturity, etc. But the","reasoning_details":[{"type":"reasoning.text","text":" maturity, etc. But the","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" question is broad","reasoning_details":[{"type":"reasoning.text","text":" question is broad","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":". The simplest:","reasoning_details":[{"type":"reasoning.text","text":". The simplest:","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" \"A bond's","reasoning_details":[{"type":"reasoning.text","text":" \"A bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield measures the annual","reasoning_details":[{"type":"reasoning.text","text":" yield measures the annual","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" income","reasoning_details":[{"type":"reasoning.text","text":" income","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" (","reasoning_details":[{"type":"reasoning.text","text":" (","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"interest","reasoning_details":[{"type":"reasoning.text","text":"interest","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":") generated by the bond as","reasoning_details":[{"type":"reasoning.text","text":") generated by the bond as","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" a percentage of its current","reasoning_details":[{"type":"reasoning.text","text":" a percentage of its current","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" price.\"","reasoning_details":[{"type":"reasoning.text","text":" price.\"","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" That's current","reasoning_details":[{"type":"reasoning.text","text":" That's current","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield. But many","reasoning_details":[{"type":"reasoning.text","text":" yield. But many","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" nov","reasoning_details":[{"type":"reasoning.text","text":" nov","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"ices think","reasoning_details":[{"type":"reasoning.text","text":"ices think","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield =","reasoning_details":[{"type":"reasoning.text","text":" yield =","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" coupon","reasoning_details":[{"type":"reasoning.text","text":" coupon","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" rate","reasoning_details":[{"type":"reasoning.text","text":" rate","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":". Actually","reasoning_details":[{"type":"reasoning.text","text":". Actually","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield","reasoning_details":[{"type":"reasoning.text","text":" yield","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" measures","reasoning_details":[{"type":"reasoning.text","text":" measures","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" return. I'd","reasoning_details":[{"type":"reasoning.text","text":" return. I'd","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" say: \"A bond's","reasoning_details":[{"type":"reasoning.text","text":" say: \"A bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield measures the annual rate","reasoning_details":[{"type":"reasoning.text","text":" yield measures the annual rate","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" of return on","reasoning_details":[{"type":"reasoning.text","text":" of return on","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" the","reasoning_details":[{"type":"reasoning.text","text":" the","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" investment, considering its price","reasoning_details":[{"type":"reasoning.text","text":" investment, considering its price","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" and coupon payments.\"","reasoning_details":[{"type":"reasoning.text","text":" and coupon payments.\"","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" I","reasoning_details":[{"type":"reasoning.text","text":" I","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" need","reasoning_details":[{"type":"reasoning.text","text":" need","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" one","reasoning_details":[{"type":"reasoning.text","text":" one","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" short sentence.","reasoning_details":[{"type":"reasoning.text","text":" short sentence.","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" I","reasoning_details":[{"type":"reasoning.text","text":" I","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"'ll craft: \"A bond","reasoning_details":[{"type":"reasoning.text","text":"'ll craft: \"A bond","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"'s yield measures the annual","reasoning_details":[{"type":"reasoning.text","text":"'s yield measures the annual","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" return an investor receives","reasoning_details":[{"type":"reasoning.text","text":" return an investor receives","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" from the bond's","reasoning_details":[{"type":"reasoning.text","text":" from the bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" interest payments relative","reasoning_details":[{"type":"reasoning.text","text":" interest payments relative","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" to its current market","reasoning_details":[{"type":"reasoning.text","text":" to its current market","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" price.\" That's current","reasoning_details":[{"type":"reasoning.text","text":" price.\" That's current","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield. But yield","reasoning_details":[{"type":"reasoning.text","text":" yield. But yield","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"-to","reasoning_details":[{"type":"reasoning.text","text":"-to","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"-maturity also","reasoning_details":[{"type":"reasoning.text","text":"-maturity also","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" includes capital gain","reasoning_details":[{"type":"reasoning.text","text":" includes capital gain","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"/loss to","reasoning_details":[{"type":"reasoning.text","text":"/loss to","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" maturity. The phrase \"","reasoning_details":[{"type":"reasoning.text","text":" maturity. The phrase \"","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"measures","reasoning_details":[{"type":"reasoning.text","text":"measures","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" the return\" is","reasoning_details":[{"type":"reasoning.text","text":" the return\" is","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" broad enough. I'll answer","reasoning_details":[{"type":"reasoning.text","text":" broad enough. I'll answer","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":": \"A bond's","reasoning_details":[{"type":"reasoning.text","text":": \"A bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield measures the total return an","reasoning_details":[{"type":"reasoning.text","text":" yield measures the total return an","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" investor can","reasoning_details":[{"type":"reasoning.text","text":" investor can","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" expect to earn based","reasoning_details":[{"type":"reasoning.text","text":" expect to earn based","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" on its","reasoning_details":[{"type":"reasoning.text","text":" on its","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" price,","reasoning_details":[{"type":"reasoning.text","text":" price,","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" coupon payments, and time","reasoning_details":[{"type":"reasoning.text","text":" coupon payments, and time","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" to maturity.\" But","reasoning_details":[{"type":"reasoning.text","text":" to maturity.\" But","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" they","reasoning_details":[{"type":"reasoning.text","text":" they","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" want short","reasoning_details":[{"type":"reasoning.text","text":" want short","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":". Perhaps","reasoning_details":[{"type":"reasoning.text","text":". Perhaps","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":": \"It","reasoning_details":[{"type":"reasoning.text","text":": \"It","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" measures the annual income","reasoning_details":[{"type":"reasoning.text","text":" measures the annual income","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" generated by the bond as","reasoning_details":[{"type":"reasoning.text","text":" generated by the bond as","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" a percentage of its market price","reasoning_details":[{"type":"reasoning.text","text":" a percentage of its market price","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":".\" That's literally","reasoning_details":[{"type":"reasoning.text","text":".\" That's literally","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" current yield. I'll go","reasoning_details":[{"type":"reasoning.text","text":" current yield. I'll go","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" with: \"A bond's","reasoning_details":[{"type":"reasoning.text","text":" with: \"A bond's","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" yield measures the annual return on","reasoning_details":[{"type":"reasoning.text","text":" yield measures the annual return on","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" investment","reasoning_details":[{"type":"reasoning.text","text":" investment","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" from","reasoning_details":[{"type":"reasoning.text","text":" from","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" its coupon","reasoning_details":[{"type":"reasoning.text","text":" its coupon","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" payments relative","reasoning_details":[{"type":"reasoning.text","text":" payments relative","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" to its market price.\" That","reasoning_details":[{"type":"reasoning.text","text":" to its market price.\" That","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"'s a","reasoning_details":[{"type":"reasoning.text","text":"'s a","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" short","reasoning_details":[{"type":"reasoning.text","text":" short","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":" sentence.","reasoning_details":[{"type":"reasoning.text","text":" sentence.","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"A bond’","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"s yield measures the annual return","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":" an investor earns","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":" from the bond","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+: OPENROUTER PROCESSING
+
+: OPENROUTER PROCESSING
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"’s interest","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":" payments relative to its current market","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":" price.","role":"assistant"},"finish_reason":null,"native_finish_reason":null}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":null},"finish_reason":"stop","native_finish_reason":"stop"}]}
+
+data: {"id":"gen-1792322423-Z886uiHhRPCLuYf7TrQ4","object":"chat.completion.chunk","created":1792322423,"model":"deepseek/deepseek-v4-pro","provider":"Relace","service_tier":null,"choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"stop","native_finish_reason":"stop"}],"usage":{"prompt_tokens":17,"completion_tokens":424,"total_tokens":441,"cost":0.0012873,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.0012873,"upstream_inference_prompt_cost":0.0000153,"upstream_inference_completions_cost":0.001272},"completion_tokens_details":{"reasoning_tokens":468,"image_tokens":0,"audio_tokens":0}}}
+
+data: [DONE]
+

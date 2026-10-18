@@ -83,6 +83,168 @@ async function backendP95(path = "/api/health") {
   return { server, client: p95(lat) };
 }
 
+/** Phase 11: first job starts the worker pool (cold, reported); then identical submits return the cached result. */
+async function jobsBench() {
+  const post = async () => (await fetch(`${BACKEND}/api/jobs`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: "sleep", params: { steps: 1, step_ms: 1, tag: "bench" } }),
+  })).json();
+  const t0 = performance.now();
+  const first = await post();
+  for (let i = 0; i < 600; i++) {
+    const j = await (await fetch(`${BACKEND}/api/jobs/${first.id}`)).json();
+    if (j.state === "done") break;
+    if (j.state === "error" || j.state === "cancelled") throw new Error(`bench job ended ${j.state}: ${j.error}`);
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  const coldMs = performance.now() - t0;
+  for (let i = 0; i < 30; i++) {
+    const j = await post();
+    if (!j.cached) throw new Error("repeated bench job was not served from the cache");
+  }
+  const cachedServer = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/jobs"].p95;
+  return { coldMs, cachedServer };
+}
+
+/** Phase 12: BT runs on 10 years of daily fixture bars. Server time per request comes from the `server-timing`
+ * header (Node fetch on Windows loopback adds ~16 ms); job time is the job's own created_at -> finished_at. */
+async function btBench() {
+  const post = async (body) => {
+    const res = await fetch(`${BACKEND}/api/bt/run`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    });
+    const serverMs = Number(/dur=([\d.]+)/.exec(res.headers.get("server-timing") ?? "")?.[1]);
+    const j = await res.json();
+    if (!res.ok) throw new Error(`bt run failed: ${j.error}${j.detail ? ` (${j.detail})` : ""}`);
+    return { j, serverMs };
+  };
+  const done = async (id) => {
+    for (let i = 0; i < 3000; i++) {
+      const j = await (await fetch(`${BACKEND}/api/jobs/${id}`)).json();
+      if (j.state === "done") return j;
+      if (j.state === "error" || j.state === "cancelled") throw new Error(`bt job ended ${j.state}: ${j.error}`);
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error("bt job did not finish in time");
+  };
+  const req = (rule, symbols = ["AAPL"]) => ({ rule, symbols, interval: "1D", range: "10Y", options: {} });
+
+  const t0 = performance.now();
+  const first = await post(req("SMA20>SMA50"));
+  await done(first.j.id);
+  const coldMs = performance.now() - t0; // pandas import in a fresh worker + the first bar fetch
+  // Warm every worker: rounds of concurrent distinct runs (a worker imports pandas on its first BT job).
+  for (let k = 0; k < 2; k++) {
+    const js = await Promise.all([0, 1, 2, 3].map((i) => post(req(`SMA${5 + i + k * 4}>SMA60`))));
+    await Promise.all(js.map((x) => done(x.j.id)));
+  }
+  const runs = [];
+  for (let i = 0; i < 12; i++) {
+    const { j, serverMs } = await post(req(`EMA${10 + i}>SMA100`));
+    const d = await done(j.id);
+    runs.push(serverMs + (d.finished_at - d.created_at) * 1000);
+  }
+  const cached = [];
+  for (let i = 0; i < 30; i++) {
+    const { j, serverMs } = await post(req("EMA10>SMA100"));
+    if (!j.cached) throw new Error("repeated BT run was not served from the cache");
+    cached.push(serverMs);
+  }
+  // 100 symbols x 10 years: synthetic bars (SYN0000-SYN0099). Measured, not gated.
+  let big = null, bigNote = "";
+  try {
+    const syms = Array.from({ length: 100 }, (_, i) => `SYN${String(i).padStart(4, "0")}`);
+    const b0 = performance.now();
+    const { j } = await post(req("SMA20>SMA50", syms));
+    await done(j.id);
+    big = performance.now() - b0;
+    bigNote = "SYN0000-SYN0099, end to end incl. bar fetch";
+  } catch (e) {
+    bigNote = `not measured: ${String(e.message ?? e).slice(0, 60)}`;
+  }
+  return { coldMs, run: p95(runs), cached: p95(cached), big, bigNote };
+}
+
+/** Phase 15: RISK, PORT OPT, ALPHA and CORR REGIME on SYN names (fixture + synthetic mode), through POST /api/quant/{fn}.
+ * Like the BT budgets, the figure is server-side: `server-timing` of the POST (parse, cached bars, data file, submit) plus the job's own
+ * created_at -> finished_at, on warm workers. Every measured run uses a distinct parameter (conf, rf, edge, h) so none is a cache hit. */
+async function aiBench() {
+  const key = await fetch(`${BACKEND}/api/keys/openrouter`, {
+    method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ fields: { OPENROUTER_API_KEY: "sk-or-bench-0000000000000000" } }),
+  });
+  if (!key.ok) throw new Error(`bench could not set the fake AI key: HTTP ${key.status}`);
+  const N = 12;
+  for (let i = 0; i < N; i++) {
+    const res = await fetch(`${BACKEND}/api/ai/chat`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question: `What is AAPL trading at? (${i})` }),
+    });
+    const text = await res.text();
+    const done = text.split("\n\n").map((b) => b.replace(/^data: /, "")).filter((b) => b.startsWith("{")).map((b) => JSON.parse(b)).find((e) => e.type === "done");
+    if (!done || !done.grounded) throw new Error(`AI bench turn ${i} did not finish grounded: ${text.slice(0, 200)}`);
+  }
+  const p = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/ai/first_event"];
+  return { firstEvent: p?.p95 ?? null, n: p?.n ?? 0 };
+}
+
+async function quantBench() {
+  const post = async (fn, body) => {
+    const res = await fetch(`${BACKEND}/api/quant/${fn}`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    });
+    const serverMs = Number(/dur=([\d.]+)/.exec(res.headers.get("server-timing") ?? "")?.[1]);
+    const j = await res.json();
+    if (!res.ok) throw new Error(`quant ${fn} failed: ${j.error}${j.detail ? ` (${j.detail})` : ""}`);
+    return { j, serverMs };
+  };
+  const done = async (id) => {
+    for (let i = 0; i < 6000; i++) {
+      const j = await (await fetch(`${BACKEND}/api/jobs/${id}`)).json();
+      if (j.state === "done") return j;
+      if (j.state === "error" || j.state === "cancelled") throw new Error(`quant job ended ${j.state}: ${j.error}`);
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error("quant job did not finish in time");
+  };
+  const one = async (fn, body) => {
+    const { j, serverMs } = await post(fn, body);
+    if (j.cached) throw new Error(`quant ${fn} run was served from the cache; the bench needs a distinct parameter`);
+    const d = await done(j.id);
+    if (d.result?.data?.not_runnable || d.result?.not_runnable) throw new Error(`quant ${fn} NOT RUNNABLE`);
+    return serverMs + (d.finished_at - d.created_at) * 1000;
+  };
+  const syn = (n) => Array.from({ length: n }, (_, i) => `SYN${String(i).padStart(4, "0")}`);
+  const put = await fetch(`${BACKEND}/api/portfolios/BENCH15`, {
+    method: "PUT", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ positions: syn(20).map((symbol, i) => ({ symbol, qty: 10 + i, cost: 100 })) }),
+  });
+  if (!put.ok) throw new Error(`could not create the bench portfolio: ${put.status}`);
+  const pf = "BENCH15";
+  const risk = (i) => ({ portfolio: pf, range: "3Y", bench: "SYN0001", conf: 90 + i * 0.05 });
+  const opt = (method, i) => ({ portfolio: pf, method, lookback: 252, rf: i * 0.0005 });
+  const regime = (i) => ({ symbols: syn(20), win: 60, edge: 0.3 + i * 0.01, range: "2Y" });
+
+  // Warm every worker (each imports pandas and scipy on its first job) and the bar cache: concurrent distinct runs of each kind.
+  for (let k = 0; k < 2; k++) {
+    const js = await Promise.all([0, 1, 2, 3].map((i) => post("risk", risk(100 + k * 4 + i))));
+    await Promise.all(js.map((x) => done(x.j.id)));
+    const os = await Promise.all([0, 1, 2, 3].map((i) => post("opt", opt(i % 2 ? "HRP" : "RP", 100 + k * 4 + i))));
+    await Promise.all(os.map((x) => done(x.j.id)));
+    const rs = await Promise.all([0, 1, 2, 3].map((i) => post("regime", regime(50 + k * 4 + i))));
+    await Promise.all(rs.map((x) => done(x.j.id)));
+  }
+  const riskRuns = [], hrpRuns = [], rpRuns = [], regimeRuns = [];
+  for (let i = 0; i < 12; i++) riskRuns.push(await one("risk", risk(i)));
+  for (let i = 0; i < 12; i++) hrpRuns.push(await one("opt", opt("HRP", i)));
+  for (let i = 0; i < 12; i++) rpRuns.push(await one("opt", opt("RP", i)));
+  for (let i = 0; i < 12; i++) regimeRuns.push(await one("regime", regime(i)));
+  // ALPHA: SYN 100 names x 2 years, all families. One warm-up run (bar fetch), then 3 runs with distinct horizons.
+  const alpha = (h) => ({ universe: "SYN", range: "2Y", h });
+  await one("alpha", alpha("1,5,10,20,40"));
+  const alphaRuns = [];
+  for (const h of ["1,5,10,20", "1,5,10", "1,5,20"]) alphaRuns.push(await one("alpha", alpha(h)));
+  return { risk: p95(riskRuns), hrp: p95(hrpRuns), rp: p95(rpRuns), regime: p95(regimeRuns), alpha: p95(alphaRuns), alphaN: alphaRuns.length };
+}
+
 async function freshPage(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   const page = await ctx.newPage();
@@ -209,6 +371,47 @@ async function browserBench() {
       await page.context().close();
     }
 
+    // G. Phase 11: JOBS / APIKEYS open (cached-command budget) and submit to first painted J frame (warm pool).
+    {
+      const page = await freshPage(browser);
+      out.p11 = await measure(page, async () => {
+        for (let i = 0; i < 10; i++) {
+          await run(page, `JOBS TEST ${i + 2} 1`);
+          await page.waitForTimeout(250);
+        }
+        for (let i = 0; i < 10; i++) {
+          await run(page, i % 2 ? "APIKEYS" : "JOBS");
+          await page.waitForTimeout(150);
+        }
+      });
+      await page.context().close();
+    }
+
+    // G2. Phase 16: AI panel open (typed command to the input ready).
+    {
+      const page = await freshPage(browser);
+      out.p16 = await measure(page, async () => {
+        for (let i = 0; i < 10; i++) {
+          await run(page, "AI");
+          await page.waitForTimeout(200);
+        }
+      });
+      await page.context().close();
+    }
+
+    // H. Phase 12: BT result open (cached runs from btBench) to the painted, labelled result.
+    {
+      const page = await freshPage(browser);
+      out.p12 = await measure(page, async () => {
+        for (let i = 0; i < 20; i++) {
+          await run(page, i % 2 ? "BT AAPL EMA10>SMA100 1D 10Y" : "BT AAPL SMA20>SMA50 1D 10Y");
+          await page.waitForTimeout(300);
+          await page.keyboard.press("Escape");
+        }
+      });
+      await page.context().close();
+    }
+
     // D. 10,000-row canvas grid: keyboard paging + wheel scrolling.
     {
       const page = await freshPage(browser);
@@ -239,6 +442,14 @@ async function browserBench() {
       });
       await page.context().close();
     }
+    // I. Phase 19: chart maths (patterns + SMC on 5,000 bars, SEAS on 10,000 daily bars), generated TEST DATA.
+    {
+      const page = await freshPage(browser);
+      await run(page, "PERF CALC");
+      await page.waitForFunction(() => window.__openterm_perf?.snapshot?.().gauges?.["p19.patternsMs"] !== undefined, null, { timeout: 15000 }).catch(() => {});
+      out.p19 = await page.evaluate(() => window.__openterm_perf.snapshot().gauges);
+      await page.context().close();
+    }
     return out;
   } finally {
     await browser.close();
@@ -259,6 +470,8 @@ async function main() {
     OPENTERM_SYNTHETIC_TPS: "20",
     OPENTERM_FIXTURE_LATENCY_MS: "300",
     OPENTERM_DB_PATH: join(dbDir, "bench.db"),
+    OPENTERM_KEYRING: "memory", // the bench sets a fake OpenRouter key for the AI budget: never the real keyring
+    OPENTERM_DOTENV_PATH: join(dbDir, "keys.env"),
   });
   start("npm run preview -- --host 127.0.0.1", FE);
   await waitFor(`${BACKEND}/api/health`);
@@ -269,6 +482,9 @@ async function main() {
     const be = await backendP95(path);
     add(`Backend p95, cached ${path.split("?")[0]}`, be.server, 20, "ms", `server-side; node client ${be.client.toFixed(1)} ms`);
   }
+
+  const jobs = await jobsBench(); // warms the worker pool before the browser section G
+  const bt = await btBench(); // caches the runs section H opens
 
   const r = await browserBench();
   const { a, stream: st } = r;
@@ -286,6 +502,45 @@ async function main() {
   add("Layout load to paint p95 (SQLite, 9 / 1 panels)", r.layout.layoutLoad.p95, 100, "ms", `n=${r.layout.layoutLoad.n}; frame p95 ${r.layout.frameP95.toFixed(1)} ms`);
   add("Frame time p95, 10k-row grid scroll", r.grid.frameP95, 20, "ms", "keys + wheel");
   add("Frame time p95, 50k-bar chart pan/zoom", r.chart.frameP95, 20, "ms", "keys");
+  // Job budgets are split like backend latency: browser frame-to-paint and server time are gated; end to end goes
+  // through the Vite preview proxy (Node on Windows loopback adds ~16 ms) and is reported only.
+  const jf = r.p11.jobsFirstFrame ?? { p95: null, n: 0 };
+  const ftp = r.p11.jobsFrameToPaint ?? { p95: null, n: 0 };
+  const jobsServer = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/jobs"].p95;
+  // Phase 15 server-side job times. Run AFTER the line above: quantBench polls GET /api/jobs/{id}, which /api/perf files under /api/jobs.
+  const q15 = await quantBench();
+  const ai16 = await aiBench();
+  add("Job J frame received to paint p95", ftp.n ? ftp.p95 : null, 50, "ms", `JOBS TEST; n=${ftp.n}`);
+  add("Job submit p95, server-side (new + cached)", jobsServer, 20, "ms", "POST /api/jobs");
+  add("Job submit to first J frame painted p95", jf.n ? jf.p95 : null, null, "ms", `via proxy; p50 ${jf.p50?.toFixed(1)} ms; n=${jf.n}`);
+  add("Cached job (same hash) p95, server-side", jobs.cachedServer, 20, "ms", "POST /api/jobs, n=31");
+  add("JOBS / APIKEYS open to first paint p95", r.p11.cmdToPaint.p95, 100, "ms", `n=${r.p11.cmdToPaint.n}`);
+  add("Worker pool cold start (first job done)", jobs.coldMs, null, "ms", "spawn; measured, not gated");
+  add("BT 10-year daily rule run p95, server-side", bt.run, 300, "ms", "POST + job created->finished, warm worker, n=12");
+  add("BT cached run (same hash) p95, server-side", bt.cached, 20, "ms", "POST /api/bt/run, n=30");
+  const bo = r.p12.btOpen ?? { p95: null, n: 0 };
+  const g = (k) => (r.p12.gauges[k] ?? NaN).toFixed(1);
+  add("BT result open to first paint p95", bo.n ? bo.p95 : null, 100, "ms", `cached run; n=${bo.n}; p50 ${bo.p50?.toFixed(1)}; last: post ${g("bt.postMs")} get ${g("bt.getMs")} render ${g("bt.renderMs")} ms`);
+  add("BT first run, cold worker (pandas import)", bt.coldMs, null, "ms", "measured, not gated");
+  add("BT 100 symbols x 10 years", bt.big, null, "ms", bt.bigNote);
+  // Phase 15 (spec decision M): server-side like the BT budgets (POST server-timing + job created->finished, warm workers).
+  add("RISK 20 names x 3 years p95, server-side", q15.risk, 400, "ms", "POST /api/quant/risk + job, warm, SYN0000-SYN0019, n=12");
+  add("PORT OPT HRP 20 names p95, server-side", q15.hrp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
+  add("PORT OPT RP 20 names p95, server-side", q15.rp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
+  add("CORR REGIME 20 names x 2 years p95, server-side", q15.regime, 300, "ms", "POST /api/quant/regime + job, warm, n=12");
+  add("ALPHA SYN 100 names x 2 years, server-side", q15.alpha, 8000, "ms", `POST /api/quant/alpha + job, all 29 factors, warm; n=${q15.alphaN} (p95 = slowest)`);
+
+  // Phase 16 (spec: decisions on the first-token budget): what this server controls. Fixture mode replays a recorded model.
+  add("AI request to first SSE event p95, server-side", ai16.firstEvent, 60, "ms", `POST /api/ai/chat, recorded model, n=${ai16.n}`);
+  add("AI panel open to first paint p95", r.p16.cmdToPaint.p95, 100, "ms", `n=${r.p16.cmdToPaint.n}`);
+
+  // Phase 19 budgets (spec): chart maths in the page, p95 of 15 runs on generated bars.
+  add("Pattern scan (candles + SMC) 5,000 bars p95", r.p19["p19.patternsMs"] ?? null, 40, "ms", "PERF CALC, TEST DATA");
+  add("SEAS MONTH+WOY+DOM 10,000 daily bars p95", r.p19["p19.seasMs"] ?? null, 15, "ms", "PERF CALC, TEST DATA");
+  add("Drawing hit test, 200 drawings p95", r.p19["p19.hitMs"] ?? null, 1, "ms", "PERF CALC, TEST DATA");
+  add("IMAP treemap layout, 5,000 tiles p95", r.p19["p19.treemapMs"] ?? null, 30, "ms", "PERF CALC, TEST DATA");
+  add("SECF fuzzy rank, 7,000 names, per query p95", r.p19["p19.secfMs"] ?? null, 25, "ms", "PERF CALC, TEST DATA, prefix + word + typo + subsequence");
+  add("IMAP canvas paint, 5,000 tiles p95", r.p19["p19.imapPaintMs"] ?? null, 16, "ms", "PERF CALC, 1600x900, TEST DATA");
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

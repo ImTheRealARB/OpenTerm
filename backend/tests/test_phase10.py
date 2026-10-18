@@ -62,6 +62,10 @@ def test_settings_partial_and_replace(client):
         ({"poll": {"crypto": 15.5}}, "poll.crypto"),
         ({"poll": {"sources": True}}, "poll.sources"),
         ({"poll": {"quotes": 10}}, "poll KEYS"),
+        ({"ai": {"model": "bad model!"}}, "ai.model"),
+        ({"ai": {"provider": "skynet"}}, "ai.provider"),
+        ({"ai": {"temperature": 1}}, "ai KEYS"),
+        ({"ai": "gpt"}, "ai MUST"),
         ({"keys": {"closePanel": "Alt+Q"}}, "keys.closePanel"),
         ({"keys": {"close panel": ["Alt+Q"]}}, "ACTION NAME"),
         ({"keys": {"closePanel": ["Alt Q"]}}, "BAD CHORD"),
@@ -132,3 +136,10 @@ def test_static_mount_serves_index_and_keeps_api(tmp_path):
         assert "<title>t</title>" in c.get("/").text
         assert c.get("/assets/a.js").status_code == 200
         assert c.get("/nope.txt").status_code == 404
+
+
+def test_settings_ai_roundtrip(client):
+    ai = {"model": "deepseek/deepseek-v4-pro", "visionModel": "deepseek/deepseek-v4.1-flash", "provider": "openrouter"}
+    r = client.put("/api/settings", json={"settings": {"ai": ai}})
+    assert r.status_code == 200 and r.json()["settings"]["ai"] == ai
+    assert client.get("/api/settings").json()["settings"]["ai"] == ai

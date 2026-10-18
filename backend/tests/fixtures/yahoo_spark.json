@@ -1469,7 +1469,7 @@
         "currency": "BRL",
         "symbol": "^BVSP",
         "exchangeName": "SAO",
-        "fullExchangeName": "São Paulo",
+        "fullExchangeName": "S\u00e3o Paulo",
         "instrumentType": "INDEX",
         "firstTradeDate": 735915600,
         "regularMarketTime": 1792181880,
@@ -6013,6 +6013,87 @@
          {
           "close": [
            1261.25
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "symbol": "META",
+     "response": [
+      {
+       "meta": {
+        "currency": "USD",
+        "symbol": "META",
+        "exchangeName": "NMS",
+        "fullExchangeName": "NasdaqGS",
+        "instrumentType": "EQUITY",
+        "firstTradeDate": 1337347800,
+        "regularMarketTime": 1792180801,
+        "hasPrePostMarketData": true,
+        "gmtoffset": -14400,
+        "timezone": "EDT",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 709.325,
+        "regularMarketChangePercent": -3.718,
+        "fulldayPrice": 709.325,
+        "fulldayChange": -31.397,
+        "fulldayChangePercent": -4.262,
+        "fiftyTwoWeekHigh": 779.82,
+        "fiftyTwoWeekLow": 520.26,
+        "regularMarketDayHigh": 738.49,
+        "regularMarketDayLow": 702.71,
+        "regularMarketVolume": 20427809,
+        "longName": "Meta Platforms, Inc.",
+        "shortName": "Meta Platforms, Inc.",
+        "chartPreviousClose": 736.72,
+        "priceHint": 2,
+        "currentTradingPeriod": {
+         "pre": {
+          "timezone": "EDT",
+          "end": 1792157400,
+          "start": 1792137600,
+          "gmtoffset": -14400
+         },
+         "regular": {
+          "timezone": "EDT",
+          "end": 1792180800,
+          "start": 1792157400,
+          "gmtoffset": -14400
+         },
+         "post": {
+          "timezone": "EDT",
+          "end": 1792195200,
+          "start": 1792180800,
+          "gmtoffset": -14400
+         }
+        },
+        "dataGranularity": "1d",
+        "range": "1d",
+        "validRanges": [
+         "1d",
+         "5d",
+         "1mo",
+         "3mo",
+         "6mo",
+         "1y",
+         "2y",
+         "5y",
+         "10y",
+         "ytd",
+         "max"
+        ]
+       },
+       "timestamp": [
+        1792157400
+       ],
+       "indicators": {
+        "quote": [
+         {
+          "close": [
+           709.33
           ]
          }
         ]

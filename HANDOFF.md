@@ -1,9 +1,212 @@
 # Handoff
 
-_Last updated: 2026-10-17, session 4 (all 10 phases on `main`, latest `626bddd`; post-merge fixes and browser start script done)._
+_Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-16-9d4534`; Phase 11 done except one recording; PHASES 12, 13, 14 and 15 COMPLETE; PHASE 16 COMPLETE (2026-10-18); Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
+
+## Resume here (2026-10-18 night, PHASE 19 COMPLETE, awaiting the user's merge decision)
+- Branch `claude/openterm-phase-19-step-4-c5c695`, pushed, not merged (the merge is the user's call). Steps 1-10 done; `UNLK` NOT BUILT (DefiLlama emissions are paid).
+- Windows bench and live keyless smoke done: see `docs/PERFORMANCE.md` "Phase 19 bench" and the spec Progress log (15/16 routes live OK; WETR geocoding was an Open-Meteo outage).
+- Full gate on Windows 2026-10-18: ALL GATES PASS (pytest 1567, ruff, tsc, vitest, e2e 181).
+- **PAUSED by the user for a demo before the merge.** To do next, in order:
+  1. Merge into `main`: the branch holds Phases 11-16 and 19 (85 commits) and `main` has not moved, so `git checkout main; git merge --ff-only claude/openterm-phase-19-step-4-c5c695` in the main checkout. Ask before pushing `main`.
+  2. Optional: rerun `node scripts/bench.mjs` rested (mains power) to see BT 10-year under 300 ms (read 333 / 415 ms while the machine was throttled).
+  3. Optional: make `bench.mjs` cleanup kill child process trees on Linux.
+  4. Optional: WETR, if Open-Meteo geocoding keeps timing out, resolve the ten basket cities from a built-in table.
+  5. Phases 17-18 stay paused by the user.
+
+## (superseded) Resume here (2026-10-18 evening, Phase 19 steps 1-5 DONE, 6 and 8 built but not gated, 7 and 9 half-built; PAUSED at 66% of the 5h window)
+- **Branch `claude/openterm-phase-19-step-4-c5c695`** (pushed; continues `claude/openterm-phase-19`). Not merged to `main`. Last commit is a WIP commit; **the full gate has NOT run on it** (last full gate was green at step 5: pytest 1416, e2e 166).
+- **Step 6 `NRG` + `WETR`: built.** Backend `world/energy.py`, `weather.py`, `commodity.py`, `providers/openmeteo.py`, `nws.py`, routes `/api/world/nrg|wetr`; panels `NRG.tsx`, `WETR.tsx`, `energyArgs.ts`. `test_phase19_energy.py` 37 pass, `energyArgs.test.ts` 10 pass. `e2e/phase19g.spec.ts` written, NOT run. Finding: EIA weekly stocks/production (WCESTUS1 etc.) answer 404 on fredgraph.csv, so NRG is prices only (note on screen; add to DATA_LIMITS). NWS alerts need `SEC_USER_AGENT`; without it they show SKIPPED.
+- **Step 8 `PRED`: built by a Sonnet subagent**, 47 pytest + 11 vitest pass, `e2e/phase19e.spec.ts` written, NOT run. Notes in `PRED_NOTES.md` (fold into `docs/specs/PHASE_19.md` Progress log, then delete it). Added arg `SRC=POLY|KALSHI|ALL`.
+- **Step 7 crypto depth: half-built, nothing tested or wired.** Real fixtures recorded (`record_phase19.py 7`: binance_depth/premium/funding_info/funding_history, okx books/funding/mark/index/liq/instruments, llama_stablecoins, llama_yields trimmed, llama_emissions_probe = HTTP 402). Written: `world/cryptodepth.py` (pure parsers/maths), `providers/binance_deriv.py`, `okx.py`, `defillama.py`, `world/crypto.py` (service). **Still to do:** register in `providers/__init__.py` (ADAPTERS `binance_deriv`, `okx`, `defillama`), `main.py` DEFAULT_ORDER (`crypto_depth` [binance_deriv, okx], `crypto_funding` and `crypto_funding_detail` [binance_deriv, okx], `crypto_liq` [okx], `stablecoins` [defillama], `yields` [defillama]), add the three names to `tests/test_api.py` provider set, fixture routes in `fixtures.py` (hosts api.binance.com `/api/v3/depth`, fapi.binance.com `premiumIndex`/`fundingInfo`/`fundingRate`, www.okx.com v5 paths, stablecoins.llama.fi, yields.llama.fi; fapi `fundingRate` and spot klines already have older routes: put the new route in front for the depth/premium/info paths only), routes `/api/world/cdep|fund|liq|stbl|defi` in `world_routes.py`, tests-first file `test_phase19_crypto.py` (depth cumulation/spread/imbalance, 8h/4h/1h annualisation, quarterly basis annualised, liq parse/aggregate, stablecoin and yield parsers incl. a large synthetic payload, 451 fallback Binance -> OKX with a MockTransport), panels `CDEP FUND LIQ STBL DEFI` + registry + `api.ts` types + e2e `phase19h.spec.ts`. **`UNLK` is NOT BUILT:** `api.llama.fi/emissions` is paid (402); an unadvertised dataset host serves it keyless but is the site's own storage, so it is not used. Say so in DATA_LIMITS.
+- **Step 9 India: half-built by a subagent that was stopped mid-edit.** Files exist: `providers/nse_archive.py`, `amfi.py`, `world/india.py`, `india_store.py`, `mf.py`; `main.py`, `providers/__init__.py`, `fixtures.py` already edited. **Not done / unverified:** `test_phase19_india.py` missing, the `/api/world/mfnav` route, SECF MF rows, `phase19f.spec.ts`, DATA_LIMITS market table, `INDIA_NOTES.md`. Review these files before trusting them (the agent was killed while applying edits); re-record with `record_phase19.py 9` if fixtures are missing.
+- **Then step 10:** run ONE full gate (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`; this also runs the unrun e2e specs 19e, 19f, 19g, 19h; Playwright port 4173 must be free), add bench lines for steps 6-9 only if cheap, `node scripts/bench.mjs`, docs (COMMANDS, CHANGELOG, DATA_LIMITS, roadmap, CLAUDE.md), spec Progress log entries for steps 5-9 (step 5's entry may be missing), push, report in at most 10 lines.
+- **Usage:** Sonnet only. The 5h window was at 66% when paused (rule: pause at 60% unless the user says otherwise).
+
+## (superseded) Resume here (2026-10-18, Phase 19 steps 1-3 done, PAUSED at 87% of the 5h window)
+- **Branch `claude/openterm-phase-19`** (cut from `origin/claude/openterm-phase-16-9d4534`), pushed to origin, last commit "Phase 19 step 3". Not merged to `main`. Worked in the worktree `.claude/worktrees/openterm-phase-19-4c98b8` (a session cannot switch branches there to the phase-16 one; just continue on `claude/openterm-phase-19`).
+- **Spec:** `docs/specs/PHASE_19.md` (10 steps, decisions table, "Progress log" at the bottom says what each finished step built). **Done: step 1** (12 studies, candle + SMC patterns, `SEAS`, `PERF CALC` hook), **step 2** (GP drawings `T`/`H`/`B`, `EVT` markers, `VS ... PANE`, `/api/drawings`, `/api/world/events`), **step 3** (`GIP` + server tick ring buffer `/api/world/ticks`, `IMAP`). Gates green after each; bench 36/36 (`docs/PERFORMANCE.md` "Phase 19 bench").
+- **Next: step 4 `SECF` + OpenFIGI**, then 5 (ECST/WECO/CENB, FOMC in ECO, exchange holidays), 6 (NRG/WETR), 7 (crypto depth/funding/liquidations/stablecoins/DeFi/unlocks), 8 (PRED), 9 (India NSE archive bars), 10 (close: bench, live keyless smoke, docs COMMANDS/CHANGELOG/DATA_LIMITS/HANDOFF/roadmap/CLAUDE.md, report). Steps 4-9 are not started. Docs for steps 1-3 (COMMANDS, CHANGELOG, DATA_LIMITS) are still owed at step 10: `SEAS`, `GIP`, `IMAP`, GP keys/args, Ichimoku forward cloud not drawn, GIP buffer limits.
+- **How each step went (repeat it):** tests first (pytest / vitest), recorder `scripts/record_phase19.py <step>` for real keyless fixtures (add a route in `providers/fixtures.py`), new backend routes in `backend/openterm/world_routes.py` (+ `world/` for pure code, providers in `providers/`, order in `main.py` `DEFAULT_ORDER`), panels in `frontend/src/functions/` with pure parsers in their own files, e2e in `frontend/e2e/phase19*.spec.ts` using helpers in `e2e/p19util.ts`, one full gate (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`), commit with the Sonnet 5.5 co-author line, `git push -u origin HEAD`.
+- **Gotchas found this phase:** the Bash tool fails to parse heredocs that contain `'''`: write patch scripts with the Write tool and run `python file.py`; the PowerShell shell keeps its cwd between calls, so use absolute `Set-Location`; a bench run right after a full gate can show a false tick-to-pixel miss (59 ms; rested rerun 37 ms); one e2e flake (`phase12` BT tests) appeared once under the parallel gate and passed alone and on rerun.
+- **Usage rule:** Sonnet only, at most 2 subagents (none used so far), pause at 60% of the 5h window (this session paused at 87%).
+
+## Resume here (2026-10-18, Phase 16 closed, Phase 19 next; superseded by the section above)
+- **State:** Phases 1-16 are done. Phase 16 (AI layer) closed 2026-10-18 on branch `claude/openterm-phase-16-9d4534`, head at or after `384f5c0`, pushed to origin, **not merged to `main`** (main is still at Phase 10, `26891f1`).
+  Full gate green (pytest 1287, ruff, tsc, vitest, e2e 143), bench 31/31, live smoke with the real OpenRouter key done (SWARM, AI AUTO). Details: `docs/specs/PHASE_16.md` "Progress log".
+- **Next action: Phase 19** (`docs/ROADMAP_PHASES_11-19.md` "Phase 19": GP drawing tools and studies, GIP, IMAP, SECF, ECST/WECO/CENB, NRG/WETR, crypto depth/funding/DeFi, PRED, non-US zero-key data). It has NO spec yet: first write `docs/specs/PHASE_19.md`
+  (defaults pre-approved, tests-first step plan like `docs/specs/PHASE_16.md`, zero-key sources first, no paid APIs), then build step by step. A first attempt in a worktree session (`claude/openterm-phase-19-8ad9bb`, cut from `384f5c0`) was stopped by the user before any work: that branch is empty, ignore or delete it.
+- **How to start (user decision 2026-10-18: new session in the plain project folder, not a worktree):** in `C:\Users\Asus\Documents\OpenTerm` (checkout of `main`, must be clean) run
+  `git fetch origin; git switch -c claude/openterm-phase-19 --no-track origin/claude/openterm-phase-16-9d4534`, then `cd backend; uv sync` and `cd ..\frontend; npm ci`. Do NOT `git switch` to `claude/openterm-phase-16-9d4534` itself: git refuses a branch that is checked out in a worktree.
+  Push the working branch to origin after each step. Do not merge to `main` unless the user says so. Ports 8000, 4173, 5173 must be free (other worktrees may hold them).
+- **Still open (not Phase 19):** real Kite recordings (needs the user's Kite key and redirect URL; do not start); Phases 17 and 18 stay paused by the user; first real Docker / Tauri builds. Not built in Phase 16 (see `docs/DATA_LIMITS.md`): `ai.store_text`, SignalEngine code drafts in AI BT, OCR, parallel SWARM roles.
+- **Usage rule:** Sonnet only, at most 2 subagents with targeted tests, one full gate per step (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`), pause at 60% of the 5h window when the user is away: update this file, commit, push. If the user is present and says continue, continue.
+
+## Resume here (2026-10-18, Phase 15 closed, Phase 16 started; superseded, kept for history)
+- Phase 15 closed on `df5325e` (bench 29/29, real-backend smoke and live keyless checks done, ALPHA Enter shows the factor formula).
+
+## Resume here (2026-10-18, Phase 15 complete)
+- **Phase 15 is built** on branch `claude/openterm-phase-15-65e1da` (spec `docs/specs/PHASE_15.md`, steps 1-8). Functions: `RISK`, `PORT OPT` (`A` saves `<NAME>.OPT`), `PORT ATTR` (+ `ADD`/`DEL` valuations),
+  `FACT`, `QL`, `ALPHA` (29 factors), `CORR REGIME`, and read-only `KITE` (`LOGIN`/`STATUS`/`LOGOUT`, Indian bars, NFO/MCX chains with OI via `OMON NIFTY.NFO R= Q=`). Pieces: `quant_routes.py`
+  (`POST /api/quant/{fn}`), `quantjobs/` (job kinds), `quantlib/` (worker-only math), `kite/` + `kite_routes.py`.
+- **Final gates:** 1205 pytest passed + 1 xfail (Phase 11 recording), ruff, tsc, vitest, 122 Playwright, all green. **Bench: 28 of 29 pass** (recorded in `docs/PERFORMANCE.md` "Phase 15 bench"):
+  RISK 84 ms, OPT HRP 13 ms, OPT RP 33 ms, REGIME 91 ms, ALPHA SYN 1.29 s, all well inside budget. The one miss is the old BT 10-year run (323 ms vs 300): the Phase 14 commit reads 322 ms on this machine
+  the same hour, so it is machine throttling (earlier phases read 195-285 ms), not a regression. Next phase: rest ~4 min before the bench, rerun once, and if BT run misses again compare against the previous commit before blaming the change.
+  The bench found two real bugs, both fixed: a Windows rename race in `bt/store.py write_data` (concurrent identical quant POSTs gave HTTP 500) and `quantBench` polluting the `/api/jobs` perf key (it now runs after that read).
+- **Known limits, not verified live:** Kite is entirely unverified against a real key (login, REST, WebSocket decoder; fixtures are doc-shaped, run `scripts/record_phase15.py --kite` once a key exists);
+  Ken French and `ALPHA TOP100` live shapes are fixture-only; `CORR REGIME` with no list is answered by the server (the CORR panel keeps no default basket); ALPHA Enter (factor formula) was built 2026-10-18.
+  Details: `docs/DATA_LIMITS.md` "Phase 15 limits".
+- **Next action: Phase 16 (AI layer).** BEFORE starting it, ask the user to set the OpenRouter key in APIKEYS (the one pending Phase 11 OpenRouter recording needs it too). Order tools never appear in the AI agent; Kite has no order surface at all. Reuse the Phase 11 gateway (`openterm/llm/`), the job runner and `quant_routes.py` as tool backends. Phases 17 and 18 stay paused. Fresh session, tests first; read `docs/ROADMAP_PHASES_11-19.md` "Phase 16".
+- **Usage rule:** Sonnet only, at most 2 agents with targeted tests only, one full gate per step, pause at 95% of the 5h window when the user asked for unattended work, else 60%.
+
+## Open items to close Phase 15 (items 1, 2, 3 and 5 DONE 2026-10-18; only item 4, real Kite recordings, is open)
+1. **Bench 29/29.** Free port 8000, rest ~4 min (longer if the machine is hot), run `node scripts/bench.mjs` once. The only miss on 2026-10-18 was the BT 10-year run (323 ms vs 300; the Phase 14 commit `edb3292` read 322 ms the same hour). If it still misses, check out `edb3292` and bench it the same way: equal numbers mean machine throttling; update the "Phase 15 bench" result paragraph in `docs/PERFORMANCE.md` either way.
+2. **Real-backend smoke run:** `cd frontend; npm run build`, then start the backend with `OPENTERM_FIXTURES=1 OPENTERM_SYNTHETIC=1 OPENTERM_STATIC_DIR=frontend/dist`, open http://127.0.0.1:8000 and try `RISK`, `PORT OPT <name> METHOD=RP` then `A`, `PORT ATTR`, `FACT AAPL`, `QL GARCH AAPL`, `ALPHA UNIVERSE=SYN`, `CORR REGIME LIST:SYN0001,SYN0002,SYN0003`, `KITE`. The mocked Playwright suites cannot see real-browser problems (e.g. the textarea / Ctrl+K gotcha). Fix what breaks.
+3. **Live checks (keyless):** run `FACT AAPL`, `ALPHA` (default `TOP100`, the screener universe) and `RISK` on a real portfolio with the app started via `.\scripts\start.ps1`; fix shape drift (Ken French zips, screener sectors, Yahoo pacing in `quant_routes._bars`).
+4. **Kite, needs the user's own Kite Connect key** (ask the user): paste `KITE_API_KEY` / `KITE_API_SECRET` in APIKEYS, register `http://127.0.0.1:8000/api/kite/callback` as the redirect URL in the Kite developer console, run `KITE LOGIN`, then `uv run python ../scripts/record_phase15.py --kite` is doc-shaped only: write a real recorder mode, replace the `kite_*_docshape` fixtures with recordings, check the WebSocket decoder (`kite/ws.py`) on live packets and `OMON NIFTY.NFO R= Q=`. Until then Kite stays labelled NOT A RECORDING.
+5. **Small gap:** `ALPHA` Enter should open the selected factor's formula/meta (not built).
+After these, mark the open items done here and in `docs/ROADMAP_PHASES_11-19.md`, then start Phase 16.
+
+## Resume here (2026-10-19, Phase 14 complete)
+- **Phase 14 is done and committed** (spec `docs/specs/PHASE_14.md`, steps 1-8). Functions: OMON PCR OV OSA OVDV SKEW HIVG, RATES upgrade (EUR GBP CAD JPY, NS fit,
+  FRED OAS spreads, auctions), CT WIRP COT FXFA YAS SWPM CDSW, `BT <SYM> MKT=options`. Quant lib `openterm/quant/` (Vibe port, cross-checked), migration 12 `iv_snapshots`.
+  Gates after step 8: 698 pytest + 1 xfail (Phase 11 recording), ruff, tsc, vitest, 113 Playwright; bench 24/24 on the rested run (see `docs/PERFORMANCE.md`).
+- **Known limits / not verified live:** Tradier fixture is doc-shaped (no token, unverified live); IV30 history starts when OSA/HIVG is first opened (local snapshots);
+  OSA `B` opens BT but you must type `OPEN=` and `STYLE=` (and `EXP=` in OSA); the OSA structure is lost on reload; BT option trade rows leave entry price/pnl % empty;
+  no real-network run of the new rates/futures/CFTC/FOMC providers (fixtures only: try `RATES EUR`, `COT ES`, `WIRP`, `AAPL OMON` live and fix shape drift).
+- **Usage lesson:** Phase 14 burned ~75% of a 5h window (agents + repeated gates). See memory `token-burn-rules`: targeted tests in agents, one full gate per step, pause at 60% of the 5h window.
+- **Kite Connect (read-only data) is added to Phase 15 scope** (roadmap row `KITE`). A separate Kite session was started and STOPPED by the user before it committed anything (branch `claude/angry-easley-fc2d86` only holds the Phase 14 commits, nothing Kite), so build it fresh in Phase 15; that branch can be deleted.
+- **Next action: Phase 15** (risk, quant library, alphas, plus the `KITE` row): read `docs/ROADMAP_PHASES_11-19.md` "Phase 15", write `docs/specs/PHASE_15.md`, tests first (fresh session).
+  Phases 17 and 18 stay paused. Before Phase 16: ask the user to set the OpenRouter key in APIKEYS.
+
+## Resume here (2026-10-18, Phase 13 complete)
+- **Phase 13 is done and committed** (spec `docs/specs/PHASE_13.md`, steps 1-8). Functions: EE EEO ANR MGMT DVD SPLT CACS IPO SI EVTS DCF WACC RV ETF MEMB MGR CN,
+  plus `ALRT NEWS WORD [SYM]` (migration 11 `news_alerts`, `/api/newsalerts`, evaluated in `command/alerts.ts`), Finnhub + Alpaca adapters (inert without
+  keys; doc-shaped fixtures), `N` merges keyed headlines (`DataService.news`), ANR/EEO Finnhub fallback (capability `surprises`), real-time US quotes
+  (`streaming/iex.py`, tick source `a` = `RT IEX`, off in fixture mode). Gates after step 7: 460 pytest + 1 xfail (Phase 11 recording), ruff, tsc, vitest,
+  104 Playwright; bench 24/24 (see `docs/PERFORMANCE.md`). Docs updated: CHANGELOG, COMMANDS, DATA_LIMITS. Known limit: MSFT `RV`/`DCF` NOT RUNNABLE (EBITDA untagged).
+  The e2e suite flaked once under the all-gates-at-once run (4 specs passed alone and on rerun); not chased.
+- **Not verified live:** Finnhub/Alpaca response shapes and the IEX poller against the real service (no keys). When the user sets keys in `APIKEYS`, try
+  `AAPL CN`, `AAPL Q` (source should read RT IEX) and fix any shape drift in `research/keyed_parse.py`.
+- **Next action: Phase 14**: read `docs/ROADMAP_PHASES_11-19.md` "Phase 14", write `docs/specs/PHASE_14.md` with its defaults and tests-first step 1, then build
+  (fresh session per phase). **Phases 17 and 18 stay paused (user, 2026-10-18).** Before Phase 16: ask the user to set the OpenRouter key.
+- **Phase 14 not started** (a session was launched and stopped before it changed anything; the tree was clean at commit `de90def`). The user will run it
+  in a new session, possibly on another account: the branch and worktree are local only (no remote), so the new account must open this same folder.
+- _Older notes below are from Phase 12._
+
+## Resume here (2026-10-19, Phase 12 complete)
+- **Where the work is:** branch `claude/openterm-phases-12-19-5ebe04`, worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`
+  (a session cannot write into another worktree). It was fast-forwarded from `claude/openterm-phases-11-19-a99b2b` (that
+  worktree is clean and now stale: do not work there) and `claude/test-speedup` is merged. `backend/.venv` and
+  `frontend/node_modules` are installed. Nothing is running. Not merged into `main`; no remote.
+- **Steps 12.3 to 12.6 are done and committed.** Gates after step 6: 315 pytest + 9 xfail (8 for steps 7-8, 1 Phase 11
+  recording), ruff, tsc, 192 vitest, 80 Playwright, bench **24/24** on the third run (two runs missed on machine noise;
+  BT run 286 ms of 300, cached 5 ms, BT open 72 ms; see `docs/PERFORMANCE.md`; the BT run budget has little headroom). Step 4 also added VaR 95 / ES 95 (`bt/job.py` `tail_risk`, decision H was missed in step 3).
+- **What step 5 added:** `bt/engines/` `india_equity.py`, `crypto.py`, `forex.py`, `futures_base.py`, `global_futures.py`,
+  `composite.py`, `bands.py` (ported from Vibe `d0db2e3`, THIRD_PARTY.md rows added), wired in `bt/engine.py`; all six
+  `ENGINES` tests pass against Vibe's own numbers. Ours: `composite.market_of` (Vibe's detector reads `BTCUSDT.P`, `BRK-B`,
+  `^GSPC` as China A; unplaceable symbols raise), `providers/crypto.py` `BinanceKlinesProvider` (`binance_klines`, first in
+  the `history` order in `main.py` and `config.yaml`; spot `BTCUSDT`/`BTC-USDT`, perp `BTCUSDT.P` with `Bars.fund` =
+  mean funding per bar), `frames.from_bars` reads `fund`, `catalog.py` (`BUILT`, `SLIPPAGE_KEYS`, `COSTS`,
+  `bars_per_year()`), API sets `interval` + `funding_rate` 0 for crypto/composite and refuses `SLIP` on forex. New tests:
+  `tests/test_phase12_engines.py`. **Not ported:** Vibe's crypto `perpetual_strict` (needs mark prices and maintenance
+  brackets; the engine refuses it), see `docs/DATA_LIMITS.md`.
+- **The permission classifier denied running a copy script** over the downloaded Vibe sources, so the ported files were
+  written by hand from reading them (headers name the source file and the changes). Vibe sources were fetched with
+  `curl` from `raw.githubusercontent.com/HKUDS/Vibe-Trading/d0db2e3/...` into the scratchpad only, never into the repo.
+- **What step 4 added:** `functions/BT.tsx` (views CHART / METRICS / TRADES / CODE cycled with `V`, not `Tab`; labels of
+  decision L; progress from `J` frames; `R` re-run, `X` cancel, `E` CSV of the visible view), `bt/ruleParse.ts` (mirror
+  of `bt/rules.py`), `bt/metricsFormat.ts`, `btApi` in `net/api.ts`, `adoptJob` in `net/jobs.ts`, ChartView `lowerPane`
+  (drawdown) and lazy indicator worker, BT intent prefetch, `btOpen` perf series, bench section H + `btBench()`.
+  `BT RUNS/EXPORT/MC/WF/SAVE/LOAD/DEL` say NOT BUILT YET with their step. **Not built yet: the Python strategy editor**
+  (spec section 1: textarea + `BT SAVE/LOAD/DEL`); call it step 4B, before step 9.
+- **What step 6 added:** `bt/validation.py` (Vibe's `monte_carlo_test`, `bootstrap_sharpe_ci`, `walk_forward_analysis`; matches
+  Vibe's numbers), `bt/validate_job.py` + job kinds `bt.mc` / `bt.wf` (server-submitted, `POST /api/bt/runs/{id}/mc|wf`),
+  frontend `BT MC|WF <run args>` and `M` / `W` keys, MC and WF views, `bt/validationFormat.ts`. Tests:
+  `tests/test_phase12_validation.py`, vitest + 3 Playwright tests. **Not yet checked against the real backend in a browser:**
+  do one smoke run (fixture mode) at step 9, with RUNS and IMPORT.
+- **What step 7 added:** `bt/export.py` (CSV parts, Pine v5 translation of rule runs), `GET /api/bt/runs/{id}/export`, `GET /api/bt/compare`,
+  frontend `functions/BtRuns.tsx` (`BT RUNS`: list, `C` marks two, comparison with metric diffs and the two equity lines),
+  `BT OPEN`, `BT EXPORT`, `P` key, `csv.ts` `downloadText`. Tests: `tests/test_phase12_export.py`, vitest, 5 Playwright.
+- **Bench note (closed):** the step-7 misses of the BT-run budget were machine throttling; the phase bench after a rest reads 233.6 ms (see below and `docs/PERFORMANCE.md`).
+- **What step 8 added:** migration 10 `local_bars`, `bt/csvimport.py` + `bt/localdata.py`, `DataService.local` (set in the lifespan), `/api/bt/import`
+  (POST/GET/DELETE), `bt/csvImport.ts`, `functions/IMPORT.tsx` (paste box with live preview, list, `D` twice). Tests: `tests/test_phase12_import.py`,
+  vitest, 4 Playwright. Gates after step 8: 354 pytest + 1 xfail (the Phase 11 recording), 196 vitest, 87 Playwright, all green.
+- **What step 4B and 9 added:** `functions/BtEditor.tsx` (`BT EDIT`/`LOAD`: list or editor), `BT SAVE name RULE`, `BT DEL name`, `@name` in the rule
+  position (`bt/ruleParse.ts` `strategy`), docs (`COMMANDS.md`, `CHANGELOG.md`, `DATA_LIMITS.md`, `PERFORMANCE.md`), real-backend browser
+  smoke run (all green; found the Ctrl+K-in-textarea bug). Final Phase 12 gates: 354 pytest + 1 xfail, 198 vitest, 92 Playwright, bench 24/24.
+- **Next action: Phase 13 (equity research gaps)**: read `docs/ROADMAP_PHASES_11-19.md` "Phase 13", write `docs/specs/PHASE_13.md` with its
+  defaults plus the tests in one step, then code (fresh session per phase). **Before Phase 16: ask the user to set the OpenRouter key with
+  `APIKEYS`**, then finish the Phase 11 `@RECORDING` test (`scripts/record_llm.py`). Phase 12 is not merged into `main` (no remote).
+- **Bench rule of thumb:** after many back-to-back runs this machine throttles and the BT 10-year run reads 380-490 ms against 233 ms when
+  rested. Run the bench once after a rest; do not chase a lone BT-run miss before re-measuring. `node scripts/gates.mjs` runs the five gates
+  in parallel (`--skip=e2e,pytest`).
+- **Scope and plan (decided by the user 2026-10-19; do not relitigate):**
+  - **Full scope, Phases 12-19, minus paid-only data.** Removed: `TRAN`, `SEG` (paid FMP). Keys: keyless sources
+    first; free sign-up keys are fine (Finnhub free tier for `EE`/`ANR` only as far as it covers them, Alpaca/Finnhub
+    for real-time L1, EIA, Telegram bot token, the user's own SMTP); the **only paid service is OpenRouter**, default
+    model a DeepSeek model chosen in `SETTINGS AI`, with the Phase 11 daily spend cap. Brokers: Alpaca paper first;
+    Zerodha only if its API is free when the Phase 18 spec is written. A source that turns out paid-only is dropped
+    and noted in DATA_LIMITS.md, never faked.
+  - **Roadmap defaults are pre-approved** for every phase: write each spec with its defaults, then go straight on to
+    tests and code. Stop only for a decision the roadmap did not foresee, a gate failure that needs a decision, or a
+    missing key (OpenRouter before Phase 16: ask the user to set it with `APIKEYS`; then finish the `@RECORDING` test).
+  - **Speed levers (approved):** (1) port Vibe modules in bulk by copy script with their tests converted to pytest
+    and cross-checked against Vibe's values, independent modules on 2 Sonnet agents at most; (2) pre-approved
+    defaults (above); (3) build shared templates first (keyed provider adapter, table panel, canvas heat grid) and
+    keep later functions thin; (4) spec + tests in one step per phase, all of a phase's fixtures in one recording
+    script run; (5) faster gates (test-suite audit running in its own session on its own branch, see below).
+    Quality, accuracy, terminal speed and bench budgets are never traded for pace.
+  - Estimate: about 9-13 hours of active work (4-5 sessions of one 5-hour window each). Re-check after Phase 12.
+  - **Test audit: finished and MERGED (2026-10-19, `863af15`, no conflicts, all five gates green).** Branch
+    `refs/heads/claude/test-speedup`, commit `5347a9b` (off `976c7ad`, 23 files). What it does: pytest 39-41 s -> 20-29 s
+    (httpx client / CA bundle built once per worker in `conftest.py`; `addopts` `-n 6 --dist worksteal`), Playwright
+    30-45 s -> 18-27 s (shared `openApp()` in `e2e/app.ts` loads the page once; web server builds without the type check),
+    vitest 2.1 -> 1.3-1.6 s (`threads` pool). Merged duplicates: four migration-upgrade tests -> one test upgrading from
+    every schema version 0-9 (`test_userdata.py`), three restart-survival tests -> one. Fixed flake:
+    `test_runtime_limits_fail_closed` (3 s limit only on the time-limit case). Every old assertion kept.
+    After merging: a new migration must list its tables in `TABLES_BY_VERSION` (`test_userdata.py`), or a check fails;
+    `phase12.spec.ts` can switch its setup to `openApp()`. Left as is: ~700 unmocked Playwright requests
+    (`/api/cmdhistory`, `/api/sources`, `/api/alerts`, `/api/settings`) reach port 8000, so keep port 8000 free during
+    e2e; two Phase 6 insider tests wait ~1.7 s each on the real SEC rate limit (by design).
+- **What step 3 added** (`backend/openterm/bt/`):
+  - Ported verbatim from Vibe-Trading `d0db2e3` by a copy script (header line names the source): `models.py`,
+    `metrics.py`, `rebalance_mask.py`, `engines/hooks.py` (= `_market_hooks.py`), `engines/global_equity.py`,
+    `engines/base.py` (cut: loaders, optimizer, fundamentals/events, run card, artifacts; `run_backtest` replaced by an
+    in-memory `run(data_map, signal_map, bars_per_year, bench_ret, benchmark_metadata)`; the rest unchanged).
+  - Ours: `engine.py` (`backtest()`, `FEES=` overlay on `calc_commission`), `frames.py` (Yahoo chart / router `Bars` /
+    Binance perp -> frames; `adjusted()`), `rules.py` (pure parser + `signals()` + `parse_command`), `sandbox.py`
+    (AST allowlist + restricted builtins + guarded import + sockets off), `limits.py` (memory cap: Windows Job Object
+    per worker, `RLIMIT_AS` elsewhere), `catalog.py` (engine per symbol, built engines, default costs), `job.py`
+    (worker side of `bt.run`), `store.py` (data files, strategies, runs; keep 200).
+  - Jobs: `Kind.internal` (bt.run only via `/api/bt/run`), `Kind.hash_view` (bt.run hashes without its labels),
+    per-job `time_limit_s`, `JobRunner.on_done` hooks (store the run before the job shows done), `JobStore.forget(hash)`.
+  - Migration 9 (`strategies`, `bt_runs`; a migration may now be a list of statements). API: `POST /api/bt/run`,
+    `GET /api/bt/runs`, `GET|DELETE /api/bt/runs/{id}`, `GET /api/bt/strategies`, `GET|PUT|DELETE /api/bt/strategies/{name}`.
+    Fixture routes for the 10y charts. Dependencies added: numpy, pandas (<3), psutil, keyring (decision M: APIKEYS now
+    uses the Windows keyring).
+- **Changed from the spec (tell the user):** default benchmark is Vibe's (equal-weight buy and hold of the traded
+  symbols), not SPY; `BENCH=SPY` compares with an index. Needed so API runs match the Vibe cross-check exactly.
+- **Still open from Phase 11:** the OpenRouter recording (`scripts/record_llm.py`, then delete `@RECORDING`).
+- **The user's working rules for Phases 11-19** (updated 2026-10-19 to speed things up; quality and terminal speed
+  must not drop):
+  1. Do a whole phase per turn, step by step in HANDOFF order, committing each step. Stop only on a gate failure that
+     needs a decision, a missing key, or a real product decision.
+  2. Each phase starts with `docs/specs/PHASE_<n>.md` (defaults at the top, pre-approved: see "Scope and plan"),
+     written together with its tests in one step, then code.
+  3. One fresh session per phase (HANDOFF.md carries the state). Sonnet subagents only, at most 2 at once, only for
+     truly parallel pieces (backend and frontend halves).
+  4. Every step: `uv run pytest -q`, `uv run ruff check .`, `npx tsc --noEmit`, `npx vitest run`, `npx playwright test`.
+     `node scripts/bench.mjs` at the end of each phase and on any step that touches rendering, hot paths or the bench;
+     a phase is not done while any budget regresses. Record bench numbers in `docs/PERFORMANCE.md`.
+  5. Docs (HANDOFF.md, CLAUDE.md): only the changed sections.
+  6. At 95% of the 5-hour or weekly limit: stop subagents, write the state to HANDOFF.md, commit, and stop.
+  7. Keep output small. If a key is needed, stop and say which one.
+  8. **Sonnet for everything** (main session and subagents; decided 2026-10-19, no model switching). If the same gate
+     fails twice on the same problem: stop, write the state and exact next action here, commit, and tell the user.
+- **Before the bench:** port 8000 must be free. The user's own `start.ps1` backend sometimes holds it; ask before stopping it.
 
 ## How Phases 6-10 were built (history)
 Built in parallel, one git worktree per phase (`openterm-p6..p10`, from `4b3814c`), by Sonnet sessions following
@@ -203,6 +406,58 @@ Remaining:
 2. Tick-to-pixel bench budget: missed (55-59 ms vs 50) on every run of the post-merge session, including with the
    fixes reverted, so it is machine load or drift, not those fixes; earlier the same day it ran 38-42 ms. Re-run on a
    quiet machine before treating it as a regression.
+3. Phases 11-19: plan in [docs/ROADMAP_PHASES_11-19.md](docs/ROADMAP_PHASES_11-19.md) and
+   [docs/FEATURE_GAP.md](docs/FEATURE_GAP.md). Work happens in worktree branch `claude/openterm-phases-11-19-328938`
+   (fast-forwarded onto the roadmap commit `7d20e69` from `claude/openterm-bloomberg-feature-gap-badb0c`; not on `main` yet).
+   Since session 6 the work continues on `claude/openterm-phases-11-19-a99b2b` (fast-forwarded from 328938; see "Resume here").
+   Steps (one commit each; a step is a spec, a tests set, or one function's code):
+
+   | Step | State |
+   |---|---|
+   | 11.1 Spec [docs/specs/PHASE_11.md](docs/specs/PHASE_11.md) | **done**, defaults approved 2026-10-18 |
+   | 11.2 Tests set: `backend/tests/test_phase11.py` (39), `frontend/src/net/phase11.test.ts` (5), `frontend/e2e/phase11.spec.ts` (4) | **done**; all marked expected-to-fail per step (see CLAUDE.md) |
+   | 11.3 Key store, redaction, `/api/keys`, `KEY REQUIRED`, `APIKEYS` panel | **done** (backend by the main session, frontend by one Sonnet subagent) |
+   | 11.4 Job runner, migration 8, `J` frames, `JOBS` panel, bench budgets (JOBS + APIKEYS open) | **done** (backend main session, frontend one Sonnet subagent); bench 21/21 |
+   | 11.5 LLM gateway + health | **done except the recording** (main session, no subagents); bench 21/21 on the third run. `test_recorded_openrouter_stream...` waits for the OpenRouter key (`scripts/record_llm.py`) |
+   | 11.6 `THIRD_PARTY.md`, CLAUDE.md rule changes, docs, phase verification | **done** 2026-10-19; bench 21/21 first run |
+   | 12.1 Spec [docs/specs/PHASE_12.md](docs/specs/PHASE_12.md) | **approved** 2026-10-19 |
+   | 12.2 Tests set + recordings + Vibe cross-check values | **done** 2026-10-19: `backend/tests/test_phase12.py` (75; markers `CORE` step 3, `ENGINES` 5, `VALID` 6, `RUNS` 7, `IMPORT` 8), `frontend/src/bt/phase12.test.ts` (6), `frontend/e2e/phase12.spec.ts` (5); fixtures by `scripts/record_phase12.py`; expected values `bt_vibe_expected.json` by `scripts/vibe_crosscheck.py` |
+   | 12.3 Engine core, rules, sandbox, API, migration 9 | **done** 2026-10-19: all gates green, bench 21/21, THIRD_PARTY rows added |
+   | 12.4 `BT` panel + BT bench budgets | **done** 2026-10-19: bench 24/24; strategy editor split out as 12.4B |
+
+   The tests pin interfaces the spec left open: `keys.KeyStore(env, dotenv, keyring)`, `MemoryKeyring`, `classify()`, `KeyStoreError.kind`
+   (`env_locked` 409, `unknown_provider` 404, `bad_request` 400), `redact.redact(text, secrets)`, `Provider.key_name`, `AllFailed.key`,
+   `DataError(..., key=)`, `jobs.job_hash`, `jobs.store.JobStore`, sleep params `ignore_cancel` / `fail_at` / `crash_at` / `tag`,
+   `llm.sse.parse_sse`, `events_from_payloads`, `llm.spend.check/cost/add/today`, `/api/llm/health`, settings `OPENTERM_KEYRING`
+   (`auto|memory|none`), `OPENTERM_DOTENV_PATH`, `OPENTERM_JOB_WORKERS`; frontend `jobFrames.ts` (`parseJobFrame`, `applyJobFrame`,
+   `progressText`), `keyRequired.ts`, `functions/apikeysMask.ts` (`maskKey`), `.keyreq` line class.
+   Step 3 notes: `backend/openterm/keys.py` (specs, store, `.env` writer, `classify`, `run_test`), `redact.py` (filter on the ring buffer,
+   root handlers, httpx/httpcore), `/api/keys*` in `api.py`, router `key_required` (no breaker strike; `AllFailed.key`), 424 in `error()`,
+   SOURCES keyed rows from the store (`providers/__init__.py` Phase 11 block). `app.state.on_key_change` re-applies a FRED key set in
+   APIKEYS (other keyed adapters arrive in later phases and must read the store the same way). Fixtures: real 401s for Finnhub,
+   OpenAI, Anthropic, OpenRouter (`keytest_*_401`); `keytest_openrouter_ok` is doc-shaped. Frontend: `APIKEYS.tsx`, `KeyRequiredLine.tsx`
+   (wired into `secPanel` and `macroUi` error lines only; DES, N, GP and others still show their own error text),
+   `state/panelContext.ts`, `net/keyRequired.ts`, `apikeysMask.ts`, `apikeysSignup.ts`. Spend cap editing (`C`) waits for step 5.
+   Step 4 notes: `backend/openterm/jobs/` (`__init__` = `job_hash` only, kept import-light for workers; `kinds.py` (`sleep` = TEST JOB);
+   `worker.py`; `store.py` (migration 8, hash index made on first use, trim 200, results > 8 MB not cached); `runner.py`: own pool of
+   spawn workers, two pipes + a shared cancel flag each, one reader thread on pipes + sentinels, hard cancel after 2 s, time limit,
+   `WORKER DIED`, 10 frames/s/job). Hub `Client.push` / `Hub.broadcast` carry `J` frames. `/api/jobs` POST/GET, `/{id}` GET/DELETE,
+   `DELETE /api/jobs?state=finished`. Frontend: `net/jobFrames.ts`, `net/jobs.ts`, `functions/JOBS.tsx`, `jobsArgs.ts`, status bar `JOBS n`.
+   The job budget is split (user's choice): frame-to-paint and server time gated, end to end through the bench proxy is INFO.
+   Step 5 notes: `backend/openterm/llm/` = `sse.py` (incremental `SSEParser` + `parse_sse`), `events.py` (`Event`), `openai_compat.py`
+   (`OpenAIStream`, tool-call deltas assembled per `index`, emitted on `finish_reason`), `anthropic.py` (`AnthropicStream`, OpenAI-shaped
+   messages/tools converted to the Messages API), `spend.py` (`check`/`cost`, per-day spend in `kv` `llm_spend:<date>` added in one SQL
+   statement, cap in `kv` `llm_cap`, default US$1), `client.py` (`Gateway.chat(messages, model, provider="openrouter", tools,
+   max_tokens, temperature)`: KEY REQUIRED / PRICE UNKNOWN / SPEND CAP REACHED before any network call, OpenRouter prices from its
+   `/models` list (cached 1 h, `:free` = 0), OpenAI/Anthropic prices from `config.yaml` `llm.prices` (left empty on purpose), worst case
+   charged if a stream ends without usage; `health()`, Ollama probe 300 ms cached 10 s). API: `GET /api/llm/health`,
+   `PUT /api/llm/cap` (loopback, 0-1000), `/api/keys` `spend` is real, SOURCES has an `ollama` row. The gateway is built on first use
+   (`api.llm_of`; `app.state.llm` reset in the lifespan). Fixture mode: Ollama port refuses, OpenRouter chat replays
+   `llm_openrouter_stream.txt` if present, other LLM hosts 404. No AI function calls `chat()` yet (Phase 16). Frontend: APIKEYS `C`
+   edits the cap (`functions/spendCap.ts`). The `client` fixture now clears every KEY_SPECS env var.
+   Baseline before Phase 11 code: 163 pytest, 169 vitest, 66 Playwright, bench 17/17 on the rerun (see `docs/PERFORMANCE.md`
+   "Phase 11 baseline"). Open problem: port 8000 was held by the user's own `start.ps1` backend (system Python); stop it
+   (with the user's OK) before the bench.
 
 Done after the merge: `main` fast-forwarded; panel tab names the security only for functions that use it; charts skip
 the volume histogram when a series has no volume (FRED's flat line); `scripts/start.ps1` / `scripts/start` run the

@@ -44,6 +44,9 @@ ROWS: list[tuple[str, str, str, str, str, tuple[str, ...]]] = [
         "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
     )),
     ("IS", "income_tax", "Income tax", "dur", "USD", ("IncomeTaxExpenseBenefit",)),
+    ("IS", "interest_expense", "Interest expense", "dur", "USD", (
+        "InterestExpense", "InterestExpenseDebt", "InterestExpenseNonoperating",
+    )),
     ("IS", "net_income", "Net income", "dur", "USD", ("NetIncomeLoss", "ProfitLoss")),
     ("IS", "eps_basic", "EPS basic", "dur", "USD/shares", ("EarningsPerShareBasic",)),
     ("IS", "eps_diluted", "EPS diluted", "dur", "USD/shares", ("EarningsPerShareDiluted",)),
@@ -66,6 +69,10 @@ ROWS: list[tuple[str, str, str, str, str, tuple[str, ...]]] = [
     ("CF", "financing_cf", "Financing cash flow", "dur", "USD", ("NetCashProvidedByUsedInFinancingActivities",)),
     ("CF", "dividends", "Dividends paid", "dur", "USD", ("PaymentsOfDividends", "PaymentsOfDividendsCommonStock")),
     ("CF", "buybacks", "Share repurchases", "dur", "USD", ("PaymentsForRepurchaseOfCommonStock",)),
+    ("CF", "da", "Depreciation and amortization", "dur", "USD", (
+        "DepreciationDepletionAndAmortization", "DepreciationAndAmortization", "DepreciationAmortizationAndAccretionNet",
+        "DepreciationAmortizationAndOther",
+    )),
 ]
 # Only used to fill Total liabilities when the filer does not tag it (flagged "c" = computed).
 HELPER_TAGS = ("LiabilitiesAndStockholdersEquity",)

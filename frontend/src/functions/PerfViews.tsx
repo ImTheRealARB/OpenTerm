@@ -7,6 +7,13 @@ import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { candlePatterns, smc } from "../chart/patterns";
+import { gauges } from "../perf/metrics";
+import { seasonality } from "./seasMath";
+import { hitTest, type Drawing, type Geo } from "../chart/drawings";
+import { paintTreemap } from "./imapPaint";
+import { rank, type Cand } from "./secfScore";
+import { treemap } from "./treemap";
 
 function rng(seed: number) {
   return () => {
@@ -98,6 +105,111 @@ export function TestChart({ panelId, bars }: { panelId: number; bars: number }) 
     <div className="fn">
       <div className="line warn">PERF CHART: {bars.toLocaleString("en-US")} BARS OF GENERATED TEST DATA · ←/→ PAN · +/- ZOOM</div>
       <ChartView ref={chart} data={data} type="CANDLE" log={false} indicators={indicators} />
+    </div>
+  );
+}
+
+/** `PERF CALC`: times the Phase 19 chart maths on generated bars (TEST DATA) and publishes gauges p19.patternsMs / p19.seasMs (p95 of 15 runs). */
+export function CalcBench() {
+  const res = useMemo(() => {
+    const r = rng(7);
+    const p95 = (a: number[]) => [...a].sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * 0.95))];
+    const n = 5000;
+    const o = new Float64Array(n), h = new Float64Array(n), l = new Float64Array(n), c = new Float64Array(n);
+    let px = 100;
+    for (let i = 0; i < n; i++) {
+      o[i] = px;
+      px *= 1 + (r() - 0.5) * 0.04;
+      c[i] = px;
+      h[i] = Math.max(o[i], c[i]) * (1 + r() * 0.01);
+      l[i] = Math.min(o[i], c[i]) * (1 - r() * 0.01);
+    }
+    const dn = 10000;
+    const t = new Float64Array(dn), dc = new Float64Array(dn);
+    let p = 100;
+    for (let i = 0; i < dn; i++) {
+      t[i] = 631152000 + i * 86400;
+      p *= 1 + (r() - 0.5) * 0.02;
+      dc[i] = p;
+    }
+    const pat: number[] = [];
+    const seas: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      let t0 = performance.now();
+      candlePatterns(o, h, l, c);
+      smc(o, h, l, c, 3);
+      pat.push(performance.now() - t0);
+      t0 = performance.now();
+      seasonality(t, dc, "MONTH");
+      seasonality(t, dc, "WOY");
+      seasonality(t, dc, "DOM");
+      seas.push(performance.now() - t0);
+    }
+    // 200 drawings (a third of each kind) hit-tested at points in the middle of the chart.
+    const ds: Drawing[] = Array.from({ length: 200 }, (_, i) => {
+      const t0 = 100 + (i % 50) * 10;
+      const k = i % 3;
+      return k === 0
+        ? { id: `h${i}`, kind: "HLINE", pts: [{ t: t0, p: 50 + (i % 40) }] }
+        : k === 1
+          ? { id: `t${i}`, kind: "TREND", pts: [{ t: t0, p: 40 + (i % 30) }, { t: t0 + 200, p: 60 + (i % 20) }] }
+          : { id: `f${i}`, kind: "FIB", pts: [{ t: t0, p: 40 }, { t: t0 + 300, p: 80 + (i % 10) }] };
+    });
+    const geo: Geo = { toX: (t) => t, toY: (p) => 1000 - p, width: 1200 };
+    const hit: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      const t0 = performance.now();
+      for (let j = 0; j < 20; j++) hitTest(ds, 300 + j * 7, 930 + (j % 5), geo, 6);
+      hit.push((performance.now() - t0) / 20);
+    }
+    // IMAP: 5,000 tiles in 12 groups on a 1600 x 900 canvas, layout then one paint pass.
+    const groups = Array.from({ length: 12 }, (_, g) => ({ key: `G${g}`, items: [] as { id: number; value: number }[] }));
+    const rows = Array.from({ length: 5000 }, (_, i) => ({ sym: `T${i}`, pct: (r() - 0.5) * 8 }));
+    rows.forEach((_, i) => groups[i % 12].items.push({ id: i, value: Math.exp(r() * 7) }));
+    const cv = document.createElement("canvas");
+    cv.width = 1600;
+    cv.height = 900;
+    const ctx = cv.getContext("2d")!;
+    const palette = { bg: "#000", fg: "#fa0", dim: "#a60", up: "#0c0", down: "#e22", sel: "#210", line: "#430", font: "monospace" };
+    const lay: number[] = [];
+    const paint: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      let t0 = performance.now();
+      const l = treemap(groups, 1600, 900, { header: 14, pad: 1 });
+      lay.push(performance.now() - t0);
+      t0 = performance.now();
+      paintTreemap(ctx, 1600, 900, l, rows, palette, 0);
+      paint.push(performance.now() - t0);
+    }
+    // SECF: four queries (prefix, name word, typo, subsequence) ranked over 7,000 generated names.
+    const WORDS = ["micro", "soft", "apple", "global", "energy", "bank", "capital", "tech", "health", "pharma", "mining", "trust", "holdings", "systems", "motors", "foods", "water", "steel", "air", "media"];
+    const cands: Cand[] = Array.from({ length: 7000 }, (_, i) => ({
+      symbol: `S${i.toString(36).toUpperCase()}`,
+      name: `${WORDS[Math.floor(r() * 20)]} ${WORDS[Math.floor(r() * 20)]}${WORDS[Math.floor(r() * 20)]} Inc. Common Stock`,
+      exchange: null, type: null, sector: null, mcap: r() * 1e12, src: "EQS" as const,
+    }));
+    const secf: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      const t0 = performance.now();
+      for (const q of ["micro", "apple bank", "microsft", "mcrsft"]) rank(cands, q, 200);
+      secf.push((performance.now() - t0) / 4);
+    }
+    gauges.set("p19.secfMs", p95(secf));
+    gauges.set("p19.treemapMs", p95(lay));
+    gauges.set("p19.imapPaintMs", p95(paint));
+    gauges.set("p19.hitMs", p95(hit));
+    gauges.set("p19.patternsMs", p95(pat));
+    gauges.set("p19.seasMs", p95(seas));
+    return { secf: p95(secf), pat: p95(pat), seas: p95(seas), hit: p95(hit), lay: p95(lay), paint: p95(paint), n, dn };
+  }, []);
+  return (
+    <div>
+      <h2>PERF CALC (TEST DATA, NOT A SECURITY)</h2>
+      <div>PATTERNS + SMC, {res.n} BARS: {res.pat.toFixed(2)} MS P95</div>
+      <div>SEAS MONTH + WOY + DOM, {res.dn} DAILY BARS: {res.seas.toFixed(2)} MS P95</div>
+      <div>HIT TEST OVER 200 DRAWINGS: {res.hit.toFixed(3)} MS P95</div>
+      <div>SECF RANK, 7000 NAMES (PER QUERY): {res.secf.toFixed(2)} MS P95</div>
+      <div>IMAP 5000 TILES: LAYOUT {res.lay.toFixed(2)} MS · PAINT {res.paint.toFixed(2)} MS P95</div>
     </div>
   );
 }

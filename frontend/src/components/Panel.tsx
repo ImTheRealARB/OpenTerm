@@ -1,6 +1,7 @@
 import { Component, Profiler, useEffect, useReducer, type ReactNode } from "react";
 import { FUNCTIONS, loadModule, loadedModule } from "../functions/registry";
 import { panelPainted, recordPanelRender } from "../perf/metrics";
+import { PanelIdContext } from "../state/panelContext";
 import { useStore } from "../state/store";
 import { currentView, focusPanel, workspace } from "../state/workspace";
 
@@ -57,7 +58,11 @@ function FunctionView({ panelId, view }: { panelId: number; view: ReturnType<typ
   if (!def?.load) return <NotBuilt code={code} />;
   if (error) return <div className="err">{error}</div>;
   if (!Mod) return <div className="dim">LOADING {code}…</div>;
-  return <Mod panelId={panelId} security={view.security} args={view.args} />;
+  return (
+    <PanelIdContext.Provider value={panelId}>
+      <Mod panelId={panelId} security={view.security} args={view.args} />
+    </PanelIdContext.Provider>
+  );
 }
 
 export function Panel({ id }: { id: number }) {

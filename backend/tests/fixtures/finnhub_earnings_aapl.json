@@ -1,0 +1,9 @@
+{
+ "doc_shaped": "BUILT from Finnhub's documented /stock/earnings response shape, not recorded (no key was available on 2026-10-18). Numbers are invented test values.",
+ "status": 200,
+ "body": [
+  {"actual": 1.80, "estimate": 1.60, "period": "2026-09-30", "quarter": 3, "surprise": 0.20, "surprisePercent": 12.5, "symbol": "AAPL", "year": 2026},
+  {"actual": 1.50, "estimate": 1.55, "period": "2026-06-30", "quarter": 2, "surprise": -0.05, "surprisePercent": -3.2258, "symbol": "AAPL", "year": 2026},
+  {"actual": 2.40, "estimate": 2.30, "period": "2026-03-31", "quarter": 1, "surprise": 0.10, "surprisePercent": 4.3478, "symbol": "AAPL", "year": 2026}
+ ]
+}

@@ -2,6 +2,70 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 19: charting, discovery, macro, crypto (complete 2026-10-18; UNLK not built; not merged to main)
+- Added to `GP`: 12 studies (`ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU`), rule-based pattern overlays (`PAT:CANDLE` 9 candlestick patterns, `PAT:SMC` swings, BOS / CHOCH, fair-value gaps, order blocks; `PAT:ICHI` = `ICHIMOKU`),
+  drawings by keyboard (`T` trend ray, `H` horizontal, `B` fib; `P` anchor price, `Enter` places, `[` `]` select, `D` removes) saved per symbol on the server, `EVT` markers (E earnings = last four reported, D ex-dividend, S split),
+  `VS A B C PANE` (each compare symbol in its own pane). The indicator picker uses keys 1-9 then letters. The crosshair readout no longer goes stale.
+- Added `SEAS` (seasonality by month, weekday, day of month, ISO week), `GIP` (candles built from the live ticks this server has seen, buffer 20,000 ticks per symbol), `IMAP` (treemap heat map of the EQS universe: size = market cap, colour = % change).
+- Added `SECF` (fuzzy security finder; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI), `ECST` (World Bank / DBnomics indicator chart), `WECO` (G20 table, each cell with its own data year), `CENB` (policy rates and decision dates of eight banks), FOMC decisions in `ECO`, exchange holidays (`HOL` / `EARLY`) on the market lights.
+- Added `NRG` (crude, gas, refined products, retail fuel from FRED's keyless CSV; prices only) and `WETR` (demand-city degree-day basket, place forecast from Open-Meteo, NWS alerts when `SEC_USER_AGENT` is set), `PRED` (Polymarket and Kalshi odds, labelled MARKET-IMPLIED PROBABILITY, NOT A FORECAST).
+- Added crypto depth: `CDEP` (order book, Binance with OKX fallback on HTTP 451), `FUND` (funding annualised from each venue's interval, perp and quarterly basis, 30-print history), `LIQ` (latest OKX liquidations), `STBL` (stablecoin supply by coin and chain), `DEFI` (yield pools over US$1M TVL, filtered server side). `UNLK` is NOT BUILT: DefiLlama emissions are paid.
+- Added India zero-key data: NSE archive end-of-day bars as the last `history` fallback for `.NS` at `1d` (built from daily bhavcopy files, kept in SQLite, labelled with the file count), and AMFI mutual fund NAV rows in `SECF` (`M`). `config.yaml`'s history order now includes `nse_archive`.
+- New routes: `GET/PUT /api/drawings/{symbol}`, `GET /api/world/events`, `GET /api/world/ticks/{symbol}`. New Nasdaq `earnings-surprise` source. Bench 36/36 with five new chart-maths budgets.
+
+## Phase 16: AI layer (in progress)
+- Added `AI`: a chat panel over an agent that calls 14 read-only tools in-process (quotes, history, profile, financials, filings, news, screener, research tables, options chain, rates, macro, portfolio, backtest, quant jobs).
+  Every answer lists its tool calls (source, age, STALE / FAILED / EMPTY), cites them as [T1], and carries `AI · model · time · MODEL OUTPUT, NOT DATA`; no tool data = `UNGROUNDED`, figures no tool returned = `UNSOURCED NUMBERS`.
+  Loop guard (3 failed or empty calls in a row, or the same call twice), context budget, daily spend cap. No order tools exist. No key = `KEY REQUIRED`. `SETTINGS AI` picks the model.
+- Added `AI BT <idea>` (drafts a BT rule, validated by the engine parser, shown with its command, never run by the AI), `AI CHART` (the newest GP chart to a vision model), five finance playbooks the agent loads on demand
+  (valuation, earnings, options, risk, macro) and a `strategy_check` tool. AI BT drafts rule strings only; `SignalEngine` code drafts are not built.
+- Added `AI DOC`: ask questions about one SEC filing (`AI DOC FILING AAPL 10-Q`) or an uploaded TXT / CSV / HTML / DOCX / XLSX / PDF. Local parsing (new dependency: pure-Python `pypdf`), keyword search over chunks,
+  chunk citations, the same UNGROUNDED / UNSOURCED checks. Documents stay in memory (last 5). No OCR.
+- Added `SWARM` (five preset desks of analyst roles plus a chair, each role with its own tools, one retry, stored runs that replay with no model call), `THESIS` (notes per ticker with status,
+  invalidation rule and linked runs) and `AI AUTO` (hypothesis, backtest, evidence report; the evidence line comes from the backtest runs the server saw). New migration 13 (`ai_runs`, `theses`).
+- Added `AUDIT`: a hash-chained ledger (migration 14, `ai_ledger`) of AI chat, AI BT, AI DOC, SWARM, AI AUTO and BT runs with a manifest (prompt, tool registry and skill hashes, app version, model) and metadata (question and answer hashes,
+  tool calls with argument hashes, cost, grounding verdict). No prompt or answer text is stored. The panel verifies the chain and names the first broken entry.
+- Recorded with the real OpenRouter key: one plain stream and a tool-call round (the pending Phase 11 recording is done).
+
+## Phase 15: risk, quant library, alphas, Kite
+- Added `RISK` (VaR / ES by history, normal and EVT, beta, drawdown, contributions, stress replays of 2008, 2020 and 2022 with COVERAGE, Kupiec / Christoffersen / Basel backtest),
+  `PORT OPT` (EQVOL, RP, MV, MAXDIV, HRP, TURN preview; `A` saves `<NAME>.OPT`, never edits the original), `PORT ATTR` (Brinson-Fachler plus TWR / MWR / Dietz / XIRR from a stored valuation table),
+  `FACT` (Fama-French 5 + momentum, keyless Ken French data), `QL` (GARCH, OU, cointegration, copula, microstructure, event study, deflated Sharpe), `ALPHA` (29-factor zoo scan: IC, IR, decay,
+  alive / reversed / dead, lookahead sentinel test) and `CORR REGIME` (edge density, fused / diffuse episodes).
+- The math is the new worker-only `quantlib` package ported from Vibe-Trading (MIT, `THIRD_PARTY.md`); every function runs as a job through `POST /api/quant/{fn}`. History accepts a `20Y` range of daily bars.
+- Added `KITE` (Zerodha Kite Connect), READ-ONLY: daily `KITE LOGIN`, status, Indian bars, NFO / MCX chains with OI (`OMON NIFTY.NFO R= Q=`), ticker decoder. Inert without your own key; no order surface exists.
+  Its fixtures are doc-shaped, NOT recordings.
+- `ALPHA`: `Enter` on a factor shows its formula line (the ported module's docstring, inputs, warm-up). Bench 29 of 29. Checked in the real app: fixture smoke run of every Phase 15 function, and live keyless `FACT AAPL`, `RISK` and `ALPHA TOP100`.
+
+## Phase 14: options, rates, futures
+- Added `OMON` (chain with Greeks, OI, volume), `PCR`, `OV` (Black-Scholes, binomial, Heston, barrier, IV solver) and `OSA` (multi-leg payoff, scenario
+  grid, Greeks by leg), `OVDV` / `SKEW` (implied-vol surface, quadratic smile never extrapolated), `HIVG` (realised vs implied; IV30 is built from LOCAL
+  SNAPSHOTS, so history starts the day you first open it). Crypto options come from Deribit. Yahoo options are keyless; Tradier (`TRADIER_TOKEN`) is an optional fallback.
+- Added `RATES` upgrade (EUR, GBP, CAD, JPY curves, Nelson-Siegel fit, FRED OAS credit spreads, Treasury auctions), `CT`, `WIRP`, `COT`, `FXFA`
+  (labelled a CIP estimate), `YAS`, `SWPM`, `CDSW`. A missing input makes a model NOT RUNNABLE and lists the fields; nothing defaults silently.
+- Quant library (`openterm/quant/`) ported from Vibe-Trading (MIT, `THIRD_PARTY.md`) and cross-checked against Vibe's own numbers. `BT` can run
+  options structures from `OSA`, labelled MODEL-PRICED OPTIONS (BLACK-SCHOLES ON HISTORICAL VOL), NOT MARKET QUOTES. Migration 12 adds `iv_snapshots`.
+
+## Phase 13: equity research gaps
+- Added `EE` / `EEO` (estimates, revisions, EPS surprises), `ANR` (ratings, targets, rating changes), `MGMT` (officers, governance, proxies),
+  `DVD` / `SPLT` / `CACS`, `IPO`, `SI` (short interest and FINRA short volume), `EVTS` (8-K items decoded), `ETF`, `MEMB` (constituents via the
+  proxy ETF's N-PORT), `MGR` (13F, quarter over quarter) and `CN` (company news from every source, keyword-scored, NOT A MODEL).
+  All work with zero keys (Yahoo `quoteSummary`, Nasdaq, FINRA, SEC); a key unlocks more.
+- Added `DCF` / `WACC` / `RV` on the valuation engine ported from Vibe-Trading (MIT): a missing input makes the model NOT RUNNABLE and lists it; opinions
+  (ERP, terminal growth, exit multiple) must be typed (`ERP=5.5 G=2.5 EXITX=14`).
+- Added the keyed Finnhub and Alpaca sources (set in `APIKEYS`): their headlines join `N` and `CN`, Finnhub backs `ANR` / `EEO` when Yahoo is down, and
+  Alpaca keys turn on real-time US last trades (IEX only), labelled `RT IEX`. Without keys nothing changes.
+- Added `ALRT NEWS WORD [SYM]`: fires when a newer headline contains the word (checked on each news refresh, every 2 minutes while the app is open).
+
+## Phase 12: backtester (Phase 11, keys and jobs, is on the same branch)
+- Added `BT`: rule syntax (`BT AAPL SMA20>SMA50 1D 5Y`), Python strategies (`BT EDIT`, `@name`), saved rules, results with chart, metrics,
+  trades and code views, every result labelled HISTORICAL SIMULATION, NOT A FORECAST with its sources, fees and slippage.
+- Engines ported from Vibe-Trading (MIT, `THIRD_PARTY.md`): US, UK, Hong Kong, Canada, India, crypto perpetuals with funding, forex,
+  global futures, composite baskets. China A, China futures, Korea, Vietnam and Brazil are not built.
+- Added `BT MC` / `BT WF` (Monte Carlo trade shuffle, bootstrap Sharpe interval, walk-forward), `BT RUNS` (compare), `BT EXPORT` (CSV, Pine).
+- Added `IMPORT` (your own daily bars, labelled LOCAL DATA) and the keyless `binance_klines` source (spot and USD-M candles with funding).
+- Added `scripts/gates.mjs` (the five test gates in parallel) and faster test suites.
+
 ## After Phase 10: fixes and browser start
 - Added `scripts/start.ps1` / `scripts/start`: build the frontend if stale, serve it from the backend on :8000, open the browser.
 - Added `docs/COMMANDS.md`, a list of commands to try.

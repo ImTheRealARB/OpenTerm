@@ -1,0 +1,2471 @@
+{
+ "source": "HKUDS/Vibe-Trading d0db2e3, run 2026-10-18",
+ "cases": [
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "call",
+    "q": 0.0
+   },
+   "result": 10.450583572185565
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "call",
+    "q": 0.0
+   },
+   "result": {
+    "delta": 0.6368306511756191,
+    "gamma": 0.018762017345846895,
+    "theta": -0.01757267820941972,
+    "vega": 0.3752403469169379,
+    "rho": 0.5323248154537634
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 100,
+    "K": 110,
+    "T": 0.5,
+    "r": 0.03,
+    "sigma": 0.25,
+    "option_type": "put",
+    "q": 0.02
+   },
+   "result": 12.91085527444423
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 100,
+    "K": 110,
+    "T": 0.5,
+    "r": 0.03,
+    "sigma": 0.25,
+    "option_type": "put",
+    "q": 0.02
+   },
+   "result": {
+    "delta": -0.6570602459283437,
+    "gamma": 0.020435395969858557,
+    "theta": -0.0146347269490935,
+    "vega": 0.2554424496232319,
+    "rho": -0.393084399336393
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 50,
+    "K": 45,
+    "T": 0.25,
+    "r": 0.01,
+    "sigma": 0.4,
+    "option_type": "call",
+    "q": 0.03
+   },
+   "result": 6.595876918751902
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 50,
+    "K": 45,
+    "T": 0.25,
+    "r": 0.01,
+    "sigma": 0.4,
+    "option_type": "call",
+    "q": 0.03
+   },
+   "result": {
+    "delta": 0.7209199940386962,
+    "gamma": 0.03303767183625771,
+    "theta": -0.01594700165486391,
+    "vega": 0.08259417959064425,
+    "rho": 0.07362530695795727
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 250,
+    "K": 300,
+    "T": 2.0,
+    "r": 0.045,
+    "sigma": 0.35,
+    "option_type": "P",
+    "q": 0.0
+   },
+   "result": 64.18985214626817
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 250,
+    "K": 300,
+    "T": 2.0,
+    "r": 0.045,
+    "sigma": 0.35,
+    "option_type": "P",
+    "q": 0.0
+   },
+   "result": {
+    "delta": -0.4756916849982803,
+    "gamma": 0.0032179538661099923,
+    "theta": -0.011174396824355039,
+    "vega": 1.4078548164231217,
+    "rho": -3.662255467916765
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 100,
+    "K": 90,
+    "T": 0.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "call"
+   },
+   "result": 10.0
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 100,
+    "K": 90,
+    "T": 0.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "call"
+   },
+   "result": {
+    "delta": 1.0,
+    "gamma": 0.0,
+    "theta": 0.0,
+    "vega": 0.0,
+    "rho": 0.0
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 0.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "put"
+   },
+   "result": 0.0
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 0.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "put"
+   },
+   "result": {
+    "delta": -0.5,
+    "gamma": 0.0,
+    "theta": 0.0,
+    "vega": 0.0,
+    "rho": 0.0
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.0,
+    "option_type": "call",
+    "q": 0.01
+   },
+   "result": 3.8820409248453984
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.0,
+    "option_type": "call",
+    "q": 0.01
+   },
+   "result": {
+    "delta": 0.9900498337491681,
+    "gamma": 0.0,
+    "theta": -0.01031807476371069,
+    "vega": 0.0,
+    "rho": 0.951229424500714
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 0,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "put"
+   },
+   "result": 100.0
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 0,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "put"
+   },
+   "result": {
+    "delta": -1.0,
+    "gamma": 0.0,
+    "theta": 0.0,
+    "vega": 0.0,
+    "rho": 0.0
+   }
+  },
+  {
+   "fn": "options.bs_price",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "kall"
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "options.bs_greeks",
+   "args": {
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.2,
+    "option_type": "kall"
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "options.implied_volatility",
+   "from_bs": {
+    "sigma": 0.2,
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "option_type": "call",
+    "q": 0.0
+   },
+   "args": {
+    "market_price": 10.450583572185565,
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "option_type": "call",
+    "q": 0.0
+   },
+   "true_sigma": 0.2,
+   "result": 0.20000000711496005
+  },
+  {
+   "fn": "options.implied_volatility",
+   "from_bs": {
+    "sigma": 0.35,
+    "S": 100,
+    "K": 120,
+    "T": 0.5,
+    "r": 0.03,
+    "option_type": "call",
+    "q": 0.01
+   },
+   "args": {
+    "market_price": 3.8426062636053864,
+    "S": 100,
+    "K": 120,
+    "T": 0.5,
+    "r": 0.03,
+    "option_type": "call",
+    "q": 0.01
+   },
+   "true_sigma": 0.35,
+   "result": 0.35000001991281166
+  },
+  {
+   "fn": "options.implied_volatility",
+   "from_bs": {
+    "sigma": 0.5,
+    "S": 100,
+    "K": 80,
+    "T": 0.25,
+    "r": 0.02,
+    "option_type": "put",
+    "q": 0.0
+   },
+   "args": {
+    "market_price": 2.178441657384104,
+    "S": 100,
+    "K": 80,
+    "T": 0.25,
+    "r": 0.02,
+    "option_type": "put",
+    "q": 0.0
+   },
+   "true_sigma": 0.5,
+   "result": 0.4999999999999998
+  },
+  {
+   "fn": "options.implied_volatility",
+   "from_bs": {
+    "sigma": 0.9,
+    "S": 100,
+    "K": 100,
+    "T": 2.0,
+    "r": 0.05,
+    "option_type": "put",
+    "q": 0.02
+   },
+   "args": {
+    "market_price": 41.598929076599276,
+    "S": 100,
+    "K": 100,
+    "T": 2.0,
+    "r": 0.05,
+    "option_type": "put",
+    "q": 0.02
+   },
+   "true_sigma": 0.9,
+   "result": 0.8999999999926203
+  },
+  {
+   "fn": "options.implied_volatility",
+   "args": {
+    "market_price": 50.0,
+    "S": 100,
+    "K": 50,
+    "T": 0.0547945205479452,
+    "r": 0.0,
+    "option_type": "call"
+   },
+   "result": null
+  },
+  {
+   "fn": "options.implied_volatility",
+   "args": {
+    "market_price": 1.0,
+    "S": 100,
+    "K": 100,
+    "T": 0.0,
+    "r": 0.05,
+    "option_type": "call"
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "options.implied_volatility",
+   "args": {
+    "market_price": 120.0,
+    "S": 100,
+    "K": 100,
+    "T": 1.0,
+    "r": 0.05,
+    "option_type": "call"
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-out",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 9.923413534761554
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-out",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 13.411031490016049
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-out",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 0.41665599526570674
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-out",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 1.608574683890753
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-in",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 1.2003483932965686
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-in",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 3.1273852469495083
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-in",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 7.810181052188298
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-in",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 7.276770049967112
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-out",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 0.6726777274420463
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-out",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 2.635200000729658
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-out",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 7.527964873519728
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-out",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 6.9418039995494425
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-in",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 10.451084200616076
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-in",
+    "option_type": "call",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 13.9032167362359
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-in",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 0.0
+   },
+   "result": 0.6988721739342765
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 95.0,
+    "H": 120.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "up-and-in",
+    "option_type": "put",
+    "q": 0.02,
+    "rebate": 3.0
+   },
+   "result": 1.9435407343084221
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 90.0,
+    "T": 0.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "doc"
+   },
+   "result": 0.0
+  },
+  {
+   "fn": "options.barrier_option_price",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": -1.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "doc"
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "options.barrier_greeks",
+   "args": {
+    "S": 100.0,
+    "K": 100.0,
+    "H": 85.0,
+    "T": 1.0,
+    "r": 0.05,
+    "sigma": 0.25,
+    "barrier_type": "down-and-out",
+    "option_type": "call",
+    "q": 0.02
+   },
+   "result": {
+    "delta": 0.6883158779501741,
+    "gamma": 0.006671026646642986,
+    "theta": -0.010023273463721338,
+    "vega": 0.201522090429318,
+    "rho": 0.44430506028927397
+   }
+  },
+  {
+   "fn": "options.barrier_greeks",
+   "args": {
+    "S": 100.0,
+    "K": 105.0,
+    "H": 120.0,
+    "T": 0.75,
+    "r": 0.04,
+    "sigma": 0.3,
+    "barrier_type": "up-and-in",
+    "option_type": "put",
+    "q": 0.0
+   },
+   "result": {
+    "delta": 0.10304469590209919,
+    "gamma": 0.005632749484618671,
+    "theta": -0.007929432223779287,
+    "vega": 0.15355618720480635,
+    "rho": -0.033082592082234186
+   }
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "K": 80.0,
+    "option_type": "call",
+    "S0": 100.0,
+    "T": 1.0,
+    "r": 0.05,
+    "v0": 0.04,
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3,
+    "rho": -0.7,
+    "q": 0.01
+   },
+   "result": 24.125340963485343
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "K": 80.0,
+    "option_type": "put",
+    "S0": 100.0,
+    "T": 1.0,
+    "r": 0.05,
+    "v0": 0.04,
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3,
+    "rho": -0.7,
+    "q": 0.01
+   },
+   "result": 1.218711548625663
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "K": 100.0,
+    "option_type": "call",
+    "S0": 100.0,
+    "T": 1.0,
+    "r": 0.05,
+    "v0": 0.04,
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3,
+    "rho": -0.7,
+    "q": 0.01
+   },
+   "result": 9.71456205210157
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "K": 100.0,
+    "option_type": "put",
+    "S0": 100.0,
+    "T": 1.0,
+    "r": 0.05,
+    "v0": 0.04,
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3,
+    "rho": -0.7,
+    "q": 0.01
+   },
+   "result": 5.832521127256172
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "K": 120.0,
+    "option_type": "call",
+    "S0": 100.0,
+    "T": 1.0,
+    "r": 0.05,
+    "v0": 0.04,
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3,
+    "rho": -0.7,
+    "q": 0.01
+   },
+   "result": 2.0547073714766384
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "K": 120.0,
+    "option_type": "put",
+    "S0": 100.0,
+    "T": 1.0,
+    "r": 0.05,
+    "v0": 0.04,
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3,
+    "rho": -0.7,
+    "q": 0.01
+   },
+   "result": 17.19725493664552
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "S0": 100.0,
+    "K": 100.0,
+    "T": 0.25,
+    "r": 0.02,
+    "v0": 0.09,
+    "kappa": 1.5,
+    "theta": 0.06,
+    "sigma_v": 0.5,
+    "rho": 0.3,
+    "option_type": "call"
+   },
+   "result": 5.924354612647633
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "S0": 100.0,
+    "K": 100.0,
+    "T": 0.0,
+    "r": 0.02,
+    "v0": 0.09,
+    "kappa": 1.5,
+    "theta": 0.06,
+    "sigma_v": 0.5,
+    "rho": 0.3
+   },
+   "result": 0.0
+  },
+  {
+   "fn": "heston.heston_price",
+   "args": {
+    "S0": 100.0,
+    "K": 100.0,
+    "T": 1.0,
+    "r": 0.02,
+    "v0": 0.09,
+    "kappa": 1.5,
+    "theta": 0.06,
+    "sigma_v": 0.5,
+    "rho": 1.5
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "heston.heston_feller_condition",
+   "args": {
+    "kappa": 2.0,
+    "theta": 0.04,
+    "sigma_v": 0.3
+   },
+   "result": {
+    "feller_ratio": 1.777777777777778,
+    "is_satisfied": true
+   }
+  },
+  {
+   "fn": "heston.heston_feller_condition",
+   "args": {
+    "kappa": 1.0,
+    "theta": 0.04,
+    "sigma_v": 0.6
+   },
+   "result": {
+    "feller_ratio": 0.22222222222222224,
+    "is_satisfied": false
+   }
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2026-01-31"
+    },
+    "end": {
+     "$date": "2026-10-18"
+    },
+    "day_count": "ACT/365F"
+   },
+   "result": 0.7123287671232876
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2024-02-29"
+    },
+    "end": {
+     "$date": "2028-02-29"
+    },
+    "day_count": "ACT/365F"
+   },
+   "result": 4.002739726027397
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2026-01-31"
+    },
+    "end": {
+     "$date": "2026-10-18"
+    },
+    "day_count": "ACT/360"
+   },
+   "result": 0.7222222222222222
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2024-02-29"
+    },
+    "end": {
+     "$date": "2028-02-29"
+    },
+    "day_count": "ACT/360"
+   },
+   "result": 4.058333333333334
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2026-01-31"
+    },
+    "end": {
+     "$date": "2026-10-18"
+    },
+    "day_count": "ACT/ACT"
+   },
+   "result": 0.7123287671232876
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2024-02-29"
+    },
+    "end": {
+     "$date": "2028-02-29"
+    },
+    "day_count": "ACT/ACT"
+   },
+   "result": 4.0
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2026-01-31"
+    },
+    "end": {
+     "$date": "2026-10-18"
+    },
+    "day_count": "30/360"
+   },
+   "result": 0.7166666666666667
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2024-02-29"
+    },
+    "end": {
+     "$date": "2028-02-29"
+    },
+    "day_count": "30/360"
+   },
+   "result": 4.0
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2026-01-31"
+    },
+    "end": {
+     "$date": "2026-10-18"
+    },
+    "day_count": "30E/360"
+   },
+   "result": 0.7166666666666667
+  },
+  {
+   "fn": "fixedincome.year_fraction",
+   "args": {
+    "start": {
+     "$date": "2024-02-29"
+    },
+    "end": {
+     "$date": "2028-02-29"
+    },
+    "day_count": "30E/360"
+   },
+   "result": 4.0
+  },
+  {
+   "fn": "fixedincome.accrued_interest",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.045,
+    "freq": 2,
+    "last_coupon": {
+     "$date": "2026-05-15"
+    },
+    "settlement": {
+     "$date": "2026-10-18"
+    },
+    "next_coupon": {
+     "$date": "2026-11-15"
+    },
+    "day_count": "ACT/ACT"
+   },
+   "result": 1.9076086956521738
+  },
+  {
+   "fn": "fixedincome.accrued_interest",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.045,
+    "freq": 2,
+    "last_coupon": {
+     "$date": "2026-05-15"
+    },
+    "settlement": {
+     "$date": "2026-10-18"
+    },
+    "next_coupon": {
+     "$date": "2026-11-15"
+    },
+    "day_count": "30/360"
+   },
+   "result": 1.9124999999999999
+  },
+  {
+   "fn": "fixedincome.accrued_interest",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.045,
+    "freq": 2,
+    "last_coupon": {
+     "$date": "2026-05-15"
+    },
+    "settlement": {
+     "$date": "2026-12-01"
+    },
+    "next_coupon": {
+     "$date": "2026-11-15"
+    }
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "fixedincome.bond_cashflows",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": [
+    [
+     1.0,
+     2.0,
+     3.0,
+     4.0,
+     5.0,
+     6.0,
+     7.0,
+     8.0,
+     9.0,
+     10.0,
+     11.0,
+     12.0,
+     13.0,
+     14.0,
+     15.0,
+     16.0,
+     17.0,
+     18.0,
+     19.0,
+     20.0
+    ],
+    [
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     2.5,
+     102.5
+    ]
+   ]
+  },
+  {
+   "fn": "fixedincome.bond_price",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "ytm": 0.06,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": 92.56126256977221
+  },
+  {
+   "fn": "fixedincome.macaulay_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "ytm": 0.06,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": 7.894997340182341
+  },
+  {
+   "fn": "fixedincome.modified_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "ytm": 0.06,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": 7.665045961342078
+  },
+  {
+   "fn": "fixedincome.convexity",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "ytm": 0.06,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": 71.78539801290005
+  },
+  {
+   "fn": "fixedincome.dv01",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "ytm": 0.06,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": 709.4863318371562
+  },
+  {
+   "fn": "fixedincome.bond_cashflows",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.04,
+    "n_periods": 20,
+    "freq": 1
+   },
+   "result": [
+    [
+     1.0,
+     2.0,
+     3.0,
+     4.0,
+     5.0,
+     6.0,
+     7.0,
+     8.0,
+     9.0,
+     10.0,
+     11.0,
+     12.0,
+     13.0,
+     14.0,
+     15.0,
+     16.0,
+     17.0,
+     18.0,
+     19.0,
+     20.0
+    ],
+    [
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     104.0
+    ]
+   ]
+  },
+  {
+   "fn": "fixedincome.bond_price",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.04,
+    "ytm": 0.04,
+    "n_periods": 20,
+    "freq": 1
+   },
+   "result": 99.99999999999994
+  },
+  {
+   "fn": "fixedincome.macaulay_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.04,
+    "ytm": 0.04,
+    "n_periods": 20,
+    "freq": 1
+   },
+   "result": 14.133939398766396
+  },
+  {
+   "fn": "fixedincome.modified_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.04,
+    "ytm": 0.04,
+    "n_periods": 20,
+    "freq": 1
+   },
+   "result": 13.590326344967687
+  },
+  {
+   "fn": "fixedincome.convexity",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.04,
+    "ytm": 0.04,
+    "n_periods": 20,
+    "freq": 1
+   },
+   "result": 240.68271513175705
+  },
+  {
+   "fn": "fixedincome.dv01",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.04,
+    "ytm": 0.04,
+    "n_periods": 20,
+    "freq": 1
+   },
+   "result": 1359.0326344967682
+  },
+  {
+   "fn": "fixedincome.bond_cashflows",
+   "args": {
+    "face": 1000.0,
+    "coupon_rate": 0.0,
+    "n_periods": 10,
+    "freq": 1
+   },
+   "result": [
+    [
+     1.0,
+     2.0,
+     3.0,
+     4.0,
+     5.0,
+     6.0,
+     7.0,
+     8.0,
+     9.0,
+     10.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1000.0
+    ]
+   ]
+  },
+  {
+   "fn": "fixedincome.bond_price",
+   "args": {
+    "face": 1000.0,
+    "coupon_rate": 0.0,
+    "ytm": 0.035,
+    "n_periods": 10,
+    "freq": 1
+   },
+   "result": 708.9188137097722
+  },
+  {
+   "fn": "fixedincome.macaulay_duration",
+   "args": {
+    "face": 1000.0,
+    "coupon_rate": 0.0,
+    "ytm": 0.035,
+    "n_periods": 10,
+    "freq": 1
+   },
+   "result": 10.0
+  },
+  {
+   "fn": "fixedincome.modified_duration",
+   "args": {
+    "face": 1000.0,
+    "coupon_rate": 0.0,
+    "ytm": 0.035,
+    "n_periods": 10,
+    "freq": 1
+   },
+   "result": 9.66183574879227
+  },
+  {
+   "fn": "fixedincome.convexity",
+   "args": {
+    "face": 1000.0,
+    "coupon_rate": 0.0,
+    "ytm": 0.035,
+    "n_periods": 10,
+    "freq": 1
+   },
+   "result": 102.68617704030434
+  },
+  {
+   "fn": "fixedincome.dv01",
+   "args": {
+    "face": 1000.0,
+    "coupon_rate": 0.0,
+    "ytm": 0.035,
+    "n_periods": 10,
+    "freq": 1
+   },
+   "result": 684.9457137292485
+  },
+  {
+   "fn": "fixedincome.bond_cashflows",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "n_periods": 60,
+    "freq": 2
+   },
+   "result": [
+    [
+     1.0,
+     2.0,
+     3.0,
+     4.0,
+     5.0,
+     6.0,
+     7.0,
+     8.0,
+     9.0,
+     10.0,
+     11.0,
+     12.0,
+     13.0,
+     14.0,
+     15.0,
+     16.0,
+     17.0,
+     18.0,
+     19.0,
+     20.0,
+     21.0,
+     22.0,
+     23.0,
+     24.0,
+     25.0,
+     26.0,
+     27.0,
+     28.0,
+     29.0,
+     30.0,
+     31.0,
+     32.0,
+     33.0,
+     34.0,
+     35.0,
+     36.0,
+     37.0,
+     38.0,
+     39.0,
+     40.0,
+     41.0,
+     42.0,
+     43.0,
+     44.0,
+     45.0,
+     46.0,
+     47.0,
+     48.0,
+     49.0,
+     50.0,
+     51.0,
+     52.0,
+     53.0,
+     54.0,
+     55.0,
+     56.0,
+     57.0,
+     58.0,
+     59.0,
+     60.0
+    ],
+    [
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     3.6249999999999996,
+     103.625
+    ]
+   ]
+  },
+  {
+   "fn": "fixedincome.bond_price",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "ytm": 0.051,
+    "n_periods": 60,
+    "freq": 2,
+    "compounding": "continuous"
+   },
+   "result": 131.61440429393224
+  },
+  {
+   "fn": "fixedincome.macaulay_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "ytm": 0.051,
+    "n_periods": 60,
+    "freq": 2,
+    "compounding": "continuous"
+   },
+   "result": 14.60001328278435
+  },
+  {
+   "fn": "fixedincome.modified_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "ytm": 0.051,
+    "n_periods": 60,
+    "freq": 2,
+    "compounding": "continuous"
+   },
+   "result": 14.60001328278435
+  },
+  {
+   "fn": "fixedincome.convexity",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "ytm": 0.051,
+    "n_periods": 60,
+    "freq": 2,
+    "compounding": "continuous"
+   },
+   "result": 315.8007033072394
+  },
+  {
+   "fn": "fixedincome.dv01",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "ytm": 0.051,
+    "n_periods": 60,
+    "freq": 2,
+    "compounding": "continuous"
+   },
+   "result": 1921.5720508971601
+  },
+  {
+   "fn": "fixedincome.key_rate_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "ytm": 0.06,
+    "n_periods": 20,
+    "freq": 2
+   },
+   "result": {
+    "0.5": 0.0127293519308797,
+    "1.0": 0.04271514079925698,
+    "2.0": 0.09286925437538691,
+    "3.0": 0.214135697639401,
+    "5.0": 0.38777972426344404,
+    "7.0": 0.6192849968240026,
+    "10.0": 6.295531795509707,
+    "20.0": 0.0,
+    "30.0": 0.0
+   }
+  },
+  {
+   "fn": "fixedincome.key_rate_duration",
+   "args": {
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "ytm": 0.051,
+    "n_periods": 60,
+    "freq": 2,
+    "key_rates": [
+     1.0,
+     5.0,
+     10.0,
+     30.0
+    ]
+   },
+   "result": {
+    "1.0": 0.24067753038004355,
+    "5.0": 0.9496681964465383,
+    "10.0": 4.414526620115041,
+    "30.0": 8.69615575437582
+   }
+  },
+  {
+   "fn": "fixedincome.ytm_solve",
+   "args": {
+    "price": 94.6,
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "n_periods": 20,
+    "freq": 2,
+    "compounding": "discrete"
+   },
+   "result": 0.05716447622101583
+  },
+  {
+   "fn": "fixedincome.ytm_solve",
+   "args": {
+    "price": 88.0,
+    "face": 100.0,
+    "coupon_rate": 0.0725,
+    "n_periods": 60,
+    "freq": 2,
+    "compounding": "continuous"
+   },
+   "result": 0.08176345203718889
+  },
+  {
+   "fn": "fixedincome.ytm_solve",
+   "args": {
+    "price": -5.0,
+    "face": 100.0,
+    "coupon_rate": 0.05,
+    "n_periods": 10
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "fixedincome.nelson_siegel",
+   "args": {
+    "tau": [
+     0.25,
+     1.0,
+     5.0,
+     10.0,
+     30.0
+    ],
+    "beta0": 0.045,
+    "beta1": -0.02,
+    "beta2": 0.01,
+    "lambda1": 1.8
+   },
+   "result": [
+    0.026960133001670206,
+    0.03159002736589946,
+    0.04100207024625846,
+    0.043168299454856326,
+    0.04439999945689164
+   ]
+  },
+  {
+   "fn": "fixedincome.svensson",
+   "args": {
+    "tau": [
+     0.25,
+     1.0,
+     5.0,
+     10.0,
+     30.0
+    ],
+    "beta0": 0.045,
+    "beta1": -0.02,
+    "beta2": 0.01,
+    "beta3": -0.005,
+    "lambda1": 1.8,
+    "lambda2": 9.0
+   },
+   "result": [
+    0.02689196126819465,
+    0.031331993206617954,
+    0.04003461813658252,
+    0.04179563283903143,
+    0.04313188041364878
+   ]
+  },
+  {
+   "fn": "fixedincome.fit_yield_curve",
+   "args": {
+    "maturities": [
+     0.25,
+     0.5,
+     1.0,
+     2.0,
+     3.0,
+     5.0,
+     7.0,
+     10.0,
+     20.0,
+     30.0
+    ],
+    "yields": [
+     0.0412,
+     0.0408,
+     0.0399,
+     0.0391,
+     0.0394,
+     0.0402,
+     0.0416,
+     0.0431,
+     0.0462,
+     0.0451
+    ],
+    "model": "nelson_siegel"
+   },
+   "result": {
+    "model": "nelson_siegel",
+    "params": [
+     0.047391424235707066,
+     -0.0052598481211242765,
+     -0.018480017975969744,
+     1.8537107231616425
+    ],
+    "rmse": 0.00042464839461713743
+   }
+  },
+  {
+   "fn": "fixedincome.fit_yield_curve",
+   "args": {
+    "maturities": [
+     0.25,
+     0.5,
+     1.0,
+     2.0,
+     3.0,
+     5.0,
+     7.0,
+     10.0,
+     20.0,
+     30.0
+    ],
+    "yields": [
+     0.0412,
+     0.0408,
+     0.0399,
+     0.0391,
+     0.0394,
+     0.0402,
+     0.0416,
+     0.0431,
+     0.0462,
+     0.0451
+    ],
+    "model": "svensson"
+   },
+   "result": {
+    "model": "svensson",
+    "params": [
+     0.024158660801265955,
+     0.017636898256874194,
+     -7.044340458173259e-10,
+     0.068997161946782,
+     1.6708688879516431,
+     12.865840229691095
+    ],
+    "rmse": 0.00013139638357400618
+   }
+  },
+  {
+   "fn": "fixedincome.fit_yield_curve",
+   "args": {
+    "maturities": [
+     0.25,
+     0.5,
+     1.0
+    ],
+    "yields": [
+     0.0412,
+     0.0408,
+     0.0399
+    ],
+    "model": "svensson"
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "credit.cds_price",
+   "args": {
+    "spread_bps": 150.0,
+    "recovery_rate": 0.4,
+    "tenor_years": 5.0,
+    "risk_free_rate": 0.03,
+    "coupon_bps": 100.0,
+    "notional": 10000000.0
+   },
+   "result": {
+    "hazard_rate": 0.025,
+    "survival_probability": 0.8824969025845955,
+    "default_probability": 0.11750309741540454,
+    "rpv01": 4.355091918557155,
+    "protection_leg_pv": 0.06557082930227838,
+    "premium_leg_pv": 0.043550919185571545,
+    "par_spread_bps": 150.56129819643863,
+    "upfront_pct": 0.022019910116706835,
+    "upfront_amount": 220199.10116706835,
+    "buyer_mtm": 220199.10116706835
+   }
+  },
+  {
+   "fn": "credit.cds_price",
+   "args": {
+    "spread_bps": 450.0,
+    "recovery_rate": 0.25,
+    "tenor_years": 3.0,
+    "risk_free_rate": 0.045,
+    "coupon_bps": 500.0,
+    "notional": 10000000.0
+   },
+   "result": {
+    "hazard_rate": 0.06,
+    "survival_probability": 0.835270211411272,
+    "default_probability": 0.164729788588728,
+    "rpv01": 2.559111093474186,
+    "protection_leg_pv": 0.11580252901534883,
+    "premium_leg_pv": 0.1279555546737093,
+    "par_spread_bps": 452.51075387328416,
+    "upfront_pct": -0.012153025658360475,
+    "upfront_amount": -121530.25658360476,
+    "buyer_mtm": -121530.25658360476
+   }
+  },
+  {
+   "fn": "credit.cds_price",
+   "args": {
+    "spread_bps": 60.0,
+    "recovery_rate": 0.4,
+    "tenor_years": 1.0,
+    "risk_free_rate": 0.02,
+    "coupon_bps": 100.0,
+    "notional": 10000000.0
+   },
+   "result": {
+    "hazard_rate": 0.01,
+    "survival_probability": 0.9900498337491681,
+    "default_probability": 0.009950166250831893,
+    "rpv01": 0.9826906248276691,
+    "protection_leg_pv": 0.005910880975956553,
+    "premium_leg_pv": 0.00982690624827669,
+    "par_spread_bps": 60.14996812443512,
+    "upfront_pct": -0.003916025272320138,
+    "upfront_amount": -39160.25272320138,
+    "buyer_mtm": -39160.25272320138
+   }
+  },
+  {
+   "fn": "credit.cds_price",
+   "args": {
+    "spread_bps": 150.0,
+    "recovery_rate": 1.0,
+    "tenor_years": 5.0
+   },
+   "raises": "ValueError"
+  },
+  {
+   "fn": "credit.hazard_rate_to_survival_probability",
+   "args": {
+    "hazard_rate": 0.025,
+    "tenor_years": 5.0
+   },
+   "result": 0.8824969025845955
+  },
+  {
+   "fn": "credit.survival_probability_to_hazard_rate",
+   "args": {
+    "survival_prob": 0.88,
+    "tenor_years": 5.0
+   },
+   "result": 0.025566674301976976
+  },
+  {
+   "fn": "credit.expected_loss",
+   "args": {
+    "ead": 1000000.0,
+    "pd": 0.02,
+    "lgd": 0.6
+   },
+   "result": 12000.0
+  },
+  {
+   "fn": "payoff.expiry_payoff",
+   "args": {
+    "legs": {
+     "$legs": [
+      [
+       "call",
+       100.0,
+       1,
+       null
+      ],
+      [
+       "call",
+       110.0,
+       -1,
+       null
+      ]
+     ]
+    },
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "entry_spot": 100.0,
+    "time_to_expiry": 0.25,
+    "rate": 0.04,
+    "iv": 0.3,
+    "multiplier": 100.0,
+    "commission_rate": 0.001,
+    "_label": "spread"
+   },
+   "result": {
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "payoff": [
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     -369.57129651122915,
+     130.42870348877085,
+     630.4287034887709,
+     630.4287034887709,
+     630.4287034887709,
+     630.4287034887709,
+     630.4287034887709,
+     630.4287034887709,
+     630.4287034887709
+    ],
+    "net_premium": 368.6480479236216,
+    "entry_commission": 0.9232485876075365,
+    "entry_cost": 369.57129651122915,
+    "breakevens": [
+     103.69571296511229
+    ],
+    "breakeven_intervals": [],
+    "max_profit": 630.4287034887709,
+    "max_loss": -369.57129651122915,
+    "profit_unbounded": false,
+    "loss_unbounded": false
+   }
+  },
+  {
+   "fn": "payoff.expiry_payoff",
+   "args": {
+    "legs": {
+     "$legs": [
+      [
+       "put",
+       80.0,
+       1,
+       0.6
+      ],
+      [
+       "put",
+       90.0,
+       -1,
+       1.5
+      ],
+      [
+       "call",
+       110.0,
+       -1,
+       1.4
+      ],
+      [
+       "call",
+       120.0,
+       1,
+       0.5
+      ]
+     ]
+    },
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "entry_spot": 100.0,
+    "time_to_expiry": 0.25,
+    "rate": 0.04,
+    "iv": 0.3,
+    "multiplier": 100.0,
+    "commission_rate": 0.001,
+    "_label": "condor"
+   },
+   "result": {
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "payoff": [
+     -820.4,
+     -820.4,
+     -820.4,
+     -820.4,
+     -820.4,
+     -320.4,
+     179.6,
+     179.6,
+     179.6,
+     179.6,
+     179.6,
+     -320.4,
+     -820.4,
+     -820.4,
+     -820.4,
+     -820.4,
+     -820.4
+    ],
+    "net_premium": -180.0,
+    "entry_commission": 0.39999999999999997,
+    "entry_cost": -179.6,
+    "breakevens": [
+     88.20400000000001,
+     111.796
+    ],
+    "breakeven_intervals": [],
+    "max_profit": 179.6,
+    "max_loss": -820.4,
+    "profit_unbounded": false,
+    "loss_unbounded": false
+   }
+  },
+  {
+   "fn": "payoff.expiry_payoff",
+   "args": {
+    "legs": {
+     "$legs": [
+      [
+       "call",
+       100.0,
+       1,
+       null
+      ],
+      [
+       "put",
+       100.0,
+       1,
+       null
+      ]
+     ]
+    },
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "entry_spot": 100.0,
+    "time_to_expiry": 0.25,
+    "rate": 0.04,
+    "iv": 0.3,
+    "multiplier": 100.0,
+    "commission_rate": 0.001,
+    "_label": "straddle"
+   },
+   "result": {
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "payoff": [
+     2806.412632004138,
+     2306.412632004138,
+     1806.4126320041378,
+     1306.4126320041378,
+     806.4126320041378,
+     306.4126320041378,
+     -193.58736799586222,
+     -693.5873679958622,
+     -1193.5873679958622,
+     -693.5873679958622,
+     -193.58736799586222,
+     306.4126320041378,
+     806.4126320041378,
+     1306.4126320041378,
+     1806.4126320041378,
+     2306.412632004138,
+     2806.412632004138
+    ],
+    "net_premium": 1192.3949730228394,
+    "entry_commission": 1.1923949730228394,
+    "entry_cost": 1193.5873679958622,
+    "breakevens": [
+     88.06412632004138,
+     111.93587367995862
+    ],
+    "breakeven_intervals": [],
+    "max_profit": "inf",
+    "max_loss": -1193.5873679958622,
+    "profit_unbounded": true,
+    "loss_unbounded": false
+   }
+  },
+  {
+   "fn": "payoff.expiry_payoff",
+   "args": {
+    "legs": {
+     "$legs": [
+      [
+       "call",
+       105.0,
+       -2,
+       2.5
+      ]
+     ]
+    },
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "entry_spot": 100.0,
+    "time_to_expiry": 0.25,
+    "rate": 0.04,
+    "iv": 0.3,
+    "multiplier": 100.0,
+    "commission_rate": 0.001,
+    "_label": "naked"
+   },
+   "result": {
+    "spot_grid": [
+     60.0,
+     65.0,
+     70.0,
+     75.0,
+     80.0,
+     85.0,
+     90.0,
+     95.0,
+     100.0,
+     105.0,
+     110.0,
+     115.0,
+     120.0,
+     125.0,
+     130.0,
+     135.0,
+     140.0
+    ],
+    "payoff": [
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     499.5,
+     -500.5,
+     -1500.5,
+     -2500.5,
+     -3500.5,
+     -4500.5,
+     -5500.5,
+     -6500.5
+    ],
+    "net_premium": -500.0,
+    "entry_commission": 0.5,
+    "entry_cost": -499.5,
+    "breakevens": [
+     107.4975
+    ],
+    "breakeven_intervals": [],
+    "max_profit": 499.5,
+    "max_loss": "-inf",
+    "profit_unbounded": false,
+    "loss_unbounded": true
+   }
+  },
+  {
+   "fn": "payoff.default_spot_grid",
+   "args": {
+    "center": 100.0,
+    "half_width_pct": 0.3,
+    "points": 7
+   },
+   "result": [
+    70.0,
+    80.0,
+    90.0,
+    100.0,
+    110.0,
+    120.0,
+    130.0
+   ]
+  },
+  {
+   "fn": "payoff.scenario_grid",
+   "args": {
+    "legs": {
+     "$legs": [
+      [
+       "call",
+       100.0,
+       1,
+       null
+      ],
+      [
+       "call",
+       110.0,
+       -1,
+       null
+      ]
+     ]
+    },
+    "spot_grid": [
+     80.0,
+     100.0,
+     120.0
+    ],
+    "iv_values": [
+     0.2,
+     0.3,
+     0.4
+    ],
+    "entry_spot": 100.0,
+    "time_to_expiry": 0.25,
+    "rate": 0.04,
+    "entry_iv": 0.3,
+    "multiplier": 100.0,
+    "commission_rate": 0.001
+   },
+   "result": [
+    [
+     -364.564352409341,
+     -35.08737252348607,
+     531.0979699226409
+    ],
+    [
+     -333.1160248269269,
+     -0.9232485876075316,
+     430.18025875128814
+    ],
+    [
+     -288.8161227247932,
+     12.749115667944864,
+     353.4661767447889
+    ]
+   ]
+  },
+  {
+   "fn": "payoff.bull_call_spread",
+   "args": {
+    "lower_strike": 95.0,
+    "upper_strike": 105.0,
+    "qty": 2
+   },
+   "result": [
+    {
+     "option_type": "call",
+     "strike": 95.0,
+     "qty": 2,
+     "premium": null
+    },
+    {
+     "option_type": "call",
+     "strike": 105.0,
+     "qty": -2,
+     "premium": null
+    }
+   ]
+  },
+  {
+   "fn": "payoff.long_straddle",
+   "args": {
+    "strike": 100.0,
+    "qty": 1
+   },
+   "result": [
+    {
+     "option_type": "call",
+     "strike": 100.0,
+     "qty": 1,
+     "premium": null
+    },
+    {
+     "option_type": "put",
+     "strike": 100.0,
+     "qty": 1,
+     "premium": null
+    }
+   ]
+  },
+  {
+   "fn": "payoff.iron_condor",
+   "args": {
+    "put_wing": 80.0,
+    "put_body": 90.0,
+    "call_body": 110.0,
+    "call_wing": 120.0,
+    "qty": 1
+   },
+   "result": [
+    {
+     "option_type": "put",
+     "strike": 80.0,
+     "qty": 1,
+     "premium": null
+    },
+    {
+     "option_type": "put",
+     "strike": 90.0,
+     "qty": -1,
+     "premium": null
+    },
+    {
+     "option_type": "call",
+     "strike": 110.0,
+     "qty": -1,
+     "premium": null
+    },
+    {
+     "option_type": "call",
+     "strike": 120.0,
+     "qty": 1,
+     "premium": null
+    }
+   ]
+  }
+ ]
+}

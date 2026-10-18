@@ -10,7 +10,7 @@ import { ACTION_LABELS, KEYBINDINGS, chord, effectiveBindings, type Action } fro
 import { FIXED_ACTIONS, checkChord, diffBindings } from "../keys/overrides";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { resetSettings, settingsStore, updateSettings } from "../settings/runtime";
-import { CHART_RANGES, CHART_TYPES, DECIMALS, POLL_BOUNDS, THOUSANDS, cycle, stepPoll, type PollKey, type Settings } from "../settings/schema";
+import { AI_MODEL_CHOICES, AI_PROVIDERS, AI_VISION_CHOICES, CHART_RANGES, CHART_TYPES, DECIMALS, POLL_BOUNDS, THOUSANDS, cycle, stepPoll, type PollKey, type Settings } from "../settings/schema";
 import { THEMES, THEME_LABELS } from "../settings/themes";
 import { useStore } from "../state/store";
 import { listNav } from "./listNav";
@@ -72,6 +72,18 @@ const SETTING_ROWS: SettingRow[] = [
   poll("movers", "MOVERS REFRESH"),
   poll("crypto", "CRYPTO REFRESH"),
   poll("sources", "SOURCE HEALTH POLL (NEXT START)"),
+  {
+    kind: "setting", id: "ai.model", label: "AI MODEL", value: (s) => `${s.ai.model}   (SETTINGS AI MODEL <ID> FOR ANY OTHER)`,
+    change: (s, d) => ({ ...s, ai: { ...s.ai, model: cycle(AI_MODEL_CHOICES as readonly string[], s.ai.model, d) } }),
+  },
+  {
+    kind: "setting", id: "ai.vision", label: "AI VISION MODEL", value: (s) => s.ai.visionModel,
+    change: (s, d) => ({ ...s, ai: { ...s.ai, visionModel: cycle(AI_VISION_CHOICES as readonly string[], s.ai.visionModel, d) } }),
+  },
+  {
+    kind: "setting", id: "ai.provider", label: "AI PROVIDER (KEY IN APIKEYS)", value: (s) => s.ai.provider.toUpperCase(),
+    change: (s, d) => ({ ...s, ai: { ...s.ai, provider: cycle(AI_PROVIDERS, s.ai.provider, d) } }),
+  },
 ];
 
 const MODIFIER_KEYS = new Set(["Control", "Alt", "Shift", "Meta", "AltGraph", "CapsLock"]);

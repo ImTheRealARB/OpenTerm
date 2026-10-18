@@ -1,4 +1,5 @@
 import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import { openApp } from "./app";
 
 const now = () => Date.now() / 1000;
 const env = (data: unknown, extra = {}) => ({ data, source: "yahoo", as_of: now(), age_s: 1, stale: false, fallback_from: [], ...extra });
@@ -78,10 +79,7 @@ async function setup(page: Page) {
     }
     return r.fulfill({ json: { name, symbols: cur, updated_at: now() } });
   });
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
   return { lists, writes };
 }
 

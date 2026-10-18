@@ -1,0 +1,1431 @@
+{
+ "commit": "d0db2e3",
+ "dcf_inputs": {
+  "risk_free_rate": 0.041,
+  "beta": 1.069,
+  "equity_risk_premium": 0.055,
+  "pretax_cost_of_debt": 0.035,
+  "tax_rate": 0.16,
+  "ebit": [
+   130000.0,
+   138000.0,
+   146000.0,
+   154000.0,
+   162000.0
+  ],
+  "depreciation_amortization": [
+   11500.0,
+   12000.0,
+   12500.0,
+   13000.0,
+   13500.0
+  ],
+  "capex": [
+   10500.0,
+   11000.0,
+   11500.0,
+   12000.0,
+   12500.0
+  ],
+  "delta_nwc": [
+   -1500.0,
+   2000.0,
+   1000.0,
+   800.0,
+   900.0
+  ],
+  "terminal_growth": {
+   "name": "terminal_growth",
+   "value": 0.025,
+   "basis": "typed on the command line"
+  },
+  "exit_multiple": {
+   "name": "exit_multiple",
+   "value": 14.0,
+   "basis": "typed on the command line"
+  },
+  "total_debt": 98000.0,
+  "cash_and_equivalents": 62000.0,
+  "minority_interest": 0.0,
+  "preferred_equity": 0.0,
+  "associate_investments": 0.0,
+  "diluted_shares": 15000.0,
+  "market_value_of_equity": 3000000.0,
+  "market_value_of_debt": 98000.0,
+  "target_equity_weight": 0.9,
+  "target_debt_weight": 0.1
+ },
+ "dcf_cases": [
+  {
+   "name": "current_mid_perp",
+   "basis": "current",
+   "conv": "mid_year",
+   "tv": "perpetuity_growth",
+   "result": {
+    "wacc_build": {
+     "risk_free_rate": 0.041,
+     "beta": 1.069,
+     "equity_risk_premium": 0.055,
+     "size_premium": 0.0,
+     "country_risk_premium": 0.0,
+     "cost_of_equity": 0.099795,
+     "pretax_cost_of_debt": 0.035,
+     "tax_rate": 0.16,
+     "cost_of_debt_after_tax": 0.029400000000000003,
+     "capital_structure_basis": "current",
+     "equity_weight": 0.9683666881859264,
+     "debt_weight": 0.0316333118140736,
+     "wacc": 0.09756817301484828
+    },
+    "fcff_bridge": [
+     {
+      "year": 1,
+      "ebit": 130000.0,
+      "tax_rate": 0.16,
+      "nopat": 109200.0,
+      "depreciation_amortization": 11500.0,
+      "capex": 10500.0,
+      "delta_nwc": -1500.0,
+      "fcff": 111700.0
+     },
+     {
+      "year": 2,
+      "ebit": 138000.0,
+      "tax_rate": 0.16,
+      "nopat": 115920.0,
+      "depreciation_amortization": 12000.0,
+      "capex": 11000.0,
+      "delta_nwc": 2000.0,
+      "fcff": 114920.0
+     },
+     {
+      "year": 3,
+      "ebit": 146000.0,
+      "tax_rate": 0.16,
+      "nopat": 122640.0,
+      "depreciation_amortization": 12500.0,
+      "capex": 11500.0,
+      "delta_nwc": 1000.0,
+      "fcff": 122640.0
+     },
+     {
+      "year": 4,
+      "ebit": 154000.0,
+      "tax_rate": 0.16,
+      "nopat": 129360.0,
+      "depreciation_amortization": 13000.0,
+      "capex": 12000.0,
+      "delta_nwc": 800.0,
+      "fcff": 129560.0
+     },
+     {
+      "year": 5,
+      "ebit": 162000.0,
+      "tax_rate": 0.16,
+      "nopat": 136080.0,
+      "depreciation_amortization": 13500.0,
+      "capex": 12500.0,
+      "delta_nwc": 900.0,
+      "fcff": 136180.0
+     }
+    ],
+    "discounted_fcff": [
+     {
+      "year": 1,
+      "fcff": 111700.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 0.5,
+      "discount_factor": 0.9545182745319735,
+      "present_value": 106619.69126522144
+     },
+     {
+      "year": 2,
+      "fcff": 114920.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 1.5,
+      "discount_factor": 0.8696665027285375,
+      "present_value": 99942.07449356353
+     },
+     {
+      "year": 3,
+      "fcff": 122640.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 2.5,
+      "discount_factor": 0.7923576176044714,
+      "present_value": 97174.73822301238
+     },
+     {
+      "year": 4,
+      "fcff": 129560.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 3.5,
+      "discount_factor": 0.7219210952773792,
+      "present_value": 93532.09710413725
+     },
+     {
+      "year": 5,
+      "fcff": 136180.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 4.5,
+      "discount_factor": 0.6577460179939209,
+      "present_value": 89571.85273041214
+     }
+    ],
+    "pv_of_explicit_fcff": 486840.4538163467,
+    "terminal_value": {
+     "wacc_rate": 0.09756817301484828,
+     "terminal_growth": {
+      "name": "terminal_growth",
+      "value": 0.025,
+      "basis": "typed on the command line",
+      "source": null
+     },
+     "perpetuity_terminal_value": 1923494.7526023483,
+     "terminal_year_ebitda": 175500.0,
+     "exit_multiple": {
+      "name": "exit_multiple",
+      "value": 14.0,
+      "basis": "typed on the command line",
+      "source": null
+     },
+     "exit_terminal_value": 2457000.0,
+     "implied_ev_ebitda_multiple": 10.96008406041224,
+     "implied_perpetuity_growth": 0.03992973919954736,
+     "gdp_growth_ceiling": 0.04,
+     "growth_exceeds_gdp_ceiling": false
+    },
+    "terminal_value_method": "perpetuity_growth",
+    "discounting_convention": "mid_year",
+    "terminal_discount_factor": 0.6577460179939209,
+    "pv_of_terminal_value": 1265171.0141563965,
+    "enterprise_value": 1752011.4679727433,
+    "net_debt_bridge": {
+     "enterprise_value": 1752011.4679727433,
+     "total_debt": 98000.0,
+     "cash_and_equivalents": 62000.0,
+     "minority_interest": 0.0,
+     "preferred_equity": 0.0,
+     "associate_investments": 0.0,
+     "equity_value": 1716011.4679727433,
+     "diluted_shares": 15000.0,
+     "value_per_share": 114.40076453151622
+    },
+    "equity_value": 1716011.4679727433,
+    "value_per_share": 114.40076453151622
+   }
+  },
+  {
+   "name": "current_end_exit",
+   "basis": "current",
+   "conv": "year_end",
+   "tv": "exit_multiple",
+   "result": {
+    "wacc_build": {
+     "risk_free_rate": 0.041,
+     "beta": 1.069,
+     "equity_risk_premium": 0.055,
+     "size_premium": 0.0,
+     "country_risk_premium": 0.0,
+     "cost_of_equity": 0.099795,
+     "pretax_cost_of_debt": 0.035,
+     "tax_rate": 0.16,
+     "cost_of_debt_after_tax": 0.029400000000000003,
+     "capital_structure_basis": "current",
+     "equity_weight": 0.9683666881859264,
+     "debt_weight": 0.0316333118140736,
+     "wacc": 0.09756817301484828
+    },
+    "fcff_bridge": [
+     {
+      "year": 1,
+      "ebit": 130000.0,
+      "tax_rate": 0.16,
+      "nopat": 109200.0,
+      "depreciation_amortization": 11500.0,
+      "capex": 10500.0,
+      "delta_nwc": -1500.0,
+      "fcff": 111700.0
+     },
+     {
+      "year": 2,
+      "ebit": 138000.0,
+      "tax_rate": 0.16,
+      "nopat": 115920.0,
+      "depreciation_amortization": 12000.0,
+      "capex": 11000.0,
+      "delta_nwc": 2000.0,
+      "fcff": 114920.0
+     },
+     {
+      "year": 3,
+      "ebit": 146000.0,
+      "tax_rate": 0.16,
+      "nopat": 122640.0,
+      "depreciation_amortization": 12500.0,
+      "capex": 11500.0,
+      "delta_nwc": 1000.0,
+      "fcff": 122640.0
+     },
+     {
+      "year": 4,
+      "ebit": 154000.0,
+      "tax_rate": 0.16,
+      "nopat": 129360.0,
+      "depreciation_amortization": 13000.0,
+      "capex": 12000.0,
+      "delta_nwc": 800.0,
+      "fcff": 129560.0
+     },
+     {
+      "year": 5,
+      "ebit": 162000.0,
+      "tax_rate": 0.16,
+      "nopat": 136080.0,
+      "depreciation_amortization": 13500.0,
+      "capex": 12500.0,
+      "delta_nwc": 900.0,
+      "fcff": 136180.0
+     }
+    ],
+    "discounted_fcff": [
+     {
+      "year": 1,
+      "fcff": 111700.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 1.0,
+      "discount_factor": 0.911105136415496,
+      "present_value": 101770.4437376109
+     },
+     {
+      "year": 2,
+      "fcff": 114920.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 2.0,
+      "discount_factor": 0.8301125696026994,
+      "present_value": 95396.53649874222
+     },
+     {
+      "year": 3,
+      "fcff": 122640.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 3.0,
+      "discount_factor": 0.7563198259680853,
+      "present_value": 92755.06345672598
+     },
+     {
+      "year": 4,
+      "fcff": 129560.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 4.0,
+      "discount_factor": 0.6890868782123964,
+      "present_value": 89278.09594119809
+     },
+     {
+      "year": 5,
+      "fcff": 136180.0,
+      "wacc_rate": 0.09756817301484828,
+      "time_period": 5.0,
+      "discount_factor": 0.6278305941758338,
+      "present_value": 85497.97031486504
+     }
+    ],
+    "pv_of_explicit_fcff": 464698.1099491422,
+    "terminal_value": {
+     "wacc_rate": 0.09756817301484828,
+     "terminal_growth": {
+      "name": "terminal_growth",
+      "value": 0.025,
+      "basis": "typed on the command line",
+      "source": null
+     },
+     "perpetuity_terminal_value": 1923494.7526023483,
+     "terminal_year_ebitda": 175500.0,
+     "exit_multiple": {
+      "name": "exit_multiple",
+      "value": 14.0,
+      "basis": "typed on the command line",
+      "source": null
+     },
+     "exit_terminal_value": 2457000.0,
+     "implied_ev_ebitda_multiple": 10.96008406041224,
+     "implied_perpetuity_growth": 0.03992973919954736,
+     "gdp_growth_ceiling": 0.04,
+     "growth_exceeds_gdp_ceiling": false
+    },
+    "terminal_value_method": "exit_multiple",
+    "discounting_convention": "year_end",
+    "terminal_discount_factor": 0.6278305941758338,
+    "pv_of_terminal_value": 1542579.7698900236,
+    "enterprise_value": 2007277.8798391658,
+    "net_debt_bridge": {
+     "enterprise_value": 2007277.8798391658,
+     "total_debt": 98000.0,
+     "cash_and_equivalents": 62000.0,
+     "minority_interest": 0.0,
+     "preferred_equity": 0.0,
+     "associate_investments": 0.0,
+     "equity_value": 1971277.8798391658,
+     "diluted_shares": 15000.0,
+     "value_per_share": 131.41852532261106
+    },
+    "equity_value": 1971277.8798391658,
+    "value_per_share": 131.41852532261106
+   }
+  },
+  {
+   "name": "target_mid_perp",
+   "basis": "target",
+   "conv": "mid_year",
+   "tv": "perpetuity_growth",
+   "result": {
+    "wacc_build": {
+     "risk_free_rate": 0.041,
+     "beta": 1.069,
+     "equity_risk_premium": 0.055,
+     "size_premium": 0.0,
+     "country_risk_premium": 0.0,
+     "cost_of_equity": 0.099795,
+     "pretax_cost_of_debt": 0.035,
+     "tax_rate": 0.16,
+     "cost_of_debt_after_tax": 0.029400000000000003,
+     "capital_structure_basis": "target",
+     "equity_weight": 0.9,
+     "debt_weight": 0.1,
+     "wacc": 0.09275549999999999
+    },
+    "fcff_bridge": [
+     {
+      "year": 1,
+      "ebit": 130000.0,
+      "tax_rate": 0.16,
+      "nopat": 109200.0,
+      "depreciation_amortization": 11500.0,
+      "capex": 10500.0,
+      "delta_nwc": -1500.0,
+      "fcff": 111700.0
+     },
+     {
+      "year": 2,
+      "ebit": 138000.0,
+      "tax_rate": 0.16,
+      "nopat": 115920.0,
+      "depreciation_amortization": 12000.0,
+      "capex": 11000.0,
+      "delta_nwc": 2000.0,
+      "fcff": 114920.0
+     },
+     {
+      "year": 3,
+      "ebit": 146000.0,
+      "tax_rate": 0.16,
+      "nopat": 122640.0,
+      "depreciation_amortization": 12500.0,
+      "capex": 11500.0,
+      "delta_nwc": 1000.0,
+      "fcff": 122640.0
+     },
+     {
+      "year": 4,
+      "ebit": 154000.0,
+      "tax_rate": 0.16,
+      "nopat": 129360.0,
+      "depreciation_amortization": 13000.0,
+      "capex": 12000.0,
+      "delta_nwc": 800.0,
+      "fcff": 129560.0
+     },
+     {
+      "year": 5,
+      "ebit": 162000.0,
+      "tax_rate": 0.16,
+      "nopat": 136080.0,
+      "depreciation_amortization": 13500.0,
+      "capex": 12500.0,
+      "delta_nwc": 900.0,
+      "fcff": 136180.0
+     }
+    ],
+    "discounted_fcff": [
+     {
+      "year": 1,
+      "fcff": 111700.0,
+      "wacc_rate": 0.09275549999999999,
+      "time_period": 0.5,
+      "discount_factor": 0.9566178921985256,
+      "present_value": 106854.2185585753
+     },
+     {
+      "year": 2,
+      "fcff": 114920.0,
+      "wacc_rate": 0.09275549999999999,
+      "time_period": 1.5,
+      "discount_factor": 0.875418052984886,
+      "present_value": 100603.04264902309
+     },
+     {
+      "year": 3,
+      "fcff": 122640.0,
+      "wacc_rate": 0.09275549999999999,
+      "time_period": 2.5,
+      "discount_factor": 0.8011106354393879,
+      "present_value": 98248.20833028654
+     },
+     {
+      "year": 4,
+      "fcff": 129560.0,
+      "wacc_rate": 0.09275549999999999,
+      "time_period": 3.5,
+      "discount_factor": 0.7331105955901277,
+      "present_value": 94981.80876465695
+     },
+     {
+      "year": 5,
+      "fcff": 136180.0,
+      "wacc_rate": 0.09275549999999999,
+      "time_period": 4.5,
+      "discount_factor": 0.6708825492895051,
+      "present_value": 91360.7855622448
+     }
+    ],
+    "pv_of_explicit_fcff": 492048.06386478664,
+    "terminal_value": {
+     "wacc_rate": 0.09275549999999999,
+     "terminal_growth": {
+      "name": "terminal_growth",
+      "value": 0.025,
+      "basis": "typed on the command line",
+      "source": null
+     },
+     "perpetuity_terminal_value": 2060120.5806170718,
+     "terminal_year_ebitda": 175500.0,
+     "exit_multiple": {
+      "name": "exit_multiple",
+      "value": 14.0,
+      "basis": "typed on the command line",
+      "source": null
+     },
+     "exit_terminal_value": 2457000.0,
+     "implied_ev_ebitda_multiple": 11.738578806934882,
+     "implied_perpetuity_growth": 0.03536980213483058,
+     "gdp_growth_ceiling": 0.04,
+     "growth_exceeds_gdp_ceiling": false
+    },
+    "terminal_value_method": "perpetuity_growth",
+    "discounting_convention": "mid_year",
+    "terminal_discount_factor": 0.6708825492895051,
+    "pv_of_terminal_value": 1382098.9469681566,
+    "enterprise_value": 1874147.0108329433,
+    "net_debt_bridge": {
+     "enterprise_value": 1874147.0108329433,
+     "total_debt": 98000.0,
+     "cash_and_equivalents": 62000.0,
+     "minority_interest": 0.0,
+     "preferred_equity": 0.0,
+     "associate_investments": 0.0,
+     "equity_value": 1838147.0108329433,
+     "diluted_shares": 15000.0,
+     "value_per_share": 122.54313405552955
+    },
+    "equity_value": 1838147.0108329433,
+    "value_per_share": 122.54313405552955
+   }
+  }
+ ],
+ "grid": {
+  "wacc": [
+   0.07,
+   0.08,
+   0.09
+  ],
+  "growth": [
+   0.01,
+   0.02,
+   0.03,
+   0.09
+  ],
+  "values": [
+   [
+    144.847116765268,
+    168.72839641164023,
+    204.5503158811985,
+    null
+   ],
+   [
+    124.00405873308421,
+    140.51567687077898,
+    163.63194226355165,
+    null
+   ],
+   [
+    108.37888349764236,
+    120.369494143778,
+    136.3569750052921,
+    null
+   ]
+  ]
+ },
+ "comps_inputs": {
+  "target": {
+   "name": "TGT",
+   "total_debt": 100.0,
+   "cash_and_equivalents": 60.0,
+   "ebitda": {
+    "fiscal_year_end_month": 12,
+    "last_full_fiscal_year": 400.0,
+    "current_year_to_date": 330.0,
+    "prior_year_to_date": 300.0,
+    "next_full_fiscal_year": 450.0
+   },
+   "ebit": {
+    "fiscal_year_end_month": 12,
+    "last_full_fiscal_year": 330.0,
+    "current_year_to_date": 270.0,
+    "prior_year_to_date": 245.0,
+    "next_full_fiscal_year": 370.0
+   },
+   "revenue": {
+    "fiscal_year_end_month": 12,
+    "last_full_fiscal_year": 1200.0,
+    "current_year_to_date": 950.0,
+    "prior_year_to_date": 880.0,
+    "next_full_fiscal_year": 1300.0
+   },
+   "diluted_eps": {
+    "fiscal_year_end_month": 12,
+    "last_full_fiscal_year": 6.0,
+    "current_year_to_date": 4.6,
+    "prior_year_to_date": 4.2,
+    "next_full_fiscal_year": 6.6
+   },
+   "book_value_of_equity": 700.0,
+   "eps_basis": "gaap",
+   "minority_interest": 5.0,
+   "preferred_stock": null,
+   "investments_in_associates": 10.0,
+   "diluted_shares_outstanding": 100.0
+  },
+  "peers": [
+   {
+    "name": "P1",
+    "total_debt": 110.00000000000001,
+    "cash_and_equivalents": 66.0,
+    "ebitda": {
+     "fiscal_year_end_month": 12,
+     "last_full_fiscal_year": 440.00000000000006,
+     "current_year_to_date": 363.00000000000006,
+     "prior_year_to_date": 330.0,
+     "next_full_fiscal_year": 495.00000000000006
+    },
+    "ebit": {
+     "fiscal_year_end_month": 12,
+     "last_full_fiscal_year": 363.00000000000006,
+     "current_year_to_date": 297.0,
+     "prior_year_to_date": 269.5,
+     "next_full_fiscal_year": 407.00000000000006
+    },
+    "revenue": {
+     "fiscal_year_end_month": 12,
+     "last_full_fiscal_year": 1320.0,
+     "current_year_to_date": 1045.0,
+     "prior_year_to_date": 968.0000000000001,
+     "next_full_fiscal_year": 1430.0000000000002
+    },
+    "diluted_eps": {
+     "fiscal_year_end_month": 12,
+     "last_full_fiscal_year": 6.0,
+     "current_year_to_date": 4.6,
+     "prior_year_to_date": 4.2,
+     "next_full_fiscal_year": 6.6
+    },
+    "book_value_of_equity": 770.0000000000001,
+    "eps_basis": "gaap",
+    "minority_interest": 5.5,
+    "preferred_stock": null,
+    "investments_in_associates": 11.0,
+    "market_cap": 3520.0000000000005,
+    "price_per_share": 120.0
+   },
+   {
+    "name": "P2",
+    "total_debt": 80.0,
+    "cash_and_equivalents": 48.0,
+    "ebitda": {
+     "fiscal_year_end_month": 6,
+     "last_full_fiscal_year": 320.0,
+     "current_year_to_date": 264.0,
+     "prior_year_to_date": 240.0,
+     "next_full_fiscal_year": 360.0
+    },
+    "ebit": {
+     "fiscal_year_end_month": 6,
+     "last_full_fiscal_year": 264.0,
+     "current_year_to_date": 216.0,
+     "prior_year_to_date": 196.0,
+     "next_full_fiscal_year": 296.0
+    },
+    "revenue": {
+     "fiscal_year_end_month": 6,
+     "last_full_fiscal_year": 960.0,
+     "current_year_to_date": 760.0,
+     "prior_year_to_date": 704.0,
+     "next_full_fiscal_year": 1040.0
+    },
+    "diluted_eps": {
+     "fiscal_year_end_month": 6,
+     "last_full_fiscal_year": 6.0,
+     "current_year_to_date": 4.6,
+     "prior_year_to_date": 4.2,
+     "next_full_fiscal_year": 6.6
+    },
+    "book_value_of_equity": 560.0,
+    "eps_basis": "gaap",
+    "minority_interest": 4.0,
+    "preferred_stock": null,
+    "investments_in_associates": 8.0,
+    "market_cap": 1680.0,
+    "price_per_share": 120.0
+   },
+   {
+    "name": "P3",
+    "total_debt": 140.0,
+    "cash_and_equivalents": 84.0,
+    "ebitda": {
+     "fiscal_year_end_month": 9,
+     "last_full_fiscal_year": 560.0,
+     "current_year_to_date": 461.99999999999994,
+     "prior_year_to_date": 420.0,
+     "next_full_fiscal_year": 630.0
+    },
+    "ebit": {
+     "fiscal_year_end_month": 9,
+     "last_full_fiscal_year": 461.99999999999994,
+     "current_year_to_date": 378.0,
+     "prior_year_to_date": 343.0,
+     "next_full_fiscal_year": 518.0
+    },
+    "revenue": {
+     "fiscal_year_end_month": 9,
+     "last_full_fiscal_year": 1680.0,
+     "current_year_to_date": 1330.0,
+     "prior_year_to_date": 1232.0,
+     "next_full_fiscal_year": 1819.9999999999998
+    },
+    "diluted_eps": {
+     "fiscal_year_end_month": 9,
+     "last_full_fiscal_year": 6.0,
+     "current_year_to_date": 4.6,
+     "prior_year_to_date": 4.2,
+     "next_full_fiscal_year": 6.6
+    },
+    "book_value_of_equity": 979.9999999999999,
+    "eps_basis": "gaap",
+    "minority_interest": 7.0,
+    "preferred_stock": null,
+    "investments_in_associates": 14.0,
+    "market_cap": 7279.999999999999,
+    "price_per_share": 120.0
+   }
+  ]
+ },
+ "comps_cases": [
+  {
+   "policy": "ltm",
+   "result": {
+    "target_name": "TGT",
+    "calendarisation_policy": "ltm",
+    "eps_basis": "gaap",
+    "peer_multiples": [
+     {
+      "name": "P1",
+      "ev_bridge": {
+       "direction": "equity_to_ev",
+       "equity_value": 3520.0000000000005,
+       "enterprise_value": 3558.5000000000005,
+       "total_debt": 110.00000000000001,
+       "cash_and_equivalents": 66.0,
+       "minority_interest": 5.5,
+       "preferred_stock": null,
+       "investments_in_associates": 11.0,
+       "omitted_components": [
+        "preferred_stock"
+       ]
+      },
+      "calendarised_ebitda": {
+       "policy": "ltm",
+       "value": 473.0000000000001,
+       "fiscal_year_end_month": 12,
+       "weights": null
+      },
+      "calendarised_ebit": {
+       "policy": "ltm",
+       "value": 390.5,
+       "fiscal_year_end_month": 12,
+       "weights": null
+      },
+      "calendarised_revenue": {
+       "policy": "ltm",
+       "value": 1397.0,
+       "fiscal_year_end_month": 12,
+       "weights": null
+      },
+      "calendarised_diluted_eps": {
+       "policy": "ltm",
+       "value": 6.3999999999999995,
+       "fiscal_year_end_month": 12,
+       "weights": null
+      },
+      "ev_ebitda": 7.5232558139534875,
+      "ev_ebit": 9.11267605633803,
+      "ev_sales": 2.5472440944881893,
+      "pe": 18.75,
+      "pb": 4.571428571428571,
+      "exclusions": []
+     },
+     {
+      "name": "P2",
+      "ev_bridge": {
+       "direction": "equity_to_ev",
+       "equity_value": 1680.0,
+       "enterprise_value": 1708.0,
+       "total_debt": 80.0,
+       "cash_and_equivalents": 48.0,
+       "minority_interest": 4.0,
+       "preferred_stock": null,
+       "investments_in_associates": 8.0,
+       "omitted_components": [
+        "preferred_stock"
+       ]
+      },
+      "calendarised_ebitda": {
+       "policy": "ltm",
+       "value": 344.0,
+       "fiscal_year_end_month": 6,
+       "weights": null
+      },
+      "calendarised_ebit": {
+       "policy": "ltm",
+       "value": 284.0,
+       "fiscal_year_end_month": 6,
+       "weights": null
+      },
+      "calendarised_revenue": {
+       "policy": "ltm",
+       "value": 1016.0,
+       "fiscal_year_end_month": 6,
+       "weights": null
+      },
+      "calendarised_diluted_eps": {
+       "policy": "ltm",
+       "value": 6.3999999999999995,
+       "fiscal_year_end_month": 6,
+       "weights": null
+      },
+      "ev_ebitda": 4.965116279069767,
+      "ev_ebit": 6.014084507042254,
+      "ev_sales": 1.6811023622047243,
+      "pe": 18.75,
+      "pb": 3.0,
+      "exclusions": []
+     },
+     {
+      "name": "P3",
+      "ev_bridge": {
+       "direction": "equity_to_ev",
+       "equity_value": 7279.999999999999,
+       "enterprise_value": 7328.999999999999,
+       "total_debt": 140.0,
+       "cash_and_equivalents": 84.0,
+       "minority_interest": 7.0,
+       "preferred_stock": null,
+       "investments_in_associates": 14.0,
+       "omitted_components": [
+        "preferred_stock"
+       ]
+      },
+      "calendarised_ebitda": {
+       "policy": "ltm",
+       "value": 602.0,
+       "fiscal_year_end_month": 9,
+       "weights": null
+      },
+      "calendarised_ebit": {
+       "policy": "ltm",
+       "value": 497.0,
+       "fiscal_year_end_month": 9,
+       "weights": null
+      },
+      "calendarised_revenue": {
+       "policy": "ltm",
+       "value": 1778.0,
+       "fiscal_year_end_month": 9,
+       "weights": null
+      },
+      "calendarised_diluted_eps": {
+       "policy": "ltm",
+       "value": 6.3999999999999995,
+       "fiscal_year_end_month": 9,
+       "weights": null
+      },
+      "ev_ebitda": 12.17441860465116,
+      "ev_ebit": 14.746478873239434,
+      "ev_sales": 4.122047244094488,
+      "pe": 18.75,
+      "pb": 7.428571428571429,
+      "exclusions": []
+     }
+    ],
+    "distributions": {
+     "ev_ebitda": {
+      "name": "ev_ebitda",
+      "included": {
+       "P1": 7.5232558139534875,
+       "P2": 4.965116279069767,
+       "P3": 12.17441860465116
+      },
+      "excluded": [],
+      "minimum": 4.965116279069767,
+      "p25": 6.2441860465116275,
+      "median": 7.5232558139534875,
+      "p75": 9.848837209302324,
+      "maximum": 12.17441860465116,
+      "warning": null
+     },
+     "ev_ebit": {
+      "name": "ev_ebit",
+      "included": {
+       "P1": 9.11267605633803,
+       "P2": 6.014084507042254,
+       "P3": 14.746478873239434
+      },
+      "excluded": [],
+      "minimum": 6.014084507042254,
+      "p25": 7.563380281690142,
+      "median": 9.11267605633803,
+      "p75": 11.929577464788732,
+      "maximum": 14.746478873239434,
+      "warning": null
+     },
+     "ev_sales": {
+      "name": "ev_sales",
+      "included": {
+       "P1": 2.5472440944881893,
+       "P2": 1.6811023622047243,
+       "P3": 4.122047244094488
+      },
+      "excluded": [],
+      "minimum": 1.6811023622047243,
+      "p25": 2.114173228346457,
+      "median": 2.5472440944881893,
+      "p75": 3.334645669291339,
+      "maximum": 4.122047244094488,
+      "warning": null
+     },
+     "pe": {
+      "name": "pe",
+      "included": {
+       "P1": 18.75,
+       "P2": 18.75,
+       "P3": 18.75
+      },
+      "excluded": [],
+      "minimum": 18.75,
+      "p25": 18.75,
+      "median": 18.75,
+      "p75": 18.75,
+      "maximum": 18.75,
+      "warning": null
+     },
+     "pb": {
+      "name": "pb",
+      "included": {
+       "P1": 4.571428571428571,
+       "P2": 3.0,
+       "P3": 7.428571428571429
+      },
+      "excluded": [],
+      "minimum": 3.0,
+      "p25": 3.7857142857142856,
+      "median": 4.571428571428571,
+      "p75": 6.0,
+      "maximum": 7.428571428571429,
+      "warning": null
+     }
+    },
+    "implied_valuations": {
+     "ev_ebitda": {
+      "multiple_name": "ev_ebitda",
+      "is_ev_multiple": true,
+      "target_metric_value": 430.0,
+      "implied_ev_by_quantile": {
+       "minimum": 2135.0,
+       "p25": 2685.0,
+       "median": 3234.9999999999995,
+       "p75": 4234.999999999999,
+       "maximum": 5234.999999999999
+      },
+      "implied_equity_value_by_quantile": {
+       "minimum": 2100.0,
+       "p25": 2650.0,
+       "median": 3199.9999999999995,
+       "p75": 4199.999999999999,
+       "maximum": 5199.999999999999
+      },
+      "warning": null
+     },
+     "ev_ebit": {
+      "multiple_name": "ev_ebit",
+      "is_ev_multiple": true,
+      "target_metric_value": 355.0,
+      "implied_ev_by_quantile": {
+       "minimum": 2135.0,
+       "p25": 2685.0000000000005,
+       "median": 3235.0000000000005,
+       "p75": 4235.0,
+       "maximum": 5234.999999999999
+      },
+      "implied_equity_value_by_quantile": {
+       "minimum": 2100.0,
+       "p25": 2650.0000000000005,
+       "median": 3200.0000000000005,
+       "p75": 4200.0,
+       "maximum": 5199.999999999999
+      },
+      "warning": null
+     },
+     "ev_sales": {
+      "multiple_name": "ev_sales",
+      "is_ev_multiple": true,
+      "target_metric_value": 1270.0,
+      "implied_ev_by_quantile": {
+       "minimum": 2135.0,
+       "p25": 2685.0000000000005,
+       "median": 3235.0000000000005,
+       "p75": 4235.0,
+       "maximum": 5235.0
+      },
+      "implied_equity_value_by_quantile": {
+       "minimum": 2100.0,
+       "p25": 2650.0000000000005,
+       "median": 3200.0000000000005,
+       "p75": 4200.0,
+       "maximum": 5200.0
+      },
+      "warning": null
+     },
+     "pe": {
+      "multiple_name": "pe",
+      "is_ev_multiple": false,
+      "target_metric_value": 640.0,
+      "implied_ev_by_quantile": null,
+      "implied_equity_value_by_quantile": {
+       "minimum": 12000.0,
+       "p25": 12000.0,
+       "median": 12000.0,
+       "p75": 12000.0,
+       "maximum": 12000.0
+      },
+      "warning": null
+     },
+     "pb": {
+      "multiple_name": "pb",
+      "is_ev_multiple": false,
+      "target_metric_value": 700.0,
+      "implied_ev_by_quantile": null,
+      "implied_equity_value_by_quantile": {
+       "minimum": 2100.0,
+       "p25": 2650.0,
+       "median": 3200.0,
+       "p75": 4200.0,
+       "maximum": 5200.0
+      },
+      "warning": null
+     }
+    },
+    "warnings": []
+   }
+  },
+  {
+   "policy": "calendar_year",
+   "result": {
+    "target_name": "TGT",
+    "calendarisation_policy": "calendar_year",
+    "eps_basis": "gaap",
+    "peer_multiples": [
+     {
+      "name": "P1",
+      "ev_bridge": {
+       "direction": "equity_to_ev",
+       "equity_value": 3520.0000000000005,
+       "enterprise_value": 3558.5000000000005,
+       "total_debt": 110.00000000000001,
+       "cash_and_equivalents": 66.0,
+       "minority_interest": 5.5,
+       "preferred_stock": null,
+       "investments_in_associates": 11.0,
+       "omitted_components": [
+        "preferred_stock"
+       ]
+      },
+      "calendarised_ebitda": {
+       "policy": "calendar_year",
+       "value": 440.00000000000006,
+       "fiscal_year_end_month": 12,
+       "weights": [
+        1.0,
+        0.0
+       ]
+      },
+      "calendarised_ebit": {
+       "policy": "calendar_year",
+       "value": 363.00000000000006,
+       "fiscal_year_end_month": 12,
+       "weights": [
+        1.0,
+        0.0
+       ]
+      },
+      "calendarised_revenue": {
+       "policy": "calendar_year",
+       "value": 1320.0,
+       "fiscal_year_end_month": 12,
+       "weights": [
+        1.0,
+        0.0
+       ]
+      },
+      "calendarised_diluted_eps": {
+       "policy": "calendar_year",
+       "value": 6.0,
+       "fiscal_year_end_month": 12,
+       "weights": [
+        1.0,
+        0.0
+       ]
+      },
+      "ev_ebitda": 8.0875,
+      "ev_ebit": 9.803030303030303,
+      "ev_sales": 2.6958333333333337,
+      "pe": 20.0,
+      "pb": 4.571428571428571,
+      "exclusions": []
+     },
+     {
+      "name": "P2",
+      "ev_bridge": {
+       "direction": "equity_to_ev",
+       "equity_value": 1680.0,
+       "enterprise_value": 1708.0,
+       "total_debt": 80.0,
+       "cash_and_equivalents": 48.0,
+       "minority_interest": 4.0,
+       "preferred_stock": null,
+       "investments_in_associates": 8.0,
+       "omitted_components": [
+        "preferred_stock"
+       ]
+      },
+      "calendarised_ebitda": {
+       "policy": "calendar_year",
+       "value": 340.0,
+       "fiscal_year_end_month": 6,
+       "weights": [
+        0.5,
+        0.5
+       ]
+      },
+      "calendarised_ebit": {
+       "policy": "calendar_year",
+       "value": 280.0,
+       "fiscal_year_end_month": 6,
+       "weights": [
+        0.5,
+        0.5
+       ]
+      },
+      "calendarised_revenue": {
+       "policy": "calendar_year",
+       "value": 1000.0,
+       "fiscal_year_end_month": 6,
+       "weights": [
+        0.5,
+        0.5
+       ]
+      },
+      "calendarised_diluted_eps": {
+       "policy": "calendar_year",
+       "value": 6.3,
+       "fiscal_year_end_month": 6,
+       "weights": [
+        0.5,
+        0.5
+       ]
+      },
+      "ev_ebitda": 5.023529411764706,
+      "ev_ebit": 6.1,
+      "ev_sales": 1.708,
+      "pe": 19.047619047619047,
+      "pb": 3.0,
+      "exclusions": []
+     },
+     {
+      "name": "P3",
+      "ev_bridge": {
+       "direction": "equity_to_ev",
+       "equity_value": 7279.999999999999,
+       "enterprise_value": 7328.999999999999,
+       "total_debt": 140.0,
+       "cash_and_equivalents": 84.0,
+       "minority_interest": 7.0,
+       "preferred_stock": null,
+       "investments_in_associates": 14.0,
+       "omitted_components": [
+        "preferred_stock"
+       ]
+      },
+      "calendarised_ebitda": {
+       "policy": "calendar_year",
+       "value": 577.5,
+       "fiscal_year_end_month": 9,
+       "weights": [
+        0.75,
+        0.25
+       ]
+      },
+      "calendarised_ebit": {
+       "policy": "calendar_year",
+       "value": 475.99999999999994,
+       "fiscal_year_end_month": 9,
+       "weights": [
+        0.75,
+        0.25
+       ]
+      },
+      "calendarised_revenue": {
+       "policy": "calendar_year",
+       "value": 1715.0,
+       "fiscal_year_end_month": 9,
+       "weights": [
+        0.75,
+        0.25
+       ]
+      },
+      "calendarised_diluted_eps": {
+       "policy": "calendar_year",
+       "value": 6.15,
+       "fiscal_year_end_month": 9,
+       "weights": [
+        0.75,
+        0.25
+       ]
+      },
+      "ev_ebitda": 12.69090909090909,
+      "ev_ebit": 15.397058823529411,
+      "ev_sales": 4.273469387755101,
+      "pe": 19.51219512195122,
+      "pb": 7.428571428571429,
+      "exclusions": []
+     }
+    ],
+    "distributions": {
+     "ev_ebitda": {
+      "name": "ev_ebitda",
+      "included": {
+       "P1": 8.0875,
+       "P2": 5.023529411764706,
+       "P3": 12.69090909090909
+      },
+      "excluded": [],
+      "minimum": 5.023529411764706,
+      "p25": 6.555514705882353,
+      "median": 8.0875,
+      "p75": 10.389204545454545,
+      "maximum": 12.69090909090909,
+      "warning": null
+     },
+     "ev_ebit": {
+      "name": "ev_ebit",
+      "included": {
+       "P1": 9.803030303030303,
+       "P2": 6.1,
+       "P3": 15.397058823529411
+      },
+      "excluded": [],
+      "minimum": 6.1,
+      "p25": 7.951515151515151,
+      "median": 9.803030303030303,
+      "p75": 12.600044563279857,
+      "maximum": 15.397058823529411,
+      "warning": null
+     },
+     "ev_sales": {
+      "name": "ev_sales",
+      "included": {
+       "P1": 2.6958333333333337,
+       "P2": 1.708,
+       "P3": 4.273469387755101
+      },
+      "excluded": [],
+      "minimum": 1.708,
+      "p25": 2.201916666666667,
+      "median": 2.6958333333333337,
+      "p75": 3.4846513605442175,
+      "maximum": 4.273469387755101,
+      "warning": null
+     },
+     "pe": {
+      "name": "pe",
+      "included": {
+       "P1": 20.0,
+       "P2": 19.047619047619047,
+       "P3": 19.51219512195122
+      },
+      "excluded": [],
+      "minimum": 19.047619047619047,
+      "p25": 19.279907084785133,
+      "median": 19.51219512195122,
+      "p75": 19.75609756097561,
+      "maximum": 20.0,
+      "warning": null
+     },
+     "pb": {
+      "name": "pb",
+      "included": {
+       "P1": 4.571428571428571,
+       "P2": 3.0,
+       "P3": 7.428571428571429
+      },
+      "excluded": [],
+      "minimum": 3.0,
+      "p25": 3.7857142857142856,
+      "median": 4.571428571428571,
+      "p75": 6.0,
+      "maximum": 7.428571428571429,
+      "warning": null
+     }
+    },
+    "implied_valuations": {
+     "ev_ebitda": {
+      "multiple_name": "ev_ebitda",
+      "is_ev_multiple": true,
+      "target_metric_value": 400.0,
+      "implied_ev_by_quantile": {
+       "minimum": 2009.4117647058824,
+       "p25": 2622.2058823529414,
+       "median": 3235.0,
+       "p75": 4155.681818181818,
+       "maximum": 5076.363636363636
+      },
+      "implied_equity_value_by_quantile": {
+       "minimum": 1974.4117647058824,
+       "p25": 2587.2058823529414,
+       "median": 3200.0,
+       "p75": 4120.681818181818,
+       "maximum": 5041.363636363636
+      },
+      "warning": null
+     },
+     "ev_ebit": {
+      "multiple_name": "ev_ebit",
+      "is_ev_multiple": true,
+      "target_metric_value": 330.0,
+      "implied_ev_by_quantile": {
+       "minimum": 2012.9999999999998,
+       "p25": 2624.0,
+       "median": 3235.0,
+       "p75": 4158.014705882353,
+       "maximum": 5081.029411764705
+      },
+      "implied_equity_value_by_quantile": {
+       "minimum": 1977.9999999999998,
+       "p25": 2589.0,
+       "median": 3200.0,
+       "p75": 4123.014705882353,
+       "maximum": 5046.029411764705
+      },
+      "warning": null
+     },
+     "ev_sales": {
+      "multiple_name": "ev_sales",
+      "is_ev_multiple": true,
+      "target_metric_value": 1200.0,
+      "implied_ev_by_quantile": {
+       "minimum": 2049.6,
+       "p25": 2642.3,
+       "median": 3235.0000000000005,
+       "p75": 4181.581632653061,
+       "maximum": 5128.1632653061215
+      },
+      "implied_equity_value_by_quantile": {
+       "minimum": 2014.6,
+       "p25": 2607.3,
+       "median": 3200.0000000000005,
+       "p75": 4146.581632653061,
+       "maximum": 5093.1632653061215
+      },
+      "warning": null
+     },
+     "pe": {
+      "multiple_name": "pe",
+      "is_ev_multiple": false,
+      "target_metric_value": 600.0,
+      "implied_ev_by_quantile": null,
+      "implied_equity_value_by_quantile": {
+       "minimum": 11428.57142857143,
+       "p25": 11567.94425087108,
+       "median": 11707.317073170732,
+       "p75": 11853.658536585366,
+       "maximum": 12000.0
+      },
+      "warning": null
+     },
+     "pb": {
+      "multiple_name": "pb",
+      "is_ev_multiple": false,
+      "target_metric_value": 700.0,
+      "implied_ev_by_quantile": null,
+      "implied_equity_value_by_quantile": {
+       "minimum": 2100.0,
+       "p25": 2650.0,
+       "median": 3200.0,
+       "p75": 4200.0,
+       "maximum": 5200.0
+      },
+      "warning": null
+     }
+    },
+    "warnings": []
+   }
+  }
+ ],
+ "errors": [
+  {
+   "name": "growth_at_wacc",
+   "type": "ValuationError",
+   "message": "terminal_value: terminal_growth (0.5) must be strictly less than WACC (0.09756817301484828); at or above WACC the Gordon-growth terminal value is negative or infinite, not merely a large number. Lower the growth assumption or check the WACC build.",
+   "missing": []
+  },
+  {
+   "name": "missing",
+   "type": "MissingInputError",
+   "message": "run_dcf is not runnable: missing 2 required input(s): beta, diluted_shares. Supply them or report the model as not runnable -- do not substitute an assumed value.",
+   "missing": [
+    "beta",
+    "diluted_shares"
+   ]
+  },
+  {
+   "name": "bare_growth",
+   "type": "ValuationError",
+   "message": "run_dcf: 'terminal_growth' must be supplied as an Assumption(name=..., value=..., basis=...) carrying its justification, not a bare float. A terminal growth rate or exit multiple chosen without a stated reason is exactly the kind of silent default this package refuses to make on your behalf.",
+   "missing": []
+  },
+  {
+   "name": "no_peers",
+   "type": "MissingInputError",
+   "message": "comps.run_comps is not runnable: missing 1 required input(s): peers. Supply them or report the model as not runnable -- do not substitute an assumed value.",
+   "missing": [
+    "peers"
+   ]
+  }
+ ]
+}

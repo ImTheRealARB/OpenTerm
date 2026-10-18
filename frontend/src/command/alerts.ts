@@ -7,11 +7,11 @@
  * locally at once, then on the backend with the trigger price and time. A closed tab evaluates nothing.
  */
 import { fmtPrice } from "../format";
-import { api8, type Alert, type ApiError } from "../net/api";
+import { api, api8, newsAlertsApi, type Alert, type ApiError, type NewsAlert, type NewsItem } from "../net/api";
 import { subscribe } from "../net/socket";
 import { createStore } from "../state/store";
 import { onRawTicks } from "../state/ticks";
-import { alertMet, describeRule, parseAlrt } from "./alertArgs";
+import { alertMet, describeRule, newsMatch, parseAlrt } from "./alertArgs";
 import type { SecurityRef } from "./markets";
 import { fail, info, statusMsg } from "./status";
 
@@ -112,6 +112,72 @@ function onTicksForAlerts(rows: readonly (readonly unknown[])[]): void {
   }
 }
 
+// --- Phase 13: news keyword alerts (ALRT NEWS WORD [SYM]) --------------------------------------------------------------
+// Checked whenever a news answer arrives: the N panel reports its items (`checkNewsItems`), and a background poll fetches
+// the headlines of each watched symbol (or the market top stories) every 2 minutes while an alert is active. A headline
+// fires an alert only if it was published after the alert was created or re-armed, so old news never fires.
+export const newsAlerts = createStore<NewsAlert[] | null>(null);
+const newsFiring = new Set<number>();
+export const NEWS_POLL_MS = 120_000;
+
+/** Loads the news alerts. A failure throws and leaves the list as it was: an outage already shows through `refreshAlerts`. */
+export async function refreshNewsAlerts(): Promise<NewsAlert[]> {
+  const { alerts: list } = await newsAlertsApi.list();
+  const local = new Map((newsAlerts.get() ?? []).map((a) => [a.id, a]));
+  newsAlerts.set(() => list.map((a) => (a.status === "active" && newsFiring.has(a.id) && local.get(a.id) ? local.get(a.id)! : a)));
+  return list;
+}
+
+function fireNews(a: NewsAlert, item: NewsItem): void {
+  newsFiring.add(a.id);
+  const at = Date.now() / 1000;
+  newsAlerts.set((cur) =>
+    (cur ?? []).map((x) => (x.id === a.id ? { ...x, status: "triggered", triggered_at: at, headline: item.title, url: item.url } : x)),
+  );
+  const where = a.symbol ?? "MARKET";
+  const text = `NEWS ALERT N${a.id} ${where} "${a.word}": ${item.title}`;
+  lastFired.set(() => ({ text, at: Date.now() }));
+  info(text);
+  desktopNotify(`NEWS ${where} ${a.word}`, item.title, `openterm-news-alert-${a.id}`);
+  newsAlertsApi.trigger(a.id, item.title, item.url, at).then(
+    () => newsFiring.delete(a.id),
+    (e) => fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED: ${errText(e)}`),
+  );
+}
+
+/** Checks fetched headlines against the active news alerts for `symbol` (null = market top stories). */
+export function checkNewsItems(symbol: string | null, items: readonly NewsItem[]): void {
+  const list = newsAlerts.get();
+  if (!list?.length) return;
+  for (const a of list) {
+    if (a.status !== "active" || newsFiring.has(a.id) || (a.symbol ?? null) !== symbol) continue;
+    const hit = items.find((i) => i.published != null && i.published > a.created_at && newsMatch(a.word, i.title));
+    if (hit) fireNews(a, hit);
+  }
+}
+
+let newsPolling = false;
+
+/** Fetches the headlines every active news alert watches (one request per distinct symbol) and checks them. */
+export async function pollNewsAlerts(): Promise<void> {
+  if (newsPolling) return;
+  const active = (newsAlerts.get() ?? []).filter((a) => a.status === "active");
+  if (!active.length) return;
+  newsPolling = true;
+  try {
+    for (const symbol of [...new Set(active.map((a) => a.symbol))]) {
+      try {
+        const env = await api.news(symbol ? { symbol } : {});
+        checkNewsItems(symbol, env.data.items);
+      } catch {
+        /* a news outage is shown by N; the alert simply waits for the next poll */
+      }
+    }
+  } finally {
+    newsPolling = false;
+  }
+}
+
 let started = false;
 
 /** Boot: load alerts, subscribe their symbols, watch ticks. Re-syncs every minute (other tabs, restarts). */
@@ -120,7 +186,10 @@ export function startAlerts(): void {
   started = true;
   onRawTicks(onTicksForAlerts);
   void refreshAlerts().catch(() => {});
+  void refreshNewsAlerts().then(() => pollNewsAlerts()).catch(() => {});
   setInterval(() => void refreshAlerts().catch(() => {}), 60_000);
+  setInterval(() => void refreshNewsAlerts().catch(() => {}), 60_000);
+  setInterval(() => void pollNewsAlerts(), NEWS_POLL_MS);
 }
 
 async function act(what: string, call: () => Promise<unknown>, ok: string): Promise<boolean> {
@@ -140,7 +209,21 @@ export const rearmAlert = (id: number) => {
   firing.delete(id);
   return act(`ALERT ${id} NOT REARMED`, () => api8.rearmAlert(id), `ALERT ${id} REARMED`);
 };
-export const clearAlerts = () => act("ALERTS NOT CLEARED", () => api8.clearAlerts(), "TRIGGERED ALERTS CLEARED");
+export const clearAlerts = () =>
+  act("ALERTS NOT CLEARED", () => api8.clearAlerts(), "TRIGGERED ALERTS CLEARED").then(async (ok) => {
+    // Triggered news keyword alerts go with them; that list failing to clear is not worth failing the command for.
+    if (ok) await newsAlertsApi.clear().catch(() => {});
+    void refreshNewsAlerts().catch(() => {});
+    return ok;
+  });
+
+/** News keyword alerts (ids shown as N<id>). */
+export const deleteNewsAlert = (id: number) =>
+  act(`NEWS ALERT N${id} NOT DELETED`, () => newsAlertsApi.delete(id), `NEWS ALERT N${id} DELETED`).then((ok) => (void refreshNewsAlerts().catch(() => {}), ok));
+export const rearmNewsAlert = (id: number) => {
+  newsFiring.delete(id);
+  return act(`NEWS ALERT N${id} NOT REARMED`, () => newsAlertsApi.rearm(id), `NEWS ALERT N${id} REARMED`).then((ok) => (void refreshNewsAlerts().catch(() => {}), ok));
+};
 
 /** Runs an `ALRT ...` command. true/false = finished here; string[] = show `ALRT <args>`. */
 export function alrtCommand(args: string[], security?: SecurityRef): boolean | string[] {
@@ -152,11 +235,21 @@ export function alrtCommand(args: string[], security?: SecurityRef): boolean | s
       return [];
     case "delete":
       statusMsg.set(() => null);
-      void deleteAlert(a.id);
+      void (a.news ? deleteNewsAlert(a.id) : deleteAlert(a.id));
       return [];
     case "rearm":
-      void rearmAlert(a.id);
+      void (a.news ? rearmNewsAlert(a.id) : rearmAlert(a.id));
       return [];
+    case "createNews": {
+      askNotifyPermission();
+      const where = a.symbol ?? "MARKET";
+      void act(
+        `NEWS ALERT ${where} "${a.word}" NOT SAVED`,
+        () => newsAlertsApi.create({ word: a.word, symbol: a.symbol }),
+        `NEWS ALERT SET: ${where} HEADLINE CONTAINS "${a.word}" (CHECKED ON EACH NEWS REFRESH, EVERY 2 MIN)`,
+      ).then(() => refreshNewsAlerts().catch(() => {}));
+      return [];
+    }
     case "clear":
       void clearAlerts();
       return [];

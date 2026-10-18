@@ -48,6 +48,8 @@ def keyed_client(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENTERM_FIXTURES", "1")
     monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "k.db"))
     monkeypatch.setenv("FRED_API_KEY", "dummykey0123456789")
+    monkeypatch.setenv("OPENTERM_KEYRING", "memory")  # Phase 11: never the real keyring or repo .env
+    monkeypatch.setenv("OPENTERM_DOTENV_PATH", str(tmp_path / "keys.env"))
     from openterm.config import get_settings
 
     get_settings.cache_clear()
@@ -277,7 +279,7 @@ def test_api_with_key_search_and_metadata(keyed_client):
     # No key leaks into any envelope.
     assert "dummykey0123456789" not in json.dumps(b) + json.dumps(m)
     keyed = {k["name"]: k["status"] for k in keyed_client.get("/api/sources").json()["keyed"]}
-    assert "fred" not in keyed
+    assert keyed["fred"] == "UNTESTED"  # Phase 11: a set key shows its state (from env), not KEY REQUIRED
 
 
 def test_api_with_key_unknown_series_message(keyed_client):

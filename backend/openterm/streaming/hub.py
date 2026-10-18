@@ -15,6 +15,7 @@ import orjson
 from fastapi import WebSocket
 
 from ..symbols import SYNTHETIC_RE
+from ..world.tickbuf import TickBuffers
 from .tick import Tick
 
 log = logging.getLogger("openterm.hub")
@@ -28,6 +29,7 @@ class Client:
         self.pending: dict[str, Tick] = {}
         self.ready = asyncio.Event()
         self.sent_frames = 0
+        self.outbox: deque[list] = deque(maxlen=1000)  # Phase 11: non-tick frames (jobs), sent before ticks
 
     def offer(self, ticks: dict[str, Tick]) -> None:
         hit = False
@@ -40,10 +42,16 @@ class Client:
     async def send_json(self, obj) -> None:
         await self.ws.send_text(orjson.dumps(obj).decode())
 
+    def push(self, frame: list) -> None:
+        self.outbox.append(frame)
+        self.ready.set()
+
     async def sender(self) -> None:
         while True:
             await self.ready.wait()
             self.ready.clear()
+            while self.outbox:
+                await self.send_json(self.outbox.popleft())
             batch, self.pending = self.pending, {}
             if batch:
                 await self.send_json(["T", [t.wire() for t in batch.values()]])
@@ -51,17 +59,25 @@ class Client:
 
 
 class Hub:
-    def __init__(self, yahoo, poller, synthetic=None, on_tick=None):
+    def __init__(self, yahoo, poller, synthetic=None, on_tick=None, iex=None, kite=None):
         self.yahoo = yahoo
         self.poller = poller
         self.synthetic = synthetic
+        self.iex = iex  # Phase 13: real-time IEX trades (Alpaca keys); None or keyless = Yahoo only
+        self.kite = kite  # Phase 15: Kite ticker (login); None, logged out or fixture mode = Yahoo only
         self.on_tick = on_tick
+        self.tickbuf = TickBuffers()  # Phase 19: GIP reads the ticks seen since the session began
         self.clients: set[Client] = set()
         self.refs: dict[str, int] = {}
         self._pending: dict[str, Tick] = {}
         self._task: asyncio.Task | None = None
         self.ticks_in = 0
         self._rate: deque[tuple[float, int]] = deque(maxlen=50)
+
+    def broadcast(self, frame: list) -> None:
+        """Phase 11: one frame to every connected client (job progress)."""
+        for c in self.clients:
+            c.push(frame)
 
     def start(self) -> None:
         self._task = asyncio.create_task(self._flush_loop())
@@ -74,7 +90,12 @@ class Hub:
 
     # --- upstream -----------------------------------------------------------------------------
     def emit(self, tick: Tick) -> None:
+        if self.iex is not None and tick.source in ("y", "p") and self.iex.covers(tick.symbol):
+            return  # real-time IEX owns this symbol while it answers; Yahoo resumes if it stops
+        if self.kite is not None and tick.source in ("y", "p") and self.kite.covers(tick.symbol):
+            return  # likewise for the Kite ticker on Indian symbols
         self.ticks_in += 1
+        self.tickbuf.add(tick)
         self._pending[tick.symbol] = tick
         if self.on_tick:
             self.on_tick(tick)
@@ -85,6 +106,10 @@ class Hub:
         real = symbols - synth
         await self.yahoo.set_symbols(real)
         await self.poller.set_symbols(real)
+        if self.iex is not None:
+            await self.iex.set_symbols(real)
+        if self.kite is not None:
+            await self.kite.set_symbols(real)
         if self.synthetic:
             await self.synthetic.set_symbols(synth)
 
@@ -136,4 +161,6 @@ class Hub:
             "yahoo_stream": self.yahoo.status,
             "yahoo_messages": self.yahoo.messages,
             "synthetic": self.synthetic is not None,
+            "iex": self.iex.status if self.iex is not None else "OFF",
+            "kite": self.kite.status if self.kite is not None else "OFF",
         }

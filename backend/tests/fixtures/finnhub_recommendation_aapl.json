@@ -1,0 +1,9 @@
+{
+ "doc_shaped": "BUILT from Finnhub's documented /stock/recommendation response shape, not recorded (no key was available on 2026-10-18). Counts are invented test numbers.",
+ "status": 200,
+ "body": [
+  {"buy": 22, "hold": 14, "period": "2026-10-01", "sell": 2, "strongBuy": 12, "strongSell": 1, "symbol": "AAPL"},
+  {"buy": 21, "hold": 15, "period": "2026-09-01", "sell": 2, "strongBuy": 12, "strongSell": 1, "symbol": "AAPL"},
+  {"buy": 22, "hold": 13, "period": "2026-08-01", "sell": 2, "strongBuy": 13, "strongSell": 0, "symbol": "AAPL"}
+ ]
+}

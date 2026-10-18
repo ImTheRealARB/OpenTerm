@@ -11,17 +11,46 @@ export interface AlertRule {
 export type AlrtAction =
   | { kind: "list" }
   | { kind: "create"; symbol: string; rule: AlertRule }
-  | { kind: "delete"; id: number }
-  | { kind: "rearm"; id: number }
+  /** Phase 13: a keyword that fires when a fetched headline contains it. `symbol` null = market top stories. */
+  | { kind: "createNews"; word: string; symbol: string | null }
+  /** `news` = an id written N3 (a news keyword alert). */
+  | { kind: "delete"; id: number; news?: boolean }
+  | { kind: "rearm"; id: number; news?: boolean }
   | { kind: "clear" }
   | { kind: "error"; message: string };
 
-const USAGE = "USAGE: ALRT | ALRT SYM > 200 | ALRT SYM < 180 | ALRT SYM +5% | ALRT SYM -3% | ALRT DEL ID | ALRT CLEAR";
+const USAGE = "USAGE: ALRT | ALRT SYM > 200 | ALRT SYM < 180 | ALRT SYM +5% | ALRT SYM -3% | ALRT NEWS WORD [SYM] | ALRT DEL ID | ALRT CLEAR";
 const COND = /^(>=?|<=?)?([+-])?(\d+(?:\.\d+)?|\.\d+)(%)?$/;
 
 function idAction(kind: "delete" | "rearm", raw: string | undefined): AlrtAction {
-  const id = Number(raw);
-  return raw && /^\d+$/.test(raw) && id > 0 ? { kind, id } : { kind: "error", message: `ALRT ${kind === "delete" ? "DEL" : "REARM"} NEEDS AN ALERT ID, E.G. ALRT ${kind === "delete" ? "DEL" : "REARM"} 3` };
+  const verb = kind === "delete" ? "DEL" : "REARM";
+  const m = /^(N?)(\d+)$/i.exec(raw ?? "");
+  const id = Number(m?.[2]);
+  return m && id > 0 ? { kind, id, ...(m[1] ? { news: true } : {}) } : { kind: "error", message: `ALRT ${verb} NEEDS AN ALERT ID, E.G. ALRT ${verb} 3 OR ALRT ${verb} N3 (NEWS ALERT)` };
+}
+
+const NEWS_WORD = /^[A-Za-z0-9][A-Za-z0-9 .&'/-]{0,38}[A-Za-z0-9.]$/;
+
+/** `ALRT NEWS WORD [SYM]`: one word (or a quoted phrase), then an optional security. `AAPL ALRT NEWS WORD` uses the typed security. */
+function parseNews(args: string[], explicit?: SecurityRef): AlrtAction {
+  const rest = args.slice(1);
+  const phrase = /^["'](.+?)["']\s*(\S*)$/.exec(rest.join(" "));
+  const word = (phrase ? phrase[1] : (rest[0] ?? "")).trim();
+  const symTok = (phrase ? phrase[2] : (rest[1] ?? "")).toUpperCase();
+  const extra = phrase ? 0 : rest.length - 2;
+  if (!word) return { kind: "error", message: "ALRT NEWS NEEDS A WORD, E.G. ALRT NEWS RECALL AAPL" };
+  if (word.length < 2 || !NEWS_WORD.test(word)) return { kind: "error", message: "NEWS ALERT WORD: 2-40 LETTERS, DIGITS OR . & ' / -" };
+  if (extra > 0) return { kind: "error", message: 'ONE WORD, THEN AN OPTIONAL SECURITY: ALRT NEWS RECALL AAPL (QUOTE A PHRASE: ALRT NEWS "STOCK SPLIT" AAPL)' };
+  if (symTok && !isSymbolToken(symTok)) return { kind: "error", message: `BAD SYMBOL: ${symTok}` };
+  return { kind: "createNews", word: word.toUpperCase(), symbol: symTok || explicit?.symbol || null };
+}
+
+/** True when `title` contains `word` as a whole word (case-insensitive, optional plural s). Used for news keyword alerts. */
+export function newsMatch(word: string, title: string): boolean {
+  const w = word.trim();
+  if (!w) return false;
+  const esc = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![A-Za-z0-9])${esc}s?(?![A-Za-z0-9])`, "i").test(title);
 }
 
 /** Parses the condition part: "> 200", ">=200", "+5%", "-3%", "> 5%", "< -2%". */
@@ -50,6 +79,7 @@ export function parseRule(text: string): AlertRule | string {
 export function parseAlrt(args: string[], explicit?: SecurityRef): AlrtAction {
   if (!args.length) return explicit ? { kind: "error", message: `ALRT NEEDS A CONDITION, E.G. ${explicit.symbol} ALRT > 200` } : { kind: "list" };
   const first = args[0].toUpperCase();
+  if (first === "NEWS") return parseNews(args, explicit);
   if (first === "DEL" || first === "DELETE" || first === "RM") return args.length === 2 ? idAction("delete", args[1]) : idAction("delete", undefined);
   if (first === "REARM") return args.length === 2 ? idAction("rearm", args[1]) : idAction("rearm", undefined);
   if (first === "CLEAR") return args.length === 1 ? { kind: "clear" } : { kind: "error", message: USAGE };

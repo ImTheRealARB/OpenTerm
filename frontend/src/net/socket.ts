@@ -1,6 +1,7 @@
 import { gauges, series } from "../perf/metrics";
 import { createStore } from "../state/store";
 import { ingest } from "../state/ticks";
+import { ingestJobFrame } from "./jobs";
 
 export interface LinkState {
   status: "CONNECTING" | "OK" | "DOWN";
@@ -75,6 +76,8 @@ export function connect(): void {
       const msg = JSON.parse(ev.data as string) as unknown[];
       if (msg[0] === "T") {
         ingest(msg[1] as Parameters<typeof ingest>[0], recv);
+      } else if (msg[0] === "J") {
+        ingestJobFrame(msg); // Phase 11 job progress
       } else if (msg[0] === "pong") {
         const rtt = recv - (msg[1] as number);
         series.wsRtt.push(rtt);

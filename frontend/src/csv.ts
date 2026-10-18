@@ -12,3 +12,14 @@ export function downloadCsv(name: string, header: string[], rows: CsvCell[][]): 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return file;
 }
+
+/** Saves text (a Pine script, a server-built CSV) as a file; returns the file name. */
+export function downloadText(file: string, text: string, type = "text/plain;charset=utf-8"): string {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = file;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return file;
+}

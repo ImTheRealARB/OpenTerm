@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openApp } from "./app";
 
 /** Phase 10: SETTINGS panel, themes, vim mode, keybinding overrides. /api/settings is mocked; no network. */
 
@@ -27,10 +28,7 @@ async function setup(page: Page, initial: Doc = { settings: null, updated_at: nu
     }
     return r.fulfill({ json: { version: 1, ...server } });
   });
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page);
   return { server, puts };
 }
 

@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import { DISCLAIMER } from "../config";
+import { kite, refreshKite } from "../net/kite";
+import { useRunningJobs } from "../net/jobs";
 import { link } from "../net/socket";
 import { sources } from "../net/sources";
 import { useStore } from "../state/store";
@@ -19,6 +22,30 @@ function Providers() {
           {p.latency_p50_ms != null && ` ${p.latency_p50_ms.toFixed(0)}MS`}{" "}
         </span>
       ))}
+    </span>
+  );
+}
+
+/** Phase 11: shown only while a background job is queued or running. */
+function JobsCount() {
+  const n = useRunningJobs();
+  return n > 0 ? (
+    <span>
+      JOBS <span className="acc">{n}</span>
+    </span>
+  ) : null;
+}
+
+/** Phase 15: Kite login state, asked once at start (and after KITE login/logout). Nothing is shown without a key or when unknown. */
+function KiteState() {
+  const k = useStore(kite, (s) => s);
+  useEffect(() => {
+    void refreshKite();
+  }, []);
+  if (!k || k.state === "NO KEY") return null;
+  return (
+    <span>
+      KITE <span className={k.state === "OK" ? "up" : k.state === "LOGGED OUT" ? "warn" : "err"}>{k.state.replace(/^KITE /, "")}</span>
     </span>
   );
 }
@@ -45,6 +72,8 @@ export function StatusBar() {
         LAYOUT <span className={layout ? "acc" : "dim"}>{layout ?? "NONE"}</span>
       </span>
       <span>MODE CMD</span>
+      <JobsCount />
+      <KiteState />
       <AlertFlash />
       <span className="sp" />
       <span>{DISCLAIMER}</span>

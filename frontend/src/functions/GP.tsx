@@ -1,58 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CHART_TYPES, ChartView, toBarData, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
-import { INDICATORS, type IndicatorName } from "../chart/indicators";
+import { registerChartShot } from "../chart/shot";
+import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent } from "../chart/ChartView";
+import { MAX_DRAWINGS, NEEDED, KIND_NAME, cycleSelection, newId, parseDrawings, snapDay, type DPoint, type DrawKind, type Drawing } from "../chart/drawings";
+import { INDICATORS } from "../chart/indicators";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api } from "../net/api";
+import { ApiError, api, worldApi, type ChartEvents, type Envelope } from "../net/api";
 import { subscribe } from "../net/socket";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { replaceView } from "../state/workspace";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
+import { KEY_RANGES, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
+import { useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 
-const RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"];
-/** Number keys 1..8 jump to these. */
-const KEY_RANGES = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"];
-const INTERVAL_WORDS = new Set(["1MIN", "2MIN", "5MIN", "15MIN", "30MIN", "60MIN", "90MIN", "1H", "D", "1D", "DAILY", "W", "1W", "1WK", "WEEKLY", "MO", "1MO", "MONTHLY"]);
-const YAHOO_INTERVALS = new Set(["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1d", "1wk", "1mo"]);
+export { parseGpArgs };
 
-interface Parsed {
-  range: string;
-  interval?: string;
-  compare?: string;
-  type: ChartType;
-  log: boolean;
-  indicators: IndicatorName[];
-}
-
-/** GP args: [range] [interval] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 RSI ...]. Order free. */
-/** `defaults`: the SETTINGS default range and chart type (Phase 10). */
-export function parseGpArgs(args: string[], defaults: { range: string; type: ChartType } = { range: "1Y", type: "CANDLE" }): Parsed {
-  const p: Parsed = { range: defaults.range, type: defaults.type, log: false, indicators: [] };
-  for (let i = 0; i < args.length; i++) {
-    const raw = args[i];
-    const a = raw.toUpperCase();
-    if (a === "VS" && args[i + 1]) p.compare = args[++i].toUpperCase();
-    else if (RANGES.includes(a)) p.range = a;
-    else if (YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a)) p.interval = raw;
-    else if ((CHART_TYPES as string[]).includes(a)) p.type = a as ChartType;
-    else if (a === "LOG") p.log = true;
-    else if ((INDICATORS as readonly string[]).includes(a)) p.indicators.push(a as IndicatorName);
-  }
-  return p;
-}
-
-function serialize(p: Parsed, defaultType: ChartType = "CANDLE"): string[] {
-  return [
-    p.range,
-    ...(p.interval ? [p.interval] : []),
-    ...(p.compare ? ["VS", p.compare] : []),
-    ...(p.type !== defaultType ? [p.type] : []),
-    ...(p.log ? ["LOG"] : []),
-    ...p.indicators,
-  ];
-}
+/** Indicator picker keys: 1-9 then letters (I is left out: it closes the picker). */
+const PICK_KEYS = "123456789ABCDEFGHJKLMNP";
+const ANCHOR_NAME = { C: "CLOSE", H: "HIGH", L: "LOW", O: "OPEN" } as const;
+const ANCHOR_NEXT = { C: "H", H: "L", L: "O", O: "C" } as const;
 
 interface Loaded {
   bars: BarData;
@@ -60,8 +28,14 @@ interface Loaded {
   asOf: number;
   stale: boolean;
   fallback: string[];
-  compare: { symbol: string; t: Float64Array; c: Float64Array } | null;
-  compareError?: string;
+  compares: { symbol: string; t: Float64Array; c: Float64Array }[];
+  compareErrors: string[];
+}
+
+interface Mode {
+  kind: DrawKind;
+  pts: DPoint[];
+  anchor: "C" | "H" | "L" | "O";
 }
 
 export default function GP({ panelId, security, args }: FunctionProps) {
@@ -75,31 +49,37 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const chart = useRef<ChartHandle>(null);
   const pRef = useRef(p);
   pRef.current = p;
+  useEffect(() => registerChartShot(panelId, { symbol, range: p.range, shot: () => chart.current?.screenshot() ?? null }), [panelId, symbol, p.range]);
 
-  const update = (fn: (q: Parsed) => Parsed) => replaceView(panelId, (v) => ({ ...v, args: serialize(fn(pRef.current), chartDefaults.type) }));
+  const update = (fn: (q: GpParsed) => GpParsed) => replaceView(panelId, (v) => ({ ...v, args: serializeGp(fn(pRef.current), chartDefaults.type) }));
 
+  // --- bars (and compare symbols) ---
+  const compareKey = p.compare.join(",");
   useEffect(() => {
     let alive = true;
     setState((s) => ({ ...s, loading: true }));
     const main = api.history(symbol, p.range, p.interval);
-    const cmp = p.compare ? api.history(p.compare, p.range, p.interval).catch((e: ApiError) => e) : Promise.resolve(null);
+    const cmp = Promise.all(p.compare.map((c) => api.history(c, p.range, p.interval).catch((e: ApiError) => e)));
     Promise.all([main, cmp])
-      .then(([env, c]) => {
+      .then(([env, cs]) => {
         if (!alive) return;
-        const compare = c && !(c instanceof ApiError) ? { symbol: c.data.symbol, ...pick(toBarData(c.data)) } : null;
+        const compares: Loaded["compares"] = [];
+        const compareErrors: string[] = [];
+        cs.forEach((c, i) => {
+          if (c instanceof ApiError) compareErrors.push(`${p.compare[i]}: ${c.message}`);
+          else compares.push({ symbol: c.data.symbol, ...pick(toBarData(c.data)) });
+        });
         setState({
           loading: false,
-          loaded: {
-            bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, compare,
-            compareError: c instanceof ApiError ? `${p.compare}: ${c.message}` : undefined,
-          },
+          loaded: { bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, compares, compareErrors },
         });
       })
       .catch((e: ApiError) => alive && setState({ loading: false, error: e.message }));
     return () => {
       alive = false;
     };
-  }, [symbol, p.range, p.interval, p.compare, reload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, p.range, p.interval, compareKey, reload]);
 
   // Live: extend the last bar from ticks.
   const resolved = state.loaded?.bars.symbol;
@@ -117,14 +97,92 @@ export default function GP({ panelId, security, args }: FunctionProps) {
     };
   }, [resolved, state.loaded]);
 
+  // --- drawings: stored per symbol on the server, saved 0.4 s after the last change ---
+  const [drawings, setDrawings] = useState<Drawing[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [drawNote, setDrawNote] = useState<string | null>(null);
+  const loadedFor = useRef<string | null>(null);
+  const dirty = useRef(false);
+  const latestDrawings = useLatest(drawings);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flush = (sym: string) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    if (!dirty.current || loadedFor.current !== sym) return;
+    dirty.current = false;
+    worldApi
+      .saveDrawings(sym, latestDrawings.current)
+      .then(() => setDrawNote(null))
+      .catch((e: ApiError) => setDrawNote(`DRAWINGS NOT SAVED: ${e.message}`));
+  };
+  useEffect(() => {
+    let alive = true;
+    loadedFor.current = null;
+    setDrawings([]);
+    setSelected(null);
+    setMode(null);
+    worldApi
+      .drawings(symbol)
+      .then((r) => {
+        if (!alive) return;
+        setDrawings(parseDrawings(r.drawings));
+        loadedFor.current = symbol;
+        setDrawNote(null);
+      })
+      .catch((e: ApiError) => alive && setDrawNote(`DRAWINGS NOT LOADED: ${e.message}`));
+    return () => {
+      alive = false;
+      flush(symbol);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol]);
+  const commit = (next: Drawing[]) => {
+    setDrawings(next);
+    latestDrawings.current = next;
+    dirty.current = true;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => flush(symbol), 400);
+  };
+
+  // --- event markers (EVT) ---
+  const [events, setEvents] = useState<{ env?: Envelope<ChartEvents>; error?: string } | null>(null);
+  useEffect(() => {
+    if (!p.evt) {
+      setEvents(null);
+      return;
+    }
+    let alive = true;
+    worldApi
+      .events(symbol, reload > 0)
+      .then((env) => alive && setEvents({ env }))
+      .catch((e: ApiError) => alive && setEvents({ error: `${e.message}${e.detail ? ` (${e.detail})` : ""}` }));
+    return () => {
+      alive = false;
+    };
+  }, [symbol, p.evt, reload]);
+
+  const L = state.loaded;
+  const markers = useMemo<ChartMarkerEvent[] | undefined>(() => {
+    if (!L || !p.evt || !events?.env) return undefined;
+    const iv = INTERVAL_S[L.bars.interval] ?? 86400;
+    return events.env.data.events.flatMap((e) => {
+      const t = snapDay(e.date, L.bars.t, iv);
+      return t === null ? [] : [{ t, kind: e.kind, detail: `${e.date} ${e.detail}` }];
+    });
+  }, [L, p.evt, events]);
+
+  const drawState = useMemo(() => ({ drawings, selected, pending: mode }), [drawings, selected, mode]);
+  const live = useLatest({ drawings, selected, mode, bars: L?.bars });
+
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         const k = e.key;
         if (picker) {
-          const n = Number(k);
-          if (n >= 1 && n <= INDICATORS.length) {
-            const name = INDICATORS[n - 1];
+          const idx = PICK_KEYS.indexOf(k.toUpperCase());
+          if (k.length === 1 && idx >= 0 && idx < INDICATORS.length) {
+            const name = INDICATORS[idx];
             update((q) => ({ ...q, indicators: q.indicators.includes(name) ? q.indicators.filter((x) => x !== name) : [...q.indicators, name] }));
             return true;
           }
@@ -133,6 +191,68 @@ export default function GP({ panelId, security, args }: FunctionProps) {
             return true;
           }
           return true; // picker is modal inside the panel
+        }
+        const st = live.current;
+        const plain = !e.ctrlKey && !e.altKey && !e.metaKey;
+        if (st.mode && plain) {
+          if (k === "Escape") {
+            setMode(null);
+            return true;
+          }
+          if (k === "p") {
+            setMode({ ...st.mode, anchor: ANCHOR_NEXT[st.mode.anchor] });
+            return true;
+          }
+          if (k === "Enter") {
+            const b = st.bars;
+            if (!b || !chart.current) return true;
+            const i = chart.current.crosshairIndex();
+            const px = st.mode.anchor === "H" ? b.h[i] : st.mode.anchor === "L" ? b.l[i] : st.mode.anchor === "O" ? b.o[i] : b.c[i];
+            if (!Number.isFinite(px) || !Number.isFinite(b.t[i])) return true;
+            const pts = [...st.mode.pts, { t: b.t[i], p: px }];
+            if (pts.length < NEEDED[st.mode.kind]) {
+              setMode({ ...st.mode, pts });
+              return true;
+            }
+            if (st.drawings.length >= MAX_DRAWINGS) {
+              setDrawNote(`AT MOST ${MAX_DRAWINGS} DRAWINGS PER SYMBOL: DELETE ONE FIRST`);
+              setMode(null);
+              return true;
+            }
+            const id = newId(st.drawings);
+            commit([...st.drawings, { id, kind: st.mode.kind, pts }]);
+            setSelected(id);
+            setMode(null);
+            return true;
+          }
+        }
+        if (plain && !st.mode) {
+          const start = (kind: DrawKind) => {
+            if (!st.bars) return true;
+            if (!crossOn) {
+              chart.current?.crosshair(true);
+              setCrossOn(true);
+            }
+            setSelected(null);
+            setMode({ kind, pts: [], anchor: "C" });
+            return true;
+          };
+          if (k === "t") return start("TREND");
+          if (k === "h") return start("HLINE");
+          if (k === "b") return start("FIB");
+          if (k === "]" || k === "[") {
+            setSelected(cycleSelection(st.drawings, st.selected, k === "]" ? 1 : -1));
+            return true;
+          }
+          if ((k === "Delete" || k === "d") && st.selected) {
+            commit(st.drawings.filter((d) => d.id !== st.selected));
+            setSelected(null);
+            return true;
+          }
+          if (k === "Escape" && st.selected) {
+            setSelected(null);
+            return true;
+          }
         }
         const n = Number(k);
         if (n >= 1 && n <= 8) {
@@ -176,43 +296,83 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         }
         return false;
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [panelId, picker, crossOn],
   );
 
-  const L = state.loaded;
-  const live = L ? getLive(L.bars.symbol) : undefined;
+  const liveQ = L ? getLive(L.bars.symbol) : undefined;
+  const sel = drawings.find((d) => d.id === selected);
+  const overlayCompare = !p.pane && L?.compares.length ? L.compares[0] : null;
+  const shownEvents = markers?.length ?? 0;
   return (
     <div className="fn" style={{ position: "relative" }}>
       <div className="line">
-        <span className="acc">{L?.bars.symbol ?? symbol}</span> {p.range} {L?.bars.interval ?? p.interval ?? ""} {p.compare ? `VS ${p.compare} (%)` : p.type}
-        {p.log && !p.compare && " LOG"} {p.indicators.join(" ")}
+        <span className="acc">{L?.bars.symbol ?? symbol}</span> {p.range} {L?.bars.interval ?? p.interval ?? ""}{" "}
+        {p.compare.length ? `VS ${p.compare.join(" ")} ${p.pane ? "(PANES)" : "(%)"}` : p.type}
+        {p.log && !overlayCompare && " LOG"} {p.indicators.join(" ")}
         {L && (
           <span className="dim">
             {" · "}
-            {L.source?.toUpperCase()} AS OF {fmtAge(Math.max(0, Date.now() / 1000 - L.asOf))} AGO
-            {live && ` · LIVE ${SRC_LABEL[live.src] ?? ""}`}
+            {L.source === "local" ? "LOCAL DATA (IMPORTED BY YOU)" : L.source?.toUpperCase()} AS OF {fmtAge(Math.max(0, Date.now() / 1000 - L.asOf))} AGO
+            {liveQ && ` · LIVE ${SRC_LABEL[liveQ.src] ?? ""}`}
           </span>
         )}
         {L?.stale && <span className="warn"> · STALE</span>}
         {L?.fallback.length ? <span className="warn"> · {L.fallback.join(",").toUpperCase()} DOWN, VIA FALLBACK</span> : null}
-        {L?.compareError && <span className="err"> · {L.compareError}</span>}
+        {L?.compareErrors.map((m) => (
+          <span className="err" key={m}> · {m}</span>
+        ))}
         {state.loading && <span className="dim"> · LOADING…</span>}
-        {crossOn && <span className="acc"> · CROSSHAIR (←/→, X TO EXIT)</span>}
-        <span className="dim"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
+        {crossOn && !mode && <span className="acc"> · CROSSHAIR (←/→, X TO EXIT)</span>}
+        {mode && (
+          <span className="acc">
+            {" · "}DRAW {KIND_NAME[mode.kind]}: ANCHOR {mode.pts.length + 1}/{NEEDED[mode.kind]} AT {ANCHOR_NAME[mode.anchor]} · ←/→ MOVE · P PRICE · ENTER PLACES · ESC CANCELS
+          </span>
+        )}
+        {!mode && sel && (
+          <span className="acc"> · {KIND_NAME[sel.kind]} {sel.id} SELECTED · [ ] CYCLE · D REMOVES</span>
+        )}
+        {drawNote && <span className="err"> · {drawNote}</span>}
+        <span className="dim"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · T/H/B DRAW · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
       </div>
+      {p.evt && (
+        <div className="line dim">
+          {events?.error ? <span className="err">EVT: {events.error}</span> : !events ? "EVT: LOADING…" : (
+            <>
+              EVT E=EARNINGS (LAST 4 REPORTED) D=EX-DIVIDEND S=SPLIT · {shownEvents} IN VIEW OF {events.env!.data.events.length} · {events.env!.source?.toUpperCase()}
+              {events.env!.data.missing.length ? <span className="warn"> · MISSING {events.env!.data.missing.join(", ")}</span> : null}
+            </>
+          )}
+        </div>
+      )}
+      {overlayCompare && drawings.length > 0 && <div className="warn">DRAWINGS HIDDEN WHILE A % OVERLAY (VS) IS ON: USE PANE TO KEEP THEM</div>}
+      {p.compare.length > 1 && !p.pane && <div className="warn">VS OVERLAYS ONLY {p.compare[0]}; ADD PANE TO SHOW ALL {p.compare.length}</div>}
       {state.error && !L && (
         <div className="err">
           {state.error} ({symbol} {p.range}). F5 TO RETRY.
         </div>
       )}
       {!L && !state.error && <div className="dim">LOADING {symbol} {p.range}…</div>}
-      {L && <ChartView ref={chart} data={L.bars} compare={L.compare} type={p.type} log={p.log} indicators={p.indicators} />}
+      {L && (
+        <ChartView
+          ref={chart}
+          data={L.bars}
+          compare={overlayCompare}
+          comparePanes={p.pane ? L.compares : undefined}
+          type={p.type}
+          log={p.log}
+          indicators={p.indicators}
+          draw={drawState}
+          events={markers}
+          onPick={(id) => setSelected(id)}
+        />
+      )}
       {picker && (
         <div className="picker">
-          <div className="acc">INDICATORS (NUMBER TOGGLES, ESC CLOSES)</div>
+          <div className="acc">INDICATORS (KEY TOGGLES, ESC CLOSES)</div>
           {INDICATORS.map((name, i) => (
             <div key={name}>
-              {i + 1} {p.indicators.includes(name) ? "[X]" : "[ ]"} {name}
+              {PICK_KEYS[i]} {p.indicators.includes(name) ? "[X]" : "[ ]"} {name}
             </div>
           ))}
         </div>

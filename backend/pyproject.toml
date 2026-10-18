@@ -17,6 +17,15 @@ dependencies = [
   "apscheduler>=3.10,<4",
   # uvloop has no Windows build; asyncio's default loop is used there.
   "uvloop>=0.19; sys_platform != 'win32'",
+  "numpy>=1.26",
+  "pandas>=2.2,<3",
+  # Phase 15 `openterm.quantlib`: imported in job workers and tests only, never in the server process.
+  "scipy>=1.13",
+  "statsmodels>=0.14",
+  "arch>=7.0",
+  "psutil>=5.9",
+  "keyring>=25",
+  "pypdf>=6.21.1",
 ]
 
 [dependency-groups]
@@ -37,7 +46,7 @@ packages = ["openterm"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-n 4"  # pytest-xdist; 4 beats auto on Windows (worker startup dominates). Debug serially with -n 0.
+addopts = "-n 6 --dist worksteal"  # pytest-xdist; 6 + worksteal beats 4 and auto here (docs/PERFORMANCE.md). Debug serially with -n 0.
 
 [tool.ruff]
 line-length = 100

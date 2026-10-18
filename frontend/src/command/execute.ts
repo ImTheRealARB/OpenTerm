@@ -29,7 +29,11 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   // Phase 10: THEME name / SETTINGS key value apply at once and stay on the current panel;
   // bare THEME or SETTINGS opens the SETTINGS panel.
   let fnOverride: string | undefined;
-  if (parsed.fn === "THEME" || parsed.fn === "SETTINGS") {
+  // Phase 11: SETTINGS APIKEYS [PROVIDER] is the APIKEYS panel.
+  if (parsed.fn === "SETTINGS" && args[0]?.toUpperCase() === "APIKEYS") {
+    fnOverride = "APIKEYS";
+    args = args.slice(1);
+  } else if (parsed.fn === "THEME" || parsed.fn === "SETTINGS") {
     const cmd = (parsed.fn === "THEME" ? themeArgs : settingsArgs)(args, getSettings());
     if (cmd && !cmd.ok) return fail(cmd.error);
     if (cmd) {
@@ -38,6 +42,16 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
       return true;
     }
     fnOverride = "SETTINGS";
+  }
+  // Phase 15: PORT OPT / PORT ATTR are the OPT / ATTR panels; every other PORT argument stays with the PORT panel below.
+  if (parsed.fn === "PORT" && (args[0]?.toUpperCase() === "OPT" || args[0]?.toUpperCase() === "ATTR")) {
+    fnOverride = args[0].toUpperCase();
+    args = args.slice(1);
+  }
+  // Phase 15: CORR REGIME is the REGIME panel; every other CORR argument stays with the CORR panel.
+  if (parsed.fn === "CORR" && args[0]?.toUpperCase() === "REGIME") {
+    fnOverride = "REGIME";
+    args = args.slice(1);
   }
   if (parsed.fn === "WL") {
     const act = parseWl(args, parsed.security);
@@ -54,7 +68,7 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   }
 
   // --- Phase 8: PORT / ALRT edit first, then show the panel ---
-  if (parsed.fn === "PORT" || parsed.fn === "ALRT") {
+  if ((parsed.fn === "PORT" && !fnOverride) || parsed.fn === "ALRT") {
     const r = parsed.fn === "PORT" ? portCommand(args, parsed.security) : alrtCommand(args, parsed.security);
     if (typeof r === "boolean") return r;
     args = r;
