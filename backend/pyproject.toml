@@ -19,6 +19,10 @@ dependencies = [
   "uvloop>=0.19; sys_platform != 'win32'",
   "numpy>=1.26",
   "pandas>=2.2,<3",
+  # Phase 15 `openterm.quantlib`: imported in job workers and tests only, never in the server process.
+  "scipy>=1.13",
+  "statsmodels>=0.14",
+  "arch>=7.0",
   "psutil>=5.9",
   "keyring>=25",
 ]

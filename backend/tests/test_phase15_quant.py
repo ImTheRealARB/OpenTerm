@@ -31,7 +31,7 @@ def xf(group: str, step: int):
     return pytest.mark.xfail(strict=True, reason=f"Phase 15 step {step}: {group}")
 
 
-QUANT = xf("quantlib ports", 2)
+QUANT = lambda f: f  # step 2 landed
 
 TOLERANCE = {"timeseries.fit_garch": 1e-4, "risk.fit_gpd_tail": 1e-5, "timeseries.fit_ornstein_uhlenbeck": 1e-6,
              "timeseries.cointegration_test": 1e-6, "timeseries.adf_test": 1e-6, "timeseries.granger_test": 1e-6,

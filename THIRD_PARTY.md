@@ -34,6 +34,20 @@ Filled from Phase 12 onwards. One row per ported file.
 | `openterm/quant/credit.py` (`cds_price`, hazard/survival conversion, `expected_loss` only) | `agent/src/quantlib/credit.py` (numpy, pandas and scipy removed) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/quant/payoff.py` | `agent/backtest/options_payoff.py` (numpy removed; arrays became lists) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/options_portfolio.py` | `agent/backtest/engines/options_portfolio.py` (loader / signal engine / run directory / CSV artifacts / run card replaced by an in-memory call; equity indexed by timestamp) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/risk.py` | `agent/src/quantlib/risk.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/var_backtest.py` | `agent/src/quantlib/var_backtest.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/portfolio.py` | `agent/src/quantlib/portfolio.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/attribution.py` | `agent/src/quantlib/attribution.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/factormodel.py` | `agent/src/quantlib/factormodel.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/copula.py` | `agent/src/quantlib/copula.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/microstructure.py` | `agent/src/quantlib/microstructure.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/eventstudy.py` | `agent/src/quantlib/eventstudy.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/multipletesting.py` | `agent/src/quantlib/multipletesting.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/timeseries.py` | `agent/src/quantlib/timeseries.py` (imports and safe lint fixes only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/optimizers/*.py` | `agent/backtest/optimizers/*.py` (lint only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/regime.py`, `risk_xray.py`, `_vibe_backtest.py` | `agent/backtest/{regime,risk_xray}.py` (+ `_close_series` from `correlation.py`, `_json_safe` from `validation.py`) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/alpha/base.py`, `_backend.py`, `bench.py` | `agent/src/factors/{base,_backend}.py` (bottleneck path removed), `bench_runner.py` (`t_stat`, `categorise` only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quantlib/alpha/zoo/*/*.py` (29 factors) | `agent/src/factors/zoo/{alpha101,qlib158,academic}/*.py` (import path and lint headers only) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 
 ### HKUDS/Vibe-Trading (MIT)
 
