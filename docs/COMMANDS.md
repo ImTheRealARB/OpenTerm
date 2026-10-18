@@ -31,6 +31,14 @@ AAPL FIL 10-K         SEC filings, one form type
 AAPL OWN              insider trades (Form 4)
 AAPL HDS              institutional and fund holders
 AAPL COMP             peers with median and 1M-1Y returns
+AAPL EE / EEO / ANR   estimates, revisions and surprises / analyst ratings and targets
+AAPL MGMT             officers, governance scores, proxy statements
+AAPL DVD / SPLT / CACS   dividends / splits / both merged;  AAPL SI  short interest;  AAPL EVTS  8-K items
+AAPL CN               company news from every source, keyword score (NOT A MODEL)
+AAPL DCF ERP=5.5 G=2.5 EXITX=14   valuation (NOT RUNNABLE lists missing inputs);  WACC;  RV PEERS=MSFT,GOOGL
+AAPL ETF / MEMB SPX / MGR BERKSHIRE   ETF holdings (SEC N-PORT) / index members / manager 13F changes
+IPO 2026-10           IPO calendar for a month
+ALRT NEWS RECALL AAPL   alert when a newer AAPL headline contains the word (omit the symbol for market top stories)
 RELIANCE IN GP        non-US: market code (IN, BO, LN, JP, HK, GR, CN, AU) or suffix (RELIANCE.NS)
 ```
 Chart keys: `1`-`8` range, `c` type, `i` indicators, `←`/`→` pan, `+`/`-` zoom, `x` crosshair, `l` log.

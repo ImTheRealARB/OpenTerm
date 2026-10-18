@@ -158,6 +158,26 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - **Forex ignores `SLIP`** (its cost is a spread plus slippage in pips) and says so. **Composite refuses mixed
   currencies** (no FX translation yet) and any symbol it cannot place in a built market.
 
+## Phase 13: equity research (2026-10-18)
+- **Estimates, ratings, officers, key statistics, fund profile** come from Yahoo `quoteSummary` (unofficial, cookie + crumb); consensus is Yahoo's
+  aggregation. **Dividends / splits** use Nasdaq, with Yahoo chart events as the fallback. **Short interest** is Nasdaq (twice a month, a delay of
+  days); **short volume** is FINRA Reg SHO daily files (off-exchange TRF volume only, not total volume).
+- **ETF / MEMB** read SEC N-PORT: quarterly, filed about 60 days after the period end, and the panel says `HOLDINGS AS OF`. N-PORT lists name and CUSIP,
+  not ticker, so a ticker is shown only when the name matches exactly one SEC company; the headline counts the matches (approximate). SPY, DIA and
+  MDY are unit investment trusts missing from the SEC fund-ticker file, so a short curated table maps them. `MEMB` is the proxy ETF's holdings, not
+  the index provider's list. **MGR** diffs the manager's two latest 13F-HR filings (long US equity positions only, 45 days after quarter end);
+  a curated table maps about 25 well-known names, any numeric CIK works.
+- **DCF / WACC / RV** use filed figures from SEC companyfacts. A company whose filings do not tag a needed line (MSFT: EBITDA) is NOT RUNNABLE, never
+  filled in. RV peers default to Yahoo's recommended symbols and only those that are SEC filers with a market cap are used (`PEERS USED: n`).
+  The forecast is your assumptions applied to filed figures: a scenario, not a prediction.
+- **Finnhub and Alpaca** (keys in `APIKEYS`) are written from the documented response shapes; no key was available to record them, so their fixtures
+  are labelled doc-shaped and the live shapes are unverified. Finnhub backs `ANR` with the recommendation trend only (no targets) and `EEO` with EPS
+  surprises only (no revisions), and says so. **FMP is not wired** (its useful endpoints are paid). `TRAN` and `SEG` are not built (paid data).
+- **Real-time quotes (`RT IEX`)** are the last trade on IEX only (one exchange, about 2-3% of volume): the price can differ from the consolidated last
+  sale and the size is IEX volume. Polled once a second for at most 100 US symbols; Yahoo ticks resume when IEX stops answering for 5 seconds.
+- **CN** leaves GDELT out (one call per 5 s, 8-12 s answers); `N <SYM>` still uses it as a fallback. The score is a fixed positive/negative word list.
+- **News alerts** are evaluated in the open browser app only (like price alerts); a headline older than the alert never fires it.
+
 ## Imported bars (Phase 12 step 8)
 - `IMPORT` stores daily bars you provide; they are never from a market source and are labelled LOCAL DATA in GP and BT. There is no
   adjusted close: a CSV with split-adjusted prices is used as given. Intraday bars are refused. A stored symbol shadows a real ticker

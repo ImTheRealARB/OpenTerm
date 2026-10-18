@@ -2,6 +2,17 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 13: equity research gaps
+- Added `EE` / `EEO` (estimates, revisions, EPS surprises), `ANR` (ratings, targets, rating changes), `MGMT` (officers, governance, proxies),
+  `DVD` / `SPLT` / `CACS`, `IPO`, `SI` (short interest and FINRA short volume), `EVTS` (8-K items decoded), `ETF`, `MEMB` (constituents via the
+  proxy ETF's N-PORT), `MGR` (13F, quarter over quarter) and `CN` (company news from every source, keyword-scored, NOT A MODEL).
+  All work with zero keys (Yahoo `quoteSummary`, Nasdaq, FINRA, SEC); a key unlocks more.
+- Added `DCF` / `WACC` / `RV` on the valuation engine ported from Vibe-Trading (MIT): a missing input makes the model NOT RUNNABLE and lists it; opinions
+  (ERP, terminal growth, exit multiple) must be typed (`ERP=5.5 G=2.5 EXITX=14`).
+- Added the keyed Finnhub and Alpaca sources (set in `APIKEYS`): their headlines join `N` and `CN`, Finnhub backs `ANR` / `EEO` when Yahoo is down, and
+  Alpaca keys turn on real-time US last trades (IEX only), labelled `RT IEX`. Without keys nothing changes.
+- Added `ALRT NEWS WORD [SYM]`: fires when a newer headline contains the word (checked on each news refresh, every 2 minutes while the app is open).
+
 ## Phase 12: backtester (Phase 11, keys and jobs, is on the same branch)
 - Added `BT`: rule syntax (`BT AAPL SMA20>SMA50 1D 5Y`), Python strategies (`BT EDIT`, `@name`), saved rules, results with chart, metrics,
   trades and code views, every result labelled HISTORICAL SIMULATION, NOT A FORECAST with its sources, fees and slippage.
