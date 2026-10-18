@@ -10,6 +10,7 @@ import orjson
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, scheduler
+from .ai.routes import router as ai_router
 from .api import router as api_router
 from .bt.localdata import LocalData
 from .cache import Cache
@@ -203,6 +204,7 @@ app.add_middleware(perf.TimingMiddleware)
 app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(kite_router)
+app.include_router(ai_router)
 
 
 @app.get("/api/health")

@@ -33,7 +33,7 @@ async def main() -> int:
                 print("no :free model listed; pass a model id")
                 return 1
         body = {"model": model, "messages": [{"role": "user", "content": PROMPT}], "stream": True,
-                "max_tokens": 64, "usage": {"include": True}}
+                "max_tokens": 600, "usage": {"include": True}}
         raw = b""
         async with http.stream("POST", "https://openrouter.ai/api/v1/chat/completions", json=body,
                                headers={"Authorization": f"Bearer {key}"}) as r:

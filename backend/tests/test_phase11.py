@@ -14,9 +14,6 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-RECORDING = pytest.mark.xfail(strict=True, reason="needs fixtures/llm_openrouter_stream.txt, recorded with the "
-                              "OpenRouter key (scripts/record_llm.py)")
-
 SECRET = "sk-test-0123456789abcdefSECRET"
 SPEC_NAMES = {"openrouter", "openai", "anthropic", "finnhub", "alpaca", "fmp", "fred", "eia", "openfigi", "tradier",
               "telegram", "smtp", "kite"}
@@ -449,7 +446,6 @@ def test_anthropic_events_map_to_the_same_shape():
     assert events[-1].type == "done"
 
 
-@RECORDING
 def test_recorded_openrouter_stream_gives_tokens_usage_and_cost():
     # One real streamed answer (raw SSE text), recorded in step 5 with the OpenRouter key.
     raw = (Path(__file__).parent / "fixtures" / "llm_openrouter_stream.txt").read_bytes().decode("utf-8")

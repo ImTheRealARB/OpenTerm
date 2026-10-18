@@ -11,7 +11,7 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-15-65e1da`; 
   fixture + synthetic smoke run (`RISK`, `PORT OPT ... METHOD=RP` then `A`, `PORT ATTR`, `FACT`, `QL GARCH`, `ALPHA UNIVERSE=SYN`, `CORR REGIME LIST:...`, `KITE` = KEY REQUIRED), live keyless `FACT AAPL`, `RISK` on a 4-name portfolio and
   `ALPHA` (TOP100: 96 names, 29 factors, about 40 s; 4 tickers had too few bars and are listed as dropped), and `ALPHA` Enter (shows the factor's formula via `ResearchPanel` `onKey` 5th argument `row`; backend row field `info`).
   Nothing needed fixing besides the Enter gap. **Still open: item 4, real Kite recordings** (waiting for the user's Kite key and redirect URL; do not start it).
-- **Phase 16 (AI layer):** see `docs/specs/PHASE_16.md` for the defaults and the step plan; progress is logged below it. Phases 17 and 18 stay paused.
+- **Phase 16 (AI layer):** see `docs/specs/PHASE_16.md` for the defaults and the step plan; its "Progress log" says which steps are done (step 1 backend agent done 2026-10-18). Phases 17 and 18 stay paused.
 - **Usage rule:** Sonnet only, at most 2 subagents with targeted tests, one full gate per step (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`), pause at 60% of the 5h window: update this file, commit, push.
 
 ## Resume here (2026-10-18, Phase 15 complete)
