@@ -10,6 +10,8 @@ Format: newest first, one section per phase. Details for each release are in `do
   (valuation, earnings, options, risk, macro) and a `strategy_check` tool. AI BT drafts rule strings only; `SignalEngine` code drafts are not built.
 - Added `AI DOC`: ask questions about one SEC filing (`AI DOC FILING AAPL 10-Q`) or an uploaded TXT / CSV / HTML / DOCX / XLSX / PDF. Local parsing (new dependency: pure-Python `pypdf`), keyword search over chunks,
   chunk citations, the same UNGROUNDED / UNSOURCED checks. Documents stay in memory (last 5). No OCR.
+- Added `SWARM` (five preset desks of analyst roles plus a chair, each role with its own tools, one retry, stored runs that replay with no model call), `THESIS` (notes per ticker with status,
+  invalidation rule and linked runs) and `AI AUTO` (hypothesis, backtest, evidence report; the evidence line comes from the backtest runs the server saw). New migration 13 (`ai_runs`, `theses`).
 - Recorded with the real OpenRouter key: one plain stream and a tool-call round (the pending Phase 11 recording is done).
 
 ## Phase 15: risk, quant library, alphas, Kite

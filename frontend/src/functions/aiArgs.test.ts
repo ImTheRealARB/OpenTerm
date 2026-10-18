@@ -26,3 +26,10 @@ describe("aiArgs", () => {
     expect(aiArgs(["why", "BT", "failed"])).toEqual({ mode: "ask", text: "why BT failed" });
   });
 });
+
+describe("aiArgs AUTO", () => {
+  it("AUTO tests a hypothesis from the rest of the line", () => {
+    expect(aiArgs(["AUTO", "momentum", "works", "on", "AAPL"])).toEqual({ mode: "auto", text: "momentum works on AAPL" });
+    expect(aiArgs(["auto"]).mode).toBe("bad");
+  });
+});

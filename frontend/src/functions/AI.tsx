@@ -29,7 +29,7 @@ interface DocCard {
   preview: string;
 }
 
-function Answer({ text, running }: { text: string; running: boolean }) {
+export function Answer({ text, running }: { text: string; running: boolean }) {
   return (
     <div className="ai-answer" data-testid="ai-answer">
       {citeSegments(text.replace(/\*\*/g, "")).map((s, i) => ("cite" in s ? <span key={i} className="acc">[{s.cite}]</span> : <span key={i}>{s.text}</span>))}
@@ -38,11 +38,10 @@ function Answer({ text, running }: { text: string; running: boolean }) {
   );
 }
 
-function TurnView({ t }: { t: Turn }) {
+export function ToolLines({ tools }: { tools: Turn["tools"] }) {
   return (
-    <div className="ai-turn" data-testid="ai-turn">
-      <div className="acc">&gt; {t.question}</div>
-      {t.tools.map((r) => (
+    <>
+      {tools.map((r) => (
         <div key={r.id} className={r.state === "failed" ? "warn" : "dim"} data-testid="ai-tool">
           [{r.id}] {r.name} {JSON.stringify(r.args)} · {r.source ?? "-"}
           {r.age_s != null ? ` · ${r.age_s < 10 ? r.age_s.toFixed(1) : Math.round(r.age_s)}s` : ""}
@@ -50,6 +49,15 @@ function TurnView({ t }: { t: Turn }) {
           {r.state === "failed" && r.summary ? ` · ${r.summary}` : ""}
         </div>
       ))}
+    </>
+  );
+}
+
+function TurnView({ t }: { t: Turn }) {
+  return (
+    <div className="ai-turn" data-testid="ai-turn">
+      <div className="acc">&gt; {t.question}</div>
+      <ToolLines tools={t.tools} />
       {t.notices.map((n, i) => (
         <div key={i} className="warn">
           {n}
@@ -86,6 +94,13 @@ function TurnView({ t }: { t: Turn }) {
       {t.draftError && (
         <div className="warn" data-testid="ai-draft-error">
           {t.draftError}
+        </div>
+      )}
+      {t.evidence && (
+        <div className={t.evidence.tested ? "dim" : "warn"} data-testid="ai-evidence">
+          EVIDENCE: {t.evidence.tested ? `BT RUN ${t.evidence.runs.join(", ")} · ` : ""}
+          {t.evidence.note}
+          {t.runId ? ` · STORED RUN ${t.runId}` : ""}
         </div>
       )}
       {t.unsourced.length > 0 && (
@@ -128,10 +143,10 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, []);
 
   const send = useCallback(
-    async (question: string, mode: "ask" | "bt" | "chart" = "ask") => {
+    async (question: string, mode: "ask" | "bt" | "chart" | "auto" = "ask") => {
       const { turns: cur, ai: cfg, doc: curDoc } = state.current;
       if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
-      const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : "";
+      const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : "";
       const shown = label ? `${label} ${question}`.trim() : question;
       const shot = mode === "chart" ? latestChartShot() : null;
       const image = shot?.shot() ?? null;
@@ -151,11 +166,13 @@ export default function AI({ panelId, args }: FunctionProps) {
       let sawToken = false;
       try {
         const asking = mode === "ask" && curDoc;
-        const url = mode === "bt" ? "/api/ai/bt" : mode === "chart" ? "/api/ai/chart" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
+        const url = mode === "bt" ? "/api/ai/bt" : mode === "auto" ? "/api/ai/auto" : mode === "chart" ? "/api/ai/chart" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
         const payload =
           mode === "bt"
             ? { idea: question, model: cfg.model, provider: cfg.provider }
-            : mode === "chart"
+            : mode === "auto"
+              ? { hypothesis: question, model: cfg.model, provider: cfg.provider }
+              : mode === "chart"
               ? { image, symbol: shot!.symbol, range: shot!.range, model: cfg.visionModel, provider: cfg.provider }
               : { question, history, model: cfg.model, provider: cfg.provider, ...(asking ? { doc_id: curDoc.id } : {}) };
         const res = await fetch(url, {
@@ -304,7 +321,7 @@ export default function AI({ panelId, args }: FunctionProps) {
         <span className="dim">
           {" "}
           · {ai.provider.toUpperCase()}
-          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI CHART
+          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI AUTO HYPOTHESIS · AI CHART
         </span>
       </div>
       {doc && (

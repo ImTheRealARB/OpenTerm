@@ -16,7 +16,7 @@ STATE = {
 
 # Tables each migration creates, by schema version (independent of db.py's SQL, so a renamed table fails here).
 TABLES_BY_VERSION = {1: {"cache"}, 2: {"kv"}, 3: {"layouts"}, 4: {"history"}, 5: {"watchlists"}, 6: {"portfolios"},
-                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}, 10: {"local_bars"}, 11: {"news_alerts"}, 12: {"iv_snapshots"}}
+                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}, 10: {"local_bars"}, 11: {"news_alerts"}, 12: {"iv_snapshots"}, 13: {"ai_runs", "theses"}}
 ALERT_COLUMNS = ["id", "symbol", "op", "unit", "value", "status", "created_at", "triggered_at", "trigger_price"]
 
 

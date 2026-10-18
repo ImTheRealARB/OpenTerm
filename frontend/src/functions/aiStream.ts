@@ -11,6 +11,8 @@ export type AiEvent =
   | { type: "notice"; text: string }
   | { type: "draft"; draft: BtDraft }
   | { type: "draft_error"; text: string }
+  | { type: "evidence"; runs: string[]; tested: boolean; note: string }
+  | { type: "saved"; run_id: string }
   | { type: "error"; kind: string; text: string }
   | { type: "done"; answer: string; grounded: boolean; label: string | null; unsourced: string[]; tool_calls: number; cost: number; stopped: string | null };
 
@@ -52,6 +54,9 @@ export interface Turn {
   error?: { kind: string; text: string };
   draft?: BtDraft;
   draftError?: string;
+  /** `AI AUTO`: the backtest runs behind the report (none = the report has no backtest evidence). */
+  evidence?: { runs: string[]; tested: boolean; note: string };
+  runId?: string;
 }
 
 export function newTurn(question: string): Turn {
@@ -59,15 +64,15 @@ export function newTurn(question: string): Turn {
 }
 
 /** Whole `data:` events in `buf`; whatever is left over (a partial event) comes back in `rest`. */
-export function parseSse(buf: string): { events: AiEvent[]; rest: string } {
+export function parseSse<E = AiEvent>(buf: string): { events: E[]; rest: string } {
   const parts = buf.replace(/\r\n/g, "\n").split("\n\n");
   const rest = parts.pop() ?? "";
-  const events: AiEvent[] = [];
+  const events: E[] = [];
   for (const block of parts) {
     for (const line of block.split("\n")) {
       if (!line.startsWith("data: ")) continue;
       try {
-        events.push(JSON.parse(line.slice(6)) as AiEvent);
+        events.push(JSON.parse(line.slice(6)) as E);
       } catch {
         /* a broken line is skipped, never shown as data */
       }
@@ -99,6 +104,10 @@ export function reduceTurn(t: Turn, e: AiEvent): Turn {
       return { ...t, draft: e.draft };
     case "draft_error":
       return { ...t, draftError: e.text };
+    case "evidence":
+      return { ...t, evidence: { runs: e.runs, tested: e.tested, note: e.note } };
+    case "saved":
+      return { ...t, runId: e.run_id };
     case "error":
       return { ...t, status: "error", error: { kind: e.kind, text: e.text } };
     case "done":

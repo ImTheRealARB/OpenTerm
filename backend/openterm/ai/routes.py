@@ -86,7 +86,7 @@ def _stream(request: Request, t0: float, events: AsyncIterator[dict], runner: to
                 if first:  # request in to the first event out: what this server controls (the model's own latency is not ours)
                     first = False
                     perf.record("/api/ai/first_event", (time.perf_counter() - t0) * 1000)
-                if ev["type"] == "start":
+                if ev["type"] in ("start", "swarm_start"):
                     ev["fixtures"] = bool(request.app.state.settings.openterm_fixtures)  # the panel says RECORDED when the model is a recording
                 for extra in tap(ev) if tap else []:
                     yield sse(extra)

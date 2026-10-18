@@ -52,6 +52,12 @@ MIGRATIONS: list[str | list[str]] = [
     ),
     # 12: local IV30 snapshots (Phase 14 HIVG): one point per symbol per day
     "CREATE TABLE iv_snapshots (symbol TEXT NOT NULL, day TEXT NOT NULL, iv30 REAL NOT NULL, at REAL NOT NULL, PRIMARY KEY (symbol, day))",
+    # 13: AI runs (SWARM / AI AUTO event logs for replay) and THESIS notes (Phase 16)
+    [
+        "CREATE TABLE ai_runs (id TEXT PRIMARY KEY, kind TEXT NOT NULL, title TEXT NOT NULL, symbol TEXT, created_at REAL NOT NULL, events TEXT NOT NULL)",
+        ("CREATE TABLE theses (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, status TEXT NOT NULL, text TEXT NOT NULL,"
+        " invalidation TEXT NOT NULL, run_ids TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL)"),
+    ],
 ]
 
 

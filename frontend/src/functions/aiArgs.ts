@@ -1,6 +1,6 @@
-/** `AI [question...]`, `AI BT <idea>`, `AI CHART [hint]` (pure, unit-tested). Only the first word picks a mode. */
+/** `AI [question...]`, `AI BT <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]` (pure, unit-tested). Only the first word picks a mode. */
 export type AiArgs =
-  | { mode: "ask" | "bt" | "chart" | "doc" | "docoff"; text: string }
+  | { mode: "ask" | "bt" | "chart" | "doc" | "docoff" | "auto"; text: string }
   | { mode: "docfiling"; text: string; symbol: string; form: string }
   | { mode: "bad"; text: string; error: string };
 
@@ -9,6 +9,10 @@ export function aiArgs(args: string[]): AiArgs {
   if (first === "BT") {
     const text = args.slice(1).join(" ").trim();
     return text ? { mode: "bt", text } : { mode: "bad", text: "", error: "USAGE: AI BT <strategy idea in words>" };
+  }
+  if (first === "AUTO") {
+    const text = args.slice(1).join(" ").trim();
+    return text ? { mode: "auto", text } : { mode: "bad", text: "", error: "USAGE: AI AUTO <hypothesis in words>" };
   }
   if (first === "DOC") {
     const sub = (args[1] ?? "").toUpperCase();

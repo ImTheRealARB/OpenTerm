@@ -138,6 +138,10 @@ cites them as [T1], and says UNGROUNDED when no tool returned data or UNSOURCED 
 `AI CHART` sends the chart of your newest `GP` panel to the vision model (labelled CHART IMAGE ONLY). `AI` playbooks (valuation, earnings, options, risk, macro) load automatically when a question needs them.
 `AI DOC FILING <SYMBOL> [FORM]` loads the latest SEC filing of that form (default 10-K); `U` in the AI panel uploads a TXT, CSV, HTML, DOCX, XLSX or PDF (10 MB, kept in memory only, the last 5).
 While a document is loaded, questions use ONLY its text (chunks C1, C2... cited); `AI DOC OFF` goes back to market data. Scanned PDFs need OCR, which is not built.
+
+`AI AUTO <hypothesis>` turns a hypothesis into one rule, backtests it (`backtest_run`, a stored BT run) and writes an evidence report; the EVIDENCE line names the BT run ids, or says NO BACKTEST WAS RUN. The run is stored.
+`SWARM [COMMITTEE|RISK|EARNINGS|MACRO|QUANT] <subject>` runs a preset desk: analyst roles with their own tool lists, then a chair. A failed role is retried once and shown if it still fails; the chair's figures are checked against the analysts' notes. `SWARM` lists presets and stored runs; `SWARM REPLAY <id>` shows a stored run again with no model call. `T` saves the desk answer as a THESIS note, `Esc` cancels.
+`THESIS [SYMBOL]` lists thesis notes (status, invalidation rule, linked runs); `THESIS ADD <SYMBOL> <text>`, `THESIS INVALID <id> <rule>`; `S` cycles the status, `D` `D` deletes, Up/Down select.
 `SETTINGS AI MODEL <id>` / `VISION <id>` / `PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA` / `RESET` (default `deepseek/deepseek-v4-pro`; the AI rows in `SETTINGS` cycle common models).
 
 ## Phase 15: risk, quant library, alphas, Kite
