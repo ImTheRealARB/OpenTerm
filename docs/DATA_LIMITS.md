@@ -251,6 +251,11 @@ No key is needed for any of them. Each table header shows the source, its age an
 - AI BT drafts rule strings only (no SignalEngine code). Backtests stay historical simulations, not forecasts.
 - AUDIT stores hashes and metadata, not text. Stored SWARM / AI AUTO runs (for replay) do keep the events, including answers and tool summaries, in the local database (last 200).
 
+- **NRG (Phase 19).** Prices only. EIA's weekly crude stocks and production series (WCESTUS1, WCRFPUS2 and others) answer 404 on FRED's keyless CSV (probed 2026-10-18); EIA's own API needs a key. Spot series lag one to three business days; a value older than its normal lag is flagged STALE.
+- **WETR (Phase 19).** Open-Meteo forecasts are model output, free for non-commercial use. Degree days are F-days, base 65 F, from (max + min) / 2; the ten-city basket is equal-weighted, not demand-weighted. NWS alerts cover the US only and need `SEC_USER_AGENT` (weather.gov requires a User-Agent with contact info); without it they are SKIPPED and labelled.
+- **PRED (Phase 19).** Polymarket volume is USD, Kalshi volume is contracts; the list marks each. Kalshi has over 12,000 open markets with no volume ordering, so PRED shows the top markets of two 1000-market pages (nearest-closing and 30+ days out), not the whole exchange. Odds are MARKET-IMPLIED PROBABILITY, NOT A FORECAST.
+- **UNLK (Phase 19, planned NOT BUILT).** DefiLlama's documented emissions endpoint is paid (HTTP 402, probed 2026-10-18). An unadvertised dataset host serves similar data without a key but is the site's own storage, so it is not used.
+
 ## Phase 19 limits (steps 1-3)
 - Pattern overlays and SMC marks are rules on price (last 5,000 bars), not signals. The Ichimoku cloud is drawn over existing bars only; the 26-bar forward projection is not drawn (needs future timestamps).
 - `GP EVT` earnings markers are the last four reported quarters only (Nasdaq `earnings-surprise`); dividends and splits go back as far as their sources do. A date with no bar on the chart (weekend, outside the data) is skipped. On intraday charts a marker sits on the last bar of its date.
