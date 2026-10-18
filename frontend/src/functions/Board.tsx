@@ -24,7 +24,7 @@ function columns(def: BoardDef): Column<BRow>[] {
   const num = def.rates ? fmtRate : fmtPrice;
   const signed = (v: number | null) => (v == null ? fmtChg(v) : (v > 0 ? "+" : "") + num(v));
   const cols: Column<BRow>[] = [
-    { title: "NAME", width: 20, text: (r) => r.section ?? r.label, color: (r) => (r.section ? "fg" : "acc") },
+    { title: "NAME", width: 20, text: (r) => r.section ?? r.label, color: () => "fg" },
     { title: "SECURITY", width: 11, text: (r) => r.symbol, color: (r) => (r.error ? "err" : "dim") },
     { title: "SRC", width: 9, text: srcText, color: srcColor },
     { title: "LAST", width: 12, align: "right", text: (r) => num(price(r)), color: lastColor, flash: lastFlash },
@@ -92,7 +92,7 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
         {loading && <span className="dim"> · LOADING…</span>}
         <span className="dim"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
       </div>
-      <Grid ref={grid} columns={cols} rows={rows} initialSelected={1} />
+      <Grid ref={grid} columns={cols} rows={rows} initialSelected={1} band={isHeader} />
     </div>
   );
 }

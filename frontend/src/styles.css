@@ -1,15 +1,21 @@
 /* Utilitarian by design: no shadows, radii, gradients, transitions or web fonts. */
 :root {
   --bg: #000000;
-  --fg: #ffb000;
-  --fg-dim: #b37a00;
-  --up: #00d26a;
-  --down: #ff3b30;
-  --sel: #1a1a1a;
-  --accent: #00b7ff;
-  --warn: #ffd60a;
-  --err: #ff3b30;
-  --line: #3a2a00;
+  --fg: #fb8b1e;
+  --fg-dim: #b5732a;
+  --up: #1ee05a;
+  --down: #ff433d;
+  --sel: #1d4f91;
+  --accent: #4fc1ff;
+  --warn: #ffe100;
+  --err: #ff433d;
+  --line: #3a3a3a;
+  /* Extra surface tokens (not theme-checked): data values, gray header bands, red menu band. */
+  --val: #ffffff;
+  --bar: #262626;
+  --hdr: #d9d9d9;
+  --menu: #a00000;
+  --menu-fg: #ffffff;
   --font: "JetBrains Mono", "IBM Plex Mono", Consolas, "Cascadia Mono", Menlo, monospace;
   --fs: 12px;
   --row: 16px;
@@ -26,6 +32,7 @@
 :root[data-theme="light"] {
   --bg: #ffffff; --fg: #1a1a1a; --fg-dim: #5c5c5c; --up: #007a3d; --down: #c4161c;
   --sel: #dcdcdc; --accent: #0055b3; --warn: #8a5a00; --err: #c4161c; --line: #b0b0b0;
+  --val: #000000; --bar: #e6e6e6; --hdr: #333333; --menu: #b00000; --menu-fg: #ffffff;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,13 +51,14 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .top { display: flex; align-items: center; border-bottom: 1px solid var(--line); height: 22px; min-width: 0; }
 .brand { padding: 0 6px; color: var(--bg); background: var(--fg); font-weight: bold; height: 100%; line-height: 22px; }
 .cmd { position: relative; flex: 1 1 auto; min-width: 120px; height: 100%; }
-.cmd input { width: 100%; height: 100%; padding: 0 6px; caret-color: var(--fg); text-transform: uppercase; }
+.cmd input { width: 100%; height: 100%; padding: 0 6px; caret-color: var(--warn); text-transform: uppercase; font-weight: bold; }
 .cmd input::placeholder { color: var(--fg-dim); }
-.cmd.focus { background: var(--sel); }
+.cmd.focus { background: var(--bar); }
+.cmd.focus input { color: var(--val); }
 .ac { position: absolute; left: 0; top: 22px; z-index: 20; min-width: 420px; max-width: 100%;
   background: var(--bg); border: 1px solid var(--fg); }
 .ac div { display: grid; grid-template-columns: 110px 1fr 70px; padding: 0 6px; white-space: nowrap; overflow: hidden; }
-.ac div.on { background: var(--sel); color: var(--accent); }
+.ac div.on { background: var(--sel); color: var(--val); }
 .ac .k { color: var(--fg-dim); text-align: right; }
 .msg { padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
 .msg.err { color: var(--err); }
@@ -67,16 +75,19 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .split.h { flex-direction: column; }
 .panel { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; border: 1px solid var(--line); contain: strict; }
 .panel.focus { border-color: var(--fg); }
-.ph { display: flex; height: 16px; padding: 0 4px; gap: 8px; background: var(--sel); color: var(--fg-dim); white-space: nowrap; overflow: hidden; flex: none; }
-.panel.focus .ph { color: var(--fg); }
-.ph .id { color: var(--bg); background: var(--fg-dim); padding: 0 4px; }
+/* Title bar: dark band on idle panels, solid amber bar with inverted id chip on the focused one. */
+/* Window title bar: dark gray band with the panel number in an amber chip; the focused window gets white text and an amber frame. */
+.ph { display: flex; height: 16px; padding: 0 4px 0 0; gap: 8px; background: var(--bar); color: var(--hdr); white-space: nowrap; overflow: hidden; flex: none; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.panel.focus .ph { color: var(--val); font-weight: bold; }
+.ph .id { color: var(--bg); background: var(--fg-dim); padding: 0 5px; font-weight: bold; }
 .panel.focus .ph .id { background: var(--fg); }
 .pb { flex: 1 1 auto; overflow: auto; padding: 2px 4px; min-height: 0; }
 
 /* Tables (DOM tables only for small static content; live grids are canvas) */
 .t { border-collapse: collapse; width: 100%; table-layout: fixed; }
 .t td, .t th { padding: 0 6px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; font-weight: normal; }
-.t th { color: var(--fg-dim); border-bottom: 1px solid var(--line); }
+.t th { color: var(--hdr); background: var(--bar); }
+:where(.t .n) { color: var(--val); }
 .t .n { text-align: right; }
 .t tr.on { background: var(--sel); }
 .dim { color: var(--fg-dim); }
@@ -85,10 +96,10 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .down { color: var(--down); }
 .err { color: var(--err); }
 .warn { color: var(--warn); }
-h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px; }
+h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(--bar); padding: 0 4px; margin: 4px 0 2px; text-transform: uppercase; }
 
 /* Status bar */
-.status { display: flex; gap: 12px; align-items: center; padding: 0 6px; border-top: 1px solid var(--line); color: var(--fg-dim); white-space: nowrap; overflow: hidden; }
+.status { display: flex; gap: 12px; align-items: center; padding: 0 6px; background: var(--bar); color: var(--hdr); white-space: nowrap; overflow: hidden; }
 .status .sp { flex: 1; }
 
 /* Overlays */
@@ -105,10 +116,15 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .vis canvas { display: block; }
 .grid canvas { display: block; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.tabs { display: flex; gap: 12px; flex: none; }
-.tabs .on { color: var(--accent); }
+.tabs { display: flex; gap: 12px; flex: none; background: var(--menu); color: var(--menu-fg); padding: 0 4px; }
+.tabs .on { color: var(--bg); background: var(--fg); padding: 0 4px; }
 .summary { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid var(--line); }
 .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+/* A function's first info line is its red menu band (title in yellow, hints in light gray). */
+.fn > .line:first-child:not(.err):not(.warn) { background: var(--menu); color: var(--menu-fg); padding: 0 4px; margin: -2px -4px 1px; }
+.fn > .line:first-child .acc { color: var(--warn); font-weight: bold; }
+.fn > .line:first-child .dim { color: var(--hdr); }
+.fn > .line:first-child .down, .fn > .line:first-child .err { color: #ffb3b3; }
 .big { font-size: 20px; line-height: 24px; }
 .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); column-gap: 16px; }
 .kv div { display: flex; justify-content: space-between; white-space: nowrap; overflow: hidden; }
@@ -125,9 +141,9 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .ai-turn { margin-bottom: 8px; }
 .ai-answer { white-space: pre-wrap; word-break: break-word; }
 .ai-in { flex: none; display: flex; gap: 6px; border-top: 1px solid var(--line); padding-top: 2px; }
-.ai-input { flex: 1; min-width: 0; background: var(--bg); color: var(--fg); font: inherit; }
-.ai-input::placeholder { color: var(--fg-dim); }
-.runline { background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; width: 40ch; }
+.ai-input { flex: 1; min-width: 0; background: var(--fg); color: var(--bg); font: inherit; padding: 0 4px; }
+.ai-input::placeholder { color: var(--bg); opacity: 0.6; }
+.runline { background: var(--fg); color: var(--bg); border: 0; padding: 0 4px; font: inherit; width: 40ch; }
 .import textarea { width: 100%; height: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); font: inherit; resize: none; }
 
 /* --- Phase 9: CORR heat (colour carries the sign; strength steps with |r| 0.2 / 0.4 / 0.7) --- */

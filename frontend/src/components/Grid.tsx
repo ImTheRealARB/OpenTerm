@@ -5,7 +5,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
 
-export type CellColor = "fg" | "dim" | "up" | "down" | "warn" | "err" | "acc";
+/** `val` is the data-value colour (white on the dark themes); uncoloured right-aligned cells use it. */
+export type CellColor = "fg" | "dim" | "up" | "down" | "warn" | "err" | "acc" | "val";
 
 export interface Column<R> {
   title: string;
@@ -33,6 +34,8 @@ interface Props<R> {
   rows: R[];
   initialSelected?: number;
   onSelect?: (index: number) => void;
+  /** Rows drawn as a full-width section band (e.g. board section headers). */
+  band?: (row: R) => boolean;
 }
 
 const ROW_H = 16;
@@ -42,6 +45,8 @@ interface Theme {
   bg: string;
   sel: string;
   line: string;
+  bar: string;
+  hdr: string;
   font: string;
   colors: Record<CellColor, string>;
 }
@@ -53,8 +58,10 @@ function readTheme(el: Element): Theme {
     bg: v("--bg"),
     sel: v("--sel"),
     line: v("--line"),
+    bar: v("--bar") || v("--sel"),
+    hdr: v("--hdr") || v("--fg-dim"),
     font: `${v("--fs") || "12px"} ${v("--font")}`,
-    colors: { fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), warn: v("--warn"), err: v("--err"), acc: v("--accent") },
+    colors: { fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), warn: v("--warn"), err: v("--err"), acc: v("--accent"), val: v("--val") || v("--fg") },
   };
 }
 
@@ -62,13 +69,13 @@ function clip(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, Math.max(0, n - 1)) + "…";
 }
 
-function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>, ref: React.Ref<GridHandle>) {
+function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Props<R>, ref: React.Ref<GridHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const sr = useRef<HTMLDivElement>(null);
   const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[] });
-  const data = useRef({ columns, rows });
-  data.current = { columns, rows };
+  const data = useRef({ columns, rows, band });
+  data.current = { columns, rows, band };
 
   const visibleCount = () => Math.max(1, Math.floor((st.current.h - ROW_H) / ROW_H));
 
@@ -90,10 +97,11 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
     const vis = i - s.top;
     if (vis < 0 || vis >= visibleCount()) return;
     const y = ROW_H + vis * ROW_H;
-    const { columns: cols, rows: rs } = data.current;
-    ctx.fillStyle = i === s.sel ? th.sel : th.bg;
-    ctx.fillRect(0, y, s.w, ROW_H);
+    const { columns: cols, rows: rs, band: isBand } = data.current;
     const row = rs[i];
+    const banded = row !== undefined && !!isBand?.(row);
+    ctx.fillStyle = i === s.sel ? th.sel : banded ? th.bar : th.bg;
+    ctx.fillRect(0, y, s.w, ROW_H);
     if (row === undefined) return;
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
@@ -105,7 +113,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
         ctx.fillRect(x + 1, y + 1, cwPx - 2, ROW_H - 2);
       }
       const text = clip(col.text(row), col.width);
-      ctx.fillStyle = hl ? th.bg : th.colors[col.color?.(row) ?? "fg"];
+      ctx.fillStyle = hl ? th.bg : banded ? th.colors.val : th.colors[col.color?.(row) ?? (col.align === "right" ? "val" : "fg")];
       const tx = col.align === "right" ? x + PAD + (col.width - text.length) * s.cw : x + PAD;
       ctx.fillText(text, tx, y + ROW_H / 2 + 1);
     }
@@ -142,7 +150,9 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect }: Props<R>
     ctx.fillStyle = th.bg;
     ctx.fillRect(0, 0, s.w, s.h);
     const cols = data.current.columns;
-    ctx.fillStyle = th.colors.dim;
+    ctx.fillStyle = th.bar;
+    ctx.fillRect(0, 0, s.w, ROW_H - 1);
+    ctx.fillStyle = th.hdr;
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const t = clip(col.title, col.width);

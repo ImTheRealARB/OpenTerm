@@ -23,7 +23,7 @@ export const price = (r: QRow) => getLive(r.symbol)?.price ?? r.q?.price ?? null
 export const pct = (r: QRow) => getLive(r.symbol)?.pct ?? r.q?.change_pct ?? null;
 export const chg = (r: QRow) => getLive(r.symbol)?.change ?? r.q?.change ?? null;
 export const vol = (r: QRow) => getLive(r.symbol)?.volume ?? r.q?.volume ?? null;
-export const dirColor = (v: number | null): CellColor => (sign(v) > 0 ? "up" : sign(v) < 0 ? "down" : "fg");
+export const dirColor = (v: number | null): CellColor => (sign(v) > 0 ? "up" : sign(v) < 0 ? "down" : "val");
 export const quoteTime = (r: QRow) => getLive(r.symbol)?.t ?? (r.q?.market_time ? r.q.market_time * 1000 : null);
 
 export function srcText(r: QRow): string {
@@ -42,7 +42,7 @@ export function srcColor(r: QRow): CellColor {
 
 export const lastColor = (r: QRow): CellColor => {
   const l = getLive(r.symbol);
-  return l ? dirColor(l.dir) : "fg";
+  return l ? dirColor(l.dir) : "val";
 };
 export const lastFlash = (r: QRow, f: number): CellColor | null => {
   const l = getLive(r.symbol);
@@ -50,7 +50,7 @@ export const lastFlash = (r: QRow, f: number): CellColor | null => {
 };
 
 export const QUOTE_COLUMNS: Column<QRow>[] = [
-  { title: "SECURITY", width: 11, text: (r) => r.symbol, color: (r) => (r.error ? "err" : "acc") },
+  { title: "SECURITY", width: 11, text: (r) => r.symbol, color: (r) => (r.error ? "err" : "fg") },
   { title: "SRC", width: 9, text: srcText, color: srcColor },
   { title: "NAME", width: 14, text: (r) => r.error ?? r.q?.name ?? "", color: (r) => (r.error ? "err" : "dim") },
   { title: "LAST", width: 12, align: "right", text: (r) => fmtPrice(price(r)), color: lastColor, flash: lastFlash },

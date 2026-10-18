@@ -86,7 +86,7 @@ export const INTERVAL_S: Record<string, number> = {
 function themeColors() {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string) => cs.getPropertyValue(n).trim();
-  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), line: v("--line"), acc: v("--accent"), warn: v("--warn"), sel: v("--sel"), font: v("--font") };
+  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), line: v("--line"), acc: v("--accent"), warn: v("--warn"), sel: v("--sel"), val: v("--val") || v("--fg"), bar: v("--bar") || v("--sel"), font: v("--font") };
 }
 
 const toTime = (s: number) => s as UTCTimestamp;
@@ -170,7 +170,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const chart = createChart(box.current!, {
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, fontFamily: c.font, fontSize: 11, attributionLogo: false, panes: { separatorColor: c.line, enableResize: false } },
-      grid: { vertLines: { color: c.sel }, horzLines: { color: c.sel } },
+      grid: { vertLines: { color: c.bar }, horzLines: { color: c.bar } },
       rightPriceScale: { borderColor: c.line },
       timeScale: { borderColor: c.line, timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: false, rightOffset: 3 },
       crosshair: { mode: CrosshairMode.Normal, vertLine: { color: c.dim, labelBackgroundColor: c.sel }, horzLine: { color: c.dim, labelBackgroundColor: c.sel } },
@@ -211,7 +211,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const c = (colors.current = themeColors());
     chart.applyOptions({
       layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, panes: { separatorColor: c.line } },
-      grid: { vertLines: { color: c.sel }, horzLines: { color: c.sel } },
+      grid: { vertLines: { color: c.bar }, horzLines: { color: c.bar } },
       rightPriceScale: { borderColor: c.line },
       timeScale: { borderColor: c.line },
       crosshair: { vertLine: { color: c.dim, labelBackgroundColor: c.sel }, horzLine: { color: c.dim, labelBackgroundColor: c.sel } },
@@ -246,8 +246,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       const pts = new Array(n);
       for (let i = 0; i < n; i++) pts[i] = { time: toTime(data.t[i]), value: data.c[i] };
       s = kind === "AREA"
-        ? chart.addSeries(AreaSeries, { lineColor: c.fg, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
-        : chart.addSeries(LineSeries, { color: c.fg, lineWidth: 1 });
+        ? chart.addSeries(AreaSeries, { lineColor: c.val, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
+        : chart.addSeries(LineSeries, { color: c.val, lineWidth: 1 });
       s.setData(pts);
     }
     main.current = s;
