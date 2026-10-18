@@ -442,3 +442,9 @@ Same machine, shared with other sessions running tests, so each figure is a rang
   gets a fresh browser context. Now `e2e/app.ts` `openApp()` (phase 12's spec left as is while its steps land). Phase 4's
   mid-test "fresh session" still clears storage itself.
 - **Playwright web server runs `vite build`, not `npm run build`:** the `tsc --noEmit` inside it (~5 s) is its own gate.
+
+## Phase 14 bench (2026-10-19, options, rates, futures)
+24/24 pass on the rested run. First run right after the gates read the BT 10-year rule run at 317 ms (budget 300): throttling, since a rested rerun read 207.5 ms
+(Phase 13: 195.7 ms). Tick received to pixel p95 36.3 ms (budget 50; Phase 13 36.8), initial bundle 102.7 KB gzip (Phase 13 101.1; budget 400), keystroke echo
+14.7 ms, 8-panel frame 16.7 ms, BT open 63.3 ms. The new panels (OMON, OV, OSA, OVDV, SKEW, HIVG, CT, WIRP, COT, FXFA, YAS, SWPM, CDSW, RATES views) share
+`ResearchPanel` and load on demand; chart and heat map render only when opened, so nothing new runs on the hot path. The surface render has no separate budget gate.

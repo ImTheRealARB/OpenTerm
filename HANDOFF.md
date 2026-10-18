@@ -5,6 +5,17 @@ _Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-ph
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
+## Resume here (2026-10-19, Phase 14 complete)
+- **Phase 14 is done and committed** (spec `docs/specs/PHASE_14.md`, steps 1-8). Functions: OMON PCR OV OSA OVDV SKEW HIVG, RATES upgrade (EUR GBP CAD JPY, NS fit,
+  FRED OAS spreads, auctions), CT WIRP COT FXFA YAS SWPM CDSW, `BT <SYM> MKT=options`. Quant lib `openterm/quant/` (Vibe port, cross-checked), migration 12 `iv_snapshots`.
+  Gates after step 8: 698 pytest + 1 xfail (Phase 11 recording), ruff, tsc, vitest, 113 Playwright; bench 24/24 on the rested run (see `docs/PERFORMANCE.md`).
+- **Known limits / not verified live:** Tradier fixture is doc-shaped (no token, unverified live); IV30 history starts when OSA/HIVG is first opened (local snapshots);
+  OSA `B` opens BT but you must type `OPEN=` and `STYLE=` (and `EXP=` in OSA); the OSA structure is lost on reload; BT option trade rows leave entry price/pnl % empty;
+  no real-network run of the new rates/futures/CFTC/FOMC providers (fixtures only: try `RATES EUR`, `COT ES`, `WIRP`, `AAPL OMON` live and fix shape drift).
+- **Usage lesson:** Phase 14 burned ~75% of a 5h window (agents + repeated gates). See memory `token-burn-rules`: targeted tests in agents, one full gate per step, pause at 60% of the 5h window.
+- **Next action: Phase 15** (risk, quant library, alphas): read `docs/ROADMAP_PHASES_11-19.md` "Phase 15", write `docs/specs/PHASE_15.md`, tests first (fresh session).
+  Phases 17 and 18 stay paused. Before Phase 16: ask the user to set the OpenRouter key in APIKEYS.
+
 ## Resume here (2026-10-18, Phase 13 complete)
 - **Phase 13 is done and committed** (spec `docs/specs/PHASE_13.md`, steps 1-8). Functions: EE EEO ANR MGMT DVD SPLT CACS IPO SI EVTS DCF WACC RV ETF MEMB MGR CN,
   plus `ALRT NEWS WORD [SYM]` (migration 11 `news_alerts`, `/api/newsalerts`, evaluated in `command/alerts.ts`), Finnhub + Alpaca adapters (inert without
