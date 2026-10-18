@@ -16,6 +16,8 @@ _Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-ph
   `AAPL CN`, `AAPL Q` (source should read RT IEX) and fix any shape drift in `research/keyed_parse.py`.
 - **Next action: Phase 14**: read `docs/ROADMAP_PHASES_11-19.md` "Phase 14", write `docs/specs/PHASE_14.md` with its defaults and tests-first step 1, then build
   (fresh session per phase). **Phases 17 and 18 stay paused (user, 2026-10-18).** Before Phase 16: ask the user to set the OpenRouter key.
+- **Phase 14 not started** (a session was launched and stopped before it changed anything; the tree was clean at commit `de90def`). The user will run it
+  in a new session, possibly on another account: the branch and worktree are local only (no remote), so the new account must open this same folder.
 - _Older notes below are from Phase 12._
 
 ## Resume here (2026-10-19, Phase 12 complete)

@@ -3,9 +3,7 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-All 10 phases are built and on `main`. **Phases 11-19 are in progress on branch `claude/openterm-phases-11-19-a99b2b`**
-(Phase 11 done except one OpenRouter recording; Phase 12 steps 1-4 done, step 5 (engines) next; HANDOFF.md "Resume here" has the next action, the user's step rules and the approved scope: full Phases 12-19 minus
-paid-only data, roadmap defaults pre-approved, OpenRouter (DeepSeek) the only paid service). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+All 10 phases are built and on `main`. **Phases 11-13 are done; work continues on branch `claude/openterm-phases-12-19-5ebe04`** (worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`, not merged into `main`, no remote). **Next: Phase 14**, to be built in a new session (possibly another account): HANDOFF.md "Resume here" has the next action and the approved scope (full Phases 12-19 minus paid-only data, roadmap defaults pre-approved, OpenRouter (DeepSeek) the only paid service). **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** One Phase 11 OpenRouter recording is still pending (needs the key). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
 2026-10-19), subagents at most 2 at a time. If the same gate fails twice on the same problem, stop, write the state and
