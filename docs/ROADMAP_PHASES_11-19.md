@@ -34,17 +34,17 @@ Create them when the phase that needs them starts. Free tiers change: re-check l
 | Key | Cost | Unlocks | Phase |
 |---|---|---|---|
 | OpenRouter | Pay per use (some free models) | `AI`, `SWARM`, `BRIEF`, AI strategy drafts | 16 (gateway in 11) |
-| Finnhub | Free tier | Estimates, recommendations, surprises, IPO calendar, company news, real-time US trades websocket | 13 |
-| Alpaca | Free | Real-time IEX quotes, news, paper trading | 13, 18 |
-| FMP | Free tier, paid for transcripts/segments | Estimates, index members, transcripts (paid) | 13 |
-| FRED | Free | Faster FRED API paths (CSV already works keyless) | 13 |
+| Finnhub | Free tier | Company and market news, recommendation trend and EPS surprises as an ANR / EEO fallback (built in 13; IPO, estimates and sentiment come keyless from Nasdaq / Yahoo) | 13 |
+| Alpaca | Free | Real-time IEX last trades (`RT IEX`, built in 13), news (built in 13); paper trading is Phase 18 (paused) | 13, 18 |
+| FMP | Free tier, paid for transcripts/segments | **Not wired** (useful endpoints are paid; Yahoo, Nasdaq and SEC cover Phase 13 keyless) | - |
+| FRED | Free | Faster FRED API paths (CSV already works keyless); adapter built in Phase 7 | 7 |
 | EIA | Free | Energy inventories (`NRG`) | 19 |
 | OpenFIGI | Free (raises rate limit) | `SECF` identifier mapping | 19 |
 | Tradier | Free sandbox | Options chain with Greeks fallback | 14 |
-| Telegram bot token | Free | Push alerts and briefs | 17 |
-| SMTP (app password) | Free | Email alerts and briefs | 17 |
-| Zerodha Kite Connect | Plan-dependent | Read-only holdings sync, later orders (India) | 18 |
-| IBKR | Free with an account | Read-only portfolio sync via TWS/Gateway | 18 |
+| Telegram bot token | Free | Push alerts and briefs | 17 (paused) |
+| SMTP (app password) | Free | Email alerts and briefs | 17 (paused) |
+| Zerodha Kite Connect | Plan-dependent | Read-only holdings sync, later orders (India) | 18 (paused) |
+| IBKR | Free with an account | Read-only portfolio sync via TWS/Gateway | 18 (paused) |
 | Optional: Tiingo, Alpha Vantage, Polygon.io, CoinGecko demo, Marketaux | Free tiers | Extra fallbacks in the router | as needed |
 
 No key needed: SEC EDGAR (User-Agent only), FINRA Reg SHO files, CFTC, TreasuryDirect, DBnomics, World Bank,
@@ -85,16 +85,20 @@ off the screen (push, MCP, brokers). 19 is breadth.
                                                           │
                                          19 Charting, macro, crypto (any time after 11)
 ```
-12, 13 and 14 touch different files and can run in parallel worktrees.
+12, 13 and 14 touch different files and can run in parallel worktrees (they were built one after another instead).
+
+**Current order (2026-10-18): 11, 12, 13 done; next 14, then 15, 16, 19. 17 and 18 are PAUSED by the user and nothing in 14, 15, 16 or 19
+depends on them.** Phase 16 needs the OpenRouter key (ask the user to set it in `APIKEYS` first).
 
 ---
 
 ## Phase 11: Foundations (keys, jobs, LLM gateway)
+**Status: done** (one OpenRouter stream recording is still pending until the key exists; `KEY REQUIRED` and the gateway are tested with fixtures).
 Small phase. No big user-facing function, but everything after it depends on it.
 
 | Item | What |
 |---|---|
-| `SETTINGS KEYS` | Enter, test and remove keys. Shows status per provider (OK / invalid / quota). Stored in the local key store (OS keyring if available, else `.env`), redacted everywhere. |
+| `APIKEYS` (was `SETTINGS KEYS`; `SETTINGS KEYS` now means keyboard shortcuts) | Enter, test and remove keys. Shows status per provider (OK / invalid / quota). Stored in the local key store (OS keyring if available, else `.env`), redacted everywhere. |
 | `KEY REQUIRED` state | New panel state next to STALE / ERR / PROVIDER DOWN, naming the key and the command to set it. |
 | Job runner | Process-pool jobs with id, progress over `/ws`, cancel (`Esc` in the panel), result cache by hash. `JOBS` panel lists running and finished jobs. |
 | LLM gateway | One backend client for OpenAI-compatible endpoints: OpenRouter (default), Anthropic, OpenAI, Ollama (local, no key). Streaming, tool calls, token and cost accounting, per-day spend cap. No AI functions yet: `SOURCES` shows the gateway health. |
@@ -105,6 +109,7 @@ Small phase. No big user-facing function, but everything after it depends on it.
 progress and cancels, the gateway passes a recorded-response test, bench unchanged.
 
 ## Phase 12: Backtester (`BT`)
+**Status: done** (spec `docs/specs/PHASE_12.md`; bench 24/24). The strategy-format decision below was adopted and built.
 Port Vibe-Trading's backtest core. **Strategy format decision (proposed):** adopt its `SignalEngine` contract,
 `generate(data_map) -> {symbol: Series in [-1, 1]}`, run in a sandboxed worker process (AST checks as in Vibe's
 `runner.py`, no network, time and memory limits). Add a short rule syntax for the command line
@@ -131,7 +136,10 @@ escape tests fail closed, e2e for the panel, bench budgets recorded (proposed: 1
 < 300 ms warm, 100-symbol 10-year run < 5 s).
 
 ## Phase 13: Equity research gaps
-Keyed data layer plus the missing company functions.
+**Status: done** (spec `docs/specs/PHASE_13.md`, actual sources in `docs/DATA_LIMITS.md`; bench 24/24). The Source column below is the original
+plan: everything shipped keyless (Yahoo `quoteSummary`, Nasdaq, FINRA, SEC); Finnhub and Alpaca are keyed additions only; FMP is not wired.
+`ALRT NEWS` lives in the Phase 13 build; the Phase 17 delivery of alerts (push, email) stays paused. Finnhub and Alpaca shapes are doc-shaped
+fixtures, unverified against the live services until a key is set.
 
 | Function | What | Source |
 |---|---|---|
@@ -247,11 +255,10 @@ In this order, each one a separate approval:
 ---
 
 ## Open decisions (settle in the Phase 11 or 12 spec)
-1. **Strategy format:** Vibe's `SignalEngine` Python contract + a rule shortcut (proposed above), or rule
-   strings only.
+1. **Strategy format:** decided and built in Phase 12 (Vibe's `SignalEngine` contract + a rule shortcut).
 2. **Default AI model** on OpenRouter, and the daily spend cap.
 3. **Market priority:** US first, or US + India together (the India cost model and Zerodha sync are ready to port).
-4. **Live orders:** in scope at all, or stop at paper + read-only sync.
+4. **Live orders:** Phase 18 is paused by the user (2026-10-18); decide when it is unpaused.
 5. **Paid keys:** decided 2026-10-19: skip them (`TRAN`, `SEG` removed).
 
 ## Gaps vs OpenBB with no phase (2026-10-18)
