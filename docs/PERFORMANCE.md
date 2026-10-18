@@ -411,6 +411,13 @@ Playwright against the built frontend served by the backend): BT, M, W, P, `BT M
 imported symbol, `BT EDIT` save + run in the real sandbox, sandbox refusal: all 10 steps pass. It found one bug the mocked tests could not
 (Ctrl+K swallowed while a textarea has focus), fixed in IMPORT and the editor.
 
+## Phase 13 bench (2026-10-18, equity research, keyed layer, RT IEX)
+24/24 pass, no budget moved. Nothing new runs on the hot path without keys: the IEX poller sleeps on `has_key`, `Hub.emit` adds one `is not None`
+test per tick, news merging only runs when a keyed source supports the capability. Tick received to pixel p95 36.8 ms (budget 50), keystroke echo
+14.8 ms, 8-panel frame 16.7 ms, BT 10-year run 195.7 ms (budget 300), BT open 82.8 ms (budget 100), initial bundle 101.1 KB gzip (budget 400; the
+13 research panels share one `ResearchPanel` and load on demand). The research routes are cached SWR like FA, and a real-backend run answered `CN AAPL`
+from live Yahoo headlines with no startup error.
+
 ## Test suite speed (2026-10-19, on top of Phase 12 step 4)
 Same machine, shared with other sessions running tests, so each figure is a range over 3+ runs. No app code changed.
 

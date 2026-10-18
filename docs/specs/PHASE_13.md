@@ -1,6 +1,6 @@
 # Phase 13 spec: equity research gaps
 
-Status: **approved as written 2026-10-19 (roadmap defaults pre-approved by the user); steps 1-7 done (step 8, docs and bench, is next).**
+Status: **approved as written 2026-10-19 (roadmap defaults pre-approved by the user); steps 1-8 done (complete).**
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 13", [FEATURE_GAP.md](../FEATURE_GAP.md), Vibe-Trading `d0db2e3`
 (MIT: `quantlib/valuation/{contracts,dcf,comps}.py`, `tools/institutional_holdings_tool.py`).
 

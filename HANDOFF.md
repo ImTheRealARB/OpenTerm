@@ -1,9 +1,22 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; PHASE 12 COMPLETE (steps 1-9 and 4B); Phase 13 next; full scope, defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; PHASE 12 COMPLETE (steps 1-9 and 4B); PHASE 13 COMPLETE (steps 1-8); Phase 14 next; Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
+
+## Resume here (2026-10-18, Phase 13 complete)
+- **Phase 13 is done and committed** (spec `docs/specs/PHASE_13.md`, steps 1-8). Functions: EE EEO ANR MGMT DVD SPLT CACS IPO SI EVTS DCF WACC RV ETF MEMB MGR CN,
+  plus `ALRT NEWS WORD [SYM]` (migration 11 `news_alerts`, `/api/newsalerts`, evaluated in `command/alerts.ts`), Finnhub + Alpaca adapters (inert without
+  keys; doc-shaped fixtures), `N` merges keyed headlines (`DataService.news`), ANR/EEO Finnhub fallback (capability `surprises`), real-time US quotes
+  (`streaming/iex.py`, tick source `a` = `RT IEX`, off in fixture mode). Gates after step 7: 460 pytest + 1 xfail (Phase 11 recording), ruff, tsc, vitest,
+  104 Playwright; bench 24/24 (see `docs/PERFORMANCE.md`). Docs updated: CHANGELOG, COMMANDS, DATA_LIMITS. Known limit: MSFT `RV`/`DCF` NOT RUNNABLE (EBITDA untagged).
+  The e2e suite flaked once under the all-gates-at-once run (4 specs passed alone and on rerun); not chased.
+- **Not verified live:** Finnhub/Alpaca response shapes and the IEX poller against the real service (no keys). When the user sets keys in `APIKEYS`, try
+  `AAPL CN`, `AAPL Q` (source should read RT IEX) and fix any shape drift in `research/keyed_parse.py`.
+- **Next action: Phase 14**: read `docs/ROADMAP_PHASES_11-19.md` "Phase 14", write `docs/specs/PHASE_14.md` with its defaults and tests-first step 1, then build
+  (fresh session per phase). **Phases 17 and 18 stay paused (user, 2026-10-18).** Before Phase 16: ask the user to set the OpenRouter key.
+- _Older notes below are from Phase 12._
 
 ## Resume here (2026-10-19, Phase 12 complete)
 - **Where the work is:** branch `claude/openterm-phases-12-19-5ebe04`, worktree `.claude/worktrees/openterm-phases-12-19-5ebe04`
