@@ -3,13 +3,15 @@
 The function list comes from frontend/src/functions/registry.ts and the shortcut table from
 frontend/src/keys/keybindings.json + keys.ts, so rerun this after adding a function or a binding:
 
-    python scripts/gen_functions_doc.py
+    python scripts/gen_functions_doc.py           # rewrite the doc
+    python scripts/gen_functions_doc.py --check   # exit 1 if the doc is out of date (pytest runs this)
 """
 
 from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,10 +46,10 @@ SECTION_ORDER = [
     "Company research: estimates, events, valuation", "Screening and comparison", "Macro and calendars",
     "Commodities, energy and weather", "Crypto, DeFi and prediction markets", "Derivatives, rates and credit",
     "Portfolio and alerts", "Risk and quant", "Backtesting", "AI (needs an OpenRouter key in APIKEYS)",
-    "App, workspace and settings",
+    "App, workspace and settings", "Other",
 ]
 
-DEF_RE = re.compile(r'\{ code: "(\w+)", title: "((?:[^"\\]|\\.)*)", needsSecurity: (true|false)(.*?)\},?\s*$', re.M)
+DEF_RE = re.compile(r'\{ code: "(\w+)", title: "((?:[^"\\]|\\.)*)", needsSecurity: (true|false)(.*?)\},?\s*$', re.MULTILINE)
 
 
 def cell(s: str) -> str:
@@ -65,7 +67,7 @@ def functions() -> dict[str, list[str]]:
         seen.add(code)
         phase = int(re.search(r"phase: (\d+)", rest).group(1))
         args = re.search(r'argsSchema: "((?:[^"\\]|\\.)*)"', rest)
-        section = P19.get(code, "Crypto, DeFi and prediction markets") if phase == 19 else PHASE_SECTION[phase]
+        section = P19.get(code, "Crypto, DeFi and prediction markets") if phase == 19 else PHASE_SECTION.get(phase, "Other")
         example = f"`AAPL {code}`" if needs else f"`{code}`"
         status = "" if "load:" in rest else " **(not built yet)**"
         usage = f"`{cell(args.group(1))}`" if args and args.group(1) else ""
@@ -75,7 +77,7 @@ def functions() -> dict[str, list[str]]:
 
 def shortcuts() -> list[str]:
     bindings = json.loads(BINDINGS.read_text(encoding="utf-8"))
-    labels = dict(re.findall(r'^\s+(\w+): "((?:[^"\\]|\\.)*)",$', KEYS_TS.read_text(encoding="utf-8"), re.M))
+    labels = dict(re.findall(r'^\s+(\w+): "((?:[^"\\]|\\.)*)",$', KEYS_TS.read_text(encoding="utf-8"), re.MULTILINE))
     return [f"| {' · '.join(f'`{c}`' for c in chords)} | {labels.get(action, action)} |" for action, chords in bindings.items()]
 
 
@@ -174,7 +176,7 @@ TAIL = """
 """
 
 
-def main() -> None:
+def render() -> str:
     parts = [HEAD]
     for name, rows in functions().items():
         if not rows:
@@ -184,7 +186,20 @@ def main() -> None:
     parts.append("\n## Global keyboard shortcuts\n\nRebind any of these in `SETTINGS KEYS`.\n\n| Keys | Action |\n|---|---|\n")
     parts.append("\n".join(shortcuts()) + "\n")
     parts.append(TAIL)
-    OUT.write_bytes("".join(parts).encode("utf-8"))
+    return "".join(parts)
+
+
+def is_current() -> bool:
+    return OUT.exists() and OUT.read_bytes().decode("utf-8") == render()
+
+
+def main() -> None:
+    if "--check" in sys.argv:
+        if not is_current():
+            sys.exit("docs/FUNCTIONS.md is out of date: run python scripts/gen_functions_doc.py")
+        print("docs/FUNCTIONS.md is current")
+        return
+    OUT.write_bytes(render().encode("utf-8"))
     print(f"wrote {OUT.relative_to(ROOT)}")
 
 

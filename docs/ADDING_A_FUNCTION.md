@@ -25,3 +25,5 @@ Rules:
 - `needsSecurity: true` makes the command fall back to the panel's sticky security and fail with a clear message when there is none.
 - Never block the main thread: push heavy math into a Web Worker, and draw live tables on canvas, not DOM.
 - Never show invented numbers. Missing data renders as `STALE` or `ERR` with the source and `as_of`.
+- After adding or changing a function (registry) or a key binding, run `python scripts/gen_functions_doc.py` and commit `docs/FUNCTIONS.md`.
+  `backend/tests/test_functions_doc.py` fails while the doc is stale.

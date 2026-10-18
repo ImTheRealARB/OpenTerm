@@ -200,6 +200,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   Tool gotchas: the Bash tool cannot parse heredocs containing `'''` (use the Write tool + `python file.py`); the PowerShell tool keeps its cwd between calls (use absolute `Set-Location`).
 
 ## Conventions
+- **Keep `docs/FUNCTIONS.md` current:** after any change to `functions/registry.ts`, `keys/keybindings.json` or `keys/keys.ts` labels (or the doc template in `scripts/gen_functions_doc.py`), run `python scripts/gen_functions_doc.py` before committing. `test_functions_doc.py` (pytest, so the gates) fails on a stale doc.
 - Commits end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Commit only when the user says so. Remote `origin` is a private GitHub repo; push the working branch after each step.
 - LF line endings (`.gitattributes`), except `*.ps1`.
 - Tests never hit the network: record fixtures with real responses, and add a route in `providers/fixtures.py`.
