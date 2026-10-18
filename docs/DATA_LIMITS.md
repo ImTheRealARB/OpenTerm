@@ -240,3 +240,11 @@ No key is needed for any of them. Each table header shows the source, its age an
 - **`PORT OPT`**: `CAP` is enforced by re-solving with bounds for the SLSQP methods and by clipping and redistributing for `EQVOL` and `HRP` (`CAP BY CLIPPING, NOT RE-OPTIMISED`). Results are estimates from the lookback window, not forecasts.
 - **`PORT ATTR` BRINSON** holds today's holdings constant over the range (not your historical weights); benchmark sector weights come from the benchmark ETF's current sector weighting.
 - **Kite**: the WebSocket ticker has never run against a live key, and the `kite_*` fixtures are doc-shaped (Kite Connect v3 documentation), not recordings. Expect shape drift on first live use (see `scripts/record_phase15.py --kite`).
+
+## Phase 16 limits (AI layer)
+- The model is OpenRouter (default `deepseek/deepseek-v4-pro`), paid, behind the daily spend cap; no key = `KEY REQUIRED`. Model output is never data: every answer lists its tool calls and flags UNGROUNDED / UNSOURCED numbers (a check, not a proof).
+- Tools return what the panels show (same source, age and STALE labels); results are cut to 6 000 characters, so long tables reach the model as a head and tail. Order, Kite and account tools do not exist.
+- AI DOC: filing text and uploads are parsed locally (TXT, CSV, HTML, DOCX, XLSX, PDF via pypdf; no OCR, so scanned PDFs have no text), kept in memory (last 5), 10 MB each. The SEC document fetch has only been tested with a patched provider.
+- SWARM roles run one after another; a failed role is retried once. The chair's numbers are checked against the analysts' notes, not against raw tool results. AI AUTO's evidence line lists the BT runs the server saw, whatever the model says.
+- AI BT drafts rule strings only (no SignalEngine code). Backtests stay historical simulations, not forecasts.
+- AUDIT stores hashes and metadata, not text. Stored SWARM / AI AUTO runs (for replay) do keep the events, including answers and tool summaries, in the local database (last 200).

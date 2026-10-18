@@ -486,3 +486,5 @@ Fixture mode replays a recorded OpenRouter answer (`llm_tool_turn1.txt` / `llm_t
 **Result (2026-10-18, step 2): 30 of 31 pass; the one miss is the old BT 10-year rule run (368 ms and 374 ms in two runs, against 300).** Same-hour control: the Phase 15 commit `df5325e` benched on this machine right after reads
 410 ms for BT 10-year, 84.7 ms for RISK and 1247 ms for ALPHA (the rested run recorded above read 208 / 37 / 673 ms), so the machine is throttled today (everything reads about 2x slower) and Phase 16 changes nothing on that path.
 Re-bench on a rested machine before calling the phase closed.
+
+**Phase 16 close (2026-10-18, rested machine): 31 of 31 pass.** BT 10-year 191.3 ms (limit 300), AI request to first SSE event p95 8.3 ms (limit 60; it was 1.2 ms before the audit manifest was hashed per request, still far inside), AI panel open to first paint p95 19.4 ms (limit 100), RISK 20 names 35.4 ms, PORT OPT HRP 7.8 ms, keystroke echo 15.0 ms, frame p95 16.8 ms. The earlier BT miss was throttling, as controlled above. SWARM, THESIS, AUDIT and AI AUTO have no latency budget: their cost is the model's own time, and the ledger write happens at the final event.

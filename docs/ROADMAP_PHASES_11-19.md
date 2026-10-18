@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 IN PROGRESS; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 DONE 2026-10-18 (live smoke of SWARM and AI AUTO done); Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
@@ -198,7 +198,8 @@ for the surface render recorded.
 jobs with a bench budget, lookahead sentinel test ported, e2e.
 
 ## Phase 16: AI layer (OpenRouter key)
-**Status: in progress** (started 2026-10-18; spec `docs/specs/PHASE_16.md`).
+**Status: DONE 2026-10-18** (spec `docs/specs/PHASE_16.md`; bench 31/31). Built: AI chat with tools, grounding and loop guard, SETTINGS AI, playbooks, AI BT (draft only), AI CHART, AI DOC, SWARM (5 presets), THESIS, AI AUTO, hash-chained AUDIT.
+Not built: `ai.store_text`, SignalEngine code drafts in AI BT, OCR, parallel SWARM roles. Live smoke 2026-10-18 (real key, about US$0.02): SWARM EARNINGS AAPL (3 roles, 11 tool calls, chain verified) and AI AUTO (found and fixed: the evidence line missed the 16-hex BT run id).
 Off until a key is set. The agent calls OpenTerm's own backend APIs as tools, so answers rest on the same data
 the panels show.
 

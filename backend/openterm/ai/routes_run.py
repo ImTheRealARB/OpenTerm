@@ -14,7 +14,7 @@ from . import agent, tools
 from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, audit, router
 
 AUTO_TOOLS = ["history", "quote", "profile", "skill", "strategy_check", "backtest_run", "backtest_get"]
-RUN_ID_IN_TEXT = re.compile(r'"run_id"\s*:\s*"([0-9a-f]{12})"')
+RUN_ID_IN_TEXT = re.compile(r'"run_id"\s*:\s*"([0-9a-f]{8,32})"')  # BT run ids are 16 hex characters
 SUBJECT_SYMBOL = re.compile(r"^[A-Za-z][A-Za-z0-9.\-^=]{0,11}$")
 SYMBOL_ARG = re.compile(r"^[A-Za-z0-9.^=\-]{1,12}$")
 AUTO_SYSTEM = """You test a market hypothesis with evidence for OpenTerm. Today is {today}.

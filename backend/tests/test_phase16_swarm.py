@@ -169,6 +169,7 @@ def test_auto_collects_the_run_ids_of_backtests_the_agent_ran():
     from openterm.ai import routes_run
 
     assert routes_run.RUN_ID_IN_TEXT.findall('{"run_id":"0123456789ab","metrics":{}} {"run_id": "fedcba987654"}') == ["0123456789ab", "fedcba987654"]
+    assert routes_run.RUN_ID_IN_TEXT.findall('{"id":"9a81900108345b07","run_id":"9a81900108345b07"}') == ["9a81900108345b07"]  # the real BT id (found by the live smoke)
     assert routes_run.RUN_ID_IN_TEXT.findall('{"run_id":"short"}') == []
     assert "backtest_run" in routes_run.AUTO_TOOLS and "portfolio" not in routes_run.AUTO_TOOLS
 
