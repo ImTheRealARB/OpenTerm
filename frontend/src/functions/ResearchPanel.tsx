@@ -24,7 +24,7 @@ export interface ResearchOptions {
   valuation?: boolean;
   api?: "deriv" | "rates";
   /** Query parameters from the panel props; defaults to {symbol}. Return null to show `usage` instead of loading. */
-  params?: (p: FunctionProps) => Record<string, string> | null;
+  params?: (p: FunctionProps) => Record<string, string | string[]> | null;
   usage?: string;
   /** Short key hints appended to the header. */
   keys?: string;
@@ -33,7 +33,7 @@ export interface ResearchOptions {
   /** An extra panel key; return true when handled. `say` shows a one-line note above the table. */
   onKey?: (e: KeyboardEvent, p: FunctionProps, d: TablePayload | undefined, say: (text: string) => void) => boolean;
   /** Phase 15: replaces the GET (quant jobs: POST, wait for the job, return its result). `ctx` carries progress and note callbacks. */
-  loader?: (params: Record<string, string>, ctx: RunCtx) => Promise<Envelope<TablePayload>>;
+  loader?: (params: Record<string, string | string[]>, ctx: RunCtx) => Promise<Envelope<TablePayload>>;
 }
 
 export function makeResearchPanel(opts: ResearchOptions) {
@@ -68,7 +68,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
         });
       }
       const call = opts.api ? researchApi[opts.api] : opts.valuation ? researchApi.valuation : researchApi.get;
-      return call(opts.fn, params, fresh) as Promise<Envelope<TablePayload>>;
+      return call(opts.fn, params as Record<string, string>, fresh) as Promise<Envelope<TablePayload>>;
     });
     const d = env?.data;
     const section = d?.sections[Math.min(sec, (d?.sections.length ?? 1) - 1)];

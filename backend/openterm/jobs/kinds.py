@@ -154,7 +154,11 @@ QUANT_KEYS = {
     "risk.run": {"name", "base", "positions", "range", "bench", "conf", "hor", "mixed_ccy"},
     "opt.run": {"name", "base", "positions", "method", "cap", "lookback", "rf", "tc", "range", "mixed_ccy"},
     "attr.run": {"name", "base", "positions", "bench", "range", "sector_of", "sector_problem", "bench_weights", "vals", "mixed_ccy"},
+    "fact.run": {"name", "base", "symbol", "positions", "range", "mixed_ccy", "non_us", "factor_label"},
+    "ql.run": {"calc", "symbols", "range", "h", "hor", "conf", "buckets", "date", "bench", "win", "est", "sr", "n", "t", "skew", "kurt",
+               "trial_sr_std"},
 }
+NEEDS_POSITIONS = {"risk.run", "opt.run", "attr.run"}
 QUANT_COMMON = {"data_path", "data_sha", "labels", "not_runnable"}
 
 
@@ -162,8 +166,11 @@ def validate_quant(kind: str):
     def validate(params: dict) -> dict:
         if not isinstance(params, dict) or set(params) - QUANT_KEYS[kind] - QUANT_COMMON:
             raise BadParams(f"{kind.upper()} PARAMS ARE BUILT BY /api/quant/{kind.split('.')[0]}")
-        if not params.get("not_runnable") and not ({"data_path", "data_sha", "positions"} <= set(params)):
-            raise BadParams(f"{kind.upper()} NEEDS data_path, data_sha AND positions")
+        needs = {"data_path", "data_sha"} | ({"positions"} if kind in NEEDS_POSITIONS else set())
+        if kind == "ql.run" and params.get("calc") == "DSR":
+            needs = set()  # the deflated Sharpe is closed form: no bars
+        if not params.get("not_runnable") and not needs <= set(params):
+            raise BadParams(f"{kind.upper()} NEEDS {', '.join(sorted(needs))}")
         return params
 
     return validate
@@ -187,6 +194,18 @@ def attr_job(params: dict, progress: Callable[[float, str], None]) -> dict:
     return run(params, progress)
 
 
+def fact_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..quantjobs.fact import run
+
+    return run(params, progress)
+
+
+def ql_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..quantjobs.ql import run
+
+    return run(params, progress)
+
+
 def _quant_kind(name: str, label: str, fn) -> Kind:
     return Kind(name, "1", label, fn, validate_quant(name), internal=True, fingerprint=lambda p: p.get("data_sha", ""),
                 hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
@@ -195,3 +214,5 @@ def _quant_kind(name: str, label: str, fn) -> Kind:
 KINDS["risk.run"] = _quant_kind("risk.run", "RISK", risk_job)
 KINDS["opt.run"] = _quant_kind("opt.run", "PORT OPT", opt_job)
 KINDS["attr.run"] = _quant_kind("attr.run", "PORT ATTR", attr_job)
+KINDS["fact.run"] = _quant_kind("fact.run", "FACT", fact_job)
+KINDS["ql.run"] = _quant_kind("ql.run", "QL", ql_job)

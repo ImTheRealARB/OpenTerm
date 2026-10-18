@@ -165,3 +165,8 @@ ADAPTERS.update({"ecb": EcbProvider, "boe": BoeProvider, "boc": BocProvider, "mo
 from .futures import CftcProvider, FomcProvider, YahooFuturesProvider
 
 ADAPTERS.update({"yahoo_futures": YahooFuturesProvider, "cftc": CftcProvider, "fomc": FomcProvider})
+
+# --- Phase 15 step 4: Fama-French factors for FACT (Ken French library, no key) ---
+from .kenfrench import KenFrenchProvider
+
+ADAPTERS["kenfrench"] = KenFrenchProvider

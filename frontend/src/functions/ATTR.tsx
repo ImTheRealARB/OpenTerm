@@ -19,7 +19,7 @@ export default makeResearchPanel({
     return { ...params, act: action.kind, date: action.date, ...(action.kind === "add" ? { value: action.value, ...(action.flow ? { flow: action.flow } : {}) } : {}) };
   },
   loader: async (params, ctx): Promise<Envelope<TablePayload>> => {
-    const { act, date, value, flow, ...rest } = params;
+    const { act, date, value, flow, ...rest } = params as Record<string, string>;
     if (act === "add") {
       const n = await addValuation(rest.portfolio, { date, value: Number(value), flow: Number(flow ?? 0) });
       ctx.say(`ADDED VALUATION ${date} · ${n} STORED`);

@@ -25,8 +25,11 @@ from .userdata import UserDataError
 
 router = APIRouter(prefix="/api")
 
-LIVE = ("risk", "opt", "attr")  # fact, ql, alpha, regime answer 404 until their build steps land
+LIVE = ("risk", "opt", "attr", "fact", "ql")  # alpha, regime answer 404 until their build steps land
 KNOWN = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")
+QL_CALCS = ("GARCH", "OU", "COINT", "HEDGE", "COPULA", "ROLL", "AMIHUD", "KYLE", "VPIN", "EVENT", "DSR", "ADF", "HVAR")
+QL_PAIR = ("COINT", "HEDGE", "COPULA")
+QL_VOLUME = ("AMIHUD", "KYLE", "VPIN")  # these need the daily volume column
 OPT_METHODS = ("EQVOL", "RP", "MV", "MAXDIV", "HRP", "TURN")
 MINOR = {"GBp": ("GBP", 0.01), "ZAc": ("ZAR", 0.01), "ILA": ("ILS", 0.01)}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -275,7 +278,163 @@ async def build_attr(request: Request, body: dict) -> dict:
             **({} if sector_of is not None else {"sector_problem": "NOT RUNNABLE: THE SCREENER (SECTORS) IS UNAVAILABLE"}), "mixed_ccy": mixed, "data_path": path, "data_sha": sha, "labels": labels}
 
 
-BUILD = {"risk": ("risk.run", build_risk), "opt": ("opt.run", build_opt), "attr": ("attr.run", build_attr)}
+# --- FACT ---------------------------------------------------------------------------------------------------------------------------
+FACTOR_TTL = 86400.0
+
+
+async def _factors(request: Request) -> dict:
+    """The Ken French daily factors (columnar, percent) through the router and the 24 h SWR cache."""
+    s = svc(request)
+
+    async def fetch() -> dict:
+        out, failed = await s.router.call("factors", lambda p: p.factors())
+        return {"data": {"dates": out["dates"], "cols": out["cols"]}, "source": out["source"], "fallback_from": failed}
+
+    try:
+        return await s._swr("q:kenfrench", FACTOR_TTL, fetch)
+    except DataError as e:
+        raise DataError(e.kind, f"FACTOR DATA (KEN FRENCH): {e}", getattr(e, "detail", None)) from None
+
+
+def _ymd(epoch: int) -> int:
+    return int(time.strftime("%Y%m%d", time.gmtime(epoch)))
+
+
+async def build_fact(request: Request, body: dict) -> dict:
+    range_ = _range(body, "3Y")
+    raw = body.get("symbol")
+    pf = None
+    sym = None
+    if body.get("portfolio") not in (None, "") or raw in (None, ""):
+        pf, why = await _pick(request, body)
+        if pf is None:
+            return {"not_runnable": why}
+    else:
+        if not isinstance(raw, str) or not raw.strip():
+            raise _bad("SYMBOL MUST BE A SYMBOL OR A PORTFOLIO NAME")
+        names = {p["name"].upper(): p["name"] for p in await portfolios(request).all()}
+        if raw.strip().upper() in names:
+            pf = await portfolios(request).get(names[raw.strip().upper()])
+        else:
+            sym = resolve(raw.strip().upper())
+    if pf is not None:
+        pos, fx, mixed, why = await _positions(request, pf)
+        if why:
+            return {"not_runnable": why}
+        syms = [p["symbol"] for p in pos]
+        envs, _ = await _bars(request, syms, range_)
+        non_us = any("." in x for x in syms) or any(p["ccy"] not in (None, "", "USD") for p in pos)
+        who: dict = {"name": pf["name"], "base": pf["base"], "positions": pos, "mixed_ccy": mixed}
+    else:
+        envs, _ = await _bars(request, [sym], range_)
+        cur = envs[sym]["data"].get("currency")
+        non_us = "." in sym or (cur not in (None, "", "USD", "XXX"))
+        fx = {}
+        who = {"symbol": sym}
+    fenv = await _factors(request)
+    first = min((_ymd(t) for e in envs.values() for t in e["data"]["t"][:1]), default=0)
+    d = fenv["data"]
+    i0 = next((i for i, x in enumerate(d["dates"]) if x >= first), len(d["dates"]))
+    factors = {"dates": d["dates"][i0:], "cols": {k: v[i0:] for k, v in d["cols"].items()}}
+    sha, path = await _stored(request, {"bars": {s: _slim(e) for s, e in envs.items()}, "factors": factors, "fx": fx})
+    labels = _labels(request, envs)
+    labels["sources"].append({"symbol": "KEN FRENCH", "name": fenv.get("source"), "as_of": fenv.get("as_of"), "age_s": fenv.get("age_s"),
+                              "stale": bool(fenv.get("stale"))})
+    labels["fallback_from"] = sorted({*labels["fallback_from"], *(fenv.get("fallback_from") or [])})
+    age = fenv.get("age_s")
+    label = (f"FACTORS FROM {str(fenv.get('source')).upper()}" + (f", AGE {age:.0f}s" if isinstance(age, int | float) else "")
+             + (", STALE: OLDER THAN THEIR 24 H CACHE LIFETIME" if fenv.get("stale") else ""))
+    return {**who, "range": range_, "non_us": non_us, "factor_label": label, "data_path": path, "data_sha": sha, "labels": labels}
+
+
+# --- QL -----------------------------------------------------------------------------------------------------------------------------
+def _ql_range(calc: str, body: dict, when: str | None, est: int) -> str:
+    if body.get("range"):
+        return _range(body, "1Y")
+    if calc == "EVENT" and when:
+        years = (date.today() - date.fromisoformat(when)).days / 365.25 + (est + 40) / 252
+        return next((r for r, y in (("1Y", 1), ("2Y", 2), ("3Y", 3), ("5Y", 5), ("10Y", 10)) if years <= y), "20Y")
+    return "3Y" if calc in ("GARCH", "HVAR") else "2Y" if calc == "EVENT" else "1Y"
+
+
+def _ql_win(body: dict) -> list[int]:
+    w = body.get("win")
+    if w in (None, ""):
+        return [-5, 5]
+    parts = w if isinstance(w, list) else str(w).split(",")
+    try:
+        a, b = (int(str(x).strip()) for x in parts)
+    except ValueError:
+        raise _bad("WIN MUST BE TWO WHOLE NUMBERS LIKE -5,5") from None
+    if not -250 <= a <= b <= 250:
+        raise _bad("WIN MUST BE START,END WITH -250 <= START <= END <= 250")
+    return [a, b]
+
+
+async def build_ql(request: Request, body: dict) -> dict:
+    calc = str(body.get("calc") or "").strip().upper()
+    if calc not in QL_CALCS:
+        raise _bad(f"CALC MUST BE {', '.join(QL_CALCS)}")
+    raw = body.get("symbols", body.get("symbol"))
+    raw = [] if raw in (None, "") else [raw] if isinstance(raw, str) else raw
+    if not isinstance(raw, list) or len(raw) > 4 or not all(isinstance(x, str) and x.strip() for x in raw):
+        raise _bad("SYMBOLS MUST BE A LIST OF AT MOST 4 SYMBOLS")
+    symbols = [resolve(x.strip().upper()) for x in raw]
+    h = _num(body, "h", 1, 60, 5, integer=True)
+    conf = _num(body, "conf", 50, 99.9, 95.0)
+    hor = _num(body, "hor", 1, 60, 1, integer=True)
+    buckets = _num(body, "buckets", 2, 1000, 50, integer=True)
+    est = _num(body, "est", 30, 2000, 120, integer=True)
+    sr = _num(body, "sr", -10, 10, None)
+    n = _num(body, "n", 1, 1e9, None, integer=True)
+    t = _num(body, "t", 2, 1e9, None, integer=True)
+    skew = _num(body, "skew", -50, 50, 0.0)
+    kurt = _num(body, "kurt", 1, 1000, 3.0)
+    trial = _num(body, "trial_sr_std", 0, 10, None)
+    win = _ql_win(body)
+    when = body.get("date")
+    if when not in (None, ""):
+        try:
+            if not isinstance(when, str) or not DATE_RE.match(when):
+                raise ValueError
+            date.fromisoformat(when)
+        except ValueError:
+            raise _bad(f"BAD DATE: {str(when)[:24]} (USE YYYY-MM-DD)") from None
+    else:
+        when = None
+    bench = _symbol(body, "bench", "SPY")
+    need = 2 if calc in QL_PAIR else 1
+    if calc == "DSR":
+        missing = [k.upper() for k, v in (("sr", sr), ("n", n), ("t", t)) if v is None]
+    else:
+        missing = [f"SYMBOL{i + 1}" if need > 1 else "SYMBOL" for i in range(len(symbols), need)]
+        if calc == "EVENT" and when is None:
+            missing.append("DATE")
+    base = {"calc": calc, "symbols": symbols}
+    if missing:
+        return {**base, "not_runnable": f"NOT RUNNABLE: MISSING {', '.join(missing)}"}
+    if calc == "DSR":
+        return {**base, "sr": sr, "n": n, "t": t, "skew": skew, "kurt": kurt, **({"trial_sr_std": trial} if trial is not None else {})}
+    range_ = _ql_range(calc, body, when, est)
+    use = symbols[:need]
+    want = use + ([bench] if calc == "EVENT" and bench and bench not in use else [])
+    envs, _ = await _bars(request, want, range_)
+    keep = ("t", "c", "v") if calc in QL_VOLUME else ("t", "c")
+    sha, path = await _stored(request, {"bars": {s: {k: e["data"][k] for k in keep} for s, e in envs.items()}})
+    params = {**base, "symbols": use, "range": range_, "data_path": path, "data_sha": sha, "labels": _labels(request, envs)}
+    if calc == "GARCH":
+        params["h"] = h
+    elif calc == "HVAR":
+        params.update(conf=conf, hor=hor)
+    elif calc == "VPIN":
+        params["buckets"] = buckets
+    elif calc == "EVENT":
+        params.update(date=when, bench=bench or "SPY", win=win, est=est)
+    return params
+
+
+BUILD = {"risk": ("risk.run", build_risk), "opt": ("opt.run", build_opt), "attr": ("attr.run", build_attr), "fact": ("fact.run", build_fact),
+         "ql": ("ql.run", build_ql)}
 
 
 @router.post("/quant/{fn}")

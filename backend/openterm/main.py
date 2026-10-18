@@ -54,6 +54,8 @@ DEFAULT_ORDER |= {"curve_eur": ["ecb"], "curve_gbp": ["boe"], "curve_cad": ["boc
                   "credit_spreads": ["fred_oas"], "auctions": ["treasurydirect"]}
 # --- Phase 14 step 7: futures, COT, FOMC ---
 DEFAULT_ORDER |= {"futures_contract": ["yahoo_futures"], "cot_history": ["cftc"], "cot_markets": ["cftc"], "fomc_dates": ["fomc"]}
+# --- Phase 15: Fama-French factors (FACT) ---
+DEFAULT_ORDER["factors"] = ["kenfrench"]
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 

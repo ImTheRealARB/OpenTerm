@@ -2,6 +2,7 @@
 anything not recorded is a 404, so fixture mode can never invent data for an unknown symbol."""
 
 import asyncio
+import base64
 import json
 import os
 from pathlib import Path
@@ -39,6 +40,8 @@ LATENCY_S = float(os.environ.get("OPENTERM_FIXTURE_LATENCY_MS", "0")) / 1000
 
 def _load(name: str) -> httpx.Response:
     rec = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    if "b64" in rec:  # binary answers (the Ken French zips) are recorded as base64
+        return httpx.Response(rec["status"], content=base64.b64decode(rec["b64"]), headers={"content-type": rec["content_type"]})
     if "text" in rec:  # XML feeds and plain-text answers are recorded as text
         return httpx.Response(rec["status"], text=rec["text"], headers={"content-type": rec["content_type"]})
     return httpx.Response(rec["status"], json=rec["body"])
@@ -456,3 +459,15 @@ def _route(request: httpx.Request) -> httpx.Response:
         if sliced is not None:
             return sliced
     return _route_before_slice(request)
+
+
+# --- Phase 15 step 4: Ken French daily factor zips (FACT), recorded as base64 ---
+_KEN_FRENCH = {"F-F_Research_Data_5_Factors_2x3_daily_CSV.zip": "kenfrench_ff5_daily", "F-F_Momentum_Factor_daily_CSV.zip": "kenfrench_mom_daily"}
+_route_before_kenfrench = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    if request.url.host == "mba.tuck.dartmouth.edu":
+        name = _KEN_FRENCH.get(request.url.path.rsplit("/", 1)[-1])
+        return _load(name) if name else httpx.Response(404, text="not recorded")
+    return _route_before_kenfrench(request)

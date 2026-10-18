@@ -9,6 +9,7 @@ export type { Parsed };
 const NAME = /^[A-Za-z0-9_.-]{1,40}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const NUM = /^-?\d+(\.\d+)?$/;
+const SYMBOL = /^[A-Za-z0-9^._-]{1,20}$/;
 
 type Norm = (v: string) => string;
 const upper: Norm = (v) => v.toUpperCase();
@@ -77,17 +78,67 @@ export function attrArgs(args: string[]): AttrParsed {
   return { params, action: { kind, date, value: value ?? "", ...(flow !== undefined ? { flow } : {}) }, bad };
 }
 
+/** FACT: `<SYMBOL|PORTFOLIO> [RANGE=3y]`. One word only; anything else is reported. */
+export function factArgs(args: string[]): Parsed {
+  const params: Record<string, string> = {};
+  const bad: string[] = [];
+  for (const raw of args) {
+    const i = raw.indexOf("=");
+    if (i < 0) {
+      if (SYMBOL.test(raw) && !params.symbol) params.symbol = raw.toUpperCase();
+      else bad.push(raw);
+    } else if (raw.slice(0, i).toLowerCase() === "range" && raw.slice(i + 1)) params.range = raw.slice(i + 1).toLowerCase();
+    else bad.push(raw);
+  }
+  return { params, bad };
+}
+
+export const QL_CALCS = ["GARCH", "OU", "COINT", "HEDGE", "COPULA", "ROLL", "AMIHUD", "KYLE", "VPIN", "EVENT", "DSR", "ADF", "HVAR"];
+
+export interface QlParsed {
+  params: Record<string, string | string[]>;
+  bad: string[];
+}
+
+/** QL: `<CALCULATOR> [SYMBOL ...] [KEY=VALUE ...]`. Symbols (upper-cased) become a list; keys are lower-cased, values kept as typed. */
+export function qlArgs(args: string[]): QlParsed {
+  const params: Record<string, string | string[]> = {};
+  const bad: string[] = [];
+  if (!args.length) return { params, bad: ["CALCULATOR"] };
+  const calc = args[0].toUpperCase();
+  if (!QL_CALCS.includes(calc)) return { params, bad: [calc] };
+  params.calc = calc;
+  const symbols: string[] = [];
+  for (const raw of args.slice(1)) {
+    const i = raw.indexOf("=");
+    if (i < 0) {
+      if (SYMBOL.test(raw)) symbols.push(raw.toUpperCase());
+      else bad.push(raw);
+      continue;
+    }
+    const k = raw.slice(0, i).toLowerCase();
+    const v = raw.slice(i + 1);
+    if (!v || !/^[a-z_]{1,20}$/.test(k) || k === "calc" || k === "symbols") bad.push(raw);
+    else params[k] = v;
+  }
+  if (symbols.length) params.symbols = symbols;
+  return { params, bad };
+}
+
 /** Params that are numbers in the job body; `h` is a list of numbers. Other values (symbols, calc, universe) stay strings. */
-const NUMERIC = new Set(["conf", "hor", "cap", "lookback", "rf", "tc", "sr", "n", "t", "win", "edge"]);
+const NUMERIC = new Set(["conf", "hor", "cap", "lookback", "rf", "tc", "sr", "n", "t", "win", "edge", "skew", "kurt", "trial_sr_std", "est", "buckets"]);
+/** QL keeps `win` (EVENT: "-5,5") and `h` (one number) as the user typed them / plain numbers. */
+const QL_STRING = new Set(["win"]);
 const LISTS = new Set(["h"]);
 
 /** The JSON body of `POST /api/quant/{fn}`: numeric params as numbers, horizon lists as arrays, symbols as given. */
-export function quantBody(_fn: string, params: Record<string, string | string[]>): Record<string, unknown> {
+export function quantBody(fn: string, params: Record<string, string | string[]>): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(params)) {
     if (Array.isArray(v)) body[k] = v;
-    else if (LISTS.has(k)) body[k] = v.split(",").map((x) => (NUM.test(x.trim()) ? Number(x) : x.trim()));
-    else if (NUMERIC.has(k) && NUM.test(v)) body[k] = Number(v);
+    else if (fn === "ql" && QL_STRING.has(k)) body[k] = v;
+    else if (LISTS.has(k) && fn !== "ql") body[k] = v.split(",").map((x) => (NUM.test(x.trim()) ? Number(x) : x.trim()));
+    else if ((NUMERIC.has(k) || (fn === "ql" && k === "h")) && NUM.test(v)) body[k] = Number(v);
     else body[k] = v;
   }
   return body;

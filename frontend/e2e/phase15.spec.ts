@@ -142,7 +142,6 @@ test.describe("Phase 15", () => {
   });
 
   test("FACT: factor loadings, the data-end label and the symbol go to the job", async ({ page }) => {
-    test.fail();
     await setup(page);
     await mockQuant(page, "fact", () => job(env(payload("FACT AAPL", [
       { id: "loadings", title: "FACTOR LOADINGS", note: null, columns: [c("factor", "FACTOR"), c("beta", "BETA", "num4"), c("t", "T", "num")], rows: [{ factor: "MKT-RF", beta: 1.1234, t: 21.5 }, { factor: "MOM", beta: -0.0512, t: -1.2 }] }],
@@ -155,7 +154,6 @@ test.describe("Phase 15", () => {
   });
 
   test("QL: a calculator runs on bars, a missing input is NOT RUNNABLE", async ({ page }) => {
-    test.fail();
     await setup(page);
     await mockQuant(page, "ql", (b) =>
       (b as { calc: string }).calc === "DSR"

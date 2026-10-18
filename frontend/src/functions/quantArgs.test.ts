@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attrArgs, optArgs, quantBody, riskArgs } from "./quantArgs";
+import { attrArgs, factArgs, optArgs, qlArgs, quantBody, riskArgs } from "./quantArgs";
 
 /*
  * Phase 15 step 1 (spec docs/specs/PHASE_15.md): command-line parsers for RISK, PORT OPT, PORT ATTR, FACT, QL, ALPHA, CORR REGIME and KITE,
@@ -48,23 +48,20 @@ describe("attrArgs", () => {
 });
 
 describe("factArgs", () => {
-  it.fails("one symbol (or portfolio) and a range", async () => {
-    const { factArgs } = await load();
+  it("one symbol (or portfolio) and a range", () => {
     expect(factArgs(["aapl", "range=3y"])).toEqual({ params: { symbol: "AAPL", range: "3y" }, bad: [] });
     expect(factArgs(["AAPL", "MSFT"]).bad).toEqual(["MSFT"]);
   });
 });
 
 describe("qlArgs", () => {
-  it.fails("the calculator word, its symbols and its KEY=VALUE inputs", async () => {
-    const { qlArgs } = await load();
+  it("the calculator word, its symbols and its KEY=VALUE inputs", () => {
     expect(qlArgs(["garch", "aapl", "h=5"])).toEqual({ params: { calc: "GARCH", symbols: ["AAPL"], h: "5" }, bad: [] });
     expect(qlArgs(["coint", "ko", "pep"]).params).toEqual({ calc: "COINT", symbols: ["KO", "PEP"] });
     expect(qlArgs(["dsr", "sr=1.5", "n=100", "t=1000"]).params).toEqual({ calc: "DSR", sr: "1.5", n: "100", t: "1000" });
     expect(qlArgs(["event", "aapl", "date=2026-01-15", "win=-5,5"]).params).toEqual({ calc: "EVENT", symbols: ["AAPL"], date: "2026-01-15", win: "-5,5" });
   });
-  it.fails("an unknown calculator is reported, a missing one too", async () => {
-    const { qlArgs } = await load();
+  it("an unknown calculator is reported, a missing one too", () => {
     expect(qlArgs(["nope", "aapl"]).bad).toEqual(["NOPE"]);
     expect(qlArgs([]).bad).toEqual(["CALCULATOR"]);
   });

@@ -32,8 +32,8 @@ def xf(group: str, step: int):
 RISK = lambda f: f  # step 3 landed
 OPT = lambda f: f  # step 3 landed
 ATTR = lambda f: f  # step 3 landed
-FACT = xf("FACT", 4)
-QL = xf("QL", 4)
+FACT = lambda f: f  # step 4 landed
+QL = lambda f: f  # step 4 landed
 ALPHA = xf("ALPHA", 5)
 REGIME = xf("CORR REGIME", 5)
 PLUMB = lambda f: f  # step 3 landed
