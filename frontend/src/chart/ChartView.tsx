@@ -35,6 +35,8 @@ export interface ChartHandle {
   crosshair(on: boolean): void;
   crosshairStep(delta: number): void;
   live(price: number, timeMs: number, dayVolume: number | null): void;
+  /** PNG data URL of the chart as drawn (for AI CHART), or null. */
+  screenshot(): string | null;
 }
 
 interface Props {
@@ -277,6 +279,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   }, [data, compare, type, log, indicators, lowerPane, ver]);
 
   useImperativeHandle(ref, () => ({
+    screenshot() {
+      try {
+        return chartRef.current?.takeScreenshot().toDataURL("image/png") ?? null;
+      } catch {
+        return null;
+      }
+    },
     pan(bars) {
       const ts = chartRef.current?.timeScale();
       if (ts) ts.scrollToPosition(ts.scrollPosition() + bars, false);

@@ -9,8 +9,21 @@ export type AiEvent =
   | { type: "tool_result"; id: string; name: string; ok: boolean; empty: boolean; source: string | null; age_s: number | null; stale: boolean; bytes: number; summary: string }
   | { type: "usage"; prompt_tokens: number; completion_tokens: number; cost: number | null }
   | { type: "notice"; text: string }
+  | { type: "draft"; draft: BtDraft }
+  | { type: "draft_error"; text: string }
   | { type: "error"; kind: string; text: string }
   | { type: "done"; answer: string; grounded: boolean; label: string | null; unsourced: string[]; tool_calls: number; cost: number; stopped: string | null };
+
+/** A backtest drafted by `AI BT`: validated by the BT parser, never run by the AI. */
+export interface BtDraft {
+  symbols: string[];
+  rule: string;
+  range: string;
+  interval: string;
+  rationale: string;
+  command: string;
+  note: string;
+}
 
 export interface ToolRow {
   id: string;
@@ -37,6 +50,8 @@ export interface Turn {
   label: string | null;
   unsourced: string[];
   error?: { kind: string; text: string };
+  draft?: BtDraft;
+  draftError?: string;
 }
 
 export function newTurn(question: string): Turn {
@@ -80,6 +95,10 @@ export function reduceTurn(t: Turn, e: AiEvent): Turn {
       return { ...t, cost: t.cost + (e.cost ?? 0) };
     case "notice":
       return { ...t, notices: [...t.notices, e.text] };
+    case "draft":
+      return { ...t, draft: e.draft };
+    case "draft_error":
+      return { ...t, draftError: e.text };
     case "error":
       return { ...t, status: "error", error: { kind: e.kind, text: e.text } };
     case "done":

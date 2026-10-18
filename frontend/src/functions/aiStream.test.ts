@@ -75,6 +75,17 @@ describe("reduceTurn", () => {
   });
 });
 
+describe("draft events", () => {
+  it("keeps a validated BT draft and a draft error on the turn", () => {
+    const d = { symbols: ["AAPL"], rule: "SMA20 CROSS> SMA50", range: "5Y", interval: "1D", rationale: "r", command: "BT AAPL SMA20 CROSS> SMA50 1D 5Y", note: "n" };
+    let t = reduceTurn(newTurn("idea"), { type: "draft", draft: d });
+    expect(t.draft).toEqual(d);
+    t = reduceTurn(newTurn("idea"), { type: "draft_error", text: "NOT VALID" });
+    expect(t.draftError).toBe("NOT VALID");
+    expect(t.draft).toBeUndefined();
+  });
+});
+
 describe("citeSegments", () => {
   it("splits text around [T1] markers", () => {
     expect(citeSegments("a 1 [T1] b [T12].")).toEqual([{ text: "a 1 " }, { cite: "T1" }, { text: " b " }, { cite: "T12" }, { text: "." }]);

@@ -6,6 +6,8 @@ Format: newest first, one section per phase. Details for each release are in `do
 - Added `AI`: a chat panel over an agent that calls 14 read-only tools in-process (quotes, history, profile, financials, filings, news, screener, research tables, options chain, rates, macro, portfolio, backtest, quant jobs).
   Every answer lists its tool calls (source, age, STALE / FAILED / EMPTY), cites them as [T1], and carries `AI · model · time · MODEL OUTPUT, NOT DATA`; no tool data = `UNGROUNDED`, figures no tool returned = `UNSOURCED NUMBERS`.
   Loop guard (3 failed or empty calls in a row, or the same call twice), context budget, daily spend cap. No order tools exist. No key = `KEY REQUIRED`. `SETTINGS AI` picks the model.
+- Added `AI BT <idea>` (drafts a BT rule, validated by the engine parser, shown with its command, never run by the AI), `AI CHART` (the newest GP chart to a vision model), five finance playbooks the agent loads on demand
+  (valuation, earnings, options, risk, macro) and a `strategy_check` tool. AI BT drafts rule strings only; `SignalEngine` code drafts are not built.
 - Recorded with the real OpenRouter key: one plain stream and a tool-call round (the pending Phase 11 recording is done).
 
 ## Phase 15: risk, quant library, alphas, Kite

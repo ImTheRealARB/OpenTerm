@@ -160,6 +160,7 @@ class Tool:
     build: Callable[[dict], dict] = field(default=lambda a: {"params": a})
     shape: Callable[[dict, dict], Any] = shape_slim
     job: bool = False  # POST returns a job: wait for it and shape its result
+    local: Callable[[dict], dict] | None = None  # answered in this process, no route (skill, strategy_check)
 
 
 def _bt_body(a: dict) -> dict:
@@ -177,7 +178,34 @@ def _portfolio(a: dict) -> dict:
     return {"path": f"/api/portfolios/{a['name']}"} if a.get("name") else {"path": "/api/portfolios"}
 
 
+def _skill(a: dict) -> dict:
+    from . import skills
+
+    return {"name": a["name"], "playbook": skills.get(a["name"])}
+
+
+def _strategy_check(a: dict) -> dict:
+    """Parse a BT rule with the engine's own parser. A rejected rule is information for the model, not a failed call."""
+    from ..bt import rules
+
+    try:
+        node = rules.parse(a["rule"])
+    except rules.RuleError as e:
+        return {"valid": False, "error": str(e), "col": e.col, "grammar": "CLOSE|OPEN|HIGH|LOW|VOLUME|SMA<n>|EMA<n>|RSI<n>|HIGH<n>|LOW<n>|RET<n> or a number; > < >= <= CROSS> CROSS<; AND OR"}
+    return {"valid": True, "rule": a["rule"], "warmup_bars": rules.max_period(node)}
+
+
+def _skill_names() -> list[str]:
+    from . import skills
+
+    return skills.names()
+
+
 REGISTRY: dict[str, Tool] = {t.name: t for t in [
+    Tool("skill", "Load a finance playbook (steps and limits) before answering a valuation, earnings, options, risk or macro question.",
+         obj({"name": {"type": "string", "enum": ["valuation", "earnings", "options", "risk", "macro"]}}, ["name"]), "local:skill", local=_skill),
+    Tool("strategy_check", "Check a backtest rule with the engine's own parser, for example 'SMA20 CROSS> SMA50' or 'RSI14 < 30'. Returns valid or the error and its column.",
+         obj({"rule": S}, ["rule"]), "local:strategy_check", local=_strategy_check),
     Tool("quote", "Latest quote for one or more tickers (comma separated, up to 10): price, change, volume, market cap.",
          obj({"symbols": S}, ["symbols"]), "/api/quote", shape=shape_quote),
     Tool("history", "Daily price history summary for one ticker: first and last close, period return, high, low, average volume, last 10 closes.",
@@ -278,6 +306,13 @@ class ToolRunner:
         if (err := validate(name, args)) or (self.allowed is not None and name not in self.allowed):
             return ToolResult(ok=False, text=err or f"TOOL {name} IS NOT AVAILABLE HERE", error=err or "NOT AVAILABLE")
         t = REGISTRY[name]
+        if t.local is not None:
+            try:
+                data = t.local(args)
+            except (OSError, ValueError, KeyError) as e:
+                msg = f"TOOL ERROR {type(e).__name__}: {str(e)[:120]}"
+                return ToolResult(ok=False, text=msg, error=msg)
+            return ToolResult(ok=True, text=truncate_text(json.dumps(data, separators=(",", ":")), RESULT_LIMIT), source="openterm", age_s=0.0)
         spec = {"path": t.path, **t.build(args)}
         try:
             r = await self.http.request(t.method, spec["path"], params=spec.get("params"), json=spec.get("json"))

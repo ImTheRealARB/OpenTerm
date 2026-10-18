@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { registerChartShot } from "../chart/shot";
 import { CHART_TYPES, ChartView, toBarData, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
 import { INDICATORS, type IndicatorName } from "../chart/indicators";
 import { fmtAge } from "../format";
@@ -75,6 +76,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const chart = useRef<ChartHandle>(null);
   const pRef = useRef(p);
   pRef.current = p;
+  useEffect(() => registerChartShot(panelId, { symbol, range: p.range, shot: () => chart.current?.screenshot() ?? null }), [panelId, symbol, p.range]);
 
   const update = (fn: (q: Parsed) => Parsed) => replaceView(panelId, (v) => ({ ...v, args: serialize(fn(pRef.current), chartDefaults.type) }));
 

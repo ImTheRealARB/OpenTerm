@@ -51,6 +51,8 @@ Scope control: if a step runs out of budget, steps are cut from the END (7 stays
 Recorded-response tests for the loop guard and grounding, an e2e with a recorded model, first-token budget recorded, no key = `KEY REQUIRED`, keys never reach the frontend.
 
 ## Progress log
+- **Step 3 done (2026-10-18):** `ai/skills/*.md` + `skill` and `strategy_check` tools, `POST /api/ai/bt` (BT_DRAFT line parsed, validated with `bt.rules`, `draft` / `draft_error` events, nothing run) and `POST /api/ai/chart` (image data URL to the vision model, no tools), panel modes `AI BT` and `AI CHART`,
+  `chart/shot.ts` + `ChartHandle.screenshot()`. AI BT drafts rule strings only (no `SignalEngine` code): a code draft needs the sandbox review flow, left out.
 - **Step 1 done (2026-10-18):** `openterm/ai/` (`tools.py` 14 tools via in-process ASGI, `agent.py`, `guard.py`, `context.py`, `ground.py`, `routes.py`), `POST /api/ai/chat` (SSE) and `GET /api/ai/tools`,
   27 tests in `test_phase16_agent.py`. Recorded with the real key: `llm_openrouter_stream.txt` (the pending Phase 11 recording; `deepseek/deepseek-v4-pro` is a reasoning model, so give it >= 400 output tokens),
   `llm_tool_turn1.txt` / `llm_tool_turn2.txt` (tool call, then answer; test tool whose argument is `symbol`). Full gate green: 1233 passed, 0 xfail.

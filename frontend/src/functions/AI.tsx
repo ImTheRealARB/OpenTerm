@@ -2,14 +2,19 @@
  * AI (Phase 16): research chat over OpenTerm's own data. The backend agent answers from tools (quotes, history, filings, quant jobs...) and this
  * panel shows every tool call with its source and age, the answer with its [T1] citations, and the verdict: UNGROUNDED when no tool returned
  * data, UNSOURCED NUMBERS for figures no tool returned. AI output is model output, not data. Keys never reach this code: the backend holds them.
+ * `AI BT <idea>` drafts a backtest rule (validated by the BT parser, shown, never run by the AI: B puts the BT command on the command line).
+ * `AI CHART` sends the chart of the newest GP panel to a vision model. Both answers are labelled model output.
  * Keys: I / Enter type a question, Enter sends, Esc cancels a running answer (or leaves the input), X clears the chat.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { latestChartShot } from "../chart/shot";
+import { prefillCommand } from "../components/CommandLine";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { gauges } from "../perf/metrics";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { replaceView } from "../state/workspace";
+import { aiArgs } from "./aiArgs";
 import { citeSegments, newTurn, parseSse, reduceTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
 import type { FunctionProps } from "./registry";
 
@@ -53,6 +58,27 @@ function TurnView({ t }: { t: Turn }) {
           {t.label}: NO TOOL RETURNED DATA FOR THIS ANSWER, IT COMES FROM THE MODEL
         </div>
       )}
+      {t.draft && (
+        <div data-testid="ai-draft">
+          <div className="dim">{t.draft.rationale}</div>
+          <div>
+            <span className="dim">RULE </span>
+            <span className="acc">{t.draft.rule}</span>
+            <span className="dim"> · {t.draft.symbols.join(",")} · {t.draft.interval} · {t.draft.range}</span>
+          </div>
+          <div>
+            <span className="dim">COMMAND </span>
+            {t.draft.command}
+          </div>
+          <div className="warn">{t.draft.note}</div>
+          <div className="dim">B PUTS THE COMMAND ON THE COMMAND LINE, THEN ENTER RUNS IT IN BT</div>
+        </div>
+      )}
+      {t.draftError && (
+        <div className="warn" data-testid="ai-draft-error">
+          {t.draftError}
+        </div>
+      )}
       {t.unsourced.length > 0 && (
         <div className="warn" data-testid="ai-unsourced">
           UNSOURCED NUMBERS (NO TOOL RETURNED THEM): {t.unsourced.join(" ")}
@@ -90,12 +116,21 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, []);
 
   const send = useCallback(
-    async (question: string) => {
+    async (question: string, mode: "ask" | "bt" | "chart" = "ask") => {
       const { turns: cur, ai: cfg } = state.current;
-      if (!question.trim() || cur.some((t) => t.status === "running")) return;
-      const history = cur.filter((t) => t.status === "done" && t.answer).flatMap((t) => [{ role: "user", content: t.question }, { role: "assistant", content: t.answer }]);
+      if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
+      const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : "";
+      const shown = label ? `${label} ${question}`.trim() : question;
+      const shot = mode === "chart" ? latestChartShot() : null;
+      const image = shot?.shot() ?? null;
+      if (mode === "chart" && !image) {
+        const t = reduceTurn(newTurn(shown), { type: "error", kind: "no_chart", text: "OPEN A CHART FIRST (GP <SYMBOL>), THEN AI CHART" });
+        setTurns((ts) => [...ts, t].slice(-MAX_TURNS));
+        return;
+      }
+      const history = mode !== "ask" ? [] : cur.filter((t) => t.status === "done" && t.answer).flatMap((t) => [{ role: "user", content: t.question }, { role: "assistant", content: t.answer }]);
       const idx = cur.length;
-      setTurns((ts) => [...ts, newTurn(question)].slice(-MAX_TURNS));
+      setTurns((ts) => [...ts, newTurn(shown)].slice(-MAX_TURNS));
       const apply = (e: AiEvent) => setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? reduceTurn(t, e) : t)));
       const ac = new AbortController();
       abort.current = ac;
@@ -103,10 +138,17 @@ export default function AI({ panelId, args }: FunctionProps) {
       let sawEvent = false;
       let sawToken = false;
       try {
-        const res = await fetch("/api/ai/chat", {
+        const url = mode === "bt" ? "/api/ai/bt" : mode === "chart" ? "/api/ai/chart" : "/api/ai/chat";
+        const payload =
+          mode === "bt"
+            ? { idea: question, model: cfg.model, provider: cfg.provider }
+            : mode === "chart"
+              ? { image, symbol: shot!.symbol, range: shot!.range, model: cfg.visionModel, provider: cfg.provider }
+              : { question, history, model: cfg.model, provider: cfg.provider };
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, history, model: cfg.model, provider: cfg.provider }),
+          body: JSON.stringify(payload),
           signal: ac.signal,
         });
         if (!res.ok || !res.body) {
@@ -161,8 +203,13 @@ export default function AI({ panelId, args }: FunctionProps) {
   useEffect(() => {
     void refreshSpend();
     if (asked.current || !args.length) return;
-    asked.current = true;
-    void send(args.join(" "));
+    const a = aiArgs(args);
+    if (a.mode === "bad") {
+      setTurns([reduceTurn(newTurn("AI " + args.join(" ")), { type: "error", kind: "usage", text: a.error })]);
+    } else if (a.mode !== "ask" || a.text) {
+      asked.current = true;
+      void send(a.text, a.mode);
+    } else return;
     replaceView(panelId, (v) => ({ ...v, args: [] }));
   }, [args, panelId, send, refreshSpend]);
 
@@ -177,6 +224,12 @@ export default function AI({ panelId, args }: FunctionProps) {
         if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         if (e.key === "Escape" && abort.current) {
           abort.current.abort();
+          return true;
+        }
+        if (e.key === "b" || e.key === "B") {
+          const d = [...state.current.turns].reverse().find((t) => t.draft)?.draft;
+          if (!d) return false;
+          prefillCommand(d.command);
           return true;
         }
         if (e.key === "i" || e.key === "I" || e.key === "Enter") {
@@ -200,7 +253,7 @@ export default function AI({ panelId, args }: FunctionProps) {
         <span className="dim">
           {" "}
           · {ai.provider.toUpperCase()}
-          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR
+          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · AI BT IDEA · AI CHART
         </span>
       </div>
       {lite && <div className="warn">LITE MODELS CALL TOOLS BADLY AND ANSWER FROM MEMORY: SETTINGS AI MODEL</div>}
