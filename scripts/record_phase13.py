@@ -37,7 +37,79 @@ def save_text(name: str, text: str, content_type: str) -> None:
     print(f"{name}: {len(text)} chars")
 
 
+PEERS = {"aapl": 320193, "msft": 789019, "meta": 1326801}
+
+
+def record_peer(symbol: str, cik: int) -> int:
+    """A relative-valuation peer: SEC facts, Yahoo profile summary, the spark quote (merged into yahoo_spark.json) and its
+    row in sec_company_tickers.json. All real answers recorded now; nothing is edited."""
+    PEERS[symbol.lower()] = cik
+    record_facts([symbol.lower()])
+    record_profile(symbol)
+    with httpx.Client(headers={"User-Agent": UA}, timeout=30.0, follow_redirects=True) as h:
+        spark = h.get(f"{YQ}/v7/finance/spark", params={"symbols": symbol, "range": "1d", "interval": "1d"},
+                      headers={"Accept": "application/json"}).json()
+        path = OUT / "yahoo_spark.json"
+        rec = json.loads(path.read_bytes().decode("utf-8"))
+        rows = rec["body"]["spark"]["result"]
+        if not any(r["symbol"] == symbol for r in rows):
+            rows.extend(spark["spark"]["result"])
+            path.write_bytes(json.dumps(rec, indent=1).encode("utf-8"))
+        tickers = h.get("https://www.sec.gov/files/company_tickers.json", headers={"User-Agent": SEC_UA}).json()
+        row = next(v for v in tickers.values() if v["ticker"] == symbol)
+        path = OUT / "sec_company_tickers.json"
+        rec = json.loads(path.read_bytes().decode("utf-8"))
+        if not any(v["ticker"] == symbol for v in rec["body"].values()):
+            rec["body"][str(len(rec["body"]) + 1)] = row
+            path.write_bytes(json.dumps(rec, separators=(",", ":")).encode("utf-8"))
+    return 0
+
+
+def record_facts(only: list[str] | None = None) -> int:
+    """Re-records sec_facts_<name> with every tag in sec_parse.TAGS (run after adding FA rows)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+    from openterm.providers.sec_parse import FORMS, TAGS
+
+    with httpx.Client(headers={"User-Agent": SEC_UA, "Accept-Encoding": "gzip, deflate"}, timeout=60.0) as h:
+        for name, cik in ((n, c) for n, c in PEERS.items() if only is None or n in only):
+            body = h.get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json").json()
+            gaap = body["facts"]["us-gaap"]
+            kept = {}
+            for tag in TAGS:
+                if tag not in gaap:
+                    continue
+                units = {}
+                for unit, facts in gaap[tag]["units"].items():
+                    rows = [f for f in facts if f.get("form") in FORMS and f.get("end", "") >= "2014-01-01"]
+                    if rows:
+                        units[unit] = rows
+                if units:
+                    kept[tag] = {"label": gaap[tag].get("label"), "units": units}
+            save_json(f"sec_facts_{name}", {"cik": body["cik"], "entityName": body["entityName"], "facts": {"us-gaap": kept}})
+            print(name, "tags:", sorted(kept))
+    return 0
+
+
+def record_profile(symbol: str) -> int:
+    """The profile module set DES/RV use, for a peer (yahoo_summary_<symbol>.json)."""
+    with httpx.Client(headers={"User-Agent": UA}, timeout=30.0, follow_redirects=True) as h:
+        h.get("https://fc.yahoo.com", headers={"Accept": "*/*"})
+        crumb = h.get(f"{YQ}/v1/test/getcrumb", headers={"Accept": "*/*"}).text
+        r = h.get(f"{YQ}/v10/finance/quoteSummary/{symbol}", headers={"Accept": "application/json"},
+                  params={"modules": "assetProfile,summaryDetail,defaultKeyStatistics,price", "crumb": crumb})
+        r.raise_for_status()
+        save_json(f"yahoo_summary_{symbol.lower()}", r.json())
+    return 0
+
+
 def main() -> int:
+    if "--facts" in sys.argv:
+        return record_facts()
+    if "--peer" in sys.argv:
+        i = sys.argv.index("--peer")
+        return record_peer(sys.argv[i + 1], int(sys.argv[i + 2]))
+    if "--profile" in sys.argv:
+        return record_profile(sys.argv[sys.argv.index("--profile") + 1])
     with httpx.Client(headers={"User-Agent": UA}, timeout=30.0, follow_redirects=True) as h:
         h.get("https://fc.yahoo.com", headers={"Accept": "*/*"})
         crumb = h.get(f"{YQ}/v1/test/getcrumb", headers={"Accept": "*/*"}).text

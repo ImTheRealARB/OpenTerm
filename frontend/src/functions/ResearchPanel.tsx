@@ -109,6 +109,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
           </div>
         )}
         <ErrorLine error={error} hasData={!!env} />
+        {d?.status?.startsWith("NOT RUNNABLE") && <div className="warn">{d.status}</div>}
         {d?.key_required.map((k) => (
           <div key={k.key} className="warn">
             KEY REQUIRED: set {k.key} in APIKEYS <span className="dim">· {k.what}</span>

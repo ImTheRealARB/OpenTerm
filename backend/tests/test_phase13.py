@@ -22,7 +22,7 @@ def xf(group: str, step: int):
 
 EST = lambda f: f  # step 2 landed
 CORP = lambda f: f  # step 3 landed
-VAL = xf("VAL", 4)
+VAL = lambda f: f  # step 4 landed
 FUND = xf("FUND", 5)
 KEYED = xf("KEYED", 6)
 
@@ -225,7 +225,7 @@ def test_dcf_not_runnable_lists_every_missing_input(client):
     d = data(client, "valuation/dcf", symbol="AAPL")
     p = d["data"]
     assert p["runnable"] is False and p["result"] is None
-    for name in ("equity_risk_premium", "terminal_growth", "exit_multiple", "growth",
+    for name in ("equity_risk_premium", "terminal_growth", "exit_multiple", "growth", "minority_interest",
                  "capital_structure_basis", "discounting_convention", "terminal_value_method"):
         assert name in p["missing"], name
     found = {f["input"]: f for f in p["found"]}
@@ -237,7 +237,7 @@ def test_dcf_not_runnable_lists_every_missing_input(client):
 @VAL
 def test_dcf_runs_and_reconciles(client):
     q = {"symbol": "AAPL", "erp": 5.5, "g": 2.5, "exitx": 14, "growth": 5, "basis": "current", "conv": "mid",
-         "tv": "perp", "kd": 3.5}
+         "tv": "perp", "kd": 3.5, "other": 0}
     d = data(client, "valuation/dcf", **q)
     p = d["data"]
     assert p["runnable"] is True, p["missing"]

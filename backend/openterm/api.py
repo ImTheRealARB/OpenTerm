@@ -242,6 +242,15 @@ async def research(
         return error(e)
 
 
+@router.get("/valuation/{fn}")
+async def valuation(request: Request, fn: str, symbol: str | None = Query(None, max_length=24)):
+    try:
+        query = {k: v for k, v in request.query_params.items() if k != "symbol"}
+        return await svc(request).research.run_valuation(fn, symbol, query)
+    except DataError as e:
+        return error(e)
+
+
 # --- Phase 9: screener (EQS) and peers (COMP) ---
 @router.get("/screener")
 async def screener(request: Request):

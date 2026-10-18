@@ -38,6 +38,8 @@ export interface TablePayload {
   notes: string[];
   key_required: { key: string; what: string }[];
   source: string | null;
+  /** Valuation functions: `RUNNABLE` or `NOT RUNNABLE: ...` (a missing input stops the model). */
+  status?: string;
 }
 
 const DASH = "—";

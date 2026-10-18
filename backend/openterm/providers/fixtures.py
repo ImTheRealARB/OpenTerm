@@ -16,7 +16,7 @@ ROUTES = {
     ("/v1/finance/search", "relian"): "yahoo_search_relian",
     ("/api/quote/AAPL/info", "stocks"): "nasdaq_info_aapl",
 }
-SUMMARIES = {"AAPL": "yahoo_summary_aapl", "RELIANCE.NS": "yahoo_summary_reliance_ns"}
+SUMMARIES = {"AAPL": "yahoo_summary_aapl", "RELIANCE.NS": "yahoo_summary_reliance_ns", "MSFT": "yahoo_summary_msft", "META": "yahoo_summary_meta"}
 # Path-only routes (one recording each). Unrecorded queries on these hosts are 404s.
 PATHS = {
     "/rs/search/combinedcms/view.xml": "rss_cnbc",
@@ -102,7 +102,7 @@ def fixture_transport() -> httpx.MockTransport:
 # sec_facts_*: us-gaap tags in sec_parse.TAGS only, 10-K/10-Q facts ending 2014 or later.
 # sec_subs_*: filings.recent cut to the first 60 entries. sec_company_tickers: AAPL, MSFT, BRK-B only.
 # sec_form4/<accession>: raw Form 4 XML of the 20 latest AAPL Form 4s in sec_subs_aapl.
-SEC_FACTS = {320193: "sec_facts_aapl", 789019: "sec_facts_msft"}
+SEC_FACTS = {320193: "sec_facts_aapl", 789019: "sec_facts_msft", 1326801: "sec_facts_meta"}
 SEC_SUBS = {320193: "sec_subs_aapl", 789019: "sec_subs_msft"}
 YAHOO_OWN = {("AAPL", "holders"): "yahoo_holders_aapl", ("AAPL", "insiders"): "yahoo_insiders_aapl"}
 

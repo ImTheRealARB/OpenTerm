@@ -8,12 +8,14 @@ the TTL. Router capability names live next to the adapters (providers/research_y
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..router import AllFailed
-from ..service import DataError
+from ..service import DataError, envelope
 from ..symbols import resolve
 from . import corp_parse as cp
+from . import valuation as vp
 
 if TYPE_CHECKING:
     from ..service import DataService
@@ -166,3 +168,101 @@ class Research:
         d = env["data"]
         data = cp.evts_payload(symbol, d["filings"], d["total"], env.get("source") or "sec")
         return {**env, "data": data}
+
+
+    # --- VAL: DCF, WACC, RV ---------------------------------------------------------------------
+    VALUATION: ClassVar[set[str]] = {"dcf", "wacc", "rv"}
+
+    async def run_valuation(self, fn: str, symbol: str | None, query: dict[str, str]) -> dict:
+        fn = fn.lower()
+        if fn not in self.VALUATION:
+            raise DataError("not_found", f"NO VALUATION FUNCTION {fn.upper()}")
+        if not symbol:
+            raise DataError("bad_request", "SYMBOL REQUIRED")
+        try:
+            params = vp.parse_params(query)
+        except vp.ParamError as e:
+            raise DataError("bad_request", str(e)) from e
+        sym = resolve(symbol)
+        data = await getattr(self, f"val_{fn}")(sym, params)
+        return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
+
+    async def _safe(self, awaitable):
+        try:
+            return await awaitable
+        except (DataError, AllFailed) as e:
+            return e
+
+    async def _fin(self, symbol: str, period: str = "A"):
+        r = await self._safe(self.svc.fundamentals(symbol, period))
+        if isinstance(r, Exception):
+            return None, str(getattr(r, "detail", None) or r)
+        return vp.Fin(r["data"]), None
+
+    async def _prices(self, symbols: list[str]) -> dict[str, float | None]:
+        """One batched quote call for several symbols (separate concurrent calls raced on the quote cache)."""
+        r = await self._safe(self.svc.quotes(symbols))
+        if isinstance(r, Exception):
+            return dict.fromkeys(symbols)
+        return {s: (((r.get(s) or {}).get("data") or {}).get("price")) for s in symbols}
+
+    async def _price(self, symbol: str) -> float | None:
+        return (await self._prices([symbol]))[symbol]
+
+    async def _market(self, symbol: str):
+        """beta, risk-free rate, market cap, each as (value, source text)."""
+        async def beta():
+            out, _ = await self._raw_call(symbol, "keystats", lambda p: p.keystats(symbol))
+            return cp.keystats_values(out)["beta"]
+
+        async def rate():
+            env = await self.svc.rates()
+            d = env["data"]
+            y = d["yields"][d["tenors"].index("10Y")]
+            return (y / 100.0 if y is not None else None), d["date"]
+
+        async def profile():
+            return (await self.svc.profile(symbol))["data"].get("market_cap")
+
+        b, r, m = await asyncio.gather(beta(), rate(), profile(), return_exceptions=True)
+        b_out = (None, "Yahoo key statistics unavailable") if isinstance(b, BaseException) else (b, "Yahoo key statistics (beta)")
+        r_out = (None, "US Treasury curve unavailable") if isinstance(r, BaseException) else (r[0], f"US Treasury 10Y par yield, {r[1]}")
+        m_out = (None, "profile unavailable") if isinstance(m, BaseException) else (m, "profile market cap (Yahoo/Nasdaq)")
+        return b_out, r_out, m_out
+
+    async def val_wacc(self, symbol: str, p: dict) -> dict:
+        (fin, err), (beta, rf, cap) = await asyncio.gather(self._fin(symbol), self._market(symbol))
+        g = vp.gather(fin, err, beta, rf, cap, p)
+        return vp.build_wacc(symbol, g, p, "sec + yahoo_research + treasury")
+
+    async def val_dcf(self, symbol: str, p: dict) -> dict:
+        (fin, err), (beta, rf, cap), price = await asyncio.gather(self._fin(symbol), self._market(symbol), self._price(symbol))
+        g = vp.gather(fin, err, beta, rf, cap, p)
+        return vp.build_dcf(symbol, g, p, price, "sec + yahoo_research + treasury")
+
+    async def val_rv(self, symbol: str, p: dict) -> dict:
+        peer_basis = "typed on the command line (PEERS=)"
+        names = p.get("peers")
+        if not names:
+            env = await self._safe(self.svc.peers(symbol))
+            names = [] if isinstance(env, Exception) else [x["symbol"] for x in env["data"]["peers"]][:6]
+            peer_basis = "Yahoo recommended symbols, first six (PEERS= overrides)" if names else "none found"
+
+        others = [n for n in names if n != symbol]
+        prices = await self._prices([symbol, *others])
+
+        async def one(sym: str, target: bool):
+            price = prices.get(sym)
+            (fa, err), (fq, _), cap_env = await asyncio.gather(
+                self._fin(sym, "A"), self._fin(sym, "Q"), self._safe(self.svc.profile(sym)))
+            if fa is None or fq is None:
+                return sym, None, err or "no SEC quarterly data"
+            cap = None if isinstance(cap_env, Exception) else cap_env["data"].get("market_cap")
+            c, why = vp.company_inputs(sym, fa, fq, cap, price, target)
+            return sym, c, why
+
+        results = await asyncio.gather(one(symbol, True), *(one(n, False) for n in others))
+        _, target, target_why = results[0]
+        peers = [c for _, c, _ in results[1:] if c]
+        skipped = {s: why for s, c, why in results[1:] if not c}
+        return vp.build_rv(symbol, target, target_why, peers, skipped, prices.get(symbol), "sec + yahoo", peer_basis)

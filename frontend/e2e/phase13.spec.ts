@@ -205,6 +205,30 @@ test("SI: interest change is coloured, the volume section lists FINRA days, an u
   await expect(panel(page)).toContainText("NO FINRA DAILY FILE FOUND IN THE LOOK-BACK WINDOW");
 });
 
+test("DCF: NOT RUNNABLE lists what is missing and sends the typed arguments; a runnable answer shows the value", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/valuation/dcf?**", (r) => {
+    const u = new URL(r.request().url());
+    asked.push(u.search);
+    const inputs = { id: "inputs", title: "INPUTS", note: null, columns: [c("input", "INPUT"), c("value", "VALUE"), c("source", "WHERE IT COMES FROM")], rows: [{ input: "BETA", value: "1.07", source: "Yahoo key statistics (beta)" }, { input: "EQUITY RISK PREMIUM", value: "MISSING", source: "YOUR CALL: type ERP=5.5" }] };
+    if (!u.searchParams.get("erp"))
+      return r.fulfill({ json: env({ ...payload("DCF AAPL · DISCOUNTED CASH FLOW", [inputs], [{ label: "STATUS", value: "NOT RUNNABLE: 1 INPUT(S) MISSING" }], { notes: ["TO RUN: DCF AAPL ERP=5.5 G=2.5"] }), status: "NOT RUNNABLE: 1 INPUT(S) MISSING", runnable: false, missing: ["equity_risk_premium"] }) });
+    return r.fulfill({ json: env({ ...payload("DCF AAPL · DISCOUNTED CASH FLOW", [{ id: "value", title: "VALUE BRIDGE", note: null, columns: [c("item", "ITEM"), c("value", "VALUE")], rows: [{ item: "VALUE PER SHARE", value: "101.86" }] }], [{ label: "VALUE PER SHARE", value: "101.86" }]), status: "RUNNABLE", runnable: true }) });
+  });
+  await run(page, "AAPL DCF");
+  await expect(panel(page)).toContainText("NOT RUNNABLE: 1 INPUT(S) MISSING");
+  await expect(selected(page)).toContainText("BETA");
+  await page.keyboard.press("j");
+  await expect(selected(page)).toContainText("YOUR CALL: type ERP=5.5");
+  await expect(panel(page)).toContainText("TO RUN: DCF AAPL ERP=5.5 G=2.5");
+  await run(page, "AAPL DCF ERP=5.5 G=2.5");
+  await expect(panel(page)).toContainText("VALUE PER SHARE 101.86");
+  expect(asked.at(-1)).toContain("erp=5.5");
+  expect(asked.at(-1)).toContain("g=2.5");
+  await run(page, "AAPL DCF ERP");
+  await expect(panel(page)).toContainText("USAGE: <SYM> DCF ERP=5.5");
+});
+
 test("a missing key from the backend (424) shows the shared KEY REQUIRED line", async ({ page }) => {
   await setup(page);
   await page.route("**/api/research/ee?**", (r) =>
