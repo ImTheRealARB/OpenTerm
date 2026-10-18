@@ -5,7 +5,12 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-16-9d4534`; 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-18 evening, Phase 19 steps 1-5 DONE, 6 and 8 built but not gated, 7 and 9 half-built; PAUSED at 66% of the 5h window)
+## Resume here (2026-10-18 late, Phase 19 steps 1-9 BUILT, step 10 nearly closed)
+- Branch `claude/openterm-phase-19-step-4-c5c695`, pushed, not merged. Steps 7 (CDEP FUND LIQ STBL DEFI; UNLK NOT BUILT, paid) and 9 (NSE archive history fallback, SECF AMFI fund rows) are built and tested; see the spec Progress log.
+- Full gate on a Linux cloud container: pytest 1567, e2e 181 (19e-19h included), tsc pass; ruff fixed after; two vitest timing tests failed only under the parallel gate and pass alone (411).
+- **Open:** the bench ran on that slower container (27/37, not comparable, see `docs/PERFORMANCE.md`). Rerun `node scripts/bench.mjs` rested on the Windows machine before merging. A live keyless smoke of the new functions (spec step 10) was not run.
+
+## (superseded) Resume here (2026-10-18 evening, Phase 19 steps 1-5 DONE, 6 and 8 built but not gated, 7 and 9 half-built; PAUSED at 66% of the 5h window)
 - **Branch `claude/openterm-phase-19-step-4-c5c695`** (pushed; continues `claude/openterm-phase-19`). Not merged to `main`. Last commit is a WIP commit; **the full gate has NOT run on it** (last full gate was green at step 5: pytest 1416, e2e 166).
 - **Step 6 `NRG` + `WETR`: built.** Backend `world/energy.py`, `weather.py`, `commodity.py`, `providers/openmeteo.py`, `nws.py`, routes `/api/world/nrg|wetr`; panels `NRG.tsx`, `WETR.tsx`, `energyArgs.ts`. `test_phase19_energy.py` 37 pass, `energyArgs.test.ts` 10 pass. `e2e/phase19g.spec.ts` written, NOT run. Finding: EIA weekly stocks/production (WCESTUS1 etc.) answer 404 on fredgraph.csv, so NRG is prices only (note on screen; add to DATA_LIMITS). NWS alerts need `SEC_USER_AGENT`; without it they show SKIPPED.
 - **Step 8 `PRED`: built by a Sonnet subagent**, 47 pytest + 11 vitest pass, `e2e/phase19e.spec.ts` written, NOT run. Notes in `PRED_NOTES.md` (fold into `docs/specs/PHASE_19.md` Progress log, then delete it). Added arg `SRC=POLY|KALSHI|ALL`.
