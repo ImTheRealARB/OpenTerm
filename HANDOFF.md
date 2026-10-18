@@ -8,8 +8,13 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-16-9d4534`; 
 ## Resume here (2026-10-18 night, PHASE 19 COMPLETE, awaiting the user's merge decision)
 - Branch `claude/openterm-phase-19-step-4-c5c695`, pushed, not merged (the merge is the user's call). Steps 1-10 done; `UNLK` NOT BUILT (DefiLlama emissions are paid).
 - Windows bench and live keyless smoke done: see `docs/PERFORMANCE.md` "Phase 19 bench" and the spec Progress log (15/16 routes live OK; WETR geocoding was an Open-Meteo outage).
-- Full gate last ran on the Linux container (pytest 1567, e2e 181, tsc, vitest 411 alone, ruff); not rerun on Windows since no code changed. Optional: run `node scripts/gates.mjs` once before merging.
-- Not done (optional): `bench.mjs` cleanup does not kill child process trees on Linux.
+- Full gate on Windows 2026-10-18: ALL GATES PASS (pytest 1567, ruff, tsc, vitest, e2e 181).
+- **PAUSED by the user for a demo before the merge.** To do next, in order:
+  1. Merge into `main`: the branch holds Phases 11-16 and 19 (85 commits) and `main` has not moved, so `git checkout main; git merge --ff-only claude/openterm-phase-19-step-4-c5c695` in the main checkout. Ask before pushing `main`.
+  2. Optional: rerun `node scripts/bench.mjs` rested (mains power) to see BT 10-year under 300 ms (read 333 / 415 ms while the machine was throttled).
+  3. Optional: make `bench.mjs` cleanup kill child process trees on Linux.
+  4. Optional: WETR, if Open-Meteo geocoding keeps timing out, resolve the ten basket cities from a built-in table.
+  5. Phases 17-18 stay paused by the user.
 
 ## (superseded) Resume here (2026-10-18 evening, Phase 19 steps 1-5 DONE, 6 and 8 built but not gated, 7 and 9 half-built; PAUSED at 66% of the 5h window)
 - **Branch `claude/openterm-phase-19-step-4-c5c695`** (pushed; continues `claude/openterm-phase-19`). Not merged to `main`. Last commit is a WIP commit; **the full gate has NOT run on it** (last full gate was green at step 5: pytest 1416, e2e 166).
