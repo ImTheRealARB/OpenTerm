@@ -28,6 +28,11 @@ Filled from Phase 12 onwards. One row per ported file.
 | `openterm/bt/engines/composite.py` | `agent/backtest/engines/composite.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/engines/bands.py` | `agent/backtest/engines/china_a (only `_blocked_by_limit`).py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/bt/validation.py` | `agent/backtest/validation.py` | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quant/options.py` | `agent/src/quantlib/options.py` (scipy and numpy removed) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quant/heston.py` | `agent/src/quantlib/volatility.py` (scipy `quad` replaced by an adaptive Gauss-Kronrod integrator) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quant/fixedincome.py` | `agent/src/quantlib/fixedincome.py` (numpy and scipy removed; `price_mid_period` and `ytm_from_clean` added) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quant/credit.py` (`cds_price`, hazard/survival conversion, `expected_loss` only) | `agent/src/quantlib/credit.py` (numpy, pandas and scipy removed) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/quant/payoff.py` | `agent/backtest/options_payoff.py` (numpy removed; arrays became lists) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 
 ### HKUDS/Vibe-Trading (MIT)
 

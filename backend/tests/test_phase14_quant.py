@@ -24,7 +24,7 @@ def xf(group: str, step: int):
     return pytest.mark.xfail(strict=True, reason=f"Phase 14 step {step}: {group}")
 
 
-QUANT = xf("quant library", 2)
+QUANT = lambda f: f  # step 2 landed
 
 CASES = json.loads((FIX / "quant_vibe_expected.json").read_bytes().decode("utf-8"))["cases"]
 EXCEPTIONS = {"ValueError": ValueError}
@@ -89,6 +89,8 @@ def tolerance(case: dict) -> float:
         return 1e-3
     if case["fn"] == "options.implied_volatility":
         return 1e-6
+    if case["fn"] == "options.barrier_greeks":
+        return 1e-6   # gamma is a second finite difference (dS = 0.01): one ulp of price noise shows at about 1e-8 relative
     return 1e-9
 
 
@@ -279,8 +281,8 @@ def test_numerics_are_scipy_free():
 @QUANT
 def test_bond_textbook_and_mid_period_settlement():
     f = mod("fixedincome")
-    # 5% coupon, 10 years, semi-annual, yield 6%: price 92.5614 (standard textbook value)
-    assert f.bond_price(100, 0.05, 0.06, 20, 2) == pytest.approx(92.5614, abs=1e-4)
+    # 5% coupon, 10 years, semi-annual, yield 6%: 92.56126 (the textbook 92.56; also Vibe's own fixture)
+    assert f.bond_price(100, 0.05, 0.06, 20, 2) == pytest.approx(92.56126, abs=1e-5)   # sum of 20 half-year flows at 3%
     assert f.bond_price(100, 0.04, 0.04, 20, 1) == pytest.approx(100.0, abs=1e-9)      # coupon = yield -> par
     # settle between coupons: accrued by actual days; the dirty price discounts the first coupon by the stub fraction
     q = f.price_mid_period(face=100.0, coupon_rate=0.045, ytm=0.047, freq=2, last_coupon=dt.date(2026, 5, 15),
