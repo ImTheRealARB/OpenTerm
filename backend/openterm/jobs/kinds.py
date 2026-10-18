@@ -84,14 +84,17 @@ def sleep_job(params: dict, progress: Callable[[float, str], None]) -> dict:
 # --- bt.run: one backtest (Phase 12). Params are built by /api/bt/run; the data file hash is the fingerprint. ----
 
 BT_KEYS = {"data_path", "data_sha", "rule", "code", "short", "engine", "config", "bars_per_year", "adjusted",
-           "time_limit_s", "memory_limit_mb", "labels", "meta", "run_id"}
+           "time_limit_s", "memory_limit_mb", "labels", "meta", "run_id", "structure"}
 
 
 def validate_bt(params: dict) -> dict:
     if not isinstance(params, dict) or set(params) - BT_KEYS or not {"data_path", "data_sha", "engine", "config",
                                                                      "run_id"} <= set(params):
         raise BadParams("BT.RUN PARAMS ARE BUILT BY /api/bt/run")
-    if bool(params.get("rule")) == bool(params.get("code")):
+    if params["engine"] == "options":
+        if params.get("rule") or params.get("code") or not params.get("structure"):
+            raise BadParams("BT.RUN OPTIONS NEEDS A STRUCTURE AND NO RULE OR CODE")
+    elif bool(params.get("rule")) == bool(params.get("code")):
         raise BadParams("BT.RUN NEEDS EXACTLY ONE OF RULE OR CODE")
     return params
 

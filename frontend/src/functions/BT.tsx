@@ -8,7 +8,8 @@
  * view (MC: text histogram of the shuffled Sharpe ratios; WF: one row per window), numbers straight from Vibe's functions.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fmtMetric, METRIC_ROWS, type MetricRow } from "../bt/metricsFormat";
+import { btStructure, lastOsa, NO_OSA } from "../bt/optionsStructure";
+import { fmtMetric,METRIC_ROWS, type MetricRow } from "../bt/metricsFormat";
 import { BT_USAGE, isBtRun, parseBtArgs, parseRule, type BtRun } from "../bt/ruleParse";
 import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
@@ -83,9 +84,10 @@ const TRADE_COLS: Column<BtTrade>[] = [
   { title: "EXIT REASON", width: 14, text: (t) => (t.exit_reason ?? "").toUpperCase(), color: () => "dim" },
 ];
 
-function request(a: BtRun) {
+function request(a: BtRun, structure?: Record<string, unknown>) {
   return {
-    ...(a.strategy ? { strategy: a.strategy } : { rule: a.rule }), symbols: a.symbols, interval: a.interval, range: a.range,
+    ...(structure ? { structure } : {}),
+    ...(a.strategy ? { strategy: a.strategy } : structure ? {} : { rule: a.rule }), symbols: a.symbols, interval: a.interval, range: a.range,
     options: {
       ...(a.short ? { short: true } : {}), ...(a.fees !== undefined ? { fees_bps: a.fees } : {}),
       ...(a.slip !== undefined ? { slip_bps: a.slip } : {}), ...(a.cash !== 100_000 ? { cash: a.cash } : {}),
@@ -143,11 +145,17 @@ export default function BT({ panelId, args }: FunctionProps) {
   };
 
   const submit = (a: BtRun) => {
+    let structure: Record<string, unknown> | undefined;
+    if (a.mkt === "options") {
+      const os = lastOsa(a.symbols[0]);
+      if (!os) return setState({ k: "failed", error: NO_OSA });
+      structure = btStructure(os, a);
+    }
     setState({ k: "submitting" });
     setMsg(null);
     const t = performance.now();
     btApi
-      .run(request(a))
+      .run(request(a, structure))
       .then((j) => {
         gauges.set("bt.postMs", performance.now() - t);
         const rec = adoptJob(j);

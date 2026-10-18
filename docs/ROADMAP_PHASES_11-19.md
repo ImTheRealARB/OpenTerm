@@ -161,6 +161,7 @@ fixtures, unverified against the live services until a key is set.
 with and without its key (`KEY REQUIRED` path), bench unchanged.
 
 ## Phase 14: Options, rates, futures
+**Status: done** (spec `docs/specs/PHASE_14.md`, actual sources in `docs/DATA_LIMITS.md`; bench in `docs/PERFORMANCE.md`). Everything shipped keyless except Tradier (optional `TRADIER_TOKEN`, doc-shaped fixture).
 | Function | What | Source |
 |---|---|---|
 | `OMON` | Chain with Greeks, OI, volume; `PCR` put/call | Yahoo options (crumb), Tradier fallback |

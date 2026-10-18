@@ -1,6 +1,6 @@
 # Phase 14 spec: options, rates, futures
 
-Status: **approved as written 2026-10-18 (roadmap defaults pre-approved by the user); step 1 in progress.**
+Status: **approved as written 2026-10-18 (roadmap defaults pre-approved by the user); built (steps 1-8).**
 Source: [ROADMAP_PHASES_11-19.md](../ROADMAP_PHASES_11-19.md) "Phase 14", [FEATURE_GAP.md](../FEATURE_GAP.md), Vibe-Trading `d0db2e3`
 (MIT: `quantlib/{options,volatility,fixedincome,credit}.py`, `backtest/options_payoff.py`, `backtest/engines/options_portfolio.py`).
 Model: [PHASE_13.md](PHASE_13.md) (same table payload, same router/SWR/envelope, same strict-xfail test groups).

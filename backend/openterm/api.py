@@ -772,12 +772,30 @@ async def _bt_params(request: Request, body: dict) -> dict:
     if bench is not None and (not isinstance(bench, str) or not bench.strip()):
         raise BtError("bad_request", "OPTION BENCH MUST BE A SYMBOL")
 
+    is_opt = str(opts.get("engine") or "").lower() == "options"
+    structure = None
     sources = [k for k in ("rule", "code", "strategy") if body.get(k)]
-    if len(sources) != 1:
+    if is_opt:  # MKT=options: an OSA structure replaces the rule (decision N)
+        structure = body.get("structure")
+        miss = catalog.options_missing(structure)
+        if len(symbols) != 1:
+            miss.insert(0, "symbols (exactly one underlying)")
+        if miss:
+            raise BtError("bad_request", "NOT RUNNABLE: MISSING " + ", ".join(miss))
+        if structure["exercise_style"] not in catalog.OPTIONS_STYLES:
+            raise BtError("bad_request", f"NOT RUNNABLE: exercise_style MUST BE {' OR '.join(catalog.OPTIONS_STYLES)}")
+        if sources or short or slip is not None:
+            raise BtError("bad_request", "OPTIONS TAKES A STRUCTURE ONLY (NO RULE, CODE, SHORT OR SLIP)")
+        structure = {k: structure[k] for k in ("legs", "open_date", "close_date", "risk_free_rate", "contract_multiplier",
+                                               "exercise_style") if structure.get(k) not in (None, "")}
+        sources = ["structure"]
+    elif len(sources) != 1:
         raise BtError("bad_request", "SEND EXACTLY ONE OF RULE, CODE OR STRATEGY")
     rule = code = None
     strategy = None
-    if body.get("rule"):
+    if is_opt:
+        pass
+    elif body.get("rule"):
         rule = str(body["rule"])
         rules.parse(rule)
     else:
@@ -816,6 +834,9 @@ async def _bt_params(request: Request, body: dict) -> dict:
     sha, path = await asyncio.to_thread(store.write_data, payload)
 
     config: dict = {"initial_cash": float(cash)}
+    if is_opt:
+        config.update(codes=symbols, commission=fees / 1e4, options_config={
+            k: structure[k] for k in ("risk_free_rate", "contract_multiplier", "exercise_style")})
     if slip is not None:
         for key in catalog.SLIPPAGE_KEYS.get(engine, ()):
             config[key] = slip / 1e4
@@ -834,17 +855,20 @@ async def _bt_params(request: Request, body: dict) -> dict:
         "sources": [{"symbol": x, "name": envs[x].get("source"), "as_of": envs[x].get("as_of"),
                      "age_s": envs[x].get("age_s"), "stale": envs[x].get("stale", False)} for x in wanted],
         "benchmark": wanted[-1] if bench else "EQUAL-WEIGHT BUY AND HOLD OF THE TRADED SYMBOLS",
+        **({"model": catalog.OPTIONS_LABEL, "commission": f"FEES= {fees or 0:g} BPS OF PREMIUM", "slippage": "NONE MODELLED",
+            "default_iv": 0.3, "iv_note": "HISTORICAL VOL (30 BARS); 0.30 UNTIL A FULL WINDOW EXISTS"} if is_opt else {}),
         "data_note": " ".join(n for n in (
             "RECORDED FIXTURE DATA" if fixtures else "",
             "LOCAL DATA (IMPORTED BY YOU, NOT FROM A MARKET SOURCE)" if any(
                 str(envs[x].get("source")) == "local" for x in wanted) else "") if n),
     }
     meta = {"rule": rule, "strategy": strategy, "code": code, "symbols": symbols, "interval": interval,
-            "range": range_, "engine": engine, "short": short, "bench": wanted[-1] if bench else None}
+            "range": range_, "engine": engine, "short": short, "bench": wanted[-1] if bench else None,
+            **({"structure": structure} if is_opt else {})}
     params = {"data_path": str(path), "data_sha": sha, "short": short, "engine": engine, "config": config,
               "bars_per_year": catalog.bars_per_year(engine, interval),
               "adjusted": adjusted, "time_limit_s": limit_s, "memory_limit_mb": int(mem_mb), "labels": labels,
-              "meta": meta, **({"rule": rule} if rule else {"code": code})}
+              "meta": meta, **({"structure": structure} if is_opt else {"rule": rule} if rule else {"code": code})}
     stable = {k: v for k, v in params.items() if k != "labels"}  # labels carry data age: not part of the identity
     params["run_id"] = hashlib.sha256(orjson.dumps(stable, option=orjson.OPT_SORT_KEYS)).hexdigest()[:16]
     return params

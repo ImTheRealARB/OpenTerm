@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-BUILT = {"us", "uk", "hk", "ca", "india", "crypto", "forex", "futures", "composite"}
+BUILT = {"us", "uk", "hk", "ca", "india", "crypto", "forex", "futures", "composite", "options"}
 """Engines `bt.engine` can run. China A, China futures, Korea, Vietnam and Brazil are not built (spec decision C)."""
 
 SLIPPAGE_KEYS = {
@@ -22,7 +22,30 @@ COSTS = {
     "forex": "HALF SPREAD + 0.3 PIP SLIPPAGE, DAILY SWAP",
     "futures": "USD 2.25-2.50 PER CONTRACT PER SIDE",
     "composite": "EACH MARKET'S OWN COST STACK",
+    "options": "FEES= AS BPS OF PREMIUM, NO BID/ASK, NO SLIPPAGE MODELLED",
 }
+
+OPTIONS_LABEL = "MODEL-PRICED OPTIONS (BLACK-SCHOLES ON HISTORICAL VOL), NOT MARKET QUOTES"
+"""Must equal `engines.options_portfolio.MODEL_LABEL` (a test pins it; the server cannot import that module, it needs pandas)."""
+OPTIONS_STYLES = ("european", "american")
+OPTIONS_LEG_FIELDS = ("type", "strike", "expiry", "qty")
+
+
+def options_missing(structure) -> list[str]:
+    """Field names an options run still needs (empty = runnable). Pure; never fills a default for the user."""
+    if not isinstance(structure, dict):
+        return ["structure"]
+    miss = [f for f in ("open_date", "risk_free_rate", "contract_multiplier", "exercise_style")
+            if structure.get(f) in (None, "")]
+    legs = structure.get("legs")
+    if not isinstance(legs, list) or not legs:
+        return [*miss, "legs"]
+    for i, leg in enumerate(legs):
+        if not isinstance(leg, dict):
+            miss.append(f"legs[{i}]")
+            continue
+        miss += [f"legs[{i}].{f}" for f in OPTIONS_LEG_FIELDS if leg.get(f) in (None, "")]
+    return miss
 
 
 def bars_per_year(engine: str, interval: str) -> int:

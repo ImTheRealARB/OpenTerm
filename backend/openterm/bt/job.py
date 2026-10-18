@@ -54,6 +54,48 @@ def _epoch(ts) -> int:
     return int(ts.value // 1_000_000_000)
 
 
+def option_signals(code: str, st: dict) -> list[dict]:
+    """The OSA structure as trade instructions: open on `open_date`, close every leg on `close_date` when one is given."""
+    legs = [{"type": str(g["type"]).lower(), "strike": float(g["strike"]), "expiry": str(g["expiry"]), "qty": g["qty"]}
+            for g in st["legs"]]
+    out = [{"date": str(st["open_date"]), "action": "open", "underlying": code, "legs": legs}]
+    if st.get("close_date"):
+        out.append({"date": str(st["close_date"]), "action": "close", "underlying": code,
+                    "legs": [{k: g[k] for k in ("type", "strike", "expiry")} for g in legs]})
+    return out
+
+
+def _run_options(params: dict, data_map: dict, adjusted: bool, progress: Callable[[float, str], None]) -> dict:
+    from .engines.options_portfolio import run_options_backtest
+
+    (code,) = data_map
+    progress(0.35, "SIMULATING")
+    res = run_options_backtest(dict(params["config"]), data_map, option_signals(code, params["structure"]),
+                               bars_per_year=params.get("bars_per_year"))
+    progress(0.9, "WRITING RESULT")
+    cash = float(params["config"].get("initial_cash", 100_000))
+    eq = res.equity_series
+    close = data_map[code]["close"].reindex(eq.index)
+    bench_eq = cash * (1 + close.pct_change(fill_method=None).fillna(0.0)).cumprod()
+    trades = [{
+        "symbol": f"{t['code']} {str(t['option_type'])[:1].upper()}{t['strike']:g} {t['expiry']}",
+        "direction": 1 if t["qty"] > 0 else -1, "entry_time": t["entry_date"], "exit_time": t["timestamp"],
+        "entry_price": None, "exit_price": _num(t["price"]), "size": _num(abs(t["qty"])), "pnl": _num(t["pnl"]),
+        "pnl_pct": None, "commission": None, "holding_bars": None, "exit_reason": t["side"],
+    } for t in res.trades]
+    labels = dict(params["labels"])
+    labels["model"] = res.label
+    labels["prices"] = "ADJ" if adjusted else "RAW"
+    return {
+        "run_id": params["run_id"],
+        "metrics": {**scalar_metrics(res.metrics), **tail_risk(eq)},
+        "equity": [[_epoch(ts), round(float(v), 4)] for ts, v in eq.items()],
+        "benchmark": [[_epoch(ts), round(float(v), 4)] for ts, v in bench_eq.items()],
+        "trades": trades,
+        "labels": labels,
+    }
+
+
 def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     import pandas as pd
 
@@ -69,6 +111,9 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     empty = [s for s, f in data_map.items() if len(f) < 2]
     if empty:
         raise ValueError(f"NOT ENOUGH BARS FOR {', '.join(empty)}")
+
+    if params["engine"] == "options":
+        return _run_options(params, data_map, adjusted, progress)
 
     progress(0.15, "SIGNALS")
     with limits.memory_cap(int(params.get("memory_limit_mb", 1024))):

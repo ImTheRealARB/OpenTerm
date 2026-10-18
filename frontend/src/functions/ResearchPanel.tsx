@@ -27,6 +27,10 @@ export interface ResearchOptions {
   usage?: string;
   /** Short key hints appended to the header. */
   keys?: string;
+  /** Called with each loaded payload (OSA remembers its structure for BT MKT=options). */
+  onData?: (d: TablePayload, p: FunctionProps) => void;
+  /** An extra panel key; return true when handled. */
+  onKey?: (e: KeyboardEvent, p: FunctionProps, d: TablePayload | undefined) => boolean;
 }
 
 export function makeResearchPanel(opts: ResearchOptions) {
@@ -50,7 +54,12 @@ export function makeResearchPanel(opts: ResearchOptions) {
     const rows: TableRow[] = section?.rows ?? [];
     const visuals = useMemo(() => [...(d?.charts ?? []).map((c) => ({ kind: "chart" as const, c })), ...(d?.heat ? [{ kind: "heat" as const, h: d.heat }] : [])], [d]);
     const visual = visuals[Math.min(vis, visuals.length - 1)];
-    const latest = useLatest({ rows, count: d?.sections.length ?? 0, visuals: visuals.length, heat: visual?.kind === "heat" });
+    const latest = useLatest({ rows, count: d?.sections.length ?? 0, visuals: visuals.length, heat: visual?.kind === "heat", d, props });
+    useEffect(() => {
+      if (d) opts.onData?.(d, props);
+      // props change identity every render; the payload is what matters
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [d]);
     const label = opts.fn.toUpperCase();
     useCsvExport(panelId, () => (section ? gridCsv(`${label}_${d?.symbol ?? "ALL"}_${section.id.toUpperCase()}`, columns, rows) : null));
 
@@ -67,7 +76,8 @@ export function makeResearchPanel(opts: ResearchOptions) {
         registerPanelKeys(panelId, (e) => {
           if (e.ctrlKey || e.altKey || e.metaKey) return false;
           if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
-          const { rows: cur, count, visuals: nvis, heat: heatShown } = latest.current;
+          const { rows: cur, count, visuals: nvis, heat: heatShown, d: data, props: pp } = latest.current;
+          if (opts.onKey?.(e, pp, data)) return true;
           if (heatShown && e.shiftKey && "HJKL".includes(e.key)) {
             heatRef.current?.move(e.key === "J" ? 1 : e.key === "K" ? -1 : 0, e.key === "L" ? 1 : e.key === "H" ? -1 : 0);
             return true;

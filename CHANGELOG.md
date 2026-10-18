@@ -2,6 +2,15 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 14: options, rates, futures
+- Added `OMON` (chain with Greeks, OI, volume), `PCR`, `OV` (Black-Scholes, binomial, Heston, barrier, IV solver) and `OSA` (multi-leg payoff, scenario
+  grid, Greeks by leg), `OVDV` / `SKEW` (implied-vol surface, quadratic smile never extrapolated), `HIVG` (realised vs implied; IV30 is built from LOCAL
+  SNAPSHOTS, so history starts the day you first open it). Crypto options come from Deribit. Yahoo options are keyless; Tradier (`TRADIER_TOKEN`) is an optional fallback.
+- Added `RATES` upgrade (EUR, GBP, CAD, JPY curves, Nelson-Siegel fit, FRED OAS credit spreads, Treasury auctions), `CT`, `WIRP`, `COT`, `FXFA`
+  (labelled a CIP estimate), `YAS`, `SWPM`, `CDSW`. A missing input makes a model NOT RUNNABLE and lists the fields; nothing defaults silently.
+- Quant library (`openterm/quant/`) ported from Vibe-Trading (MIT, `THIRD_PARTY.md`) and cross-checked against Vibe's own numbers. `BT` can run
+  options structures from `OSA`, labelled MODEL-PRICED OPTIONS (BLACK-SCHOLES ON HISTORICAL VOL), NOT MARKET QUOTES. Migration 12 adds `iv_snapshots`.
+
 ## Phase 13: equity research gaps
 - Added `EE` / `EEO` (estimates, revisions, EPS surprises), `ANR` (ratings, targets, rating changes), `MGMT` (officers, governance, proxies),
   `DVD` / `SPLT` / `CACS`, `IPO`, `SI` (short interest and FINRA short volume), `EVTS` (8-K items decoded), `ETF`, `MEMB` (constituents via the

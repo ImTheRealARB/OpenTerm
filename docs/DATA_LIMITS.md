@@ -215,3 +215,15 @@ No key is needed for any of them. Each table header shows the source, its age an
   YAS yield is a periodic-compounding yield with a fractional first period; SWPM is single-curve (the Treasury par curve is a *discount proxy, not SOFR/OIS*); CDSW is the flat-hazard credit-triangle engine, not the
   ISDA standard model; FXFA is covered interest parity from government yields (USD Treasury bills, EUR ECB 3M-1Y, JPY MoF 1Y) or typed `R1=`/`R2=`, ACT/360 simple interest, not a dealer quote. A currency with no free
   short rate (GBP, CAD, ...) is NOT RUNNABLE until its rate is typed.
+
+## Phase 14 options sources
+- **Yahoo options** (keyless, crumb + cookie): eight expiries per symbol, picked as the nearest plus those closest to a 7-day spacing. Yahoo's own IV is shown
+  as a cross-check; Greeks are computed here (Black-Scholes on the mid) and labelled so.
+- **Tradier** (optional `TRADIER_TOKEN`, inert without it): its Greeks and IV replace the computed ones when it answers. The recorded fixture
+  (`tradier_*_aapl*.json`) is **doc-shaped, NOT a recording**: bid/ask/volume come from Yahoo, Greeks and IV are round placeholder numbers. Shape drift is unverified live.
+- **Deribit** (keyless): BTC options in fixture mode; ETH, SOL, XRP work live only. IV is the exchange mark IV.
+- **Smile fit**: quadratic in log-moneyness, never extrapolated outside the quoted strikes. **IV30** is interpolated from the chain and stored once a day in
+  `iv_snapshots` (LOCAL SNAPSHOTS): `HIVG` implied history starts the day you first open it; there is no free historical IV source.
+- **BT options** prices structures with Black-Scholes on trailing historical vol, not quotes (MODEL-PRICED, NOT MARKET QUOTES).
+- **BT options limits**: model marks only (no bid/ask, no skew dynamics, no early assignment, no slippage); the IV is 0.30 until a 30-bar window exists, and the run says so (`iv_note`). Option trade rows leave entry price, pnl % and holding bars empty.
+- **OSA to BT**: `B` in OSA opens `BT <SYM> MKT=options`. OSA has no open date or exercise style, so type `OPEN=yyyy-mm-dd STYLE=european|american` (and `EXP=` in OSA); until then the run says NOT RUNNABLE: MISSING. The stored structure lives in memory and is lost on reload.

@@ -630,6 +630,8 @@ export interface BtRunRequest {
   interval: string;
   range: string;
   options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string };
+  /** Phase 14: MKT=options (an OSA structure instead of a rule). */
+  structure?: Record<string, unknown>;
 }
 
 /** Result of a bt.mc job: Vibe's trade-order permutation test plus the bootstrap Sharpe interval. */

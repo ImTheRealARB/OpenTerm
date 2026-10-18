@@ -335,3 +335,43 @@ test("CT / YAS / FXFA: futures curve rows, a calculator that is NOT RUNNABLE, an
   await run(page, "CT CL NG");
   await expect(panel(page)).toContainText("USAGE: CT <ROOT>");
 });
+
+test("OSA -> BT MKT=options: B hands over the shown structure; nothing is defaulted; no OSA structure says so", async ({ page }) => {
+  await setup(page);
+  const posted: Record<string, unknown>[] = [];
+  await page.route("**/api/bt/run", (r) => {
+    posted.push(r.request().postDataJSON());
+    return r.fulfill({ status: 400, json: { error: "NOT RUNNABLE: MISSING open_date, exercise_style", kind: "bad_request" } });
+  });
+  await page.route("**/api/deriv/osa?**", (r) =>
+    r.fulfill({
+      json: env(
+        payload("OSA AAPL", [
+          { id: "legs", title: "LEGS", note: null, columns: [c("qty", "QTY", "int"), c("type", "TYPE"), c("strike", "STRIKE", "price")], rows: [
+            { qty: 1, type: "C", strike: 270 }, { qty: -1, type: "C", strike: 290 }] },
+          { id: "inputs", title: "INPUTS", note: null, columns: [c("name", "INPUT"), c("value", "VALUE")], rows: [
+            { name: "R", value: "4.10%", rate: 0.041 }, { name: "MULT", value: "100" }] },
+        ], [], { status: "RUNNABLE" }),
+      ),
+    }),
+  );
+  await run(page, "AAPL OSA STRAT=BULLCALL,270,290 EXP=2026-12-18 IV=25");
+  await expect(selected(page)).toContainText("270.00");
+  await expect(async () => {
+    await page.keyboard.press("b");
+    await expect(panel(page)).toContainText("NOT RUNNABLE: MISSING open_date, exercise_style");
+  }).toPass();
+  const body = posted.at(-1)!;
+  expect(body).toMatchObject({ symbols: ["AAPL"], options: { engine: "options" } });
+  expect(body.rule).toBeUndefined();
+  expect(body.structure).toEqual({
+    legs: [{ type: "call", strike: 270, qty: 1, expiry: "2026-12-18" }, { type: "call", strike: 290, qty: -1, expiry: "2026-12-18" }],
+    risk_free_rate: 0.041, contract_multiplier: 100,
+  });
+  await run(page, "BT AAPL MKT=options OPEN=2026-06-01 STYLE=european");
+  await expect.poll(() => posted.length).toBe(2);
+  expect(posted.at(-1)!.structure).toMatchObject({ open_date: "2026-06-01", exercise_style: "european" });
+  await run(page, "BT MSFT MKT=options");
+  await expect(panel(page)).toContainText("NO OSA STRUCTURE");
+  expect(posted.length).toBe(2);
+});

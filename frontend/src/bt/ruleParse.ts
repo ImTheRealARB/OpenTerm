@@ -130,6 +130,10 @@ export interface BtRun {
   cash: number;
   bench?: string;
   mkt?: string;
+  /** MKT=options only: OPEN=/CLOSE=YYYY-MM-DD, STYLE=european|american. Never defaulted. */
+  open?: string;
+  close?: string;
+  style?: string;
   /** Name of a saved strategy (`@name` in the rule position); `rule` then holds `@name`. */
   strategy?: string;
   /** Validate the finished run: Monte Carlo (MC) or walk-forward (WF). */
@@ -154,7 +158,7 @@ export const BT_USAGE = "USAGE: BT <SYMBOLS> <RULE> [1D|1W] [RANGE] [SHORT] [FEE
 
 function isOption(a: string): boolean {
   const u = a.toUpperCase();
-  return INTERVALS.includes(u) || RANGE_RE.test(u) || u === "SHORT" || (u.includes("=") && ["FEES", "SLIP", "CASH", "BENCH", "MKT"].includes(u.split("=")[0]));
+  return INTERVALS.includes(u) || RANGE_RE.test(u) || u === "SHORT" || (u.includes("=") && ["FEES", "SLIP", "CASH", "BENCH", "MKT", "OPEN", "CLOSE", "STYLE"].includes(u.split("=")[0]));
 }
 
 const DECIMAL = /^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i;
@@ -197,8 +201,21 @@ export function parseBtArgs(args: string[]): BtArgs {
       else if (u.startsWith("CASH=")) out.cash = num("CASH", u.slice(5), 1, 1e12);
       else if (u.startsWith("BENCH=")) out.bench = u.slice(6) || undefined;
       else if (u.startsWith("MKT=")) out.mkt = u.slice(4).toLowerCase() || undefined;
+      else if (u.startsWith("OPEN=")) out.open = u.slice(5);
+      else if (u.startsWith("CLOSE=")) out.close = u.slice(6);
+      else if (u.startsWith("STYLE=")) out.style = u.slice(6).toLowerCase();
       else throw new RuleError(`UNKNOWN BT OPTION ${a}`);
     }
+    if (out.mkt === "options") {
+      // The OSA structure replaces the rule (the backend validates the rest and lists what is missing).
+      if (out.rule) throw new RuleError("MKT=options TAKES THE LAST OSA STRUCTURE, NOT A RULE");
+      if (out.short || out.slip !== undefined) throw new RuleError("MKT=options TAKES NO SHORT OR SLIP");
+      for (const [k, v] of [["OPEN", out.open], ["CLOSE", out.close]] as const) {
+        if (v !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new RuleError(`${k}= NEEDS A DATE YYYY-MM-DD`);
+      }
+      return out;
+    }
+    if (out.open !== undefined || out.close !== undefined || out.style !== undefined) throw new RuleError("OPEN= CLOSE= STYLE= NEED MKT=options");
     const named = STRATEGY_RE.exec(out.rule);
     if (named) {
       out.strategy = named[1].toLowerCase();
