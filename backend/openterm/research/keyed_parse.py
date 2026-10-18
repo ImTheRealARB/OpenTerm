@@ -53,6 +53,22 @@ def alpaca_news(body: Any, source: str) -> list[NewsItem]:
     return merge(out)[:MAX_ITEMS]
 
 
+def alpaca_trades(body: Any) -> dict[str, tuple[float, int | None, int]]:
+    """Alpaca /v2/stocks/trades/latest: {"trades": {"AAPL": {"t": ISO, "p": price, "s": size}}} -> {symbol: (price, size, epoch ms)}.
+    Rows without a positive price or a readable time are dropped."""
+    if not isinstance(body, dict) or not isinstance(body.get("trades"), dict):
+        raise ProviderError("unavailable", "unexpected Alpaca trades shape")
+    out: dict[str, tuple[float, int | None, int]] = {}
+    for sym, t in body["trades"].items():
+        if not isinstance(t, dict):
+            continue
+        price, when = t.get("p"), _iso(t.get("t"))
+        if isinstance(price, (int, float)) and price > 0 and when:
+            size = t.get("s")
+            out[str(sym)] = (float(price), int(size) if isinstance(size, (int, float)) else None, int(when * 1000))
+    return out
+
+
 def finnhub_ratings(symbol: str, rows: Any, source: str) -> dict:
     """ANR fallback: Finnhub /stock/recommendation (monthly analyst counts). No targets or firm-level changes."""
     if not isinstance(rows, list) or not rows:

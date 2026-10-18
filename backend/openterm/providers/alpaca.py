@@ -1,4 +1,4 @@
-"""Alpaca market data (free keys): news now; real-time IEX trades are added in the next step.
+"""Alpaca market data (free keys): news, and the latest IEX trades behind real-time quotes (streaming/iex.py).
 
 `supports()` is false without both keys (ALPACA_KEY_ID, ALPACA_SECRET_KEY), so the router skips it. Keys travel in the
 APCA-API-* headers only. Answers are documented shapes; the fixtures that replay them are labelled doc-shaped.
@@ -82,6 +82,10 @@ class AlpacaProvider(Provider):
 
     async def news_top(self) -> dict:
         return await self._news({})
+
+    async def latest_trades(self, symbols: list[str]) -> dict[str, tuple[float, int | None, int]]:
+        """Last IEX trade per symbol (IEX volume only, not the consolidated tape): {symbol: (price, size, epoch ms)}."""
+        return kp.alpaca_trades(await self._api("v2/stocks/trades/latest", {"symbols": ",".join(symbols), "feed": "iex"}))
 
     async def probe(self) -> None:
         await self._api("v1beta1/news", {"limit": 1})

@@ -14,7 +14,7 @@ export interface Live {
   low: number | null;
   /** Epoch ms of the trade. */
   t: number;
-  /** y = Yahoo stream, p = REST poll, s = SYNTHETIC */
+  /** y = Yahoo stream, p = REST poll, s = SYNTHETIC, a = Alpaca IEX real-time trade (RT IEX) */
   src: string;
   /** Direction of the last price move: drives the persistent up/down colour. */
   dir: -1 | 0 | 1;
@@ -91,7 +91,7 @@ export function onTicks(l: TickListener): () => void {
   return () => listeners.delete(l);
 }
 
-export const SRC_LABEL: Record<string, string> = { y: "STREAM", p: "POLL", s: "SYNTHETIC" };
+export const SRC_LABEL: Record<string, string> = { y: "STREAM", p: "POLL", s: "SYNTHETIC", a: "RT IEX" };
 
 // --- Phase 8: raw tick listeners ---
 export type RawTickListener = (rows: readonly Row[]) => void;

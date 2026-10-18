@@ -97,9 +97,18 @@ async def lifespan(app: FastAPI):
     yahoo = NullStream() if settings.openterm_fixtures else YahooStream(emit)
     poller = Poller(emit, service.quotes, active=lambda: yahoo.status != "OK" and not settings.openterm_fixtures)
     synthetic = SyntheticStream(emit, settings.openterm_synthetic_tps) if settings.openterm_synthetic else None
-    hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick)
+    # Phase 13: real-time IEX trades when Alpaca keys are set (APIKEYS); inert and invisible otherwise
+    from .streaming.iex import IexPoller
+
+    def prev_close(symbol: str) -> float | None:
+        entry = service.cache.mem.get(f"q:{symbol}")
+        return ((entry[0].get("data") or {}).get("prev_close")) if entry else None
+
+    alpaca = router.providers.get("alpaca")
+    iex = IexPoller(emit, alpaca, prev_close) if alpaca is not None and not settings.openterm_fixtures else None
+    hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick, iex=iex)
     hub_ref.append(hub)
-    for part in (yahoo, poller, synthetic, hub):
+    for part in (yahoo, poller, synthetic, iex, hub):
         if part:
             part.start()
 
@@ -148,7 +157,7 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(jobs.close)
         if keys_http is not http:
             await keys_http.aclose()
-        for part in (hub, synthetic, poller, yahoo):
+        for part in (hub, iex, synthetic, poller, yahoo):
             if part:
                 await part.stop()
         await cache.flush()

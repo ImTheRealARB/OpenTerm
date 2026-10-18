@@ -58,10 +58,11 @@ class Client:
 
 
 class Hub:
-    def __init__(self, yahoo, poller, synthetic=None, on_tick=None):
+    def __init__(self, yahoo, poller, synthetic=None, on_tick=None, iex=None):
         self.yahoo = yahoo
         self.poller = poller
         self.synthetic = synthetic
+        self.iex = iex  # Phase 13: real-time IEX trades (Alpaca keys); None or keyless = Yahoo only
         self.on_tick = on_tick
         self.clients: set[Client] = set()
         self.refs: dict[str, int] = {}
@@ -86,6 +87,8 @@ class Hub:
 
     # --- upstream -----------------------------------------------------------------------------
     def emit(self, tick: Tick) -> None:
+        if self.iex is not None and tick.source in ("y", "p") and self.iex.covers(tick.symbol):
+            return  # real-time IEX owns this symbol while it answers; Yahoo resumes if it stops
         self.ticks_in += 1
         self._pending[tick.symbol] = tick
         if self.on_tick:
@@ -97,6 +100,8 @@ class Hub:
         real = symbols - synth
         await self.yahoo.set_symbols(real)
         await self.poller.set_symbols(real)
+        if self.iex is not None:
+            await self.iex.set_symbols(real)
         if self.synthetic:
             await self.synthetic.set_symbols(synth)
 
@@ -148,4 +153,5 @@ class Hub:
             "yahoo_stream": self.yahoo.status,
             "yahoo_messages": self.yahoo.messages,
             "synthetic": self.synthetic is not None,
+            "iex": self.iex.status if self.iex is not None else "OFF",
         }
