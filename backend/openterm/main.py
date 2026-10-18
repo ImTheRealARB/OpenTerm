@@ -71,6 +71,9 @@ DEFAULT_ORDER["factors"] = ["kenfrench"]
 # --- Phase 19 step 8: PRED ---
 DEFAULT_ORDER |= {"pred_poly": ["polymarket"], "pred_poly_market": ["polymarket"], "pred_poly_history": ["polymarket"],
                   "pred_kalshi": ["kalshi"], "pred_kalshi_market": ["kalshi"], "pred_kalshi_candles": ["kalshi"]}
+# --- Phase 19 step 7: crypto depth (Binance first; OKX when Binance fails, e.g. HTTP 451), liquidations (OKX only), DefiLlama ---
+DEFAULT_ORDER |= {"crypto_depth": ["binance_deriv", "okx"], "crypto_funding": ["binance_deriv", "okx"], "crypto_funding_detail": ["binance_deriv", "okx"],
+                  "crypto_liq": ["okx"], "stablecoins": ["defillama"], "yields": ["defillama"]}
 # --- Phase 19: GP event markers ---
 DEFAULT_ORDER["earnings_history"] = ["nasdaq_research"]
 # --- Phase 6: SEC / ownership ---

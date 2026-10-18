@@ -245,7 +245,7 @@ def parse_amfi(text: str) -> dict[str, Any]:
             skipped += 1
             continue
 
-        def cell(key: str, parts: list[str] = parts) -> str | None:
+        def cell(key: str, parts: list[str] = parts, layout: dict[str, int] = layout) -> str | None:
             i = layout[key]
             v = parts[i] if 0 <= i < len(parts) else ""
             return None if v in ("", "-") else v

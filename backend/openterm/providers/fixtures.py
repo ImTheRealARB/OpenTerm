@@ -675,3 +675,51 @@ def _route_phase19f(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase19f(request) or _route_before_phase19f(request)
+
+
+# --- Phase 19 step 7: Binance depth / premium / funding info, OKX v5 public, DefiLlama stablecoins + yields (recordings from scripts/record_phase19.py 7).
+# BTCUSDT / BTC-USDT only; OKX single-instrument answers are the matching row of the recorded all-instrument answer. `fapi/v1/fundingRate` keeps its Phase 12 route. ---
+_route_before_phase19h = _route
+_BINANCE_19H = {("/api/v3/depth", "BTCUSDT"): "binance_depth_btcusdt", ("/fapi/v1/premiumIndex", "BTCUSDT"): "binance_premium_btcusdt",
+                ("/fapi/v1/premiumIndex", ""): "binance_premium_all", ("/fapi/v1/fundingInfo", ""): "binance_funding_info"}
+_OKX_ALL = {"/api/v5/public/funding-rate": "okx_funding_any", "/api/v5/public/mark-price": "okx_mark_swap", "/api/v5/market/index-tickers": "okx_index_usdt"}
+_OKX_NONE = {"code": "51001", "msg": "Instrument ID does not exist (not recorded)", "data": []}
+
+
+def _okx_rows(name: str, inst: str) -> httpx.Response:
+    body = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))["body"]
+    rows = [x for x in body["data"] if x.get("instId") == inst]
+    return httpx.Response(200, json={**body, "data": rows}) if rows else httpx.Response(200, json=_OKX_NONE)
+
+
+def _route_phase19h(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host in ("api.binance.com", "fapi.binance.com") and p in ("/api/v3/depth", "/fapi/v1/premiumIndex", "/fapi/v1/fundingInfo"):
+        name = _BINANCE_19H.get((p, q.get("symbol", "")))
+        return _load(name) if name else httpx.Response(400, json={"code": -1121, "msg": "Invalid symbol."})
+    if host == "www.okx.com":
+        if p == "/api/v5/market/books":
+            return _load("okx_books_btcusdt") if q.get("instId") == "BTC-USDT" else httpx.Response(200, json=_OKX_NONE)
+        if p in _OKX_ALL:
+            inst = q.get("instId", "")
+            if p == "/api/v5/public/funding-rate" and inst == "ANY" or p != "/api/v5/public/funding-rate" and not inst:
+                return _load(_OKX_ALL[p])
+            return _okx_rows(_OKX_ALL[p], inst)
+        if p == "/api/v5/public/funding-rate-history":
+            return _load("okx_funding_history_btc") if q.get("instId") == "BTC-USDT-SWAP" else httpx.Response(200, json=_OKX_NONE)
+        if p == "/api/v5/public/liquidation-orders":
+            return _load("okx_liq_btcusdt") if q.get("uly") == "BTC-USDT" else httpx.Response(200, json=_OKX_NONE)
+        if p == "/api/v5/public/instruments":
+            return _load("okx_instruments_btcusdt") if q.get("uly") == "BTC-USDT" else httpx.Response(200, json=_OKX_NONE)
+        return httpx.Response(404, text="not recorded")
+    if host == "stablecoins.llama.fi":
+        return _load("llama_stablecoins") if p == "/stablecoins" else httpx.Response(404, text="not recorded")
+    if host == "yields.llama.fi":
+        return _load("llama_yields") if p == "/pools" else httpx.Response(404, text="not recorded")
+    if host == "api.llama.fi" and p.startswith("/emissions"):
+        return _load("llama_emissions_probe")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase19h(request) or _route_before_phase19h(request)

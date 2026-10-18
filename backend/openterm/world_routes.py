@@ -162,3 +162,58 @@ async def mf_nav(request: Request, q: str = Query(..., max_length=80)):
         return await lookup(svc(request), q)
     except DataError as e:
         return error(e)
+
+
+@router.get("/cdep")
+async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length=24)):
+    """CDEP: spot order book depth (Binance, OKX when Binance fails): cumulative ladder, spread, imbalance."""
+    from .world.crypto import cdep
+
+    try:
+        return await cdep(svc(request), pair)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/fund")
+async def crypto_funding(request: Request, sym: str = Query("", max_length=24)):
+    """FUND: perpetual funding (annualised from each venue's interval) and basis; with a coin, its last 30 funding prints."""
+    from .world.crypto import fund
+
+    try:
+        return await fund(svc(request), sym)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/liq")
+async def crypto_liquidations(request: Request, sym: str = Query("BTC", max_length=24)):
+    """LIQ: the latest filled liquidation orders of a USDT perpetual on OKX (Binance has no REST history)."""
+    from .world.crypto import liq
+
+    try:
+        return await liq(svc(request), sym)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/stbl")
+async def stablecoins(request: Request, chain: str = Query("", max_length=24)):
+    """STBL: stablecoin supply by coin and by chain (DefiLlama)."""
+    from .world.crypto import stbl
+
+    try:
+        return await stbl(svc(request), chain)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/defi")
+async def defi_yields(request: Request, q: str = Query("", max_length=40)):
+    """DEFI: yield pools over US$1M TVL (DefiLlama), by chain or project, highest APY first."""
+    from .world.crypto import defi
+
+    try:
+        return await defi(svc(request), q)
+    except DataError as e:
+        return error(e)

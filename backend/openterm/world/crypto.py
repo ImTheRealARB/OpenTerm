@@ -14,6 +14,11 @@ LIQ_TTL_S = 20.0
 LLAMA_TTL_S = 600.0
 
 
+def _src(venue: str) -> str:
+    """Envelope source = the provider name (`binance_deriv` / `okx`), so panels label it like every other answer."""
+    return "binance_deriv" if venue.lower().startswith("binance") else "okx"
+
+
 def _bad(e: ValueError) -> DataError:
     return DataError("bad_request", str(e))
 
@@ -26,7 +31,7 @@ async def cdep(svc: Any, pair: str) -> dict[str, Any]:
 
     async def fetch() -> dict:
         out, failed = await svc.router.call("crypto_depth", lambda p: p.crypto_depth(base, quote), f"{base}{quote}")
-        return {"data": {**out, "base": base}, "fallback_from": failed, "source": out["venue"].lower()}
+        return {"data": {**out, "base": base}, "fallback_from": failed, "source": _src(out["venue"])}
 
     return await svc._swr(f"w:cdep:{base}{quote}", DEPTH_TTL_S, fetch)
 
@@ -40,14 +45,14 @@ async def fund(svc: Any, sym: str) -> dict[str, Any]:
         async def board() -> dict:
             rows, failed = await svc.router.call("crypto_funding", lambda p: p.crypto_funding())
             return {"data": {"mode": "BOARD", "rows": rows, "detail": None, "venue": rows[0]["source"].upper() if rows else None, "majors": list(cd.MAJORS)},
-                    "fallback_from": failed, "source": rows[0]["source"] if rows else "binance_deriv"}
+                    "fallback_from": failed, "source": _src(rows[0]["source"]) if rows else "binance_deriv"}
 
         return await svc._swr("w:fund:board", FUND_TTL_S, board)
 
     async def one() -> dict:
         out, failed = await svc.router.call("crypto_funding_detail", lambda p: p.crypto_funding_detail(base), base)
         return {"data": {"mode": "DETAIL", "rows": [out["row"]], "detail": out["history"], "venue": out["row"]["source"].upper(), "majors": list(cd.MAJORS)},
-                "fallback_from": failed, "source": out["row"]["source"]}
+                "fallback_from": failed, "source": _src(out["row"]["source"])}
 
     return await svc._swr(f"w:fund:{base}", FUND_TTL_S, one)
 

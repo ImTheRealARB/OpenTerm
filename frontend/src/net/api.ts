@@ -1068,6 +1068,37 @@ export interface PredDetail {
   basis: string;
 }
 
+/** Phase 19 step 7: CDEP / FUND / LIQ / STBL / DEFI (`/api/world/cdep|fund|liq|stbl|defi`). Ladder rows are [price, qty, cumulative qty, cumulative notional]. */
+export interface CdepBand { pct: number; bid: number; ask: number; imbalance_pct: number | null }
+export interface CdepPayload {
+  base: string; quote: string; symbol: string; venue: string; ts_ms: number | null; usd: boolean;
+  bids: [number, number, number, number][]; asks: [number, number, number, number][];
+  best_bid: number; best_ask: number; mid: number; spread: number; spread_pct: number; imbalance_pct: number;
+  bid_qty: number; ask_qty: number; levels: [number, number]; bands: CdepBand[];
+}
+export interface FundRow {
+  sym: string; base: string; kind: "PERP" | "QUARTERLY"; mark: number | null; index: number | null; basis_pct: number | null;
+  rate_pct: number | null; interval_h: number | null; ann_pct: number | null; next_ms: number | null;
+  expiry: string | null; days: number | null; ann_basis_pct: number | null; source: string;
+}
+export interface FundHistory { prints: { t: number; rate_pct: number; ann_pct: number }[]; interval_h: number; mean_rate_pct: number | null; mean_ann_pct: number | null }
+export interface FundPayload { mode: "BOARD" | "DETAIL"; rows: FundRow[]; detail: FundHistory | null; venue: string | null; majors: string[] }
+export interface LiqEvent { t: number; side: "LONG" | "SHORT"; px: number; base: number; usd: number; inst: string }
+export interface LiqPayload {
+  base: string; venue: string; events: number; span_s: number; since_ms: number | null; until_ms: number | null;
+  long: { n: number; usd: number }; short: { n: number; usd: number }; largest: LiqEvent | null; recent: LiqEvent[]; ct_val: number; note: string;
+}
+export interface StblCoin {
+  name: string; symbol: string; peg: string; mechanism: string | null; circulating: number; value: number | null;
+  chg_1d: number | null; chg_7d: number | null; chg_30d: number | null; price: number | null; peg_dev_pct: number | null; chains: string[];
+}
+export interface StblPayload { coins: StblCoin[]; chains: { chain: string; usd: number; share_pct: number | null }[]; total_usd: number; n_coins: number; chain: string | null }
+export interface DefiPool {
+  chain: string; project: string; symbol: string; tvl: number; apy: number; apy_base: number | null; apy_reward: number | null;
+  stable: boolean; il: string | null; apy_30d: number | null; pool: string;
+}
+export interface DefiPayload { rows: DefiPool[]; matched: number; mode: "ALL" | "CHAIN" | "PROJECT"; query: string | null; pools_over_tvl: number; min_tvl: number }
+
 export const worldApi = {
   stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
   weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
@@ -1077,6 +1108,11 @@ export const worldApi = {
   holidays: (mkt: string, year: number) => request<Envelope<HolidayCalendar>>(`/api/world/holidays?${qs({ mkt, year: String(year) })}`, 3_600_000),
   pred: (q: string, fresh = false) => request<Envelope<PredPayload>>(`/api/world/pred?${qs({ q })}`, fresh ? 0 : 60_000),
   predDetail: (source: string, id: string, fresh = false) => request<Envelope<PredDetail>>(`/api/world/pred/detail?${qs({ source, id })}`, fresh ? 0 : 60_000),
+  cdep: (pair: string, fresh = false) => request<Envelope<CdepPayload>>(`/api/world/cdep?${qs({ pair })}`, fresh ? 0 : 4_000),
+  fund: (sym: string, fresh = false) => request<Envelope<FundPayload>>(`/api/world/fund?${qs({ sym })}`, fresh ? 0 : 30_000),
+  liq: (sym: string, fresh = false) => request<Envelope<LiqPayload>>(`/api/world/liq?${qs({ sym })}`, fresh ? 0 : 20_000),
+  stbl: (chain: string, fresh = false) => request<Envelope<StblPayload>>(`/api/world/stbl?${qs({ chain })}`, fresh ? 0 : 600_000),
+  defi: (q: string, fresh = false) => request<Envelope<DefiPayload>>(`/api/world/defi?${qs({ q })}`, fresh ? 0 : 600_000),
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */

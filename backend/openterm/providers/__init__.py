@@ -201,3 +201,10 @@ from .amfi import AmfiProvider
 from .nse_archive import NseArchiveProvider
 
 ADAPTERS.update({"nse_archive": NseArchiveProvider, "amfi": AmfiProvider})
+
+# --- Phase 19 step 7: crypto depth, funding, liquidations, stablecoins, yields (Binance first, OKX when Binance answers 451) ---
+from .binance_deriv import BinanceDerivProvider
+from .defillama import DefiLlamaProvider
+from .okx import OkxProvider
+
+ADAPTERS.update({"binance_deriv": BinanceDerivProvider, "okx": OkxProvider, "defillama": DefiLlamaProvider})

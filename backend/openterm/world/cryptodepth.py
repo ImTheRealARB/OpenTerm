@@ -6,6 +6,7 @@ A perpetual has no expiry, so its premium (mark vs index) is NOT annualised; dat
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import UTC, date, datetime
 from typing import Any
@@ -53,7 +54,7 @@ def _f(x: Any) -> float | None:
         v = float(x)
     except (TypeError, ValueError):
         return None
-    return v if v == v else None
+    return None if math.isnan(v) else v
 
 
 # --- order book -----------------------------------------------------------------------------------

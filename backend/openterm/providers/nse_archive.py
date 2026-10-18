@@ -28,7 +28,16 @@ from typing import ClassVar
 import httpx
 
 from ..models import Bars
-from ..world.india import IST, bhavcopy_url, build_columns, label, nse_symbol, parse_bhavcopy, plan, unzip_bhavcopy
+from ..world.india import (
+    IST,
+    bhavcopy_url,
+    build_columns,
+    label,
+    nse_symbol,
+    parse_bhavcopy,
+    plan,
+    unzip_bhavcopy,
+)
 from ..world.india_store import DayStore
 from .base import HISTORY, Provider, ProviderError
 
