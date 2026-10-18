@@ -8,6 +8,7 @@ import { bpChange, curveShape, fmtBp, fredIdForTenor, nyToday, spreadBp, yieldBa
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import RatesView from "./RatesView";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 120_000;
@@ -47,7 +48,12 @@ function buildRows(c: YieldCurve): Row[] {
   }));
 }
 
-export default function RATES({ panelId }: FunctionProps) {
+/** Phase 14: with an argument (EUR GBP CAD JPY SPRD AUCT NS <ccy>) the table views; with none, the US Treasury panel below. */
+export default function RATES(props: FunctionProps) {
+  return props.args.length ? <RatesView {...props} /> : <RatesUS {...props} />;
+}
+
+function RatesUS({ panelId }: FunctionProps) {
   const [env, setEnv] = useState<Envelope<YieldCurve> | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);

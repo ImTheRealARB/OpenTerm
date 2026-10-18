@@ -149,3 +149,19 @@ ADAPTERS.update({"yahoo_options": YahooOptionsProvider, "tradier": TradierProvid
 from .deribit import DeribitProvider
 
 ADAPTERS["deribit"] = DeribitProvider
+
+# --- Phase 14 step 6: rates views (public data, no key) ---
+from .boc import BocProvider
+from .boe import BoeProvider
+from .ecb import EcbProvider
+from .fred_oas import FredOasProvider
+from .mof import MofProvider
+from .treasurydirect import TreasuryDirectProvider
+
+ADAPTERS.update({"ecb": EcbProvider, "boe": BoeProvider, "boc": BocProvider, "mof": MofProvider, "fred_oas": FredOasProvider,
+                 "treasurydirect": TreasuryDirectProvider})
+
+# --- Phase 14 step 7: futures, COT and FOMC dates (public data, no key) ---
+from .futures import CftcProvider, FomcProvider, YahooFuturesProvider
+
+ADAPTERS.update({"yahoo_futures": YahooFuturesProvider, "cftc": CftcProvider, "fomc": FomcProvider})

@@ -48,6 +48,11 @@ DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "gdelt"]
 # --- Phase 14: option chains (Yahoo first; Tradier is a keyed fallback) ---
 DEFAULT_ORDER["option_chain"] = ["yahoo_options", "tradier"]
 DEFAULT_ORDER["crypto_options"] = ["deribit"]
+# --- Phase 14 step 6: RATES views ---
+DEFAULT_ORDER |= {"curve_eur": ["ecb"], "curve_gbp": ["boe"], "curve_cad": ["boc"], "curve_jpy": ["mof"],
+                  "credit_spreads": ["fred_oas"], "auctions": ["treasurydirect"]}
+# --- Phase 14 step 7: futures, COT, FOMC ---
+DEFAULT_ORDER |= {"futures_contract": ["yahoo_futures"], "cot_history": ["cftc"], "cot_markets": ["cftc"], "fomc_dates": ["fomc"]}
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
@@ -88,6 +93,10 @@ async def lifespan(app: FastAPI):
     from .derivs.service import Derivs
 
     service.derivs = Derivs(service, settings.openterm_fixtures, db)
+
+    from .rates.service import RatesViews
+
+    service.rates_views = RatesViews(service)
 
     # --- Phase 12: imported bars (IMPORT) ---
     service.local = LocalData(db)

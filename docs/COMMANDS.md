@@ -119,3 +119,10 @@ Keys: `Ctrl+\` / `Ctrl+-` split, `Alt+1..9` focus, `Alt+W` close, `Ctrl+Shift+F`
 panel history, `E` or `Alt+X` export a table to CSV.
 
 A four-panel macro desk: `RATES` (Enter), then `FRED CPIAUCSL`, `FX`, `CRYP` (each Shift+Enter), then `LAYOUT SAVE MACRO`.
+
+## Phase 14 step 7: futures, policy and calculators
+
+`CT CL` futures curve (contango or backwardation, spread to front, roll yield; `C` charts the curve) · `WIRP` implied fed funds path across FOMC meetings · `COT ES` CFTC positions, weekly change, 3-year net chart and
+percentile (`COT CRUDE`, `COT GOLD`, or part of a CFTC market name) · `FXFA EURUSD [1W,1M,3M] [R1=pct R2=pct]` forward estimate by covered interest parity · `YAS CPN=4.5 MAT=2034-05-15 YLD=4.7` (or `PX=` clean price;
+`FREQ= SETTLE= DAYS=ACT/ACT|30/360 FACE=`) · `SWPM N=10000000 FIXED=4.0 TENOR=5 DIR=PAY|REC [FREQ= CURVE=TSY|FLAT:4.0]` · `CDSW SPREAD=150 REC=40 TENOR=5 RF=3 COUPON=100 N=10000000`. The calculators never default an
+opinion: a missing input shows `NOT RUNNABLE: MISSING ...`.

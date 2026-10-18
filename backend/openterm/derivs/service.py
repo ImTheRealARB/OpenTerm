@@ -25,6 +25,8 @@ from ..research import corp_parse as cp
 from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
+from .calc_service import CalcMixin
+from .fut_service import FuturesMixin
 
 if TYPE_CHECKING:
     from ..service import DataService
@@ -33,7 +35,7 @@ if TYPE_CHECKING:
 FIXTURE_NOW = datetime(2026, 10, 18, tzinfo=UTC)
 
 
-class Derivs:
+class Derivs(FuturesMixin, CalcMixin):
     TTL: ClassVar[dict[str, float]] = {
         "chain": 120.0, "omon": 120.0, "pcr": 120.0, "surface": 300.0, "hivg": 300.0,
     }

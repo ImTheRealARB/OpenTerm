@@ -365,3 +365,48 @@ def _route(request: httpx.Request) -> httpx.Response:
             return _load("deribit_index_btc")
         return httpx.Response(400, json={"error": {"message": "Invalid params", "code": -32602}})
     return _route_before_deribit(request)
+
+
+# --- Phase 14 step 6: rates views (ECB, BoE, BoC, MoF, TreasuryDirect; FRED OAS goes through the fred_csv_<ID> route above) ---
+_route_before_rates = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "data-api.ecb.europa.eu":
+        return _load("ecb_yc_spot") if p.startswith("/service/data/YC/") and "SR_10Y" in p else httpx.Response(404, text="not recorded")
+    if host == "www.bankofengland.co.uk":
+        ok = p.endswith("/_iadb-fromshowcolumns.asp") and q.get("SeriesCodes") == "IUDSNPY,IUDMNPY,IUDLNPY"
+        return _load("boe_par_yields") if ok else httpx.Response(404, text="not recorded")
+    if host == "www.bankofcanada.ca":
+        return _load("boc_yields") if p.endswith("/observations/group/bond_yields_benchmark/json") else httpx.Response(404, text="not recorded")
+    if host == "www.mof.go.jp":
+        return _load("mof_jgb") if p.endswith("/jgbcme_all.csv") else httpx.Response(404, text="not recorded")
+    if host == "www.treasurydirect.gov":
+        if p.endswith("/securities/auctioned"):
+            return _load("treasurydirect_auctioned")
+        if p.endswith("/securities/upcoming"):
+            return _load("treasurydirect_upcoming")
+        return httpx.Response(404, text="not recorded")
+    return _route_before_rates(request)
+
+
+# --- Phase 14 step 7: futures contracts (CT, WIRP), CFTC COT, FOMC calendar ---
+# yahoo_chart_fut_<symbol>: one recorded v8/chart per contract (a contract that was not recorded is a 404, like Yahoo's). cftc_legacy_<tag>:
+# four markets by contract code. cftc_markets answers the distinct-name query. fomc_calendar: the recorded federalreserve.gov page.
+_COT_TAGS = {"13874A": "es", "067651": "cl", "088691": "gc", "043602": "zn"}
+_route_before_futures = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if p.startswith("/v8/finance/chart/") and (FIXTURES / f"yahoo_chart_fut_{p.rsplit('/', 1)[-1].replace('.', '_')}.json").exists():
+        return _load(f"yahoo_chart_fut_{p.rsplit('/', 1)[-1].replace('.', '_')}")
+    if host == "publicreporting.cftc.gov":
+        if q.get("$group"):
+            return _load("cftc_markets")
+        code = next((c for c in _COT_TAGS if f"'{c}'" in q.get("$where", "")), None)
+        return _load(f"cftc_legacy_{_COT_TAGS[code]}") if code else httpx.Response(200, json=[])
+    if host == "www.federalreserve.gov" and p.endswith("/fomccalendars.htm"):
+        return _load("fomc_calendar")
+    return _route_before_futures(request)

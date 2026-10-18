@@ -182,3 +182,36 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - `IMPORT` stores daily bars you provide; they are never from a market source and are labelled LOCAL DATA in GP and BT. There is no
   adjusted close: a CSV with split-adjusted prices is used as given. Intraday bars are refused. A stored symbol shadows a real ticker
   of the same name everywhere (history, GP, BT) until you `IMPORT DEL` it; quotes and streaming still come from the market sources.
+
+## Phase 14 rates sources (RATES views; recorded 2026-10-18)
+No key is needed for any of them. Each table header shows the source, its age and, when a fallback answered, which provider failed first.
+- **`RATES EUR` (ECB, `ecb`)**: ECB Data Portal SDMX, euro area AAA government spot curve (Svensson fit by the ECB), tenors 3M, 6M, 1Y, 2Y, 5Y, 10Y, 20Y, 30Y.
+  It is an estimated curve, not a traded yield. Published each TARGET business day, about one day behind. Cached 1 h.
+- **`RATES GBP` (Bank of England, `boe`)**: Interactive Database CSV, nominal par yields at **5, 10 and 20 years only** (IUDSNPY, IUDMNPY, IUDLNPY): the full gilt curve
+  is not offered as a keyless download. Three points are too few for a Nelson-Siegel fit, so `RATES NS GBP` answers "needs 4 curve points". One to two days behind.
+- **`RATES CAD` (Bank of Canada Valet, `boc`)**: Government of Canada benchmark yields for 2, 3, 5, 7 and 10 years. The LONG and real-return series have no fixed
+  maturity and are left out. About one business day behind (the newest day is often missing until the evening).
+- **`RATES JPY` (Japan MoF, `mof`)**: the ministry's daily JGB CSV, 1Y to 40Y. The file is the whole history (about a megabyte), downloaded on a cache miss; the newest
+  40 days are kept. A dash in the file (no benchmark that day for that maturity) is shown as no value. One business day behind.
+- **`RATES SPRD` (FRED OAS, `fred_oas`)**: ICE BofA option-adjusted spreads (US corporate, high yield, BBB, BB, CCC) from the keyless `fredgraph.csv`, read with a plain
+  client User-Agent (FRED hangs on a browser one). FRED serves only the last three years of ICE data and is about one business day behind. The 1-year percentile is computed here
+  from the daily values of the last 365 days. Cached 6 h. A series that fails shows no value and is named in the notes.
+- **`RATES AUCT` (TreasuryDirect, `treasurydirect`)**: the securities API, auction results of the last 30 days and the announced upcoming auctions. Results appear within
+  minutes of an auction; an auction is announced about a week before. Bid-to-cover and high rate are the Treasury's figures; an upcoming auction has neither (shown as no value).
+- **`RATES NS <ccy>`**: a Nelson-Siegel fit computed here (the Vibe-Trading `fit_yield_curve` port) to the shown yields as zero rates; parameters, RMSE in bp and the fitted column
+  are labelled as a model fit, not a source figure.
+- Day changes are against the previous *observation* (not calendar day) and five observations back; they show a dash when the source returned fewer observations.
+
+## Phase 14 step 7: futures, COT, policy path and calculators
+
+- **`CT <root>`**: one Yahoo `v8/chart` per contract (`yahoo_futures`, delayed, unofficial). Yahoo returns no expiry date, so roll yield is annualised by *contract month spacing*, not days to expiry. A contract Yahoo
+  does not list (recorded: `ZNM27`) is skipped and named in the notes, never invented. SHAPE (CONTANGO / BACKWARDATION / MIXED) is called only from the listed contracts. Cached 120 s.
+- **`WIRP`**: `ZQ` fed funds futures (implied average rate = 100 - price) chained across the FOMC decision dates parsed from federalreserve.gov (cached 24 h), starting from the effective rate (FRED `DFF`). The decision
+  takes effect the next day, so a month with the decision on day d averages d days at the old rate; a decision in the last quarter of its month reads the next month's contract instead. "25BP MOVE SHARE" is
+  |change| / 25 bp, illustrative, labelled `NOT A PROBABILITY FORECAST`. No term premium or day-count refinement is applied.
+- **`COT <market>`**: CFTC legacy futures-only report (Socrata `6dca-aqww`), 160 weeks, as of Tuesday and released Friday; cached 6 h. Names resolve through a curated alias table, else a substring search of the CFTC market
+  names seen in the last 90 days (cached 24 h). The percentile is computed here over the weeks shown. Options-and-futures-combined and disaggregated reports are not used.
+- **`YAS`, `SWPM`, `CDSW`, `FXFA`** are calculators: no free bond, swap or CDS database exists, so the instrument is described by its terms and a missing term makes the answer `NOT RUNNABLE` listing every missing field.
+  YAS yield is a periodic-compounding yield with a fractional first period; SWPM is single-curve (the Treasury par curve is a *discount proxy, not SOFR/OIS*); CDSW is the flat-hazard credit-triangle engine, not the
+  ISDA standard model; FXFA is covered interest parity from government yields (USD Treasury bills, EUR ECB 3M-1Y, JPY MoF 1Y) or typed `R1=`/`R2=`, ACT/360 simple interest, not a dealer quote. A currency with no free
+  short rate (GBP, CAD, ...) is NOT RUNNABLE until its rate is typed.

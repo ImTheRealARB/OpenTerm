@@ -245,3 +245,93 @@ test("OVDV / SKEW / HIVG: surface heat map with empty cells, skew table, realize
   await expect(panel(page)).toContainText("IV30 26.0%");
   await expect(panel(page)).toContainText("NOT AVAILABLE: 1 LOCAL SNAPSHOT");
 });
+
+
+test("RATES: EUR curve table and SPRD spread table through the research panel; no argument stays the US panel", async ({ page }) => {
+  await setup(page);
+  const ratesAsked: string[] = [];
+  const curveCols = [c("tenor", "TENOR"), c("years", "YEARS", "num"), c("yield", "YIELD %", "num4"), c("d1", "1D BP", "bp"), c("d5", "5D BP", "bp")];
+  await page.route("**/api/rates/curve?**", (r) => {
+    ratesAsked.push(new URL(r.request().url()).search);
+    return r.fulfill({
+      json: env(
+        payload("RATES EUR", [{ id: "curve", title: "EUR CURVE", note: null, columns: curveCols, rows: [
+          { tenor: "3M", years: 0.25, yield: 2.5838, d1: 3.8, d5: 5.3 },
+          { tenor: "10Y", years: 10, yield: 3.3904, d1: -12, d5: -12.9 },
+        ] }], [{ label: "CURVE", value: "ECB EURO AREA AAA GOVERNMENT SPOT CURVE" }, { label: "AS OF", value: "2026-10-15" }], { symbol: "EUR", source: "ecb" }),
+        { source: "ecb" },
+      ),
+    });
+  });
+  await page.route("**/api/rates/spreads?**", (r) =>
+    r.fulfill({
+      json: env(
+        payload("RATES SPRD", [{ id: "oas", title: "CREDIT SPREADS (OAS)", note: null, columns: [c("series", "FRED ID"), c("name", "OPTION-ADJUSTED SPREAD"), c("bp", "OAS BP", "bp"), c("date", "AS OF", "date")], rows: [
+          { series: "BAMLC0A0CM", name: "US CORPORATE (INVESTMENT GRADE)", bp: 84, date: "2026-10-15" },
+          { series: "BAMLH0A0HYM2", name: "US HIGH YIELD", bp: 323, date: "2026-10-15" },
+        ] }], [{ label: "AS OF", value: "2026-10-15" }], { symbol: null, source: "fred_oas" }),
+        { source: "fred_oas" },
+      ),
+    }),
+  );
+  await run(page, "RATES EUR");
+  const p = panel(page);
+  await expect(p).toContainText("ECB EURO AREA AAA GOVERNMENT SPOT CURVE");
+  await expect(selected(page)).toContainText("3M");
+  await expect(selected(page)).toContainText("2.5838");
+  await page.keyboard.press("j");
+  await expect(selected(page)).toContainText("3.3904");
+  await expect.poll(() => ratesAsked[0]).toContain("ccy=EUR");
+
+  await run(page, "RATES NS EUR");
+  await expect.poll(() => ratesAsked.some((q) => q.includes("fit=NS"))).toBe(true);
+
+  await run(page, "RATES SPRD");
+  await expect(p).toContainText("US CORPORATE (INVESTMENT GRADE)");
+  await expect(selected(page)).toContainText("BAMLC0A0CM");
+  await page.keyboard.press("j");
+  await expect(selected(page)).toContainText("323");
+
+  await run(page, "RATES XYZ");
+  await expect(p).toContainText("USAGE: RATES [EUR|GBP|CAD|JPY|SPRD|AUCT|NS");
+});
+
+test("CT / YAS / FXFA: futures curve rows, a calculator that is NOT RUNNABLE, and typed rates reaching the API", async ({ page }) => {
+  await setup(page);
+  const fut: string[] = [];
+  await page.route("**/api/deriv/ct?**", (r) => {
+    fut.push(new URL(r.request().url()).search);
+    return r.fulfill({
+      json: env(
+        payload("CT CL", [{ id: "contracts", title: "CL CONTRACTS", note: null, columns: [c("symbol", "SYMBOL"), c("contract", "CONTRACT"), c("price", "PRICE", "price"), c("roll_yield", "ROLL YIELD (ANN.)", "pct")], rows: [
+          { symbol: "CLX26.NYM", contract: "NOV 2026", price: 97.5, roll_yield: null },
+          { symbol: "CLZ26.NYM", contract: "DEC 2026", price: 99.02, roll_yield: -0.1842 },
+        ] }], [{ label: "SHAPE", value: "MIXED" }], { symbol: "CL", source: "yahoo_futures:fixture" }),
+        { source: "yahoo_futures:fixture" },
+      ),
+    });
+  });
+  await page.route("**/api/deriv/yas?**", (r) =>
+    r.fulfill({ json: env(payload("YAS BOND YIELD ANALYSIS", [{ id: "inputs", title: "INPUTS", note: null, columns: [c("name", "INPUT"), c("value", "VALUE")], rows: [{ name: "CPN", value: "4.5000%" }] }], [], { status: "NOT RUNNABLE: MISSING MAT, PX OR YLD", symbol: "YAS" })) }),
+  );
+  await page.route("**/api/deriv/fxfa?**", (r) => {
+    fut.push(new URL(r.request().url()).search);
+    return r.fulfill({ json: env(payload("FXFA EURUSD", [{ id: "forwards", title: "FORWARDS", note: null, columns: [c("tenor", "TENOR"), c("forward", "FORWARD", "num4")], rows: [{ tenor: "1W", forward: 1.1252 }] }], [{ label: "SPOT", value: "1.1244", raw: 1.1244 }], { symbol: "EURUSD" })) });
+  });
+  await run(page, "CT CL");
+  await expect(panel(page)).toContainText("MIXED");
+  await expect(selected(page)).toContainText("NOV 2026");
+  await page.keyboard.press("j");
+  await expect(selected(page)).toContainText("99.02");
+  await expect.poll(() => fut[0]).toContain("root=CL");
+
+  await run(page, "YAS CPN=4.5");
+  await expect(panel(page)).toContainText("NOT RUNNABLE: MISSING MAT, PX OR YLD");
+
+  await run(page, "FXFA EURUSD R1=2 R2=4");
+  await expect(selected(page)).toContainText("1W");
+  await expect.poll(() => fut.at(-1)).toContain("pair=EURUSD");
+  expect(fut.at(-1)).toContain("r1=2");
+  await run(page, "CT CL NG");
+  await expect(panel(page)).toContainText("USAGE: CT <ROOT>");
+});

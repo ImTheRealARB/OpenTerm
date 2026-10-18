@@ -55,6 +55,7 @@ class DataService:
         self.local: LocalData | None = None  # IMPORT: set by the lifespan (bars the user imported)
         self.research = None  # Phase 13 research functions: set by the lifespan (research/service.py)
         self.derivs = None  # Phase 14 options, rates and futures: set by the lifespan (derivs/service.py)
+        self.rates_views = None  # Phase 14 RATES views (EUR, GBP, CAD, JPY, SPRD, AUCT, NS): set by the lifespan (rates/service.py)
         self.cache = cache
         self.ttl = {
             "quote": 5.0, "intraday": 60.0, "daily": 3600.0, "search": 86400.0, "profile": 86400.0,

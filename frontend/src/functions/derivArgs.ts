@@ -40,3 +40,37 @@ export function wordThenKv(args: string[], key: string): Parsed {
   if (words.length) params[key] = words.join(" ");
   return { params, bad };
 }
+
+const ROOT = /^[A-Z0-9]{1,4}$/;
+const PAIR = /^[A-Z]{3}[/-]?[A-Z]{3}$/;
+const TENORS = /^(\d+[WMY])(,\d+[WMY])*$/;
+
+/** CT: one futures root (`CL`, `ES`, `6E`). Anything else is reported, never guessed. */
+export function ctArgs(args: string[]): Parsed {
+  const params: Record<string, string> = {};
+  const bad: string[] = [];
+  for (const raw of args) {
+    const a = raw.toUpperCase();
+    if (ROOT.test(a) && !params.root) params.root = a;
+    else bad.push(raw);
+  }
+  return { params, bad };
+}
+
+/** FXFA: `<PAIR> [1W,1M,3M] [R1=pct] [R2=pct]`; the pair and the tenor list are recognised by shape. */
+export function fxfaArgs(args: string[]): Parsed {
+  const params: Record<string, string> = {};
+  const bad: string[] = [];
+  for (const raw of args) {
+    const a = raw.toUpperCase();
+    const i = a.indexOf("=");
+    if (i > 0 && i < a.length - 1) {
+      const k = a.slice(0, i).toLowerCase();
+      if (k === "r1" || k === "r2" || k === "tenors") params[k] = a.slice(i + 1);
+      else bad.push(raw);
+    } else if (TENORS.test(a)) params.tenors = a;
+    else if (PAIR.test(a) && !params.pair) params.pair = a.replace(/[/-]/g, "");
+    else bad.push(raw);
+  }
+  return { params, bad };
+}

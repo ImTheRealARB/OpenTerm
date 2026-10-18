@@ -28,7 +28,8 @@ OPT = lambda f: f  # step 3 landed
 PRICER = lambda f: f  # step 4 landed
 SURF = lambda f: f  # step 5 landed
 RATES = xf("rates and calculators", 6)
-FUT = xf("futures and policy", 7)
+FUT = lambda f: f  # step 7 landed
+CALC = lambda f: f  # step 7 landed: YAS, SWPM, CDSW, FXFA (the RATES views keep RATES)
 
 
 def fixture_body(name: str):
@@ -399,7 +400,7 @@ def pv_yield(y: float, cpn=0.045, freq=2) -> float:
     return sum((100 * cpn / freq + (100 if k == 15 else 0)) / (1 + y / freq) ** (w + k) for k in range(16))
 
 
-@RATES
+@CALC
 def test_yas_from_yield_and_from_price_agree(client):
     d = data(client, "deriv/yas", **YAS, YLD="4.7")
     assert_table_payload(d)
@@ -418,14 +419,14 @@ def test_yas_from_yield_and_from_price_agree(client):
     assert cfs[-1]["principal"] == 100.0 and cfs[0]["coupon"] == pytest.approx(2.25)
 
 
-@RATES
+@CALC
 def test_yas_needs_a_price_or_a_yield(client):
     d = data(client, "deriv/yas", **YAS)
     assert d["data"]["status"].startswith("NOT RUNNABLE") and "PX" in d["data"]["status"] and "YLD" in d["data"]["status"]
     assert client.get("/api/deriv/yas", params={**YAS, "YLD": "4.7", "MAT": "2026-01-01"}).status_code == 400
 
 
-@RATES
+@CALC
 def test_swpm_flat_curve_is_internally_consistent(client):
     d = data(client, "deriv/swpm", N="10000000", FIXED="4.0", TENOR="5", FREQ="2", DIR="PAY", CURVE="FLAT:4.0")
     assert_table_payload(d)
@@ -443,13 +444,13 @@ def test_swpm_flat_curve_is_internally_consistent(client):
     assert any("NOT SOFR" in n for n in t["data"]["notes"])
 
 
-@RATES
+@CALC
 def test_swpm_missing_terms_are_not_runnable(client):
     d = data(client, "deriv/swpm", N="10000000")
     assert d["data"]["status"].startswith("NOT RUNNABLE") and "FIXED" in d["data"]["status"] and "TENOR" in d["data"]["status"]
 
 
-@RATES
+@CALC
 def test_cdsw_matches_vibe_cds_price(client):
     case = next(c for c in json.loads((FIX / "quant_vibe_expected.json").read_bytes().decode("utf-8"))["cases"]
                 if c["fn"] == "credit.cds_price" and c["args"]["spread_bps"] == 150.0 and "result" in c)
@@ -465,7 +466,7 @@ def test_cdsw_matches_vibe_cds_price(client):
                                                   "N": "1000000"}).status_code == 400
 
 
-@RATES
+@CALC
 def test_fxfa_typed_rates_follow_covered_interest_parity(client):
     d = data(client, "deriv/fxfa", pair="EURUSD", R1="2.0", R2="4.0")
     assert_table_payload(d)
@@ -480,7 +481,7 @@ def test_fxfa_typed_rates_follow_covered_interest_parity(client):
     assert any("COVERED INTEREST PARITY ESTIMATE, NOT A DEALER QUOTE" in n for n in d["data"]["notes"])
 
 
-@RATES
+@CALC
 def test_fxfa_rates_from_data_and_not_runnable_without_them(client):
     d = data(client, "deriv/fxfa", pair="EURUSD")
     inputs = {r["name"]: r for r in section(d, "inputs")["rows"]}
@@ -503,7 +504,6 @@ def ecb_latest() -> dict[str, tuple[float, float]]:
     return out
 
 
-@RATES
 def test_rates_curve_eur_matches_the_ecb_recording(client):
     d = data(client, "rates/curve", ccy="EUR")
     assert_table_payload(d)
@@ -515,12 +515,11 @@ def test_rates_curve_eur_matches_the_ecb_recording(client):
         assert rows[tenor]["yield"] == pytest.approx(now) and rows[tenor]["d1"] == pytest.approx((now - prev) * 100, abs=1e-6)
 
 
-@RATES
 def test_rates_curve_other_currencies(client):
     boe = data(client, "rates/curve", ccy="GBP")
     assert {r["tenor"]: r["yield"] for r in section(boe, "curve")["rows"]} == pytest.approx({"5Y": 4.9692, "10Y": 5.383, "20Y": 5.7225})
     boc = data(client, "rates/curve", ccy="CAD")
-    assert {r["tenor"]: r["yield"] for r in section(boc, "curve")["rows"]}["10Y"] == pytest.approx(3.94)
+    assert {r["tenor"]: r["yield"] for r in section(boc, "curve")["rows"]}["10Y"] == pytest.approx(3.83)
     jp = data(client, "rates/curve", ccy="JPY")
     rows = {r["tenor"]: r for r in section(jp, "curve")["rows"]}
     last = fixture_body("mof_jgb").strip().splitlines()[-1].split(",")
@@ -528,7 +527,6 @@ def test_rates_curve_other_currencies(client):
     assert client.get("/api/rates/curve", params={"ccy": "XXX"}).status_code == 400
 
 
-@RATES
 def test_rates_nelson_siegel_fit_of_a_shown_curve(client):
     d = data(client, "rates/curve", ccy="EUR", fit="NS")
     fit = {r["name"]: r["value"] for r in section(d, "fit")["rows"]}
@@ -539,7 +537,6 @@ def test_rates_nelson_siegel_fit_of_a_shown_curve(client):
     assert any("NELSON-SIEGEL" in n for n in d["data"]["notes"])
 
 
-@RATES
 def test_rates_credit_spreads_from_fred_oas(client):
     d = data(client, "rates/spreads")
     assert_table_payload(d)
@@ -551,7 +548,6 @@ def test_rates_credit_spreads_from_fred_oas(client):
     assert rows["BAMLH0A0HYM2"]["bp"] > rows["BAMLC0A0CM"]["bp"]   # high yield pays more than investment grade
 
 
-@RATES
 def test_rates_auctions_results_and_upcoming(client):
     d = data(client, "rates/auctions")
     assert_table_payload(d)

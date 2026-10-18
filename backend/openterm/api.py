@@ -261,6 +261,31 @@ async def deriv(request: Request, fn: str):
         return error(e)
 
 
+# --- Phase 14 step 6: RATES views (the Treasury panel keeps GET /rates) ---
+@router.get("/rates/curve")
+async def rates_curve(request: Request, ccy: str = Query("", max_length=8), fit: str | None = Query(None, max_length=8)):
+    try:
+        return await svc(request).rates_views.curve(ccy, fit)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/rates/spreads")
+async def rates_spreads(request: Request):
+    try:
+        return await svc(request).rates_views.spreads()
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/rates/auctions")
+async def rates_auctions(request: Request):
+    try:
+        return await svc(request).rates_views.auctions()
+    except DataError as e:
+        return error(e)
+
+
 # --- Phase 9: screener (EQS) and peers (COMP) ---
 @router.get("/screener")
 async def screener(request: Request):

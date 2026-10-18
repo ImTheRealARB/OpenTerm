@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kvParams, omonArgs, wordThenKv } from "./derivArgs";
+import { ctArgs, fxfaArgs, kvParams, omonArgs, wordThenKv } from "./derivArgs";
 
 describe("omonArgs", () => {
   it("recognises a date, a moneyness word and Q= by shape", () => {
@@ -23,5 +23,28 @@ describe("wordThenKv", () => {
   it("joins positional words under one key", () => {
     expect(wordThenKv(["CRUDE", "OIL"], "market").params).toEqual({ market: "CRUDE OIL" });
     expect(wordThenKv(["EURUSD", "R1=2", "R2=4"], "pair").params).toEqual({ pair: "EURUSD", r1: "2", r2: "4" });
+  });
+});
+
+describe("ctArgs", () => {
+  it("takes one futures root, upper-cased", () => {
+    expect(ctArgs(["cl"])).toEqual({ params: { root: "CL" }, bad: [] });
+    expect(ctArgs(["6e"]).params).toEqual({ root: "6E" });
+    expect(ctArgs([])).toEqual({ params: {}, bad: [] });
+  });
+  it("reports a second word or a malformed root", () => {
+    expect(ctArgs(["CL", "NG"]).bad).toEqual(["NG"]);
+    expect(ctArgs(["CRUDE-OIL"]).bad).toEqual(["CRUDE-OIL"]);
+  });
+});
+
+describe("fxfaArgs", () => {
+  it("recognises the pair, the tenor list and R1/R2 by shape", () => {
+    expect(fxfaArgs(["eurusd", "1w,1m", "r1=2", "R2=4"])).toEqual({ params: { pair: "EURUSD", tenors: "1W,1M", r1: "2", r2: "4" }, bad: [] });
+    expect(fxfaArgs(["EUR/USD"]).params).toEqual({ pair: "EURUSD" });
+  });
+  it("reports anything else", () => {
+    expect(fxfaArgs(["EURUSD", "X=1"]).bad).toEqual(["X=1"]);
+    expect(fxfaArgs(["EURUSD", "GBPUSD"]).bad).toEqual(["GBPUSD"]);
   });
 });
