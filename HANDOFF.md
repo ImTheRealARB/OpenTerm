@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-phases-12-19-5ebe04`; Phase 11 done except one recording; PHASE 12 COMPLETE (steps 1-9 and 4B); PHASE 13 COMPLETE (steps 1-8); Phase 14 next; Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-19, session 8 (branch `claude/openterm-phase-14-ec5824`; Phase 11 done except one recording; PHASES 12, 13 and 14 COMPLETE; Phase 15 next (plus read-only Kite, see "Resume here"); Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.

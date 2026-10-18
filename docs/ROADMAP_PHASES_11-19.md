@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phases 11, 12 and 13 done; Phase 14 next; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 14, 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12, 13 and 14 done; Phase 15 next, with a read-only Kite Connect source added; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
