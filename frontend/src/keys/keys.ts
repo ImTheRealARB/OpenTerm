@@ -26,6 +26,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   cheatsheet: "Shortcut cheatsheet",
   perfHud: "Toggle PERF HUD",
   exportCsv: "Export the focused panel's table to CSV (also E in tables)",
+  windowMenu: "Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter)",
 };
 
 /** Canonical chord string for an event, e.g. "Ctrl+Shift+ArrowLeft". */

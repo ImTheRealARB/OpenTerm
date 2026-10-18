@@ -5,6 +5,7 @@ import { commandInputRef, prefillCommand, vimInsertMode } from "./components/Com
 import { StatusBar } from "./components/StatusBar";
 import { TopBar } from "./components/TopBar";
 import { Workspace } from "./components/Workspace";
+import { openWindowMenu, windowMenuKey } from "./components/windowMenuRun";
 import { match } from "./keys/keys";
 import { dispatchPanelKey } from "./keys/panelKeys";
 import { exportPanelCsv } from "./functions/tableExport";
@@ -30,6 +31,11 @@ export function App() {
     // Bubble phase on window: component handlers (command line Tab/arrows) run first and may preventDefault.
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
+      // An open window-frame menu takes plain keys first (arrows, digits, Enter, Esc).
+      if (windowMenuKey(e)) {
+        e.preventDefault();
+        return;
+      }
       const input = commandInputRef.current;
       const inInput = document.activeElement === input;
       const m = match(e);
@@ -131,6 +137,10 @@ export function App() {
         // --- Phase 9 ---
         case "exportCsv":
           exportPanelCsv(workspace.get().focus);
+          break;
+        case "windowMenu":
+          input?.blur();
+          openWindowMenu();
           break;
       }
     };

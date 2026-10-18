@@ -171,6 +171,15 @@ export function replaceView(id: number, update: (v: View) => View): void {
   });
 }
 
+/** Jumps a panel to one entry of its history (window-frame RECENT menu). */
+export function historyGo(id: number, pos: number): void {
+  workspace.set((s) => {
+    const p = s.panels[id];
+    if (!p || pos < 0 || pos >= p.views.length || pos === p.pos) return s;
+    return { ...s, panels: { ...s.panels, [id]: { ...p, pos } } };
+  });
+}
+
 export function historyStep(dir: -1 | 1): void {
   workspace.set((s) => {
     const p = s.panels[s.focus];

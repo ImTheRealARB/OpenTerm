@@ -19,5 +19,6 @@
   "openWorkspace": ["Ctrl+O"],
   "cheatsheet": ["?"],
   "perfHud": ["Ctrl+Shift+P"],
-  "exportCsv": ["Alt+X"]
+  "exportCsv": ["Alt+X"],
+  "windowMenu": ["Alt+M"]
 }

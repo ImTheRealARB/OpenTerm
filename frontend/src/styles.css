@@ -81,6 +81,16 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .panel.focus .ph { color: var(--val); font-weight: bold; }
 .ph .id { color: var(--bg); background: var(--fg-dim); padding: 0 5px; font-weight: bold; }
 .panel.focus .ph .id { background: var(--fg); }
+/* Window-frame menus (RECENT / RELATED / OPTIONS, Alt+M) */
+.panel { position: relative; }
+.ph .wm-sp { flex: 1; }
+.ph .wm-t { color: var(--hdr); font-weight: normal; cursor: default; }
+.ph .wm-t.on { color: var(--bg); background: var(--fg); padding: 0 4px; }
+.wm { position: absolute; top: 16px; right: 0; z-index: 10; min-width: 260px; max-height: calc(100% - 16px); overflow-y: auto; background: var(--bg); border: 1px solid var(--fg); }
+.wm div { padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wm div.on { background: var(--sel); color: var(--val); }
+.wm .wm-n { color: var(--val); display: inline-block; width: 3ch; }
+.wm .wm-hint { color: var(--fg-dim); border-top: 1px solid var(--line); }
 .pb { flex: 1 1 auto; overflow: auto; padding: 2px 4px; min-height: 0; }
 
 /* Tables (DOM tables only for small static content; live grids are canvas) */

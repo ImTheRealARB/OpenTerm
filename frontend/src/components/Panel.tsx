@@ -4,6 +4,8 @@ import { panelPainted, recordPanelRender } from "../perf/metrics";
 import { PanelIdContext } from "../state/panelContext";
 import { useStore } from "../state/store";
 import { currentView, focusPanel, workspace } from "../state/workspace";
+import { MENUS, type MenuIndex } from "./windowMenu";
+import { closeWindowMenu, itemsOf, openWindowMenu, runItem, windowMenu } from "./windowMenuRun";
 
 /** One panel crashing never takes down the app. */
 class PanelBoundary extends Component<{ children: ReactNode; resetKey: string }, { error: Error | null }> {
@@ -65,8 +67,29 @@ function FunctionView({ panelId, view }: { panelId: number; view: ReturnType<typ
   );
 }
 
+/** Drop-down under the title bar: numbered items, the cursor row highlighted. */
+function WindowMenu({ id }: { id: number }) {
+  const state = useStore(windowMenu, (s) => s);
+  useStore(workspace, (s) => s.panels[id]);
+  if (!state || state.panel !== id) return null;
+  const items = itemsOf(state);
+  return (
+    <div className="wm" data-testid="window-menu" onMouseDown={(e) => e.stopPropagation()}>
+      {items.length === 0 && <div className="dim">NOTHING HERE</div>}
+      {items.map((it, i) => (
+        <div key={i} className={i === state.sel ? "on" : undefined} onMouseDown={() => runItem(id, it)}>
+          <span className="wm-n">{i < 9 ? `${i + 1})` : ""}</span> {it.label}
+          {it.kind === "history" && it.current && <span className="dim"> (CURRENT)</span>}
+        </div>
+      ))}
+      <div className="wm-hint">1-9 PICK · ↑↓ ENTER · ←→ MENU · ESC CLOSE</div>
+    </div>
+  );
+}
+
 export function Panel({ id }: { id: number }) {
   const panel = useStore(workspace, (s) => s.panels[id]);
+  const menu = useStore(windowMenu, (s) => (s?.panel === id ? s : null));
   const focused = useStore(workspace, (s) => s.focus === id);
   const view = currentView(panel);
   // The sticky security stays on the panel, but the tab only names it when this function uses it
@@ -83,7 +106,22 @@ export function Panel({ id }: { id: number }) {
         <span className="id">{id}</span>
         <span>{title}</span>
         {panel.views.length > 1 && <span className="dim">{panel.pos + 1}/{panel.views.length}</span>}
+        <span className="wm-sp" />
+        {MENUS.map((m, i) => (
+          <span
+            key={m}
+            className={"wm-t" + (menu?.menu === i ? " on" : "")}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              if (menu?.menu === i) closeWindowMenu();
+              else openWindowMenu(id, i as MenuIndex);
+            }}
+          >
+            {m} ▾
+          </span>
+        ))}
       </header>
+      {menu && <WindowMenu id={id} />}
       <div className="pb">
         <PanelBoundary resetKey={resetKey}>
           <Profiler id={String(id)} onRender={(_id, _phase, ms) => recordPanelRender(id, ms)}>
