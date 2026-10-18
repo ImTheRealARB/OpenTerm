@@ -1,12 +1,13 @@
 /**
  * SECF: security finder. `SECF <text>` ranks the EQS screener universe plus Yahoo search hits with a typo-tolerant scorer (secfScore.ts);
  * `SECF <ISIN|CUSIP|SEDOL|FIGI:id ...>` maps identifiers to listings through OpenFIGI (keyless, server side). Enter opens DES.
+ * A name search also looks up Indian mutual fund schemes in AMFI's daily NAV file (`/api/world/mfnav`); `M` switches the grid to those fund rows.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, api9, worldApi, type Envelope, type FigiItem, type FigiListing, type FigiResult, type ScreenerPayload, type SearchHit } from "../net/api";
+import { ApiError, api, api9, worldApi, type Envelope, type FigiItem, type FigiListing, type FigiResult, type MfItem, type MfNavPayload, type ScreenerPayload, type SearchHit } from "../net/api";
 import { navigate } from "../state/workspace";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
@@ -16,6 +17,8 @@ import { gridCsv, useCsvExport } from "./tableExport";
 
 const USAGE = "SECF APPLE · SECF MICROSFT · SECF RELIANCE · SECF US0378331005 · SECF 037833100 · SECF 2046251 · SECF FIGI:BBG000B9XRY4";
 const LIMIT = 200;
+/** The server needs 3+ letters or a 4-7 digit AMFI scheme code. */
+const mfQuery = (q: string) => q.replace(/\s+/g, "").length >= 3 || /^\d{4,7}$/.test(q);
 
 /** One line of an identifier lookup: an OpenFIGI listing, or the reason an identifier has none. */
 interface FigiRow {
@@ -40,6 +43,8 @@ export default function SECF({ panelId, args }: FunctionProps) {
   const [uni, setUni] = useState<Envelope<ScreenerPayload> | null>(null);
   const [search, setSearch] = useState<Envelope<SearchHit[]> | null>(null);
   const [figi, setFigi] = useState<Envelope<FigiResult> | null>(null);
+  const [mf, setMf] = useState<Envelope<MfNavPayload> | null>(null);
+  const [funds, setFunds] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
@@ -50,6 +55,8 @@ export default function SECF({ panelId, args }: FunctionProps) {
     let live = true;
     setMsg("");
     setErrors([]);
+    setMf(null);
+    setFunds(false);
     if (!query) {
       setLoading(false);
       return;
@@ -81,7 +88,10 @@ export default function SECF({ panelId, args }: FunctionProps) {
         if (live) setSearch(null);
         fail("YAHOO SEARCH")(e);
       });
-      void Promise.all([u, s]).finally(() => live && setLoading(false));
+      const m = mfQuery(query)
+        ? worldApi.mfnav(query, fresh).then((e) => live && setMf(e)).catch(fail("AMFI NAV"))
+        : Promise.resolve();
+      void Promise.all([u, s, m]).finally(() => live && setLoading(false));
     }
     return () => {
       live = false;
@@ -94,6 +104,8 @@ export default function SECF({ panelId, args }: FunctionProps) {
     return rank(search ? mergeSearch(base, search.data) : base, query, LIMIT);
   }, [idents, query, uni, search]);
   const rows = useMemo(() => (figi ? figiRows(figi.data.items) : []), [figi]);
+  const fundRows = useMemo(() => mf?.data.items ?? [], [mf]);
+  const showFunds = funds && !idents && fundRows.length > 0;
 
   const hitCols = useMemo<Column<Hit>[]>(
     () => [
@@ -122,10 +134,25 @@ export default function SECF({ panelId, args }: FunctionProps) {
     [],
   );
 
+  const fundCols = useMemo<Column<MfItem>[]>(
+    () => [
+      { title: "SCHEME", width: 7, text: (r) => r.code, color: () => "acc" },
+      { title: "NAME", width: 44, text: (r) => r.name },
+      { title: "PLAN", width: 12, text: (r) => r.plan ?? "", color: () => "dim" },
+      { title: "OPTION", width: 14, text: (r) => r.option ?? "", color: () => "dim" },
+      { title: "NAV", width: 10, align: "right", text: (r) => r.nav.toFixed(4) },
+      { title: "NAV DATE", width: 10, text: (r) => r.date, color: () => "dim" },
+      { title: "ISIN", width: 12, text: (r) => r.isin ?? "", color: () => "dim" },
+      { title: "AMC", width: 24, text: (r) => r.amc ?? "", color: () => "dim" },
+    ],
+    [],
+  );
+
   const count = idents ? rows.length : hits.length;
-  const latest = useLatest({ idents, rows, hits });
+  const latest = useLatest({ idents, rows, hits, fundRows, showFunds });
   useCsvExport(panelId, () => {
     if (!query) return null;
+    if (showFunds) return gridCsv(`SECF_FUNDS_${query.replace(/\W+/g, "_")}`, fundCols, fundRows);
     return idents && figi ? gridCsv(`SECF_${query.replace(/\W+/g, "_")}`, figiCols, rows) : !idents && (uni || search) ? gridCsv(`SECF_${query.replace(/\W+/g, "_")}`, hitCols, hits) : null;
   });
 
@@ -139,14 +166,21 @@ export default function SECF({ panelId, args }: FunctionProps) {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         const cur = latest.current;
-        if (navKey(e, g, cur.idents ? cur.rows.length : cur.hits.length)) return true;
+        if (navKey(e, g, cur.showFunds ? cur.fundRows.length : cur.idents ? cur.rows.length : cur.hits.length)) return true;
+        if ((e.key === "m" || e.key === "M") && !cur.idents) {
+          setFunds((f) => !f);
+          return true;
+        }
         if (e.key === "F5") {
           setReload((n) => n + 1);
           return true;
         }
         if (e.key !== "Enter") return false;
         const i = g?.selected() ?? -1;
-        if (cur.idents) {
+        if (cur.showFunds) {
+          const f = cur.fundRows[i];
+          if (f) setMsg(`${f.name} · ${f.plan ?? ""} ${f.option ?? ""} · NAV ${f.nav} ON ${f.date} · ${f.category ?? ""} · NO CHART: AMFI GIVES THE LATEST NAV ONLY`);
+        } else if (cur.idents) {
           const l = cur.rows[i]?.listing;
           if (!l) return true;
           const sym = yahooSymbol(l.exch_code, l.ticker);
@@ -178,9 +212,22 @@ export default function SECF({ panelId, args }: FunctionProps) {
         <div key={x} className="err">{x}</div>
       ))}
       {idents && figi && <div className="dim">{figi.data.note}</div>}
+      {mf && !idents && (
+        <div className={showFunds ? "line" : "dim"} data-testid="secf-funds">
+          {mf.data.total} AMFI FUND SCHEME{mf.data.total === 1 ? "" : "S"} MATCH{mf.data.total > mf.data.shown ? ` (FIRST ${mf.data.shown})` : ""} · NAV DATE {mf.data.nav_date ?? "?"} · {(mf.source ?? "").toUpperCase()}
+          {mf.data.total > 0 && ` · M ${showFunds ? "BACK TO SECURITIES" : "SHOWS FUNDS"}`}
+          {showFunds && <span className="dim"> · {mf.data.note}</span>}
+        </div>
+      )}
       {msg && <div className="warn">{msg}</div>}
-      {query && !loading && count === 0 && errors.length === 0 && <div className="warn">NOTHING MATCHES {query.toUpperCase()}</div>}
-      {idents ? <Grid ref={grid} columns={figiCols} rows={rows} /> : <Grid ref={grid} columns={hitCols} rows={hits} />}
+      {query && !loading && count === 0 && !mf?.data.total && errors.length === 0 && <div className="warn">NOTHING MATCHES {query.toUpperCase()}</div>}
+      {showFunds ? (
+        <Grid key="funds" ref={grid} columns={fundCols} rows={fundRows} />
+      ) : idents ? (
+        <Grid key="figi" ref={grid} columns={figiCols} rows={rows} />
+      ) : (
+        <Grid key="hits" ref={grid} columns={hitCols} rows={hits} />
+      )}
     </div>
   );
 }

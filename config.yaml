@@ -29,7 +29,7 @@ cache:
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
   quotes: [yahoo, nasdaq]
-  history: [binance_klines, yahoo, nasdaq]
+  history: [binance_klines, yahoo, nasdaq, nse_archive]   # nse_archive: .NS at 1d only, last (Phase 19 step 9)
   search: [yahoo]
   profile: [yahoo, nasdaq]
   news_top: [rss, finnhub, alpaca]            # finnhub and alpaca are inert until a key is set in APIKEYS

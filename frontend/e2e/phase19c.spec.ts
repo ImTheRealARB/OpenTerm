@@ -34,6 +34,8 @@ async function setupSecf(page: Page) {
     calls.search.push(new URL(r.request().url()).searchParams.get("q")!);
     return r.fulfill({ json: env([{ symbol: "RELIANCE.NS", name: "Reliance Industries Limited", exchange: "NSI", type: "EQUITY", source: "yahoo" }]) });
   });
+  const nav = { query: "", items: [], total: 0, shown: 0, nav_date: "2026-10-16", schemes: 186, note: "AMFI NAV" };
+  await page.route("**/api/world/mfnav?**", (r) => r.fulfill({ json: env(nav, { source: "amfi" }) }));
   await page.route("**/api/world/figi?**", (r) => {
     calls.figi.push(new URL(r.request().url()).searchParams.get("q")!);
     return r.fulfill({ json: env(FIGI, { source: "openfigi" }) });

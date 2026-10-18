@@ -1099,6 +1099,13 @@ export interface DefiPool {
 }
 export interface DefiPayload { rows: DefiPool[]; matched: number; mode: "ALL" | "CHAIN" | "PROJECT"; query: string | null; pools_over_tvl: number; min_tvl: number }
 
+/** Phase 19 step 9: SECF fund rows from AMFI's NAVAll.txt (`/api/world/mfnav`). NAV is end of day per unit, not a market price. */
+export interface MfItem {
+  code: string; isin: string | null; isin_reinv: string | null; name: string; plan: string | null; option: string | null;
+  nav: number; date: string; category: string | null; amc: string | null;
+}
+export interface MfNavPayload { query: string; items: MfItem[]; total: number; shown: number; nav_date: string | null; schemes: number; note: string }
+
 export const worldApi = {
   stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
   weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
@@ -1113,6 +1120,7 @@ export const worldApi = {
   liq: (sym: string, fresh = false) => request<Envelope<LiqPayload>>(`/api/world/liq?${qs({ sym })}`, fresh ? 0 : 20_000),
   stbl: (chain: string, fresh = false) => request<Envelope<StblPayload>>(`/api/world/stbl?${qs({ chain })}`, fresh ? 0 : 600_000),
   defi: (q: string, fresh = false) => request<Envelope<DefiPayload>>(`/api/world/defi?${qs({ q })}`, fresh ? 0 : 600_000),
+  mfnav: (q: string, fresh = false) => request<Envelope<MfNavPayload>>(`/api/world/mfnav?${qs({ q })}`, fresh ? 0 : 3_600_000),
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
