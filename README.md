@@ -120,6 +120,7 @@ Budgets are enforced in CI by `node scripts/bench.mjs`. See [docs/PERFORMANCE.md
 
 ## Docs
 
+- **[User reference: every function, key and feature](docs/FUNCTIONS.md)** (generated: `python scripts/gen_functions_doc.py`)
 - [Adding a function](docs/ADDING_A_FUNCTION.md)
 - [Adding a provider](docs/ADDING_A_PROVIDER.md)
 - [Data limits](docs/DATA_LIMITS.md)
