@@ -9,12 +9,14 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-15-65e1da`; 
 - **Phase 15 is built** on branch `claude/openterm-phase-15-65e1da` (spec `docs/specs/PHASE_15.md`, steps 1-8). Functions: `RISK`, `PORT OPT` (`A` saves `<NAME>.OPT`), `PORT ATTR` (+ `ADD`/`DEL` valuations),
   `FACT`, `QL`, `ALPHA` (29 factors), `CORR REGIME`, and read-only `KITE` (`LOGIN`/`STATUS`/`LOGOUT`, Indian bars, NFO/MCX chains with OI via `OMON NIFTY.NFO R= Q=`). Pieces: `quant_routes.py`
   (`POST /api/quant/{fn}`), `quantjobs/` (job kinds), `quantlib/` (worker-only math), `kite/` + `kite_routes.py`.
-- **Gates after step 7:** 1205 pytest passed + 1 xfail (Phase 11 recording), ruff, tsc, vitest, 122 Playwright, all green. **Step 8 (docs and bench plumbing) added 5 bench budgets (24 -> 29); the bench has NOT been run yet:**
-  the user runs `node scripts/bench.mjs` once and fills the `measured` column of the "Phase 15 bench" table in `docs/PERFORMANCE.md`.
+- **Final gates:** 1205 pytest passed + 1 xfail (Phase 11 recording), ruff, tsc, vitest, 122 Playwright, all green. **Bench: 28 of 29 pass** (recorded in `docs/PERFORMANCE.md` "Phase 15 bench"):
+  RISK 84 ms, OPT HRP 13 ms, OPT RP 33 ms, REGIME 91 ms, ALPHA SYN 1.29 s, all well inside budget. The one miss is the old BT 10-year run (323 ms vs 300): the Phase 14 commit reads 322 ms on this machine
+  the same hour, so it is machine throttling (earlier phases read 195-285 ms), not a regression. Next phase: rest ~4 min before the bench, rerun once, and if BT run misses again compare against the previous commit before blaming the change.
+  The bench found two real bugs, both fixed: a Windows rename race in `bt/store.py write_data` (concurrent identical quant POSTs gave HTTP 500) and `quantBench` polluting the `/api/jobs` perf key (it now runs after that read).
 - **Known limits, not verified live:** Kite is entirely unverified against a real key (login, REST, WebSocket decoder; fixtures are doc-shaped, run `scripts/record_phase15.py --kite` once a key exists);
-  Ken French and `ALPHA TOP100` live shapes are fixture-only; `CORR REGIME` with no list is answered by the server (the symbols of the `CORR` panel); Enter-opens-factor-formula in `ALPHA` is not built.
+  Ken French and `ALPHA TOP100` live shapes are fixture-only; `CORR REGIME` with no list is answered by the server (the CORR panel keeps no default basket); Enter-opens-factor-formula in `ALPHA` is not built.
   Details: `docs/DATA_LIMITS.md` "Phase 15 limits".
-- **Next action: Phase 16.** BEFORE starting it, ask the user to set the OpenRouter key in APIKEYS. Phases 17 and 18 stay paused. Fresh session, tests first; read `docs/ROADMAP_PHASES_11-19.md` "Phase 16".
+- **Next action: Phase 16 (AI layer).** BEFORE starting it, ask the user to set the OpenRouter key in APIKEYS (the one pending Phase 11 OpenRouter recording needs it too). Order tools never appear in the AI agent; Kite has no order surface at all. Reuse the Phase 11 gateway (`openterm/llm/`), the job runner and `quant_routes.py` as tool backends. Phases 17 and 18 stay paused. Fresh session, tests first; read `docs/ROADMAP_PHASES_11-19.md` "Phase 16".
 - **Usage rule:** Sonnet only, at most 2 agents with targeted tests only, one full gate per step, pause at 95% of the 5h window when the user asked for unattended work, else 60%.
 
 ## Resume here (2026-10-19, Phase 14 complete)
