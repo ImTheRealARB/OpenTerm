@@ -502,3 +502,12 @@ New budgets are added per step (spec `docs/specs/PHASE_19.md`). The chart-maths 
 
 **Step 3 (2026-10-18): 36 of 36 pass on the rested rerun.** The first run right after the full gate missed twice: tick received to pixel 59.5 ms (limit 50; the rerun after a minute's rest reads 37.3 ms, the known throttle noise) and the IMAP paint at 17.5 ms (a real miss: one `fillRect` and one fill-style change per tile).
 The painter now batches the tile fills into nine colour-band paths (4.9 ms). Step 3 puts a per-tick `TickBuffers.add` on the hub's emit path (three array appends); the streaming budgets did not move (frame p95 16.8 ms, long tasks 0, 4,027 ticks/s delivered of 4,000 offered).
+
+**Steps 7 and 9 (2026-10-18): 27 of 37 pass, but on a different machine, so the run is NOT comparable and does not count as a regression check.** It ran in a Linux cloud container
+(4 vCPU Xeon 2.8 GHz, headless Chromium without a GPU, Playwright's pinned headless shell symlinked to an older installed build) instead of the Windows machine every earlier number comes from.
+The misses include pure in-page maths that steps 7 and 9 do not touch (SEAS 25.7 ms vs 9.1 ms on step 3, IMAP paint 23.3 vs 4.9, SECF rank 29.7 vs ~8), so the container is roughly 2-5x slower per frame.
+Steps 7 and 9 add nothing to a hot path: five lazily loaded panels, providers that run only when called, and one extra `/api/world/mfnav` request per SECF name search (off the ranking path).
+Misses on this run: tick to pixel 69.7 ms (50), streaming frame 33.4 ms (20), streaming keystroke 20.0 ms (16.7), layout load 126.5 ms (100), 50k-bar pan 50.0 ms (20), BT 10-year 666 ms (300),
+BT result open 195 ms (100), SEAS 25.7 ms (15), SECF 29.7 ms (25), IMAP paint 23.3 ms (16). Passing lines of note: bundle 108.0 KB, cached history p95 4.7 ms, keystroke echo 15.1 ms, 8-panel frame 16.8 ms,
+long tasks 0, 4,190 ticks/s delivered. **To do on the Windows machine:** `node scripts/bench.mjs` (rested, after no other run) to confirm 37/37 before merging.
+Note for Linux runs: `bench.mjs` leaves its backend and `vite preview` running when it exits there; kill them before a second run, or it reads the old server's job cache and stops.

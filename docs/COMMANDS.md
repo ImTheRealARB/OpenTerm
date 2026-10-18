@@ -159,7 +159,7 @@ Kite (read-only, needs your own Kite Connect app): paste `KITE_API_KEY` and `KIT
 `KITE LOGIN` (once per trading day), `KITE STATUS`, `KITE LOGOUT`. After login `RELIANCE.NS`, `^NSEI` and NFO/MCX bars come from Kite, and `OMON NIFTY.NFO R=6.5 Q=1.2` builds the chain with OI
 (IV and Greeks only when `R=` / `Q=` are typed, labelled computed here). There is no order surface.
 
-## Phase 19: charting, discovery, macro (steps 1-6 and 8; crypto depth and India data follow)
+## Phase 19: charting, discovery, macro, crypto, India data
 - `AAPL GP 1Y ATR STOCH KELT SUPERTREND ICHIMOKU PAT:CANDLE PAT:SMC` : new studies and pattern marks (rule-based, not signals). `I` in GP opens the picker (keys 1-9, then A, B, C...).
 - `AAPL GP 1Y EVT` : earnings (last four reported), ex-dividend and split markers. `AAPL GP VS MSFT NVDA PANE` : up to three compare symbols, one pane each (without `PANE` only the first is overlaid as %).
 - GP drawing keys: `T` trend ray, `H` horizontal line, `B` fib retracement; `P` cycles the anchor price (close / high / low / open); `Enter` places an anchor; `Esc` cancels; `[` `]` select; `D` or `Del` removes. Saved per symbol; hidden while a `VS` % overlay is on.
@@ -168,3 +168,6 @@ Kite (read-only, needs your own Kite Connect app): paste `KITE_API_KEY` and `KIT
 - `SECF <text | ISIN | CUSIP | SEDOL | FIGI:id>` : fuzzy finder and identifier lookup. `ECST USA CPI` / `ECST DBN:IMF/WEO:latest/USA.NGDP_RPCH` : country indicator chart. `WECO` : G20 table (keys 1-5 sort, Enter opens ECST). `CENB` : central bank rates and next decisions.
 - `NRG` : energy prices board (Enter or `NRG WTI` opens the series on FRED). `WETR` : degree-day basket; `WETR Houston` or `WETR 29.76,-95.37` : 7-day forecast plus NWS alerts (US, needs `SEC_USER_AGENT`); `B` toggles basket / place.
 - `PRED [text] [SRC=POLY|KALSHI|ALL]` : prediction markets; Enter shows outcomes and price history. Odds are market-implied probabilities, not forecasts.
+- `CDEP [PAIR] [LEVELS]` (`CDEP ETHUSDT 50`) : order book depth, spread and imbalance (Binance, OKX fallback). `FUND` : perpetual funding board (annualised) and quarterly basis; Enter or `FUND BTC` : last 30 prints, Backspace back.
+  `LIQ [COIN]` : latest OKX liquidations. `STBL [CHAIN]` : stablecoin supply (`C` coins / chains, Enter opens a chain). `DEFI [CHAIN|PROJECT]` : yield pools over US$1M TVL. `UNLK` is not built (paid source).
+- `SECF axis bluechip` : also lists Indian mutual fund schemes from AMFI NAV; `M` switches to the fund rows. `RELIANCE.NS GP 1Y` : when Yahoo cannot answer, daily bars come from the NSE archive (labelled, raw prices).

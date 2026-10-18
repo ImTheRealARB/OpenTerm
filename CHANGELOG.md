@@ -2,14 +2,15 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
-## Phase 19: charting, discovery, macro, crypto (in progress: steps 1-6 and 8 built; 7 and 9 half-built; 10 open)
+## Phase 19: charting, discovery, macro, crypto (steps 1-9 built; not merged to main)
 - Added to `GP`: 12 studies (`ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU`), rule-based pattern overlays (`PAT:CANDLE` 9 candlestick patterns, `PAT:SMC` swings, BOS / CHOCH, fair-value gaps, order blocks; `PAT:ICHI` = `ICHIMOKU`),
   drawings by keyboard (`T` trend ray, `H` horizontal, `B` fib; `P` anchor price, `Enter` places, `[` `]` select, `D` removes) saved per symbol on the server, `EVT` markers (E earnings = last four reported, D ex-dividend, S split),
   `VS A B C PANE` (each compare symbol in its own pane). The indicator picker uses keys 1-9 then letters. The crosshair readout no longer goes stale.
 - Added `SEAS` (seasonality by month, weekday, day of month, ISO week), `GIP` (candles built from the live ticks this server has seen, buffer 20,000 ticks per symbol), `IMAP` (treemap heat map of the EQS universe: size = market cap, colour = % change).
 - Added `SECF` (fuzzy security finder; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI), `ECST` (World Bank / DBnomics indicator chart), `WECO` (G20 table, each cell with its own data year), `CENB` (policy rates and decision dates of eight banks), FOMC decisions in `ECO`, exchange holidays (`HOL` / `EARLY`) on the market lights.
 - Added `NRG` (crude, gas, refined products, retail fuel from FRED's keyless CSV; prices only) and `WETR` (demand-city degree-day basket, place forecast from Open-Meteo, NWS alerts when `SEC_USER_AGENT` is set), `PRED` (Polymarket and Kalshi odds, labelled MARKET-IMPLIED PROBABILITY, NOT A FORECAST).
-- Not finished yet: crypto depth (`CDEP FUND LIQ STBL DEFI`; `UNLK` will be NOT BUILT, DefiLlama emissions are paid) and the India NSE archive / AMFI NAV fallback. See HANDOFF.md.
+- Added crypto depth: `CDEP` (order book, Binance with OKX fallback on HTTP 451), `FUND` (funding annualised from each venue's interval, perp and quarterly basis, 30-print history), `LIQ` (latest OKX liquidations), `STBL` (stablecoin supply by coin and chain), `DEFI` (yield pools over US$1M TVL, filtered server side). `UNLK` is NOT BUILT: DefiLlama emissions are paid.
+- Added India zero-key data: NSE archive end-of-day bars as the last `history` fallback for `.NS` at `1d` (built from daily bhavcopy files, kept in SQLite, labelled with the file count), and AMFI mutual fund NAV rows in `SECF` (`M`). `config.yaml`'s history order now includes `nse_archive`.
 - New routes: `GET/PUT /api/drawings/{symbol}`, `GET /api/world/events`, `GET /api/world/ticks/{symbol}`. New Nasdaq `earnings-surprise` source. Bench 36/36 with five new chart-maths budgets.
 
 ## Phase 16: AI layer (in progress)

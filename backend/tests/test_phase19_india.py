@@ -53,8 +53,9 @@ def test_recorded_day_file_parses_eq_and_be_only():
 
 def test_eq_wins_over_be_and_bad_rows_are_skipped():
     head = ",".join(india.NEEDED)
-    text = "\n".join([head, "2026-10-16,ABC,BE,1,2,0.5,1.5,10", "2026-10-16,ABC,EQ,3,4,2.5,3.5,20", "2026-10-16,XYZ,EQ,x,1,1,1,1",
-                      "2026-10-16,ZERO,EQ,1,1,1,0,1", "2026-10-16,BOND,N1,1,1,1,1,1"])
+    lines = [head, "2026-10-16,ABC,BE,1,2,0.5,1.5,10", "2026-10-16,ABC,EQ,3,4,2.5,3.5,20", "2026-10-16,XYZ,EQ,x,1,1,1,1",
+                      "2026-10-16,ZERO,EQ,1,1,1,0,1", "2026-10-16,BOND,N1,1,1,1,1,1"]
+    text = "\n".join(lines)
     d, rows = india.parse_bhavcopy(text)
     assert rows == {"ABC": [3.0, 4.0, 2.5, 3.5, 20]} and d == date(2026, 10, 16)
 
@@ -239,8 +240,9 @@ def test_amfi_recorded_file_parses_categories_amcs_and_rows():
 
 
 def test_amfi_skips_na_navs_and_reads_the_old_layout():
-    text = "\n".join(["Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Net Asset Value;Date", "Open Ended Schemes(Equity)", "X Mutual Fund",
-                      "1001;INF000000001;-;X Fund Growth;12.5;01-Oct-2026", "1002;-;-;X Fund Old;N.A.;01-Oct-2026", "1003;-;-;X Bad Date;1.0;2026-10-01"])
+    lines = ["Scheme Code;ISIN Div Payout/ ISIN Growth;ISIN Div Reinvestment;Scheme Name;Net Asset Value;Date", "Open Ended Schemes(Equity)", "X Mutual Fund",
+                      "1001;INF000000001;-;X Fund Growth;12.5;01-Oct-2026", "1002;-;-;X Fund Old;N.A.;01-Oct-2026", "1003;-;-;X Bad Date;1.0;2026-10-01"]
+    text = "\n".join(lines)
     t = india.parse_amfi(text)
     assert [r[0] for r in t["rows"]] == ["1001"] and t["skipped"] == 2 and t["rows"][0][4] is None
     assert india.amfi_date("16-Oct-2026") == "2026-10-16" and india.amfi_date("31-Feb-2026") is None
