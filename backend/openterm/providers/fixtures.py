@@ -350,3 +350,18 @@ def _route_phase14(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase14(request) or _route_before_phase14(request)
+
+
+# --- Phase 14 step 5: Deribit (BTC only; four expiries kept in deribit_book_btc, any other currency is a 400 like the real API) ---
+_route_before_deribit = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "www.deribit.com":
+        if p.endswith("/get_book_summary_by_currency") and q.get("currency") == "BTC":
+            return _load("deribit_book_btc")
+        if p.endswith("/get_index_price") and q.get("index_name") == "btc_usd":
+            return _load("deribit_index_btc")
+        return httpx.Response(400, json={"error": {"message": "Invalid params", "code": -32602}})
+    return _route_before_deribit(request)

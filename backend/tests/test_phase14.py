@@ -26,7 +26,7 @@ def xf(group: str, step: int):
 
 OPT = lambda f: f  # step 3 landed
 PRICER = lambda f: f  # step 4 landed
-SURF = xf("surface", 5)
+SURF = lambda f: f  # step 5 landed
 RATES = xf("rates and calculators", 6)
 FUT = xf("futures and policy", 7)
 
@@ -311,7 +311,11 @@ def test_ovdv_surface_from_the_recorded_chains(client):
     heat = d["data"]["heat"]
     assert heat["x"] == pytest.approx(MONEYNESS) and heat["y"] == [exp_date(e) for e in EXPIRIES]
     assert len(heat["z"]) == 8 and all(len(row) == 9 for row in heat["z"])
-    assert all(0.05 < v < 1.5 for row in heat["z"] for v in row)
+    # a cell outside the strikes the fit was made from is EMPTY (never extrapolated); every filled cell is a sane vol
+    assert all(0.05 < v < 1.5 for row in heat["z"] for v in row if v is not None)
+    assert all(row[4] is not None for row in heat["z"])   # the forward is always inside the quotes
+    assert sum(v is not None for row in heat["z"] for v in row) >= 0.6 * 72
+    assert heat["z"][0][0] is None and heat["z"][-1][0] is not None   # the 1-day expiry has quotes only near the money
     assert "QUADRATIC" in headline(d, "FIT")["value"] and "NOT SVI" in headline(d, "FIT")["value"]
     fit = section(d, "fit")["rows"]
     assert len(fit) == 8 and all(r["rmse"] < 0.03 and r["n"] >= 8 for r in fit)
@@ -323,14 +327,15 @@ def test_ovdv_surface_from_the_recorded_chains(client):
 @SURF
 def test_ovdv_equity_skew_is_downward_in_most_expiries(client):
     z = data(client, "deriv/ovdv", symbol="AAPL")["data"]["heat"]["z"]
-    assert sum(row[0] > row[4] for row in z) >= 6   # 80% moneyness IV above ATM IV: the usual put skew
+    pairs = [(row[0], row[4]) for row in z if row[0] is not None]
+    assert len(pairs) >= 6 and sum(w > a for w, a in pairs) >= len(pairs) - 1   # 80% moneyness IV above ATM IV: the usual put skew
 
 
 @SURF
 def test_ovdv_crypto_comes_from_deribit(client):
     d = data(client, "deriv/ovdv", symbol="BTC")
     assert d["source"].startswith("deribit")
-    assert headline(d, "INDEX")["raw"] == pytest.approx(81517.85)
+    assert headline(d, "INDEX")["raw"] == pytest.approx(81483.01)   # recorded deribit_index_btc
     assert len(d["data"]["heat"]["y"]) == 4 and all(0.2 < row[4] < 1.5 for row in d["data"]["heat"]["z"])
 
 
@@ -340,10 +345,12 @@ def test_skew_table_relations(client):
     assert_table_payload(d)
     rows = section(d, "skew")["rows"]
     assert len(rows) == 8
-    for r in rows:
+    shown = [r for r in rows if r["rr25"] is not None]   # a 25-delta strike outside the quoted range is not reported
+    assert len(shown) >= 6
+    for r in shown:
         assert r["rr25"] == pytest.approx(r["iv_c25"] - r["iv_p25"], abs=1e-9)
         assert r["bf25"] == pytest.approx((r["iv_c25"] + r["iv_p25"]) / 2 - r["atm_iv"], abs=1e-9)
-    assert sum(r["rr25"] < 0 for r in rows) >= 5
+    assert sum(r["rr25"] < 0 for r in shown) >= len(shown) - 1
     assert d["data"]["charts"][0]["id"] == "term"
 
 

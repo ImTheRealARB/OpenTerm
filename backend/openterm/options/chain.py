@@ -157,3 +157,44 @@ def parse_tradier_chain(symbol: str, expirations: dict, chain: dict, quote: dict
         "puts": [one(o) for o in options if o.get("option_type") == "put"],
         "vendor_greeks": True, "source": source,
     }
+
+
+_MONTHS = {m: i + 1 for i, m in enumerate(["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"])}
+
+
+def deribit_expiry(token: str) -> int:
+    """`27NOV26` -> epoch of 08:00 UTC that day (Deribit settles at 08:00 UTC)."""
+    from datetime import UTC, datetime
+
+    day, mon, yr = int(token[:-5]), _MONTHS[token[-5:-2]], 2000 + int(token[-2:])
+    return int(datetime(yr, mon, day, 8, tzinfo=UTC).timestamp())
+
+
+def parse_deribit(book: dict, index: dict, currency: str, source: str) -> dict:
+    """Deribit book summaries + index price -> {currency, index, expiries:[{expiry, forward, calls, puts}], source}. IV is `mark_iv`
+    (percent) as a ratio; the forward of an expiry is the median `underlying_price` of its instruments."""
+    rows = (book or {}).get("result") or []
+    idx = ((index or {}).get("result") or {}).get("index_price")
+    if not rows or idx is None:
+        raise ProviderError("not_found", "no option book")
+    by: dict[int, dict] = {}
+    unders: dict[int, list[float]] = {}
+    for r in rows:
+        try:
+            _, tok, strike, kind = str(r["instrument_name"]).split("-")
+            ep = deribit_expiry(tok)
+        except (KeyError, ValueError):
+            continue
+        iv = r.get("mark_iv")
+        if iv is None or iv <= 0:
+            continue
+        e = by.setdefault(ep, {"expiry": ep, "forward": None, "calls": [], "puts": []})
+        unders.setdefault(ep, []).append(float(r["underlying_price"]))
+        e["calls" if kind == "C" else "puts"].append({"strike": float(strike), "iv": iv / 100.0, "oi": r.get("open_interest") or 0,
+                                                     "volume": r.get("volume") or 0})
+    for ep, e in by.items():
+        u = sorted(unders[ep])
+        e["forward"] = u[len(u) // 2]
+    if not by:
+        raise ProviderError("not_found", "no option book")
+    return {"currency": currency, "index": float(idx), "expiries": [by[k] for k in sorted(by)], "source": source}

@@ -47,6 +47,7 @@ DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca"]
 DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "gdelt"]
 # --- Phase 14: option chains (Yahoo first; Tradier is a keyed fallback) ---
 DEFAULT_ORDER["option_chain"] = ["yahoo_options", "tradier"]
+DEFAULT_ORDER["crypto_options"] = ["deribit"]
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
@@ -86,7 +87,7 @@ async def lifespan(app: FastAPI):
     # --- Phase 14: options, rates, futures ---
     from .derivs.service import Derivs
 
-    service.derivs = Derivs(service, settings.openterm_fixtures)
+    service.derivs = Derivs(service, settings.openterm_fixtures, db)
 
     # --- Phase 12: imported bars (IMPORT) ---
     service.local = LocalData(db)

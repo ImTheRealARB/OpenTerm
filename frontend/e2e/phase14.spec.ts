@@ -202,3 +202,46 @@ test("OSA: payoff headline, chart and scenario heat map from one payload", async
     await expect(vis.locator("[data-testid=heat-sr]")).toHaveText("20.0% SPOT 250 -300");
   }).toPass();
 });
+
+test("OVDV / SKEW / HIVG: surface heat map with empty cells, skew table, realized vs implied headline", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/deriv/ovdv?**", (r) =>
+    r.fulfill({
+      json: env(
+        payload("OVDV AAPL", [{ id: "fit", title: "FITTED SMILE PER EXPIRY", note: null, columns: [c("expiry", "EXPIRY", "date"), c("atm_iv", "ATM IV", "pct")], rows: [{ expiry: "2026-10-19", atm_iv: 0.255 }] }],
+          [{ label: "FIT", value: "FIT: QUADRATIC IN LOG-MONEYNESS, NOT SVI" }],
+          { heat: { id: "surface", title: "IV SURFACE", xlabel: "K / FORWARD", ylabel: "EXPIRY", x: [0.9, 1, 1.1], y: ["2026-10-19"], z: [[null, 0.255, null]], unit: "pct" } }),
+      ),
+    }),
+  );
+  await run(page, "AAPL OVDV");
+  const p = panel(page);
+  await expect(p).toContainText("NOT SVI");
+  await expect(p.locator("[data-testid=heat-sr]")).toHaveText("2026-10-19 K / FORWARD 0.9 no value");
+  await page.keyboard.press("Shift+L");
+  await expect(p.locator("[data-testid=heat-sr]")).toHaveText("2026-10-19 K / FORWARD 1 25.5");
+
+  await page.route("**/api/deriv/skew?**", (r) =>
+    r.fulfill({
+      json: env(
+        payload("SKEW AAPL", [{ id: "skew", title: "SKEW BY EXPIRY", note: null, columns: [c("expiry", "EXPIRY", "date"), c("rr25", "RR25", "pct"), c("iv_c25", "25D CALL IV", "pct")], rows: [{ expiry: "2026-10-19", rr25: null, iv_c25: null }, { expiry: "2026-11-20", rr25: -0.045, iv_c25: 0.26 }] }], []),
+      ),
+    }),
+  );
+  await run(page, "AAPL SKEW");
+  await expect(selected(page)).toContainText("2026-10-19");
+  await page.keyboard.press("j");
+  await expect(selected(page)).toContainText("-4.50%");
+
+  await page.route("**/api/deriv/hivg?**", (r) =>
+    r.fulfill({
+      json: env(
+        payload("HIVG AAPL", [{ id: "rv", title: "REALIZED VOL", note: null, columns: [c("window", "DAYS", "int"), c("cc_vol", "CLOSE-CLOSE", "pct")], rows: [{ window: 30, cc_vol: 0.21 }] }],
+          [{ label: "IV30", value: "26.0%", raw: 0.26 }, { label: "IV RANK", value: "NOT AVAILABLE: 1 LOCAL SNAPSHOT SINCE 2026-10-18 (NEEDS 20)" }]),
+      ),
+    }),
+  );
+  await run(page, "AAPL HIVG");
+  await expect(panel(page)).toContainText("IV30 26.0%");
+  await expect(panel(page)).toContainText("NOT AVAILABLE: 1 LOCAL SNAPSHOT");
+});

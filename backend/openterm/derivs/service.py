@@ -8,15 +8,18 @@ order, the cache keys and the TTLs, and turns the clock into time to expiry (spe
 from __future__ import annotations
 
 import asyncio
+import math
 import os
 import time
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..options import chain as ch
+from ..options import ivstore
 from ..options import market as mk
 from ..options import pricer as pr
 from ..options import surface as sf
+from ..options import surface_tables as st
 from ..options import tables as ot
 from ..research import corp_parse as cp
 from ..router import AllFailed
@@ -36,9 +39,10 @@ class Derivs:
     }
     MAX_EXPIRIES = 8
 
-    def __init__(self, svc: DataService, fixtures: bool = False):
+    def __init__(self, svc: DataService, fixtures: bool = False, db: Any = None):
         self.svc = svc
         self.fixtures = fixtures
+        self.db = db   # local IV30 snapshots (HIVG); None in unit tests that never touch SQLite
 
     # --- clock ----------------------------------------------------------------------------------
     def now(self) -> float:
@@ -290,3 +294,131 @@ class Derivs:
         data = pr.osa_payload(sym, legs, spot, spot_basis, T, iv, iv_basis if iv is not None else "", r, r_basis, mult, comm,
                               "quote + yahoo_options + treasury", missing)
         return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
+
+    # --- surface: OVDV, SKEW, HIVG --------------------------------------------------------------
+    EQUITY_K_MAX = 0.35
+    CRYPTO_K_MAX = 0.60
+
+    @staticmethod
+    def crypto_currency(sym: str) -> str | None:
+        base = sym.upper().replace("-USD", "").replace("USDT", "")
+        return base if base in ("BTC", "ETH", "SOL", "XRP") else None
+
+    async def smiles(self, sym: str) -> dict:
+        """Out-of-the-money (k, iv) points per expiry, cached. Equity: solved from the bid/ask mid of the picked chains. Crypto: Deribit's
+        mark IV. `k = ln(K / F)`, F the expiry's forward."""
+        cur = self.crypto_currency(sym)
+
+        async def fetch() -> dict:
+            if cur:
+                return {"data": await self._crypto_smiles(cur), "fallback_from": []}
+            return {"data": await self._equity_smiles(sym), "fallback_from": []}
+
+        return await self.svc._swr(f"d:smiles:{cur or sym}", self.ttl("surface"), fetch)
+
+    async def _equity_smiles(self, sym: str) -> dict:
+        base, chains, planned = await self.chains(sym)
+        S = base["spot"]
+        out, notes, q_known = [], [], None
+        for c in chains:
+            T = ch.years_to_expiry(c["expiry"], self.now())
+            if T <= 0:
+                notes.append(f"{ot.day(c['expiry'])}: EXPIRED, SKIPPED")
+                continue
+            r, _par, _cd, q, qnote = await self.rate_and_yield(sym, T, q_known)
+            if q is not None:
+                q_known = q
+            elif qnote and qnote not in notes:
+                notes.append(qnote)
+            qv = q or 0.0
+            F = S * math.exp((r - qv) * T)
+            pts = []
+            for kind, side in (("call", c["calls"]), ("put", c["puts"])):
+                for x in side:
+                    k = math.log(x["strike"] / F)
+                    if abs(k) > self.EQUITY_K_MAX or (kind == "call") != (x["strike"] >= F):
+                        continue
+                    iv, src = ch.solved_iv(x, kind, S, T, r, qv)
+                    if iv is not None and src == "MID" and 0.03 <= iv <= 3.0:
+                        pts.append([k, iv])
+            out.append({"epoch": c["expiry"], "date": ot.day(c["expiry"]), "T": T, "F": F, "points": pts})
+        return {"kind": "equity", "spot": S, "source": base["source"], "planned": planned, "smiles": out, "notes": notes}
+
+    async def _crypto_smiles(self, cur: str) -> dict:
+        book, _failed = await self.svc.router.call("crypto_options", lambda p: p.crypto_options(cur), cur)
+        out, notes = [], []
+        for e in book["expiries"]:
+            T = (e["expiry"] - self.now()) / (365.0 * 86400.0)
+            if T <= 0:
+                notes.append(f"{ot.day(e['expiry'])}: EXPIRED, SKIPPED")
+                continue
+            F = e["forward"]
+            pts = []
+            for side, is_call in ((e["calls"], True), (e["puts"], False)):
+                for x in side:
+                    k = math.log(x["strike"] / F)
+                    if abs(k) <= self.CRYPTO_K_MAX and is_call == (x["strike"] >= F):
+                        pts.append([k, x["iv"]])
+            out.append({"epoch": e["expiry"], "date": ot.day(e["expiry"]), "T": T, "F": F, "points": pts})
+        notes.append("CRYPTO IV IS DERIBIT'S MARK IV; THE FORWARD OF EACH EXPIRY IS DERIBIT'S UNDERLYING PRICE FOR IT, 08:00 UTC EXPIRY")
+        return {"kind": "crypto", "spot": book["index"], "source": book["source"], "planned": len(book["expiries"]), "smiles": out,
+                "notes": notes}
+
+    async def fitted(self, sym: str) -> tuple[dict, list[dict], list[str], dict]:
+        """(smiles, expiries that fitted, notes, envelope). An expiry with too few two-sided quotes is left out and listed."""
+        env = await self.smiles(sym)
+        sm = env["data"]
+        rows, notes = [], list(sm["notes"])
+        for s in sm["smiles"]:
+            fit = sf.fit_smile([(k, v) for k, v in s["points"]])
+            if fit is None:
+                notes.append(f"{s['date']}: TOO FEW TWO-SIDED QUOTES TO FIT ({len(s['points'])}, NEEDS {sf.MIN_POINTS}), LEFT OUT")
+                continue
+            rows.append({**s, "fit": fit})
+        if not rows:
+            raise DataError("not_found", f"NO FITTABLE SMILE FOR {sym}")
+        return sm, rows, notes, env
+
+    def iv30(self, rows: list[dict]) -> tuple[float | None, str | None]:
+        iv, outside = sf.interp_total_variance([(r["T"], r["fit"].a) for r in rows], 30.0 / 365.0)
+        note = "30 DAYS IS OUTSIDE THE FITTED EXPIRIES: THE NEAREST EXPIRY'S ATM IV IS USED FLAT" if outside else \
+            "IV30: ATM IV INTERPOLATED LINEARLY IN TOTAL VARIANCE BETWEEN THE TWO EXPIRIES AROUND 30 DAYS"
+        return iv, note
+
+    async def snapshot(self, sym: str, iv30: float | None) -> list[tuple[str, float]]:
+        if self.db is None:
+            return []
+        if iv30 is not None:
+            await ivstore.record(self.db, sym, self.today().isoformat(), iv30)
+        return await ivstore.history(self.db, sym)
+
+    async def fn_ovdv(self, symbol: str | None = None, **_: Any) -> dict:
+        sym = resolve(self._need({"symbol": symbol}, "symbol"))
+        sm, rows, notes, env = await self.fitted(sym)
+        iv30, _ = self.iv30(rows)
+        await self.snapshot(sym, iv30)
+        data = st.ovdv_payload(sym, sm, rows, notes, [] if sm["kind"] == "crypto" else self.tradier_missing())
+        return {**env, "data": data, "source": sm["source"]}
+
+    async def fn_skew(self, symbol: str | None = None, **_: Any) -> dict:
+        sym = resolve(self._need({"symbol": symbol}, "symbol"))
+        sm, rows, notes, env = await self.fitted(sym)
+        data = st.skew_payload(sym, sm, rows, notes, [] if sm["kind"] == "crypto" else self.tradier_missing())
+        return {**env, "data": data, "source": sm["source"]}
+
+    async def fn_hivg(self, symbol: str | None = None, **_: Any) -> dict:
+        sym = resolve(self._need({"symbol": symbol}, "symbol"))
+        sm, rows, notes, env = await self.fitted(sym)
+        iv30, iv30_note = self.iv30(rows)
+        history = await self.snapshot(sym, iv30)
+        bars_sym = f"{self.crypto_currency(sym)}-USD" if sm["kind"] == "crypto" else sym
+        bars = bars_error = None
+        try:
+            bars = (await self.svc.history(bars_sym, "1y", "1d"))["data"]
+        except (DataError, AllFailed) as e:
+            bars_error = str(e)
+        notes = [*notes, "RV: CLOSE-TO-CLOSE AND PARKINSON, ANNUALISED WITH SQRT(252); VRP = IV30 - RV30 (A SPREAD, NOT A FORECAST)",
+                 "IV RANK / PERCENTILE USE ONLY THIS MACHINE'S DAILY IV30 SNAPSHOTS (NO FREE SOURCE HAS IV HISTORY)"]
+        data = st.hivg_payload(sym, sm, rows, bars, bars_error, iv30, iv30_note, history, notes,
+                               [] if sm["kind"] == "crypto" else self.tradier_missing())
+        return {**env, "data": data, "source": sm["source"]}

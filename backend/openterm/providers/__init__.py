@@ -144,3 +144,8 @@ from .options_yahoo import YahooOptionsProvider
 from .tradier import TradierProvider
 
 ADAPTERS.update({"yahoo_options": YahooOptionsProvider, "tradier": TradierProvider})
+
+# --- Phase 14 step 5: crypto options (Deribit public API, no key) ---
+from .deribit import DeribitProvider
+
+ADAPTERS["deribit"] = DeribitProvider

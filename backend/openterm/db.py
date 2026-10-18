@@ -50,6 +50,8 @@ MIGRATIONS: list[str | list[str]] = [
         "CREATE TABLE news_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT NOT NULL, symbol TEXT,"
         " status TEXT NOT NULL, created_at REAL NOT NULL, triggered_at REAL, headline TEXT, url TEXT)"
     ),
+    # 12: local IV30 snapshots (Phase 14 HIVG): one point per symbol per day
+    "CREATE TABLE iv_snapshots (symbol TEXT NOT NULL, day TEXT NOT NULL, iv30 REAL NOT NULL, at REAL NOT NULL, PRIMARY KEY (symbol, day))",
 ]
 
 
