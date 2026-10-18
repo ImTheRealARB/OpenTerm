@@ -12,6 +12,7 @@ import { gauges } from "../perf/metrics";
 import { seasonality } from "./seasMath";
 import { hitTest, type Drawing, type Geo } from "../chart/drawings";
 import { paintTreemap } from "./imapPaint";
+import { rank, type Cand } from "./secfScore";
 import { treemap } from "./treemap";
 
 function rng(seed: number) {
@@ -180,12 +181,26 @@ export function CalcBench() {
       paintTreemap(ctx, 1600, 900, l, rows, palette, 0);
       paint.push(performance.now() - t0);
     }
+    // SECF: four queries (prefix, name word, typo, subsequence) ranked over 7,000 generated names.
+    const WORDS = ["micro", "soft", "apple", "global", "energy", "bank", "capital", "tech", "health", "pharma", "mining", "trust", "holdings", "systems", "motors", "foods", "water", "steel", "air", "media"];
+    const cands: Cand[] = Array.from({ length: 7000 }, (_, i) => ({
+      symbol: `S${i.toString(36).toUpperCase()}`,
+      name: `${WORDS[Math.floor(r() * 20)]} ${WORDS[Math.floor(r() * 20)]}${WORDS[Math.floor(r() * 20)]} Inc. Common Stock`,
+      exchange: null, type: null, sector: null, mcap: r() * 1e12, src: "EQS" as const,
+    }));
+    const secf: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      const t0 = performance.now();
+      for (const q of ["micro", "apple bank", "microsft", "mcrsft"]) rank(cands, q, 200);
+      secf.push((performance.now() - t0) / 4);
+    }
+    gauges.set("p19.secfMs", p95(secf));
     gauges.set("p19.treemapMs", p95(lay));
     gauges.set("p19.imapPaintMs", p95(paint));
     gauges.set("p19.hitMs", p95(hit));
     gauges.set("p19.patternsMs", p95(pat));
     gauges.set("p19.seasMs", p95(seas));
-    return { pat: p95(pat), seas: p95(seas), hit: p95(hit), lay: p95(lay), paint: p95(paint), n, dn };
+    return { secf: p95(secf), pat: p95(pat), seas: p95(seas), hit: p95(hit), lay: p95(lay), paint: p95(paint), n, dn };
   }, []);
   return (
     <div>
@@ -193,6 +208,7 @@ export function CalcBench() {
       <div>PATTERNS + SMC, {res.n} BARS: {res.pat.toFixed(2)} MS P95</div>
       <div>SEAS MONTH + WOY + DOM, {res.dn} DAILY BARS: {res.seas.toFixed(2)} MS P95</div>
       <div>HIT TEST OVER 200 DRAWINGS: {res.hit.toFixed(3)} MS P95</div>
+      <div>SECF RANK, 7000 NAMES (PER QUERY): {res.secf.toFixed(2)} MS P95</div>
       <div>IMAP 5000 TILES: LAYOUT {res.lay.toFixed(2)} MS · PAINT {res.paint.toFixed(2)} MS P95</div>
     </div>
   );

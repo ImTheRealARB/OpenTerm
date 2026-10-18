@@ -531,3 +531,22 @@ def _route(request: httpx.Request) -> httpx.Response:
         token = p.split("/")[3] if len(p.split("/")) > 3 else ""
         return _kite_json(KITE_HISTORICAL[token]) if token in KITE_HISTORICAL else _kite_error(400, "InputException", "Invalid instrument token.")
     return httpx.Response(404, text="not recorded")
+
+
+# --- Phase 19 step 4: OpenFIGI mapping (openfigi_mapping.json = real answers per identifier; anything else is not recorded, never invented) ---
+_route_before_phase19 = _route
+
+
+def _route_phase19(request: httpx.Request) -> httpx.Response | None:
+    if request.url.host == "api.openfigi.com" and request.url.path == "/v3/mapping" and request.method == "POST":
+        table = json.loads((FIXTURES / "openfigi_mapping.json").read_text(encoding="utf-8"))["body"]
+        jobs = json.loads(request.content)
+        answers = [table.get(f"{j.get('idType')}:{j.get('idValue')}") for j in jobs]
+        if any(a is None for a in answers):
+            return httpx.Response(404, text="not recorded")
+        return httpx.Response(200, json=answers)
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase19(request) or _route_before_phase19(request)

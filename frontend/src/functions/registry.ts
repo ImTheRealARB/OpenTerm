@@ -57,6 +57,7 @@ const defs: FunctionDef[] = [
   { code: "GIP", title: "Intraday tick chart (candles built from the live ticks seen since the session began)", needsSecurity: true, argsSchema: "[1S|5S|15S|1M]", phase: 19, load: () => import("./GIP"), idlePreload: false },
   { code: "IMAP", title: "Heat map of the equity universe (size = market cap, colour = % change)", needsSecurity: false, argsSchema: "[SECTOR|INDUSTRY|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]", phase: 19, load: () => import("./IMAP") },
   { code: "SEAS", title: "Seasonality (average return by month, weekday, day of month, ISO week)", needsSecurity: true, argsSchema: "[MONTH|WEEKDAY|DOM|WOY]", phase: 19, load: () => import("./SEAS") },
+  { code: "SECF", title: "Security finder (fuzzy name or ticker search; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI)", needsSecurity: false, argsSchema: "<text | ISIN | CUSIP | SEDOL | FIGI:id ...>", phase: 19, load: () => import("./SECF") },
   { code: "CORR", title: "Correlation matrix", needsSecurity: false, argsSchema: "SYM SYM... [1M..MAX]", phase: 9, load: () => import("./CORR") },
   { code: "COMP", title: "Peer comparison", needsSecurity: true, phase: 9, load: () => import("./COMP") },
   { code: "HIST", title: "Historical price table", needsSecurity: true, argsSchema: "[1M..MAX] [D|W|MO]", phase: 9, load: () => import("./HIST") },

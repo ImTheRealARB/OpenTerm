@@ -175,3 +175,8 @@ ADAPTERS["kenfrench"] = KenFrenchProvider
 from .kite import KiteProvider
 
 ADAPTERS["kite"] = KiteProvider
+
+# --- Phase 19 (keyless): SECF identifier mapping ---
+from .openfigi import OpenFigiProvider
+
+ADAPTERS["openfigi"] = OpenFigiProvider

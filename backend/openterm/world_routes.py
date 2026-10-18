@@ -27,6 +27,17 @@ async def events(request: Request, symbol: str = Query(..., max_length=24)):
         return error(e)
 
 
+@router.get("/figi")
+async def figi(request: Request, q: str = Query(..., max_length=600)):
+    """SECF: ISIN / CUSIP / SEDOL / FIGI (space or comma separated, at most 25) mapped to listings by OpenFIGI."""
+    from .world.figi import lookup
+
+    try:
+        return await lookup(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/ticks/{symbol}")
 async def ticks(request: Request, symbol: str, bar: str = Query("5s", max_length=4)):
     """GIP: time-bucketed bars built from the live ticks this server has seen for the symbol (nothing is invented: no ticks = empty)."""

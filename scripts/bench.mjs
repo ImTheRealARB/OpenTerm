@@ -539,6 +539,7 @@ async function main() {
   add("SEAS MONTH+WOY+DOM 10,000 daily bars p95", r.p19["p19.seasMs"] ?? null, 15, "ms", "PERF CALC, TEST DATA");
   add("Drawing hit test, 200 drawings p95", r.p19["p19.hitMs"] ?? null, 1, "ms", "PERF CALC, TEST DATA");
   add("IMAP treemap layout, 5,000 tiles p95", r.p19["p19.treemapMs"] ?? null, 30, "ms", "PERF CALC, TEST DATA");
+  add("SECF fuzzy rank, 7,000 names, per query p95", r.p19["p19.secfMs"] ?? null, 25, "ms", "PERF CALC, TEST DATA, prefix + word + typo + subsequence");
   add("IMAP canvas paint, 5,000 tiles p95", r.p19["p19.imapPaintMs"] ?? null, 16, "ms", "PERF CALC, 1600x900, TEST DATA");
 
   const pad = (s, n) => String(s).padEnd(n);

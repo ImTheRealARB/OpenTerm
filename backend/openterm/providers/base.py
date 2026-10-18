@@ -52,13 +52,17 @@ class Provider:
     def supports(self, capability: str, symbol: str | None = None) -> bool:
         return capability in self.capabilities
 
-    async def _request(self, url: str, params: dict[str, Any] | None, timeout: float | None) -> httpx.Response:
+    async def _request(self, url: str, params: dict[str, Any] | None, timeout: float | None, body: Any = None) -> httpx.Response:
+        """GET, or POST of a JSON `body` when one is given."""
         try:
             await self.bucket.acquire(self.max_wait)
         except RateLimited as e:
             raise ProviderError("rate_limited", str(e)) from e
         try:
-            r = await self.http.get(url, params=params, headers=self.headers, timeout=timeout or self.timeout)
+            if body is None:
+                r = await self.http.get(url, params=params, headers=self.headers, timeout=timeout or self.timeout)
+            else:
+                r = await self.http.post(url, params=params, json=body, headers=self.headers, timeout=timeout or self.timeout)
         except httpx.TimeoutException as e:
             raise ProviderError("unavailable", "timeout") from e
         except httpx.HTTPError as e:
@@ -75,6 +79,13 @@ class Provider:
 
     async def get_json(self, url: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:
         r = await self._request(url, params, timeout)
+        try:
+            return orjson.loads(r.content)
+        except orjson.JSONDecodeError as e:
+            raise ProviderError("unavailable", "non-JSON response (bot check?)") from e
+
+    async def post_json(self, url: str, body: Any, timeout: float | None = None) -> Any:
+        r = await self._request(url, None, timeout, body)
         try:
             return orjson.loads(r.content)
         except orjson.JSONDecodeError as e:

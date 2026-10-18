@@ -846,7 +846,32 @@ export interface TickBars {
   v: number[] | null;
 }
 
+/** SECF: one OpenFIGI listing (exchange code is OpenFIGI's own). */
+export interface FigiListing {
+  figi: string | null;
+  composite_figi: string | null;
+  share_class_figi: string | null;
+  ticker: string | null;
+  name: string | null;
+  exch_code: string | null;
+  security_type: string | null;
+  market_sector: string | null;
+  description: string | null;
+}
+export interface FigiItem {
+  kind: "ISIN" | "CUSIP" | "SEDOL" | "FIGI";
+  id: string;
+  status: "FOUND" | "NOT FOUND" | "BAD CHECK DIGIT" | "ERROR";
+  message: string | null;
+  listings: FigiListing[];
+}
+export interface FigiResult {
+  items: FigiItem[];
+  note: string;
+}
+
 export const worldApi = {
+  figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
   events: (symbol: string, fresh = false) =>

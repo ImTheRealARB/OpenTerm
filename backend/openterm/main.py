@@ -37,6 +37,8 @@ DEFAULT_ORDER = {
 # --- Phase 9 ---
 DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]})
 MAX_SUBS_PER_CLIENT = 2000
+# --- Phase 19 (capabilities fill in step by step; all keyless) ---
+DEFAULT_ORDER["figi"] = ["openfigi"]
 # --- Phase 13: research functions (capability -> providers, keyless first) ---
 DEFAULT_ORDER |= {
     "estimates": ["yahoo_research"], "ratings": ["yahoo_research"], "officers": ["yahoo_research"],

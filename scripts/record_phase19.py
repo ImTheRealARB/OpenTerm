@@ -39,7 +39,27 @@ def step2() -> None:
     save_json("nasdaq_earnings_surprise_aapl", get("https://api.nasdaq.com/api/company/AAPL/earnings-surprise").json())
 
 
-STEPS = {2: step2}
+def step4() -> None:
+    """SECF: OpenFIGI v3 mapping (keyless, 25 requests / 6 s). One recording holds the per-identifier job result, keyed by `<idType>:<idValue>`."""
+    import time
+
+    jobs = [("ID_ISIN", "US0378331005"), ("ID_ISIN", "US5949181045"), ("ID_CUSIP", "037833100"), ("ID_SEDOL", "2046251"),
+            ("ID_BB_GLOBAL", "BBG000B9XRY4"), ("ID_ISIN", "US0000000002")]  # the last one is a valid-looking ISIN nobody holds
+    r = httpx.post("https://api.openfigi.com/v3/mapping", json=[{"idType": t, "idValue": v} for t, v in jobs],
+                   headers={"User-Agent": UA, "Content-Type": "application/json"}, timeout=30)
+    print("status", r.status_code, "ratelimit", {k: v for k, v in r.headers.items() if "limit" in k.lower() or "ratelimit" in k.lower()})
+    r.raise_for_status()
+    results = r.json()
+    assert len(results) == len(jobs)
+    table = {f"{t}:{v}": res for (t, v), res in zip(jobs, results)}
+    for res in table.values():  # keep the fixture small: the first five listings per identifier
+        if "data" in res:
+            res["data"] = res["data"][:5]
+    save_json("openfigi_mapping", table)
+    time.sleep(1)
+
+
+STEPS = {2: step2, 4: step4}
 
 if __name__ == "__main__":
     wanted = [int(a) for a in sys.argv[1:]] or sorted(STEPS)
