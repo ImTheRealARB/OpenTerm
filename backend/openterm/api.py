@@ -718,6 +718,17 @@ def bt_of(request: Request):
         async def on_done(job: dict, result: dict) -> dict:
             p = job["params"]
             await store.save_run(result, p["meta"], p["config"], p["data_sha"], job["hash"])
+            try:  # the audit ledger records every BT run (hashes only); a ledger failure never loses the run
+                from . import __version__
+                from .ai.audit import audit_of, canonical, sha
+
+                await audit_of(app, user(request).db).append(
+                    "bt", result["run_id"], "-", {"app": __version__, "engine": "bt"},
+                    {"job_hash": job["hash"], "data_sha": p["data_sha"], "config_sha": sha(canonical(p["config"])), "metrics": {k: result["metrics"].get(k) for k in CARD_METRICS}})
+            except Exception:
+                import logging
+
+                logging.getLogger("openterm.api").exception("audit ledger entry for a BT run failed")
             return {"run_id": result["run_id"], "metrics": {k: result["metrics"].get(k) for k in CARD_METRICS}}
 
         jobs_of(request).on_done["bt.run"] = on_done

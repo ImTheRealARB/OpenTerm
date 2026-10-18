@@ -58,6 +58,9 @@ MIGRATIONS: list[str | list[str]] = [
         ("CREATE TABLE theses (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, status TEXT NOT NULL, text TEXT NOT NULL,"
         " invalidation TEXT NOT NULL, run_ids TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL)"),
     ],
+    # 14: hash-chained audit ledger for AI, SWARM, AI AUTO and BT runs (Phase 16)
+    ("CREATE TABLE ai_ledger (seq INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, model TEXT NOT NULL,"
+     " manifest TEXT NOT NULL, meta TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)"),
 ]
 
 

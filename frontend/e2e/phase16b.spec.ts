@@ -38,6 +38,13 @@ interface Th { id: number; symbol: string; status: string; text: string; invalid
 const bodies: Record<string, unknown[]> = {};
 const log = (k: string, v: unknown) => (bodies[k] ??= []).push(v);
 let theses: Th[] = [];
+const H = (c: string) => c.repeat(64);
+const MF = { prompt_sha: H("a"), tools_sha: H("b"), tools: ["quote", "history"], app: "0.16.0", skills: {} };
+const LEDGER = [
+  { seq: 2, at: 1_790_000_100, kind: "swarm", ref: RUN_ID, model: "deepseek/deepseek-v4-pro", manifest: MF, meta: { cost: 0.002, grounded: true, unsourced: 1, tool_calls: [{ id: "T1", role: "fundamental", name: "quote", ok: true, source: "yahoo:test" }] }, prev_hash: H("c"), hash: H("d") },
+  { seq: 1, at: 1_790_000_000, kind: "chat", ref: "", model: "deepseek/deepseek-v4-pro", manifest: MF, meta: { cost: 0.001, grounded: false, unsourced: 0, tool_calls: [] }, prev_hash: H("0"), hash: H("c") },
+];
+let verdict: Record<string, unknown> = { ok: true, count: 2, head: H("d"), broken_at: null, reason: null };
 
 async function setup(page: Page, swarm: Ev[] = SWARM_RUN) {
   for (const k of Object.keys(bodies)) delete bodies[k];
@@ -77,6 +84,8 @@ async function setup(page: Page, swarm: Ev[] = SWARM_RUN) {
       ]),
     });
   });
+  await page.route("**/api/ai/ledger?**", (r) => r.fulfill({ json: { entries: LEDGER } }));
+  await page.route("**/api/ai/ledger/verify", (r) => r.fulfill({ json: verdict }));
   await page.route("**/api/theses**", async (r) => {
     const req = r.request();
     const url = new URL(req.url());
@@ -205,5 +214,26 @@ test.describe("AI AUTO", () => {
     await expect(page.getByTestId("ai-evidence")).toContainText("STORED RUN ba9876543210");
     await expect(page.getByTestId("ai-answer")).toContainText("12.3 percent");
     expect(bodies.auto[0]).toMatchObject({ hypothesis: "a 20/50 cross works on AAPL" });
+  });
+});
+
+test.describe("AUDIT", () => {
+  test("shows the verified chain and an entry's manifest and tool calls", async ({ page }) => {
+    await setup(page);
+    verdict = { ok: true, count: 2, head: H("d"), broken_at: null, reason: null };
+    await run(page, "AUDIT");
+    await expect(page.getByTestId("audit-verdict")).toContainText("CHAIN OK · 2 ENTRIES · HEAD dddddddddddddddd");
+    await expect(page.getByTestId("audit-row")).toHaveCount(2);
+    await expect(page.getByTestId("audit-detail")).toContainText("[T1] fundamental quote · yahoo:test · OK");
+    await expect(page.getByTestId("audit-detail")).toContainText("1 UNSOURCED NUMBERS");
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByTestId("audit-detail")).toContainText("UNGROUNDED");
+  });
+
+  test("a broken chain says where", async ({ page }) => {
+    await setup(page);
+    verdict = { ok: false, count: 2, head: H("c"), broken_at: 2, reason: "ENTRY CONTENT DOES NOT MATCH ITS HASH (IT WAS CHANGED)" };
+    await run(page, "AUDIT");
+    await expect(page.getByTestId("audit-verdict")).toContainText("CHAIN BROKEN AT ENTRY 2");
   });
 });

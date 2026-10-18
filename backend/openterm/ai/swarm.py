@@ -88,6 +88,12 @@ def listing() -> list[dict]:
              "needs_subject": p.needs_subject} for p in PRESETS.values()]
 
 
+def prompt_text(preset: Preset) -> str:
+    """Everything that shapes the prompts of a preset (templates, role ids, briefs, tool lists): hashed into the audit manifest."""
+    roles = [[r.id, r.title, r.brief, list(r.tools), r.chair] for r in preset.roles]
+    return "\n".join([COMMON, CHAIR, preset.code, repr(roles)])
+
+
 def role_system(role: Role, today: str) -> str:
     return (CHAIR if role.chair else COMMON).format(today=today, title=role.title, brief=role.brief)
 

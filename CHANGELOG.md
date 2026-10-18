@@ -12,6 +12,8 @@ Format: newest first, one section per phase. Details for each release are in `do
   chunk citations, the same UNGROUNDED / UNSOURCED checks. Documents stay in memory (last 5). No OCR.
 - Added `SWARM` (five preset desks of analyst roles plus a chair, each role with its own tools, one retry, stored runs that replay with no model call), `THESIS` (notes per ticker with status,
   invalidation rule and linked runs) and `AI AUTO` (hypothesis, backtest, evidence report; the evidence line comes from the backtest runs the server saw). New migration 13 (`ai_runs`, `theses`).
+- Added `AUDIT`: a hash-chained ledger (migration 14, `ai_ledger`) of AI chat, AI BT, AI DOC, SWARM, AI AUTO and BT runs with a manifest (prompt, tool registry and skill hashes, app version, model) and metadata (question and answer hashes,
+  tool calls with argument hashes, cost, grounding verdict). No prompt or answer text is stored. The panel verifies the chain and names the first broken entry.
 - Recorded with the real OpenRouter key: one plain stream and a tool-call round (the pending Phase 11 recording is done).
 
 ## Phase 15: risk, quant library, alphas, Kite

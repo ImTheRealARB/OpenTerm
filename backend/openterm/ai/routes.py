@@ -19,6 +19,7 @@ from .. import api as api_mod
 from .. import perf
 from ..responses import Orjson
 from . import agent, tools
+from .audit import audit_of, audited, manifest
 
 router = APIRouter(prefix="/api/ai")
 MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}$")
@@ -75,6 +76,11 @@ def _models(body: dict, cfg: dict, field: str = "model", default: str = agent.DE
     return (model, provider) if ok else None
 
 
+def audit(request: Request, events: AsyncIterator[dict], kind: str, system: str, question: str, names: list[str] | None, model: str, provider: str) -> AsyncIterator[dict]:
+    """Wraps an event stream so its final event writes one hash-chained ledger entry (hashes and metadata only, no text)."""
+    return audited(audit_of(request.app, api_mod.user(request).db), events, kind, manifest(system, names, model, provider), question)
+
+
 def _stream(request: Request, t0: float, events: AsyncIterator[dict], runner: tools.ToolRunner | None = None,
             tap: Callable[[dict], list[dict]] | None = None) -> StreamingResponse:
     """SSE response over agent-style events. `tap` may add events before one (the BT draft goes out before `done`)."""
@@ -119,7 +125,8 @@ async def chat(request: Request):
         return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port))
-    events = agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1])
+    events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1]),
+                   "chat", agent.SYSTEM, question.strip(), None, names[0], names[1])
     return _stream(request, t0, events, runner)
 
 
@@ -162,7 +169,8 @@ async def bt(request: Request):
         return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=BT_TOOLS)
     system = BT_SYSTEM.format(today=time.strftime("%Y-%m-%d", time.gmtime()))
-    events = agent.run(api_mod.llm_of(request), runner, idea.strip(), [], model=names[0], provider=names[1], tools=BT_TOOLS, system=system, max_rounds=6)
+    events = audit(request, agent.run(api_mod.llm_of(request), runner, idea.strip(), [], model=names[0], provider=names[1], tools=BT_TOOLS, system=system, max_rounds=6),
+                   "ai_bt", BT_SYSTEM, idea.strip(), BT_TOOLS, names[0], names[1])
 
     def tap(ev: dict) -> list[dict]:
         if ev["type"] != "done":
@@ -297,5 +305,6 @@ async def doc_ask(request: Request):
     history = body.get("history") if isinstance(body.get("history"), list) else []
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=["doc_search"], context={"doc": d})
     system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), today=time.strftime("%Y-%m-%d", time.gmtime()))
-    events = agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], tools=["doc_search"], system=system, max_rounds=6)
+    events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], tools=["doc_search"], system=system, max_rounds=6),
+                   "ai_doc", DOC_SYSTEM, question.strip(), ["doc_search"], names[0], names[1])
     return _stream(request, t0, events, runner)

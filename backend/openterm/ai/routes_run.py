@@ -11,7 +11,7 @@ from fastapi.responses import Response
 
 from .. import api as api_mod
 from . import agent, tools
-from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, router
+from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, audit, router
 
 AUTO_TOOLS = ["history", "quote", "profile", "skill", "strategy_check", "backtest_run", "backtest_get"]
 RUN_ID_IN_TEXT = re.compile(r'"run_id"\s*:\s*"([0-9a-f]{12})"')
@@ -80,6 +80,8 @@ async def swarm_run(request: Request):
     subject = subject.strip()
     inner = swarm.run(api_mod.llm_of(request), runner_for, preset, subject, model=names[0], provider=names[1])
     events = save_events(request, inner, "swarm", f"{preset.code} {subject}"[:120], subject_symbol(subject), "swarm_done")
+    role_tools = sorted({t for r in preset.roles for t in r.tools})
+    events = audit(request, events, "swarm", swarm.prompt_text(preset), f"{preset.code} {subject}", role_tools, names[0], names[1])
     return _stream(request, t0, events)
 
 
@@ -115,7 +117,22 @@ async def auto(request: Request):
             yield ev
 
     events = save_events(request, with_evidence(), "auto", hypothesis.strip(), None, "done")
+    events = audit(request, events, "ai_auto", AUTO_SYSTEM, hypothesis.strip(), AUTO_TOOLS, names[0], names[1])
     return _stream(request, t0, events, runner)
+
+
+@router.get("/ledger")
+async def ledger_list(request: Request, limit: int = 50):
+    from .audit import audit_of
+
+    return {"entries": await audit_of(request.app, api_mod.user(request).db).entries(limit)}
+
+
+@router.get("/ledger/verify")
+async def ledger_verify(request: Request):
+    from .audit import audit_of
+
+    return await audit_of(request.app, api_mod.user(request).db).verify()
 
 
 @router.get("/runs")
