@@ -26,8 +26,8 @@ def xf(group: str, step: int):
     return pytest.mark.xfail(strict=True, reason=f"Phase 15 step {step}: {group}")
 
 
-KITE = xf("Kite backend", 6)
-KITEUI = xf("Kite data routes", 7)
+KITE = lambda f: f  # step 6 landed
+KITEUI = lambda f: f  # step 7 landed
 
 
 def fx(name: str):
@@ -82,12 +82,11 @@ def test_kite_has_no_order_surface_anywhere(client):
 
 @KITE
 def test_kite_key_row_has_two_inputs_and_no_token_field(client):
-    row = next(k for k in client.get("/api/keys").json()["keys"] if k["provider"] == "kite")
-    names = [f["name"] for f in row["fields"]]
-    assert names == ["KITE_API_KEY", "KITE_API_SECRET"] and row["state"] == "MISSING"
+    row = next(k for k in client.get("/api/keys").json()["keys"] if k["name"] == "kite")
+    assert row["fields"] == ["KITE_API_KEY", "KITE_API_SECRET"] and row["state"] == "MISSING"
     set_keys(client)
-    row = next(k for k in client.get("/api/keys").json()["keys"] if k["provider"] == "kite")
-    assert row["state"] in ("UNTESTED", "OK") and all(f["present"] for f in row["fields"])
+    row = next(k for k in client.get("/api/keys").json()["keys"] if k["name"] == "kite")
+    assert row["state"] in ("UNTESTED", "OK") and row["present"]
     assert KEY not in client.get("/api/keys").text and SECRET not in client.get("/api/keys").text
 
 
@@ -119,7 +118,7 @@ def test_callback_exchanges_the_request_token_with_the_documented_checksum(clien
     for path in ("/api/keys", "/api/sources", "/api/kite/status", "/api/log", "/api/perf"):
         text = client.get(path).text
         assert ACCESS not in text and SECRET not in text and "docshape_public_token" not in text, path
-    row = next(k for k in client.get("/api/keys").json()["keys"] if k["provider"] == "kite")
+    row = next(k for k in client.get("/api/keys").json()["keys"] if k["name"] == "kite")
     assert row["state"] == "OK"
 
 

@@ -19,7 +19,7 @@ RECORDING = pytest.mark.xfail(strict=True, reason="needs fixtures/llm_openrouter
 
 SECRET = "sk-test-0123456789abcdefSECRET"
 SPEC_NAMES = {"openrouter", "openai", "anthropic", "finnhub", "alpaca", "fmp", "fred", "eia", "openfigi", "tradier",
-              "telegram", "smtp"}
+              "telegram", "smtp", "kite"}
 
 
 def mod(name: str):

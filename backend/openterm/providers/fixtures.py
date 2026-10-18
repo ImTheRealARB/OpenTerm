@@ -471,3 +471,51 @@ def _route(request: httpx.Request) -> httpx.Response:
         name = _KEN_FRENCH.get(request.url.path.rsplit("/", 1)[-1])
         return _load(name) if name else httpx.Response(404, text="not recorded")
     return _route_before_kenfrench(request)
+
+
+# --- Phase 15 steps 6-7: Zerodha Kite Connect (READ-ONLY). Fixtures are DOC-SHAPED, labelled NOT A RECORDING in each file. ---
+# POST /session/token answers only for the test trio below (checksum = sha256(api_key + request_token + api_secret)), else 403
+# InputException. With env OPENTERM_KITE_EXPIRED=1 every authenticated call answers the TokenException fixture with 403.
+KITE_KEY, KITE_SECRET, KITE_REQUEST_TOKEN = "docshape_api_key", "docshape_secret", "docshape_request_token"
+KITE_HISTORICAL = {"738561": "kite_historical_reliance_day_docshape", "9000001": "kite_historical_nifty_fut_day_oi_docshape"}
+_route_before_kite = _route
+
+
+def _kite_json(name: str, status: int | None = None) -> httpx.Response:
+    rec = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    code = status or rec["status"]
+    if "text" in rec:
+        return httpx.Response(code, text=rec["text"], headers={"content-type": rec.get("content_type", "text/csv")})
+    return httpx.Response(code, json=rec["body"])
+
+
+def _kite_error(status: int, error_type: str, message: str) -> httpx.Response:
+    return httpx.Response(status, json={"status": "error", "message": message, "data": None, "error_type": error_type})
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    if request.url.host != "api.kite.trade":
+        return _route_before_kite(request)
+    import hashlib
+    from urllib.parse import parse_qs
+
+    p, q = request.url.path, request.url.params
+    if request.method == "POST" and p == "/session/token":
+        form = {k: v[0] for k, v in parse_qs(request.content.decode("utf-8")).items()}
+        want = hashlib.sha256((form.get("api_key", "") + form.get("request_token", "") + KITE_SECRET).encode()).hexdigest()
+        if form.get("api_key") == KITE_KEY and form.get("request_token") == KITE_REQUEST_TOKEN and form.get("checksum") == want:
+            return _kite_json("kite_session_token_docshape")
+        return _kite_error(403, "InputException", "Invalid `checksum` or `request_token`.")
+    if os.environ.get("OPENTERM_KITE_EXPIRED") == "1" or not request.headers.get("authorization", "").startswith("token "):
+        return _kite_json("kite_error_token_docshape", 403)
+    if request.method != "GET":
+        return httpx.Response(405, text="not recorded")
+    if p == "/instruments":
+        return _kite_json("kite_instruments_docshape")
+    if p == "/quote":
+        data = json.loads((FIXTURES / "kite_quote_nifty_docshape.json").read_text(encoding="utf-8"))["body"]["data"]
+        return httpx.Response(200, json={"status": "success", "data": {k: data[k] for k in q.get_list("i") if k in data}})
+    if p.startswith("/instruments/historical/"):
+        token = p.split("/")[3] if len(p.split("/")) > 3 else ""
+        return _kite_json(KITE_HISTORICAL[token]) if token in KITE_HISTORICAL else _kite_error(400, "InputException", "Invalid instrument token.")
+    return httpx.Response(404, text="not recorded")

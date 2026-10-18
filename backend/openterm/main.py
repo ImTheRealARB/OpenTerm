@@ -15,6 +15,7 @@ from .bt.localdata import LocalData
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
+from .kite_routes import router as kite_router
 from .quant_routes import router as quant_router
 from .responses import Orjson
 from .router import Router
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
         http2=True, limits=httpx.Limits(max_connections=50, max_keepalive_connections=20), timeout=6.0
     )
     order = {**DEFAULT_ORDER, **(cfg.get("providers") or {})}
+    order["history"] = ["kite", *[n for n in order.get("history", []) if n != "kite"]]  # Phase 15: Kite first, only while logged in
     if settings.openterm_synthetic:
         order = {k: [*v, "synthetic"] if k in ("quotes", "history") else v for k, v in order.items()}
     router = Router(
@@ -126,9 +128,17 @@ async def lifespan(app: FastAPI):
 
     alpaca = router.providers.get("alpaca")
     iex = IexPoller(emit, alpaca, prev_close) if alpaca is not None and not settings.openterm_fixtures else None
-    hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick, iex=iex)
+    # Phase 15: Zerodha Kite Connect (read-only). The key store is built here so the Kite session and ticker exist before the hub.
+    from .kite.session import KiteSession
+    from .kite.ws import KiteTicker
+
+    store = keys.from_settings(settings)
+    kite = router.providers["kite"]
+    kite.attach(KiteSession(store), db)
+    ticker = KiteTicker(emit, kite.session, kite.instruments, prev_close) if not settings.openterm_fixtures else None
+    hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick, iex=iex, kite=ticker)
     hub_ref.append(hub)
-    for part in (yahoo, poller, synthetic, iex, hub):
+    for part in (yahoo, poller, synthetic, iex, ticker, hub):
         if part:
             part.start()
 
@@ -139,7 +149,8 @@ async def lifespan(app: FastAPI):
 
     # --- Phase 11: key store. Key tests use the fixture transport in fixture mode. ---
     redact.install()
-    app.state.keys = store = keys.from_settings(settings)
+    app.state.keys = store
+    app.state.kite = kite
     keys_http = httpx.AsyncClient(transport=providers.fixture_transport()) if settings.openterm_fixtures else http
     app.state.keys_http = keys_http
     app.state.llm = None  # LLM gateway: built on first use (api.llm_of)
@@ -151,6 +162,8 @@ async def lifespan(app: FastAPI):
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
         if name in ("finnhub", "alpaca", "tradier") and name in router.providers:  # Phase 13/14: keyed sources
             router.providers[name].set_keys(store.get(name))
+        if name == "kite":  # Phase 15: a new key or secret drops the login; the session re-reads the store
+            kite.session.reload()
 
     app.state.on_key_change = on_key_change
 
@@ -177,7 +190,7 @@ async def lifespan(app: FastAPI):
         await asyncio.to_thread(jobs.close)
         if keys_http is not http:
             await keys_http.aclose()
-        for part in (hub, iex, synthetic, poller, yahoo):
+        for part in (hub, ticker, iex, synthetic, poller, yahoo):
             if part:
                 await part.stop()
         await cache.flush()
@@ -189,6 +202,7 @@ app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson
 app.add_middleware(perf.TimingMiddleware)
 app.include_router(api_router)
 app.include_router(quant_router)
+app.include_router(kite_router)
 
 
 @app.get("/api/health")
@@ -209,7 +223,7 @@ async def ws(socket: WebSocket) -> None:
     server -> ["T", [[symbol, price, change, change_pct, volume, high, low, time_ms, src], ...]]
               ["pong", client_ts, server_ts_ms]
               ["J", {id, kind, state, progress, msg, cached}]  (Phase 11 job progress, to every client, <= 10/s/job)
-    src: y = Yahoo stream, p = REST poll fallback, s = SYNTHETIC test data.
+    src: y = Yahoo stream, p = REST poll fallback, a = Alpaca IEX (RT IEX), k = Zerodha Kite ticker (RT KITE), s = SYNTHETIC test data.
     """
     await socket.accept()
     hub: Hub = socket.app.state.hub

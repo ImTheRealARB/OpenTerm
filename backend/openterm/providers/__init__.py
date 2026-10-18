@@ -170,3 +170,8 @@ ADAPTERS.update({"yahoo_futures": YahooFuturesProvider, "cftc": CftcProvider, "f
 from .kenfrench import KenFrenchProvider
 
 ADAPTERS["kenfrench"] = KenFrenchProvider
+
+# --- Phase 15 steps 6-7: Zerodha Kite Connect bars (read-only; inert until a key is set and a login is made) ---
+from .kite import KiteProvider
+
+ADAPTERS["kite"] = KiteProvider

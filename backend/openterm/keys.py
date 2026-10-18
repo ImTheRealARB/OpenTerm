@@ -31,6 +31,11 @@ class KeySpec:
     signup: str
     secret_fields: tuple[str, ...] = ()
     """Fields redacted from logs. Empty = all fields."""
+    hidden_fields: tuple[str, ...] = ()
+    """Internal fields stored like keys but never shown as inputs (Kite's one-day access token). Not in `fields`, so APIKEYS lists
+    only the inputs and `set` / `status` ignore them; read and written through `get_hidden` / `set_hidden`, redacted everywhere."""
+    hidden_secret: tuple[str, ...] = ()
+    """The hidden fields whose values are redacted (the rest, such as a login date, are plain)."""
 
     @property
     def secrets(self) -> tuple[str, ...]:
@@ -62,6 +67,10 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
     KeySpec("telegram", ("TELEGRAM_BOT_TOKEN",), 17, "Push alerts and briefs", "https://core.telegram.org/bots/tutorial"),
     KeySpec("smtp", ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD"), 17, "Email alerts and briefs (app password)",
             "https://support.google.com/accounts/answer/185833", secret_fields=("SMTP_PASSWORD",)),
+    KeySpec("kite", ("KITE_API_KEY", "KITE_API_SECRET"), 15,
+            "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
+            "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
+            hidden_secret=("KITE_ACCESS_TOKEN",)),
 ]}
 
 class KeyStoreError(Exception):
@@ -242,7 +251,46 @@ class KeyStore:
                 write_dotenv(self.dotenv, dict.fromkeys(spec.fields))
         else:
             write_dotenv(self.dotenv, values)
+        self._clear_hidden(spec)  # a new key or secret makes yesterday's access token meaningless
         self._checks.pop(name, None)
+
+    # --- hidden fields (Kite's access token): same stores as the keys, never an input, never in a status row ---
+    def get_hidden(self, name: str, field: str) -> str | None:
+        spec = self._spec(name)
+        if field not in spec.hidden_fields:
+            raise KeyStoreError("bad_request", f"{field} IS NOT A HIDDEN FIELD OF {spec.label}")
+        v = self._ring_get(field) if self._ring_usable() else None
+        v = v or read_dotenv(self.dotenv).get(field)
+        if v and field in spec.hidden_secret:
+            redact.register([v])
+        return v or None
+
+    def set_hidden(self, name: str, values: Mapping[str, str | None]) -> None:
+        """Stores (or, for None, removes) hidden fields. A value is one line."""
+        spec = self._spec(name)
+        for f, v in values.items():
+            if f not in spec.hidden_fields:
+                raise KeyStoreError("bad_request", f"{f} IS NOT A HIDDEN FIELD OF {spec.label}")
+            if v is not None and (not isinstance(v, str) or not v.strip() or "\n" in v or "\r" in v):
+                raise KeyStoreError("bad_request", f"{f} MUST BE ONE NON-EMPTY LINE")
+            if v and f in spec.hidden_secret:
+                redact.register([v])
+        if self._ring_usable():
+            for f, v in values.items():
+                if v is None:
+                    self.keyring.delete_password(SERVICE, f)
+                    self._ring_cache[f] = None
+                else:
+                    self.keyring.set_password(SERVICE, f, v)
+                    self._ring_cache[f] = v
+            if any(f in read_dotenv(self.dotenv) for f in values):
+                write_dotenv(self.dotenv, dict.fromkeys(values))
+        else:
+            write_dotenv(self.dotenv, values)
+
+    def _clear_hidden(self, spec: KeySpec) -> None:
+        if spec.hidden_fields:
+            self.set_hidden(spec.name, dict.fromkeys(spec.hidden_fields))
 
     def _in_dotenv(self, spec: KeySpec) -> bool:
         dot = read_dotenv(self.dotenv)
@@ -258,6 +306,7 @@ class KeyStore:
                 self._ring_cache[f] = None
         if self._in_dotenv(spec):
             write_dotenv(self.dotenv, dict.fromkeys(spec.fields))
+        self._clear_hidden(spec)
         self._checks.pop(name, None)
 
     def record_check(self, name: str, state: str, detail: str | None) -> None:
@@ -268,6 +317,7 @@ class KeyStore:
         for spec in KEY_SPECS.values():
             values, _ = self._lookup(spec)
             out.update(values[f] for f in spec.secrets if f in values)
+            out.update(v for f in spec.hidden_secret if (v := self.get_hidden(spec.name, f)))
         return out
 
 
@@ -345,7 +395,10 @@ async def run_test(store: KeyStore, name: str, http: httpx.AsyncClient, fixtures
     values = await asyncio.to_thread(store.get, name)
     if values is None:
         return await asyncio.to_thread(store.status, name)
-    if name == "smtp":
+    if name == "kite":  # no network: a Kite key is only proven by a login (GET /api/kite/login), so UNTESTED until then
+        token = await asyncio.to_thread(store.get_hidden, "kite", "KITE_ACCESS_TOKEN")
+        state, detail = ("OK", None) if token else ("UNTESTED", "LOG IN WITH KITE LOGIN TO PROVE THE KEY")
+    elif name == "smtp":
         state, detail = ("ERROR", "SMTP IS NOT TESTED IN FIXTURE MODE") if fixtures else \
             await asyncio.to_thread(_smtp_check, values)
     else:

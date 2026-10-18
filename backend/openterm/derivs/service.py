@@ -14,6 +14,7 @@ import time
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..kite.symbols import derivative_root
 from ..options import chain as ch
 from ..options import ivstore
 from ..options import market as mk
@@ -60,7 +61,7 @@ class Derivs(FuturesMixin, CalcMixin):
         return self.svc.ttl.get(f"d_{name}", self.TTL.get(name, 300.0))
 
     # --- dispatch -------------------------------------------------------------------------------
-    PARAMS: ClassVar[dict[str, tuple[str, ...]]] = {"omon": ("date", "moneyness", "q")}
+    PARAMS: ClassVar[dict[str, tuple[str, ...]]] = {"omon": ("date", "moneyness", "q", "r")}
 
     async def run(self, fn: str, **params: Any) -> dict:
         """Dispatch for GET /api/deriv/{fn}. `params` holds every query pair (names lower-cased)."""
@@ -125,7 +126,7 @@ class Derivs(FuturesMixin, CalcMixin):
 
     # --- OMON, PCR ------------------------------------------------------------------------------
     async def fn_omon(self, symbol: str | None = None, date: str | None = None, moneyness: str | None = None,
-                      q: str | None = None, **_: Any) -> dict:
+                      q: str | None = None, r: str | None = None, **_: Any) -> dict:
         sym = resolve(self._need({"symbol": symbol}, "symbol"))
         m = (moneyness or "ALL").upper()
         if m not in ot.MONEYNESS:
@@ -134,6 +135,8 @@ class Derivs(FuturesMixin, CalcMixin):
             q_typed = float(q) / 100.0 if q not in (None, "") else None
         except ValueError as e:
             raise DataError("bad_request", f"Q={q}: NOT A NUMBER") from e
+        if derivative_root(sym) is not None:  # Phase 15: <UNDERLYING>.NFO / .MCX come from Kite Connect, never from Yahoo
+            return await self.kite_omon(sym, date, m, q_typed, r)
         base_env = await self.chain(sym)
         base = base_env["data"]
         env = base_env
@@ -152,6 +155,17 @@ class Derivs(FuturesMixin, CalcMixin):
         r, par, cdate, qv, note = await self.rate_and_yield(sym, T, q_typed)
         data = ot.omon_payload(chain, T, r, par, cdate, qv, note, m, self.tradier_missing())
         return {**env, "data": data, "source": chain["source"]}
+
+    async def kite_omon(self, sym: str, day: str | None, moneyness: str, q_typed: float | None, r_text: str | None) -> dict:
+        from ..kite import chain as kc
+
+        try:
+            r_typed = float(r_text) / 100.0 if r_text not in (None, "") else None
+        except ValueError as e:
+            raise DataError("bad_request", f"R={r_text}: NOT A NUMBER") from e
+        kite = self.svc.router.providers["kite"]
+        data = await kc.omon(kite.session, kite.client, kite.instruments, sym, self.now(), self.fixtures, day, moneyness, r_typed, q_typed)
+        return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
 
     async def fn_pcr(self, symbol: str | None = None, **_: Any) -> dict:
         sym = resolve(self._need({"symbol": symbol}, "symbol"))

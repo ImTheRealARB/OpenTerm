@@ -180,3 +180,12 @@ export function quantBody(fn: string, params: Record<string, string | string[]>)
   }
   return body;
 }
+
+/** KITE: `[LOGIN|STATUS|LOGOUT]`, no argument = STATUS. Read-only source: there is no other word. */
+export function kiteArgs(args: string[]): Parsed {
+  if (!args.length) return { params: { action: "status" }, bad: [] };
+  const w = args[0].toUpperCase();
+  const bad = args.slice(1).map((a) => a.toUpperCase());
+  if (w !== "LOGIN" && w !== "STATUS" && w !== "LOGOUT") return { params: {}, bad: [w, ...bad] };
+  return { params: { action: w.toLowerCase() }, bad };
+}

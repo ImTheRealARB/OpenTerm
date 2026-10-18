@@ -202,7 +202,6 @@ test.describe("Phase 15", () => {
   });
 
   test("KITE: status panel shows the login state, L opens the login route in a new tab, there is no order key", async ({ page }) => {
-    test.fail();
     await setup(page);
     await page.route("**/api/kite/status", (r) => r.fulfill({ json: { state: "KITE LOGIN EXPIRED", message: "KITE LOGIN EXPIRED: run KITE LOGIN", user: "DOC001", logged_in_at: "2026-10-17T03:00:00Z" } }));
     await page.route("**/api/kite/login", (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<html><body>KITE LOGIN PAGE (TEST)</body></html>" }));

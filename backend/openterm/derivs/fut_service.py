@@ -7,6 +7,7 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..kite.symbols import derivative_root
 from ..router import AllFailed
 from ..service import DataError, envelope
 from . import fut_parse as fp
@@ -48,6 +49,12 @@ class FuturesMixin:
     # --- CT -------------------------------------------------------------------------------------
     async def fn_ct(self, root: str | None = None, symbol: str | None = None, **_: Any) -> dict:
         r = (root or symbol or "").strip().upper()
+        if derivative_root(r) is not None:  # Phase 15: <UNDERLYING>.NFO / .MCX futures with open interest come from Kite Connect
+            from ..kite import chain as kc
+
+            kite = self.svc.router.providers["kite"]
+            data = await kc.futures(kite.session, kite.client, kite.instruments, r, self.now(), self.fixtures)  # type: ignore[attr-defined]
+            return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
         if not r or r not in fp.ROOTS:
             raise DataError("bad_request", f"CT NEEDS A ROOT: {' '.join(fp.ROOTS)}" if not r else f"UNKNOWN ROOT {r}. ROOTS: {' '.join(fp.ROOTS)}")
         got, skipped, planned = await self.contracts(r)

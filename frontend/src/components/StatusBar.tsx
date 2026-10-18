@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { DISCLAIMER } from "../config";
+import { kite, refreshKite } from "../net/kite";
 import { useRunningJobs } from "../net/jobs";
 import { link } from "../net/socket";
 import { sources } from "../net/sources";
@@ -34,6 +36,20 @@ function JobsCount() {
   ) : null;
 }
 
+/** Phase 15: Kite login state, asked once at start (and after KITE login/logout). Nothing is shown without a key or when unknown. */
+function KiteState() {
+  const k = useStore(kite, (s) => s);
+  useEffect(() => {
+    void refreshKite();
+  }, []);
+  if (!k || k.state === "NO KEY") return null;
+  return (
+    <span>
+      KITE <span className={k.state === "OK" ? "up" : k.state === "LOGGED OUT" ? "warn" : "err"}>{k.state.replace(/^KITE /, "")}</span>
+    </span>
+  );
+}
+
 export function StatusBar() {
   const l = useStore(link, (s) => s);
   const focus = useStore(workspace, (s) => s.focus);
@@ -57,6 +73,7 @@ export function StatusBar() {
       </span>
       <span>MODE CMD</span>
       <JobsCount />
+      <KiteState />
       <AlertFlash />
       <span className="sp" />
       <span>{DISCLAIMER}</span>

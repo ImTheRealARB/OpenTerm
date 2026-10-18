@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alphaArgs, attrArgs, factArgs, optArgs, qlArgs, quantBody, regimeArgs, riskArgs } from "./quantArgs";
+import { alphaArgs, attrArgs, factArgs, kiteArgs, optArgs, qlArgs, quantBody, regimeArgs, riskArgs } from "./quantArgs";
 
 /*
  * Phase 15 step 1 (spec docs/specs/PHASE_15.md): command-line parsers for RISK, PORT OPT, PORT ATTR, FACT, QL, ALPHA, CORR REGIME and KITE,
@@ -7,10 +7,6 @@ import { alphaArgs, attrArgs, factArgs, optArgs, qlArgs, quantBody, regimeArgs, 
  * not exist yet, so every test is `it.fails` through a variable-path import (tsc would reject a missing module). The build step that makes
  * them pass (step 3 for RISK/OPT/ATTR, 4 for FACT/QL, 5 for ALPHA/REGIME, 7 for KITE) switches them to plain `it` with a static import.
  */
-const MOD = "./quantArgs";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const load = async (): Promise<any> => import(/* @vite-ignore */ MOD);
-
 describe("riskArgs", () => {
   it("takes a portfolio word and KEY=VALUE pairs, keys lower-cased", () => {
     expect(riskArgs(["main", "range=5y", "conf=99", "hor=5", "bench=QQQ"])).toEqual({
@@ -93,8 +89,7 @@ describe("quantBody", () => {
 });
 
 describe("kiteArgs", () => {
-  it.fails("LOGIN, STATUS and LOGOUT, nothing else", async () => {
-    const { kiteArgs } = await load();
+  it("LOGIN, STATUS and LOGOUT, nothing else", () => {
     expect(kiteArgs([])).toEqual({ params: { action: "status" }, bad: [] });
     expect(kiteArgs(["login"]).params).toEqual({ action: "login" });
     expect(kiteArgs(["LOGOUT"]).params).toEqual({ action: "logout" });

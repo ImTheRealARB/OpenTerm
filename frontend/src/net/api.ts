@@ -776,6 +776,21 @@ export const quantApi = {
   putVals: (name: string, rows: ValRow[]) => send<{ rows: ValRow[] }>("PUT", `${pf(name)}/vals`, { rows }),
 };
 
+/** Phase 15: Kite Connect (read-only data source). Login is `/api/kite/login`, opened in a new tab; the api key never reaches this app. */
+export interface KiteStatus {
+  state: string;
+  message?: string | null;
+  user?: string | null;
+  logged_in_at?: string | null;
+  expires_note?: string | null;
+}
+
+export const kiteApi = {
+  loginUrl: "/api/kite/login",
+  status: () => send<KiteStatus>("GET", "/api/kite/status"),
+  logout: () => send<KiteStatus>("POST", "/api/kite/logout"),
+};
+
 // Phase 13 step 6: news keyword alerts (ALRT NEWS WORD [SYM]); stored by the backend, evaluated here on each news refresh.
 export interface NewsAlert {
   id: number;

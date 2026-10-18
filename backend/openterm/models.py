@@ -49,6 +49,9 @@ class Bars(BaseModel):
     # --- Phase 12 ---
     fund: list[float | None] | None = None
     """Perpetual funding rate per bar (mean of the settlements inside the bar; Binance USD-M daily/weekly bars only)."""
+    # --- Phase 15 ---
+    oi: list[float | None] | None = None
+    """Open interest per bar (Kite futures and options bars only). None when the source has none."""
 
 
 class SearchHit(BaseModel):

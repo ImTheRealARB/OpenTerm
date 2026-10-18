@@ -16,7 +16,8 @@ from .userdata import UserData, UserDataError
 
 router = APIRouter(prefix="/api")
 
-STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503, "key_required": 424}
+STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503, "key_required": 424,
+          "login_required": 401, "login_expired": 403}  # Phase 15: Kite
 
 
 def svc(request: Request) -> DataService:
