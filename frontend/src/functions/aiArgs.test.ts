@@ -14,6 +14,14 @@ describe("aiArgs", () => {
     expect(aiArgs(["CHART"])).toEqual({ mode: "chart", text: "" });
     expect(aiArgs(["chart", "support", "levels"])).toEqual({ mode: "chart", text: "support levels" });
   });
+  it("DOC loads a filing, switches the document off, or waits for an upload", () => {
+    expect(aiArgs(["DOC"])).toEqual({ mode: "doc", text: "" });
+    expect(aiArgs(["doc", "filing", "aapl"])).toEqual({ mode: "docfiling", text: "", symbol: "AAPL", form: "10-K" });
+    expect(aiArgs(["DOC", "FILING", "msft", "10-q"])).toEqual({ mode: "docfiling", text: "", symbol: "MSFT", form: "10-Q" });
+    expect(aiArgs(["DOC", "OFF"])).toEqual({ mode: "docoff", text: "" });
+    expect(aiArgs(["DOC", "FILING"])).toEqual({ mode: "bad", text: "", error: "USAGE: AI DOC [FILING <SYMBOL> [FORM]] | AI DOC OFF (U uploads a file)" });
+    expect(aiArgs(["DOC", "what"])).toMatchObject({ mode: "bad" });
+  });
   it("only the first word picks a mode: a question that mentions BT is still a question", () => {
     expect(aiArgs(["why", "BT", "failed"])).toEqual({ mode: "ask", text: "why BT failed" });
   });

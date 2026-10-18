@@ -185,6 +185,8 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **AI (Phase 16):** `openterm/ai/` (tools via in-process ASGI to the app's own routes, agent loop, guard, context, grounding) behind `POST /api/ai/chat` (SSE). Fixture mode replays two recorded OpenRouter turns for ANY question (labelled RECORDED);
   tests inject a scripted gateway (`FakeGateway` in `test_phase16_agent.py`). The default model `deepseek/deepseek-v4-pro` is a reasoning model: give it >= 400 output tokens or it answers nothing. The bench sets a fake key into a memory keyring (`OPENTERM_KEYRING=memory`).
   A job-based tool (`quant`, `backtest_run`) cannot be probed from a bare script on Windows (worker spawn re-imports `__main__`: guard with `if __name__ == "__main__"`).
+- **Inputs inside a panel (AI question box) must let Ctrl/Alt/Meta chords bubble** (`if (!e.ctrlKey && !e.altKey && !e.metaKey) e.stopPropagation()`), or Ctrl+K stops working there and the next command is typed into the box.
+  `AI DOC` documents are in memory only (`app.state.ai_docs`, last 5); the filing text path is only unit-tested (fixture mode has no filing documents).
 - **Command line keeps focus after a run:** in a manual or browser-driven check press `Esc` before a panel key (`Enter`, `A`, `J`); Playwright's `keyboard.press` already lands on the panel.
   `ResearchPanel` `onKey(e, props, data, say, row)` gets the selected row as 5th argument (ALPHA Enter shows the row's `info`: ported module docstring + inputs).
 - **Manual smoke without keys:** `OPENTERM_DB_PATH=<temp>` keeps the user's DB out; portfolio positions are `{symbol, qty, cost}` (`PUT /api/portfolios/<name>`), not `quantity`/`avg_cost`.

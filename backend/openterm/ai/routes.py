@@ -209,3 +209,93 @@ async def chart(request: Request):
         yield {"type": "done", "answer": "".join(parts), "grounded": False, "label": "CHART IMAGE ONLY", "unsourced": [], "tool_calls": 0, "cost": cost, "stopped": None}
 
     return _stream(request, t0, events())
+
+
+# --- AI DOC ------------------------------------------------------------------------------------------------------------------------
+NAME_RE = re.compile(r"^[\w.\- ()]{1,100}$")
+SYMBOL_RE = re.compile(r"^[A-Za-z0-9.^=\-]{1,12}$")
+DOC_SYSTEM = """You answer questions about ONE document: "{name}" ({kind}, {chunks} chunks). Today is {today}.
+Rules:
+- Find passages with the doc_search tool (try different words if the first search finds nothing). Chunks come back labelled C1, C2...
+- Answer only from the chunks you retrieved. Cite the chunk in parentheses after each fact, like (C3), and the tool call as [T1].
+- If the document does not contain the answer, say so plainly. Never fill a gap with outside knowledge; figures you state must appear in a retrieved chunk.
+- Quote numbers exactly as written in the document. Be brief."""
+
+
+def doc_store(request: Request):
+    from .doc import DocStore
+
+    st = getattr(request.app.state, "ai_docs", None)
+    if st is None:
+        st = request.app.state.ai_docs = DocStore()
+    return st
+
+
+@router.post("/doc/upload")
+async def doc_upload(request: Request, name: str = ""):
+    from . import doc
+
+    if not api_mod.loopback(request):
+        return _err(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
+    if not NAME_RE.match(name) or ".." in name:
+        return _err(400, "bad_request", "FILE NAME MUST BE 1-100 PLAIN CHARACTERS WITH AN EXTENSION")
+    data = await request.body()
+    if len(data) > doc.MAX_BYTES:
+        return _err(413, "too_large", f"FILE OVER {doc.MAX_BYTES // 1024 // 1024} MB")
+    try:
+        kind, text = doc.extract_text(name, data)
+    except ValueError as e:
+        return _err(400, "bad_request", str(e))
+    return {"doc": doc_store(request).add(name, kind, doc.chunk(text)).card()}
+
+
+@router.post("/doc/filing")
+async def doc_filing(request: Request):
+    from ..providers.base import ProviderError
+    from . import doc
+
+    body = await _body(request)
+    if isinstance(body, Response):
+        return body
+    symbol, form = str(body.get("symbol") or ""), str(body.get("form") or "10-K").upper()
+    if not SYMBOL_RE.match(symbol) or not re.match(r"^[A-Z0-9/\-]{1,12}$", form):
+        return _err(400, "bad_request", "SYMBOL OR FORM IS NOT VALID")
+    sec = api_mod.svc(request).router.providers["sec"]
+    try:
+        filings = (await sec.filings(symbol.upper())).get("filings") or []
+        hit = next((f for f in filings if f.get("form") == form and f.get("doc_url")), None)
+        if hit is None:
+            return _err(404, "not_found", f"NO {form} FILING WITH A DOCUMENT FOR {symbol.upper()} IN THE LATEST SEC LIST")
+        raw = await sec.get_bytes(hit["doc_url"])
+    except ProviderError as e:
+        return _err(502, "provider", f"SEC: {str(e)[:120]}")
+    if len(raw) > doc.MAX_BYTES:
+        return _err(413, "too_large", "THE FILING DOCUMENT IS OVER 10 MB")
+    try:
+        _, text = doc.extract_text("filing.htm", raw)
+    except ValueError as e:
+        return _err(400, "bad_request", str(e))
+    name = f"{symbol.upper()} {form} {hit.get('filed') or ''}".strip()
+    return {"doc": doc_store(request).add(name, "filing", doc.chunk(text)).card(), "url": hit.get("url") or hit["doc_url"]}
+
+
+@router.post("/doc/ask")
+async def doc_ask(request: Request):
+    t0 = time.perf_counter()
+    body = await _body(request)
+    if isinstance(body, Response):
+        return body
+    question = body.get("question")
+    if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION or not isinstance(body.get("doc_id"), str):
+        return _err(400, "bad_request", f"NEEDS doc_id AND A QUESTION OF 1-{MAX_QUESTION} CHARACTERS")
+    d = doc_store(request).get(body["doc_id"])
+    if d is None:
+        return _err(404, "not_found", "THAT DOCUMENT IS NO LONGER LOADED (THE LAST 5 ARE KEPT): LOAD IT AGAIN")
+    names = _models(body, await ai_settings(request))
+    if names is None:
+        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+    history = body.get("history") if isinstance(body.get("history"), list) else []
+    runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=["doc_search"], context={"doc": d})
+    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), today=time.strftime("%Y-%m-%d", time.gmtime()))
+    events = agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], tools=["doc_search"], system=system, max_rounds=6)
+    return _stream(request, t0, events, runner)

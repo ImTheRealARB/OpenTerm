@@ -273,9 +273,12 @@ def test_numerics_are_scipy_free():
     assert n.norm_pdf(0.0) == pytest.approx(1 / math.sqrt(2 * math.pi))
     assert n.brent(lambda x: x * x - 2, 0.0, 2.0) == pytest.approx(math.sqrt(2), abs=1e-12)
     assert n.integrate(lambda x: math.sin(x), 0.0, math.pi) == pytest.approx(2.0, abs=1e-10)
-    for name in ("openterm.quant.options", "openterm.quant.heston", "openterm.quant.fixedincome", "openterm.quant.credit"):
-        mod(name.rsplit(".", 1)[1])
-    assert "scipy" not in sys.modules
+    # In a fresh interpreter: another test on the same xdist worker may already have imported scipy (the Phase 15 quantlib tests do).
+    import subprocess
+
+    code = ("import sys; import openterm.quant.options, openterm.quant.heston, openterm.quant.fixedincome, openterm.quant.credit; "
+            "sys.exit(1 if 'scipy' in sys.modules else 0)")
+    assert subprocess.run([sys.executable, "-c", code], check=False).returncode == 0, "openterm.quant must not import scipy"
 
 
 @QUANT

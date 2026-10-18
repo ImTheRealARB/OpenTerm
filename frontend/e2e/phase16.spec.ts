@@ -54,6 +54,23 @@ async function setup(page: Page, answers: Ev[][] | "hang" = [GROUNDED]) {
     const c = t.map((_, i) => 100 + Math.sin(i / 4) * 5);
     return r.fulfill({ json: { data: { symbol: "AAPL", range: "1y", interval: "1d", currency: "USD", exchange: "X", tz: "America/New_York", t, o: c, h: c.map((x) => x + 1), l: c.map((x) => x - 1), c, v: c.map(() => 1000), source: "yahoo", as_of: 0 }, source: "yahoo", as_of: Date.now() / 1000, age_s: 1, stale: false, fallback_from: [] } });
   });
+  const card = { id: "d1", name: "AAPL 10-K 2025-10-31", kind: "filing", chunks: 42, chars: 61000, preview: "Annual report" };
+  await page.route("**/api/ai/doc/filing", (r) => {
+    bodies.push(r.request().postDataJSON());
+    const b = r.request().postDataJSON() as { form: string };
+    return b.form === "ZZZ" ? r.fulfill({ status: 404, json: { error: "NO ZZZ FILING WITH A DOCUMENT FOR AAPL IN THE LATEST SEC LIST", kind: "not_found" } }) : r.fulfill({ json: { doc: card } });
+  });
+  await page.route("**/api/ai/doc/upload?**", (r) => {
+    urls.push(r.request().url());
+    return r.fulfill({ json: { doc: { ...card, id: "d2", name: new URL(r.request().url()).searchParams.get("name"), kind: "docx", chunks: 3, chars: 4000 } } });
+  });
+  await page.route("**/api/ai/doc/ask", async (r) => {
+    bodies.push(r.request().postDataJSON());
+    return r.fulfill({ status: 200, contentType: "text/event-stream", body: sse([START, { type: "tool_call", id: "T1", name: "doc_search", args: { query: "revenue" } },
+      { type: "tool_result", id: "T1", name: "doc_search", ok: true, empty: false, source: card.name, age_s: 0, stale: false, bytes: 900, summary: "" },
+      { type: "token", text: "Net sales were 391,035 (C4) [T1]." },
+      { type: "done", answer: "Net sales were 391,035 (C4) [T1].", grounded: true, label: null, unsourced: [], tool_calls: 1, cost: 0.001, stopped: null }]) });
+  });
   await page.route("**/api/ai/chat", async (r) => {
     bodies.push(r.request().postDataJSON());
     if (answers === "hang") return new Promise(() => undefined);
@@ -207,5 +224,35 @@ test.describe("AI panel", () => {
     expect(sent.symbol).toBe("AAPL");
     expect(sent.model).toBe("deepseek/deepseek-v4.1-flash");
     await expect(page.getByTestId("ai-label").first()).toContainText("CHART IMAGE ONLY");
+  });
+
+  test("AI DOC FILING loads a filing; questions then go to the document with its id; AI DOC OFF returns to market data", async ({ page }) => {
+    await setup(page);
+    await run(page, "AI DOC FILING AAPL");
+    await expect(panel(page).getByTestId("ai-doc")).toContainText("AAPL 10-K 2025-10-31");
+    await expect(panel(page).getByTestId("ai-note")).toContainText("DOCUMENT LOADED");
+    await expect.poll(() => bodies[0]).toEqual({ symbol: "AAPL", form: "10-K" });
+    await expect(async () => {
+      await page.keyboard.press("Escape");
+      await page.keyboard.press("i");
+      await page.keyboard.type("What were net sales?");
+      await page.keyboard.press("Enter");
+      await expect(panel(page).getByTestId("ai-tool")).toContainText("doc_search", { timeout: 1500 });
+    }).toPass();
+    expect(bodies[1]).toMatchObject({ doc_id: "d1", question: "What were net sales?" });
+    await expect(panel(page).getByTestId("ai-answer")).toContainText("(C4)");
+    await run(page, "AI DOC OFF");
+    await expect(panel(page).getByTestId("ai-doc")).toHaveCount(0);
+  });
+
+  test("U uploads a file and shows its card; a failed filing says why", async ({ page }) => {
+    await setup(page);
+    await run(page, "AI DOC");
+    await expect(panel(page).getByTestId("ai-note")).toContainText("PRESS U");
+    await panel(page).getByTestId("ai-file").setInputFiles({ name: "memo.docx", mimeType: "application/octet-stream", buffer: Buffer.from("x") });
+    await expect(panel(page).getByTestId("ai-doc")).toContainText("memo.docx");
+    expect(urls.some((u) => u.includes("name=memo.docx"))).toBe(true);
+    await run(page, "AI DOC FILING AAPL ZZZ");
+    await expect(panel(page).getByTestId("ai-note")).toContainText("NO ZZZ FILING");
   });
 });

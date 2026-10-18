@@ -51,6 +51,8 @@ Scope control: if a step runs out of budget, steps are cut from the END (7 stays
 Recorded-response tests for the loop guard and grounding, an e2e with a recorded model, first-token budget recorded, no key = `KEY REQUIRED`, keys never reach the frontend.
 
 ## Progress log
+- **Step 4 done (2026-10-18):** `ai/doc.py` (stdlib parsers for TXT / CSV / HTML / DOCX / XLSX, `pypdf` for PDF: the one new dependency, pure Python), `POST /api/ai/doc/upload|filing|ask`, `doc_search` tool (offered only to a DOC run), panel `AI DOC`, `U` upload.
+  The filing fetch goes through the SEC provider (rate limit, User-Agent); in fixture mode only the filing LIST is recorded, so the document fetch is tested with a patched provider and has NOT been run against live SEC.
 - **Step 3 done (2026-10-18):** `ai/skills/*.md` + `skill` and `strategy_check` tools, `POST /api/ai/bt` (BT_DRAFT line parsed, validated with `bt.rules`, `draft` / `draft_error` events, nothing run) and `POST /api/ai/chart` (image data URL to the vision model, no tools), panel modes `AI BT` and `AI CHART`,
   `chart/shot.ts` + `ChartHandle.screenshot()`. AI BT drafts rule strings only (no `SignalEngine` code): a code draft needs the sandbox review flow, left out.
 - **Step 1 done (2026-10-18):** `openterm/ai/` (`tools.py` 14 tools via in-process ASGI, `agent.py`, `guard.py`, `context.py`, `ground.py`, `routes.py`), `POST /api/ai/chat` (SSE) and `GET /api/ai/tools`,

@@ -160,7 +160,8 @@ class Tool:
     build: Callable[[dict], dict] = field(default=lambda a: {"params": a})
     shape: Callable[[dict, dict], Any] = shape_slim
     job: bool = False  # POST returns a job: wait for it and shape its result
-    local: Callable[[dict], dict] | None = None  # answered in this process, no route (skill, strategy_check)
+    local: Callable[[dict, dict], dict] | None = None  # answered in this process, no route (skill, strategy_check, doc_search); gets the runner's context
+    doc_only: bool = False  # offered only to an AI DOC run, never in plain chat
 
 
 def _bt_body(a: dict) -> dict:
@@ -178,13 +179,13 @@ def _portfolio(a: dict) -> dict:
     return {"path": f"/api/portfolios/{a['name']}"} if a.get("name") else {"path": "/api/portfolios"}
 
 
-def _skill(a: dict) -> dict:
+def _skill(a: dict, ctx: dict) -> dict:
     from . import skills
 
     return {"name": a["name"], "playbook": skills.get(a["name"])}
 
 
-def _strategy_check(a: dict) -> dict:
+def _strategy_check(a: dict, ctx: dict) -> dict:
     """Parse a BT rule with the engine's own parser. A rejected rule is information for the model, not a failed call."""
     from ..bt import rules
 
@@ -193,6 +194,15 @@ def _strategy_check(a: dict) -> dict:
     except rules.RuleError as e:
         return {"valid": False, "error": str(e), "col": e.col, "grammar": "CLOSE|OPEN|HIGH|LOW|VOLUME|SMA<n>|EMA<n>|RSI<n>|HIGH<n>|LOW<n>|RET<n> or a number; > < >= <= CROSS> CROSS<; AND OR"}
     return {"valid": True, "rule": a["rule"], "warmup_bars": rules.max_period(node)}
+
+
+def _doc_search(a: dict, ctx: dict) -> dict:
+    from . import doc
+
+    d = ctx.get("doc")
+    if d is None:
+        raise ValueError("NO DOCUMENT LOADED: use AI DOC to load one")
+    return doc.doc_search(d, a["query"], int(a.get("k") or 3))
 
 
 def _skill_names() -> list[str]:
@@ -206,6 +216,8 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
          obj({"name": {"type": "string", "enum": ["valuation", "earnings", "options", "risk", "macro"]}}, ["name"]), "local:skill", local=_skill),
     Tool("strategy_check", "Check a backtest rule with the engine's own parser, for example 'SMA20 CROSS> SMA50' or 'RSI14 < 30'. Returns valid or the error and its column.",
          obj({"rule": S}, ["rule"]), "local:strategy_check", local=_strategy_check),
+    Tool("doc_search", "Search the loaded document for passages about a topic; returns the best chunks labelled C1, C2... Cite them.",
+         obj({"query": S, "k": {"type": "integer"}}, ["query"]), "local:doc_search", local=_doc_search, doc_only=True),
     Tool("quote", "Latest quote for one or more tickers (comma separated, up to 10): price, change, volume, market cap.",
          obj({"symbols": S}, ["symbols"]), "/api/quote", shape=shape_quote),
     Tool("history", "Daily price history summary for one ticker: first and last close, period return, high, low, average volume, last 10 closes.",
@@ -243,7 +255,7 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
 
 def openai_tools(names: list[str] | None = None) -> list[dict]:
     return [{"type": "function", "function": {"name": t.name, "description": t.description, "parameters": t.parameters}}
-            for t in REGISTRY.values() if names is None or t.name in names]
+            for t in REGISTRY.values() if (t.name in names if names is not None else not t.doc_only)]
 
 
 def validate(name: str, args: Any) -> str | None:
@@ -283,7 +295,7 @@ def _is_empty(shaped: Any) -> bool:
         secs = shaped.get("sections")
         if secs is not None and not any(s.get("total_rows") for s in secs):
             return True
-        for k in ("rows", "items", "filings"):
+        for k in ("rows", "items", "filings", "matches"):
             if k in shaped and shaped[k] == []:
                 return True
     return False
@@ -292,7 +304,8 @@ def _is_empty(shaped: Any) -> bool:
 class ToolRunner:
     """Calls the allow-listed routes of the running app in-process, as the local user."""
 
-    def __init__(self, app, client=("127.0.0.1", 50000), tools: list[str] | None = None):
+    def __init__(self, app, client=("127.0.0.1", 50000), tools: list[str] | None = None, context: dict | None = None):
+        self.ctx = context or {}
         self.http = httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=client), base_url="http://openterm.local", timeout=120.0)
         self.allowed = set(tools) if tools is not None else None
 
@@ -308,11 +321,11 @@ class ToolRunner:
         t = REGISTRY[name]
         if t.local is not None:
             try:
-                data = t.local(args)
+                data = t.local(args, self.ctx)
             except (OSError, ValueError, KeyError) as e:
                 msg = f"TOOL ERROR {type(e).__name__}: {str(e)[:120]}"
                 return ToolResult(ok=False, text=msg, error=msg)
-            return ToolResult(ok=True, text=truncate_text(json.dumps(data, separators=(",", ":")), RESULT_LIMIT), source="openterm", age_s=0.0)
+            return ToolResult(ok=True, text=truncate_text(json.dumps(data, separators=(",", ":")), RESULT_LIMIT), source=data.get("source", "openterm"), age_s=0.0, empty=_is_empty(data))
         spec = {"path": t.path, **t.build(args)}
         try:
             r = await self.http.request(t.method, spec["path"], params=spec.get("params"), json=spec.get("json"))

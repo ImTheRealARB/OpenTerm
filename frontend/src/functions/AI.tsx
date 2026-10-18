@@ -4,7 +4,8 @@
  * data, UNSOURCED NUMBERS for figures no tool returned. AI output is model output, not data. Keys never reach this code: the backend holds them.
  * `AI BT <idea>` drafts a backtest rule (validated by the BT parser, shown, never run by the AI: B puts the BT command on the command line).
  * `AI CHART` sends the chart of the newest GP panel to a vision model. Both answers are labelled model output.
- * Keys: I / Enter type a question, Enter sends, Esc cancels a running answer (or leaves the input), X clears the chat.
+ * `AI DOC FILING <SYM> [FORM]` or U (upload a TXT, CSV, HTML, DOCX, XLSX or PDF) loads one document; questions then use only its text, with chunk
+ * citations (`AI DOC OFF` goes back to market data). Keys: I / Enter type a question, Enter sends, Esc cancels a running answer (or leaves the input), X clears the chat.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { latestChartShot } from "../chart/shot";
@@ -19,6 +20,14 @@ import { citeSegments, newTurn, parseSse, reduceTurn, turnLine, type AiEvent, ty
 import type { FunctionProps } from "./registry";
 
 const MAX_TURNS = 30;
+interface DocCard {
+  id: string;
+  name: string;
+  kind: string;
+  chunks: number;
+  chars: number;
+  preview: string;
+}
 
 function Answer({ text, running }: { text: string; running: boolean }) {
   return (
@@ -98,8 +107,11 @@ export default function AI({ panelId, args }: FunctionProps) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [spend, setSpend] = useState<{ today: number; cap: number } | null>(null);
-  const state = useRef({ turns, ai });
-  state.current = { turns, ai };
+  const [doc, setDoc] = useState<DocCard | null>(null);
+  const [note, setNote] = useState<{ text: string; cls: string } | null>(null);
+  const state = useRef({ turns, ai, doc });
+  state.current = { turns, ai, doc };
+  const picker = useRef<HTMLInputElement>(null);
   const running = turns.some((t) => t.status === "running");
   const abort = useRef<AbortController | null>(null);
   const box = useRef<HTMLInputElement>(null);
@@ -117,7 +129,7 @@ export default function AI({ panelId, args }: FunctionProps) {
 
   const send = useCallback(
     async (question: string, mode: "ask" | "bt" | "chart" = "ask") => {
-      const { turns: cur, ai: cfg } = state.current;
+      const { turns: cur, ai: cfg, doc: curDoc } = state.current;
       if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
       const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : "";
       const shown = label ? `${label} ${question}`.trim() : question;
@@ -138,13 +150,14 @@ export default function AI({ panelId, args }: FunctionProps) {
       let sawEvent = false;
       let sawToken = false;
       try {
-        const url = mode === "bt" ? "/api/ai/bt" : mode === "chart" ? "/api/ai/chart" : "/api/ai/chat";
+        const asking = mode === "ask" && curDoc;
+        const url = mode === "bt" ? "/api/ai/bt" : mode === "chart" ? "/api/ai/chart" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
         const payload =
           mode === "bt"
             ? { idea: question, model: cfg.model, provider: cfg.provider }
             : mode === "chart"
               ? { image, symbol: shot!.symbol, range: shot!.range, model: cfg.visionModel, provider: cfg.provider }
-              : { question, history, model: cfg.model, provider: cfg.provider };
+              : { question, history, model: cfg.model, provider: cfg.provider, ...(asking ? { doc_id: curDoc.id } : {}) };
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -199,12 +212,46 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, [send]);
 
   // `AI <question>` from the command line sends once, then the view goes back to a plain chat so a remount does not ask again.
+  const loaded = (r: Response, j: { doc?: DocCard; error?: string; url?: string } | null) => {
+    if (!r.ok || !j?.doc) {
+      setNote({ text: j?.error ?? `HTTP ${r.status}`, cls: "err" });
+      return;
+    }
+    setDoc(j.doc);
+    setNote({ text: `DOCUMENT LOADED: ${j.doc.name} · ${j.doc.kind.toUpperCase()} · ${j.doc.chunks} CHUNKS · ${j.doc.chars.toLocaleString("en-US")} CHARACTERS · ASK ABOUT IT; ONLY ITS TEXT IS USED`, cls: "up" });
+  };
+  const loadFiling = async (symbol: string, form: string) => {
+    setNote({ text: `FETCHING ${symbol} ${form} FROM SEC...`, cls: "dim" });
+    try {
+      const r = await fetch("/api/ai/doc/filing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, form }) });
+      loaded(r, await r.json().catch(() => null));
+    } catch {
+      setNote({ text: "BACKEND DOWN", cls: "err" });
+    }
+  };
+  const uploadFile = async (file: File) => {
+    setNote({ text: `READING ${file.name}...`, cls: "dim" });
+    try {
+      const r = await fetch(`/api/ai/doc/upload?name=${encodeURIComponent(file.name)}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
+      loaded(r, await r.json().catch(() => null));
+    } catch {
+      setNote({ text: "BACKEND DOWN", cls: "err" });
+    }
+  };
+
   const asked = useRef(false);
   useEffect(() => {
     void refreshSpend();
     if (asked.current || !args.length) return;
     const a = aiArgs(args);
-    if (a.mode === "bad") {
+    if (a.mode === "doc") {
+      setNote({ text: "PRESS U TO PICK A FILE (TXT CSV HTML DOCX XLSX PDF), OR: AI DOC FILING <SYMBOL> [FORM]", cls: "dim" });
+    } else if (a.mode === "docoff") {
+      setDoc(null);
+      setNote({ text: "DOCUMENT UNLOADED: QUESTIONS USE MARKET DATA TOOLS AGAIN", cls: "dim" });
+    } else if (a.mode === "docfiling") {
+      void loadFiling(a.symbol, a.form);
+    } else if (a.mode === "bad") {
       setTurns([reduceTurn(newTurn("AI " + args.join(" ")), { type: "error", kind: "usage", text: a.error })]);
     } else if (a.mode !== "ask" || a.text) {
       asked.current = true;
@@ -224,6 +271,10 @@ export default function AI({ panelId, args }: FunctionProps) {
         if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         if (e.key === "Escape" && abort.current) {
           abort.current.abort();
+          return true;
+        }
+        if (e.key === "u" || e.key === "U") {
+          picker.current?.click();
           return true;
         }
         if (e.key === "b" || e.key === "B") {
@@ -253,9 +304,31 @@ export default function AI({ panelId, args }: FunctionProps) {
         <span className="dim">
           {" "}
           · {ai.provider.toUpperCase()}
-          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · AI BT IDEA · AI CHART
+          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI CHART
         </span>
       </div>
+      {doc && (
+        <div className="line" data-testid="ai-doc">
+          <span className="acc">DOC</span> {doc.name} <span className="dim">· {doc.kind.toUpperCase()} · {doc.chunks} CHUNKS · AI DOC OFF UNLOADS</span>
+        </div>
+      )}
+      {note && (
+        <div className={note.cls} data-testid="ai-note">
+          {note.text}
+        </div>
+      )}
+      <input
+        ref={picker}
+        type="file"
+        hidden
+        data-testid="ai-file"
+        accept=".txt,.md,.json,.csv,.htm,.html,.docx,.xlsx,.pdf"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void uploadFile(f);
+        }}
+      />
       {lite && <div className="warn">LITE MODELS CALL TOOLS BADLY AND ANSWER FROM MEMORY: SETTINGS AI MODEL</div>}
       <div className="ai-log" ref={log}>
         {turns.length === 0 && (
@@ -279,7 +352,7 @@ export default function AI({ panelId, args }: FunctionProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            e.stopPropagation();
+            if (!e.ctrlKey && !e.altKey && !e.metaKey) e.stopPropagation(); // Ctrl+K, Alt+digits and friends still reach the global bindings
             if (e.key === "Enter") {
               e.preventDefault();
               sendInput();
