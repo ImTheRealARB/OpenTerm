@@ -117,6 +117,7 @@ export default function ECO({ panelId, args }: FunctionProps) {
         US RELEASES FROM THE BLS AND BEA OFFICIAL SCHEDULES (JOBS, CPI, PPI, JOLTS, GDP, PCE, TRADE), US EASTERN. FOMC, CENSUS AND PRIVATE SURVEYS ARE NOT IN THIS SOURCE. NO FORECASTS OR ACTUALS.
       </div>
       {p.error && <div className="err">{p.error}</div>}
+      {d?.notes?.map((n) => <div key={n} className="warn">{n}</div>)}
       {d && d.failed.length > 0 && <div className="warn">{d.failed.join(" + ")} FEED DID NOT ANSWER: ITS RELEASES ARE MISSING BELOW. F5 RETRIES.</div>}
       {d && d.coverage_end && hi && hi > d.coverage_end && <div className="warn">SOURCE SCHEDULES END {d.coverage_end}.</div>}
       {d && rows.length === 0 && !error && (

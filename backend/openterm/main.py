@@ -39,6 +39,8 @@ DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]}
 MAX_SUBS_PER_CLIENT = 2000
 # --- Phase 19 (capabilities fill in step by step; all keyless) ---
 DEFAULT_ORDER["figi"] = ["openfigi"]
+DEFAULT_ORDER |= {"holidays": ["nager"], "worldstats": ["worldbank", "dbnomics"], "worldstats_latest": ["worldbank"],
+                  "worldstats_countries": ["worldbank"], "worldstats_dbn": ["dbnomics"], "policy_rates": ["policy_rates"]}
 # --- Phase 13: research functions (capability -> providers, keyless first) ---
 DEFAULT_ORDER |= {
     "estimates": ["yahoo_research"], "ratings": ["yahoo_research"], "officers": ["yahoo_research"],

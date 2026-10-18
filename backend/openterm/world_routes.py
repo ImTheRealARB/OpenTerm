@@ -38,6 +38,50 @@ async def figi(request: Request, q: str = Query(..., max_length=600)):
         return error(e)
 
 
+@router.get("/holidays")
+async def holidays(request: Request, mkt: str = Query("NY", max_length=2), year: int | None = Query(None, ge=2000, le=2040)):
+    """Market-light holidays: NY by rule, LN / TK / HK / IN from Nager.Date public holidays (labelled)."""
+    from .world.holidays import calendar
+
+    try:
+        return await calendar(svc(request), mkt, year or time.gmtime().tm_year)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/stats")
+async def world_stats(request: Request, country: str = Query("", max_length=40), ind: str = Query(..., max_length=80)):
+    """ECST: one indicator for one country (World Bank, DBnomics as the second source) or any `DBN:<provider>/<dataset>/<series>`."""
+    from .world.macro import ecst
+
+    try:
+        return await ecst(svc(request), country, ind)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/weco")
+async def world_weco(request: Request):
+    """WECO: G20 headline indicators, each cell with its own data year."""
+    from .world.macro import weco
+
+    try:
+        return await weco(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/cenb")
+async def central_banks(request: Request):
+    """CENB: policy rates and rate-decision dates of eight central banks."""
+    from .world.macro import cenb_table
+
+    try:
+        return await cenb_table(svc(request))
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/ticks/{symbol}")
 async def ticks(request: Request, symbol: str, bar: str = Query("5s", max_length=4)):
     """GIP: time-bucketed bars built from the live ticks this server has seen for the symbol (nothing is invented: no ticks = empty)."""

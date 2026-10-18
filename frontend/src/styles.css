@@ -58,6 +58,8 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .clock { display: flex; gap: 10px; padding: 0 8px; white-space: nowrap; border-left: 1px solid var(--line); height: 100%; align-items: center; }
 .mk { color: var(--fg-dim); }
 .mk.open { color: var(--up); }
+.mk.early { color: var(--up); }
+.mk.hol { color: var(--warn); }
 
 /* Workspace */
 .ws { position: relative; min-height: 0; min-width: 0; display: flex; }

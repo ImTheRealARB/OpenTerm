@@ -504,8 +504,19 @@ class DataService:
         async def fetch() -> dict:
             since = _macro.ny_today() - timedelta(days=62)
             out, failed = await self.router.call("eco_calendar", lambda p: p.eco_calendar(since))
-            events = sorted((e.model_dump() for e in out["events"]), key=lambda e: (e["ts"], e["agency"], e["name"]))
-            return {"data": {"events": events, "failed": out["failed"]},
+            events = [e.model_dump() for e in out["events"]]
+            notes: list[str] = []
+            try:  # Phase 19: the Fed's own FOMC decision dates (Phase 14 provider) join the calendar; the page being down is said, not hidden
+                from .world.fomc_eco import fomc_events
+
+                if getattr(self, "derivs", None) is None:
+                    raise DataError("unavailable", "no futures service")
+                have = {(e["date"], e["agency"]) for e in events}
+                events += [e for e in fomc_events(await self.derivs.fomc_dates(), since.isoformat()) if (e["date"], e["agency"]) not in have]
+            except (AllFailed, DataError):
+                notes.append("FOMC: STALE (federalreserve.gov DID NOT ANSWER)")
+            events.sort(key=lambda e: (e["ts"], e["agency"], e["name"]))
+            return {"data": {"events": events, "failed": out["failed"], "notes": notes},
                     "source": events[0]["source"] if events else None, "fallback_from": failed}
 
         env = await self._swr("eco:us", self._ttl7("eco", 21600), fetch)
@@ -513,7 +524,7 @@ class DataService:
         events = env["data"]["events"]
         env["data"] = {
             "start": lo, "days": days, "events": [e for e in events if lo <= e["date"] < hi],
-            "failed": env["data"]["failed"], "coverage_end": max((e["date"] for e in events), default=None),
+            "failed": env["data"]["failed"], "notes": env["data"].get("notes", []), "coverage_end": max((e["date"] for e in events), default=None),
             "key_set": self.fred_key_set(),
         }
         return env

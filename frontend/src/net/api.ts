@@ -440,6 +440,8 @@ export interface EcoPayload {
   events: EcoEvent[];
   /** Agencies whose feed did not answer. */
   failed: string[];
+  /** Phase 19: e.g. `FOMC: STALE ...` when the Fed page did not answer. */
+  notes?: string[];
   /** Last date the source feeds cover. */
   coverage_end: string | null;
   key_set: boolean;
@@ -870,7 +872,79 @@ export interface FigiResult {
   note: string;
 }
 
+/** ECST: one indicator series (annual unless a DBnomics series says otherwise). */
+export interface WorldSeries {
+  country: string;
+  country_name: string;
+  indicator: string;
+  label: string;
+  unit: string;
+  freq: string;
+  t: number[];
+  v: number[];
+  periods: string[];
+  last_period: string;
+  last_value: number;
+  updated: string | null;
+  source: string;
+  dataset?: string | null;
+}
+export interface WecoCell {
+  v: number;
+  year: number;
+  stale: boolean;
+}
+export interface WecoRow {
+  iso3: string;
+  name: string;
+  cells: Record<string, WecoCell | null>;
+}
+export interface WecoPayload {
+  rows: WecoRow[];
+  columns: { alias: string; label: string; unit: string }[];
+  failed: string[];
+  note: string;
+  source: string;
+}
+export interface CenbRow {
+  bank: string;
+  name: string;
+  last: string | null;
+  next: string | null;
+  after: string | null;
+  days: number | null;
+  rate: number | null;
+  rate_as_of: string | null;
+  rate_label: string | null;
+  rate_note: string | null;
+  dates: string[];
+  url: string;
+  note: string | null;
+}
+export interface CenbPayload {
+  today: string;
+  rows: CenbRow[];
+  calendar_as_of: string;
+  note: string;
+  notes: string[];
+}
+
+/** Market-light holidays (`basis`: NYSE rules or Nager public holidays). */
+export interface HolidayCalendar {
+  mkt: string;
+  year: number;
+  basis: "rules" | "public";
+  label: string;
+  holidays: { date: string; name: string; national: boolean }[];
+  early: { date: string; name: string }[];
+  source: string;
+}
+
 export const worldApi = {
+  stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
+  weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
+  cenb: (fresh = false) => request<Envelope<CenbPayload>>("/api/world/cenb", fresh ? 0 : 300_000),
+  holidays: (mkt: string, year: number) => request<Envelope<HolidayCalendar>>(`/api/world/holidays?${qs({ mkt, year: String(year) })}`, 3_600_000),
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */

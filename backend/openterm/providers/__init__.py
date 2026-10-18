@@ -180,3 +180,8 @@ ADAPTERS["kite"] = KiteProvider
 from .openfigi import OpenFigiProvider
 
 ADAPTERS["openfigi"] = OpenFigiProvider
+from .nager import NagerProvider
+from .policy_rates import PolicyRatesProvider
+from .worldstats import DbnomicsProvider, WorldBankProvider
+
+ADAPTERS.update({"nager": NagerProvider, "worldbank": WorldBankProvider, "dbnomics": DbnomicsProvider, "policy_rates": PolicyRatesProvider})

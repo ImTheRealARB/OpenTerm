@@ -550,3 +550,45 @@ def _route_phase19(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase19(request) or _route_before_phase19(request)
+
+
+# --- Phase 19 step 5: World Bank, DBnomics, Nager.Date, policy rates (recordings from scripts/record_phase19.py 5) ---
+_WB_WECO = {"NY.GDP.MKTP.KD.ZG": "gdp_growth", "FP.CPI.TOTL.ZG": "inflation", "SL.UEM.TOTL.ZS": "unemployment",
+            "GC.DOD.TOTL.GD.ZS": "debt_gdp", "BN.CAB.XOKA.GD.ZS": "current_account"}
+_route_before_phase19b = _route
+
+
+def _route_phase19b(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "api.worldbank.org":
+        parts = p.strip("/").split("/")  # v2/country/<codes>[/indicator/<code>]
+        if len(parts) == 3:
+            return _load("worldbank_countries_g20") if ";" in parts[2] else httpx.Response(404, text="not recorded")
+        if len(parts) == 5 and ";" in parts[2] and q.get("mrnev") and parts[4] in _WB_WECO:
+            return _load("worldbank_g20_" + _WB_WECO[parts[4]])
+        if len(parts) == 5 and parts[2] == "USA" and parts[4] == "NY.GDP.MKTP.KD.ZG":
+            return _load("worldbank_usa_gdp_growth")
+        if len(parts) == 5 and parts[2] == "USA" and parts[4] == "NY.GDP.PCAP.CD":
+            return _load("worldbank_usa_gdppc")
+        if len(parts) == 5 and parts[3] == "indicator":  # World Bank answers an unknown pairing with an error message list
+            return httpx.Response(200, json=[{"message": [{"id": "175", "key": "Invalid format", "value": "not recorded (fixture)"}]}])
+        return httpx.Response(404, text="not recorded")
+    if host == "api.db.nomics.world":
+        return _load("dbnomics_imf_weo_usa_ngdp_rpch") if p.endswith("/IMF/WEO:latest/USA.NGDP_RPCH") else httpx.Response(404, text="not recorded")
+    if host == "date.nager.at":
+        cc = p.rsplit("/", 1)[-1].lower()
+        year = p.rsplit("/", 2)[-2]
+        if year == "2026" and cc in ("gb", "jp", "hk"):
+            return _load(f"nager_{cc}_2026")
+        return httpx.Response(204) if cc == "in" else httpx.Response(404, text="not recorded")
+    if host == "data-api.ecb.europa.eu" and "MRR_FR" in p:
+        return _load("ecb_policy_rate_mrr")
+    if host == "www.bankofcanada.ca" and p.endswith("/observations/V39079/json"):
+        return _load("boc_policy_rate")
+    if host == "www.bankofengland.co.uk" and q.get("SeriesCodes") == "IUDBEDR":
+        return _load("boe_bank_rate")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase19b(request) or _route_before_phase19b(request)
