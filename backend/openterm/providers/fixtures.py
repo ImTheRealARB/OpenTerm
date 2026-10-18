@@ -410,3 +410,49 @@ def _route(request: httpx.Request) -> httpx.Response:
     if host == "www.federalreserve.gov" and p.endswith("/fomccalendars.htm"):
         return _load("fomc_calendar")
     return _route_before_futures(request)
+
+
+# --- Phase 15 step 3: 20y daily charts (RISK stress windows) and the SPDR sector ETFs (PORT ATTR) ---
+# Exact recordings first (the routes above win). A shorter DAILY range of a symbol that has a longer recorded daily chart is sliced
+# from it, newest bar backwards: so 1y/2y/3y/5y answer for SPY, AAPL (20y) and the 11 SPDR ETFs (3y).
+ROUTES.update({
+    ("/v8/finance/chart/SPY", "20y", "1d"): "yahoo_chart_spy_20y_1d",
+    ("/v8/finance/chart/AAPL", "20y", "1d"): "yahoo_chart_aapl_20y_1d",
+    **{(f"/v8/finance/chart/{e.upper()}", "3y", "1d"): f"yahoo_chart_{e}_3y_1d"
+       for e in ("xlk", "xlf", "xlv", "xly", "xlp", "xle", "xli", "xlb", "xlu", "xlre", "xlc")},
+})
+_SLICE_DAYS = {"1y": 366, "2y": 731, "3y": 1096, "5y": 1827, "10y": 3653}
+_route_before_slice = _route
+
+
+def _sliced_chart(path: str, rng: str) -> httpx.Response | None:
+    days = _SLICE_DAYS[rng]
+    for longer in ("20y", "10y", "5y", "3y"):
+        if _SLICE_DAYS.get(longer, 7305) <= days:
+            continue
+        name = ROUTES.get((path, longer, "1d"))
+        if name is None:
+            continue
+        rec = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+        res = rec["body"]["chart"]["result"][0]
+        ts = res["timestamp"]
+        cut = ts[-1] - days * 86400
+        keep = [i for i, t in enumerate(ts) if t >= cut]
+        res["timestamp"] = [ts[i] for i in keep]
+        for block in res["indicators"].values():
+            for series in block:
+                for k, v in series.items():
+                    series[k] = [v[i] for i in keep]
+        res.setdefault("meta", {})["range"] = rng
+        return httpx.Response(rec["status"], json=rec["body"])
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    p, q = request.url.path, request.url.params
+    wanted = (p, q.get("range"), "1d")
+    if p.startswith("/v8/finance/chart/") and q.get("interval") == "1d" and q.get("range") in _SLICE_DAYS and not q.get("events")             and wanted not in ROUTES:
+        sliced = _sliced_chart(p, q["range"])
+        if sliced is not None:
+            return sliced
+    return _route_before_slice(request)

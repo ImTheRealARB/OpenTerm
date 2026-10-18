@@ -67,7 +67,6 @@ const RISK = payload(
 
 test.describe("Phase 15", () => {
   test("RISK: the portfolio and typed params go to the job, VaR and stress rows show, bad args print usage", async ({ page }) => {
-    test.fail();
     await setup(page);
     await mockQuant(page, "risk", () => job(env(RISK)));
     await run(page, "RISK T RANGE=1y CONF=99 HOR=5");
@@ -85,7 +84,6 @@ test.describe("Phase 15", () => {
   });
 
   test("RISK: a NOT RUNNABLE answer lists what is missing", async ({ page }) => {
-    test.fail();
     await setup(page);
     await mockQuant(page, "risk", () => job(env(payload("RISK", [], [], { status: "NOT RUNNABLE: PORTFOLIO (A, B)" }))));
     await run(page, "RISK");
@@ -93,7 +91,6 @@ test.describe("Phase 15", () => {
   });
 
   test("PORT OPT: the preview shows trades and before/after, A saves <NAME>.OPT without touching the original", async ({ page }) => {
-    test.fail();
     await setup(page);
     await page.route("**/api/portfolios/**", (r) => {
       if (r.request().method() === "PUT") {
@@ -120,7 +117,6 @@ test.describe("Phase 15", () => {
   });
 
   test("PORT ATTR: Brinson rows, return measures, and ADD stores a valuation", async ({ page }) => {
-    test.fail();
     await setup(page);
     await page.route("**/api/portfolios/T/vals", (r) => {
       if (r.request().method() === "PUT") {

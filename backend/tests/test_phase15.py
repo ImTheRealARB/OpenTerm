@@ -29,14 +29,14 @@ def xf(group: str, step: int):
     return pytest.mark.xfail(strict=True, reason=f"Phase 15 step {step}: {group}")
 
 
-RISK = xf("RISK", 3)
-OPT = xf("PORT OPT", 3)
-ATTR = xf("PORT ATTR", 3)
+RISK = lambda f: f  # step 3 landed
+OPT = lambda f: f  # step 3 landed
+ATTR = lambda f: f  # step 3 landed
 FACT = xf("FACT", 4)
 QL = xf("QL", 4)
 ALPHA = xf("ALPHA", 5)
 REGIME = xf("CORR REGIME", 5)
-PLUMB = xf("job plumbing", 3)
+PLUMB = lambda f: f  # step 3 landed
 
 SYN = ["SYN0001", "SYN0002", "SYN0003"]
 
@@ -524,11 +524,11 @@ def test_alpha_universe_validation(client):
     assert submit(client, "alpha", universe="LIST:AAPL").status_code == 400  # a cross-section needs at least 5 names
 
 
-@ALPHA
 def test_every_zoo_factor_passes_the_lookahead_sentinel():
     """A factor computed on bars cut at day t must equal the same factor on the full series at day t."""
     import numpy as np_
     import pandas as pd
+
     from openterm.quantlib.alpha import ZOO, compute_factor
 
     rng = np_.random.default_rng(7)

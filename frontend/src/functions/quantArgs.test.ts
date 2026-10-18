@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { attrArgs, optArgs, quantBody, riskArgs } from "./quantArgs";
 
 /*
  * Phase 15 step 1 (spec docs/specs/PHASE_15.md): command-line parsers for RISK, PORT OPT, PORT ATTR, FACT, QL, ALPHA, CORR REGIME and KITE,
@@ -11,24 +12,21 @@ const MOD = "./quantArgs";
 const load = async (): Promise<any> => import(/* @vite-ignore */ MOD);
 
 describe("riskArgs", () => {
-  it.fails("takes a portfolio word and KEY=VALUE pairs, keys lower-cased", async () => {
-    const { riskArgs } = await load();
+  it("takes a portfolio word and KEY=VALUE pairs, keys lower-cased", () => {
     expect(riskArgs(["main", "range=5y", "conf=99", "hor=5", "bench=QQQ"])).toEqual({
       params: { portfolio: "MAIN", range: "5y", conf: "99", hor: "5", bench: "QQQ" },
       bad: [],
     });
     expect(riskArgs([])).toEqual({ params: {}, bad: [] });
   });
-  it.fails("reports anything else instead of guessing", async () => {
-    const { riskArgs } = await load();
+  it("reports anything else instead of guessing", () => {
     expect(riskArgs(["MAIN", "FOO=1", "x y"]).bad).toEqual(["FOO=1", "x y"]);
     expect(riskArgs(["RANGE="]).bad).toEqual(["RANGE="]);
   });
 });
 
 describe("optArgs", () => {
-  it.fails("method, cap, lookback, rf and tc are recognised; the method word is upper-cased", async () => {
-    const { optArgs } = await load();
+  it("method, cap, lookback, rf and tc are recognised; the method word is upper-cased", () => {
     expect(optArgs(["MAIN", "method=rp", "cap=0.2", "lookback=126", "rf=0.04", "tc=0.001"]).params).toEqual({
       portfolio: "MAIN", method: "RP", cap: "0.2", lookback: "126", rf: "0.04", tc: "0.001",
     });
@@ -36,12 +34,10 @@ describe("optArgs", () => {
 });
 
 describe("attrArgs", () => {
-  it.fails("a portfolio and benchmark run the attribution", async () => {
-    const { attrArgs } = await load();
+  it("a portfolio and benchmark run the attribution", () => {
     expect(attrArgs(["MAIN", "bench=qqq", "range=1y"])).toEqual({ params: { portfolio: "MAIN", bench: "QQQ", range: "1y" }, bad: [] });
   });
-  it.fails("ADD and DEL edit the stored valuations", async () => {
-    const { attrArgs } = await load();
+  it("ADD and DEL edit the stored valuations", () => {
     expect(attrArgs(["MAIN", "ADD", "2025-01-01", "VALUE=10000", "FLOW=500"])).toEqual({
       params: { portfolio: "MAIN" }, action: { kind: "add", date: "2025-01-01", value: "10000", flow: "500" }, bad: [],
     });
@@ -93,8 +89,7 @@ describe("regimeArgs", () => {
 });
 
 describe("quantBody", () => {
-  it.fails("numbers become numbers, horizons a list, symbols stay a list", async () => {
-    const { quantBody } = await load();
+  it("numbers become numbers, horizons a list, symbols stay a list", () => {
     expect(quantBody("risk", { portfolio: "MAIN", conf: "99", hor: "5" })).toEqual({ portfolio: "MAIN", conf: 99, hor: 5 });
     expect(quantBody("alpha", { universe: "SYN", h: "1,5" })).toEqual({ universe: "SYN", h: [1, 5] });
     expect(quantBody("ql", { calc: "COINT", symbols: ["KO", "PEP"], sr: "1.5" })).toEqual({ calc: "COINT", symbols: ["KO", "PEP"], sr: 1.5 });

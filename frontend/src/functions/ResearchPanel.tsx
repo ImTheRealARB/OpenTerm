@@ -13,6 +13,7 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { researchApi, type Envelope } from "../net/api";
 import { gridColumns, cellText, type TablePayload, type TableRow } from "../research/tablePayload";
 import { navKey, useLatest } from "./quoteRows";
+import type { RunCtx } from "./quantRun";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -29,8 +30,10 @@ export interface ResearchOptions {
   keys?: string;
   /** Called with each loaded payload (OSA remembers its structure for BT MKT=options). */
   onData?: (d: TablePayload, p: FunctionProps) => void;
-  /** An extra panel key; return true when handled. */
-  onKey?: (e: KeyboardEvent, p: FunctionProps, d: TablePayload | undefined) => boolean;
+  /** An extra panel key; return true when handled. `say` shows a one-line note above the table. */
+  onKey?: (e: KeyboardEvent, p: FunctionProps, d: TablePayload | undefined, say: (text: string) => void) => boolean;
+  /** Phase 15: replaces the GET (quant jobs: POST, wait for the job, return its result). `ctx` carries progress and note callbacks. */
+  loader?: (params: Record<string, string>, ctx: RunCtx) => Promise<Envelope<TablePayload>>;
 }
 
 export function makeResearchPanel(opts: ResearchOptions) {
@@ -43,8 +46,27 @@ export function makeResearchPanel(opts: ResearchOptions) {
     const heatRef = useRef<HeatHandle>(null);
     const [sec, setSec] = useState(0);
     const [vis, setVis] = useState(0);
+    const [progress, setProgress] = useState<string | null>(null);
+    const [flash, setFlash] = useState<string | null>(null);
+    const alive = useRef({ mounted: true, key });
+    alive.current.key = key;
+    useEffect(() => {
+      alive.current.mounted = true;
+      return () => {
+        alive.current.mounted = false;
+      };
+    }, []);
     const { env, error, loading, reload } = useEnvelope<TablePayload>(key, (fresh) => {
       if (!params) return Promise.reject({ status: 400, message: opts.usage ?? "USAGE: SEE HELP" });
+      if (opts.loader) {
+        const mine = key;
+        setProgress(null);
+        return opts.loader(params, {
+          progress: setProgress,
+          say: setFlash,
+          alive: () => alive.current.mounted && alive.current.key === mine,
+        });
+      }
       const call = opts.api ? researchApi[opts.api] : opts.valuation ? researchApi.valuation : researchApi.get;
       return call(opts.fn, params, fresh) as Promise<Envelope<TablePayload>>;
     });
@@ -66,6 +88,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
     useEffect(() => {
       setSec(0);
       setVis(0);
+      setFlash(null);
     }, [key]);
     useEffect(() => {
       grid.current?.moveTo(0);
@@ -77,7 +100,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
           if (e.ctrlKey || e.altKey || e.metaKey) return false;
           if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
           const { rows: cur, count, visuals: nvis, heat: heatShown, d: data, props: pp } = latest.current;
-          if (opts.onKey?.(e, pp, data)) return true;
+          if (opts.onKey?.(e, pp, data, setFlash)) return true;
           if (heatShown && e.shiftKey && "HJKL".includes(e.key)) {
             heatRef.current?.move(e.key === "J" ? 1 : e.key === "K" ? -1 : 0, e.key === "L" ? 1 : e.key === "H" ? -1 : 0);
             return true;
@@ -136,6 +159,16 @@ export function makeResearchPanel(opts: ResearchOptions) {
                 {i > 0 && " "}[{i + 1}] {s.title}
               </span>
             ))}
+          </div>
+        )}
+        {loading && progress && (
+          <div className="line dim" data-testid="research-progress">
+            RUNNING {progress}
+          </div>
+        )}
+        {flash && (
+          <div className="line acc" data-testid="research-flash">
+            {flash}
           </div>
         )}
         <ErrorLine error={error} hasData={!!env} />

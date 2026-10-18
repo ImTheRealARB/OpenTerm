@@ -43,6 +43,11 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
     }
     fnOverride = "SETTINGS";
   }
+  // Phase 15: PORT OPT / PORT ATTR are the OPT / ATTR panels; every other PORT argument stays with the PORT panel below.
+  if (parsed.fn === "PORT" && (args[0]?.toUpperCase() === "OPT" || args[0]?.toUpperCase() === "ATTR")) {
+    fnOverride = args[0].toUpperCase();
+    args = args.slice(1);
+  }
   if (parsed.fn === "WL") {
     const act = parseWl(args, parsed.security);
     if (act.kind === "error") return fail(act.message);
@@ -58,7 +63,7 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   }
 
   // --- Phase 8: PORT / ALRT edit first, then show the panel ---
-  if (parsed.fn === "PORT" || parsed.fn === "ALRT") {
+  if ((parsed.fn === "PORT" && !fnOverride) || parsed.fn === "ALRT") {
     const r = parsed.fn === "PORT" ? portCommand(args, parsed.security) : alrtCommand(args, parsed.security);
     if (typeof r === "boolean") return r;
     args = r;

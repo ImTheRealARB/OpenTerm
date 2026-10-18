@@ -763,6 +763,19 @@ export const researchApi = {
     request<Envelope<TablePayload>>(`/api/rates/${fn}?${qs(params)}`, fresh ? 0 : 60_000),
 };
 
+/** Phase 15: quant jobs (RISK, PORT OPT, PORT ATTR, ...). The answer is the job; its `result` is an envelope of a table payload. */
+export interface ValRow {
+  date: string;
+  value: number;
+  flow: number;
+}
+
+export const quantApi = {
+  run: (fn: string, body: Record<string, unknown>) => send<JobRec>("POST", `/api/quant/${encodeURIComponent(fn)}`, body),
+  vals: (name: string) => send<{ rows: ValRow[] }>("GET", `${pf(name)}/vals`),
+  putVals: (name: string, rows: ValRow[]) => send<{ rows: ValRow[] }>("PUT", `${pf(name)}/vals`, { rows }),
+};
+
 // Phase 13 step 6: news keyword alerts (ALRT NEWS WORD [SYM]); stored by the backend, evaluated here on each news refresh.
 export interface NewsAlert {
   id: number;

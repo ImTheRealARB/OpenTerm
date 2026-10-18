@@ -15,6 +15,7 @@ from .bt.localdata import LocalData
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
+from .quant_routes import router as quant_router
 from .responses import Orjson
 from .router import Router
 from .service import DataService
@@ -185,6 +186,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson, lifespan=lifespan)
 app.add_middleware(perf.TimingMiddleware)
 app.include_router(api_router)
+app.include_router(quant_router)
 
 
 @app.get("/api/health")
