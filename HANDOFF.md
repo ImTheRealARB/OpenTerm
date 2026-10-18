@@ -5,6 +5,14 @@ _Last updated: 2026-10-19, session 8 (branch `claude/openterm-phase-14-ec5824`; 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
+## Resume here (2026-10-18, Phase 15 step 1 done)
+- **Branch `claude/openterm-phase-15-65e1da`** (worktree `.claude/worktrees/openterm-phase-15-65e1da`, fast-forwarded from the Phase 14 branch; pushed to `origin`). Spec: `docs/specs/PHASE_15.md` (decisions A-M + Kite section).
+- **Step 1 done (spec, fixtures, tests-first).** All new tests are strict-xfail: `test_phase15.py` (job API, RISK/OPT/ATTR step 3, FACT/QL step 4, ALPHA/REGIME step 5), `test_phase15_quant.py` (402 Vibe cases + 29 zoo factors, step 2),
+  `test_phase15_kite.py` (KITE step 6, KITEUI step 7), vitest `quantArgs.test.ts` (`it.fails`), Playwright `phase15.spec.ts` (`test.fail()`). Each step deletes its markers.
+- **Next action: step 2** = `backend/openterm/quantlib/` ports (scipy, statsmodels, arch added to pyproject; worker-only), THIRD_PARTY rows. Steps listed in the spec.
+- Fixtures: `scripts/record_phase15.py` (keyless Yahoo 20y + SPDR ETFs + Ken French; `--kite` writes the doc-shaped Kite files). Vibe sources for porting are in the session scratchpad only; refetch with curl from raw.githubusercontent.com/HKUDS/Vibe-Trading/d0db2e3/agent/...
+- Fixture mode must route `range=20y` / `3y` daily charts by slicing the longest recorded chart, plus kenfrench (`b64` fixtures need `_load` support) and the Kite hosts (see the docstring of `test_phase15_kite.py`).
+
 ## Resume here (2026-10-19, Phase 14 complete)
 - **Phase 14 is done and committed** (spec `docs/specs/PHASE_14.md`, steps 1-8). Functions: OMON PCR OV OSA OVDV SKEW HIVG, RATES upgrade (EUR GBP CAD JPY, NS fit,
   FRED OAS spreads, auctions), CT WIRP COT FXFA YAS SWPM CDSW, `BT <SYM> MKT=options`. Quant lib `openterm/quant/` (Vibe port, cross-checked), migration 12 `iv_snapshots`.
