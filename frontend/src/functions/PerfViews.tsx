@@ -10,6 +10,7 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { candlePatterns, smc } from "../chart/patterns";
 import { gauges } from "../perf/metrics";
 import { seasonality } from "./seasMath";
+import { hitTest, type Drawing, type Geo } from "../chart/drawings";
 
 function rng(seed: number) {
   return () => {
@@ -141,15 +142,34 @@ export function CalcBench() {
       seasonality(t, dc, "DOM");
       seas.push(performance.now() - t0);
     }
+    // 200 drawings (a third of each kind) hit-tested at points in the middle of the chart.
+    const ds: Drawing[] = Array.from({ length: 200 }, (_, i) => {
+      const t0 = 100 + (i % 50) * 10;
+      const k = i % 3;
+      return k === 0
+        ? { id: `h${i}`, kind: "HLINE", pts: [{ t: t0, p: 50 + (i % 40) }] }
+        : k === 1
+          ? { id: `t${i}`, kind: "TREND", pts: [{ t: t0, p: 40 + (i % 30) }, { t: t0 + 200, p: 60 + (i % 20) }] }
+          : { id: `f${i}`, kind: "FIB", pts: [{ t: t0, p: 40 }, { t: t0 + 300, p: 80 + (i % 10) }] };
+    });
+    const geo: Geo = { toX: (t) => t, toY: (p) => 1000 - p, width: 1200 };
+    const hit: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      const t0 = performance.now();
+      for (let j = 0; j < 20; j++) hitTest(ds, 300 + j * 7, 930 + (j % 5), geo, 6);
+      hit.push((performance.now() - t0) / 20);
+    }
+    gauges.set("p19.hitMs", p95(hit));
     gauges.set("p19.patternsMs", p95(pat));
     gauges.set("p19.seasMs", p95(seas));
-    return { pat: p95(pat), seas: p95(seas), n, dn };
+    return { pat: p95(pat), seas: p95(seas), hit: p95(hit), n, dn };
   }, []);
   return (
     <div>
       <h2>PERF CALC (TEST DATA, NOT A SECURITY)</h2>
       <div>PATTERNS + SMC, {res.n} BARS: {res.pat.toFixed(2)} MS P95</div>
       <div>SEAS MONTH + WOY + DOM, {res.dn} DAILY BARS: {res.seas.toFixed(2)} MS P95</div>
+      <div>HIT TEST OVER 200 DRAWINGS: {res.hit.toFixed(3)} MS P95</div>
     </div>
   );
 }

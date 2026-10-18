@@ -276,7 +276,8 @@ def _route_phase13(request: httpx.Request) -> httpx.Response | None:
             return _load(name)
         return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found"}}})
     if request.url.host == "api.nasdaq.com":
-        quote = {"/api/quote/AAPL/dividends": "nasdaq_dividends_aapl", "/api/quote/AAPL/short-interest": "nasdaq_shortinterest_aapl"}
+        quote = {"/api/quote/AAPL/dividends": "nasdaq_dividends_aapl", "/api/quote/AAPL/short-interest": "nasdaq_shortinterest_aapl",
+                 "/api/company/AAPL/earnings-surprise": "nasdaq_earnings_surprise_aapl"}
         if p in quote:
             return _load(quote[p])
         if p == "/api/ipo/calendar":

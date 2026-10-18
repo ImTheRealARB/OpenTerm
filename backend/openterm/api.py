@@ -543,6 +543,30 @@ async def put_settings_doc(request: Request):
         return error(e)
 
 
+# --- Phase 19: GP drawings (kv, per symbol) ---
+@router.get("/drawings/{symbol}")
+async def drawings_get(request: Request, symbol: str):
+    from .drawings import DrawingsStore
+
+    try:
+        return await DrawingsStore(user(request).db).get(symbol)
+    except UserDataError as e:
+        return error(e)
+
+
+@router.put("/drawings/{symbol}")
+async def drawings_put(request: Request, symbol: str):
+    from .drawings import DrawingsStore
+
+    try:
+        body = await json_object(request)
+        if "drawings" not in body:
+            raise UserDataError("bad_request", "BODY NEEDS drawings")
+        return await DrawingsStore(user(request).db).put(symbol, body["drawings"])
+    except UserDataError as e:
+        return error(e)
+
+
 # --- Phase 11: key store (APIKEYS). Values go in, never out. ---
 KEY_STATUS = {"unknown_provider": 404, "bad_request": 400, "env_locked": 409, "forbidden": 403}
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}

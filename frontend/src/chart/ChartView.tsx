@@ -7,17 +7,20 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
   AreaSeries, BarSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle,
   PriceScaleMode, TickMarkType, createChart, createSeriesMarkers,
-  type IChartApi, type ISeriesApi, type SeriesMarker, type SeriesType, type Time, type UTCTimestamp,
+  type IChartApi, type ISeriesApi, type ISeriesMarkersPluginApi, type Logical, type SeriesMarker, type SeriesType, type Time, type UTCTimestamp,
 } from "lightweight-charts";
 import { fmtBig, fmtPrice } from "../format";
 import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { useStore } from "../state/store";
 import type { IndicatorName } from "./indicators";
+import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
 
-export type ChartType = "CANDLE" | "OHLC" | "LINE" | "AREA";
-export const CHART_TYPES: ChartType[] = ["CANDLE", "OHLC", "LINE", "AREA"];
+import { CHART_TYPES, type ChartType } from "./chartTypes";
+
+export { CHART_TYPES };
+export type { ChartType };
 
 export interface BarData {
   symbol: string;
@@ -31,7 +34,23 @@ export interface BarData {
   v: Float64Array;
 }
 
+/** Phase 19 drawings overlay state, owned by GP. `pending` is a drawing being placed: its anchors so far; the cursor is the next one. */
+export interface DrawState {
+  drawings: Drawing[];
+  selected: string | null;
+  pending: { kind: DrawKind; pts: DPoint[]; anchor: "C" | "H" | "L" | "O" } | null;
+}
+
+/** An event marker already snapped to a bar time (E earnings, D ex-dividend, S split). */
+export interface ChartMarkerEvent {
+  t: number;
+  kind: "E" | "D" | "S";
+  detail: string;
+}
+
 export interface ChartHandle {
+  /** Bar index under the keyboard crosshair (the last bar when it is off). */
+  crosshairIndex(): number;
   pan(bars: number): void;
   zoom(factor: number): void;
   crosshair(on: boolean): void;
@@ -51,9 +70,15 @@ interface Props {
   readoutLabel?: string;
   /** BT: one extra line in a second pane on the same timestamps as `data` (drawdown). NaN = gap. */
   lowerPane?: { title: string; v: Float64Array } | null;
+  /** Phase 19: extra symbols, each in its own pane below the price pane (raw prices, own scale). */
+  comparePanes?: { symbol: string; t: Float64Array; c: Float64Array }[];
+  draw?: DrawState;
+  events?: ChartMarkerEvent[];
+  /** Mouse click on the chart: the drawing under the pointer (or null). */
+  onPick?: (id: string | null) => void;
 }
 
-const INTERVAL_S: Record<string, number> = {
+export const INTERVAL_S: Record<string, number> = {
   "1m": 60, "2m": 120, "5m": 300, "15m": 900, "30m": 1800, "60m": 3600, "90m": 5400,
   "1d": 86400, "1wk": 7 * 86400, "1mo": 31 * 86400,
 };
@@ -81,7 +106,7 @@ function formatters(tz: string, intraday: boolean) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -93,6 +118,22 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const fmt = useRef(formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400));
   const worker = useRef<Worker | null>(null);
   const reqId = useRef(0);
+  // Phase 19 refs: the overlay canvas, the marker plugin of the price series, the latest props the overlay paints from.
+  const overlay = useRef<HTMLCanvasElement>(null);
+  const markersApi = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const patMarks = useRef<SeriesMarker<Time>[]>([]);
+  const eventsRef = useRef<ChartMarkerEvent[] | undefined>(events);
+  eventsRef.current = events;
+  const drawRef = useRef<DrawState | undefined>(draw);
+  drawRef.current = draw;
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const compareOn = useRef(false);
+  compareOn.current = !!compare;
+  const geoRef = useRef<Geo | null>(null);
+  const writeRef = useRef<(i: number) => void>(() => {});
+  const paintRef = useRef<() => void>(() => {});
+  const rafRef = useRef(0);
 
   const colors = useRef(themeColors());
   // Phase 10: theme switch. Colours are re-read once per change (never per frame), then series are rebuilt.
@@ -111,8 +152,15 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     }
     el.textContent =
       `${fmt.current.full(toTime(data.t[i]))}  O ${fmtPrice(data.o[i])}  H ${fmtPrice(data.h[i])}  L ${fmtPrice(data.l[i])}  ` +
-      `C ${fmtPrice(data.c[i])}  V ${fmtBig(data.v[i])}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "");
+      `C ${fmtPrice(data.c[i])}  V ${fmtBig(data.v[i])}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "") +
+      eventText(i);
     el.className = "line " + (chg > 0 ? "up" : chg < 0 ? "down" : "");
+  };
+  writeRef.current = writeReadout;
+  const eventText = (i: number) => {
+    const t = data.t[i];
+    const hit = (events ?? []).filter((e) => e.t === t);
+    return hit.length ? "  [" + hit.map((e) => e.detail).join(" | ") + "]" : "";
   };
 
   // Chart instance: created once per panel.
@@ -130,12 +178,26 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     });
     chart.subscribeCrosshairMove((p) => {
       if (p.logical == null) return;
-      writeReadout(Math.round(p.logical as number));
+      writeRef.current(Math.round(p.logical as number));
     });
+    const schedule = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0;
+        paintRef.current();
+      });
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(schedule);
+    chart.subscribeCrosshairMove(schedule);
+    const ro = new ResizeObserver(schedule);
+    ro.observe(box.current!);
     chartRef.current = chart;
     return () => {
       worker.current?.terminate();
       worker.current = null;
+      ro.disconnect();
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
       chart.remove();
       chartRef.current = null;
     };
@@ -188,6 +250,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       s.setData(pts);
     }
     main.current = s;
+    patMarks.current = [];
+    markersApi.current = createSeriesMarkers(s, []);
+    applyMarkers();
     last.current = n ? { t: data.t[n - 1], o: data.o[n - 1], h: data.h[n - 1], l: data.l[n - 1], c: data.c[n - 1], v: data.v[n - 1] } : null;
 
     // Series without volume (FRED, indices on some feeds) get no histogram: zero bars draw as a flat line.
@@ -215,6 +280,16 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       extra.current.push(ls);
       chart.panes()[1]?.setHeight(90);
     }
+    (comparePanes ?? []).forEach((cp, k) => {
+      const pane = 1 + k + (lowerPane ? 1 : 0);
+      const ls = chart.addSeries(LineSeries, { color: c.acc, lineWidth: 1, priceLineVisible: false, title: cp.symbol }, pane);
+      const pts = [];
+      for (let i = 0; i < cp.t.length; i++) if (Number.isFinite(cp.c[i])) pts.push({ time: toTime(cp.t[i]), value: cp.c[i] });
+      ls.setData(pts);
+      extra.current.push(ls);
+      chart.panes()[pane]?.setHeight(110);
+    });
+    gauges.set("chart.extraSeries", extra.current.length);
     chart.priceScale("right").applyOptions({
       mode: compare ? PriceScaleMode.Percentage : log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
     });
@@ -246,7 +321,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         extra.current.push(ls);
         return ls;
       };
-      let pane = 1;
+      let pane = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
       if (r.SMA20) line(r.SMA20, c.acc, 0, "SMA20");
       if (r.SMA50) line(r.SMA50, c.warn, 0, "SMA50");
       if (r.EMA20) line(r.EMA20, c.fg, 0, "EMA20");
@@ -348,18 +423,115 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
           }
         }
       }
-      if (marks.length && main.current) {
-        marks.sort((a, b) => (a.time as number) - (b.time as number));
-        createSeriesMarkers(main.current, marks);
-      }
+      patMarks.current = marks;
+      applyMarkers();
       gauges.set("chart.extraSeries", extra.current.length);
       gauges.set("chart.markers", marks.length);
       const panes = ch.panes();
-      for (let i = 1; i < panes.length; i++) panes[i].setHeight(90);
+      for (let i = 1; i < panes.length; i++) panes[i].setHeight(panes[i] === undefined || i <= (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0) ? 110 : 90);
     }
-  }, [data, compare, type, log, indicators, lowerPane, ver]);
+  }, [data, compare, type, log, indicators, lowerPane, comparePanes, ver]);
+
+  /** Pattern marks and event marks share the price series' marker plugin. */
+  function applyMarkers() {
+    const api = markersApi.current;
+    if (!api) return;
+    const c = colors.current;
+    const ev: SeriesMarker<Time>[] = (eventsRef.current ?? []).map((e) => ({ time: toTime(e.t), position: "aboveBar", shape: "square", color: c.fg, text: e.kind }));
+    const all = [...patMarks.current, ...ev];
+    all.sort((a, b) => (a.time as number) - (b.time as number));
+    api.setMarkers(all);
+    gauges.set("chart.markers", patMarks.current.length);
+    gauges.set("chart.events", ev.length);
+  }
+  useEffect(() => {
+    applyMarkers();
+    writeReadout(cross.current.on ? cross.current.idx : data.c.length - 1);
+  }, [events]);
+
+  // The drawings overlay: repainted on pan / zoom / resize / crosshair move (rAF-coalesced) and when its inputs change.
+  paintRef.current = () => {
+    const cv = overlay.current;
+    const chart = chartRef.current;
+    const s = main.current;
+    const host = box.current;
+    if (!cv || !chart || !s || !host) return;
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+    }
+    const ctx = cv.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const d = drawRef.current;
+    const bars = dataRef.current;
+    const plotW = Math.max(0, w - chart.priceScale("right").width());
+    const ts = chart.timeScale();
+    const geo: Geo = {
+      toX: (t) => ts.logicalToCoordinate(timeToLogical(t, bars.t) as Logical),
+      toY: (p) => s.priceToCoordinate(p),
+      width: plotW,
+    };
+    geoRef.current = geo;
+    if (!d || compareOn.current || (!d.drawings.length && !d.pending)) {
+      gauges.set("chart.drawSegs", 0);
+      return;
+    }
+    const c = colors.current;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, plotW, chart.panes()[0]?.getHeight() ?? h);
+    ctx.clip();
+    ctx.font = `11px ${c.font}`;
+    ctx.lineWidth = 1;
+    let nSegs = 0;
+    const stroke = (list: Drawing[], color: (id: string) => string, dash: number[]) => {
+      for (const dr of list) {
+        const col = color(dr.id);
+        ctx.strokeStyle = col;
+        ctx.fillStyle = col;
+        ctx.setLineDash(dr.kind === "FIB" ? [] : dash);
+        for (const sg of segments(dr, geo)) {
+          nSegs++;
+          ctx.setLineDash(!sg.label && dr.kind === "FIB" ? [3, 3] : dr.kind === "FIB" ? [] : dash);
+          ctx.beginPath();
+          ctx.moveTo(sg.x1, sg.y1);
+          ctx.lineTo(sg.x2, sg.y2);
+          ctx.stroke();
+          const text = sg.label ? `${sg.label} ${fmtPrice(sg.price ?? NaN)}` : sg.price !== undefined ? fmtPrice(sg.price) : "";
+          if (text) ctx.fillText(text, Math.max(2, sg.x2 - ctx.measureText(text).width - 4), sg.y1 - 2);
+        }
+      }
+    };
+    stroke(d.drawings, (id) => (id === d.selected ? c.warn : c.fg), []);
+    if (d.pending) {
+      const i = cross.current.on ? cross.current.idx : -1;
+      const pts = [...d.pending.pts];
+      if (i >= 0 && i < bars.t.length && pts.length < (d.pending.kind === "HLINE" ? 1 : 2)) {
+        const px = d.pending.anchor === "H" ? bars.h[i] : d.pending.anchor === "L" ? bars.l[i] : d.pending.anchor === "O" ? bars.o[i] : bars.c[i];
+        pts.push({ t: bars.t[i], p: px });
+      }
+      stroke([{ id: "pending", kind: d.pending.kind, pts }], () => c.acc, [4, 3]);
+    }
+    ctx.restore();
+    gauges.set("chart.drawSegs", nSegs);
+  };
+  useEffect(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      paintRef.current();
+    });
+  }, [draw, data, indicators, comparePanes, compare, ver]);
 
   useImperativeHandle(ref, () => ({
+    crosshairIndex() {
+      return cross.current.on ? cross.current.idx : data.c.length - 1;
+    },
     screenshot() {
       try {
         return chartRef.current?.takeScreenshot().toDataURL("image/png") ?? null;
@@ -427,7 +599,19 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   return (
     <div className="fn">
       <div ref={readout} className="line" />
-      <div ref={box} className="chart" />
+      <div
+        ref={box}
+        className="chart"
+        onClick={(e) => {
+          const g = geoRef.current;
+          const d = drawRef.current;
+          if (!g || !d || !onPick || compareOn.current) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          onPick(hitTest(d.drawings, e.clientX - r.left, e.clientY - r.top, g, 6));
+        }}
+      >
+        <canvas ref={overlay} style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 3 }} />
+      </div>
     </div>
   );
 }

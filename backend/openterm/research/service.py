@@ -155,6 +155,28 @@ class Research:
 
         return await self.svc._swr(f"r:cacs:{symbol}", self.ttl("dvd"), fetch)
 
+    async def chart_events(self, raw: str) -> dict:
+        """GP `EVT` markers: dividends, splits and the last four earnings dates, each part optional (a missing part is named)."""
+        symbol = resolve(raw)
+
+        async def fetch() -> dict:
+            async def part(capability: str, call):
+                try:
+                    return (await self._raw_call(symbol, capability, call))[0], None
+                except AllFailed as e:
+                    return None, e
+
+            (dvd, dvd_err), (splt, splt_err), (earn, earn_err) = await asyncio.gather(
+                part("dividends", lambda p: p.dividends(symbol)), part("splits", lambda p: p.splits(symbol)),
+                part("earnings_history", lambda p: p.earnings_history(symbol)))
+            if dvd is None and splt is None and earn is None:
+                raise dvd_err
+            missing = [n for n, e in (("DIVIDENDS", dvd_err), ("SPLITS", splt_err), ("EARNINGS", earn_err))
+                       if e is not None and e.kind != "not_found"]
+            return {"data": cp.chart_events(symbol, dvd, splt, earn, missing), "fallback_from": []}
+
+        return await self.svc._swr(f"r:events:{symbol}", self.ttl("dvd"), fetch)
+
     async def fn_ipo(self, month: str | None = None) -> dict:
         try:
             m = cp.valid_month(month)

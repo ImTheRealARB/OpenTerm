@@ -813,3 +813,26 @@ export const newsAlertsApi = {
   rearm: (id: number) => send<NewsAlert>("POST", `/api/newsalerts/${id}/rearm`),
   clear: () => send<{ deleted: number }>("DELETE", "/api/newsalerts?status=triggered"),
 };
+
+// --- Phase 19: GP drawings and event markers, world data ---
+export interface ChartEvent {
+  date: string;
+  kind: "E" | "D" | "S";
+  detail: string;
+}
+export interface ChartEvents {
+  symbol: string;
+  events: ChartEvent[];
+  missing: string[];
+  notes: string[];
+  source: string;
+}
+
+export const worldApi = {
+  /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
+  events: (symbol: string, fresh = false) =>
+    request<Envelope<ChartEvents>>(`/api/world/events?${qs({ symbol })}`, fresh ? 0 : 120_000),
+  drawings: (symbol: string) => send<{ symbol: string; drawings: unknown[]; updated_at: number | null }>("GET", `/api/drawings/${encodeURIComponent(symbol)}`),
+  saveDrawings: (symbol: string, drawings: unknown[]) =>
+    send<{ symbol: string; drawings: unknown[]; updated_at: number }>("PUT", `/api/drawings/${encodeURIComponent(symbol)}`, { drawings }),
+};

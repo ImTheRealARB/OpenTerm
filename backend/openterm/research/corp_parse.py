@@ -282,3 +282,43 @@ def evts_payload(symbol: str, filings: list[dict], total: int, source: str) -> d
                  [col("date", "FILED", "date", 10), col("form", "FORM", "text", 6), col("items", "ITEMS", "text", 60)], rows)],
         ["ITEM NAMES ARE SHORT LABELS; ENTER OPENS THE FILING ON SEC.GOV. THIS IS THE SEC FEED: NEWS WITH A SENTIMENT SCORE IS CN"],
         source)
+
+
+def nasdaq_earnings_history(body: dict, source: str) -> dict:
+    """Nasdaq `company/<SYM>/earnings-surprise`: the last four reported quarters with the date each was announced."""
+    rows = (((body or {}).get("data") or {}).get("earningsSurpriseTable") or {}).get("rows") or []
+    out = []
+    for r in rows:
+        day = us_date(r.get("dateReported"))
+        if not day:
+            continue
+        out.append({"date": day, "fiscal": r.get("fiscalQtrEnd"), "eps": number(r.get("eps")),
+                    "estimate": number(r.get("consensusForecast")), "surprise_pct": number(r.get("percentageSurprise"))})
+    if not out:
+        raise ProviderError("not_found", "no earnings history")
+    return {"rows": out, "source": source}
+
+
+def chart_events(symbol: str, dvd: dict | None, splt: dict | None, earn: dict | None, missing: list[str]) -> dict:
+    """GP event markers: E (earnings announced), D (ex-dividend), S (split), oldest first. Detail text is what the marker's readout says."""
+    events: list[dict] = []
+    for r in (dvd or {}).get("rows", []):
+        if r.get("ex_date"):
+            amt = f" ${r['amount']:.4f}".rstrip("0").rstrip(".") if r.get("amount") is not None else ""
+            events.append({"date": r["ex_date"], "kind": "D", "detail": f"DIV{amt}"})
+    for r in (splt or {}).get("rows", []):
+        if r.get("date"):
+            events.append({"date": r["date"], "kind": "S", "detail": f"SPLIT {r['ratio']}".strip()})
+    for r in (earn or {}).get("rows", []):
+        parts = [f"EPS {r['eps']:g}"] if r.get("eps") is not None else ["EPS n/a"]
+        if r.get("estimate") is not None:
+            parts.append(f"VS {r['estimate']:g}")
+        if r.get("surprise_pct") is not None:
+            parts.append(f"({r['surprise_pct']:+g}%)")
+        events.append({"date": r["date"], "kind": "E", "detail": " ".join(parts)})
+    events.sort(key=lambda e: (e["date"], e["kind"]))
+    notes = [f"{m} UNAVAILABLE: THOSE MARKERS ARE MISSING" for m in missing]
+    if earn:
+        notes.append("EARNINGS MARKERS: LAST FOUR REPORTED QUARTERS ONLY (NASDAQ)")
+    sources = [x["source"] for x in (dvd, splt, earn) if x and x.get("source")]
+    return {"symbol": symbol, "events": events, "missing": missing, "notes": notes, "source": " + ".join(dict.fromkeys(sources))}

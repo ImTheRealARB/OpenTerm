@@ -11,12 +11,13 @@ from .nasdaq import BASE, NasdaqProvider
 DIVIDENDS = "dividends"
 IPO = "ipo"
 SHORT_INTEREST = "short_interest"
+EARNINGS_HISTORY = "earnings_history"
 
 
 class NasdaqResearchProvider(NasdaqProvider):
     name = "nasdaq_research"
     label = "Nasdaq.com research data"
-    capabilities = frozenset({DIVIDENDS, IPO, SHORT_INTEREST})
+    capabilities = frozenset({DIVIDENDS, IPO, SHORT_INTEREST, EARNINGS_HISTORY})
     markets = "US dividends with declaration/record/pay dates, IPO calendar, FINRA short interest (plain US tickers)"
     terms = "Public website API; personal use. Undocumented: may change. Short interest is FINRA's, twice a month."
 
@@ -27,6 +28,10 @@ class NasdaqResearchProvider(NasdaqProvider):
     async def short_interest(self, symbol: str) -> dict:
         body = await self.get_json(f"{BASE}/{symbol}/short-interest", {"assetClass": "stocks"})
         return cp.nasdaq_short_interest(body, self.source)
+
+    async def earnings_history(self, symbol: str) -> dict:
+        body = await self.get_json(f"https://api.nasdaq.com/api/company/{symbol}/earnings-surprise")
+        return cp.nasdaq_earnings_history(body, self.source)
 
     async def ipo(self, month: str) -> dict:
         body = await self.get_json("https://api.nasdaq.com/api/ipo/calendar", {"date": month})

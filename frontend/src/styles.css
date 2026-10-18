@@ -113,7 +113,7 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 .kv span:first-child { color: var(--fg-dim); }
 .desc { color: var(--fg); white-space: pre-wrap; margin-top: 4px; max-width: 120ch; }
 .chart { flex: 1 1 auto; min-height: 0; position: relative; }
-.picker { position: absolute; top: 4px; left: 4px; z-index: 5; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; }
+.picker { position: absolute; top: 4px; left: 4px; z-index: 5; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; max-height: calc(100% - 8px); overflow-y: auto; }
 
 /* --- Phase 8 --- */
 .alrt-flash { background: var(--warn); color: var(--bg); padding: 0 4px; }

@@ -537,6 +537,7 @@ async function main() {
   // Phase 19 budgets (spec): chart maths in the page, p95 of 15 runs on generated bars.
   add("Pattern scan (candles + SMC) 5,000 bars p95", r.p19["p19.patternsMs"] ?? null, 40, "ms", "PERF CALC, TEST DATA");
   add("SEAS MONTH+WOY+DOM 10,000 daily bars p95", r.p19["p19.seasMs"] ?? null, 15, "ms", "PERF CALC, TEST DATA");
+  add("Drawing hit test, 200 drawings p95", r.p19["p19.hitMs"] ?? null, 1, "ms", "PERF CALC, TEST DATA");
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

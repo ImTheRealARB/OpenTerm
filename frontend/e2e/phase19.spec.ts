@@ -1,62 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { expect, test, type Download, type Page } from "@playwright/test";
-import { openApp } from "./app";
+import { expect, test, type Page } from "@playwright/test";
+import { dateOf, env, exportCsv, gauge, now, N, panel, run, setup, T } from "./p19util";
 
-// Mocked routes only (no network). Series are synthetic test data made up in this file.
-const now = () => Date.now() / 1000;
-const env = (data: unknown, extra = {}) => ({ data, source: "yahoo", as_of: now(), age_s: 1, stale: false, fallback_from: [], ...extra });
-const quote = (symbol: string, price: number) => ({
-  symbol, name: `${symbol} NAME`, currency: "USD", exchange: "X", tz: "UTC", price, prev_close: price * 0.99,
-  change: price * 0.01, change_pct: 1.01, open: null, high: price * 1.01, low: price * 0.98, volume: 1000, high_52w: null,
-  low_52w: null, market_time: Math.floor(now()), source: "yahoo", as_of: now(),
-});
-
-const N = 900;
-const T0 = Math.floor(now() / 86400) * 86400 - (N - 1) * 86400;
-const T = Array.from({ length: N }, (_, i) => T0 + i * 86400);
-const base = (i: number) => 100 + 10 * Math.sin(i / 7) + i * 0.05;
-const bars = (symbol: string, range: string, interval: string) => {
-  const c = T.map((_, i) => base(i));
-  return {
-    symbol, range, interval, currency: "USD", exchange: "X", tz: "UTC", t: T, o: c.map((x, i) => x + (i % 3) * 0.2), h: c.map((x) => x + 1), l: c.map((x) => x - 1), c,
-    v: c.map((_, i) => 1_000_000 + i), adj: c, source: "yahoo", as_of: now(),
-  };
-};
-
-async function setup(page: Page) {
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(String(e)));
-  await page.routeWebSocket(/\/ws$/, (route) => {
-    route.onMessage((m) => {
-      const msg = JSON.parse(String(m));
-      if (msg[0] === "ping") route.send(JSON.stringify(["pong", msg[1], Date.now()]));
-    });
-  });
-  await page.route("**/api/quote?**", (r) => {
-    const syms = new URL(r.request().url()).searchParams.get("symbols")!.split(",");
-    return r.fulfill({ json: { results: Object.fromEntries(syms.map((s, i) => [s, env(quote(s, 100 + i))])) } });
-  });
-  await page.route("**/api/history?**", (r) => {
-    const u = new URL(r.request().url());
-    return r.fulfill({ json: env(bars(u.searchParams.get("symbol")!, u.searchParams.get("range") ?? "", u.searchParams.get("interval") ?? "")) });
-  });
-  await openApp(page);
-  return { errors };
-}
-
-const run = async (page: Page, t: string) => {
-  await page.keyboard.press("Control+k");
-  await page.keyboard.type(t);
-  await page.keyboard.press("Enter");
-  await page.keyboard.press("Escape");
-};
-const panel = (page: Page, id = 1) => page.locator(`[data-panel="${id}"]`);
-const gauge = (page: Page, k: string) => page.evaluate((key) => window.__openterm_perf.snapshot().gauges[key], k);
-
-async function exportCsv(page: Page): Promise<{ name: string; text: string }> {
-  const [dl]: [Download, void] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("e")]);
-  return { name: dl.suggestedFilename(), text: (await readFile((await dl.path())!, "utf-8")).replace(/^﻿/, "") };
-}
+// Phase 19 end-to-end tests (mocked routes only). Steps 1-2: GP studies, patterns, SEAS, drawings, event markers, panes.
 
 test("SEAS: month table, V cycles the view, CSV export", async ({ page }) => {
   await setup(page);
@@ -88,10 +33,131 @@ test("GP: Phase 19 studies and pattern overlays draw without errors", async ({ p
   expect(errors).toEqual([]);
 });
 
-test("PERF CALC: chart maths gauges are published and published (budgets are gated by scripts/bench.mjs)", async ({ page }) => {
+test("PERF CALC: chart maths gauges are published (budgets are gated by scripts/bench.mjs)", async ({ page }) => {
   await setup(page);
   await run(page, "PERF CALC");
   await expect(panel(page)).toContainText("TEST DATA, NOT A SECURITY");
-  await expect.poll(() => gauge(page, "p19.patternsMs")).toBeLessThan(1000); // sanity only: the 40 ms budget is gated in the bench, not under the parallel gate load
+  // Sanity only: the 40 / 15 / 1 ms budgets are gated in the bench, not under the parallel gate load.
+  await expect.poll(() => gauge(page, "p19.patternsMs")).toBeLessThan(1000);
   await expect.poll(() => gauge(page, "p19.seasMs")).toBeLessThan(1000);
+  await expect.poll(() => gauge(page, "p19.hitMs")).toBeLessThan(100);
+});
+
+// --- step 2: GP drawings, event markers, panes ---
+async function setupStore(page: Page) {
+  const base = await setup(page);
+  const store: { drawings: unknown[] } = { drawings: [] };
+  const puts: unknown[][] = [];
+  await page.route("**/api/drawings/**", (r) => {
+    if (r.request().method() === "PUT") {
+      const body = r.request().postDataJSON() as { drawings: unknown[] };
+      store.drawings = body.drawings;
+      puts.push(body.drawings);
+      return r.fulfill({ json: { symbol: "AAA", drawings: body.drawings, updated_at: now() } });
+    }
+    return r.fulfill({ json: { symbol: "AAA", drawings: store.drawings, updated_at: store.drawings.length ? now() : null } });
+  });
+  return { ...base, store, puts };
+}
+
+const gpReady = async (page: Page) => {
+  await expect(panel(page)).toContainText("T/H/B DRAW");
+  await expect.poll(() => gauge(page, "chart.drawSegs")).toBeDefined();
+};
+
+test("GP drawings: trend line, horizontal line and fib by keyboard are saved and come back after a reload", async ({ page }) => {
+  const { errors, puts } = await setupStore(page);
+  await run(page, "AAA GP 1Y");
+  await gpReady(page);
+  await page.keyboard.press("t");
+  await expect(panel(page)).toContainText("DRAW TREND LINE: ANCHOR 1/2 AT CLOSE");
+  for (let i = 0; i < 20; i++) await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Enter");
+  await expect(panel(page)).toContainText("ANCHOR 2/2");
+  for (let i = 0; i < 20; i++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("p");
+  await expect(panel(page)).toContainText("AT HIGH");
+  await page.keyboard.press("Enter");
+  await expect(panel(page)).toContainText("TREND LINE d1 SELECTED");
+  await page.keyboard.press("h");
+  await page.keyboard.press("Enter");
+  await expect(panel(page)).toContainText("HORIZONTAL LINE d2 SELECTED");
+  await page.keyboard.press("b");
+  for (let i = 0; i < 30; i++) await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Enter");
+  for (let i = 0; i < 30; i++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(panel(page)).toContainText("FIB RETRACEMENT d3 SELECTED");
+  await expect.poll(() => gauge(page, "chart.drawSegs")).toBeGreaterThanOrEqual(1 + 1 + 8);
+  await expect.poll(() => puts.length).toBeGreaterThan(0);
+  await expect.poll(() => (puts[puts.length - 1] as unknown[]).length).toBe(3);
+  const saved = puts[puts.length - 1] as { id: string; kind: string; pts: { t: number; p: number }[] }[];
+  expect(saved.map((d) => d.kind)).toEqual(["TREND", "HLINE", "FIB"]);
+  expect(saved[0].pts).toHaveLength(2);
+  expect(saved[0].pts[1].t).toBeGreaterThan(saved[0].pts[0].t);
+
+  // Cycle and delete from the keyboard.
+  await page.keyboard.press("]");
+  await expect(panel(page)).toContainText("TREND LINE d1 SELECTED");
+  await page.keyboard.press("d");
+  await expect.poll(() => (puts[puts.length - 1] as unknown[]).length).toBe(2);
+
+  await page.reload();
+  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await run(page, "AAA GP 1Y");
+  await gpReady(page);
+  await expect.poll(() => gauge(page, "chart.drawSegs")).toBeGreaterThanOrEqual(1 + 8);
+  expect(errors).toEqual([]);
+});
+
+test("GP drawings: Escape cancels a placement and nothing is saved", async ({ page }) => {
+  const { puts } = await setupStore(page);
+  await run(page, "AAA GP 1Y");
+  await gpReady(page);
+  await page.keyboard.press("t");
+  await expect(panel(page)).toContainText("DRAW TREND LINE");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).not.toContainText("DRAW TREND LINE");
+  await page.waitForTimeout(600);
+  expect(puts).toHaveLength(0);
+  expect(await gauge(page, "chart.drawSegs")).toBe(0);
+});
+
+test("GP EVT: earnings, dividend and split markers land on their bars; a date with no bar is skipped", async ({ page }) => {
+  await setupStore(page);
+  const d = (i: number) => dateOf(T[N - 1 - i]);
+  await page.route("**/api/world/events?**", (r) =>
+    r.fulfill({
+      json: env(
+        {
+          symbol: "AAA",
+          events: [
+            { date: d(40), kind: "E", detail: "EPS 1.91 VS 1.88 (+1.6%)" },
+            { date: d(20), kind: "D", detail: "DIV $0.27" },
+            { date: d(5), kind: "S", detail: "SPLIT 4:1" },
+            { date: "2099-01-01", kind: "E", detail: "EPS FUTURE" },
+          ],
+          missing: ["SPLITS"],
+          notes: ["EARNINGS MARKERS: LAST FOUR REPORTED QUARTERS ONLY (NASDAQ)"],
+          source: "nasdaq_research + yahoo",
+        },
+        { source: "nasdaq_research + yahoo" },
+      ),
+    }),
+  );
+  await run(page, "AAA GP 1Y EVT");
+  await expect(panel(page)).toContainText("EVT E=EARNINGS (LAST 4 REPORTED)");
+  await expect(panel(page)).toContainText("3 IN VIEW OF 4");
+  await expect(panel(page)).toContainText("MISSING SPLITS");
+  await expect.poll(() => gauge(page, "chart.events")).toBe(3);
+});
+
+test("GP PANE: each VS symbol gets its own pane; without PANE only the first is overlaid", async ({ page }) => {
+  await setupStore(page);
+  await run(page, "AAA GP 1Y VS BBB CCC PANE");
+  await expect(panel(page)).toContainText("VS BBB CCC (PANES)");
+  await expect.poll(() => gauge(page, "chart.extraSeries")).toBe(2);
+  await run(page, "AAA GP 1Y VS BBB CCC");
+  await expect(panel(page)).toContainText("VS OVERLAYS ONLY BBB; ADD PANE TO SHOW ALL 2");
 });

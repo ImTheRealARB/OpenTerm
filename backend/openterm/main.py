@@ -26,6 +26,7 @@ from .streaming.hub import Client, Hub
 from .streaming.upstream import NullStream, Poller, SyntheticStream, YahooStream
 from .symbols import resolve
 from .userdata import UserData
+from .world_routes import router as world_router
 
 STARTED = time.time()
 DEFAULT_ORDER = {
@@ -59,6 +60,8 @@ DEFAULT_ORDER |= {"curve_eur": ["ecb"], "curve_gbp": ["boe"], "curve_cad": ["boc
 DEFAULT_ORDER |= {"futures_contract": ["yahoo_futures"], "cot_history": ["cftc"], "cot_markets": ["cftc"], "fomc_dates": ["fomc"]}
 # --- Phase 15: Fama-French factors (FACT) ---
 DEFAULT_ORDER["factors"] = ["kenfrench"]
+# --- Phase 19: GP event markers ---
+DEFAULT_ORDER["earnings_history"] = ["nasdaq_research"]
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
@@ -204,6 +207,7 @@ app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson
 app.add_middleware(perf.TimingMiddleware)
 app.include_router(api_router)
 app.include_router(quant_router)
+app.include_router(world_router)
 app.include_router(kite_router)
 app.include_router(ai_router)
 app.include_router(routes_run.theses_router)
