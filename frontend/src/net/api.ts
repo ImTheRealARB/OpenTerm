@@ -754,3 +754,26 @@ export const researchApi = {
   valuation: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
     request<Envelope<TablePayload>>(`/api/valuation/${fn}?${qs(params)}`, fresh ? 0 : 30_000),
 };
+
+// Phase 13 step 6: news keyword alerts (ALRT NEWS WORD [SYM]); stored by the backend, evaluated here on each news refresh.
+export interface NewsAlert {
+  id: number;
+  word: string;
+  /** null = the market top stories. */
+  symbol: string | null;
+  status: "active" | "triggered";
+  created_at: number;
+  triggered_at: number | null;
+  headline: string | null;
+  url: string | null;
+}
+
+export const newsAlertsApi = {
+  list: () => send<{ alerts: NewsAlert[] }>("GET", "/api/newsalerts"),
+  create: (a: { word: string; symbol: string | null }) => send<NewsAlert>("POST", "/api/newsalerts", a),
+  delete: (id: number) => send<{ deleted: number }>("DELETE", `/api/newsalerts/${id}`),
+  trigger: (id: number, headline: string, url: string, at: number) =>
+    send<{ alert: NewsAlert; changed: boolean }>("POST", `/api/newsalerts/${id}/trigger`, { headline, url, at }),
+  rearm: (id: number) => send<NewsAlert>("POST", `/api/newsalerts/${id}/rearm`),
+  clear: () => send<{ deleted: number }>("DELETE", "/api/newsalerts?status=triggered"),
+};

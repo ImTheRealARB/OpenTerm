@@ -1,0 +1,8 @@
+{
+ "doc_shaped": "BUILT from Finnhub's documented /news?category=general response shape, not recorded (no key was available on 2026-10-18). Headlines are invented test text.",
+ "status": 200,
+ "body": [
+  {"category": "top news", "datetime": 1792300500, "headline": "FIXTURE: Stocks rally as inflation cools", "id": 910001, "image": "", "related": "", "source": "Fixture Wire", "summary": "Doc-shaped fixture teaser.", "url": "https://example.com/fixture/finnhub/market-1"},
+  {"category": "top news", "datetime": 1792299000, "headline": "FIXTURE: Oil slumps on demand concerns", "id": 910002, "image": "", "related": "", "source": "Fixture Daily", "summary": "Doc-shaped fixture teaser.", "url": "https://example.com/fixture/finnhub/market-2"}
+ ]
+}

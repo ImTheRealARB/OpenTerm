@@ -1,0 +1,11 @@
+{
+ "doc_shaped": "BUILT from Alpaca's documented /v1beta1/news response shape, not recorded (no keys were available on 2026-10-18). Headlines are invented test text.",
+ "status": 200,
+ "body": {
+  "news": [
+   {"id": 920001, "headline": "FIXTURE: Apple supplier warns of weak demand for older models", "author": "Fixture Author", "created_at": "2026-10-18T09:30:00Z", "updated_at": "2026-10-18T09:31:00Z", "summary": "Doc-shaped fixture teaser.", "content": "", "images": [], "url": "https://example.com/fixture/alpaca/aapl-1", "symbols": ["AAPL"], "source": "benzinga"},
+   {"id": 920002, "headline": "FIXTURE: Apple expands buyback program", "author": "Fixture Author", "created_at": "2026-10-17T20:00:00Z", "updated_at": "2026-10-17T20:01:00Z", "summary": "Doc-shaped fixture teaser.", "content": "", "images": [], "url": "https://example.com/fixture/alpaca/aapl-2", "symbols": ["AAPL"], "source": "benzinga"}
+  ],
+  "next_page_token": null
+ }
+}

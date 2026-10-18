@@ -40,6 +40,11 @@ DEFAULT_ORDER |= {
     "short_interest": ["nasdaq_research", "yahoo_research"], "short_volume": ["finra"],
     "etf_holdings": ["sec_nport"], "manager_13f": ["sec_13f"],
 }
+# --- Phase 13 step 6: keyed sources sit after the keyless ones; inert without a key ---
+DEFAULT_ORDER["ratings"] = ["yahoo_research", "finnhub"]
+DEFAULT_ORDER["surprises"] = ["yahoo_research", "finnhub"]
+DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca"]
+DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "gdelt"]
 # --- Phase 6: SEC / ownership ---
 DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
@@ -115,13 +120,16 @@ async def lifespan(app: FastAPI):
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
         if name == "fred" and "fred" in router.providers:
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
+        if name in ("finnhub", "alpaca") and name in router.providers:  # Phase 13: keyed news and research sources
+            router.providers[name].set_keys(store.get(name))
 
     app.state.on_key_change = on_key_change
 
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        await asyncio.to_thread(on_key_change, "fred")
+        for name in ("fred", "finnhub", "alpaca"):
+            await asyncio.to_thread(on_key_change, name)
 
     key_loader = asyncio.create_task(apply_stored_keys())
 

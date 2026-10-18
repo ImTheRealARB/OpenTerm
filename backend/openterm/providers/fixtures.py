@@ -294,3 +294,29 @@ def _route_phase13(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase13(request) or _route_before_phase13(request)
+
+
+# --- Phase 13 step 6: keyed sources (doc-shaped fixtures, labelled in each file; only AAPL and the market feed) ---
+# A request without the key header is answered 401 like the real services do.
+KEYED_ROUTES = {
+    ("finnhub.io", "/api/v1/company-news", "AAPL"): "finnhub_company_news_aapl",
+    ("finnhub.io", "/api/v1/news", None): "finnhub_news_general",
+    ("finnhub.io", "/api/v1/stock/recommendation", "AAPL"): "finnhub_recommendation_aapl",
+    ("finnhub.io", "/api/v1/stock/earnings", "AAPL"): "finnhub_earnings_aapl",
+    ("data.alpaca.markets", "/v1beta1/news", "AAPL"): "alpaca_news_aapl",
+    ("data.alpaca.markets", "/v1beta1/news", None): "alpaca_news_all",
+}
+_route_before_keyed = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if (host == "finnhub.io" and p != "/api/v1/quote") or host == "data.alpaca.markets":
+        authed = request.headers.get("x-finnhub-token") if host == "finnhub.io" else request.headers.get("apca-api-key-id")
+        if not authed:
+            return httpx.Response(401, json={"error": "Invalid API key"})
+        name = KEYED_ROUTES.get((host, p, q.get("symbol") or q.get("symbols")))
+        if name:
+            return _load(name)
+        return httpx.Response(200, json=[] if host == "finnhub.io" else {"news": [], "next_page_token": None})
+    return _route_before_keyed(request)

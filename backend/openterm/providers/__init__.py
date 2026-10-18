@@ -133,3 +133,8 @@ ADAPTERS.update({"nasdaq_research": NasdaqResearchProvider, "finra": FinraProvid
 from .sec_funds import Sec13fProvider, SecNportProvider
 
 ADAPTERS.update({"sec_nport": SecNportProvider, "sec_13f": Sec13fProvider})
+# Keyed (APIKEYS): inert without a key (supports() is false), so they are always built and appear on SOURCES.
+from .alpaca import AlpacaProvider
+from .finnhub import FinnhubProvider
+
+ADAPTERS.update({"finnhub": FinnhubProvider, "alpaca": AlpacaProvider})

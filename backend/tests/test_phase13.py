@@ -24,7 +24,7 @@ EST = lambda f: f  # step 2 landed
 CORP = lambda f: f  # step 3 landed
 VAL = lambda f: f  # step 4 landed
 FUND = lambda f: f  # step 5 landed
-KEYED = xf("KEYED", 6)
+KEYED = lambda f: f  # step 6 landed
 
 
 def fixture_body(name: str):

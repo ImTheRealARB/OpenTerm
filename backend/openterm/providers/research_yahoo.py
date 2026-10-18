@@ -22,12 +22,14 @@ CORP_EVENTS = "corp_events"
 DIVIDENDS = "dividends"
 SPLITS = "splits"
 SHORT_INTEREST = "short_interest"
+SURPRISES = "surprises"
 
 
 class YahooResearchProvider(YahooOwnProvider):
     name = "yahoo_research"
     label = "Yahoo Finance research (unofficial)"
-    capabilities = frozenset({ESTIMATES, RATINGS, OFFICERS, KEYSTATS, FUND_INFO, CORP_EVENTS, DIVIDENDS, SPLITS, SHORT_INTEREST})
+    capabilities = frozenset({ESTIMATES, RATINGS, OFFICERS, KEYSTATS, FUND_INFO, CORP_EVENTS, DIVIDENDS, SPLITS, SHORT_INTEREST,
+                              SURPRISES})
     markets = "Analyst estimates and ratings, officers, key statistics, fund profile, dividend and split events; mostly US"
     terms = "Unofficial quoteSummary and chart endpoints; personal use. Consensus data is Yahoo's aggregation."
 
@@ -36,6 +38,9 @@ class YahooResearchProvider(YahooOwnProvider):
 
     async def eeo(self, symbol: str) -> dict:
         return yp.revisions_and_surprises(symbol, await self._summary(symbol, "earningsTrend,earningsHistory"), self.source)
+
+    async def surprises(self, symbol: str) -> dict:
+        return await self.eeo(symbol)
 
     async def ratings(self, symbol: str) -> dict:
         r = await self._summary(symbol, "recommendationTrend,upgradeDowngradeHistory,financialData")

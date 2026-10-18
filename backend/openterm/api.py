@@ -426,6 +426,58 @@ async def rearm_alert(request: Request, alert_id: int):
         return error(e)
 
 
+# --- Phase 13: news keyword alerts (ALRT NEWS WORD [SYM]); evaluated in the browser on each news refresh ---
+def news_alerts_store(request: Request):
+    from .news_alerts import NewsAlerts
+
+    return NewsAlerts(user(request).db)
+
+
+@router.get("/newsalerts")
+async def list_news_alerts(request: Request):
+    return {"alerts": await news_alerts_store(request).all()}
+
+
+@router.post("/newsalerts")
+async def create_news_alert(request: Request):
+    try:
+        return await news_alerts_store(request).create(await json_object(request))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.delete("/newsalerts")
+async def clear_news_alerts(request: Request, status: str = Query(...)):
+    if status != "triggered":
+        return error(UserDataError("bad_request", "ONLY status=triggered CAN BE CLEARED"))
+    return {"deleted": await news_alerts_store(request).clear_triggered()}
+
+
+@router.delete("/newsalerts/{alert_id}")
+async def delete_news_alert(request: Request, alert_id: int):
+    try:
+        return {"deleted": await news_alerts_store(request).delete(alert_id)}
+    except UserDataError as e:
+        return error(e)
+
+
+@router.post("/newsalerts/{alert_id}/trigger")
+async def trigger_news_alert(request: Request, alert_id: int):
+    try:
+        body = await json_object(request)
+        return await news_alerts_store(request).trigger(alert_id, body.get("headline"), body.get("url"), body.get("at"))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.post("/newsalerts/{alert_id}/rearm")
+async def rearm_news_alert(request: Request, alert_id: int):
+    try:
+        return await news_alerts_store(request).rearm(alert_id)
+    except UserDataError as e:
+        return error(e)
+
+
 @router.get("/peers")
 async def peers(request: Request, symbol: str = Query(..., max_length=24)):
     try:

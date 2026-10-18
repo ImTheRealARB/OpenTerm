@@ -32,8 +32,8 @@ providers:
   history: [binance_klines, yahoo, nasdaq]
   search: [yahoo]
   profile: [yahoo, nasdaq]
-  news_top: [rss]
-  news_symbol: [yahoo_rss, gdelt]
+  news_top: [rss, finnhub, alpaca]            # finnhub and alpaca are inert until a key is set in APIKEYS
+  news_symbol: [yahoo_rss, finnhub, alpaca, gdelt]
   news_keyword: [gdelt]
   movers: [nasdaq]
   crypto: [coingecko, binance]

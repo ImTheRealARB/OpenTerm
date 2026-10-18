@@ -12,7 +12,9 @@ from typing import Any, ClassVar
 
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
+from .providers.base import ProviderError
 from .providers.crypto import VS
+from .providers.news import merge
 from .providers.sec import US_ONLY, sec_ticker, store_from  # Phase 6
 from .ranges import normalize
 from .router import AllFailed, Router
@@ -156,11 +158,23 @@ class DataService:
             cap, call = "news_top", lambda p: p.news_top()
 
         async def fetch() -> dict:
-            out, failed = await self.router.call(cap, call, arg)
-            items = out["items"]
+            # Phase 13: a keyed source (Finnhub, Alpaca) adds its headlines to the first keyless answer instead of
+            # waiting to be a fallback. Without a key it does not support the capability and nothing changes.
+            extras = [p for p in self.router.candidates(cap, arg) if getattr(p, "has_key", False)] if kind != "keyword" else []
+            extra_results = await asyncio.gather(*(self._extra_news(p, call) for p in extras)) if extras else []
+            try:
+                out, failed = await self.router.call(cap, call, arg)
+            except AllFailed:
+                if not any(items for items, _ in extra_results):
+                    raise
+                out, failed = {"items": [], "failed": []}, []
+            items = [*out["items"], *(i for found, _ in extra_results for i in found)]
+            feeds = [*out["failed"], *(n.upper() for _, n in extra_results if n)]
+            if extra_results:
+                items = merge(items)
             return {
-                "data": {"kind": kind, "query": arg, "items": [i.model_dump() for i in items], "failed": out["failed"]},
-                "source": items[0].source if items else None,
+                "data": {"kind": kind, "query": arg, "items": [i.model_dump() for i in items], "failed": feeds},
+                "source": "+".join(sorted({i.source.split(":")[0] for i in items})) if extra_results else (items[0].source if items else None),
                 "fallback_from": failed,
             }
 
@@ -170,6 +184,13 @@ class DataService:
             if e.kind != "not_found":
                 raise
             raise DataError("not_found", "NO HEADLINES FOUND", e.detail) from e
+
+    async def _extra_news(self, provider, call) -> tuple[list, str | None]:
+        """One keyed news source: (its items, None) or ([], its name when it failed)."""
+        try:
+            return (await self.router._attempt(provider, call))["items"], None
+        except ProviderError:
+            return [], provider.name
 
     async def movers(self) -> dict:
         async def fetch() -> dict:

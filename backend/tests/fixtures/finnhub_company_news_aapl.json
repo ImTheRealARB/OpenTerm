@@ -1,0 +1,9 @@
+{
+ "doc_shaped": "BUILT from Finnhub's documented /company-news response shape, not recorded (no key was available on 2026-10-18). Headlines are invented test text.",
+ "status": 200,
+ "body": [
+  {"category": "company", "datetime": 1792300000, "headline": "FIXTURE: Apple beats profit estimates as services growth hits a record", "id": 900001, "image": "", "related": "AAPL", "source": "Fixture Wire", "summary": "Doc-shaped fixture teaser.", "url": "https://example.com/fixture/finnhub/aapl-1"},
+  {"category": "company", "datetime": 1792290000, "headline": "FIXTURE: Apple faces probe over app store fees, shares fall", "id": 900002, "image": "", "related": "AAPL", "source": "Fixture Wire", "summary": "Doc-shaped fixture teaser.", "url": "https://example.com/fixture/finnhub/aapl-2"},
+  {"category": "company", "datetime": 1792280000, "headline": "FIXTURE: Apple schedules its next product event", "id": 900003, "image": "", "related": "AAPL", "source": "Fixture Daily", "summary": "Doc-shaped fixture teaser.", "url": "https://example.com/fixture/finnhub/aapl-3"}
+ ]
+}

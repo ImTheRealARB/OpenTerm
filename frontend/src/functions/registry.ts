@@ -65,6 +65,7 @@ const defs: FunctionDef[] = [
   { code: "BT", title: "Backtest a rule on historical bars (historical simulation, not a forecast)", needsSecurity: false, argsSchema: "<SYMS> <RULE|@NAME> [1D|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [MKT=engine]", phase: 12, load: () => import("./BT"), idlePreload: false },
   { code: "IMPORT", title: "Import your own daily bars (CSV) as a data source, labelled LOCAL DATA", needsSecurity: false, argsSchema: "[SYMBOL | LIST | DEL SYMBOL]", phase: 12, load: () => import("./IMPORT"), idlePreload: false },
   { code: "EE", title: "Analyst estimates: EPS and revenue consensus by period", needsSecurity: true, phase: 13, load: () => import("./EE") },
+  { code: "CN", title: "Company news from every source, keyword-scored (not a model)", needsSecurity: true, phase: 13, load: () => import("./CN") },
   { code: "EEO", title: "Estimate revisions and EPS surprises", needsSecurity: true, phase: 13, load: () => import("./EEO") },
   { code: "ANR", title: "Analyst ratings, price targets and rating changes", needsSecurity: true, phase: 13, load: () => import("./ANR") },
   { code: "MGMT", title: "Officers, governance scores and proxy statements", needsSecurity: true, phase: 13, load: () => import("./MGMT") },

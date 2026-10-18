@@ -11,9 +11,11 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..providers.base import ProviderError
 from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
+from . import cn
 from . import corp_parse as cp
 from . import fund_parse as fp
 from . import valuation as vp
@@ -25,10 +27,10 @@ if TYPE_CHECKING:
 class Research:
     TTL: ClassVar[dict[str, float]] = {
         "ee": 21600.0, "eeo": 21600.0, "anr": 21600.0, "mgmt": 86400.0, "dvd": 21600.0, "splt": 21600.0, "si": 21600.0,
-        "ipo": 3600.0,
+        "ipo": 3600.0, "cn": 120.0,
         "etf": 21600.0, "memb": 21600.0, "mgr": 86400.0,
     }
-    SYMBOL_FUNCTIONS: ClassVar[set[str]] = {"ee", "eeo", "anr", "mgmt", "dvd", "splt", "cacs", "si", "evts", "etf"}
+    SYMBOL_FUNCTIONS: ClassVar[set[str]] = {"ee", "eeo", "anr", "mgmt", "dvd", "splt", "cacs", "si", "evts", "etf", "cn"}
 
     EXTRA_PARAMS: ClassVar[dict[str, tuple[str, ...]]] = {"ipo": ("month",), "memb": ("index",), "mgr": ("manager",)}
 
@@ -65,7 +67,7 @@ class Research:
 
     async def fn_eeo(self, raw: str) -> dict:
         symbol = resolve(raw)
-        return await self._symbol_call("eeo", symbol, "estimates", lambda p: p.eeo(symbol))
+        return await self._symbol_call("eeo", symbol, "surprises", lambda p: p.surprises(symbol))
 
     async def fn_anr(self, raw: str) -> dict:
         symbol = resolve(raw)
@@ -80,6 +82,35 @@ class Research:
         except DataError:
             pass
         return await self._symbol_call("mgmt", symbol, "officers", lambda p: p.officers(symbol, proxies))
+
+    # --- CN: company news from every source that answers, scored by keyword ---------------------
+    async def fn_cn(self, raw: str) -> dict:
+        symbol = resolve(raw)
+        router = self.svc.router
+
+        async def one(p):
+            try:
+                return p, (await router._attempt(p, lambda prov: prov.news_symbol(symbol)))["items"], None
+            except ProviderError as e:
+                return p, [], e
+
+        async def fetch() -> dict:
+            # GDELT is left out: one call per 5 s and 8-12 s answers would hold the panel for every other source.
+            live = [p for p in router.candidates("news_symbol", symbol) if p.name != "gdelt"]
+            results = await asyncio.gather(*(one(p) for p in live))
+            items = [i for _, found, _ in results for i in found]
+            errors = [(p.name, e) for p, _, e in results if e is not None]
+            answered = [p.name for p, found, e in results if e is None and found]
+            if not answered:
+                raise AllFailed(errors or [("news", ProviderError("not_found"))])
+            failed = [n for n, e in errors if e.kind not in ("not_found", "unsupported")]
+            missing = [
+                {"key": p.key_name, "what": f"{p.name.upper()} COMPANY HEADLINES"}
+                for n in ("finnhub", "alpaca") if (p := router.providers.get(n)) is not None and not p.has_key
+            ]
+            return {"data": cn.cn_payload(symbol, items, failed, missing, answered), "fallback_from": []}
+
+        return await self.svc._swr(f"r:cn:{symbol}", self.ttl("cn"), fetch)
 
     # --- CORP: Nasdaq, Yahoo chart events, FINRA, SEC filings ---------------------------------
     async def _raw_call(self, symbol: str | None, capability: str, call):

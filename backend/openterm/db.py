@@ -45,6 +45,11 @@ MIGRATIONS: list[str | list[str]] = [
         "CREATE TABLE local_bars (symbol TEXT PRIMARY KEY, bars BLOB NOT NULL, rows INTEGER NOT NULL,"
         " first_date TEXT NOT NULL, last_date TEXT NOT NULL, created_at REAL NOT NULL)"
     ),
+    # 11: news keyword alerts (Phase 13 step 6). symbol NULL = market top stories; the matched headline is kept once
+    (
+        "CREATE TABLE news_alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT NOT NULL, symbol TEXT,"
+        " status TEXT NOT NULL, created_at REAL NOT NULL, triggered_at REAL, headline TEXT, url TEXT)"
+    ),
 ]
 
 

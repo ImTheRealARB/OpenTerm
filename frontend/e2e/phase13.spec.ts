@@ -147,6 +147,91 @@ test("a section that needs a key shows KEY REQUIRED next to the data", async ({ 
   await expect(selected(page)).toContainText("CURRENT QTR");
 });
 
+test("CN: scored headlines with their feed, the score label, and the key hints for the keyed feeds", async ({ page }) => {
+  await setup(page);
+  const cn = payload(
+    "CN AAPL · COMPANY NEWS",
+    [{
+      id: "news", title: "HEADLINES", note: "KEYWORD SCORE, NOT A MODEL",
+      columns: [c("time", "TIME (UTC)"), c("label", "SCORE"), c("source", "FEED"), c("publisher", "PUBLISHER"), c("headline", "HEADLINE")],
+      rows: [
+        { time: "2026-10-18 09:30", label: "NEG", score: -2, source: "yahoo_rss", publisher: "example.com", headline: "Apple faces probe, shares fall", url: "https://example.com/a" },
+        { time: "2026-10-18 08:00", label: "POS", score: 2, source: "finnhub", publisher: "Wire", headline: "Apple beats estimates", url: "https://example.com/b" },
+      ],
+    }],
+    [{ label: "POS / NEG", value: "1 / 1" }],
+    {
+      notes: ["KEYWORD SCORE, NOT A MODEL: POSITIVE MINUS NEGATIVE WORD HITS IN THE HEADLINE FROM A FIXED LIST"],
+      key_required: [{ key: "ALPACA_KEY_ID", what: "ALPACA COMPANY HEADLINES" }],
+    },
+  );
+  await page.route("**/api/research/cn?**", (r) => r.fulfill({ json: env(cn, { source: "finnhub+yahoo_rss" }) }));
+  await run(page, "AAPL CN");
+  await expect(selected(page)).toContainText("NEG");
+  await expect(selected(page)).toContainText("Apple faces probe");
+  await expect(panel(page)).toContainText("KEYWORD SCORE, NOT A MODEL");
+  await expect(panel(page)).toContainText("KEY REQUIRED: set ALPACA_KEY_ID in APIKEYS");
+  await expect(panel(page)).toContainText("FINNHUB+YAHOO_RSS");
+});
+
+test("ALRT NEWS: a keyword alert fires on a newer headline that contains it, once, and shows the headline", async ({ page }) => {
+  type NA = { id: number; word: string; symbol: string | null; status: string; created_at: number; triggered_at: number | null; headline: string | null; url: string | null };
+  const list: NA[] = [];
+  const triggers: { id: number; headline: string }[] = [];
+  await page.route("**/api/newsalerts**", (r) => {
+    const req = r.request();
+    const rest = new URL(req.url()).pathname.split("/api/newsalerts")[1].replace(/^\//, "").split("/");
+    const body = req.postDataJSON?.() ?? null;
+    if (!rest[0]) {
+      if (req.method() === "POST") {
+        const a: NA = { id: list.length + 1, word: body.word, symbol: body.symbol, status: "active", created_at: now(), triggered_at: null, headline: null, url: null };
+        list.push(a);
+        return r.fulfill({ json: a });
+      }
+      return r.fulfill({ json: { alerts: list } });
+    }
+    const a = list.find((x) => x.id === Number(rest[0]))!;
+    if (rest[1] === "trigger") {
+      triggers.push({ id: a.id, headline: body.headline });
+      Object.assign(a, { status: "triggered", headline: body.headline, url: body.url, triggered_at: body.at });
+      return r.fulfill({ json: { alert: a, changed: true } });
+    }
+    return r.fulfill({ json: a });
+  });
+  const item = (id: string, title: string, published: number) => ({ id, title, url: `https://example.com/${id}`, publisher: "example.com", published, summary: null, source: "yahoo_rss" });
+  let feed = [item("old", "Apple recall of old chargers", now() - 3600)]; // published before the alert existed: never fires
+  await page.route("**/api/news?**", (r) =>
+    r.fulfill({ json: env({ kind: "symbol", query: "AAPL", items: feed, failed: [] }, { source: "yahoo_rss" }) }),
+  );
+  await setup(page);
+  await run(page, "ALRT NEWS recall AAPL");
+  await expect(page.locator(".msg")).toContainText('NEWS ALERT SET: AAPL HEADLINE CONTAINS "RECALL"');
+  const alrt = panel(page);
+  await expect(alrt).toContainText("1 ACTIVE");
+  await expect(selected(page)).toContainText('NEWS "RECALL"');
+  await expect(page.locator("footer.status")).toContainText("ALRT 1");
+
+  await run(page, "AAPL N"); // the N panel reports its headlines: the old one does not fire
+  await page.waitForTimeout(400);
+  expect(triggers).toHaveLength(0);
+
+  feed = [item("new", "Apple announces recall of chargers", now() + 30), ...feed];
+  await page.keyboard.press("F5"); // N refresh with the newer headline
+  await expect(page.locator("footer.status .alrt-flash")).toContainText('NEWS ALERT N1 AAPL "RECALL": Apple announces recall of chargers');
+  await expect.poll(() => triggers).toEqual([{ id: 1, headline: "Apple announces recall of chargers" }]);
+  await page.keyboard.press("F5"); // fired once: another refresh does not fire again
+  await page.waitForTimeout(400);
+  expect(triggers).toHaveLength(1);
+});
+
+test("ALRT NEWS: usage errors name the problem", async ({ page }) => {
+  await setup(page);
+  await run(page, "ALRT NEWS");
+  await expect(page.locator(".msg")).toContainText("ALRT NEWS NEEDS A WORD");
+  await run(page, "ALRT NEWS a");
+  await expect(page.locator(".msg")).toContainText("NEWS ALERT WORD: 2-40");
+});
+
 test("IPO: month argument, four sections, bad month shows usage", async ({ page }) => {
   await setup(page);
   await page.route("**/api/research/ipo?**", (r) => {
