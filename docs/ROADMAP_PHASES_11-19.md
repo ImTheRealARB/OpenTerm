@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phase 11 done, Phase 12 steps 1-4 done). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12 and 13 done; Phase 14 next; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 14, 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
@@ -207,6 +207,8 @@ cheaper one selectable. Spend cap per day from Phase 11.
 token budget recorded, no key = `KEY REQUIRED`, and keys never reach the frontend.
 
 ## Phase 17: Delivery, MCP, API
+
+**PAUSED (2026-10-18):** the user does not need real-time alerts or delivery. Do not spec or build unless asked.
 | Item | What |
 |---|---|
 | Server-side alerts | Backend evaluates `ALRT` rules so they fire with the tab closed; frontend alerts stay as the fast path |
@@ -220,6 +222,8 @@ token budget recorded, no key = `KEY REQUIRED`, and keys never reach the fronten
 **Done when:** alerts fire with no browser open (test), MCP tools listed and called by a test client, e2e.
 
 ## Phase 18: Brokers and orders
+
+**PAUSED (2026-10-18):** same reason as Phase 17. Phase 19 has no dependency on 17 or 18.
 In this order, each one a separate approval:
 1. **Paper trading** (Alpaca paper): `ORD` ticket, blotter, fills into `PORT`.
 2. **Read-only sync**: Zerodha Kite holdings, IBKR via TWS/Gateway, Alpaca live account read.
@@ -249,6 +253,10 @@ In this order, each one a separate approval:
 3. **Market priority:** US first, or US + India together (the India cost model and Zerodha sync are ready to port).
 4. **Live orders:** in scope at all, or stop at paper + read-only sync.
 5. **Paid keys:** decided 2026-10-19: skip them (`TRAN`, `SEG` removed).
+
+## Gaps vs OpenBB with no phase (2026-10-18)
+Python SDK / DataFrame API, third-party extension system, user-facing provider switch (same command on Yahoo, FMP, Polygon),
+hosted workspace. The SDK and REST API would build on the paused Phase 17 API work. Decide before unpausing 17.
 
 ## Not reachable even with keys
 See the end of [FEATURE_GAP.md](FEATURE_GAP.md).
