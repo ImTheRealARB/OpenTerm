@@ -33,6 +33,7 @@ Filled from Phase 12 onwards. One row per ported file.
 | `openterm/quant/fixedincome.py` | `agent/src/quantlib/fixedincome.py` (numpy and scipy removed; `price_mid_period` and `ytm_from_clean` added) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/quant/credit.py` (`cds_price`, hazard/survival conversion, `expected_loss` only) | `agent/src/quantlib/credit.py` (numpy, pandas and scipy removed) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 | `openterm/quant/payoff.py` | `agent/backtest/options_payoff.py` (numpy removed; arrays became lists) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
+| `openterm/bt/engines/options_portfolio.py` | `agent/backtest/engines/options_portfolio.py` (loader / signal engine / run directory / CSV artifacts / run card replaced by an in-memory call; equity indexed by timestamp) | HKUDS/Vibe-Trading @ `d0db2e3` | MIT |
 
 ### HKUDS/Vibe-Trading (MIT)
 
