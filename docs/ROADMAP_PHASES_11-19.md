@@ -190,6 +190,7 @@ for the surface render recorded.
 | `QL` | Calculator panel over the ported `quantlib` (only functions with tests): GARCH, cointegration, OU fit, copulas, VPIN/Roll/Amihud/Kyle, event study, deflated Sharpe |
 | `ALPHA` | Alpha Zoo: start with 20-30 factors, measure, then port the rest of the 478 (Qlib158, Alpha101, GTJA191, academic, fundamental). IC / IR / decay over the `EQS` universe; alive / reversed / dead labels |
 | `CORR REGIME` | Correlation regime timeline (edge density + hysteresis) on `CORR` |
+| `KITE` data source | Zerodha Kite Connect, READ-ONLY (user decision 2026-10-19, overrides "no paid data APIs" for this one source): keys `KITE_API_KEY` / `KITE_API_SECRET` pasted in `APIKEYS`; daily login flow (loopback redirect, one-day access token, `KITE LOGIN EXPIRED` status, never automated); instrument-token cache; WebSocket ticks (`RT KITE`) into the streaming hub; Indian historical bars; NSE/NFO/MCX option chains and futures with OI for `OMON` (Greeks computed with `openterm/quant`, labelled). NO order placement, no order tools anywhere. Inert without a key (`KEY REQUIRED: set KITE_API_KEY in APIKEYS`). Doc-shaped fixtures, labelled NOT a recording |
 
 **Done when:** ported functions carry their Vibe tests (rewritten to pytest without network), alpha scans run as
 jobs with a bench budget, lookahead sentinel test ported, e2e.

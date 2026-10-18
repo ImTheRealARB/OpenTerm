@@ -13,7 +13,8 @@ _Last updated: 2026-10-19, session 7 (Phases 12-19 on branch `claude/openterm-ph
   OSA `B` opens BT but you must type `OPEN=` and `STYLE=` (and `EXP=` in OSA); the OSA structure is lost on reload; BT option trade rows leave entry price/pnl % empty;
   no real-network run of the new rates/futures/CFTC/FOMC providers (fixtures only: try `RATES EUR`, `COT ES`, `WIRP`, `AAPL OMON` live and fix shape drift).
 - **Usage lesson:** Phase 14 burned ~75% of a 5h window (agents + repeated gates). See memory `token-burn-rules`: targeted tests in agents, one full gate per step, pause at 60% of the 5h window.
-- **Next action: Phase 15** (risk, quant library, alphas): read `docs/ROADMAP_PHASES_11-19.md` "Phase 15", write `docs/specs/PHASE_15.md`, tests first (fresh session).
+- **Kite Connect (read-only data) is added to Phase 15 scope** (roadmap row `KITE`). A separate session (`claude/angry-easley-fc2d86`) may already have started it: check `git branch` and that branch before building it again.
+- **Next action: Phase 15** (risk, quant library, alphas, plus the `KITE` row): read `docs/ROADMAP_PHASES_11-19.md` "Phase 15", write `docs/specs/PHASE_15.md`, tests first (fresh session).
   Phases 17 and 18 stay paused. Before Phase 16: ask the user to set the OpenRouter key in APIKEYS.
 
 ## Resume here (2026-10-18, Phase 13 complete)
