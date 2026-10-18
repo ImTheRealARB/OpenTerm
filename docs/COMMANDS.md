@@ -130,3 +130,17 @@ opinion: a missing input shows `NOT RUNNABLE: MISSING ...`.
 ### BT options (Phase 14)
 `BT <UNDERLYING> MKT=options` runs the last `OSA` structure for that symbol (API: `engine="options"` plus `structure`). Option prices are Black-Scholes marks on trailing historical vol
 (`MODEL-PRICED OPTIONS (BLACK-SCHOLES ON HISTORICAL VOL), NOT MARKET QUOTES`). A missing structure field gives `NOT RUNNABLE: MISSING <fields>`. `FEES=` is bps of premium; slippage is not modelled.
+
+## Phase 15: risk, quant library, alphas, Kite
+`RISK [PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` VaR / ES (historical, normal, EVT), beta, drawdown, contributions, stress replays (2008, 2020, 2022), VaR backtest ·
+`PORT OPT [PORTFOLIO] [METHOD=EQVOL|RP|MV|MAXDIV|HRP|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` trades and before/after preview; key `A` saves the proposal as a new portfolio `<NAME>.OPT`
+(never edits the original, never orders) · `PORT ATTR [PORTFOLIO] [BENCH=SPY] [RANGE=1y]` Brinson-Fachler and returns; the valuation table behind TWR / MWR / Dietz is edited with
+`PORT ATTR MAIN ADD 2025-01-01 VALUE=10000 FLOW=500` and `PORT ATTR MAIN DEL 2025-01-01` (under two rows: `NEEDS 2 VALUATIONS`) ·
+`FACT AAPL 3y` or `FACT MAIN` Fama-French 5 + momentum exposures (data lags about two months) · `QL GARCH AAPL H=5`, `QL OU AAPL`, `QL COINT AAPL MSFT`, `QL HEDGE AAPL MSFT`, `QL COPULA AAPL MSFT`,
+`QL ROLL|AMIHUD|KYLE|VPIN AAPL`, `QL EVENT AAPL DATE=2024-08-01`, `QL DSR SR=1.5 N=20 T=500`, `QL ADF AAPL`, `QL HVAR AAPL` ·
+`ALPHA [UNIVERSE=TOP100|WL:<name>|LIST:A,B,C|SYN] [RANGE=2y] [FAMILY=alpha101|qlib158|academic] [H=1,5,10,20]` Alpha Zoo scan: IC, IR, decay, alive / reversed / dead ·
+`CORR REGIME [WL:<name>|LIST:A,B,C] [WIN=60] [EDGE=0.5]` correlation edge density and fused / diffuse episodes (no list: the symbols of the `CORR` panel).
+
+Kite (read-only, needs your own Kite Connect app): paste `KITE_API_KEY` and `KITE_API_SECRET` in `APIKEYS`, register `http://127.0.0.1:8000/api/kite/callback` as the redirect URL, then
+`KITE LOGIN` (once per trading day), `KITE STATUS`, `KITE LOGOUT`. After login `RELIANCE.NS`, `^NSEI` and NFO/MCX bars come from Kite, and `OMON NIFTY.NFO R=6.5 Q=1.2` builds the chain with OI
+(IV and Greeks only when `R=` / `Q=` are typed, labelled computed here). There is no order surface.

@@ -1,17 +1,21 @@
 # Handoff
 
-_Last updated: 2026-10-19, session 8 (branch `claude/openterm-phase-14-ec5824`; Phase 11 done except one recording; PHASES 12, 13 and 14 COMPLETE; Phase 15 next (plus read-only Kite, see "Resume here"); Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
+_Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-15-65e1da`; Phase 11 done except one recording; PHASES 12, 13, 14 and 15 COMPLETE; Phase 16 next, after the user sets the OpenRouter key in APIKEYS; Phases 17-18 stay paused by the user; defaults pre-approved: see "Resume here")._
 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-18, Phase 15 step 1 done)
-- **Branch `claude/openterm-phase-15-65e1da`** (worktree `.claude/worktrees/openterm-phase-15-65e1da`, fast-forwarded from the Phase 14 branch; pushed to `origin`). Spec: `docs/specs/PHASE_15.md` (decisions A-M + Kite section).
-- **Step 1 done (spec, fixtures, tests-first).** All new tests are strict-xfail: `test_phase15.py` (job API, RISK/OPT/ATTR step 3, FACT/QL step 4, ALPHA/REGIME step 5), `test_phase15_quant.py` (402 Vibe cases + 29 zoo factors, step 2),
-  `test_phase15_kite.py` (KITE step 6, KITEUI step 7), vitest `quantArgs.test.ts` (`it.fails`), Playwright `phase15.spec.ts` (`test.fail()`). Each step deletes its markers.
-- **Next action: step 2** = `backend/openterm/quantlib/` ports (scipy, statsmodels, arch added to pyproject; worker-only), THIRD_PARTY rows. Steps listed in the spec.
-- Fixtures: `scripts/record_phase15.py` (keyless Yahoo 20y + SPDR ETFs + Ken French; `--kite` writes the doc-shaped Kite files). Vibe sources for porting are in the session scratchpad only; refetch with curl from raw.githubusercontent.com/HKUDS/Vibe-Trading/d0db2e3/agent/...
-- Fixture mode must route `range=20y` / `3y` daily charts by slicing the longest recorded chart, plus kenfrench (`b64` fixtures need `_load` support) and the Kite hosts (see the docstring of `test_phase15_kite.py`).
+## Resume here (2026-10-18, Phase 15 complete)
+- **Phase 15 is built** on branch `claude/openterm-phase-15-65e1da` (spec `docs/specs/PHASE_15.md`, steps 1-8). Functions: `RISK`, `PORT OPT` (`A` saves `<NAME>.OPT`), `PORT ATTR` (+ `ADD`/`DEL` valuations),
+  `FACT`, `QL`, `ALPHA` (29 factors), `CORR REGIME`, and read-only `KITE` (`LOGIN`/`STATUS`/`LOGOUT`, Indian bars, NFO/MCX chains with OI via `OMON NIFTY.NFO R= Q=`). Pieces: `quant_routes.py`
+  (`POST /api/quant/{fn}`), `quantjobs/` (job kinds), `quantlib/` (worker-only math), `kite/` + `kite_routes.py`.
+- **Gates after step 7:** 1205 pytest passed + 1 xfail (Phase 11 recording), ruff, tsc, vitest, 122 Playwright, all green. **Step 8 (docs and bench plumbing) added 5 bench budgets (24 -> 29); the bench has NOT been run yet:**
+  the user runs `node scripts/bench.mjs` once and fills the `measured` column of the "Phase 15 bench" table in `docs/PERFORMANCE.md`.
+- **Known limits, not verified live:** Kite is entirely unverified against a real key (login, REST, WebSocket decoder; fixtures are doc-shaped, run `scripts/record_phase15.py --kite` once a key exists);
+  Ken French and `ALPHA TOP100` live shapes are fixture-only; `CORR REGIME` with no list is answered by the server (the symbols of the `CORR` panel); Enter-opens-factor-formula in `ALPHA` is not built.
+  Details: `docs/DATA_LIMITS.md` "Phase 15 limits".
+- **Next action: Phase 16.** BEFORE starting it, ask the user to set the OpenRouter key in APIKEYS. Phases 17 and 18 stay paused. Fresh session, tests first; read `docs/ROADMAP_PHASES_11-19.md` "Phase 16".
+- **Usage rule:** Sonnet only, at most 2 agents with targeted tests only, one full gate per step, pause at 95% of the 5h window when the user asked for unattended work, else 60%.
 
 ## Resume here (2026-10-19, Phase 14 complete)
 - **Phase 14 is done and committed** (spec `docs/specs/PHASE_14.md`, steps 1-8). Functions: OMON PCR OV OSA OVDV SKEW HIVG, RATES upgrade (EUR GBP CAD JPY, NS fit,

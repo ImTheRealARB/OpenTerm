@@ -2,6 +2,15 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 15: risk, quant library, alphas, Kite
+- Added `RISK` (VaR / ES by history, normal and EVT, beta, drawdown, contributions, stress replays of 2008, 2020 and 2022 with COVERAGE, Kupiec / Christoffersen / Basel backtest),
+  `PORT OPT` (EQVOL, RP, MV, MAXDIV, HRP, TURN preview; `A` saves `<NAME>.OPT`, never edits the original), `PORT ATTR` (Brinson-Fachler plus TWR / MWR / Dietz / XIRR from a stored valuation table),
+  `FACT` (Fama-French 5 + momentum, keyless Ken French data), `QL` (GARCH, OU, cointegration, copula, microstructure, event study, deflated Sharpe), `ALPHA` (29-factor zoo scan: IC, IR, decay,
+  alive / reversed / dead, lookahead sentinel test) and `CORR REGIME` (edge density, fused / diffuse episodes).
+- The math is the new worker-only `quantlib` package ported from Vibe-Trading (MIT, `THIRD_PARTY.md`); every function runs as a job through `POST /api/quant/{fn}`. History accepts a `20Y` range of daily bars.
+- Added `KITE` (Zerodha Kite Connect), READ-ONLY: daily `KITE LOGIN`, status, Indian bars, NFO / MCX chains with OI (`OMON NIFTY.NFO R= Q=`), ticker decoder. Inert without your own key; no order surface exists.
+  Its fixtures are doc-shaped, NOT recordings.
+
 ## Phase 14: options, rates, futures
 - Added `OMON` (chain with Greeks, OI, volume), `PCR`, `OV` (Black-Scholes, binomial, Heston, barrier, IV solver) and `OSA` (multi-leg payoff, scenario
   grid, Greeks by leg), `OVDV` / `SKEW` (implied-vol surface, quadratic smile never extrapolated), `HIVG` (realised vs implied; IV30 is built from LOCAL

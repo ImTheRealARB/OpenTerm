@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+import uuid
 import zlib
 from pathlib import Path
 
@@ -58,9 +59,14 @@ class BtStore:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         path = self.data_dir / f"{sha}.msgpack"
         if not path.exists():
-            tmp = path.with_suffix(".tmp")
+            tmp = path.with_suffix(f".{uuid.uuid4().hex}.tmp")  # unique: concurrent writers of the same data must not share a temp file
             tmp.write_bytes(blob)
-            tmp.replace(path)
+            try:
+                tmp.replace(path)
+            except OSError:  # Windows: a concurrent writer of the same content just replaced it and still holds it open
+                tmp.unlink(missing_ok=True)
+                if not path.exists():
+                    raise
         else:
             path.touch()
         now = time.time()

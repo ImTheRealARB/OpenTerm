@@ -3,12 +3,13 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-All 10 phases are built and on `main`. **Phases 11-14 are done; work continues on branch `claude/openterm-phase-14-ec5824`** (worktree `.claude/worktrees/openterm-phase-14-ec5824`, not merged into `main`; remote `origin` = private GitHub repo ImTheRealARB/OpenTerm, pushed 2026-10-19). **Next: Phase 15** (plus a read-only Kite Connect data source, roadmap row `KITE`; a Kite session on `claude/angry-easley-fc2d86` was stopped with nothing committed, so build it fresh), to be built in a new session (possibly another account): HANDOFF.md "Resume here" has the next action and the approved scope (full Phases 12-19 minus paid-only data, roadmap defaults pre-approved, OpenRouter (DeepSeek) the only paid service). **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** One Phase 11 OpenRouter recording is still pending (needs the key). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+All 10 phases are built and on `main`. **Phases 11-15 are done; work continues on branch `claude/openterm-phase-15-65e1da`** (worktree `.claude/worktrees/openterm-phase-15-65e1da`, not merged into `main`; remote `origin` = private GitHub repo ImTheRealARB/OpenTerm, pushed 2026-10-19). **Next: Phase 16** (ask the user to set the OpenRouter key in APIKEYS first), to be built in a new session (possibly another account): HANDOFF.md "Resume here" has the next action and the approved scope (full Phases 12-19 minus paid-only data, roadmap defaults pre-approved, OpenRouter (DeepSeek) the only paid service). **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** One Phase 11 OpenRouter recording is still pending (needs the key). Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
-2026-10-19), subagents at most 2 at a time. **Phase 14 burned ~75% of a 5h window** (user furious): agents run only targeted tests, the main session runs the full gates once per step (output tail only), pause at 60% of the 5h window. If the same gate fails twice on the same problem, stop, write the state and
+2026-10-19). Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
+Pause at 95% of the 5-hour window when the user asked for unattended work, else at 60%. If the same gate fails twice on the same problem, stop, write the state and
 exact next action to HANDOFF.md, commit, and tell the user (they may switch to Opus for that one problem). When the
-5-hour or weekly plan window reaches 95%, stop all subagents, update HANDOFF.md so another account can resume, commit,
+5-hour or weekly plan window reaches the pause level, stop all subagents, update HANDOFF.md so another account can resume, commit,
 and pause.
 
 ## Non-negotiables (from the spec)
@@ -172,8 +173,17 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;
   Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs pytest, ruff, tsc, vitest, Playwright at once.
 - **`POST /api/bt/import` takes the CSV as the raw body;** `/api/history` is columnar (`data.t/o/h/l/c/v`), never `data.bars`. A stored symbol shadows a real ticker.
+- **`quantlib` is worker-only:** scipy, statsmodels and arch are imported only inside job kinds and tests, never by the server process (`test_server_never_imports_scipy` guards it).
+  `openterm/quant/` (Phase 14) stays pure Python.
+- **Phase 15 job pattern:** `POST /api/quant/{fn}` (`quant_routes.py`; fn = risk opt attr fact ql alpha regime) parses args, fetches bars (`_bars`), writes a content-addressed data file and submits an internal
+  job (`quantjobs/`: `risk.run opt.run attr.run fact.run ql.run alpha.scan corr.regime`); the job never touches the network and returns the Phase 13/14 table payload for `ResearchPanel`.
+  A repeat is a cache hit, so benches and tests vary a parameter. Kite lives in `kite/` + `kite_routes.py`.
+- **Kite is read-only with no order surface** (a test scans route paths, tools and module names for `order`, `gtt`, `margins`, holdings). Its `kite_*` fixtures are doc-shaped, NOT recordings;
+  the WebSocket ticker and the login flow have never run against a real key. Tokens last one trading day (`KITE LOGIN EXPIRED`).
+- **Yahoo `range=max` is monthly:** history needing daily bars back to 2006 uses `20Y` (`range=20y&interval=1d`). Yahoo's burst limit paces many-symbol fetches inside `_bars`.
+- **Bench Phase 15 budgets (5, server-side like BT):** RISK 20 names x 3Y <= 400 ms, PORT OPT HRP and RP 20 names <= 400 ms each, CORR REGIME 20 names <= 300 ms, ALPHA SYN 100 names x 2Y <= 8 s; total 29 with the older 24.
 
 ## Conventions
-- Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Commit only when the user says so. Remote `origin` is a private GitHub repo; push the working branch after each step.
+- Commits end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Commit only when the user says so. Remote `origin` is a private GitHub repo; push the working branch after each step.
 - LF line endings (`.gitattributes`), except `*.ps1`.
 - Tests never hit the network: record fixtures with real responses, and add a route in `providers/fixtures.py`.

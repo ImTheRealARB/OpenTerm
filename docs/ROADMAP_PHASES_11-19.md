@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phases 11, 12, 13 and 14 done; Phase 15 next, with a read-only Kite Connect source added; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source; Phase 16 next; Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
@@ -180,7 +180,9 @@ with and without its key (`KEY REQUIRED` path), bench unchanged.
 **Done when:** pricer tests match textbook values, surface fit tested on a recorded chain, e2e, bench budget
 for the surface render recorded.
 
-## Phase 15: Risk, quant library, alphas
+## Phase 15: Risk, quant library, alphas (DONE 2026-10-18)
+**Built** (spec `docs/specs/PHASE_15.md`, steps 1-8; bench budgets in `docs/PERFORMANCE.md`). Kite is built read-only; its fixtures are doc-shaped, a real recording is pending a key (`scripts/record_phase15.py --kite`). `ALPHA` ships 29 factors; the other ~450 of the 478 are not ported.
+
 | Function | What |
 |---|---|
 | `RISK` | Portfolio X-ray on `PORT`: VaR/ES (historical, parametric, EVT), beta, drawdown, tail risk, stress replays (2008, 2020, 2022) |

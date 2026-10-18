@@ -165,6 +165,68 @@ async function btBench() {
   return { coldMs, run: p95(runs), cached: p95(cached), big, bigNote };
 }
 
+/** Phase 15: RISK, PORT OPT, ALPHA and CORR REGIME on SYN names (fixture + synthetic mode), through POST /api/quant/{fn}.
+ * Like the BT budgets, the figure is server-side: `server-timing` of the POST (parse, cached bars, data file, submit) plus the job's own
+ * created_at -> finished_at, on warm workers. Every measured run uses a distinct parameter (conf, rf, edge, h) so none is a cache hit. */
+async function quantBench() {
+  const post = async (fn, body) => {
+    const res = await fetch(`${BACKEND}/api/quant/${fn}`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+    });
+    const serverMs = Number(/dur=([\d.]+)/.exec(res.headers.get("server-timing") ?? "")?.[1]);
+    const j = await res.json();
+    if (!res.ok) throw new Error(`quant ${fn} failed: ${j.error}${j.detail ? ` (${j.detail})` : ""}`);
+    return { j, serverMs };
+  };
+  const done = async (id) => {
+    for (let i = 0; i < 6000; i++) {
+      const j = await (await fetch(`${BACKEND}/api/jobs/${id}`)).json();
+      if (j.state === "done") return j;
+      if (j.state === "error" || j.state === "cancelled") throw new Error(`quant job ended ${j.state}: ${j.error}`);
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error("quant job did not finish in time");
+  };
+  const one = async (fn, body) => {
+    const { j, serverMs } = await post(fn, body);
+    if (j.cached) throw new Error(`quant ${fn} run was served from the cache; the bench needs a distinct parameter`);
+    const d = await done(j.id);
+    if (d.result?.data?.not_runnable || d.result?.not_runnable) throw new Error(`quant ${fn} NOT RUNNABLE`);
+    return serverMs + (d.finished_at - d.created_at) * 1000;
+  };
+  const syn = (n) => Array.from({ length: n }, (_, i) => `SYN${String(i).padStart(4, "0")}`);
+  const put = await fetch(`${BACKEND}/api/portfolios/BENCH15`, {
+    method: "PUT", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ positions: syn(20).map((symbol, i) => ({ symbol, qty: 10 + i, cost: 100 })) }),
+  });
+  if (!put.ok) throw new Error(`could not create the bench portfolio: ${put.status}`);
+  const pf = "BENCH15";
+  const risk = (i) => ({ portfolio: pf, range: "3Y", bench: "SYN0001", conf: 90 + i * 0.05 });
+  const opt = (method, i) => ({ portfolio: pf, method, lookback: 252, rf: i * 0.0005 });
+  const regime = (i) => ({ symbols: syn(20), win: 60, edge: 0.3 + i * 0.01, range: "2Y" });
+
+  // Warm every worker (each imports pandas and scipy on its first job) and the bar cache: concurrent distinct runs of each kind.
+  for (let k = 0; k < 2; k++) {
+    const js = await Promise.all([0, 1, 2, 3].map((i) => post("risk", risk(100 + k * 4 + i))));
+    await Promise.all(js.map((x) => done(x.j.id)));
+    const os = await Promise.all([0, 1, 2, 3].map((i) => post("opt", opt(i % 2 ? "HRP" : "RP", 100 + k * 4 + i))));
+    await Promise.all(os.map((x) => done(x.j.id)));
+    const rs = await Promise.all([0, 1, 2, 3].map((i) => post("regime", regime(50 + k * 4 + i))));
+    await Promise.all(rs.map((x) => done(x.j.id)));
+  }
+  const riskRuns = [], hrpRuns = [], rpRuns = [], regimeRuns = [];
+  for (let i = 0; i < 12; i++) riskRuns.push(await one("risk", risk(i)));
+  for (let i = 0; i < 12; i++) hrpRuns.push(await one("opt", opt("HRP", i)));
+  for (let i = 0; i < 12; i++) rpRuns.push(await one("opt", opt("RP", i)));
+  for (let i = 0; i < 12; i++) regimeRuns.push(await one("regime", regime(i)));
+  // ALPHA: SYN 100 names x 2 years, all families. One warm-up run (bar fetch), then 3 runs with distinct horizons.
+  const alpha = (h) => ({ universe: "SYN", range: "2Y", h });
+  await one("alpha", alpha("1,5,10,20,40"));
+  const alphaRuns = [];
+  for (const h of ["1,5,10,20", "1,5,10", "1,5,20"]) alphaRuns.push(await one("alpha", alpha(h)));
+  return { risk: p95(riskRuns), hrp: p95(hrpRuns), rp: p95(rpRuns), regime: p95(regimeRuns), alpha: p95(alphaRuns), alphaN: alphaRuns.length };
+}
+
 async function freshPage(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
   const page = await ctx.newPage();
@@ -383,6 +445,7 @@ async function main() {
 
   const jobs = await jobsBench(); // warms the worker pool before the browser section G
   const bt = await btBench(); // caches the runs section H opens
+  const q15 = await quantBench(); // Phase 15: server-side job times, before the browser sections
 
   const r = await browserBench();
   const { a, stream: st } = r;
@@ -418,6 +481,12 @@ async function main() {
   add("BT result open to first paint p95", bo.n ? bo.p95 : null, 100, "ms", `cached run; n=${bo.n}; p50 ${bo.p50?.toFixed(1)}; last: post ${g("bt.postMs")} get ${g("bt.getMs")} render ${g("bt.renderMs")} ms`);
   add("BT first run, cold worker (pandas import)", bt.coldMs, null, "ms", "measured, not gated");
   add("BT 100 symbols x 10 years", bt.big, null, "ms", bt.bigNote);
+  // Phase 15 (spec decision M): server-side like the BT budgets (POST server-timing + job created->finished, warm workers).
+  add("RISK 20 names x 3 years p95, server-side", q15.risk, 400, "ms", "POST /api/quant/risk + job, warm, SYN0000-SYN0019, n=12");
+  add("PORT OPT HRP 20 names p95, server-side", q15.hrp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
+  add("PORT OPT RP 20 names p95, server-side", q15.rp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
+  add("CORR REGIME 20 names x 2 years p95, server-side", q15.regime, 300, "ms", "POST /api/quant/regime + job, warm, n=12");
+  add("ALPHA SYN 100 names x 2 years, server-side", q15.alpha, 8000, "ms", `POST /api/quant/alpha + job, all 29 factors, warm; n=${q15.alphaN} (p95 = slowest)`);
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");
