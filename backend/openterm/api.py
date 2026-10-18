@@ -251,6 +251,16 @@ async def valuation(request: Request, fn: str, symbol: str | None = Query(None, 
         return error(e)
 
 
+# --- Phase 14: options, rates, futures (OMON, PCR, OV, OVDV, SKEW, HIVG, OSA, YAS, SWPM, CDSW, FXFA, WIRP, CT, COT, RATES views) ---
+@router.get("/deriv/{fn}")
+async def deriv(request: Request, fn: str):
+    try:
+        params = {k.lower(): v for k, v in request.query_params.items()}
+        return await svc(request).derivs.run(fn, **params)
+    except DataError as e:
+        return error(e)
+
+
 # --- Phase 9: screener (EQS) and peers (COMP) ---
 @router.get("/screener")
 async def screener(request: Request):

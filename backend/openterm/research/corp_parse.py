@@ -71,15 +71,17 @@ def nasdaq_short_interest(body: dict, source: str) -> dict:
 def keystats_values(summary: dict) -> dict:
     """Short-interest and share-count fields from Yahoo defaultKeyStatistics (all optional)."""
     ks = summary.get("defaultKeyStatistics") or {}
+    sd = summary.get("summaryDetail") or {}
 
-    def raw(k: str) -> Any:
-        v = ks.get(k)
+    def raw(k: str, src: dict = ks) -> Any:
+        v = src.get(k)
         return v.get("raw") if isinstance(v, dict) else v
 
     return {"shares_short": raw("sharesShort"), "short_ratio": raw("shortRatio"), "short_pct_float": raw("shortPercentOfFloat"),
             "float_shares": raw("floatShares"), "date": iso_date(raw("dateShortInterest")),
             "prior_shares": raw("sharesShortPriorMonth"), "prior_date": iso_date(raw("sharesShortPreviousMonthDate")),
-            "beta": raw("beta"), "shares_outstanding": raw("sharesOutstanding")}
+            "beta": raw("beta"), "shares_outstanding": raw("sharesOutstanding"),
+            "dividend_yield": raw("trailingAnnualDividendYield", sd)}
 
 
 def yahoo_short_interest(summary: dict, source: str) -> dict:

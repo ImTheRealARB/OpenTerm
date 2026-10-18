@@ -753,6 +753,12 @@ export const researchApi = {
     request<Envelope<TablePayload>>(`/api/research/${fn}?${qs(params)}`, fresh ? 0 : 120_000),
   valuation: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
     request<Envelope<TablePayload>>(`/api/valuation/${fn}?${qs(params)}`, fresh ? 0 : 30_000),
+  /** Phase 14: options, rates, futures (OMON, OV, OSA, YAS, CT, COT, ...). */
+  deriv: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
+    request<Envelope<TablePayload>>(`/api/deriv/${fn}?${qs(params)}`, fresh ? 0 : 60_000),
+  /** Phase 14: non-US curves, credit spreads and auctions (RATES views). */
+  rates: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
+    request<Envelope<TablePayload>>(`/api/rates/${fn}?${qs(params)}`, fresh ? 0 : 60_000),
 };
 
 // Phase 13 step 6: news keyword alerts (ALRT NEWS WORD [SYM]); stored by the backend, evaluated here on each news refresh.

@@ -3,8 +3,9 @@
  * Pure (no window), so it is unit-tested. Cells never invent a value: null prints as a dash.
  */
 import type { CellColor, Column } from "../components/Grid";
+import type { ChartPayload, HeatPayload } from "./chartMath";
 
-export type Kind = "text" | "int" | "num" | "pct" | "money" | "price" | "date";
+export type Kind = "text" | "int" | "num" | "num4" | "pct" | "bp" | "money" | "price" | "date";
 
 export interface TableColumn {
   key: string;
@@ -38,8 +39,11 @@ export interface TablePayload {
   notes: string[];
   key_required: { key: string; what: string }[];
   source: string | null;
-  /** Valuation functions: `RUNNABLE` or `NOT RUNNABLE: ...` (a missing input stops the model). */
+  /** Valuation and calculator functions: `RUNNABLE` or `NOT RUNNABLE: ...` (a missing input stops the model). */
   status?: string;
+  /** Phase 14: numeric-axis charts and a heat map drawn under the table (C cycles them). */
+  charts?: ChartPayload[];
+  heat?: HeatPayload;
 }
 
 const DASH = "—";
@@ -67,6 +71,10 @@ export function cellText(kind: Kind, v: unknown): string {
       return grouped(v, 0);
     case "num":
       return grouped(v, 2);
+    case "num4":
+      return grouped(v, 4);
+    case "bp":
+      return (v > 0 ? "+" : "") + v.toFixed(1);
     case "price":
       return grouped(v, Math.abs(v) >= 1 ? 2 : 4);
     case "money":
@@ -76,11 +84,13 @@ export function cellText(kind: Kind, v: unknown): string {
   }
 }
 
-const SIGNED_KEY = /growth|change|surprise|upside|diff|chg/i;
+const SIGNED_KEY = /growth|change|surprise|upside|diff|chg|^d\d|^rr|roll|points|vrp/i;
 
 /** Colour carries meaning: only change-like percentage and number columns are signed. */
 export function cellColor(col: TableColumn, v: unknown): CellColor {
-  if (typeof v === "number" && (col.kind === "pct" || col.kind === "num") && SIGNED_KEY.test(col.key)) return v > 0 ? "up" : v < 0 ? "down" : "fg";
+  if (typeof v === "number" && (col.kind === "pct" || col.kind === "num" || col.kind === "bp") && SIGNED_KEY.test(col.key)) {
+    return v > 0 ? "up" : v < 0 ? "down" : "fg";
+  }
   if (col.kind === "date") return "dim";
   return "fg";
 }

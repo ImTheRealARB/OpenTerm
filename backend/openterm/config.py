@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     openterm_synthetic_tps: float = 20.0
 
     finnhub_api_key: str = ""
+    tradier_token: str = ""
     twelvedata_api_key: str = ""
     alphavantage_api_key: str = ""
     fred_api_key: str = ""

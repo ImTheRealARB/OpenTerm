@@ -138,3 +138,9 @@ from .alpaca import AlpacaProvider
 from .finnhub import FinnhubProvider
 
 ADAPTERS.update({"finnhub": FinnhubProvider, "alpaca": AlpacaProvider})
+
+# --- Phase 14: options (Yahoo chains; Tradier sandbox is a keyed fallback, inert without a token) ---
+from .options_yahoo import YahooOptionsProvider
+from .tradier import TradierProvider
+
+ADAPTERS.update({"yahoo_options": YahooOptionsProvider, "tradier": TradierProvider})

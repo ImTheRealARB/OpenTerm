@@ -24,8 +24,8 @@ def xf(group: str, step: int):
     return pytest.mark.xfail(strict=True, reason=f"Phase 14 step {step}: {group}")
 
 
-OPT = xf("options chain", 3)
-PRICER = xf("pricer and payoff", 4)
+OPT = lambda f: f  # step 3 landed
+PRICER = lambda f: f  # step 4 landed
 SURF = xf("surface", 5)
 RATES = xf("rates and calculators", 6)
 FUT = xf("futures and policy", 7)
@@ -139,7 +139,7 @@ def test_omon_selected_expiry_and_unknown_expiry(client):
     assert headline(d, "EXPIRY")["value"] == exp_date(EXPIRIES[3])
     assert headline(d, "T (YEARS)")["raw"] == pytest.approx(years_to(EXPIRIES[3]), abs=1e-9)
     r = client.get("/api/deriv/omon", params={"symbol": "AAPL", "date": "2026-10-20"})
-    assert r.status_code == 400 and "EXPIR" in r.json()["message"].upper()
+    assert r.status_code == 400 and "EXPIR" in r.json()["error"].upper()
     assert client.get("/api/deriv/omon", params={"symbol": "ZZZZNOPE"}).status_code == 404
 
 
@@ -195,7 +195,7 @@ def test_pcr_totals_match_the_recorded_chains(client):
 
 # --- PRICER: OV, OSA --------------------------------------------------------------------------------------------------
 
-OV_ARGS = {"symbol": "AAPL", "K": "350", "EXP": exp_date(EXPIRIES[3]), "TYPE": "C", "IV": "0.27"}
+OV_ARGS = {"symbol": "AAPL", "K": "350", "EXP": exp_date(EXPIRIES[3]), "TYPE": "C", "IV": "27"}   # IV, R, Q are typed in percent
 
 
 @PRICER
@@ -262,7 +262,7 @@ def test_ov_heston_and_barrier_run_only_with_their_inputs(client):
     assert models["HESTON"]["price"] == pytest.approx(models["BS"]["price"], rel=0.15)
 
 
-OSA_SPREAD = {"symbol": "AAPL", "LEGS": "+1C270@5,-1C290@2", "EXP": exp_date(EXPIRIES[3]), "IV": "0.25", "MULT": "100"}
+OSA_SPREAD = {"symbol": "AAPL", "LEGS": "+1C270@5,-1C290@2", "EXP": exp_date(EXPIRIES[3]), "IV": "25", "MULT": "100"}
 
 
 @PRICER
@@ -281,7 +281,7 @@ def test_osa_bull_call_spread_with_explicit_premiums(client):
 
 @PRICER
 def test_osa_strategy_shortcut_prices_legs_with_black_scholes(client):
-    d = data(client, "deriv/osa", symbol="AAPL", STRAT="BULLCALL,270,290", EXP=exp_date(EXPIRIES[3]), IV="0.25", MULT="100")
+    d = data(client, "deriv/osa", symbol="AAPL", STRAT="BULLCALL,270,290", EXP=exp_date(EXPIRIES[3]), IV="25", MULT="100")
     legs = section(d, "legs")["rows"]
     inputs = {r["name"]: r for r in section(d, "inputs")["rows"]}
     T = years_to(EXPIRIES[3])
@@ -295,8 +295,8 @@ def test_osa_strategy_shortcut_prices_legs_with_black_scholes(client):
 def test_osa_missing_inputs_are_not_runnable(client):
     d = data(client, "deriv/osa", symbol="AAPL", LEGS="+1C270")
     assert d["data"]["status"].startswith("NOT RUNNABLE") and "EXP" in d["data"]["status"] and "IV" in d["data"]["status"]
-    bad = client.get("/api/deriv/osa", params={"symbol": "AAPL", "LEGS": "+1X270", "EXP": "2026-12-18", "IV": "0.2"})
-    assert bad.status_code == 400 and "LEG" in bad.json()["message"].upper()
+    bad = client.get("/api/deriv/osa", params={"symbol": "AAPL", "LEGS": "+1X270", "EXP": "2026-12-18", "IV": "20"})
+    assert bad.status_code == 400 and "LEG" in bad.json()["error"].upper()
 
 
 # --- SURF: OVDV, SKEW, HIVG -------------------------------------------------------------------------------------------
@@ -595,7 +595,7 @@ def test_ct_other_roots_and_unknown_root(client):
     es = section(data(client, "deriv/ct", root="ES"), "contracts")["rows"]
     assert [r["contract"] for r in es] == ["DEC 2026", "MAR 2027", "JUN 2027", "SEP 2027"]
     r = client.get("/api/deriv/ct", params={"root": "QQQQ"})
-    assert r.status_code == 400 and "CL" in r.json()["message"]
+    assert r.status_code == 400 and "CL" in r.json()["error"]
 
 
 def fomc_dates() -> list[str]:

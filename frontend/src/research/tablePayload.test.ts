@@ -3,7 +3,7 @@ import { cellColor, cellText, gridColumns, keyValueArgs, type TableColumn, type 
 
 describe("cellText", () => {
   it("prints null as a dash and never invents a value", () => {
-    for (const k of ["text", "int", "num", "pct", "money", "price", "date"] as const) expect(cellText(k, null)).toBe("—");
+    for (const k of ["text", "int", "num", "num4", "pct", "bp", "money", "price", "date"] as const) expect(cellText(k, null)).toBe("—");
     expect(cellText("num", Number.NaN)).toBe("—");
     expect(cellText("num", "abc")).toBe("—");
   });
@@ -17,6 +17,9 @@ describe("cellText", () => {
     expect(cellText("pct", 0.0452)).toBe("+4.52%");
     expect(cellText("pct", -0.041)).toBe("-4.10%");
     expect(cellText("date", "2026-10-12")).toBe("2026-10-12");
+    expect(cellText("num4", 0.01234)).toBe("0.0123");
+    expect(cellText("bp", 12.34)).toBe("+12.3");
+    expect(cellText("bp", -3)).toBe("-3.0");
   });
 });
 

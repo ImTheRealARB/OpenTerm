@@ -320,3 +320,33 @@ def _route(request: httpx.Request) -> httpx.Response:
             return _load(name)
         return httpx.Response(200, json=[] if host == "finnhub.io" else {"news": [], "next_page_token": None})
     return _route_before_keyed(request)
+
+# --- Phase 14: options, rates, futures (recorded 2026-10-18 by scripts/record_phase14.py) ---
+# yahoo_options_aapl_<expiry epoch>: the eight expiries pick_expiries chooses, strikes trimmed to 65%..135% of spot. Any other symbol
+# or expiry is a 404 (never invented). Tradier fixtures are DOC-SHAPED (marked in each file): no sandbox token was available.
+OPTION_NEAREST = "1792368000"
+_route_before_phase14 = _route
+
+
+def _route_phase14(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if p.startswith("/v7/finance/options/"):
+        name = f"yahoo_options_aapl_{q.get('date') or OPTION_NEAREST}"
+        if p.endswith("/AAPL") and (FIXTURES / f"{name}.json").exists():
+            return _load(name)
+        return httpx.Response(404, json={"optionChain": {"result": None, "error": {"code": "Not Found"}}})
+    if host == "sandbox.tradier.com":
+        if not request.headers.get("authorization", "").startswith("Bearer ") or len(request.headers["authorization"]) < 12:
+            return httpx.Response(401, json={"fault": {"faultstring": "Invalid Access Token"}})
+        if p == "/v1/markets/options/expirations" and q.get("symbol") == "AAPL":
+            return _load("tradier_expirations_aapl")
+        if p == "/v1/markets/options/chains" and q.get("symbol") == "AAPL" and q.get("expiration") == "2026-12-18":
+            return _load("tradier_chain_aapl_2026-12-18")
+        if p == "/v1/markets/quotes" and q.get("symbols") == "AAPL":
+            return _load("tradier_quote_aapl")
+        return httpx.Response(404, text="not recorded")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_phase14(request) or _route_before_phase14(request)

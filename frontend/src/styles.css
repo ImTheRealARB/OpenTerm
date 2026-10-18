@@ -97,6 +97,10 @@ h2 { font-size: inherit; font-weight: bold; color: var(--fg); margin: 4px 0 2px;
 /* Canvas grid fills the rest of its panel */
 .fn { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .fn > .grid { flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+/* Phase 14: chart or heat map under a table */
+.fn > .vis { flex: 0 0 40%; min-height: 120px; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.vis .xychart, .vis .heatmap { flex: 1 1 auto; min-height: 0; position: relative; }
+.vis canvas { display: block; }
 .grid canvas { display: block; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tabs { display: flex; gap: 12px; flex: none; }
