@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attrArgs, factArgs, optArgs, qlArgs, quantBody, riskArgs } from "./quantArgs";
+import { alphaArgs, attrArgs, factArgs, optArgs, qlArgs, quantBody, regimeArgs, riskArgs } from "./quantArgs";
 
 /*
  * Phase 15 step 1 (spec docs/specs/PHASE_15.md): command-line parsers for RISK, PORT OPT, PORT ATTR, FACT, QL, ALPHA, CORR REGIME and KITE,
@@ -68,8 +68,7 @@ describe("qlArgs", () => {
 });
 
 describe("alphaArgs", () => {
-  it.fails("universe, range, family and horizons", async () => {
-    const { alphaArgs } = await load();
+  it("universe, range, family and horizons", () => {
     expect(alphaArgs(["universe=syn", "range=2y", "family=alpha101", "h=1,5,10"]).params).toEqual({ universe: "SYN", range: "2y", family: "alpha101", h: "1,5,10" });
     expect(alphaArgs(["universe=wl:tech"]).params).toEqual({ universe: "WL:TECH" });
     expect(alphaArgs(["universe=list:aapl,msft,nvda"]).params).toEqual({ universe: "LIST:AAPL,MSFT,NVDA" });
@@ -78,8 +77,7 @@ describe("alphaArgs", () => {
 });
 
 describe("regimeArgs", () => {
-  it.fails("a list, a window and an edge threshold", async () => {
-    const { regimeArgs } = await load();
+  it("a list, a window and an edge threshold", () => {
     expect(regimeArgs(["wl:tech", "win=60", "edge=0.5"])).toEqual({ params: { list: "WL:TECH", win: "60", edge: "0.5" }, bad: [] });
     expect(regimeArgs([])).toEqual({ params: {}, bad: [] });
   });

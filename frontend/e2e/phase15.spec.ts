@@ -170,7 +170,6 @@ test.describe("Phase 15", () => {
   });
 
   test("ALPHA: progress while the scan runs, then the zoo table with labels and the decay chart", async ({ page }) => {
-    test.fail();
     await setup(page);
     let polls = 0;
     await mockQuant(page, "alpha", () => job(null, { state: "running", progress: 0.4, msg: "factor 10/24", kind: "alpha.scan" }));
@@ -192,7 +191,6 @@ test.describe("Phase 15", () => {
   });
 
   test("CORR REGIME: state, episodes, and the list go to the job", async ({ page }) => {
-    test.fail();
     await setup(page);
     await mockQuant(page, "regime", () => job(env(payload("CORR REGIME", [{ id: "episodes", title: "EPISODES", note: null, columns: [c("state", "STATE"), c("start", "START", "date"), c("end", "END", "date"), c("bars", "BARS", "int")], rows: [
       { state: "DIFFUSE", start: "2025-01-02", end: "2025-06-30", bars: 120 }, { state: "FUSED", start: "2025-07-01", end: "2026-10-16", bars: 330 }] }],

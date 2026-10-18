@@ -20,12 +20,12 @@ from .quantjobs import sectors as sx
 from .ranges import normalize
 from .responses import Orjson
 from .service import DataError
-from .symbols import resolve
+from .symbols import SYNTHETIC_RE, resolve
 from .userdata import UserDataError
 
 router = APIRouter(prefix="/api")
 
-LIVE = ("risk", "opt", "attr", "fact", "ql")  # alpha, regime answer 404 until their build steps land
+LIVE = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")
 KNOWN = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")
 QL_CALCS = ("GARCH", "OU", "COINT", "HEDGE", "COPULA", "ROLL", "AMIHUD", "KYLE", "VPIN", "EVENT", "DSR", "ADF", "HVAR")
 QL_PAIR = ("COINT", "HEDGE", "COPULA")
@@ -89,7 +89,8 @@ async def _bars(request: Request, symbols: list[str], range_: str, tolerate: boo
     gate = asyncio.Semaphore(4)  # Yahoo's bucket is 4 requests/s: a wider burst trips its breaker, so a rate-limited call waits and retries
 
     async def one(sym: str, i: int) -> dict:
-        await asyncio.sleep(max(0, i - 5) * 0.26)  # past the burst of 8, stay under 4 requests/s (a 429 opens the breaker for 5 s)
+        if not SYNTHETIC_RE.match(sym):  # synthetic bars never touch the network: no pacing
+            await asyncio.sleep(max(0, i - 5) * 0.26)  # past the burst of 8, stay under 4 requests/s (a 429 opens the breaker for 5 s)
         async with gate:
             for attempt in range(4):
                 try:
@@ -433,8 +434,115 @@ async def build_ql(request: Request, body: dict) -> dict:
     return params
 
 
+# --- ALPHA / CORR REGIME ------------------------------------------------------------------------------------------------------------
+ALPHA_FAMILIES = ("alpha101", "qlib158", "academic")
+MAX_REGIME = 50
+TOP_N = 100
+
+
+def _symbol_list(raw: str) -> list[str]:
+    out = list(dict.fromkeys(resolve(x.strip().upper()) for x in raw.split(",") if x.strip()))
+    if not all(re.match(r"^[A-Z0-9.^=\-]{1,20}$", x) for x in out):
+        raise _bad("BAD SYMBOL IN LIST")
+    return out
+
+
+async def _named_list(request: Request, spec: str) -> tuple[str, list[str]]:
+    """`WL:<name>` (a stored watchlist) or `LIST:A,B,C` -> (canonical spec, symbols)."""
+    up = spec.strip()
+    if up.upper().startswith("WL:"):
+        wl = await user(request).watchlist(up[3:])
+        return f"WL:{wl['name']}", list(wl["symbols"])
+    if up.upper().startswith("LIST:"):
+        syms = _symbol_list(up[5:])
+        return "LIST:" + ",".join(syms), syms
+    raise _bad("LIST MUST BE WL:<NAME> OR LIST:A,B,C")
+
+
+async def _top100(request: Request) -> list[str]:
+    try:
+        uni = (await svc(request).screener())["data"]
+    except DataError as e:
+        raise DataError(e.kind, f"TOP100 NEEDS THE SCREENER: {e}", getattr(e, "detail", None)) from None
+    i = uni["columns"].index("mcap")
+    rows = [r for r in uni["rows"] if r[i] and re.match(r"^[A-Z]{1,5}$", r[0])]
+    return [r[0] for r in sorted(rows, key=lambda r: -r[i])[:TOP_N]]
+
+
+def _horizons(body: dict) -> list[int]:
+    raw = body.get("h")
+    if raw in (None, ""):
+        return [1, 5, 10, 20]
+    parts = raw if isinstance(raw, list) else [raw] if isinstance(raw, int | float) else str(raw).split(",")
+    try:
+        hs = sorted({int(str(x).strip()) for x in parts})
+    except ValueError:
+        raise _bad("H MUST BE WHOLE NUMBERS LIKE 1,5,10,20") from None
+    if not hs or len(hs) > 8 or hs[0] < 1 or hs[-1] > 60:
+        raise _bad("H MUST BE 1 TO 8 HORIZONS OF 1-60 DAYS")
+    return hs
+
+
+async def build_alpha(request: Request, body: dict) -> dict:
+    spec = str(body.get("universe") or "TOP100").strip()
+    fam = str(body.get("family") or "").strip().lower()
+    if fam in ("", "all"):
+        fam = None
+    elif fam not in ALPHA_FAMILIES:
+        raise _bad(f"FAMILY MUST BE {', '.join(f.upper() for f in ALPHA_FAMILIES)} OR ALL")
+    hs = _horizons(body)
+    range_ = _range(body, "2Y")
+    kind = spec.upper()
+    synthetic = kind == "SYN"
+    if kind == "TOP100":
+        universe, syms = "TOP100", await _top100(request)
+    elif synthetic:
+        universe, syms = "SYN", [f"SYN{i:04d}" for i in range(100)]
+    elif kind.startswith(("WL:", "LIST:")):
+        universe, syms = await _named_list(request, spec)
+    else:
+        raise _bad("UNIVERSE MUST BE TOP100, SYN, WL:<NAME> OR LIST:A,B,C")
+    if len(syms) < 5:
+        raise _bad(f"A CROSS-SECTION NEEDS AT LEAST 5 NAMES, {universe} HAS {len(syms)}")
+    if len(syms) > 150:
+        raise _bad("AT MOST 150 NAMES")
+    envs, bad = await _bars(request, syms, range_, tolerate=True)
+    if len(envs) < 5:
+        why = next(iter(bad.values()), None)
+        return {"not_runnable": f"NOT RUNNABLE: ONLY {len(envs)} OF {len(syms)} NAMES HAVE BARS" + (f" ({why})" if why else "")}
+    keep = ("t", "o", "h", "l", "c", "v")
+    sha, path = await _stored(request, {"bars": {s: {k: e["data"].get(k) for k in keep} for s, e in envs.items()}})
+    return {"universe": universe, "symbols": list(envs), "range": range_, "family": fam, "h": hs, "failed": sorted(bad), "synthetic": synthetic,
+            "data_path": path, "data_sha": sha, "labels": _labels(request, envs)}
+
+
+async def build_regime(request: Request, body: dict) -> dict:
+    win = _num(body, "win", 2, 500, 60, integer=True)
+    edge = _num(body, "edge", 0, 1, 0.5)
+    range_ = _range(body, "2Y")
+    lst = body.get("list")
+    if lst not in (None, ""):
+        if not isinstance(lst, str):
+            raise _bad("LIST MUST BE WL:<NAME> OR LIST:A,B,C")
+        _, syms = await _named_list(request, lst)
+    else:
+        raw = body.get("symbols")
+        if isinstance(raw, str):
+            raw = raw.split(",")
+        if not isinstance(raw, list) or not all(isinstance(x, str) and x.strip() for x in raw):
+            raise _bad("SYMBOLS MUST BE A LIST OF AT LEAST 2 SYMBOLS (OR USE list)")
+        syms = list(dict.fromkeys(resolve(x.strip().upper()) for x in raw))
+    if len(syms) < 2:
+        raise _bad("A CORRELATION REGIME NEEDS AT LEAST 2 SYMBOLS")
+    if len(syms) > MAX_REGIME:
+        raise _bad(f"AT MOST {MAX_REGIME} SYMBOLS")
+    envs, _ = await _bars(request, syms, range_)
+    sha, path = await _stored(request, {"bars": {s: _slim(e) for s, e in envs.items()}})
+    return {"symbols": syms, "win": win, "edge": edge, "range": range_, "data_path": path, "data_sha": sha, "labels": _labels(request, envs)}
+
+
 BUILD = {"risk": ("risk.run", build_risk), "opt": ("opt.run", build_opt), "attr": ("attr.run", build_attr), "fact": ("fact.run", build_fact),
-         "ql": ("ql.run", build_ql)}
+         "ql": ("ql.run", build_ql), "alpha": ("alpha.scan", build_alpha), "regime": ("corr.regime", build_regime)}
 
 
 @router.post("/quant/{fn}")

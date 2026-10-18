@@ -34,8 +34,8 @@ OPT = lambda f: f  # step 3 landed
 ATTR = lambda f: f  # step 3 landed
 FACT = lambda f: f  # step 4 landed
 QL = lambda f: f  # step 4 landed
-ALPHA = xf("ALPHA", 5)
-REGIME = xf("CORR REGIME", 5)
+ALPHA = lambda f: f  # step 5 landed
+REGIME = lambda f: f  # step 5 landed
 PLUMB = lambda f: f  # step 3 landed
 
 SYN = ["SYN0001", "SYN0002", "SYN0003"]

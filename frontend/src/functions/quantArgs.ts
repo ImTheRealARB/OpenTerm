@@ -93,6 +93,43 @@ export function factArgs(args: string[]): Parsed {
   return { params, bad };
 }
 
+const UNIVERSE_WORD = /^(TOP100|SYN|WL:[A-Za-z0-9_.-]{1,40}|LIST:[A-Za-z0-9^._,-]{1,400})$/i;
+const NUMLIST = /^-?\d+(\.\d+)?(,-?\d+(\.\d+)?)*$/;
+
+/** ALPHA: `[UNIVERSE=TOP100|SYN|WL:<NAME>|LIST:A,B,C] [RANGE=2y] [FAMILY=..] [H=1,5,10,20]`; a bare universe word is also accepted. */
+export function alphaArgs(args: string[]): Parsed {
+  const params: Record<string, string> = {};
+  const bad: string[] = [];
+  for (const raw of args) {
+    const i = raw.indexOf("=");
+    const k = i < 0 ? "universe" : raw.slice(0, i).toLowerCase();
+    const v = i < 0 ? raw : raw.slice(i + 1);
+    if (!v) bad.push(raw);
+    else if (k === "universe" && UNIVERSE_WORD.test(v) && !params.universe) params.universe = v.toUpperCase();
+    else if (k === "range" && i >= 0) params.range = v.toLowerCase();
+    else if (k === "family" && i >= 0 && NAME.test(v)) params.family = v;
+    else if (k === "h" && i >= 0 && NUMLIST.test(v)) params.h = v;
+    else bad.push(raw);
+  }
+  return { params, bad };
+}
+
+/** CORR REGIME: `[WL:<NAME>|LIST:A,B,C] [WIN=60] [EDGE=0.5]`. */
+export function regimeArgs(args: string[]): Parsed {
+  const params: Record<string, string> = {};
+  const bad: string[] = [];
+  for (const raw of args) {
+    const i = raw.indexOf("=");
+    const k = i < 0 ? "list" : raw.slice(0, i).toLowerCase();
+    const v = i < 0 ? raw : raw.slice(i + 1);
+    if (!v) bad.push(raw);
+    else if (k === "list" && /^(WL|LIST):/i.test(v) && UNIVERSE_WORD.test(v) && !params.list) params.list = v.toUpperCase();
+    else if ((k === "win" || k === "edge") && i >= 0 && NUM.test(v)) params[k] = v;
+    else bad.push(raw);
+  }
+  return { params, bad };
+}
+
 export const QL_CALCS = ["GARCH", "OU", "COINT", "HEDGE", "COPULA", "ROLL", "AMIHUD", "KYLE", "VPIN", "EVENT", "DSR", "ADF", "HVAR"];
 
 export interface QlParsed {

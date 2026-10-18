@@ -48,6 +48,11 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
     fnOverride = args[0].toUpperCase();
     args = args.slice(1);
   }
+  // Phase 15: CORR REGIME is the REGIME panel; every other CORR argument stays with the CORR panel.
+  if (parsed.fn === "CORR" && args[0]?.toUpperCase() === "REGIME") {
+    fnOverride = "REGIME";
+    args = args.slice(1);
+  }
   if (parsed.fn === "WL") {
     const act = parseWl(args, parsed.security);
     if (act.kind === "error") return fail(act.message);

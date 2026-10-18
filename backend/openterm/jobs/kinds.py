@@ -157,7 +157,10 @@ QUANT_KEYS = {
     "fact.run": {"name", "base", "symbol", "positions", "range", "mixed_ccy", "non_us", "factor_label"},
     "ql.run": {"calc", "symbols", "range", "h", "hor", "conf", "buckets", "date", "bench", "win", "est", "sr", "n", "t", "skew", "kurt",
                "trial_sr_std"},
+    "alpha.scan": {"universe", "symbols", "range", "family", "h", "failed", "synthetic"},
+    "corr.regime": {"symbols", "win", "edge", "range"},
 }
+QUANT_FN = {"alpha.scan": "alpha", "corr.regime": "regime"}
 NEEDS_POSITIONS = {"risk.run", "opt.run", "attr.run"}
 QUANT_COMMON = {"data_path", "data_sha", "labels", "not_runnable"}
 
@@ -165,7 +168,7 @@ QUANT_COMMON = {"data_path", "data_sha", "labels", "not_runnable"}
 def validate_quant(kind: str):
     def validate(params: dict) -> dict:
         if not isinstance(params, dict) or set(params) - QUANT_KEYS[kind] - QUANT_COMMON:
-            raise BadParams(f"{kind.upper()} PARAMS ARE BUILT BY /api/quant/{kind.split('.')[0]}")
+            raise BadParams(f"{kind.upper()} PARAMS ARE BUILT BY /api/quant/{QUANT_FN.get(kind, kind.split('.')[0])}")
         needs = {"data_path", "data_sha"} | ({"positions"} if kind in NEEDS_POSITIONS else set())
         if kind == "ql.run" and params.get("calc") == "DSR":
             needs = set()  # the deflated Sharpe is closed form: no bars
@@ -206,8 +209,20 @@ def ql_job(params: dict, progress: Callable[[float, str], None]) -> dict:
     return run(params, progress)
 
 
-def _quant_kind(name: str, label: str, fn) -> Kind:
-    return Kind(name, "1", label, fn, validate_quant(name), internal=True, fingerprint=lambda p: p.get("data_sha", ""),
+def alpha_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..quantjobs.alpha import run
+
+    return run(params, progress)
+
+
+def regime_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..quantjobs.regime import run
+
+    return run(params, progress)
+
+
+def _quant_kind(name: str, label: str, fn, time_limit_s: float = 300.0) -> Kind:
+    return Kind(name, "1", label, fn, validate_quant(name), time_limit_s=time_limit_s, internal=True, fingerprint=lambda p: p.get("data_sha", ""),
                 hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
 
 
@@ -216,3 +231,5 @@ KINDS["opt.run"] = _quant_kind("opt.run", "PORT OPT", opt_job)
 KINDS["attr.run"] = _quant_kind("attr.run", "PORT ATTR", attr_job)
 KINDS["fact.run"] = _quant_kind("fact.run", "FACT", fact_job)
 KINDS["ql.run"] = _quant_kind("ql.run", "QL", ql_job)
+KINDS["alpha.scan"] = _quant_kind("alpha.scan", "ALPHA", alpha_job, time_limit_s=240.0)
+KINDS["corr.regime"] = _quant_kind("corr.regime", "CORR REGIME", regime_job)
