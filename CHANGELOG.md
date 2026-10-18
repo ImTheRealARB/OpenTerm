@@ -2,6 +2,13 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 19: charting, discovery, macro, crypto (in progress: steps 1-3 of 10)
+- Added to `GP`: 12 studies (`ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU`), rule-based pattern overlays (`PAT:CANDLE` 9 candlestick patterns, `PAT:SMC` swings, BOS / CHOCH, fair-value gaps, order blocks; `PAT:ICHI` = `ICHIMOKU`),
+  drawings by keyboard (`T` trend ray, `H` horizontal, `B` fib; `P` anchor price, `Enter` places, `[` `]` select, `D` removes) saved per symbol on the server, `EVT` markers (E earnings = last four reported, D ex-dividend, S split),
+  `VS A B C PANE` (each compare symbol in its own pane). The indicator picker uses keys 1-9 then letters. The crosshair readout no longer goes stale.
+- Added `SEAS` (seasonality by month, weekday, day of month, ISO week), `GIP` (candles built from the live ticks this server has seen, buffer 20,000 ticks per symbol), `IMAP` (treemap heat map of the EQS universe: size = market cap, colour = % change).
+- New routes: `GET/PUT /api/drawings/{symbol}`, `GET /api/world/events`, `GET /api/world/ticks/{symbol}`. New Nasdaq `earnings-surprise` source. Bench 36/36 with five new chart-maths budgets.
+
 ## Phase 16: AI layer (in progress)
 - Added `AI`: a chat panel over an agent that calls 14 read-only tools in-process (quotes, history, profile, financials, filings, news, screener, research tables, options chain, rates, macro, portfolio, backtest, quant jobs).
   Every answer lists its tool calls (source, age, STALE / FAILED / EMPTY), cites them as [T1], and carries `AI · model · time · MODEL OUTPUT, NOT DATA`; no tool data = `UNGROUNDED`, figures no tool returned = `UNSOURCED NUMBERS`.

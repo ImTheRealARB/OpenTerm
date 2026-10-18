@@ -248,3 +248,11 @@ No key is needed for any of them. Each table header shows the source, its age an
 - SWARM roles run one after another; a failed role is retried once. The chair's numbers are checked against the analysts' notes, not against raw tool results. AI AUTO's evidence line lists the BT runs the server saw, whatever the model says.
 - AI BT drafts rule strings only (no SignalEngine code). Backtests stay historical simulations, not forecasts.
 - AUDIT stores hashes and metadata, not text. Stored SWARM / AI AUTO runs (for replay) do keep the events, including answers and tool summaries, in the local database (last 200).
+
+## Phase 19 limits (steps 1-3)
+- Pattern overlays and SMC marks are rules on price (last 5,000 bars), not signals. The Ichimoku cloud is drawn over existing bars only; the 26-bar forward projection is not drawn (needs future timestamps).
+- `GP EVT` earnings markers are the last four reported quarters only (Nasdaq `earnings-surprise`); dividends and splits go back as far as their sources do. A date with no bar on the chart (weekend, outside the data) is skipped. On intraday charts a marker sits on the last bar of its date.
+- Drawings are anchored in (time, price); with the `VS` % overlay the price scale is percent, so drawings are hidden there (use `PANE`). Mouse selection works; creating drawings is keyboard only.
+- `GIP` shows only ticks this server received for symbols with a subscriber (ring buffer, 20,000 ticks, 100 symbols, a gap over 4 hours starts a new session). A session that began before the server started is not in it. Sub-minute bars and tick volume (derived from the rise of cumulative day volume) are history only; live bar volume is not updated.
+- `IMAP` uses the Nasdaq screener (US names with a market cap); rows without one have no tile; default 3,000 tiles (`N=` up to 5,000). Colour bands: under 0.25% flat, then 1%, 2%, 3%+.
+- `SEAS` uses the UTC date of each bar and daily history (adjusted close when the source has it); the month or ISO week still in progress is left out.

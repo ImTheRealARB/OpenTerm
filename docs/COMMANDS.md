@@ -158,3 +158,10 @@ While a document is loaded, questions use ONLY its text (chunks C1, C2... cited)
 Kite (read-only, needs your own Kite Connect app): paste `KITE_API_KEY` and `KITE_API_SECRET` in `APIKEYS`, register `http://127.0.0.1:8000/api/kite/callback` as the redirect URL, then
 `KITE LOGIN` (once per trading day), `KITE STATUS`, `KITE LOGOUT`. After login `RELIANCE.NS`, `^NSEI` and NFO/MCX bars come from Kite, and `OMON NIFTY.NFO R=6.5 Q=1.2` builds the chain with OI
 (IV and Greeks only when `R=` / `Q=` are typed, labelled computed here). There is no order surface.
+
+## Phase 19: charting and discovery (steps 1-3; more functions follow)
+- `AAPL GP 1Y ATR STOCH KELT SUPERTREND ICHIMOKU PAT:CANDLE PAT:SMC` : new studies and pattern marks (rule-based, not signals). `I` in GP opens the picker (keys 1-9, then A, B, C...).
+- `AAPL GP 1Y EVT` : earnings (last four reported), ex-dividend and split markers. `AAPL GP VS MSFT NVDA PANE` : up to three compare symbols, one pane each (without `PANE` only the first is overlaid as %).
+- GP drawing keys: `T` trend ray, `H` horizontal line, `B` fib retracement; `P` cycles the anchor price (close / high / low / open); `Enter` places an anchor; `Esc` cancels; `[` `]` select; `D` or `Del` removes. Saved per symbol; hidden while a `VS` % overlay is on.
+- `AAPL SEAS [MONTH|WEEKDAY|DOM|WOY]` : average returns by calendar bucket (`V` cycles, `E` CSV). `AAPL GIP [1S|5S|15S|1M]` : tick candles (`S` bar size). `IMAP [SECTOR|INDUSTRY|COUNTRY] [N=3000] [MCAP>10B ...]` : heat map (arrows move, `Enter` opens Q, `Z` zoom group, Backspace out).
+- `PERF CALC` : times the Phase 19 chart maths on generated test data.
