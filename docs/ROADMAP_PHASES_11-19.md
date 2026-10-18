@@ -246,8 +246,7 @@ In this order, each one a separate approval:
    Paper vs live decided by a structural broker check (host or account type), never a flag the AI can set.
 
 ## Phase 19: Charting, discovery, macro, crypto
-**Status 2026-10-18:** steps 1-9 built (`UNLK` NOT BUILT: DefiLlama emissions are paid, HTTP 402); step 10 close: gate and bench recorded. Not merged to `main`. See HANDOFF.md.
-**Status: IN PROGRESS (2026-10-18).** Spec `docs/specs/PHASE_19.md`. Steps 1-3 done on branch `claude/openterm-phase-19` (GP studies/patterns/drawings/events/panes, `SEAS`, `GIP`, `IMAP`); steps 4-10 not started (SECF, macro, NRG/WETR, crypto, PRED, non-US, close). See HANDOFF.md "Resume here".
+**Status: DONE (2026-10-18).** Steps 1-10 done on branch `claude/openterm-phase-19-step-4-c5c695` (`UNLK` NOT BUILT: DefiLlama emissions are paid, HTTP 402). Bench rerun on Windows and live keyless smoke done (spec Progress log). Not merged to `main`. See HANDOFF.md.
 
 | Area | Items |
 |---|---|

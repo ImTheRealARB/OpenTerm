@@ -5,10 +5,11 @@ _Last updated: 2026-10-18, session 9 (branch `claude/openterm-phase-16-9d4534`; 
 > **Resuming in a new session or account?** Read "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try.
 
-## Resume here (2026-10-18 late, Phase 19 steps 1-9 BUILT, step 10 nearly closed)
-- Branch `claude/openterm-phase-19-step-4-c5c695`, pushed, not merged. Steps 7 (CDEP FUND LIQ STBL DEFI; UNLK NOT BUILT, paid) and 9 (NSE archive history fallback, SECF AMFI fund rows) are built and tested; see the spec Progress log.
-- Full gate on a Linux cloud container: pytest 1567, e2e 181 (19e-19h included), tsc pass; ruff fixed after; two vitest timing tests failed only under the parallel gate and pass alone (411).
-- **Open:** the bench ran on that slower container (27/37, not comparable, see `docs/PERFORMANCE.md`). Rerun `node scripts/bench.mjs` rested on the Windows machine before merging. A live keyless smoke of the new functions (spec step 10) was not run.
+## Resume here (2026-10-18 night, PHASE 19 COMPLETE, awaiting the user's merge decision)
+- Branch `claude/openterm-phase-19-step-4-c5c695`, pushed, not merged (the merge is the user's call). Steps 1-10 done; `UNLK` NOT BUILT (DefiLlama emissions are paid).
+- Windows bench and live keyless smoke done: see `docs/PERFORMANCE.md` "Phase 19 bench" and the spec Progress log (15/16 routes live OK; WETR geocoding was an Open-Meteo outage).
+- Full gate last ran on the Linux container (pytest 1567, e2e 181, tsc, vitest 411 alone, ruff); not rerun on Windows since no code changed. Optional: run `node scripts/gates.mjs` once before merging.
+- Not done (optional): `bench.mjs` cleanup does not kill child process trees on Linux.
 
 ## (superseded) Resume here (2026-10-18 evening, Phase 19 steps 1-5 DONE, 6 and 8 built but not gated, 7 and 9 half-built; PAUSED at 66% of the 5h window)
 - **Branch `claude/openterm-phase-19-step-4-c5c695`** (pushed; continues `claude/openterm-phase-19`). Not merged to `main`. Last commit is a WIP commit; **the full gate has NOT run on it** (last full gate was green at step 5: pytest 1416, e2e 166).

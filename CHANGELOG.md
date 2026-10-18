@@ -2,7 +2,7 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
-## Phase 19: charting, discovery, macro, crypto (steps 1-9 built; not merged to main)
+## Phase 19: charting, discovery, macro, crypto (complete 2026-10-18; UNLK not built; not merged to main)
 - Added to `GP`: 12 studies (`ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU`), rule-based pattern overlays (`PAT:CANDLE` 9 candlestick patterns, `PAT:SMC` swings, BOS / CHOCH, fair-value gaps, order blocks; `PAT:ICHI` = `ICHIMOKU`),
   drawings by keyboard (`T` trend ray, `H` horizontal, `B` fib; `P` anchor price, `Enter` places, `[` `]` select, `D` removes) saved per symbol on the server, `EVT` markers (E earnings = last four reported, D ex-dividend, S split),
   `VS A B C PANE` (each compare symbol in its own pane). The indicator picker uses keys 1-9 then letters. The crosshair readout no longer goes stale.
