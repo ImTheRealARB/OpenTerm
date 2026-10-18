@@ -7,6 +7,9 @@ import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { candlePatterns, smc } from "../chart/patterns";
+import { gauges } from "../perf/metrics";
+import { seasonality } from "./seasMath";
 
 function rng(seed: number) {
   return () => {
@@ -98,6 +101,55 @@ export function TestChart({ panelId, bars }: { panelId: number; bars: number }) 
     <div className="fn">
       <div className="line warn">PERF CHART: {bars.toLocaleString("en-US")} BARS OF GENERATED TEST DATA · ←/→ PAN · +/- ZOOM</div>
       <ChartView ref={chart} data={data} type="CANDLE" log={false} indicators={indicators} />
+    </div>
+  );
+}
+
+/** `PERF CALC`: times the Phase 19 chart maths on generated bars (TEST DATA) and publishes gauges p19.patternsMs / p19.seasMs (p95 of 15 runs). */
+export function CalcBench() {
+  const res = useMemo(() => {
+    const r = rng(7);
+    const p95 = (a: number[]) => [...a].sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * 0.95))];
+    const n = 5000;
+    const o = new Float64Array(n), h = new Float64Array(n), l = new Float64Array(n), c = new Float64Array(n);
+    let px = 100;
+    for (let i = 0; i < n; i++) {
+      o[i] = px;
+      px *= 1 + (r() - 0.5) * 0.04;
+      c[i] = px;
+      h[i] = Math.max(o[i], c[i]) * (1 + r() * 0.01);
+      l[i] = Math.min(o[i], c[i]) * (1 - r() * 0.01);
+    }
+    const dn = 10000;
+    const t = new Float64Array(dn), dc = new Float64Array(dn);
+    let p = 100;
+    for (let i = 0; i < dn; i++) {
+      t[i] = 631152000 + i * 86400;
+      p *= 1 + (r() - 0.5) * 0.02;
+      dc[i] = p;
+    }
+    const pat: number[] = [];
+    const seas: number[] = [];
+    for (let k = 0; k < 15; k++) {
+      let t0 = performance.now();
+      candlePatterns(o, h, l, c);
+      smc(o, h, l, c, 3);
+      pat.push(performance.now() - t0);
+      t0 = performance.now();
+      seasonality(t, dc, "MONTH");
+      seasonality(t, dc, "WOY");
+      seasonality(t, dc, "DOM");
+      seas.push(performance.now() - t0);
+    }
+    gauges.set("p19.patternsMs", p95(pat));
+    gauges.set("p19.seasMs", p95(seas));
+    return { pat: p95(pat), seas: p95(seas), n, dn };
+  }, []);
+  return (
+    <div>
+      <h2>PERF CALC (TEST DATA, NOT A SECURITY)</h2>
+      <div>PATTERNS + SMC, {res.n} BARS: {res.pat.toFixed(2)} MS P95</div>
+      <div>SEAS MONTH + WOY + DOM, {res.dn} DAILY BARS: {res.seas.toFixed(2)} MS P95</div>
     </div>
   );
 }

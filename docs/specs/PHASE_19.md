@@ -69,3 +69,6 @@ drawings survive a reload; `IMAP` and `GIP` budgets are in the bench and pass; n
 
 ## Progress log
 - 2026-10-18: spec written, branch `claude/openterm-phase-19` cut from `origin/claude/openterm-phase-16-9d4534` (`fe50765`).
+- 2026-10-18: step 1 done. 12 studies (`chart/studies.ts`), candle + SMC patterns (`chart/patterns.ts`), `SEAS` (`functions/seasMath.ts`, `SEAS.tsx`), `PERF CALC` bench hook (gauges `p19.patternsMs`, `p19.seasMs`).
+  `PAT:ICHI` is an alias of `ICHIMOKU` (one overlay, not two). The Ichimoku cloud is drawn over existing bars only (the 26-bar forward projection needs future timestamps: not drawn).
+  Gate green (pytest, ruff, tsc, vitest 311, e2e 146); the bench lines for the two budgets run with the full bench at step 3.

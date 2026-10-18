@@ -442,6 +442,14 @@ async function browserBench() {
       });
       await page.context().close();
     }
+    // I. Phase 19: chart maths (patterns + SMC on 5,000 bars, SEAS on 10,000 daily bars), generated TEST DATA.
+    {
+      const page = await freshPage(browser);
+      await run(page, "PERF CALC");
+      await page.waitForFunction(() => window.__openterm_perf?.snapshot?.().gauges?.["p19.patternsMs"] !== undefined, null, { timeout: 15000 }).catch(() => {});
+      out.p19 = await page.evaluate(() => window.__openterm_perf.snapshot().gauges);
+      await page.context().close();
+    }
     return out;
   } finally {
     await browser.close();
@@ -525,6 +533,10 @@ async function main() {
   // Phase 16 (spec: decisions on the first-token budget): what this server controls. Fixture mode replays a recorded model.
   add("AI request to first SSE event p95, server-side", ai16.firstEvent, 60, "ms", `POST /api/ai/chat, recorded model, n=${ai16.n}`);
   add("AI panel open to first paint p95", r.p16.cmdToPaint.p95, 100, "ms", `n=${r.p16.cmdToPaint.n}`);
+
+  // Phase 19 budgets (spec): chart maths in the page, p95 of 15 runs on generated bars.
+  add("Pattern scan (candles + SMC) 5,000 bars p95", r.p19["p19.patternsMs"] ?? null, 40, "ms", "PERF CALC, TEST DATA");
+  add("SEAS MONTH+WOY+DOM 10,000 daily bars p95", r.p19["p19.seasMs"] ?? null, 15, "ms", "PERF CALC, TEST DATA");
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

@@ -2,6 +2,8 @@
  * Indicator math on Float64Arrays. NaN marks "not enough data yet". Pure functions: they run in a
  * Web Worker in the app and directly in unit tests.
  */
+import { candlePatterns, smc, smcZonesFlat } from "./patterns";
+import { adx, atr, cci, donchian, ichimoku, keltner, mfi, obv, psar, stoch, supertrend, willr } from "./studies";
 
 export function sma(src: Float64Array, n: number): Float64Array {
   const out = new Float64Array(src.length).fill(NaN);
@@ -100,11 +102,19 @@ export function vwap(t: Float64Array, h: Float64Array, l: Float64Array, c: Float
   return out;
 }
 
-export const INDICATORS = ["SMA20", "SMA50", "EMA20", "BB", "RSI", "MACD", "VWAP"] as const;
+export const INDICATORS = [
+  "SMA20", "SMA50", "EMA20", "BB", "RSI", "MACD", "VWAP",
+  "ATR", "STOCH", "ADX", "OBV", "CCI", "WILLR", "MFI", "KELT", "DONCH", "SUPERTREND", "PSAR", "ICHIMOKU",
+  "PAT:CANDLE", "PAT:SMC",
+] as const;
 export type IndicatorName = (typeof INDICATORS)[number];
+
+/** Pattern scans look at the latest bars only. */
+export const PATTERN_MAX_BARS = 5000;
 
 export interface Series {
   t: Float64Array;
+  o: Float64Array;
   h: Float64Array;
   l: Float64Array;
   c: Float64Array;
@@ -130,6 +140,60 @@ export function compute(s: Series, which: IndicatorName[]): Record<string, Float
       out.MACD_SIG = m.signal;
       out.MACD_HIST = m.hist;
     } else if (w === "VWAP") out.VWAP = vwap(s.t, s.h, s.l, s.c, s.v);
+    else if (w === "ATR") out.ATR = atr(s.h, s.l, s.c, 14);
+    else if (w === "STOCH") {
+      const k = stoch(s.h, s.l, s.c, 14, 3);
+      out.STOCH_K = k.k;
+      out.STOCH_D = k.d;
+    } else if (w === "ADX") {
+      const a = adx(s.h, s.l, s.c, 14);
+      out.ADX = a.adx;
+      out.ADX_PDI = a.pdi;
+      out.ADX_MDI = a.mdi;
+    } else if (w === "OBV") out.OBV = obv(s.c, s.v);
+    else if (w === "CCI") out.CCI = cci(s.h, s.l, s.c, 20);
+    else if (w === "WILLR") out.WILLR = willr(s.h, s.l, s.c, 14);
+    else if (w === "MFI") out.MFI = mfi(s.h, s.l, s.c, s.v, 14);
+    else if (w === "KELT") {
+      const k = keltner(s.h, s.l, s.c, 20, 10, 2);
+      out.KELT_MID = k.mid;
+      out.KELT_UP = k.upper;
+      out.KELT_LO = k.lower;
+    } else if (w === "DONCH") {
+      const d = donchian(s.h, s.l, 20);
+      out.DONCH_UP = d.upper;
+      out.DONCH_LO = d.lower;
+      out.DONCH_MID = d.mid;
+    } else if (w === "SUPERTREND") {
+      const st = supertrend(s.h, s.l, s.c, 10, 3);
+      out.SUPERTREND = st.line;
+      out.SUPERTREND_DIR = st.dir;
+    } else if (w === "PSAR") out.PSAR = psar(s.h, s.l);
+    else if (w === "ICHIMOKU") {
+      const ich = ichimoku(s.h, s.l, s.c);
+      out.ICHI_TENKAN = ich.tenkan;
+      out.ICHI_KIJUN = ich.kijun;
+      out.ICHI_SPANA = ich.spanA;
+      out.ICHI_SPANB = ich.spanB;
+      out.ICHI_CHIKOU = ich.chikou;
+    } else if (w === "PAT:CANDLE") {
+      const n = s.c.length;
+      const st = Math.max(0, n - PATTERN_MAX_BARS);
+      const out2 = new Float64Array(n);
+      out2.set(candlePatterns(s.o.subarray(st), s.h.subarray(st), s.l.subarray(st), s.c.subarray(st)), st);
+      out.PAT_CANDLE = out2;
+    } else if (w === "PAT:SMC") {
+      const n = s.c.length;
+      const st = Math.max(0, n - PATTERN_MAX_BARS);
+      const r = smc(s.o.subarray(st), s.h.subarray(st), s.l.subarray(st), s.c.subarray(st), 3);
+      const swing = new Float64Array(n);
+      const bos = new Float64Array(n);
+      swing.set(r.swing, st);
+      bos.set(r.bos, st);
+      out.SMC_SWING = swing;
+      out.SMC_BOS = bos;
+      out.SMC_ZONES = smcZonesFlat(r.zones, st);
+    }
   }
   return out;
 }

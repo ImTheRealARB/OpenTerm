@@ -5,14 +5,16 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
-  AreaSeries, BarSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries,
-  PriceScaleMode, TickMarkType, createChart,
-  type IChartApi, type ISeriesApi, type SeriesType, type Time, type UTCTimestamp,
+  AreaSeries, BarSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle,
+  PriceScaleMode, TickMarkType, createChart, createSeriesMarkers,
+  type IChartApi, type ISeriesApi, type SeriesMarker, type SeriesType, type Time, type UTCTimestamp,
 } from "lightweight-charts";
 import { fmtBig, fmtPrice } from "../format";
+import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { useStore } from "../state/store";
 import type { IndicatorName } from "./indicators";
+import { PATTERN_INFO } from "./patterns";
 
 export type ChartType = "CANDLE" | "OHLC" | "LINE" | "AREA";
 export const CHART_TYPES: ChartType[] = ["CANDLE", "OHLC", "LINE", "AREA"];
@@ -230,7 +232,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         drawIndicators(chartRef.current, ev.data.results);
       };
       // Copies: the worker gets its own buffers so `data` stays usable here.
-      w.postMessage({ id, which: indicators, series: { t: data.t.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
+      w.postMessage({ id, which: indicators, series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
     } else {
       reqId.current++;
     }
@@ -273,6 +275,85 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         line(r.MACD_SIG, c.warn, pane);
         pane++;
       }
+      // Phase 19 overlays on the price pane.
+      const tri = (k: string, col: string, title: string) => {
+        if (!r[k + "_UP"]) return;
+        line(r[k + "_UP"], col, 0, title);
+        line(r[k + "_MID"], col, 0);
+        line(r[k + "_LO"], col, 0);
+      };
+      tri("KELT", c.dim, "KELT");
+      tri("DONCH", c.dim, "DONCH");
+      if (r.SUPERTREND) {
+        const ls = ch.addSeries(LineSeries, { color: c.up, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "SUPERTREND" }, 0);
+        const pts = [];
+        for (let i = 0; i < r.SUPERTREND.length; i++) {
+          pts.push(Number.isFinite(r.SUPERTREND[i]) ? { time: toTime(data.t[i]), value: r.SUPERTREND[i], color: r.SUPERTREND_DIR[i] > 0 ? c.up : c.down } : { time: toTime(data.t[i]) });
+        }
+        ls.setData(pts);
+        extra.current.push(ls);
+      }
+      if (r.PSAR) {
+        const ls = ch.addSeries(LineSeries, { color: c.warn, lineVisible: false, pointMarkersVisible: true, pointMarkersRadius: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "PSAR" }, 0);
+        const pts = [];
+        for (let i = 0; i < r.PSAR.length; i++) pts.push(Number.isFinite(r.PSAR[i]) ? { time: toTime(data.t[i]), value: r.PSAR[i] } : { time: toTime(data.t[i]) });
+        ls.setData(pts);
+        extra.current.push(ls);
+      }
+      if (r.ICHI_TENKAN) {
+        line(r.ICHI_TENKAN, c.acc, 0, "TENKAN");
+        line(r.ICHI_KIJUN, c.warn, 0, "KIJUN");
+        line(r.ICHI_SPANA, c.up, 0, "SPAN A");
+        line(r.ICHI_SPANB, c.down, 0, "SPAN B");
+        line(r.ICHI_CHIKOU, c.dim, 0, "CHIKOU");
+      }
+      // Oscillators, one pane each.
+      const osc = (vals: Float64Array | undefined, col: string, title: string, levels: number[] = []) => {
+        if (!vals) return null;
+        const ls = line(vals, col, pane, title);
+        for (const price of levels) ls.createPriceLine({ price, color: c.line, lineWidth: 1, axisLabelVisible: false });
+        return ls;
+      };
+      if (r.ATR) { osc(r.ATR, c.acc, "ATR14"); pane++; }
+      if (r.STOCH_K) { osc(r.STOCH_K, c.acc, "STOCH K", [80, 20]); line(r.STOCH_D, c.warn, pane); pane++; }
+      if (r.ADX) { osc(r.ADX, c.fg, "ADX14", [25]); line(r.ADX_PDI, c.up, pane); line(r.ADX_MDI, c.down, pane); pane++; }
+      if (r.OBV) { osc(r.OBV, c.acc, "OBV"); pane++; }
+      if (r.CCI) { osc(r.CCI, c.acc, "CCI20", [100, -100]); pane++; }
+      if (r.WILLR) { osc(r.WILLR, c.acc, "%R14", [-20, -80]); pane++; }
+      if (r.MFI) { osc(r.MFI, c.acc, "MFI14", [80, 20]); pane++; }
+
+      // Pattern marks (rule-based, not signals) on the price series; SMC zones as dashed edges.
+      const marks: SeriesMarker<Time>[] = [];
+      if (r.PAT_CANDLE) {
+        for (let i = 0; i < r.PAT_CANDLE.length; i++) {
+          const info = PATTERN_INFO[r.PAT_CANDLE[i]];
+          if (!info) continue;
+          marks.push({ time: toTime(data.t[i]), position: info.dir < 0 ? "aboveBar" : "belowBar", shape: info.dir < 0 ? "arrowDown" : info.dir > 0 ? "arrowUp" : "circle", color: info.dir < 0 ? c.down : info.dir > 0 ? c.up : c.dim, text: info.short });
+        }
+      }
+      if (r.SMC_SWING && r.SMC_BOS) {
+        for (let i = 0; i < r.SMC_SWING.length; i++) {
+          const sw = r.SMC_SWING[i];
+          const b = r.SMC_BOS[i];
+          if (sw) marks.push({ time: toTime(data.t[i]), position: sw > 0 ? "aboveBar" : "belowBar", shape: "circle", color: c.dim, size: 0.5 });
+          if (b) marks.push({ time: toTime(data.t[i]), position: b > 0 ? "belowBar" : "aboveBar", shape: b > 0 ? "arrowUp" : "arrowDown", color: b > 0 ? c.up : c.down, text: Math.abs(b) === 2 ? "CHOCH" : "BOS" });
+        }
+        const z = r.SMC_ZONES ?? new Float64Array(0);
+        for (let j = 0; j + 5 < z.length; j += 6) {
+          const col = z[j] === 1 ? c.dim : z[j + 1] > 0 ? c.up : c.down;
+          for (const price of [z[j + 4], z[j + 5]]) {
+            const zs = ch.addSeries(LineSeries, { color: col, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: price === z[j + 4] ? (z[j] === 1 ? "FVG" : "OB") : "" }, 0);
+            zs.setData([{ time: toTime(data.t[z[j + 2]]), value: price }, { time: toTime(data.t[z[j + 3]]), value: price }]);
+            extra.current.push(zs);
+          }
+        }
+      }
+      if (marks.length && main.current) {
+        marks.sort((a, b) => (a.time as number) - (b.time as number));
+        createSeriesMarkers(main.current, marks);
+      }
+      gauges.set("chart.extraSeries", extra.current.length);
+      gauges.set("chart.markers", marks.length);
       const panes = ch.panes();
       for (let i = 1; i < panes.length; i++) panes[i].setHeight(90);
     }

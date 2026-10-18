@@ -39,6 +39,7 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
     else if (YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a)) p.interval = raw;
     else if ((CHART_TYPES as string[]).includes(a)) p.type = a as ChartType;
     else if (a === "LOG") p.log = true;
+    else if (a === "PAT:ICHI") p.indicators.push("ICHIMOKU");
     else if ((INDICATORS as readonly string[]).includes(a)) p.indicators.push(a as IndicatorName);
   }
   return p;
