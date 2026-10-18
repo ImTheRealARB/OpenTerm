@@ -449,18 +449,23 @@ Same machine, shared with other sessions running tests, so each figure is a rang
 14.7 ms, 8-panel frame 16.7 ms, BT open 63.3 ms. The new panels (OMON, OV, OSA, OVDV, SKEW, HIVG, CT, WIRP, COT, FXFA, YAS, SWPM, CDSW, RATES views) share
 `ResearchPanel` and load on demand; chart and heat map render only when opened, so nothing new runs on the hot path. The surface render has no separate budget gate.
 
-## Phase 15 bench (risk, quant library, alphas; numbers to be filled after the run)
+## Phase 15 bench (risk, quant library, alphas)
 Five new server-side budgets (spec `docs/specs/PHASE_15.md` decision M), so the bench has 24 + 5 = 29 budgets. Measured like the BT budgets: `server-timing` of
 `POST /api/quant/{fn}` plus the job's own `created_at` to `finished_at`, on warm workers (concurrent warm-up rounds first), every measured run with a distinct
 parameter so none is a cache hit. Data: SYN names in fixture + synthetic mode, a 20-name `BENCH15` portfolio (SYN0000-SYN0019).
 
 | Budget | Limit | Measured | Method |
 |---|---|---|---|
-| RISK, 20 names x 3 years, p95 | 400 ms | | n=12, `conf` varies |
-| PORT OPT HRP, 20 names, p95 | 400 ms | | n=12, `rf` varies |
-| PORT OPT RP, 20 names, p95 | 400 ms | | n=12, `rf` varies |
-| CORR REGIME, 20 names x 2 years, p95 | 300 ms | | n=12, `edge` varies |
-| ALPHA, SYN 100 names x 2 years, all 29 factors | 8000 ms | | n=3 (slowest), `h` varies, after one warm-up scan |
+| RISK, 20 names x 3 years, p95 | 400 ms | 83.9 ms | n=12, `conf` varies |
+| PORT OPT HRP, 20 names, p95 | 400 ms | 12.8 ms | n=12, `rf` varies |
+| PORT OPT RP, 20 names, p95 | 400 ms | 33.2 ms | n=12, `rf` varies |
+| CORR REGIME, 20 names x 2 years, p95 | 300 ms | 90.9 ms | n=12, `edge` varies |
+| ALPHA, SYN 100 names x 2 years, all 29 factors | 8000 ms | 1289.9 ms | n=3 (slowest), `h` varies, after one warm-up scan |
 
-_The user fills the numbers after running `node scripts/bench.mjs`; limits may be re-set once measured, never after the fact to hide a miss. The Phase 15 panels
-share `ResearchPanel` and load on demand, so nothing new runs on the hot path._
+**Result (2026-10-18): 28 of 29 pass.** The one miss is the old BT 10-year rule run: 322.9 ms against 300. The same bench on the Phase 14 commit
+(`edb3292`) read **322.3 ms** on the same machine the same hour (a rested run, nothing else running), so the miss is the machine reading slower today than in
+earlier phases (195-285 ms rested), not a Phase 15 change; it is recorded, not hidden. Two things the bench found and Phase 15 fixed: (1) `quantBench` polls
+`GET /api/jobs/{id}`, which `/api/perf` files under `/api/jobs`, so run before the read it pushed "Job submit p95" from 5.7 ms to 25 ms: the new budgets now run
+after that read; (2) four concurrent identical `POST /api/quant/risk` calls raced on the content-addressed data file's temp name and rename on Windows (HTTP 500):
+`bt/store.py` `write_data` now uses a unique temp file and tolerates a concurrent replace. The Phase 15 panels share `ResearchPanel` and load on demand, so
+nothing new runs on the hot path.

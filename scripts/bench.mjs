@@ -445,7 +445,6 @@ async function main() {
 
   const jobs = await jobsBench(); // warms the worker pool before the browser section G
   const bt = await btBench(); // caches the runs section H opens
-  const q15 = await quantBench(); // Phase 15: server-side job times, before the browser sections
 
   const r = await browserBench();
   const { a, stream: st } = r;
@@ -468,6 +467,8 @@ async function main() {
   const jf = r.p11.jobsFirstFrame ?? { p95: null, n: 0 };
   const ftp = r.p11.jobsFrameToPaint ?? { p95: null, n: 0 };
   const jobsServer = (await (await fetch(`${BACKEND}/api/perf`)).json())["/api/jobs"].p95;
+  // Phase 15 server-side job times. Run AFTER the line above: quantBench polls GET /api/jobs/{id}, which /api/perf files under /api/jobs.
+  const q15 = await quantBench();
   add("Job J frame received to paint p95", ftp.n ? ftp.p95 : null, 50, "ms", `JOBS TEST; n=${ftp.n}`);
   add("Job submit p95, server-side (new + cached)", jobsServer, 20, "ms", "POST /api/jobs");
   add("Job submit to first J frame painted p95", jf.n ? jf.p95 : null, null, "ms", `via proxy; p50 ${jf.p50?.toFixed(1)} ms; n=${jf.n}`);
