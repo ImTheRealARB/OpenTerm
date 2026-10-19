@@ -65,7 +65,7 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
     }
     case "POLL": {
       const k = word.toLowerCase() as PollKey;
-      if (!(k in POLL_BOUNDS)) return fail(`SETTINGS POLL ${Object.keys(POLL_BOUNDS).join("|").toUpperCase()} SECONDS`);
+      if (!Object.hasOwn(POLL_BOUNDS, k)) return fail(`SETTINGS POLL ${Object.keys(POLL_BOUNDS).join("|").toUpperCase()} SECONDS`);
       const [lo, hi] = POLL_BOUNDS[k];
       const v = Number(rest[1]);
       if (!Number.isInteger(v) || v < lo || v > hi) return fail(`POLL ${word}: ${lo}-${hi} SECONDS`);
