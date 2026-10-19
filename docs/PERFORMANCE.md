@@ -525,3 +525,6 @@ Rejected (no gain): `to_thread` for the screener, companyfacts and NSE bhavcopy 
 ### Review sprint bench (2026-10-19, Windows, `node scripts/bench.mjs` on `claude/review-all` after the gate)
 Run 1 (straight after the full gate, machine throttled): 35 pass, 2 miss: BT 10-year 400.2 ms (budget 300), BT open to first paint 122.1 ms (budget 100). Run 2 after 2 minutes of rest: **37 pass, 0 fail**.
 Selected run-2 numbers: cached /api/quote 1.0 ms; tick to pixel p95 36.3 ms (50); job submit 4.8 ms (20); cached job 1.9 ms; BT 10-year 205.6 ms (300); BT cached 6.1 ms; BT open to first paint 90.2 ms (100); RISK 76.3 ms (400); CORR REGIME 92.5 ms (300); ALPHA SYN 881 ms (8000); AI first SSE 4.7 ms (60). No budget regressed; the first-run BT misses match the known throttling note (CLAUDE.md). Gate wall-clock before/after: `docs/review/BASELINE.md`.
+
+### Terminal look bench (2026-10-19, branch `claude/ui-terminal-look`, Windows)
+Restyle of the chrome and data views (command field, key-hint row, panel bands, grid rules, chart colours). Full gate ALL PASS (pytest 1628, e2e 183, 123.1 s). Bench: **37 pass, 0 fail**. Grid and tick budgets: frame p95 10k-row grid scroll 16.8 ms (20), tick to pixel p95 36.2 ms (50), command submit to first paint 16.9 ms (100), IMAP paint 5.1 ms (16).
