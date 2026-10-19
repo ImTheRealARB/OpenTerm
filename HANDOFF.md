@@ -8,8 +8,9 @@ _Last updated: 2026-10-19 (review sprint on `claude/review-all`). Phases 1-16 an
 ## Resume here (2026-10-19)
 - **State:** `main` holds Phases 1-16 and 19 (the Phase 19 branch was merged and pushed). Full gate on Windows 2026-10-18: ALL GATES PASS
   (pytest 1567, ruff, tsc, vitest, e2e 181); bench numbers in `docs/PERFORMANCE.md` ("Phase 19 bench"). `UNLK` is NOT BUILT (DefiLlama emissions are paid).
-  A review sprint (performance, bugs, duplicate logic, test pruning, dev loop) runs on branch `claude/review-all`: notes in `docs/review/*.md`
-  (rules in `docs/review/BRIEF.md`); anything risky is listed there under "Decisions for user".
+  **Review sprint DONE (2026-10-19) on branch `claude/review-all`, pushed, NOT merged** (the merge is the user's call): ~30 bugs fixed with tests, speedups, dev-loop scripts.
+  Full gate ALL PASS (pytest 1628, e2e 183, 123 s vs 167 s on main), bench 37/37 after one rested rerun. Read `docs/review/SUMMARY.md` first, then
+  `DECISIONS_FOR_USER.md` (deferred risky items) and `REVERTED.md` (ChartView buffer-transfer and SWARM unmount-abort were reverted: retry them with a browser open).
 - **Dev loop (new):** `.\scripts\check.ps1` (bash: `./scripts/check.sh`) runs only the tests a change can affect plus tsc and ruff on changed files
   (`-DryRun` prints the plan, `-All` = everything). `node scripts/gates.mjs` is the full gate: ruff + tsc first (fail fast), then pytest, vitest and
   Playwright in parallel, per-gate timing on the last line; one full gate per step, tail only (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`).
