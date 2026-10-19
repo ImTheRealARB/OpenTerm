@@ -145,12 +145,13 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
   useEffect(() => {
     const watched = new Set([...inputs, ...fxInputs]);
     let pending = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const off = onTicks((changed) => {
       if (pending) return;
       for (const s of changed) {
         if (!watched.has(s)) continue;
         pending = true;
-        setTimeout(() => {
+        timer = setTimeout(() => {
           pending = false;
           setFrameTick((n) => n + 1);
           grid.current?.redraw();
@@ -160,6 +161,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
     });
     return () => {
       off();
+      clearTimeout(timer); // a pending refresh must not fire on an unmounted or re-keyed panel
     };
   }, [inputs, fxInputs]);
 
