@@ -3,6 +3,7 @@
  * Lightweight Charts (Apache-2.0, attribution shown in GP's status line and README).
  * Indicators run in a Web Worker; live ticks update the last bar in place.
  */
+import "../components/dataColors.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
   AreaSeries, BarSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle,
@@ -86,7 +87,7 @@ export const INTERVAL_S: Record<string, number> = {
 function themeColors() {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string) => cs.getPropertyValue(n).trim();
-  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), line: v("--line"), acc: v("--accent"), warn: v("--warn"), sel: v("--sel"), val: v("--val") || v("--fg"), bar: v("--bar") || v("--sel"), font: v("--font") };
+  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), line: v("--line"), acc: v("--accent"), warn: v("--warn"), sel: v("--sel"), val: v("--val") || v("--fg"), bar: v("--bar") || v("--sel"), grid: v("--chart-grid") || v("--bar") || v("--line"), cup: v("--chart-up") || v("--up"), cdown: v("--chart-down") || v("--down"), cline: v("--chart-line") || v("--val") || v("--fg"), font: v("--font") };
 }
 
 const toTime = (s: number) => s as UTCTimestamp;
@@ -170,7 +171,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const chart = createChart(box.current!, {
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, fontFamily: c.font, fontSize: 11, attributionLogo: false, panes: { separatorColor: c.line, enableResize: false } },
-      grid: { vertLines: { color: c.bar }, horzLines: { color: c.bar } },
+      grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       rightPriceScale: { borderColor: c.line },
       timeScale: { borderColor: c.line, timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: false, rightOffset: 3 },
       crosshair: { mode: CrosshairMode.Normal, vertLine: { color: c.dim, labelBackgroundColor: c.sel }, horzLine: { color: c.dim, labelBackgroundColor: c.sel } },
@@ -211,7 +212,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const c = (colors.current = themeColors());
     chart.applyOptions({
       layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, panes: { separatorColor: c.line } },
-      grid: { vertLines: { color: c.bar }, horzLines: { color: c.bar } },
+      grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       rightPriceScale: { borderColor: c.line },
       timeScale: { borderColor: c.line },
       crosshair: { vertLine: { color: c.dim, labelBackgroundColor: c.sel }, horzLine: { color: c.dim, labelBackgroundColor: c.sel } },
@@ -239,15 +240,15 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       const ohlc = new Array(n);
       for (let i = 0; i < n; i++) ohlc[i] = { time: toTime(data.t[i]), open: data.o[i], high: data.h[i], low: data.l[i], close: data.c[i] };
       s = kind === "CANDLE"
-        ? chart.addSeries(CandlestickSeries, { upColor: c.up, downColor: c.down, wickUpColor: c.up, wickDownColor: c.down, borderVisible: false })
-        : chart.addSeries(BarSeries, { upColor: c.up, downColor: c.down, thinBars: true });
+        ? chart.addSeries(CandlestickSeries, { upColor: c.cup, downColor: c.cdown, wickUpColor: c.cup, wickDownColor: c.cdown, borderVisible: false })
+        : chart.addSeries(BarSeries, { upColor: c.cup, downColor: c.cdown, thinBars: true });
       s.setData(ohlc);
     } else {
       const pts = new Array(n);
       for (let i = 0; i < n; i++) pts[i] = { time: toTime(data.t[i]), value: data.c[i] };
       s = kind === "AREA"
-        ? chart.addSeries(AreaSeries, { lineColor: c.val, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
-        : chart.addSeries(LineSeries, { color: c.val, lineWidth: 1 });
+        ? chart.addSeries(AreaSeries, { lineColor: c.cline, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
+        : chart.addSeries(LineSeries, { color: c.cline, lineWidth: 1 });
       s.setData(pts);
     }
     main.current = s;

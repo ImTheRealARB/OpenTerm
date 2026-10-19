@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
+import "./dataColors.css";
 import { extentOf, niceTicks, runs, tickLabel, type ChartPayload } from "../research/chartMath";
 
 const PAD_L = 52;
@@ -16,6 +17,7 @@ interface Colors {
   fg: string;
   dim: string;
   line: string;
+  grid: string;
   series: string[];
   font: string;
 }
@@ -24,7 +26,7 @@ function readColors(el: Element): Colors {
   const cs = getComputedStyle(el);
   const v = (n: string) => cs.getPropertyValue(n).trim();
   return {
-    bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), line: v("--line"),
+    bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), line: v("--line"), grid: v("--chart-grid") || v("--line"),
     series: [v("--accent"), v("--fg"), v("--up"), v("--warn"), v("--down"), v("--fg-dim")],
     font: `${v("--fs") || "12px"} ${v("--font")}`,
   };
@@ -68,7 +70,7 @@ export function XYChart({ chart }: { chart: ChartPayload }) {
     const X = (x: number) => PAD_L + ((x - ext.xMin) / (ext.xMax - ext.xMin)) * pw;
     const Y = (y: number) => PAD_T + (1 - (y - ext.yMin) / (ext.yMax - ext.yMin)) * ph;
 
-    ctx.strokeStyle = c.line;
+    ctx.strokeStyle = c.grid;
     ctx.lineWidth = 1;
     ctx.fillStyle = c.dim;
     ctx.textAlign = "right";

@@ -5,6 +5,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
 import { wheelTop } from "../state/gridScroll";
+import "./dataColors.css";
 
 /** `val` is the data-value colour (white on the dark themes); uncoloured right-aligned cells use it. */
 export type CellColor = "fg" | "dim" | "up" | "down" | "warn" | "err" | "acc" | "val";
@@ -48,6 +49,9 @@ interface Theme {
   line: string;
   bar: string;
   hdr: string;
+  hdrBg: string;
+  rowRule: string;
+  colRule: string;
   font: string;
   colors: Record<CellColor, string>;
 }
@@ -57,10 +61,13 @@ function readTheme(el: Element): Theme {
   const v = (n: string) => cs.getPropertyValue(n).trim();
   return {
     bg: v("--bg"),
-    sel: v("--sel"),
+    sel: v("--grid-sel") || v("--sel"),
     line: v("--line"),
     bar: v("--bar") || v("--sel"),
-    hdr: v("--hdr") || v("--fg-dim"),
+    hdr: v("--grid-hdr-fg") || v("--hdr") || v("--fg-dim"),
+    hdrBg: v("--grid-hdr-bg") || v("--bar") || v("--sel"),
+    rowRule: v("--grid-row-rule") || v("--line"),
+    colRule: v("--grid-col-rule") || v("--line"),
     font: `${v("--fs") || "12px"} ${v("--font")}`,
     colors: { fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), warn: v("--warn"), err: v("--err"), acc: v("--accent"), val: v("--val") || v("--fg") },
   };
@@ -101,9 +108,16 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     const { columns: cols, rows: rs, band: isBand } = data.current;
     const row = rs[i];
     const banded = row !== undefined && !!isBand?.(row);
-    ctx.fillStyle = i === s.sel ? th.sel : banded ? th.bar : th.bg;
+    ctx.fillStyle = i === s.sel ? th.sel : banded ? th.hdrBg : th.bg;
     ctx.fillRect(0, y, s.w, ROW_H);
     if (row === undefined) return;
+    if (i !== s.sel && !banded) {
+      // Thin gray rules: under the row and between columns (no per-cell allocation, plain rects).
+      ctx.fillStyle = th.rowRule;
+      ctx.fillRect(0, y + ROW_H - 1, s.w, 1);
+      ctx.fillStyle = th.colRule;
+      for (let c = 1; c < cols.length; c++) ctx.fillRect(s.xs[c] - 1, y, 1, ROW_H - 1);
+    }
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const x = s.xs[c];
@@ -114,7 +128,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
         ctx.fillRect(x + 1, y + 1, cwPx - 2, ROW_H - 2);
       }
       const text = clip(col.text(row), col.width);
-      ctx.fillStyle = hl ? th.bg : banded ? th.colors.val : th.colors[col.color?.(row) ?? (col.align === "right" ? "val" : "fg")];
+      ctx.fillStyle = hl ? th.bg : banded ? (c === 0 ? th.colors.fg : th.colors.val) : th.colors[col.color?.(row) ?? (col.align === "right" ? "val" : "fg")];
       const tx = col.align === "right" ? x + PAD + (col.width - text.length) * s.cw : x + PAD;
       ctx.fillText(text, tx, y + ROW_H / 2 + 1);
     }
@@ -152,7 +166,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     ctx.fillStyle = th.bg;
     ctx.fillRect(0, 0, s.w, s.h);
     const cols = data.current.columns;
-    ctx.fillStyle = th.bar;
+    ctx.fillStyle = th.hdrBg;
     ctx.fillRect(0, 0, s.w, ROW_H - 1);
     ctx.fillStyle = th.hdr;
     for (let c = 0; c < cols.length; c++) {

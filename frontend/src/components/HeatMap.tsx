@@ -5,6 +5,7 @@
  */
 import { useEffect, useImperativeHandle, useRef, forwardRef } from "react";
 import { displayVersion } from "../settings/runtime";
+import "./dataColors.css";
 import { heatLevel, heatRange, heatText, type HeatPayload } from "../research/chartMath";
 
 const CELL_H = 18;
@@ -18,7 +19,7 @@ export interface HeatHandle {
 function readColors(el: Element) {
   const cs = getComputedStyle(el);
   const v = (n: string) => cs.getPropertyValue(n).trim();
-  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), line: v("--line"), hue: v("--accent"), font: `${v("--fs") || "12px"} ${v("--font")}` };
+  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), line: v("--line"), hdrBg: v("--grid-hdr-bg") || v("--bar") || v("--line"), hdrFg: v("--grid-hdr-fg") || v("--fg"), rule: v("--grid-row-rule") || v("--line"), hue: v("--accent"), font: `${v("--fs") || "12px"} ${v("--font")}` };
 }
 
 function HeatMapInner({ heat }: { heat: HeatPayload }, ref: React.Ref<HeatHandle>) {
@@ -57,12 +58,14 @@ function HeatMapInner({ heat }: { heat: HeatPayload }, ref: React.Ref<HeatHandle
     const h = latest.current;
     ctx.fillStyle = c.bg;
     ctx.fillRect(0, 0, w, hpx);
+    ctx.fillStyle = c.hdrBg;
+    ctx.fillRect(0, 0, w, HEAD_H);
     ctx.font = c.font;
     ctx.textBaseline = "middle";
     const range = heatRange(h.z);
     const cols = h.x.length;
     const cw = Math.max(24, (w - LABEL_W) / Math.max(1, cols));
-    ctx.fillStyle = c.dim;
+    ctx.fillStyle = c.hdrFg;
     ctx.textAlign = "center";
     h.x.forEach((x, j) => ctx.fillText(String(x), LABEL_W + j * cw + cw / 2, HEAD_H / 2));
     ctx.textAlign = "left";

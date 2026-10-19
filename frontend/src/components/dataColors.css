@@ -1,0 +1,25 @@
+/* Data-view colour tokens (grids, heat maps, XY and price charts). Extra surface tokens, not theme-checked.
+   Defaults live on :root; every theme block below overrides them so dark and light both read correctly. */
+:root {
+  --grid-hdr-bg: #2a2a2a;   /* column-header band */
+  --grid-hdr-fg: #fb8b1e;   /* column-header labels (amber) */
+  --grid-row-rule: #1c1c1c; /* thin rule under each row */
+  --grid-col-rule: #1c1c1c; /* thin rule between columns */
+  --grid-sel: #1d4f91;      /* selection bar (blue) */
+  --chart-grid: #1a1a1a;    /* price-chart grid lines (dim gray) */
+  --chart-up: #1ee05a;      /* candle / bar up */
+  --chart-down: #ff433d;    /* candle / bar down */
+  --chart-line: #ffffff;    /* line / area series */
+}
+:root[data-theme="green"] {
+  --grid-hdr-bg: #0a1f10; --grid-hdr-fg: #33ff66; --grid-row-rule: #0a2412; --grid-col-rule: #0a2412;
+  --grid-sel: #0f2a16; --chart-grid: #0a2412; --chart-up: #00ffd0; --chart-down: #ff5c5c; --chart-line: #33ff66;
+}
+:root[data-theme="white"] {
+  --grid-hdr-bg: #2a2a2a; --grid-hdr-fg: #ffffff; --grid-row-rule: #3a3a3a; --grid-col-rule: #3a3a3a;
+  --grid-sel: #333333; --chart-grid: #333333; --chart-up: #00ff66; --chart-down: #ff4040; --chart-line: #ffffff;
+}
+:root[data-theme="light"] {
+  --grid-hdr-bg: #d0d0d0; --grid-hdr-fg: #7a3d00; --grid-row-rule: #e0e0e0; --grid-col-rule: #e0e0e0;
+  --grid-sel: #b8d0f0; --chart-grid: #e4e4e4; --chart-up: #007a3d; --chart-down: #c4161c; --chart-line: #000000;
+}
