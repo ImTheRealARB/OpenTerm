@@ -1,6 +1,7 @@
 import { gauges, series } from "../perf/metrics";
 import { createStore } from "../state/store";
 import { ingest } from "../state/ticks";
+import { heartbeatDead, heartbeatMissed } from "./heartbeat";
 import { ingestJobFrame } from "./jobs";
 
 export interface LinkState {
@@ -62,7 +63,32 @@ export function connect(): void {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(`${proto}://${location.host}/ws`);
     socket = ws;
-    const ping = () => ws.readyState === 1 && ws.send(JSON.stringify(["ping", performance.now()]));
+    let closed = false;
+    let lastPingAt = 0;
+    let lastRecvAt = 0;
+    let missed = 0;
+    // Runs once per socket, from `close` or from the heartbeat below (a half-open connection never fires `close`).
+    const handleClose = () => {
+      if (closed) return;
+      closed = true;
+      clearInterval(pingTimer);
+      if (socket === ws) socket = null;
+      link.set((s) => ({ ...s, status: "DOWN" }));
+      setTimeout(open, backoff);
+      backoff = Math.min(backoff * 2, 15000);
+    };
+    const ping = () => {
+      if (ws.readyState !== 1) return;
+      missed = heartbeatMissed(missed, lastPingAt, lastRecvAt);
+      if (heartbeatDead(missed)) {
+        handleClose();
+        ws.onclose = ws.onmessage = null;
+        ws.close();
+        return;
+      }
+      lastPingAt = performance.now();
+      ws.send(JSON.stringify(["ping", lastPingAt]));
+    };
 
     ws.onopen = () => {
       backoff = 500;
@@ -72,6 +98,7 @@ export function connect(): void {
     };
     ws.onmessage = (ev) => {
       const recv = performance.now();
+      lastRecvAt = recv;
       frames++;
       const msg = JSON.parse(ev.data as string) as unknown[];
       if (msg[0] === "T") {
@@ -84,13 +111,7 @@ export function connect(): void {
         link.set((s) => ({ ...s, status: "OK", rttMs: rtt, lastMsgAt: Date.now() }));
       }
     };
-    ws.onclose = () => {
-      clearInterval(pingTimer);
-      if (socket === ws) socket = null;
-      link.set((s) => ({ ...s, status: "DOWN" }));
-      setTimeout(open, backoff);
-      backoff = Math.min(backoff * 2, 15000);
-    };
+    ws.onclose = handleClose;
   };
   open();
 }
