@@ -261,7 +261,8 @@ async def ws(socket: WebSocket) -> None:
                 continue
             op = msg[0]
             if op == "ping":
-                await client.send_json(["pong", msg[1], time.time() * 1000])
+                if len(msg) > 1:  # a bare ["ping"] is ignored, not a reason to drop the socket
+                    await client.send_json(["pong", msg[1], time.time() * 1000])
             elif op in ("sub", "unsub") and len(msg) > 1 and isinstance(msg[1], list):
                 symbols = [resolve(str(s)) for s in msg[1][:MAX_SUBS_PER_CLIENT]]
                 if op == "sub":
