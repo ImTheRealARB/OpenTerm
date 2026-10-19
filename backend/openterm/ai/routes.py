@@ -6,6 +6,7 @@ one chart image to a vision model with no tools.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
@@ -242,6 +243,18 @@ def doc_store(request: Request):
     return st
 
 
+def _ingest(name: str, fname: str, data: bytes, kind_as: str | None = None):
+    """Parse, chunk and index one document (not yet stored). Runs in a thread: a 5 MB HTML file holds the event loop for about 0.8 s otherwise."""
+    import uuid
+
+    from . import doc
+
+    kind, text = doc.extract_text(fname, data)
+    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text))
+    d.index()
+    return d
+
+
 @router.post("/doc/upload")
 async def doc_upload(request: Request, name: str = ""):
     from . import doc
@@ -254,10 +267,10 @@ async def doc_upload(request: Request, name: str = ""):
     if len(data) > doc.MAX_BYTES:
         return _err(413, "too_large", f"FILE OVER {doc.MAX_BYTES // 1024 // 1024} MB")
     try:
-        kind, text = doc.extract_text(name, data)
+        d = doc_store(request).put(await asyncio.to_thread(_ingest, name, name, data))
     except ValueError as e:
         return _err(400, "bad_request", str(e))
-    return {"doc": doc_store(request).add(name, kind, doc.chunk(text)).card()}
+    return {"doc": d.card()}
 
 
 @router.post("/doc/filing")
@@ -282,12 +295,12 @@ async def doc_filing(request: Request):
         return _err(502, "provider", f"SEC: {str(e)[:120]}")
     if len(raw) > doc.MAX_BYTES:
         return _err(413, "too_large", "THE FILING DOCUMENT IS OVER 10 MB")
+    name = f"{symbol.upper()} {form} {hit.get('filed') or ''}".strip()
     try:
-        _, text = doc.extract_text("filing.htm", raw)
+        d = doc_store(request).put(await asyncio.to_thread(_ingest, name, "filing.htm", raw, "filing"))
     except ValueError as e:
         return _err(400, "bad_request", str(e))
-    name = f"{symbol.upper()} {form} {hit.get('filed') or ''}".strip()
-    return {"doc": doc_store(request).add(name, "filing", doc.chunk(text)).card(), "url": hit.get("url") or hit["doc_url"]}
+    return {"doc": d.card(), "url": hit.get("url") or hit["doc_url"]}
 
 
 @router.post("/doc/ask")
