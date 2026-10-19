@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import aclosing
 from datetime import UTC, datetime
 
 from . import ground
@@ -68,18 +69,19 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
         rounds += 1
         text_parts: list[str] = []
         calls: list = []
-        async for ev in gateway.chat(fit(messages), model, provider, offered, max_tokens, 0.2):
-            if ev.type == "token":
-                text_parts.append(ev.text)
-                yield {"type": "token", "text": ev.text}
-            elif ev.type == "tool_call":
-                calls.append(ev)
-            elif ev.type == "usage":
-                cost += ev.cost or 0.0
-                yield _usage(ev)
-            elif ev.type == "error":
-                yield {"type": "error", "kind": ev.kind, "text": ev.text}
-                return
+        async with aclosing(gateway.chat(fit(messages), model, provider, offered, max_tokens, 0.2)) as stream:  # closed at once if we are closed
+            async for ev in stream:
+                if ev.type == "token":
+                    text_parts.append(ev.text)
+                    yield {"type": "token", "text": ev.text}
+                elif ev.type == "tool_call":
+                    calls.append(ev)
+                elif ev.type == "usage":
+                    cost += ev.cost or 0.0
+                    yield _usage(ev)
+                elif ev.type == "error":
+                    yield {"type": "error", "kind": ev.kind, "text": ev.text}
+                    return
         text = "".join(text_parts)
         if not calls:
             answer = text
@@ -118,16 +120,17 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
         yield {"type": "notice", "text": f"STOPPED: {why}"}
         messages.append({"role": "user", "content": CLOSING.format(why=why.lower())})
         parts: list[str] = []
-        async for ev in gateway.chat(fit(messages), model, provider, None, max_tokens, 0.2):
-            if ev.type == "token":
-                parts.append(ev.text)
-                yield {"type": "token", "text": ev.text}
-            elif ev.type == "usage":
-                cost += ev.cost or 0.0
-                yield _usage(ev)
-            elif ev.type == "error":
-                yield {"type": "error", "kind": ev.kind, "text": ev.text}
-                return
+        async with aclosing(gateway.chat(fit(messages), model, provider, None, max_tokens, 0.2)) as stream:
+            async for ev in stream:
+                if ev.type == "token":
+                    parts.append(ev.text)
+                    yield {"type": "token", "text": ev.text}
+                elif ev.type == "usage":
+                    cost += ev.cost or 0.0
+                    yield _usage(ev)
+                elif ev.type == "error":
+                    yield {"type": "error", "kind": ev.kind, "text": ev.text}
+                    return
         answer = "".join(parts)
 
     grounded = good > 0

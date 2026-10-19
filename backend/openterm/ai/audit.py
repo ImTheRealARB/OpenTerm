@@ -14,6 +14,7 @@ import hashlib
 import logging
 import time
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 
 import aiosqlite
 import orjson
@@ -101,22 +102,23 @@ async def audited(ledger: AuditLog, events: AsyncIterator[dict], kind: str, mf: 
     """Pass events through; at the final event write the ledger entry first (a ledger failure is logged, never shown as an answer problem)."""
     calls: list[dict] = []
     run_id = ref
-    async for ev in events:
-        t = ev["type"]
-        if t == "tool_call" and len(calls) < MAX_TOOL_LINES:
-            calls.append({"id": ev["id"], "role": ev.get("role"), "name": ev["name"], "args_sha": sha(canonical(ev["args"])), "ok": None, "source": None})
-        elif t == "tool_result":
-            for c in calls:
-                if c["id"] == ev["id"] and c["role"] == ev.get("role") and c["ok"] is None:
-                    c["ok"], c["source"] = ev["ok"], ev["source"]
-        elif t == "saved":
-            run_id = ev["run_id"]
-        elif t in FINAL_EVENTS:
-            answer = ev.get("answer") or ""
-            meta = {"question_sha": sha(question), "answer_sha": sha(answer), "cost": ev.get("cost"), "grounded": ev.get("grounded"),
-                    "unsourced": len(ev.get("unsourced") or []), "tool_calls": calls, "stopped": ev.get("stopped"), "failed_roles": ev.get("failed")}
-            try:
-                await ledger.append(kind, run_id, mf["model"], mf, meta)
-            except Exception:
-                log.exception("ai ledger append failed")
-        yield ev
+    async with aclosing(events) as stream:  # closing this generator closes the run it wraps now, not when the garbage collector gets to it
+        async for ev in stream:
+            t = ev["type"]
+            if t == "tool_call" and len(calls) < MAX_TOOL_LINES:
+                calls.append({"id": ev["id"], "role": ev.get("role"), "name": ev["name"], "args_sha": sha(canonical(ev["args"])), "ok": None, "source": None})
+            elif t == "tool_result":
+                for c in calls:
+                    if c["id"] == ev["id"] and c["role"] == ev.get("role") and c["ok"] is None:
+                        c["ok"], c["source"] = ev["ok"], ev["source"]
+            elif t == "saved":
+                run_id = ev["run_id"]
+            elif t in FINAL_EVENTS:
+                answer = ev.get("answer") or ""
+                meta = {"question_sha": sha(question), "answer_sha": sha(answer), "cost": ev.get("cost"), "grounded": ev.get("grounded"),
+                        "unsourced": len(ev.get("unsourced") or []), "tool_calls": calls, "stopped": ev.get("stopped"), "failed_roles": ev.get("failed")}
+                try:
+                    await ledger.append(kind, run_id, mf["model"], mf, meta)
+                except Exception:
+                    log.exception("ai ledger append failed")
+            yield ev

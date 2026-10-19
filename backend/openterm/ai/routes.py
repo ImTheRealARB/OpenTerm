@@ -17,6 +17,7 @@ from fastapi.responses import Response, StreamingResponse
 
 from .. import api as api_mod
 from .. import perf
+from ..redact import redact
 from ..responses import Orjson
 from . import agent, tools
 from .audit import audit_of, audited, manifest
@@ -97,6 +98,8 @@ def _stream(request: Request, t0: float, events: AsyncIterator[dict], runner: to
                 for extra in tap(ev) if tap else []:
                     yield sse(extra)
                 yield sse(ev)
+        except Exception as e:  # noqa: BLE001 - headers are sent: end the stream with an error event the panel can show, not a dropped connection
+            yield sse({"type": "error", "kind": "internal", "text": redact(f"AI RUN FAILED: {type(e).__name__}: {str(e)[:160]}")})
         finally:
             await events.aclose()
             if runner:

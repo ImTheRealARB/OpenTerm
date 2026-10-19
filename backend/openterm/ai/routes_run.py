@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
@@ -13,6 +15,7 @@ from .. import api as api_mod
 from . import agent, tools
 from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, audit, router
 
+log = logging.getLogger("openterm.ai")
 AUTO_TOOLS = ["history", "quote", "profile", "skill", "strategy_check", "backtest_run", "backtest_get"]
 RUN_ID_IN_TEXT = re.compile(r'"run_id"\s*:\s*"([0-9a-f]{8,32})"')  # BT run ids are 16 hex characters
 SUBJECT_SYMBOL = re.compile(r"^[A-Za-z][A-Za-z0-9.\-^=]{0,11}$")
@@ -35,12 +38,17 @@ def _store(request: Request):
 async def save_events(request: Request, events: AsyncIterator[dict], kind: str, title: str, symbol: str | None, final: str) -> AsyncIterator[dict]:
     """Pass events through, keep them, and at the final event store the run and send `saved {run_id}` just before it so the panel can link it."""
     kept: list[dict] = []
-    async for ev in events:
-        kept.append(ev)
-        if ev["type"] == final:
-            run_id = await _store(request).save_run(kind, title, symbol, kept)
-            yield {"type": "saved", "run_id": run_id}
-        yield ev
+    async with aclosing(events) as stream:
+        async for ev in stream:
+            kept.append(ev)
+            if ev["type"] == final:
+                try:  # a full disk must not cost the user the answer they already paid for
+                    run_id = await _store(request).save_run(kind, title, symbol, kept)
+                except Exception:
+                    log.exception("could not store the %s run", kind)
+                else:
+                    yield {"type": "saved", "run_id": run_id}
+            yield ev
 
 
 def subject_symbol(subject: str) -> str | None:
@@ -110,11 +118,12 @@ async def auto(request: Request):
     inner = agent.run(api_mod.llm_of(request), seen, hypothesis.strip(), [], model=names[0], provider=names[1], tools=AUTO_TOOLS, system=system, max_rounds=8)
 
     async def with_evidence() -> AsyncIterator[dict]:
-        async for ev in inner:
-            if ev["type"] == "done":
-                yield {"type": "evidence", "runs": runs, "tested": bool(runs),
-                       "note": "HISTORICAL SIMULATION, NOT A FORECAST" if runs else "NO BACKTEST WAS RUN: THIS REPORT HAS NO BACKTEST EVIDENCE"}
-            yield ev
+        async with aclosing(inner) as stream:
+            async for ev in stream:
+                if ev["type"] == "done":
+                    yield {"type": "evidence", "runs": runs, "tested": bool(runs),
+                           "note": "HISTORICAL SIMULATION, NOT A FORECAST" if runs else "NO BACKTEST WAS RUN: THIS REPORT HAS NO BACKTEST EVIDENCE"}
+                yield ev
 
     events = save_events(request, with_evidence(), "auto", hypothesis.strip(), None, "done")
     events = audit(request, events, "ai_auto", AUTO_SYSTEM, hypothesis.strip(), AUTO_TOOLS, names[0], names[1])
