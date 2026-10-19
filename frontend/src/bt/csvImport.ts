@@ -33,6 +33,7 @@ function validDate(y: number, m: number, d: number): boolean {
 
 function num(raw: string): number | null {
   if (raw.trim() === "") return null;
+  if (/^\s*[+-]?0[xbo]/i.test(raw)) return null; // JS reads 0x10 / 0b1 / 0o7 as numbers; the backend (Python float) does not
   const v = Number(raw);
   return Number.isFinite(v) ? v : null;
 }
