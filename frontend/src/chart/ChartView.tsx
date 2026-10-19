@@ -13,6 +13,7 @@ import { fmtBig, fmtPrice } from "../format";
 import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { useStore } from "../state/store";
+import { clampIndex, listKey } from "./chartGuards";
 import type { IndicatorName } from "./indicators";
 import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
@@ -136,6 +137,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const paintRef = useRef<() => void>(() => {});
   const rafRef = useRef(0);
 
+  const indKey = listKey(indicators);
   const colors = useRef(themeColors());
   // Phase 10: theme switch. Colours are re-read once per change (never per frame), then series are rebuilt.
   const ver = useStore(displayVersion, (v) => v);
@@ -254,6 +256,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     patMarks.current = [];
     markersApi.current = createSeriesMarkers(s, []);
     applyMarkers();
+    cross.current.idx = clampIndex(cross.current.idx, n); // the data may be shorter than when the keyboard crosshair was placed
     last.current = n ? { t: data.t[n - 1], o: data.o[n - 1], h: data.h[n - 1], l: data.l[n - 1], c: data.c[n - 1], v: data.v[n - 1] } : null;
 
     // Series without volume (FRED, indices on some feeds) get no histogram: zero bars draw as a flat line.
@@ -307,8 +310,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         if (ev.data.id !== reqId.current || !chartRef.current) return;
         drawIndicators(chartRef.current, ev.data.results);
       };
-      // Copies: the worker gets its own buffers so `data` stays usable here.
-      w.postMessage({ id, which: indicators, series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
+      // Copies handed over (transferred), so `data` stays usable here: one copy instead of a copy plus a structured clone.
+      const series = { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() };
+      w.postMessage({ id, which: indicators, series }, [series.t.buffer, series.o.buffer, series.h.buffer, series.l.buffer, series.c.buffer, series.v.buffer]);
     } else {
       reqId.current++;
     }
@@ -431,7 +435,9 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       const panes = ch.panes();
       for (let i = 1; i < panes.length; i++) panes[i].setHeight(panes[i] === undefined || i <= (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0) ? 110 : 90);
     }
-  }, [data, compare, type, log, indicators, lowerPane, comparePanes, ver]);
+    // `indKey`, not the array: a caller passing a fresh `[]` each render must not rebuild the chart (and reset its zoom).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, compare, type, log, indKey, lowerPane, comparePanes, ver]);
 
   /** Pattern marks and event marks share the price series' marker plugin. */
   function applyMarkers() {
@@ -531,7 +537,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
 
   useImperativeHandle(ref, () => ({
     crosshairIndex() {
-      return cross.current.on ? cross.current.idx : data.c.length - 1;
+      return cross.current.on ? clampIndex(cross.current.idx, data.c.length) : data.c.length - 1;
     },
     screenshot() {
       try {
