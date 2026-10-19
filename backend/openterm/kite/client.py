@@ -71,6 +71,8 @@ class KiteClient:
             body = r.json()
         except ValueError as e:
             raise _error("unavailable", f"KITE ANSWERED HTTP {r.status_code} WITHOUT JSON") from e
+        if not isinstance(body, dict):
+            raise _error("unavailable", f"KITE ANSWERED HTTP {r.status_code} WITH AN UNEXPECTED BODY")
         if r.status_code >= 400 or body.get("status") != "success":
             msg = redact(str(body.get("message") or f"HTTP {r.status_code}"))
             kind = "not_found" if body.get("error_type") == "InputException" else "unavailable"
@@ -126,6 +128,8 @@ class KiteClient:
         try:
             body = r.json()
         except ValueError:
+            body = {}
+        if not isinstance(body, dict):
             body = {}
         if r.status_code != 200 or body.get("status") != "success" or not (body.get("data") or {}).get("access_token"):
             raise KiteLoginFailed(redact(str(body.get("message") or f"HTTP {r.status_code}"), [key, secret, request_token]))
