@@ -4,6 +4,7 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
+import { wheelTop } from "../state/gridScroll";
 
 /** `val` is the data-value colour (white on the dark themes); uncoloured right-aligned cells use it. */
 export type CellColor = "fg" | "dim" | "up" | "down" | "warn" | "err" | "acc" | "val";
@@ -124,7 +125,8 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     const el = sr.current;
     const row = data.current.rows[st.current.sel];
     if (!el) return;
-    el.textContent = row === undefined ? "" : data.current.columns.map((c) => `${c.title} ${c.text(row)}`.trim()).join(" · ");
+    const text = row === undefined ? "" : data.current.columns.map((c) => `${c.title} ${c.text(row)}`.trim()).join(" · ");
+    if (el.textContent !== text) el.textContent = text; // identical text would still re-announce in the live region
   };
 
   const drawScrollbar = () => {
@@ -238,9 +240,9 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     ro.observe(el);
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const n = data.current.rows.length;
-      const step = Math.sign(e.deltaY) * 3;
-      s.top = Math.max(0, Math.min(s.top + step, Math.max(0, n - visibleCount())));
+      const top = wheelTop(s.top, e.deltaY, data.current.rows.length, visibleCount());
+      if (top === s.top) return; // at either end, or a horizontal wheel: nothing moved, nothing to repaint
+      s.top = top;
       redraw();
     };
     const onDown = (e: MouseEvent) => {
