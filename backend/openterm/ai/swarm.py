@@ -16,6 +16,7 @@ from . import agent, ground
 from . import tools as toolbox
 
 MAX_RETRIES = 1
+FATAL_KINDS = ("key_required", "invalid", "spend_cap", "price_unknown")  # every role would hit the same wall: no retry, stop the run
 ROLE_ROUNDS = 5
 ROLE_CALLS = 10
 
@@ -136,7 +137,7 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
                         continue
                     if ev["type"] == "error":
                         failure = f"{ev['kind']}: {ev['text']}"
-                        if ev["kind"] == "key_required":  # no retry, nothing else can run either
+                        if ev["kind"] in FATAL_KINDS:  # no retry, nothing else can run either
                             yield {"type": "error", "kind": ev["kind"], "text": ev["text"]}
                             return
                         yield {"type": "role_error", "role": role.id, "kind": ev["kind"], "text": ev["text"]}
@@ -148,6 +149,8 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
                         else:
                             done = ev
                         continue
+                    if ev["type"] == "usage":  # counted here, so an attempt that failed after it was paid for still shows in the total
+                        cost += ev.get("cost") or 0.0
                     yield {**ev, "role": role.id}
             finally:
                 await events.aclose()
@@ -156,7 +159,6 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
             outcomes.append({"role": role.id, "ok": False, "why": failure, "cost": 0.0})
             notes.append((role, f"ROLE FAILED: {failure}"))
             continue
-        cost += done["cost"]
         if role.chair:
             sources = [t for _, t in notes if not t.startswith("ROLE FAILED")]
             grounded = any(o.get("grounded") for o in outcomes if o["ok"])
