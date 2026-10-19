@@ -5,6 +5,7 @@ import { fmtAge, fmtBig, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, api9, type Envelope, type PeersPayload, type Quote } from "../net/api";
 import { navigate } from "../state/workspace";
+import { latestOnly } from "./keyedLoad";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { periodReturn } from "./returns";
@@ -49,8 +50,10 @@ export default function COMP({ panelId, security }: FunctionProps) {
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const grid = useRef<GridHandle>(null);
+  const gate = useRef(latestOnly());
 
   const load = useCallback(() => {
+    const current = gate.current.start();
     setLoading(true);
     return api9
       .peers(symbol)
@@ -95,19 +98,23 @@ export default function COMP({ panelId, security }: FunctionProps) {
             pct: median(peerRows.map((r) => r.pct)), cap: median(peerRows.map((r) => r.cap)),
             rets: PERIODS.map((_, k) => median(peerRows.map((r) => r.rets[k]))),
           });
+        if (!current()) return;
         setData({ peers: pe, rows, failed, stale, age });
         setError(null);
       })
       .catch((e: ApiError) => {
+        if (!current()) return;
         setData(null);
         setError(e);
       })
-      .finally(() => setLoading(false));
+      .finally(() => current() && setLoading(false));
   }, [symbol]);
 
   useEffect(() => {
+    const g = gate.current;
     setData(null);
     void load();
+    return () => g.invalidate();
   }, [load]);
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
