@@ -29,21 +29,14 @@ None. Agent 9 classified 804 backend, 437 vitest, 192 Playwright tests: no exact
 ## Decisions for the user
 `DECISIONS_FOR_USER.md`.
 
-## UNVERIFIED (Phase 2 must check)
-1. Everything: no full `gates.mjs`, bench or Playwright run happened. Whole branch needs the gate.
-2. Heartbeat (`3d0c2f9`): never run against a real half-open socket; risk of false DOWN under load in e2e. Revert if flaky.
-3. SWARM unmount abort (`c820e22`): may cancel a run when the panel is maximized (remount). Check SWARM e2e.
-4. `useEnvelope` conversion of HIST, ECO, CRYP, MACRO, N: no e2e run.
-5. GP drawing-save wiring, `ChartView` effect-key change, indicator worker buffer transfer: never run in a browser. Run Phase 19 drawing and GP/GIP e2e.
-6. Grid wheel early return and `.sr` write-on-change: type-checked only; Playwright mirrors `.sr`.
-7. Tick null-carry (`state/tickMerge.ts`): check quote grids and alerts e2e.
-8. Redaction filter on a live `uvicorn.run`; new 413/422 limits against real routes (full pytest).
-9. `JobStore.recent` covering index and the jobs runner changes under the Phase 11/13/14/15 bench budgets; BT/quant job benches.
-10. `Cache.get_many` in `DataService.quotes`: run bench backend latency lines.
-11. `gates.mjs`, `check.mjs`/`check.sh` (Linux), new CI workflow, `new_function.py` (only dry-run in repo): never run for real.
-12. `docs/FUNCTIONS.md` staleness test after the registry changes (agent 8 touched registry.ts only if listed; run `gen_functions_doc.py`).
-13. Not audited: `quantlib/`, `quant/`, `valuation/`, `options/`, `rates/`, `secf/`, individual `quantjobs/*` bodies.
-14. CLAUDE.md gotcha "ChartView captures writeReadout" is obsolete per agent 6; remove in Phase 2.
+## Phase 2 result (2026-10-19)
+- Full gate on the final tree: ALL PASS (pytest 1628, ruff, tsc, vitest, e2e 183) in 123.3 s; `main` took 167.4 s and FAILED 9 e2e tests (load flakes). See `BASELINE.md`.
+- Bench: 37/37 after one rested rerun (first run: two BT misses, throttling). See `docs/PERFORMANCE.md`.
+- Reverted: `c820e22` (SWARM abort, remount hazard) and `e8eed43` (ChartView: broke 6 GP e2e tests). See `REVERTED.md`.
+- Added after the self-review: swarm fatal error after earlier roles still ends with `swarm_done` (test), `\Z` path regex, whole floats for integer tool args (`cffa895`). Playwright now 4 workers (the default 10 flaked 8-9 tests per run, on `main` too).
+- Wave 2 added: quant parsers (`parse_deribit`, `parse_mof`), `rolling_cc` 44.1 -> 19.1 ms, `useLiveRows`/`LivePrice` (index rebuild 241-294 -> 83-92 us at 2000 rows; hidden-tab redraw stops).
+- Tests removed: 0 (none were redundant); +60 new tests.
 
-## Phase 2 revert candidates if a gate or budget fails
-Per-commit: `3d0c2f9` heartbeat, `c820e22` SWARM abort, `e8eed43` ChartView, `fb5c07e` GP draw save, `4205941` tick merge, `ebbeeee` Grid wheel, `8803f4e` useEnvelope, `d0204cd` jobs runner, `47b9b33` JobStore.recent, `40bd090` Cache.get_many, `2931bcd` AI stream cancellation.
+## UNVERIFIED items, now checked
+Items 1, 4, 6, 7, 9, 10, 12 (and the quoteRows wiring): covered by the full gate and bench above. Item 5: GP drawings e2e pass (ChartView revert, `drawSave` kept). Item 2 (heartbeat): e2e passes, never run against a real half-open socket. Item 3: resolved by the revert. Item 8: pytest passes; the uvicorn-handler filter was only tested with a stand-in logger.
+STILL UNVERIFIED: `check.mjs` Playwright stage and `check.sh` on Linux/macOS; the new 5-job CI on GitHub; `new_function.py` for real in the repo (only dry-run + scratch copy); heartbeat on a real half-open socket; modules not audited line by line (`valuation/`, `quantlib/`, most of `quant/`, `quantjobs/{opt,fact,ql,alpha}`).

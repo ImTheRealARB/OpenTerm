@@ -521,3 +521,7 @@ Measured with scratch scripts against temp DBs or Node, no servers. Best of N un
 | Frontend | job frame flush, 300 jobs x 40 frames (one map copy) | 0.614 ms | 0.019 ms |
 | Chart | indicator worker request at 50k bars (transferred buffers) | 2.75 ms | 0.97 ms |
 Rejected (no gain): `to_thread` for the screener, companyfacts and NSE bhavcopy parsers (GIL).
+
+### Review sprint bench (2026-10-19, Windows, `node scripts/bench.mjs` on `claude/review-all` after the gate)
+Run 1 (straight after the full gate, machine throttled): 35 pass, 2 miss: BT 10-year 400.2 ms (budget 300), BT open to first paint 122.1 ms (budget 100). Run 2 after 2 minutes of rest: **37 pass, 0 fail**.
+Selected run-2 numbers: cached /api/quote 1.0 ms; tick to pixel p95 36.3 ms (50); job submit 4.8 ms (20); cached job 1.9 ms; BT 10-year 205.6 ms (300); BT cached 6.1 ms; BT open to first paint 90.2 ms (100); RISK 76.3 ms (400); CORR REGIME 92.5 ms (300); ALPHA SYN 881 ms (8000); AI first SSE 4.7 ms (60). No budget regressed; the first-run BT misses match the known throttling note (CLAUDE.md). Gate wall-clock before/after: `docs/review/BASELINE.md`.
