@@ -6,6 +6,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
+from ..redact import redact
 from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
@@ -155,7 +156,7 @@ class CalcMixin:
             else:
                 return {"typed": None, "points": None, "basis": "MISSING"}, f"{ccy} RATE (NO FREE SOURCE: TYPE {flag}=<percent>)"
         except (DataError, AllFailed) as e:
-            return {"typed": None, "points": None, "basis": "MISSING"}, f"{ccy} RATE (SOURCE FAILED: {e}; TYPE {flag}=<percent>)"
+            return {"typed": None, "points": None, "basis": "MISSING"}, f"{ccy} RATE (SOURCE FAILED: {redact(str(e))}; TYPE {flag}=<percent>)"
         if not pts:
             return {"typed": None, "points": None, "basis": "MISSING"}, f"{ccy} RATE (NO CURVE POINT UP TO 1Y; TYPE {flag}=<percent>)"
         return {"typed": None, "points": pts, "basis": f"{basis} ({date}, {source})"}, None

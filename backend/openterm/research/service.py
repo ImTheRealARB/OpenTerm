@@ -12,6 +12,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..providers.base import ProviderError
+from ..redact import redact
 from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
@@ -205,7 +206,7 @@ class Research:
             ks, vol = await asyncio.gather(keystats(), volume(), return_exceptions=True)
             note = None
             if isinstance(vol, AllFailed):
-                reasons = "; ".join(f"{n}: {e}" for n, e in vol.errors) or "NO PROVIDER"
+                reasons = "; ".join(f"{n}: {redact(str(e))}" for n, e in vol.errors) or "NO PROVIDER"
                 vol, note = None, f"FINRA DAILY SHORT VOLUME UNAVAILABLE ({reasons})"
             elif isinstance(vol, BaseException):
                 raise vol

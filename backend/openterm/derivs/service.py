@@ -22,6 +22,7 @@ from ..options import pricer as pr
 from ..options import surface as sf
 from ..options import surface_tables as st
 from ..options import tables as ot
+from ..redact import redact
 from ..research import corp_parse as cp
 from ..router import AllFailed
 from ..service import DataError, envelope
@@ -432,7 +433,7 @@ class Derivs(FuturesMixin, CalcMixin):
         try:
             bars = (await self.svc.history(bars_sym, "1y", "1d"))["data"]
         except (DataError, AllFailed) as e:
-            bars_error = str(e)
+            bars_error = redact(str(e))
         notes = [*notes, "RV: CLOSE-TO-CLOSE AND PARKINSON, ANNUALISED WITH SQRT(252); VRP = IV30 - RV30 (A SPREAD, NOT A FORECAST)",
                  "IV RANK / PERCENTILE USE ONLY THIS MACHINE'S DAILY IV30 SNAPSHOTS (NO FREE SOURCE HAS IV HISTORY)"]
         data = st.hivg_payload(sym, sm, rows, bars, bars_error, iv30, iv30_note, history, notes,
