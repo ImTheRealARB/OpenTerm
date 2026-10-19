@@ -1,0 +1,2 @@
+# Reverted commits (review sprint)
+- `c820e22` SWARM aborts its SSE stream on unmount: reverted by the lead before any gate. Maximizing or restoring a panel remounts it (Workspace.tsx:25), so the abort would kill a running swarm the user only maximized, where before it finished and was saved. Putting the abort behind "only when the panel is closed, not remounted" is a decision for the user (see DECISIONS_FOR_USER.md).

@@ -4,12 +4,15 @@ Nothing below was changed in code unless it says so. Full detail is in each area
 
 ## Changed in code but user-visible (confirm or revert the named commit)
 - **Socket heartbeat** (`3d0c2f9`, frontend-core): 10 s of silence marks the link DOWN and reconnects (`MAX_MISSED` in `net/heartbeat.ts`). A backend stalled for more than 10 s now shows DOWN.
-- **SWARM aborts its SSE stream on unmount** (`c820e22`, frontend-functions-b): stops paid model calls after the panel closes. Maximizing a panel remounts it, so this may also cancel a run the user just maximized. `AI.tsx` was left without an abort for that reason. Needs a look.
 - **`gates.mjs` stops after a ruff/tsc failure** (`5e107d3`, devloop): `--keep-going` restores the old behaviour. CI is now 5 jobs (static, pytest, vitest, e2e, bench).
 - **New 413 / 422 limits** (`c768a2e`, backend-api): JSON bodies over 4 MB get 413; `symbol` over 32 characters on `/api/history`, `/api/profile`, `/api/resolve` gets 422.
 - **AI stream `error` event of kind `internal`** (backend-ai): an exception after the SSE headers now ends the stream with a redacted error event.
 
 ## Deferred (risky or user-visible)
+Quant
+- `quantjobs/attr.py` `return_measures`: Modified Dietz can divide by zero or go negative after large withdrawals; `xirr` bisection assumes a flow sign pattern and can return a wrong root; `quantjobs/risk.py` values holdings at each series' own last close, not the last common day; `parse_deribit` forward is the upper median for an even instrument count (backend-quant).
+AI/SWARM
+- SWARM and AI panels never abort their paid SSE stream when closed (SWARM abort `c820e22` was reverted because maximize remounts the panel and would kill the run). A close-vs-remount distinction is needed.
 Backend
 - `cache` table is never pruned; the DB file grows for ever (backend-core).
 - Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core).
