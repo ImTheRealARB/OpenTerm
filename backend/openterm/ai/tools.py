@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -258,6 +259,25 @@ def openai_tools(names: list[str] | None = None) -> list[dict]:
             for t in REGISTRY.values() if (t.name in names if names is not None else not t.doc_only)]
 
 
+# Arguments that are put into a route path: nothing may leave the route (httpx resolves `..`, so "../../keys" would reach /api/keys).
+PATH_ARGS = {"name": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}$"), "run_id": re.compile(r"^[A-Za-z0-9_\-]{1,64}$")}
+TYPES: dict[str, tuple[type, ...]] = {"string": (str,), "integer": (int, str), "number": (int, float, str), "array": (list,), "object": (dict,)}
+
+
+def _wrong_type(spec: dict, v: Any) -> bool:
+    want = TYPES.get(spec.get("type", ""))
+    if want is None:
+        return False
+    if isinstance(v, bool) or not isinstance(v, want):
+        return True
+    if isinstance(v, str) and spec["type"] in ("integer", "number"):  # a model often sends "5" for 5
+        try:
+            float(v)
+        except ValueError:
+            return True
+    return False
+
+
 def validate(name: str, args: Any) -> str | None:
     """An error message for the model, or None if the call is well formed."""
     t = REGISTRY.get(name)
@@ -273,9 +293,13 @@ def validate(name: str, args: Any) -> str | None:
         if args.get(k) in (None, "", []):
             return f"MISSING ARGUMENT {k} for {name}"
     for k, v in args.items():
+        if _wrong_type(props[k], v):
+            return f"ARGUMENT {k} MUST BE OF TYPE {props[k]['type'].upper()}"
         enum = props[k].get("enum")
         if enum and v not in enum:
             return f"ARGUMENT {k} MUST BE ONE OF {', '.join(map(str, enum))}"
+        if k in PATH_ARGS and name in ("backtest_get", "portfolio") and not PATH_ARGS[k].match(v):
+            return f"ARGUMENT {k} IS NOT A VALID {k.upper()}"
     return None
 
 
@@ -342,7 +366,7 @@ class ToolRunner:
                     got = await self.http.get(f"/api/bt/runs/{run_id}")
                     body = {**got.json(), "run_id": run_id} if got.status_code == 200 else body
             shaped = t.shape(body if isinstance(body, dict) else {"data": body}, args)
-        except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, IndexError, ArithmeticError) as e:  # a shaper hit an odd payload
             msg = f"TOOL ERROR {type(e).__name__}: {str(e)[:120]}"
             return ToolResult(ok=False, text=msg, error=msg)
         source, age, stale = _meta(body if isinstance(body, dict) else {})
