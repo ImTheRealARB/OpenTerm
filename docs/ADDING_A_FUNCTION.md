@@ -2,6 +2,10 @@
 
 A function (`GP`, `DES`, ...) is one lazily-loaded React module plus one registry entry.
 
+Shortcut: `python scripts/new_function.py FOO --title "What it does" [--security] [--args "[1Y|5Y]"] [--phase N]` does steps 1 and 2 below,
+adds a vitest stub (`FOO.test.ts`) and regenerates `docs/FUNCTIONS.md`; `--dry-run` prints the plan, and it refuses to overwrite anything.
+There is no per-function key binding step: `keys/keybindings.json` holds only the global actions, and a function is reached by typing its code.
+
 1. Create `frontend/src/functions/Foo.tsx` with a default export:
 
    ```tsx
