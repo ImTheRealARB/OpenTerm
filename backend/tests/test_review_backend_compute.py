@@ -86,3 +86,15 @@ async def test_pool_does_not_key_dead_workers_by_id(tmp_path, monkeypatch):
     finally:
         runner.close()
         await db.close()
+
+
+async def test_recent_listing_skips_result_blobs_but_keeps_rows(tmp_path):
+    db = await open_db(tmp_path / "rc.db")
+    await migrate(db)
+    store = JobStore(db)
+    await store.save({"id": "a", "kind": "sleep", "hash": "h", "state": "done", "params": {"x": 1}, "result": {"big": [1] * 1000},
+                      "error": None, "created_at": 1, "started_at": 1, "finished_at": 2})
+    rows = await store.recent(5)
+    assert [r["id"] for r in rows] == ["a"] and rows[0]["params"] == {"x": 1} and "result" not in rows[0]
+    assert (await store.get("a"))["result"] == {"big": [1] * 1000}
+    await db.close()

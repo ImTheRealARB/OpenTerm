@@ -16,6 +16,10 @@ class JobStore:
     async def _index(self) -> None:
         if not self._indexed:
             await self.db.execute("CREATE INDEX IF NOT EXISTS jobs_hash ON jobs (hash)")
+            # Covers `recent` (every column but params and result): SQLite stores columns in order, so reading a column
+            # after the result blob would otherwise walk the blob's overflow pages for every listed row.
+            await self.db.execute("CREATE INDEX IF NOT EXISTS jobs_recent ON jobs "
+                                  "(finished_at DESC, id, kind, hash, state, error, created_at, started_at)")
             self._indexed = True
 
     async def save(self, job: dict) -> None:
@@ -60,9 +64,9 @@ class JobStore:
         return self._row(r) if r else None
 
     async def recent(self, limit: int = 50) -> list[dict]:
-        async with self.db.execute(
-            f"SELECT {', '.join(COLS)} FROM jobs ORDER BY finished_at DESC LIMIT ?", (limit,)
-        ) as cur:
+        await self._index()
+        cols = ", ".join("NULL" if c == "result" else c for c in COLS)  # a listing never needs the (large) result blobs
+        async with self.db.execute(f"SELECT {cols} FROM jobs ORDER BY finished_at DESC LIMIT ?", (limit,)) as cur:
             return [self._row(r, with_result=False) for r in await cur.fetchall()]
 
     async def count(self) -> int:
