@@ -264,3 +264,21 @@ def test_kite_answer_that_is_not_a_json_object_is_a_data_error():
     r = httpx.Response(200, json=["not", "an", "object"])
     with pytest.raises(DataError):
         KiteClient._json(r)
+
+
+def test_a_swarm_fatal_error_after_earlier_roles_still_ends_with_swarm_done():
+    gw = FakeGateway(text("fund", cost=0.001), [Event("error", kind="spend_cap", text="CAP")])
+    ev = _swarm(gw)
+    assert len(gw.calls) == 2 and not any(e["type"] == "role_retry" for e in ev)
+    last = ev[-1]
+    assert last["type"] == "swarm_done" and last["failed"] and last["roles"][0]["ok"] is True
+    assert any(e["type"] == "role_error" and e["kind"] == "spend_cap" for e in ev)
+
+
+def test_path_arguments_reject_a_trailing_newline_and_integers_accept_whole_floats():
+    from openterm.ai import tools
+
+    assert tools.PATH_ARGS["run_id"].match("abc123")
+    assert not tools.PATH_ARGS["run_id"].match("abc123\n") and not tools.PATH_ARGS["name"].match("mine\n")
+    assert not tools._wrong_type({"type": "integer"}, 10.0)
+    assert tools._wrong_type({"type": "integer"}, 10.5)

@@ -122,7 +122,8 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
         tries = 0
         done: dict | None = None
         failure = ""
-        while tries <= MAX_RETRIES and done is None:
+        fatal = False
+        while tries <= MAX_RETRIES and done is None and not fatal:
             tries += 1
             if tries > 1:
                 yield {"type": "role_retry", "role": role.id, "attempt": tries, "why": failure}
@@ -138,8 +139,12 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
                     if ev["type"] == "error":
                         failure = f"{ev['kind']}: {ev['text']}"
                         if ev["kind"] in FATAL_KINDS:  # no retry, nothing else can run either
-                            yield {"type": "error", "kind": ev["kind"], "text": ev["text"]}
-                            return
+                            if not any(o["ok"] for o in outcomes):  # nothing to keep: end the run with the error
+                                yield {"type": "error", "kind": ev["kind"], "text": ev["text"]}
+                                return
+                            fatal = True  # earlier roles were paid for: still end with swarm_done so the run is stored and audited
+                            yield {"type": "role_error", "role": role.id, "kind": ev["kind"], "text": ev["text"]}
+                            break
                         yield {"type": "role_error", "role": role.id, "kind": ev["kind"], "text": ev["text"]}
                         break
                     if ev["type"] == "done":
@@ -158,6 +163,8 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
         if done is None:
             outcomes.append({"role": role.id, "ok": False, "why": failure, "cost": 0.0})
             notes.append((role, f"ROLE FAILED: {failure}"))
+            if fatal:
+                break
             continue
         if role.chair:
             sources = [t for _, t in notes if not t.startswith("ROLE FAILED")]

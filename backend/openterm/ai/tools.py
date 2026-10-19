@@ -260,7 +260,7 @@ def openai_tools(names: list[str] | None = None) -> list[dict]:
 
 
 # Arguments that are put into a route path: nothing may leave the route (httpx resolves `..`, so "../../keys" would reach /api/keys).
-PATH_ARGS = {"name": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}$"), "run_id": re.compile(r"^[A-Za-z0-9_\-]{1,64}$")}
+PATH_ARGS = {"name": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,31}\Z"), "run_id": re.compile(r"^[A-Za-z0-9_\-]{1,64}\Z")}
 TYPES: dict[str, tuple[type, ...]] = {"string": (str,), "integer": (int, str), "number": (int, float, str), "array": (list,), "object": (dict,)}
 
 
@@ -268,7 +268,11 @@ def _wrong_type(spec: dict, v: Any) -> bool:
     want = TYPES.get(spec.get("type", ""))
     if want is None:
         return False
-    if isinstance(v, bool) or not isinstance(v, want):
+    if isinstance(v, bool):
+        return True
+    if isinstance(v, float) and spec["type"] == "integer":  # JSON clients often send 10.0 for 10
+        return not v.is_integer()
+    if not isinstance(v, want):
         return True
     if isinstance(v, str) and spec["type"] in ("integer", "number"):  # a model often sends "5" for 5
         try:
