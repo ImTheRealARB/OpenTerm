@@ -27,6 +27,13 @@ MODELS_TTL = 3600.0
 OLLAMA_TTL = 10.0
 
 
+def _clean(ev: Event) -> Event:
+    """A provider's own error text (it can echo the key it was sent) goes through redact() like every other error text."""
+    if ev.type == "error":
+        ev.text = redact(ev.text)
+    return ev
+
+
 class Gateway:
     def __init__(self, keys: keystore.KeyStore, http: httpx.AsyncClient, db: aiosqlite.Connection,
                  config: dict | None = None):
@@ -121,15 +128,15 @@ class Gateway:
                             if ev.type == "usage":
                                 ev = await self._charge(ev, price)
                                 charged = True
-                            yield ev
+                            yield _clean(ev)
                 for payload in parser.close():
                     for ev in stream.feed(payload):
-                        yield ev
+                        yield _clean(ev)
             for ev in stream.finish():
                 if ev.type == "usage" and not charged:
                     ev = await self._charge(ev, price)
                     charged = True
-                yield ev
+                yield _clean(ev)
         except httpx.HTTPError as e:
             yield Event("error", kind="provider", text=f"{provider.upper()} {type(e).__name__}")
         finally:
