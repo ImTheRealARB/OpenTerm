@@ -27,7 +27,6 @@ def xf(group: str, step: int):
 OPT = lambda f: f  # step 3 landed
 PRICER = lambda f: f  # step 4 landed
 SURF = lambda f: f  # step 5 landed
-RATES = xf("rates and calculators", 6)
 FUT = lambda f: f  # step 7 landed
 CALC = lambda f: f  # step 7 landed: YAS, SWPM, CDSW, FXFA (the RATES views keep RATES)
 
