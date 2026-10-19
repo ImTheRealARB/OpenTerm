@@ -1,14 +1,15 @@
 /** Historical price table: newest bar first, with change % and (when the source has it) adjusted close. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api9, type BarsAdj, type Envelope } from "../net/api";
+import { api9, type BarsAdj } from "../net/api";
 import { navigate } from "../state/workspace";
 import { dayKey } from "./corrMath";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { histArgs, histRows, type HistRow } from "./returns";
+import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 const INTERVALS: Record<string, string> = { D: "1d", W: "1wk", MO: "1mo" };
@@ -17,30 +18,12 @@ const INTERVAL_LABEL: Record<string, string> = { D: "DAILY", W: "WEEKLY", MO: "M
 export default function HIST({ panelId, security, args }: FunctionProps) {
   const symbol = security!.symbol;
   const { range, interval, bad } = useMemo(() => histArgs(args), [args]);
-  const [env, setEnv] = useState<Envelope<BarsAdj> | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
   const grid = useRef<GridHandle>(null);
 
-  const load = useCallback(
-    (fresh: boolean) => {
-      setLoading(true);
-      return api9
-        .history(symbol, range, INTERVALS[interval], fresh)
-        .then((e) => {
-          setEnv(e);
-          setError(null);
-        })
-        .catch((e: ApiError) => setError(e))
-        .finally(() => setLoading(false));
-    },
-    [symbol, range, interval],
+  // useEnvelope drops an answer for an old symbol/range that lands after a re-key.
+  const { env, error, loading, reload: load } = useEnvelope<BarsAdj>(`${symbol}|${range}|${interval}`, (fresh) =>
+    api9.history(symbol, range, INTERVALS[interval], fresh),
   );
-
-  useEffect(() => {
-    setEnv(null);
-    void load(false);
-  }, [load]);
 
   const tz = env?.data.tz ?? null;
   const rows = useMemo(() => (env ? histRows(env.data) : []), [env]);

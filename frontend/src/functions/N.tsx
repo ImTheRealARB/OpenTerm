@@ -1,14 +1,15 @@
 /** News: market top stories (RSS), a security's headlines (Yahoo RSS, GDELT) or a GDELT keyword search. */
 import { pollMs } from "../settings/runtime";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { checkNewsItems } from "../command/alerts";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, type Envelope, type NewsItem, type NewsPayload } from "../net/api";
+import { api, type NewsItem, type NewsPayload } from "../net/api";
 import { newsQuery } from "./newsArgs";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 
@@ -29,34 +30,23 @@ function openArticle(url: string): void {
 
 export default function N({ panelId, args, security }: FunctionProps) {
   const query = useMemo(() => newsQuery(args, security), [args, security]);
-  const [env, setEnv] = useState<Envelope<NewsPayload> | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState(0);
   const firstIds = useRef<Set<string> | null>(null);
   const grid = useRef<GridHandle>(null);
 
-  const load = useCallback(
-    (fresh: boolean) => {
-      setLoading(true);
-      const params = query.kind === "symbol" ? { symbol: query.symbol } : query.kind === "keyword" ? { q: query.q } : {};
-      return api
-        .news(params, fresh)
-        .then((e) => {
-          setEnv(e);
-          setError(null);
-          if (query.kind !== "keyword") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
-        })
-        .catch((e: ApiError) => setError(e))
-        .finally(() => setLoading(false));
-    },
-    [query],
-  );
+  const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify(query), (fresh) => {
+    const params = query.kind === "symbol" ? { symbol: query.symbol } : query.kind === "keyword" ? { q: query.q } : {};
+    return api.news(params, fresh).then((e) => {
+      if (query.kind !== "keyword") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
+      return e;
+    });
+  });
 
   useEffect(() => {
     firstIds.current = null;
-    setEnv(null);
-    void load(false);
+  }, [query]);
+
+  useEffect(() => {
     const t = setInterval(() => void load(false), pollMs("news"));
     return () => clearInterval(t);
   }, [load]);

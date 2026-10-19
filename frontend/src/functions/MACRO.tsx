@@ -1,14 +1,15 @@
 /** FRED series browser. Keyless: a built-in list of well-known series with latest values. With FRED_API_KEY: search all of FRED. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, macroApi, type Envelope, type MacroPayload, type MacroRow } from "../net/api";
+import { macroApi, type MacroPayload, type MacroRow } from "../net/api";
 import { navigate } from "../state/workspace";
 import { fmtSeriesChange, fmtSeriesValue, parseMacroArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 const POLL_MS = 300_000;
@@ -25,29 +26,11 @@ const COLUMNS: Column<MacroRow>[] = [
 
 export default function MACRO({ panelId, args }: FunctionProps) {
   const q = useMemo(() => parseMacroArgs(args), [args]);
-  const [env, setEnv] = useState<Envelope<MacroPayload> | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
   const grid = useRef<GridHandle>(null);
 
-  const load = useCallback(
-    (fresh: boolean) => {
-      setLoading(true);
-      return macroApi
-        .macro(q, fresh)
-        .then((e) => {
-          setEnv(e);
-          setError(null);
-        })
-        .catch((e: ApiError) => setError(e))
-        .finally(() => setLoading(false));
-    },
-    [q],
-  );
+  const { env, error, loading, reload: load } = useEnvelope<MacroPayload>(JSON.stringify(q), (fresh) => macroApi.macro(q, fresh));
 
   useEffect(() => {
-    setEnv(null);
-    void load(false);
     const t = setInterval(() => void load(false), POLL_MS);
     return () => clearInterval(t);
   }, [load]);

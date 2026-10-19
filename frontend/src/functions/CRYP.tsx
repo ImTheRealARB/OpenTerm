@@ -1,13 +1,14 @@
 /** Crypto board: CoinGecko top 50 by market cap; Binance 24 h tickers (USDT) when CoinGecko is down. */
 import { pollMs } from "../settings/runtime";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtPct, fmtPrice, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, type Coin, type Envelope } from "../net/api";
+import { api, type Coin } from "../net/api";
 import { navigate } from "../state/workspace";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 
@@ -28,28 +29,11 @@ const COLUMNS: Column<Coin>[] = [
 
 export default function CRYP({ panelId, args }: FunctionProps) {
   const vs = (args[0] ?? "USD").toUpperCase();
-  const [env, setEnv] = useState<Envelope<{ vs: string; coins: Coin[] }> | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
   const grid = useRef<GridHandle>(null);
 
-  const load = useCallback(
-    (fresh: boolean) => {
-      setLoading(true);
-      return api
-        .crypto(vs, fresh)
-        .then((e) => {
-          setEnv(e);
-          setError(null);
-        })
-        .catch((e: ApiError) => setError(e))
-        .finally(() => setLoading(false));
-    },
-    [vs],
-  );
+  const { env, error, loading, reload: load } = useEnvelope<{ vs: string; coins: Coin[] }>(vs, (fresh) => api.crypto(vs, fresh));
 
   useEffect(() => {
-    void load(false);
     const t = setInterval(() => void load(false), pollMs("crypto"));
     return () => clearInterval(t);
   }, [load]);

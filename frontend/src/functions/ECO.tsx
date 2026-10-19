@@ -1,13 +1,14 @@
 /** Economic calendar: US data releases from the BLS and BEA official schedules, Eastern times. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, macroApi, type EcoEvent, type EcoPayload, type Envelope } from "../net/api";
+import { macroApi, type EcoEvent, type EcoPayload } from "../net/api";
 import { replaceView } from "../state/workspace";
 import { ECO_WINDOWS, addDays, dayLabel, nyToday, parseEcoArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
+import { useEnvelope } from "./secPanel";
 import { useCsvExport } from "./tableExport";
 
 const POLL_MS = 300_000;
@@ -31,31 +32,13 @@ function toRows(events: EcoEvent[]): Row[] {
 
 export default function ECO({ panelId, args }: FunctionProps) {
   const p = useMemo(() => parseEcoArgs(args), [args]);
-  const [env, setEnv] = useState<Envelope<EcoPayload> | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
   const grid = useRef<GridHandle>(null);
   const pRef = useRef(p);
   pRef.current = p;
 
-  const load = useCallback(
-    (fresh: boolean) => {
-      setLoading(true);
-      return macroApi
-        .eco(p.start, p.days, fresh)
-        .then((e) => {
-          setEnv(e);
-          setError(null);
-        })
-        .catch((e: ApiError) => setError(e))
-        .finally(() => setLoading(false));
-    },
-    [p.start, p.days],
-  );
+  const { env, error, loading, reload: load } = useEnvelope<EcoPayload>(`${p.start}|${p.days}`, (fresh) => macroApi.eco(p.start, p.days, fresh));
 
   useEffect(() => {
-    setEnv(null);
-    void load(false);
     const t = setInterval(() => void load(false), POLL_MS);
     return () => clearInterval(t);
   }, [load]);
