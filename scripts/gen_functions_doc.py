@@ -107,6 +107,7 @@ Windows (PowerShell):
 ```powershell
 .\\scripts\\setup.ps1     # once: installs backend (uv) and frontend (npm) dependencies
 .\\scripts\\start.ps1     # builds the frontend if needed, serves http://localhost:8000, opens the browser
+.\\scripts\\install-launcher.ps1   # once: adds an `openterm` command, so typing `openterm` in any terminal starts the app
 ```
 
 macOS/Linux: `./scripts/setup`, then `./scripts/start`. For development, `.\\scripts\\dev.ps1` runs the backend on

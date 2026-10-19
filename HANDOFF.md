@@ -1,37 +1,22 @@
 # Handoff
 
-_Last updated: 2026-10-19 (review sprint on `claude/review-all`). Phases 1-16 and 19 are DONE and on `main` (= `origin/main`); Phases 17-18 stay paused by the user._
+_Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Phases 1-16 and 19 are DONE and on `main` (= `origin/main`); Phases 17-18 stay paused by the user._
 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
-## Resume here (2026-10-19)
-- **State:** `main` holds Phases 1-16 and 19 (the Phase 19 branch was merged and pushed). Full gate on Windows 2026-10-18: ALL GATES PASS
-  (pytest 1567, ruff, tsc, vitest, e2e 181); bench numbers in `docs/PERFORMANCE.md` ("Phase 19 bench"). `UNLK` is NOT BUILT (DefiLlama emissions are paid).
-  **Review sprint DONE (2026-10-19) on branch `claude/review-all`, pushed, NOT merged** (the merge is the user's call): ~30 bugs fixed with tests, speedups, dev-loop scripts.
-  Full gate ALL PASS (pytest 1628, e2e 183, 123 s vs 167 s on main), bench 37/37 after one rested rerun. Read `docs/review/SUMMARY.md` first, then
-  `DECISIONS_FOR_USER.md` (deferred risky items) and `REVERTED.md` (ChartView buffer-transfer and SWARM unmount-abort were reverted: retry them with a browser open).
-- **Dev loop (new):** `.\scripts\check.ps1` (bash: `./scripts/check.sh`) runs only the tests a change can affect plus tsc and ruff on changed files
-  (`-DryRun` prints the plan, `-All` = everything). `node scripts/gates.mjs` is the full gate: ruff + tsc first (fail fast), then pytest, vitest and
-  Playwright in parallel, per-gate timing on the last line; one full gate per step, tail only (`$env:CI='1'; node scripts/gates.mjs | Select-Object -Last 8`).
-  `python scripts/new_function.py FOO --title "..." [--security]` scaffolds a panel + registry entry + vitest stub + `docs/FUNCTIONS.md`.
-- **Next (all optional, the user decides):** rerun `node scripts/bench.mjs` rested (mains power) to see BT 10-year under 300 ms (read 333 / 415 ms while
-  throttled); make `bench.mjs` cleanup kill child process trees on Linux; WETR: if Open-Meteo geocoding keeps timing out, resolve the ten basket cities
-  from a built-in table; first real Docker and Tauri builds. **Phases 17 and 18 stay paused by the user.**
-- **Open items carried forward (not verified live, needs the user or a key):**
-  - Kite is entirely unverified against a real key (login, REST, WebSocket decoder; fixtures are doc-shaped, labelled NOT A RECORDING). Needs the user's Kite Connect
-    key in APIKEYS and `http://127.0.0.1:8000/api/kite/callback` as the redirect URL; then write a real recorder mode in `scripts/record_phase15.py`, replace the
-    `kite_*_docshape` fixtures, check `kite/ws.py` on live packets and `OMON NIFTY.NFO R= Q=`.
-  - Keyed adapters not checked against the real service: Tradier (doc-shaped fixture), Finnhub, Alpaca, IEX poller (`AAPL CN`, `AAPL Q` should read RT IEX; shape drift goes in `research/keyed_parse.py`).
-  - Fixture-only live shapes: Ken French zips and `ALPHA TOP100`; the Phase 14 rates/futures/CFTC/FOMC providers (try `RATES EUR`, `COT ES`, `WIRP`, `AAPL OMON`).
-  - Phase 14 limits: IV30 history starts when OSA/HIVG is first opened; OSA `B` opens BT but `OPEN=` / `STYLE=` (and `EXP=` in OSA) must be typed; the OSA structure is lost on reload;
-    BT option trade rows leave entry price / pnl % empty. Phase 13: MSFT `RV` / `DCF` NOT RUNNABLE (EBITDA untagged). Details: `docs/DATA_LIMITS.md`.
-  - The Phase 11 OpenRouter `@RECORDING` test (`scripts/record_llm.py`): check whether the marker is still in `test_phase11.py`.
-  - Stale local branches that can be deleted: `claude/angry-easley-fc2d86` (only Phase 14 commits), `claude/openterm-phase-19-8ad9bb` (empty), the old phase worktree branches.
-- **Usage rule:** Sonnet only, at most 2 subagents with targeted tests (`check.ps1`), one full gate per step, pause at 60% of the 5h window when the user is away
-  (95% if they asked for unattended work): update this file, commit, push. Lesson: Phase 14 burned ~75% of a window on agents plus repeated gates.
-- **Bench rule of thumb:** after many back-to-back runs this machine throttles and the BT 10-year run reads 380-490 ms against 233 ms rested. Rest, run the bench once,
-  do not chase a lone BT-run miss before re-measuring.
+## Resume here (2026-10-19, end of the review sprint and terminal-look session)
+- **State:** everything is on `main` (local; the user decides when to push `origin/main`): Phases 1-16 and 19, the review sprint (`docs/review/SUMMARY.md`, `DECISIONS_FOR_USER.md`,
+  `REVERTED.md`, `BASELINE.md`) and the terminal-look restyle (yellow command field with GO, key-hint row, ticker/name title bands, amber grid headers with rules, blue selection,
+  `components/dataColors.css`). Final gate ALL PASS (pytest 1628, ruff, tsc, vitest, e2e 183) in 123 s; bench 37/37 (BT rows can miss when throttled: rest 2 min, rerun once).
+  `UNLK` is NOT BUILT (DefiLlama emissions are paid). Phases 17-18 stay paused by the user.
+- **Run it:** type `openterm` in any terminal (one-time `.\scripts\install-launcher.ps1` from the main checkout writes `openterm.cmd` into a PATH folder; `-Remove` undoes it).
+  It runs `scripts/start.ps1`: builds the frontend if stale, serves http://localhost:8000, opens the browser. Flags: `-NoBrowser`, `-Rebuild`.
+- **Dev loop:** `.\scripts\check.ps1` (affected tests + tsc + ruff), `node scripts/gates.mjs` (full gate, ruff/tsc first, heavy suites parallel, timing line), Playwright runs 4 workers
+  (10 flaked 8-9 tests per run, on main too: rerun a failing spec alone before suspecting a change), `python scripts/new_function.py FOO` scaffolds a panel.
+- **Next (optional, user decides):** read `DECISIONS_FOR_USER.md` (deferred risky items: cache table never pruned, SMTP TLS verification, Yahoo batch limit, execute.ts edit-before-validate,
+  SWARM/AI stream abort on close vs remount, quant edge cases); retry the reverted ChartView buffer-transfer and SWARM abort with a browser open; unaudited modules (`valuation/`,
+  `quantlib/`, most of `quant/`); still unverified: new 5-job CI on GitHub, `check.mjs` Playwright stage, heartbeat on a real half-open socket, Kite against a real key.
 
 ## Phase 11-12 notes (history, written when Phase 12 closed)
 - **Steps 12.3 to 12.6 are done and committed.** Gates after step 6: 315 pytest + 9 xfail (8 for steps 7-8, 1 Phase 11

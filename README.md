@@ -34,6 +34,10 @@ To just use it in the browser (no dev server): `.\scripts\start.ps1` (macOS/Linu
 the frontend when it is missing or out of date, serves everything from http://localhost:8000 and opens your browser.
 Flags: `-Rebuild` / `--rebuild`, `-NoBrowser` / `--no-browser`.
 
+**Run it by typing `openterm`:** `.\scripts\install-launcher.ps1` once (Windows; writes `openterm.cmd` into a folder already on your PATH, no PATH or system change;
+`-Remove` undoes it). Then `openterm` in any Command Prompt or PowerShell window starts the app; `openterm -NoBrowser` and `openterm -Rebuild` pass the flags on.
+macOS/Linux: `./scripts/install-launcher` links `~/.local/bin/openterm`.
+
 Docker (one container, backend serves the built frontend; written but not yet built on this machine):
 
 ```sh

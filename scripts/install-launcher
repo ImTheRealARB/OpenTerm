@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# Installs an `openterm` command (macOS/Linux): a launcher in ~/.local/bin that runs scripts/start from this checkout.
+# Usage: ./scripts/install-launcher [DIR]   (DIR must be on PATH; default ~/.local/bin)    Remove: delete DIR/openterm
+set -e
+root="$(cd "$(dirname "$0")/.." && pwd)"
+dir="${1:-$HOME/.local/bin}"
+mkdir -p "$dir"
+printf '#!/usr/bin/env sh\nexec "%s/scripts/start" "$@"\n' "$root" > "$dir/openterm"
+chmod +x "$dir/openterm"
+echo "installed $dir/openterm (starts OpenTerm from $root)"
+case ":$PATH:" in *":$dir:"*) ;; *) echo "note: $dir is not on your PATH" ;; esac

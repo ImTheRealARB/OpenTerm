@@ -2,7 +2,13 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
-## Phase 19: charting, discovery, macro, crypto (complete 2026-10-18; UNLK not built; not merged to main)
+## Review sprint and terminal look (2026-10-19)
+- Review sprint (13 agents, details in `docs/review/SUMMARY.md`): about 30 bugs fixed, each with a test (hub and WebSocket leaks, jobs runner races, redaction gaps, AI tool-path bypass, validation `$` vs `\Z`, load races in HIST / ECO / CRYP / MACRO / N / COMP, chart and drawing bugs, option and JGB parsers); speedups (`Cache.get_many` 527 -> 11.5 ms, `JobStore.recent` 1070 -> ~0.5 ms, GIP bucket 24 -> 5 ms, `doc_search` 171 -> 3.3 ms); two risky commits reverted (`docs/review/REVERTED.md`).
+- Dev loop: `scripts/check.ps1` / `check.sh` (affected tests only), `gates.mjs` runs ruff + tsc first then the heavy suites in parallel with per-gate timing, CI split into 5 jobs, `scripts/new_function.py`, Playwright on 4 workers. Full gate 123 s (was 167 s, with 9 flaky e2e).
+- Terminal look: yellow command field with a prompt and GO key, a key-hint row, ticker / name title bands, status bar dividers, amber grid headers with row and column rules, blue selection bar, dim chart grid (`components/dataColors.css`). No gradients, shadows, radii or web fonts; bench 37/37.
+- `scripts/install-launcher.ps1`: type `openterm` in any terminal to start the app.
+
+## Phase 19: charting, discovery, macro, crypto (complete 2026-10-18; UNLK not built; merged to main)
 - Added to `GP`: 12 studies (`ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU`), rule-based pattern overlays (`PAT:CANDLE` 9 candlestick patterns, `PAT:SMC` swings, BOS / CHOCH, fair-value gaps, order blocks; `PAT:ICHI` = `ICHIMOKU`),
   drawings by keyboard (`T` trend ray, `H` horizontal, `B` fib; `P` anchor price, `Enter` places, `[` `]` select, `D` removes) saved per symbol on the server, `EVT` markers (E earnings = last four reported, D ex-dividend, S split),
   `VS A B C PANE` (each compare symbol in its own pane). The indicator picker uses keys 1-9 then letters. The crosshair readout no longer goes stale.

@@ -1,6 +1,6 @@
 # Commands to try
 
-Start the app with `.\scripts\start.ps1` (or `./scripts/start`), then type in the command line at the top.
+Start the app by typing `openterm` (after the one-time `.\scripts\install-launcher.ps1`), or with `.\scripts\start.ps1` (or `./scripts/start`), then type in the command line at the top.
 `Enter` runs in the focused panel, `Shift+Enter` in a new panel; press `/` first if the cursor is elsewhere.
 Grammar: `[N:] SECURITY [MARKET] FUNCTION [ARGS]` or `[N:] FUNCTION [ARGS]`. The ticker comes first: `AAPL DES`,
 not `DES AAPL`. A panel remembers its last ticker, so a bare `GP` or `FA` uses it.

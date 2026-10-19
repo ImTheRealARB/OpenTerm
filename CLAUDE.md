@@ -3,7 +3,7 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 1-16 and 19 are DONE and on `main` (merged and pushed to origin = private GitHub repo ImTheRealARB/OpenTerm; Windows full gate 2026-10-18: pytest 1567, e2e 181; the review sprint on `claude/review-all` followed). Open items and what is next: HANDOFF.md "Resume here". **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+Phases 1-16 and 19 are DONE and on `main` (merged and pushed to origin = private GitHub repo ImTheRealARB/OpenTerm; Windows full gate 2026-10-18: pytest 1567, e2e 181; the review sprint and the terminal-look restyle (2026-10-19) are merged too: `docs/review/SUMMARY.md`; gate 1628 pytest + 183 e2e, bench 37/37). Open items and what is next: HANDOFF.md "Resume here". **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
 2026-10-19). Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
@@ -56,6 +56,7 @@ node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then 
 ./scripts/check.sh              # same for bash (--dry-run --all --no-e2e --base REF); both wrap scripts/check.mjs
 python scripts/new_function.py FOO --title "..." [--security] [--args "..."] [--dry-run]   # panel + registry entry + vitest stub + docs/FUNCTIONS.md
 .\scripts\dev.ps1               # backend :8000 + vite :5173 (vite binds to localhost / ::1, use http://localhost:5173)
+openterm                        # after `.\scripts\install-launcher.ps1` once: same as start.ps1 from any terminal (flags -NoBrowser, -Rebuild)
 .\scripts\start.ps1             # user mode: builds frontend if stale, backend serves it on :8000, opens the browser
 ```
 Env flags: `OPENTERM_FIXTURES=1` (replay `backend/tests/fixtures`), `OPENTERM_SYNTHETIC=1` (SYN0000-SYN9999 + tick
