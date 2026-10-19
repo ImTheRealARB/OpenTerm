@@ -119,9 +119,6 @@ export default function SWARM({ panelId, args }: FunctionProps) {
     }
   }, [loadLists]);
 
-  // Closing the panel (or running another function in it) stops a running swarm: it would otherwise keep spending model calls unseen.
-  useEffect(() => () => abort.current?.abort(), []);
-
   const asked = useRef(false);
   useEffect(() => {
     void loadLists();
