@@ -1,33 +1,70 @@
 name: CI
 on: [push, pull_request]
 
+# Same shape as scripts/gates.mjs: cheap checks (ruff, tsc) first and fail fast; then pytest, vitest and Playwright side by side;
+# the bench only runs when everything else passed. Separate jobs never share ports, so Playwright cannot collide with anything here.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  backend:
+  static:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: uv sync
+        working-directory: backend
+      - run: uv run ruff check .
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run typecheck
+        working-directory: frontend
+
+  pytest:
+    needs: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults: { run: { working-directory: backend } }
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync
-      - run: uv run ruff check .
       - run: uv run pytest -q
 
-  frontend:
+  vitest:
+    needs: static
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults: { run: { working-directory: frontend } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
       - run: npm ci
-      - run: npm run typecheck
       - run: npm test
+
+  e2e:
+    needs: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
 
   bench:
-    needs: [backend, frontend]
+    needs: [pytest, vitest, e2e]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
