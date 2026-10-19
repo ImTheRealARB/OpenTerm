@@ -28,9 +28,18 @@ def user(request: Request) -> UserData:
     return request.app.state.userdata
 
 
+MAX_BODY = 4_000_000  # the biggest honest body (a PORT import, a job's params) is well under this
+
+
 async def json_object(request: Request) -> dict:
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > MAX_BODY:  # refuse before buffering it
+        raise UserDataError("too_large", f"BODY OVER {MAX_BODY // 1_000_000} MB")
+    raw = await request.body()
+    if len(raw) > MAX_BODY:
+        raise UserDataError("too_large", f"BODY OVER {MAX_BODY // 1_000_000} MB")
     try:
-        body = orjson.loads(await request.body())
+        body = orjson.loads(raw)
     except orjson.JSONDecodeError:
         raise UserDataError("bad_request", "BODY IS NOT JSON") from None
     if not isinstance(body, dict):
@@ -64,7 +73,8 @@ async def quote(request: Request, symbols: str = Query(..., max_length=2000)):
 
 
 @router.get("/history")
-async def history(request: Request, symbol: str, range: str | None = None, interval: str | None = None):
+async def history(request: Request, symbol: str = Query(..., max_length=32), range: str | None = None,
+                  interval: str | None = None):
     try:
         return await svc(request).history(symbol, range, interval)
     except DataError as e:
@@ -72,7 +82,7 @@ async def history(request: Request, symbol: str, range: str | None = None, inter
 
 
 @router.get("/profile")
-async def profile(request: Request, symbol: str):
+async def profile(request: Request, symbol: str = Query(..., max_length=32)):
     try:
         return await svc(request).profile(symbol)
     except DataError as e:
@@ -114,7 +124,7 @@ async def crypto(request: Request, vs: str = Query("USD", max_length=5)):
 
 
 @router.get("/resolve")
-async def resolve_symbol(symbol: str):
+async def resolve_symbol(symbol: str = Query(..., max_length=32)):
     return {"input": symbol, "symbol": resolve(symbol)}
 
 
@@ -573,7 +583,7 @@ LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 
 
 def key_error(kind: str, message: str) -> Response:
-    return Orjson({"error": message, "kind": kind}, status_code=KEY_STATUS.get(kind, 500))
+    return Orjson({"error": redact(message), "kind": kind}, status_code=KEY_STATUS.get(kind, 500))
 
 
 def key_row(st: dict) -> dict:
