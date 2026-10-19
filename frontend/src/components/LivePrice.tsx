@@ -29,13 +29,12 @@ export function LivePrice({ quote, stale, ageS }: { quote: Quote; stale: boolean
       src.current!.className = l ? (l.src === "s" ? "warn" : "up") : stale ? "warn" : "dim";
     };
     paint();
-    const unsub = subscribe([quote.symbol]);
-    const off = onTicks((changed) => changed.has(quote.symbol) && paint());
-    return () => {
-      unsub();
-      off();
-    };
+    return onTicks((changed) => changed.has(quote.symbol) && paint());
   }, [quote, stale, ageS]);
+
+  // Subscribed per symbol, not per quote refresh: a refresh used to send unsub then sub for the same symbol.
+  const symbol = quote.symbol;
+  useEffect(() => subscribe([symbol]), [symbol]);
 
   return (
     <div className="line">
