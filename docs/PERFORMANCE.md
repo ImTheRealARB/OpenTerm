@@ -508,3 +508,16 @@ Phase 19 changes nothing under `bt/`, `jobs/`, `quant*/` or the backend dependen
 (RISK 84.7 ms vs 35-37 rested, the exact reading of the throttled control under Phase 16 above), while every browser line passes: tick to pixel 44.5 ms, streaming frame 16.8 ms, keystroke echo 14.3 ms,
 layout load 50.4 ms, 50k-bar pan 16.8 ms, SEAS 9.6 ms, SECF 7.6 ms, IMAP paint 5.1 ms, bundle 108.0 KB, 4,022 ticks/s. Rerun rested (mains power, nothing else running) to see BT under 300 ms again (Phase 16 close: 191 ms).
 The earlier Linux-container run (27/37) was on 2-5x slower hardware and is not comparable. Note for Linux runs: `bench.mjs` leaves its backend and `vite preview` running when it exits there; kill them before a second run.
+
+## Review sprint (2026-10-19, micro-benchmarks only; full bench in Phase 2 below if recorded)
+Measured with scratch scripts against temp DBs or Node, no servers. Best of N unless noted. The Phase 2 bench has not yet confirmed these end to end.
+| Area | Change | Before | After |
+|---|---|---|---|
+| Cache | `Cache.get_many` used by `DataService.quotes`, 2000 cold keys | 526.8 ms | 11.5 ms |
+| Jobs | `JobStore.recent(50)` with ~1 MB results (no blob read, covering index) | 1070 ms | 0.35-0.8 ms |
+| World | GIP `bucket()` on a full 20k-tick ring (single pass) | ~24 ms median | 4.2-5.6 ms |
+| AI | `doc_search` on a 3M-character document (index built once) | 171 ms median | 3.3 ms |
+| AI | AI DOC upload of a 4.9 MB HTML file, worst event-loop stall (parse in thread) | 828 ms | 42 ms |
+| Frontend | job frame flush, 300 jobs x 40 frames (one map copy) | 0.614 ms | 0.019 ms |
+| Chart | indicator worker request at 50k bars (transferred buffers) | 2.75 ms | 0.97 ms |
+Rejected (no gain): `to_thread` for the screener, companyfacts and NSE bhavcopy parsers (GIL).
