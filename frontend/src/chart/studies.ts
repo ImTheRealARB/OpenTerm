@@ -121,7 +121,11 @@ export function adx(h: Float64Array, l: Float64Array, c: Float64Array, n = 14) {
 
 export function obv(c: Float64Array, v: Float64Array): Float64Array {
   const out = new Float64Array(c.length);
-  for (let i = 1; i < c.length; i++) out[i] = out[i - 1] + (c[i] > c[i - 1] ? v[i] : c[i] < c[i - 1] ? -v[i] : 0);
+  // A missing volume counts as 0 (like VWAP and the volume histogram do): one NaN must not blank every later bar.
+  for (let i = 1; i < c.length; i++) {
+    const vol = Number.isFinite(v[i]) ? v[i] : 0;
+    out[i] = out[i - 1] + (c[i] > c[i - 1] ? vol : c[i] < c[i - 1] ? -vol : 0);
+  }
   return out;
 }
 
@@ -159,7 +163,7 @@ export function mfi(h: Float64Array, l: Float64Array, c: Float64Array, v: Float6
     let pos = 0;
     let neg = 0;
     for (let j = i - n + 1; j <= i; j++) {
-      const flow = tp[j] * v[j];
+      const flow = tp[j] * (Number.isFinite(v[j]) ? v[j] : 0);
       if (tp[j] > tp[j - 1]) pos += flow;
       else if (tp[j] < tp[j - 1]) neg += flow;
     }
