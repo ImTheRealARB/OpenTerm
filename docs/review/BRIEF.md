@@ -10,9 +10,9 @@ Audit your area for performance problems, bugs, duplicated logic, and (area 9 on
   - backend: `cd backend; uv run pytest tests/<file>.py -q -n 0`
   - frontend: `cd frontend; npx vitest run <path>` and `npx tsc --noEmit` (tsc is allowed, it is cheap enough once per change batch)
   - lint: `cd backend; uv run ruff check <files>`
-- **Bugs:** write a failing test first, then fix. Name the test after the bug.
-- **Performance changes** need a before/after measurement (micro-benchmark script in your scratchpad or a pytest timing; no servers) and a short entry in `docs/PERFORMANCE.md` under a heading "Review sprint (2026-10-19)": area, what changed, before, after. No measurement, no change.
-- **Risky or user-visible changes are NOT done.** Append them to `docs/review/DECISIONS_FOR_USER.md` (one bullet: area, file:line, what, why, risk).
+- **Bugs:** write a failing test first, then fix. Name the test after the bug. Put new tests in a NEW file (`backend/tests/test_review_<area>.py`, or `<name>.review.test.ts` beside the code); never edit existing test files unless you are agent 9 (test pruning), who is the only one allowed to touch existing tests.
+- **Performance changes** need a before/after measurement (micro-benchmark script in your scratchpad or a pytest timing; no servers) and a section "## Performance (before/after)" in your own `docs/review/<area>.md` (what changed, before, after, how measured). The lead merges these into `docs/PERFORMANCE.md`; do NOT edit `docs/PERFORMANCE.md` yourself. No measurement, no change.
+- **Risky or user-visible changes are NOT done.** List them in a section "## Decisions for user" in your own `docs/review/<area>.md` (one bullet each: file:line, what, why, risk). The lead merges them into `DECISIONS_FOR_USER.md`; do NOT edit that file yourself.
 - Never fake data; failures show STALE / ERR / PROVIDER DOWN. No keys or secrets anywhere. Tests never touch the network; never call GDELT. Any new error text goes through `redact()`.
 - Never remove a guard or lower correctness. Never touch `main`. Never edit files outside your assigned area (listed in your prompt): two agents never write the same file.
 - Ported Vibe-Trading files stay verbatim (see CLAUDE.md).
