@@ -3,7 +3,7 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 1-10 are on `main`. **Phases 11-16 and 19 are DONE (2026-10-18) on branch `claude/openterm-phase-19-step-4-c5c695` (pushed to origin = private GitHub repo ImTheRealARB/OpenTerm), not yet merged into `main`: the user paused before the merge for a demo. The Windows full gate passed (pytest 1567, e2e 181). Next action and the open items: HANDOFF.md "Resume here".** **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+Phases 1-16 and 19 are DONE and on `main` (merged and pushed to origin = private GitHub repo ImTheRealARB/OpenTerm; Windows full gate 2026-10-18: pytest 1567, e2e 181; the review sprint on `claude/review-all` followed). Open items and what is next: HANDOFF.md "Resume here". **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
 2026-10-19). Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
@@ -51,6 +51,10 @@ and pause.
 cd backend; uv run pytest -q; uv run ruff check .   # pytest: 6 xdist workers, worksteal (addopts); -n 0 to debug
 cd frontend; npx tsc --noEmit; npx vitest run; npx playwright test
 node scripts/bench.mjs          # from repo root; builds, starts servers in fixture+synthetic mode, prints PASS/FAIL
+node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then pytest, vitest, Playwright in parallel; per-gate timing; --skip=e2e,pytest --keep-going --e2e-last --list
+.\scripts\check.ps1            # dev loop: only tests affected by `git diff main` + tsc + ruff on changed files; -DryRun prints the plan, -All = everything, -NoE2e, -Base REF
+./scripts/check.sh              # same for bash (--dry-run --all --no-e2e --base REF); both wrap scripts/check.mjs
+python scripts/new_function.py FOO --title "..." [--security] [--args "..."] [--dry-run]   # panel + registry entry + vitest stub + docs/FUNCTIONS.md
 .\scripts\dev.ps1               # backend :8000 + vite :5173 (vite binds to localhost / ::1, use http://localhost:5173)
 .\scripts\start.ps1             # user mode: builds frontend if stale, backend serves it on :8000, opens the browser
 ```
@@ -148,10 +152,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Ported Vibe files stay verbatim apart from imports and the listed cuts**; their header line names the source file.
   Behaviour changes there break the cross-check tests, which is the point. Lint: only ruff's safe autofixes plus
   `# noqa` (TRY004, BLE001, B023, UP040) where a fix would change Vibe's behaviour; the header's `Changes:` line says so.
-- **A new migration needs its tables in the migration test.** Before `claude/test-speedup` is merged: add them to the
-  DROP lists in `test_userdata`, `test_phase8`, `test_phase11`. After the merge: one test upgrades from every schema
+- **A new migration needs its tables in the migration test.** One test upgrades from every schema
   version; list the new tables in `TABLES_BY_VERSION` (`test_userdata.py`), or it fails.
-- **After `claude/test-speedup` is merged:** pytest runs `-n 6 --dist worksteal`; new e2e specs use `openApp()` from
+- **Test setup:** pytest runs `-n 6 --dist worksteal`; new e2e specs use `openApp()` from
   `e2e/app.ts` (one page load); unmocked e2e requests still reach port 8000, so keep it free while Playwright runs.
 - **Tab never reaches a panel:** it is the global next-panel key (`ALWAYS_GLOBAL`). Panel views cycle with another key
   (BT uses `V` / `Shift+V` and `1`-`4`); the `Tab` cases in FA, FIL and MOV are dead code.
@@ -171,7 +174,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   The mocked Playwright suites cannot see this: run the real-backend smoke (build the frontend, `OPENTERM_FIXTURES=1 OPENTERM_STATIC_DIR=frontend/dist`).
 - **Bench throttling:** the BT 10-year run (budget 300 ms) reads 230 ms rested and 380-490 ms after several back-to-back bench runs. Rest, then rerun once.
 - **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;
-  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs pytest, ruff, tsc, vitest, Playwright at once.
+  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs ruff + tsc first, then pytest, vitest, Playwright side by side (ports 4173 and 8000 must be free; it checks).
 - **`POST /api/bt/import` takes the CSV as the raw body;** `/api/history` is columnar (`data.t/o/h/l/c/v`), never `data.bars`. A stored symbol shadows a real ticker.
 - **`quantlib` is worker-only:** scipy, statsmodels and arch are imported only inside job kinds and tests, never by the server process (`test_server_never_imports_scipy` guards it).
   `openterm/quant/` (Phase 14) stays pure Python.
@@ -194,7 +197,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `ResearchPanel` `onKey(e, props, data, say, row)` gets the selected row as 5th argument (ALPHA Enter shows the row's `info`: ported module docstring + inputs).
 - **Manual smoke without keys:** `OPENTERM_DB_PATH=<temp>` keeps the user's DB out; portfolio positions are `{symbol, qty, cost}` (`PUT /api/portfolios/<name>`), not `quantity`/`avg_cost`.
 
-- **Phase 19 (in progress, spec `docs/specs/PHASE_19.md`; new pure code in `backend/openterm/world/`: `energy.py weather.py commodity.py pred.py cryptodepth.py crypto.py india*.py`; the PRED agent used `SRC=` filter; fixtures for NRG / WETR / PRED / crypto / India recorded by `record_phase19.py 6|7|8|9`; crypto panels share `functions/cryptoLoad.ts`):** new backend routes live in `world_routes.py` (`/api/world/...`) with pure code in `backend/openterm/world/` (`tickbuf.py`); drawings in `drawings.py` (kv `drawings:<SYMBOL>`). Frontend: `chart/studies.ts`, `chart/patterns.ts`, `chart/drawings.ts`, `functions/gpArgs.ts`, `seasMath.ts`, `treemap.ts`, `imapData.ts`, `imapPaint.ts`, `gipArgs.ts`.
+- **Phase 19 (done, spec `docs/specs/PHASE_19.md`; new pure code in `backend/openterm/world/`: `energy.py weather.py commodity.py pred.py cryptodepth.py crypto.py india*.py`; the PRED agent used `SRC=` filter; fixtures for NRG / WETR / PRED / crypto / India recorded by `record_phase19.py 6|7|8|9`; crypto panels share `functions/cryptoLoad.ts`):** new backend routes live in `world_routes.py` (`/api/world/...`) with pure code in `backend/openterm/world/` (`tickbuf.py`); drawings in `drawings.py` (kv `drawings:<SYMBOL>`). Frontend: `chart/studies.ts`, `chart/patterns.ts`, `chart/drawings.ts`, `functions/gpArgs.ts`, `seasMath.ts`, `treemap.ts`, `imapData.ts`, `imapPaint.ts`, `gipArgs.ts`.
   `ChartView` takes `draw`, `events`, `comparePanes`; it publishes gauges `chart.extraSeries / markers / events / drawSegs` that e2e reads (canvas is invisible to the DOM). `PERF CALC` feeds the Phase 19 bench lines. Shared e2e helpers: `frontend/e2e/p19util.ts`. Recorder: `scripts/record_phase19.py <step>`.
   `config.yaml` `providers:` OVERRIDES `DEFAULT_ORDER` per capability: a new provider for an existing capability (`history`) must be added there too. On Linux cloud sessions the pinned Playwright wants a newer headless shell than `/opt/pw-browsers` has: point `PLAYWRIGHT_BROWSERS_PATH` at a scratch dir with a `chromium_headless_shell-<rev>/chrome-headless-shell-linux64/chrome-headless-shell` symlink to the installed one.
   Tool gotchas: the Bash tool cannot parse heredocs containing `'''` (use the Write tool + `python file.py`); the PowerShell tool keeps its cwd between calls (use absolute `Set-Location`).
