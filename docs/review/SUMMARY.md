@@ -40,3 +40,6 @@ None. Agent 9 classified 804 backend, 437 vitest, 192 Playwright tests: no exact
 ## UNVERIFIED items, now checked
 Items 1, 4, 6, 7, 9, 10, 12 (and the quoteRows wiring): covered by the full gate and bench above. Item 5: GP drawings e2e pass (ChartView revert, `drawSave` kept). Item 2 (heartbeat): e2e passes, never run against a real half-open socket. Item 3: resolved by the revert. Item 8: pytest passes; the uvicorn-handler filter was only tested with a stand-in logger.
 STILL UNVERIFIED: `check.mjs` Playwright stage and `check.sh` on Linux/macOS; the new 5-job CI on GitHub; `new_function.py` for real in the repo (only dry-run + scratch copy); heartbeat on a real half-open socket; modules not audited line by line (`valuation/`, `quantlib/`, most of `quant/`, `quantjobs/{opt,fact,ql,alpha}`).
+
+## Final state (2026-10-19, end of session)
+Everything is merged into `main` and pushed to `origin/main` (a682eec): the review sprint, the terminal-look restyle (`claude/ui-terminal-look`: gate ALL PASS 1628 pytest + 183 e2e, bench 37/37) and the docs. `openterm` (installed by `scripts/install-launcher.ps1`) starts the app from any terminal; tested end to end. Open items: `DECISIONS_FOR_USER.md`, the STILL UNVERIFIED list above, and the reverted ChartView / SWARM changes in `REVERTED.md`.
