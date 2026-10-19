@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { DISCLAIMER } from "../config";
+import { effectiveBindings, type Action } from "../keys/keys";
+import { settingsStore } from "../settings/runtime";
 import { kite, refreshKite } from "../net/kite";
 import { useRunningJobs } from "../net/jobs";
 import { link } from "../net/socket";
@@ -50,6 +52,40 @@ function KiteState() {
   );
 }
 
+/** One-line key hints for bound actions only: the chords come from the bindings in force (defaults + SETTINGS overrides). */
+const HINTS: [Action, string][] = [
+  ["focusCommand", "COMMAND"],
+  ["nextPanel", "NEXT PANEL"],
+  ["focusPanel", "PANEL"],
+  ["splitVertical", "SPLIT"],
+  ["closePanel", "CLOSE"],
+  ["maximize", "MAX"],
+  ["refresh", "REFRESH"],
+  ["windowMenu", "MENU"],
+  ["exportCsv", "CSV"],
+  ["saveWorkspace", "SAVE"],
+  ["cheatsheet", "ALL KEYS"],
+];
+
+function KeyHints() {
+  useStore(settingsStore, (s) => s.keys); // re-read when SETTINGS rebinds a key
+  const b = effectiveBindings();
+  return (
+    <div className="keys" aria-hidden="true">
+      {HINTS.map(([action, label]) => {
+        const list = b[action] ?? [];
+        const chord = list.find((c) => !c.startsWith("Ctrl+")) ?? list[0];
+        return chord ? (
+          <span key={action}>
+            <b>{chord.toUpperCase()}</b>
+            {label}
+          </span>
+        ) : null;
+      })}
+    </div>
+  );
+}
+
 export function StatusBar() {
   const l = useStore(link, (s) => s);
   const focus = useStore(workspace, (s) => s.focus);
@@ -58,9 +94,11 @@ export function StatusBar() {
   const layout = useStore(workspace, (s) => s.name);
   const cls = l.status === "OK" ? "up" : l.status === "DOWN" ? "err" : "warn";
   return (
+    <>
+    <KeyHints />
     <footer className="status">
       <span>
-        BACKEND <span className={cls}>{l.status}</span>
+        <span className={"dot " + cls} />BACKEND <span className={cls}>{l.status}</span>
         {l.status === "OK" && <> {l.rttMs.toFixed(0)}MS</>}
       </span>
       <Providers />
@@ -78,5 +116,6 @@ export function StatusBar() {
       <span className="sp" />
       <span>{DISCLAIMER}</span>
     </footer>
+    </>
   );
 }

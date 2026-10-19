@@ -255,6 +255,7 @@ export function CommandLine() {
 
   return (
     <div className={"cmd" + (focused ? " focus" : "")} data-vim={vimOn ? vimMode : undefined}>
+      <span className="cmd-pr" aria-hidden="true">&gt;</span>
       <input
         ref={(el) => {
           input.current = el;
@@ -276,6 +277,7 @@ export function CommandLine() {
           setItems([]);
         }}
       />
+      <span className="cmd-go" aria-hidden="true">GO</span>
       {vimOn && focused && <span className="vim">{vimMode === "normal" ? "-- NORMAL --" : "-- INSERT --"}</span>}
       {focused && items.length > 0 && (
         <div className="ac" role="listbox">

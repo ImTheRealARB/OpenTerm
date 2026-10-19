@@ -95,7 +95,8 @@ export function Panel({ id }: { id: number }) {
   // The sticky security stays on the panel, but the tab only names it when this function uses it
   // (bare `N` shows that security's news).
   const usesSecurity = (view.fn && FUNCTIONS.get(view.fn)?.needsSecurity) || (view.fn === "N" && view.args.length === 0);
-  const title = [usesSecurity ? view.security?.symbol : undefined, view.fn].filter(Boolean).join(" | ") || "—";
+  const tickerPart = usesSecurity ? view.security?.symbol : undefined;
+  const fnPart = view.fn;
   // New command = new history entry = remount. In-place edits (timeframe, list) keep the instance.
   const mountKey = `${panel.pos}:${view.fn}:${view.security?.symbol}`;
   const resetKey = `${mountKey}:${view.args.join(" ")}`;
@@ -104,7 +105,12 @@ export function Panel({ id }: { id: number }) {
     <section className={"panel" + (focused ? " focus" : "")} data-panel={id} onMouseDown={() => focusPanel(id)}>
       <header className="ph">
         <span className="id">{id}</span>
-        <span>{title}</span>
+        <span>
+          {tickerPart && <span className="tk">{tickerPart}</span>}
+          {tickerPart && fnPart && " | "}
+          {fnPart && <span className="fnm">{fnPart}</span>}
+          {!tickerPart && !fnPart && "—"}
+        </span>
         {panel.views.length > 1 && <span className="dim">{panel.pos + 1}/{panel.views.length}</span>}
         <span className="wm-sp" />
         {MENUS.map((m, i) => (

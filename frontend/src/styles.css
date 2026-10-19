@@ -13,6 +13,7 @@
   /* Extra surface tokens (not theme-checked): data values, gray header bands, red menu band. */
   --val: #ffffff;
   --bar: #262626;
+  --bar-hi: #3d3d3d; /* focused window title band */
   --hdr: #d9d9d9;
   --menu: #a00000;
   --menu-fg: #ffffff;
@@ -32,7 +33,7 @@
 :root[data-theme="light"] {
   --bg: #ffffff; --fg: #1a1a1a; --fg-dim: #5c5c5c; --up: #007a3d; --down: #c4161c;
   --sel: #dcdcdc; --accent: #0055b3; --warn: #8a5a00; --err: #c4161c; --line: #b0b0b0;
-  --val: #000000; --bar: #e6e6e6; --hdr: #333333; --menu: #b00000; --menu-fg: #ffffff;
+  --val: #000000; --bar: #e6e6e6; --bar-hi: #c4c4c4; --hdr: #333333; --menu: #b00000; --menu-fg: #ffffff;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -45,16 +46,18 @@ body {
 input, button { font: inherit; color: inherit; background: none; border: 0; outline: 0; }
 :focus-visible { outline: 1px solid var(--fg); outline-offset: -1px; }
 
-.app { display: grid; grid-template-rows: 22px 1fr 18px; height: 100%; }
+.app { display: grid; grid-template-rows: 22px 1fr 16px 18px; height: 100%; }
 
 /* Top bar */
 .top { display: flex; align-items: center; border-bottom: 1px solid var(--line); height: 22px; min-width: 0; }
 .brand { padding: 0 6px; color: var(--bg); background: var(--fg); font-weight: bold; height: 100%; line-height: 22px; }
-.cmd { position: relative; flex: 1 1 auto; min-width: 120px; height: 100%; }
-.cmd input { width: 100%; height: 100%; padding: 0 6px; caret-color: var(--warn); text-transform: uppercase; font-weight: bold; }
-.cmd input::placeholder { color: var(--fg-dim); }
-.cmd.focus { background: var(--bar); }
-.cmd.focus input { color: var(--val); }
+.cmd { position: relative; display: flex; align-items: center; flex: 1 1 auto; min-width: 120px; height: 100%; background: var(--bar); }
+.cmd input { flex: 1 1 auto; min-width: 0; height: 100%; padding: 0 6px 0 2px; caret-color: var(--warn); color: var(--warn); text-transform: uppercase; font-weight: bold; }
+.cmd input::placeholder { color: var(--fg-dim); font-weight: normal; }
+/* Prompt chevron and GO key: yellow command-entry field; GO is Enter. */
+.cmd-pr { flex: none; padding: 0 0 0 6px; color: var(--warn); font-weight: bold; }
+.cmd-go { flex: none; align-self: stretch; padding: 0 6px; margin: 2px 2px 2px 0; line-height: 18px; color: var(--bg); background: var(--warn); font-weight: bold; }
+.cmd.focus { outline: 1px solid var(--warn); outline-offset: -1px; }
 .ac { position: absolute; left: 0; top: 22px; z-index: 20; min-width: 420px; max-width: 100%;
   background: var(--bg); border: 1px solid var(--fg); }
 .ac div { display: grid; grid-template-columns: 110px 1fr 70px; padding: 0 6px; white-space: nowrap; overflow: hidden; }
@@ -75,6 +78,9 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .split.h { flex-direction: column; }
 .panel { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; border: 1px solid var(--line); contain: strict; }
 .panel.focus { border-color: var(--fg); }
+.panel.focus .ph { background: var(--bar-hi); border-bottom-color: var(--fg); }
+.ph .tk { color: var(--fg); font-weight: bold; }
+.ph .fnm { color: var(--val); }
 /* Title bar: dark band on idle panels, solid amber bar with inverted id chip on the focused one. */
 /* Window title bar: dark gray band with the panel number in an amber chip; the focused window gets white text and an amber frame. */
 .ph { display: flex; height: 16px; padding: 0 4px 0 0; gap: 8px; background: var(--bar); color: var(--hdr); white-space: nowrap; overflow: hidden; flex: none; text-transform: uppercase; border-bottom: 1px solid var(--line); }
@@ -111,10 +117,17 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 /* Status bar */
 .status { display: flex; gap: 12px; align-items: center; padding: 0 6px; background: var(--bar); color: var(--hdr); white-space: nowrap; overflow: hidden; }
 .status .sp { flex: 1; }
+.status > span + span { border-left: 1px solid var(--line); padding-left: 8px; }
+.status .sp, .status .alrt-flash { border-left: 0; }
+.dot::before { content: "\25A0"; }
+.dot { margin-right: 4px; }
+/* Function-key hint row: one line, keys in reverse video. Text comes from the bindings in force. */
+.keys { display: flex; gap: 10px; align-items: center; padding: 0 6px; background: var(--bg); color: var(--fg-dim); white-space: nowrap; overflow: hidden; border-top: 1px solid var(--line); }
+.keys b { color: var(--bg); background: var(--fg); font-weight: bold; padding: 0 3px; margin-right: 3px; }
 
 /* Overlays */
 .overlay { position: absolute; inset: 0; z-index: 30; background: var(--bg); border: 1px solid var(--fg); padding: 4px 8px; overflow: auto; }
-.hud { position: fixed; right: 4px; bottom: 22px; z-index: 40; width: 300px; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; pointer-events: none; }
+.hud { position: fixed; right: 4px; bottom: 38px; z-index: 40; width: 300px; background: var(--bg); border: 1px solid var(--fg); padding: 2px 6px; pointer-events: none; }
 .hud .t td:last-child { text-align: right; }
 
 /* Canvas grid fills the rest of its panel */
@@ -170,7 +183,7 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 .corr-t td.h-m3 { color: var(--down); font-weight: bold; background: var(--sel); }
 
 /* --- Phase 10: vim mode indicator --- */
-.cmd .vim { position: absolute; right: 6px; top: 0; color: var(--accent); pointer-events: none; }
+.cmd .vim { position: absolute; right: 34px; top: 0; color: var(--accent); pointer-events: none; }
 .cmd[data-vim="normal"] input { caret-color: transparent; }
 .cmd[data-vim="normal"] input::selection { background: var(--fg); color: var(--bg); }
 
