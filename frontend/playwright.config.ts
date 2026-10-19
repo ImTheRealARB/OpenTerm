@@ -3,6 +3,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
+  workers: 4, // the default (half the cores, 10 here) made 8-9 tests flake per run, on main too; 4 workers: 183 pass in 74 s vs 130 s
   timeout: 20_000,
   use: { baseURL: "http://127.0.0.1:4173", viewport: { width: 1600, height: 900 } },
   webServer: {
