@@ -107,7 +107,10 @@ def parse_mof(text: str, keep: int = 40) -> dict:
         if cells and cells[0].lower() == "date":
             header = cells[1:]
         elif header is not None and cells and re.match(r"^\d{4}/\d{1,2}/\d{1,2}$", cells[0]):
-            rows.append((_ymd(cells[0]), cells[1:]))
+            try:
+                rows.append((_ymd(cells[0]), cells[1:]))
+            except ValueError:   # an impossible date (2026/2/30) loses that row, not the curve
+                continue
     if not header or not rows:
         raise RatesParseError("MoF answer has no Date header or no rows")
     rows = rows[-keep:]

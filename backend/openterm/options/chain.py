@@ -180,17 +180,19 @@ def parse_deribit(book: dict, index: dict, currency: str, source: str) -> dict:
     by: dict[int, dict] = {}
     unders: dict[int, list[float]] = {}
     for r in rows:
-        try:
+        try:   # one malformed row is skipped, never fatal for the whole book
             _, tok, strike, kind = str(r["instrument_name"]).split("-")
             ep = deribit_expiry(tok)
-        except (KeyError, ValueError):
+            k = float(strike.replace("d", "."))   # Deribit writes a decimal point as "d" (2d5 = 2.5)
+            iv = float(r["mark_iv"])
+            under = float(r["underlying_price"])
+        except (KeyError, ValueError, TypeError):
             continue
-        iv = r.get("mark_iv")
-        if iv is None or iv <= 0:
+        if not iv > 0:
             continue
         e = by.setdefault(ep, {"expiry": ep, "forward": None, "calls": [], "puts": []})
-        unders.setdefault(ep, []).append(float(r["underlying_price"]))
-        e["calls" if kind == "C" else "puts"].append({"strike": float(strike), "iv": iv / 100.0, "oi": r.get("open_interest") or 0,
+        unders.setdefault(ep, []).append(under)
+        e["calls" if kind == "C" else "puts"].append({"strike": k, "iv": iv / 100.0, "oi": r.get("open_interest") or 0,
                                                      "volume": r.get("volume") or 0})
     for ep, e in by.items():
         u = sorted(unders[ep])
