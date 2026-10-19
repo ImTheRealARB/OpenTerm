@@ -258,8 +258,9 @@ class DataService:
         out: dict[str, dict] = {}
         need: list[str] = []
         stale: list[str] = []
+        found = await self.cache.get_many([f"q:{s}" for s in symbols.values()])  # one SQLite query for every memory miss
         for raw, s in symbols.items():
-            entry = await self.cache.get(f"q:{s}")
+            entry = found.get(f"q:{s}")
             if entry is None:
                 self.misses += 1
                 need.append(s)

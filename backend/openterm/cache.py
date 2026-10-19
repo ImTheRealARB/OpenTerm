@@ -48,6 +48,33 @@ class Cache:
         self.misses += 1
         return None
 
+    async def get_many(self, keys: list[str]) -> dict[str, Entry]:
+        """Same answers as get() for each key, but the memory misses share one SQLite query (per 500 keys)
+        instead of one thread round trip each. Missing keys are left out of the result."""
+        out: dict[str, Entry] = {}
+        need: list[str] = []
+        for key in dict.fromkeys(keys):
+            entry = self.mem.get(key)
+            if entry is not None:
+                self.mem.move_to_end(key)
+                self.hits += 1
+                out[key] = entry
+            else:
+                need.append(key)
+        if need and self.db is not None:
+            for i in range(0, len(need), 500):
+                chunk = need[i : i + 500]
+                marks = ",".join("?" * len(chunk))
+                async with self.db.execute(f"SELECT key, value, stored_at FROM cache WHERE key IN ({marks})", chunk) as cur:
+                    rows = await cur.fetchall()
+                for key, blob, stored_at in rows:
+                    entry = (orjson.loads(blob), stored_at)
+                    self._remember(key, entry)
+                    self.hits += 1
+                    out[key] = entry
+        self.misses += len(need) - sum(1 for k in need if k in out)
+        return out
+
     def put(self, key: str, value: Any, stored_at: float | None = None) -> None:
         entry = (value, stored_at or time.time())
         self._remember(key, entry)
