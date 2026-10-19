@@ -118,8 +118,10 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Docker (`Dockerfile`, `OPENTERM_STATIC_DIR`) and Tauri (`desktop/`) are written but never built** (no Docker or Rust here).
 - **fredgraph.csv hangs on a browser User-Agent; BLS ICS needs a UA with contact info** (403 otherwise). FRED API paths need `FRED_API_KEY`
   and are only fixture-tested; the keyless `fred_csv` / `treasury` / `nasdaq_earnings` / `agency_ics` (BLS + BEA) providers serve Phase 7.
-- **`ChartView` captures `writeReadout` in its create-once effect,** so the crosshair readout keeps the first render's data. FRED remounts
-  the chart with `key={id:range}`; GP may have the same stale-readout bug.
+- **`ChartView` readout:** `writeRef.current` is reassigned every render (the old stale-readout note no longer applies); FRED still remounts the chart with `key={id:range}`.
+  A transferred-buffer / effect-key rewrite of ChartView broke 6 GP e2e tests (reverted, `docs/review/REVERTED.md`): retry it with a browser open.
+- **Playwright runs 4 workers** (`playwright.config.ts`): the default 10 flaked 8-9 e2e tests per run on a 20-thread machine, on `main` too. A failing e2e spec is
+  worth rerunning alone before suspecting the change.
 - **Panel arg changes go through `replaceView(panelId, v => ({...v, args}))`** so ERN/ECO/FRED state survives layout save/load.
 - **In Playwright, assert on fetched requests with `expect.poll`:** the `.ph` title changes before the panel's fetch fires.
 - **`SETTINGS KEYS` means keyboard shortcuts** (Phase 10). API keys live in the `APIKEYS` panel (Phase 11 spec); a key is typed only in
