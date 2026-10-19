@@ -8,6 +8,7 @@ import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice, fmtTime, sign } from "../form
 import { ApiError, api, type Quote, type QuoteResult } from "../net/api";
 import { subscribe } from "../net/socket";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
+import { cachedIndex, hitRows, startAgeRedraw, subscriptionKey, symbolLayout, type IndexCache } from "./liveRowsCore";
 
 export interface QRow {
   input: string;
@@ -119,30 +120,24 @@ export function useQuotes(inputs: string[], reload: number) {
 
 /** One subscription for the symbols in `rows`; ticks repaint only their rows. */
 export function useLiveRows<R>(rows: R[], grid: RefObject<GridHandle | null>, symbolOf: (r: R) => string | undefined) {
-  const live = rows.map(symbolOf).filter((s): s is string => !!s);
-  const key = [...new Set(live)].join(",");
+  const layout = symbolLayout(rows, symbolOf);
+  const key = subscriptionKey(layout);
   useEffect(() => (key ? subscribe(key.split(",")) : undefined), [key]);
 
+  // The index is rebuilt only when a symbol moves, appears or goes; a refresh with the same symbols reuses it.
+  const cache = useRef<IndexCache | null>(null);
+  const index = cachedIndex(cache, layout);
+
   useEffect(() => {
-    const index = new Map<string, number[]>();
-    rows.forEach((r, i) => {
-      const s = symbolOf(r);
-      if (s) index.set(s, [...(index.get(s) ?? []), i]);
-    });
     const off = onTicks((changed, frame) => {
-      const hit: number[] = [];
-      for (const s of changed) {
-        const idx = index.get(s);
-        if (idx) hit.push(...idx);
-      }
+      const hit = hitRows(index, changed);
       if (hit.length) grid.current?.redrawRows(hit, frame);
     });
-    const ageTimer = setInterval(() => grid.current?.redraw(), 5000); // AGE/STALE text keeps counting
-    return () => {
-      off();
-      clearInterval(ageTimer);
-    };
-  }, [rows, grid]); // symbolOf is a module-level function at every call site
+    return off;
+  }, [index, grid]);
+
+  // AGE/STALE text keeps counting, but not while the tab is hidden; one redraw when it comes back.
+  useEffect(() => startAgeRedraw(() => grid.current?.redraw(), 5000, typeof document === "undefined" ? undefined : document), [grid]);
 }
 
 /** j/k, arrows, g/G, Home/End, PageUp/PageDown. `skip(i)` rows (section headers) are stepped over. */
