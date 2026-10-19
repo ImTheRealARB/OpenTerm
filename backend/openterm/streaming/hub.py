@@ -124,7 +124,7 @@ class Hub:
 
     # --- clients ------------------------------------------------------------------------------
     async def subscribe(self, client: Client, symbols: list[str]) -> None:
-        new = [s for s in symbols if s not in client.symbols]
+        new = [s for s in dict.fromkeys(symbols) if s not in client.symbols]  # a repeat in one frame counts once
         client.symbols.update(new)
         changed = False
         for s in new:
@@ -134,7 +134,7 @@ class Hub:
             await self._sync_upstream()
 
     async def unsubscribe(self, client: Client, symbols: list[str]) -> None:
-        gone = [s for s in symbols if s in client.symbols]
+        gone = [s for s in dict.fromkeys(symbols) if s in client.symbols]
         client.symbols.difference_update(gone)
         changed = False
         for s in gone:

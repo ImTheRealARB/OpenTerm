@@ -132,6 +132,7 @@ class Poller:
 
     async def set_symbols(self, symbols: set[str]) -> None:
         self.symbols = set(symbols)
+        self._last = {s: p for s, p in self._last.items() if s in self.symbols}  # no memory of symbols nobody watches
 
     async def _run(self) -> None:
         while True:
