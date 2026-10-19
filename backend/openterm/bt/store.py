@@ -72,9 +72,12 @@ class BtStore:
         now = time.time()
         if now - self._swept > 3600:
             self._swept = now
-            for f in self.data_dir.glob("*.msgpack"):
-                if now - f.stat().st_mtime > DATA_TTL_S:
-                    f.unlink(missing_ok=True)
+            for f in [*self.data_dir.glob("*.msgpack"), *self.data_dir.glob("*.tmp")]:  # .tmp: left by a crash mid-write
+                try:
+                    if now - f.stat().st_mtime > DATA_TTL_S:
+                        f.unlink(missing_ok=True)
+                except OSError:  # gone already (another writer swept it) or still open on Windows: next hour
+                    continue
         return sha, path
 
     # --- strategies ---

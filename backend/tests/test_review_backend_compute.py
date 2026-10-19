@@ -98,3 +98,24 @@ async def test_recent_listing_skips_result_blobs_but_keeps_rows(tmp_path):
     assert [r["id"] for r in rows] == ["a"] and rows[0]["params"] == {"x": 1} and "result" not in rows[0]
     assert (await store.get("a"))["result"] == {"big": [1] * 1000}
     await db.close()
+
+
+def test_data_sweep_removes_orphan_temp_files_and_survives_vanishing_files(tmp_path):
+    """A crash between write and rename leaves `<sha>.<uuid>.tmp`; the hourly sweep only looked at *.msgpack."""
+    import os
+    import time
+
+    from openterm.bt.store import DATA_TTL_S, BtStore
+
+    store = BtStore(None, tmp_path / "d")
+    store.write_data({"a": 1})
+    old = time.time() - DATA_TTL_S - 60
+    orphan = tmp_path / "d" / ("0" * 64 + ".abcdef.tmp")
+    stale = tmp_path / "d" / ("1" * 64 + ".msgpack")
+    for f in (orphan, stale):
+        f.write_bytes(b"x")
+        os.utime(f, (old, old))
+    store._swept = 0.0
+    store.write_data({"a": 2})
+    assert not orphan.exists() and not stale.exists()
+    assert len(list((tmp_path / "d").glob("*.msgpack"))) == 2  # both fresh payloads survive
