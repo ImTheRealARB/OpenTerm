@@ -7,6 +7,8 @@ oldest is dropped first). A gap of more than four hours between ticks starts a n
 
 import math
 from array import array
+from itertools import islice
+from operator import le
 
 from ..streaming.tick import Tick
 
@@ -93,36 +95,57 @@ def bucket(t_ms: list[int], price: list[float], cum_vol: list[float], bar_s: int
 
     Volume per bucket is the increase of the cumulative day volume across its ticks (a tick without volume keeps the last known total;
     a fall means a new day and counts as zero). `v` is None when no tick carried volume. Buckets with no ticks are not created.
+
+    One pass with scalar running values (a 20,000-tick ring took 25 ms with per-tick list indexing, 7 ms now: see docs/review/backend-api.md).
     """
     n = len(t_ms)
-    order = range(n) if all(t_ms[i] <= t_ms[i + 1] for i in range(n - 1)) else sorted(range(n), key=t_ms.__getitem__)
-    out: dict = {"t": [], "o": [], "h": [], "l": [], "c": [], "v": []}
+    if all(map(le, t_ms, islice(t_ms, 1, None))):
+        ts, ps, vs = t_ms, price, cum_vol
+    else:
+        order = sorted(range(n), key=t_ms.__getitem__)
+        ts, ps, vs = [t_ms[i] for i in order], [price[i] for i in order], [cum_vol[i] for i in order]
+    span = bar_s * 1000
+    ot: list[int] = []
+    oo: list[float] = []
+    oh: list[float] = []
+    ol: list[float] = []
+    oc: list[float] = []
+    ov: list[float] = []
     have_vol = False
     base: float | None = None
-    cur = None
-    for i in order:
-        b = (t_ms[i] // 1000 // bar_s) * bar_s
-        px = price[i]
-        vi = cum_vol[i]
+    cur: int | None = None
+    o = h = low = c = vsum = 0.0
+    for t, px, vi in zip(ts, ps, vs, strict=True):
+        b = t // span * bar_s
         delta = 0.0
-        if not math.isnan(vi):
+        if vi == vi:  # noqa: PLR0124 - not NaN; math.isnan costs a call per tick
             have_vol = True
             if base is not None and vi >= base:
                 delta = vi - base
             base = vi
-        if cur != b:
+        if b != cur:
+            if cur is not None:
+                ot.append(cur)
+                oo.append(o)
+                oh.append(h)
+                ol.append(low)
+                oc.append(c)
+                ov.append(vsum)
             cur = b
-            out["t"].append(b)
-            out["o"].append(px)
-            out["h"].append(px)
-            out["l"].append(px)
-            out["c"].append(px)
-            out["v"].append(delta)
+            o = h = low = c = px
+            vsum = delta
         else:
-            out["h"][-1] = max(out["h"][-1], px)
-            out["l"][-1] = min(out["l"][-1], px)
-            out["c"][-1] = px
-            out["v"][-1] += delta
-    if not have_vol:
-        out["v"] = None
-    return out
+            if px > h:  # noqa: PLR1730 - builtin max/min cost a call per tick here
+                h = px
+            if px < low:  # noqa: PLR1730
+                low = px
+            c = px
+            vsum += delta
+    if cur is not None:
+        ot.append(cur)
+        oo.append(o)
+        oh.append(h)
+        ol.append(low)
+        oc.append(c)
+        ov.append(vsum)
+    return {"t": ot, "o": oo, "h": oh, "l": ol, "c": oc, "v": ov if have_vol else None}
