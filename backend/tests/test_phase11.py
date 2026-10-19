@@ -1,6 +1,6 @@
 """Phase 11: key store + redaction + KEY REQUIRED, job runner, LLM gateway (spec: docs/specs/PHASE_11.md).
 
-Written before the code. Each group is marked strict-xfail until its build step lands; that step deletes the marker.
+Written before the code; every build step has landed and the strict-xfail markers are gone.
 Modules are imported inside the tests so a missing module fails one test, not the whole collection.
 """
 

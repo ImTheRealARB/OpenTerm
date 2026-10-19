@@ -6,7 +6,7 @@ Two kinds of test, both written before the code:
     (HKUDS/Vibe-Trading @ d0db2e3) with scripts/vibe_quant_crosscheck.py. Each case is {"fn": "<module>.<function>", "args", "result"
     | "raises"}; NaN is null, infinities are "inf" / "-inf". Closed forms must agree to 1e-9 relative; quadrature (Heston) to 1e-6; the
     curve fit is compared by the fitted curve (the simplex may end elsewhere in a flat valley), not by its parameters.
-Strict xfail until step 2 lands; that step deletes the marker (QUANT = lambda f: f).
+Was strict xfail until step 2 landed; the marker is gone (QUANT = lambda f: f).
 """
 
 import dataclasses

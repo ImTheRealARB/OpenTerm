@@ -3,7 +3,7 @@ import { expect, test, type Download, type Page, type WebSocketRoute } from "@pl
 
 /*
  * Phase 12 (spec: docs/specs/PHASE_12.md): BT, BT RUNS, IMPORT.
- * Written before the code: each test calls test.fail() until its build step lands; that step deletes the call.
+ * Written before the code; every build step has landed and the test.fail() calls are gone.
  * Routes and the WebSocket are mocked; `J` frames drive the job.
  */
 

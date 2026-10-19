@@ -5,7 +5,7 @@ invented values and labelled NOT A RECORDING (scripts/record_phase15.py --kite):
 independent code, and the label must appear wherever fixture data is shown. Fixture routing (added with the code): `POST api.kite.trade/session/token`
 answers the session only when `checksum == sha256(api_key + request_token + api_secret)` for the test's key trio (KEY, SECRET, REQUEST_TOKEN below),
 otherwise 403 InputException; setting env `OPENTERM_KITE_EXPIRED=1` makes every authenticated Kite call answer the TokenException fixture.
-Strict xfail until the step lands: KITE = step 6 (backend), KITEUI = step 7 (history, chains, status in the UI-facing routes).
+Was strict xfail until the steps landed: KITE = step 6 (backend), KITEUI = step 7 (history, chains, status in the UI-facing routes); the markers are gone.
 """
 
 import hashlib

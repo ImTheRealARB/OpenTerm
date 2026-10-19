@@ -5,8 +5,8 @@ import { openApp } from "./app";
  * Phase 15 (spec: docs/specs/PHASE_15.md): RISK, PORT OPT, PORT ATTR, FACT, QL, ALPHA, CORR REGIME and the KITE status panel. Every payload
  * is test data served by mocked routes; nothing reaches the network. Each function is a job (`POST /api/quant/{fn}`) whose result is the
  * table payload ResearchPanel renders; a job that is still running shows its progress and finishes through `GET /api/jobs/{id}` (the mocked
- * socket sends no J frames, so this also covers the polling fallback). All tests are marked test.fail() until their build step lands
- * (step 3: RISK, OPT, ATTR; 4: FACT, QL; 5: ALPHA, REGIME; 7: KITE); the step deletes its marker.
+ * socket sends no J frames, so this also covers the polling fallback). Every test was marked test.fail() until its build step landed
+ * (step 3: RISK, OPT, ATTR; 4: FACT, QL; 5: ALPHA, REGIME; 7: KITE); the markers are gone.
  */
 const now = () => Date.now() / 1000;
 const env = (data: unknown, extra = {}) => ({ data, source: "yahoo", as_of: now(), age_s: 1, stale: false, fallback_from: [], ...extra });

@@ -1,6 +1,6 @@
 """Phase 12: backtester `BT` (spec: docs/specs/PHASE_12.md).
 
-Written before the code. Each group is strict-xfail until its build step lands; that step deletes the marker.
+Written before the code; every build step has landed and the strict-xfail markers are gone.
 Modules (and pandas, a worker-only dependency added in step 3) are imported inside the tests, so a missing module
 fails one test, not the whole collection.
 

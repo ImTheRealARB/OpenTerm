@@ -1,7 +1,7 @@
 """Phase 13: equity research gaps (spec: docs/specs/PHASE_13.md).
 
-API-level contract tests written before the code, in fixture mode (no network). Each group is strict-xfail until its
-build step lands; that step deletes the marker (EST = step 2, CORP = step 3, VAL = step 4, FUND = step 5, KEYED = step 6).
+API-level contract tests written before the code, in fixture mode (no network). Every group was strict-xfail until its
+build step landed (EST = step 2, CORP = step 3, VAL = step 4, FUND = step 5, KEYED = step 6); the markers are gone.
 Expected numbers are read from the recorded answers in tests/fixtures (recorded 2026-10-18 by
 scripts/record_phase13.py) and written out next to the assertion. Parser unit tests live in the per-step files.
 """

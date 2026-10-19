@@ -8,7 +8,7 @@ defines: `optimizers.<module>` cases call that optimizer module's `optimize(...)
 weight rows at `record_rows`; `alpha.t_stat` / `alpha.categorise` live in `openterm.quantlib.alpha.bench`; `regime` and `risk_xray` are
 `openterm.quantlib.regime` / `.risk_xray`. The alpha zoo is replayed from `alpha.panel` against `alpha.expected` (NaN positions must match).
 Closed forms must agree to 1e-9 relative; fitted or iterative results (GARCH, GPD tail, optimizers, statsmodels tests) to the looser tolerance
-in TOLERANCE. The server never imports any of this (test_phase15.py guards that). Strict xfail until step 2 lands: that step deletes the marker.
+in TOLERANCE. The server never imports any of this (test_phase15.py guards that). Was strict xfail until step 2 landed; the marker is gone.
 """
 
 import dataclasses

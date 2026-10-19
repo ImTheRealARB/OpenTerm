@@ -1,8 +1,8 @@
 """Phase 14: options, rates, futures (spec: docs/specs/PHASE_14.md).
 
 API-level contract tests written before the code, in fixture mode (no network; OPENTERM_FIXTURES pins the clock to 2026-10-18T00:00Z,
-decision C). Each group is strict-xfail until its build step lands; that step deletes the marker (OPT = step 3, PRICER = step 4,
-SURF = step 5, RATES = step 6, FUT = step 7). Expected numbers are read from the recorded answers in tests/fixtures (recorded
+decision C). Every group was strict-xfail until its build step landed (OPT = step 3, PRICER = step 4,
+SURF = step 5, RATES = step 6, FUT = step 7); the markers are gone. Expected numbers are read from the recorded answers in tests/fixtures (recorded
 2026-10-18 by scripts/record_phase14.py) with independent code written here (math.erf Black-Scholes, plain CSV/JSON/HTML parsing),
 so a test never calls the module it checks. The quant library has its own file: test_phase14_quant.py.
 """

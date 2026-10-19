@@ -4,8 +4,8 @@ import { alphaArgs, attrArgs, factArgs, kiteArgs, optArgs, qlArgs, quantBody, re
 /*
  * Phase 15 step 1 (spec docs/specs/PHASE_15.md): command-line parsers for RISK, PORT OPT, PORT ATTR, FACT, QL, ALPHA, CORR REGIME and KITE,
  * plus `quantBody`, which turns the string params into the typed JSON body of `POST /api/quant/{fn}`. Pure (no window): the module does
- * not exist yet, so every test is `it.fails` through a variable-path import (tsc would reject a missing module). The build step that makes
- * them pass (step 3 for RISK/OPT/ATTR, 4 for FACT/QL, 5 for ALPHA/REGIME, 7 for KITE) switches them to plain `it` with a static import.
+ * not exist yet, so every test was `it.fails` through a variable-path import (tsc would reject a missing module). Every build step has since
+ * landed (step 3 for RISK/OPT/ATTR, 4 for FACT/QL, 5 for ALPHA/REGIME, 7 for KITE): the tests are plain `it` with a static import.
  */
 describe("riskArgs", () => {
   it("takes a portfolio word and KEY=VALUE pairs, keys lower-cased", () => {

@@ -3,8 +3,8 @@
 API-level contract tests written before the code, in fixture + synthetic mode (no network; OPENTERM_FIXTURES pins the clock). Every
 function is a job (`POST /api/quant/{fn}`, decision B): the helper `run` submits it, waits for the job and returns the standard envelope
 `{data, source, stale, age_s, fallback_from}` whose `data` is the table payload. Expected numbers are computed HERE with independent numpy
-code from the very bars the API serves (`/api/history`), never by calling the module under test. Each group is strict-xfail until its
-build step lands; that step deletes the marker (RISK, OPT, ATTR = step 3; FACT, QL = step 4; ALPHA, REGIME = step 5).
+code from the very bars the API serves (`/api/history`), never by calling the module under test. Every group was strict-xfail until its
+build step landed (RISK, OPT, ATTR = step 3; FACT, QL = step 4; ALPHA, REGIME = step 5); the markers are gone.
 The ported library itself is tested against Vibe-Trading's own numbers in test_phase15_quant.py.
 """
 

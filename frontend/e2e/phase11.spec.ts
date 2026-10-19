@@ -3,7 +3,7 @@ import { openApp } from "./app";
 
 /*
  * Phase 11 (spec: docs/specs/PHASE_11.md): APIKEYS, the KEY REQUIRED line, JOBS.
- * Written before the code: each test calls test.fail() until its build step lands; that step deletes the call.
+ * Written before the code; every build step has landed and the test.fail() calls are gone.
  */
 
 const SECRET = "sk-or-v1-e2e0123456789SECRET";
