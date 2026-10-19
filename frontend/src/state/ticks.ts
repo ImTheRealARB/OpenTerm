@@ -4,6 +4,7 @@
  * Live entries are mutated in place: no per-tick allocation, no React re-render.
  */
 import { afterPaint, gauges, series } from "../perf/metrics";
+import { carryNulls } from "./tickMerge";
 
 export interface Live {
   price: number;
@@ -35,7 +36,10 @@ let ticksSinceGauge = 0;
 let gaugeAt = performance.now();
 
 export function ingest(rows: Row[], recvAt: number): void {
-  for (const r of rows) pending.set(r[0], r);
+  for (const r of rows) {
+    carryNulls(pending.get(r[0]), r); // two ticks in one frame: the last one must not erase fields only the first carried
+    pending.set(r[0], r);
+  }
   for (const l of rawListeners) l(rows); // Phase 8: alerts (runs even when rAF is paused in a hidden tab)
   ticksSinceGauge += rows.length;
   if (!oldestRecv) oldestRecv = recvAt;
