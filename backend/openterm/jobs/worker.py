@@ -1,7 +1,7 @@
 """Worker process main loop. One task at a time from `tasks`; progress and results go back on `results`.
 
 Messages to the server: ("progress", job_id, fraction, msg) | ("done", job_id, result) | ("error", job_id, text)
-| ("cancelled", job_id, None). `cancel` is a shared flag the server sets; `progress()` raises once it is set.
+| ("cancelled", job_id, None). `cancel` is a shared flag the server sets (and resets before it sends a task); `progress()` raises once it is set.
 """
 
 from .kinds import KINDS, JobCancelled
@@ -16,7 +16,6 @@ def worker_main(tasks, results, cancel) -> None:
         if task is None:
             return
         job_id, kind, params = task
-        cancel.value = 0
 
         def progress(fraction: float, msg: str = "", job_id=job_id) -> None:
             if cancel.value:

@@ -48,6 +48,7 @@ class Worker:
         result_w.close()
         self.job: str | None = None
         self.retired = False  # terminated on purpose: its death is not a crash
+        self.dead = False  # the reader saw its pipe or process end (an attribute, not id(): ids are reused after a free)
 
     def stop(self) -> None:
         self.retired = True
@@ -100,12 +101,11 @@ class JobRunner:
 
     def _read(self) -> None:
         """Reader thread: blocks on all result pipes + process sentinels + the wake pipe."""
-        dead: set[int] = set()
         while not self._closing:
             ws = list(self.workers)
             waitables = {self._wake_r: None}
             for w in ws:
-                if id(w) in dead:
+                if w.dead:
                     continue
                 waitables[w.results] = w
                 waitables[w.proc.sentinel] = w
@@ -119,13 +119,13 @@ class JobRunner:
                         self._wake_r.recv()
                     continue
                 w = waitables[obj]
-                if w is None or id(w) in dead:
+                if w is None or w.dead:
                     continue
                 if obj is w.results:
                     try:
                         msg = w.results.recv()
                     except (EOFError, OSError):
-                        dead.add(id(w))
+                        w.dead = True
                         self.loop.call_soon_threadsafe(self._on_death, w)
                         continue
                     self.loop.call_soon_threadsafe(self._on_msg, w, msg)
@@ -134,7 +134,7 @@ class JobRunner:
                     with contextlib.suppress(EOFError, OSError):
                         while w.results.poll():
                             self.loop.call_soon_threadsafe(self._on_msg, w, w.results.recv())
-                    dead.add(id(w))
+                    w.dead = True
                     self.loop.call_soon_threadsafe(self._on_death, w)
 
     def _replace(self, w: Worker) -> None:
@@ -205,6 +205,7 @@ class JobRunner:
                 job = self.jobs[self.queue.popleft()]
                 w.job = job["id"]
                 job["state"], job["started_at"] = "running", time.time()
+                w.cancel.value = 0  # reset here, not in the worker: a cancel sent right after dispatch must not be wiped
                 try:
                     w.tasks.send((job["id"], job["kind"], job["params"]))
                 except OSError:
@@ -274,11 +275,12 @@ class JobRunner:
         k = KINDS[kind]
         params = k.validate(params)
         h = job_hash(kind, k.version, k.hash_view(params), k.fingerprint(params))
-        for job in self.jobs.values():
-            if job["hash"] == h:
-                return self.public(job)  # the same work is already queued or running
+        if (hit := self._known(h)) is not None:
+            return hit
         if (cached := await self.store.done_by_hash(h)) is not None:
             return {**self.public(self._from_store(cached)), "cached": True, "result": cached["result"]}
+        if (hit := self._known(h)) is not None:  # an identical submit got in while we waited on the store
+            return hit
         job = {"id": uuid.uuid4().hex[:12], "kind": kind, "label": k.label, "params": params, "hash": h,
                "state": "queued", "progress": 0.0, "msg": "", "cached": False, "error": None, "result": None,
                "created_at": time.time(), "started_at": None, "finished_at": None}
@@ -288,6 +290,16 @@ class JobRunner:
         self._frame(job, force=True)
         self._dispatch()
         return self.public(job)
+
+    def _known(self, h: str) -> dict | None:
+        """The same work already queued, running, or finished and not yet in the store."""
+        for job in self.jobs.values():
+            if job["hash"] == h:
+                return self.public(job)
+        for job in self._done.values():
+            if job["hash"] == h and job["state"] == "done" and job["result"] is not None:
+                return {**self.public(job), "cached": True, "result": job["result"]}
+        return None
 
     def cancel(self, job_id: str) -> dict | None:
         job = self.jobs.get(job_id)
