@@ -4,7 +4,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from .providers.base import ProviderError
+from .providers.base import Provider, ProviderError
 from .router import Router
 
 log = logging.getLogger("openterm.scheduler")
@@ -16,6 +16,8 @@ async def probe_down_providers(router: Router) -> None:
         h = router.health[name]
         if not h.consecutive:
             continue
+        if type(p).probe is Provider.probe:
+            continue  # no probe(): the cooldown simply runs out (a missing probe used to count as a fresh failure every 30 s)
         try:
             await router._attempt(p, lambda prov: prov.probe())
             log.info("provider %s recovered", name)
