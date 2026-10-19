@@ -84,6 +84,8 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
         if not calls:
             answer = text
             break
+        for i, c in enumerate(calls):
+            c.id = c.id or f"call_{rounds}_{i}"  # a provider that sends no id would leave the tool message unmatched
         messages.append({"role": "assistant", "content": text or None,
                          "tool_calls": [{"id": c.id, "type": "function", "function": {"name": c.name, "arguments": json.dumps(c.args)}} for c in calls]})
         for c in calls:
@@ -97,7 +99,10 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
             executed += 1
             tid = f"T{executed}"
             yield {"type": "tool_call", "id": tid, "name": c.name, "args": c.args}
-            res = await call_tool(c.name, c.args)
+            try:
+                res = await call_tool(c.name, c.args)
+            except Exception as e:  # noqa: BLE001 - one broken tool must not end the stream; the type only, never the message (it may hold a secret)
+                res = toolbox.ToolResult(ok=False, text=f"TOOL ERROR {type(e).__name__}", error=f"TOOL ERROR {type(e).__name__}")
             if res.ok and not res.empty:
                 good += 1
                 results.append(res.text)
