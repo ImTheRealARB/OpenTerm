@@ -35,7 +35,8 @@ def parkinson_vol(highs: list[float | None], lows: list[float | None], n: int) -
 
 def rolling_cc(rets: list[float | None], n: int) -> list[float | None]:
     """cc_vol over a sliding window, aligned to the last return of each window (None where the window is incomplete)."""
-    return [cc_vol(rets[: i + 1], n) if i + 1 >= n else None for i in range(len(rets))]
+    # hand cc_vol just the window: slicing rets[: i + 1] copied the whole prefix at every step (quadratic)
+    return [cc_vol(rets[i + 1 - n: i + 1], n) if i + 1 >= n else None for i in range(len(rets))]
 
 
 def percentile_rank(history: list[float], now: float) -> tuple[float, float]:
