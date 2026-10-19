@@ -152,3 +152,12 @@ def test_bucket_matches_the_reference_on_ordered_unordered_and_volumeless_ticks(
     nan = float("nan")
     assert bucket(t, p, [nan] * len(t), bar_s) == _reference_bucket(t, p, [nan] * len(t), bar_s)
     assert bucket([], [], [], bar_s)["t"] == []
+
+
+# --- world payload error text goes through redact() ---------------------------------------------------------------------
+def test_pred_reason_text_is_redacted():
+    from openterm.service import DataError
+    from openterm.world.pred import _reason
+
+    e = DataError("unavailable", "FAILED", "GET https://example.test/m?apikey=abcdef123456 returned HTML")
+    assert "abcdef123456" not in _reason(e)

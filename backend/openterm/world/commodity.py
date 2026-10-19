@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ..config import get_settings
+from ..redact import redact
 from ..router import AllFailed
 from ..service import DataError
 from . import energy, weather
@@ -25,7 +26,7 @@ async def nrg(svc: Any) -> dict[str, Any]:
         rows, datas, errors = [], {}, []
         for s, g in zip(energy.SERIES, got, strict=True):
             if isinstance(g, DataError):
-                rows.append(energy.make_row(s, None, today, error=str(g)))
+                rows.append(energy.make_row(s, None, today, error=redact(str(g))))
                 errors.append(s.alias)
             elif isinstance(g, BaseException):
                 raise g
@@ -76,7 +77,7 @@ async def _alerts(svc: Any, lat: float, lon: float) -> dict[str, Any]:
     try:
         env = await svc._swr(f"w:nws:{lat:.4f},{lon:.4f}", ALERT_TTL_S, fetch)
     except (AllFailed, DataError) as e:
-        return {"status": "UNAVAILABLE", "items": [], "note": f"NWS ALERTS UNAVAILABLE: {str(e)[:80].upper()}"}
+        return {"status": "UNAVAILABLE", "items": [], "note": f"NWS ALERTS UNAVAILABLE: {redact(str(e))[:80].upper()}"}
     items = env["data"]
     return {"status": "OK" if items else "NONE", "items": items, "note": None if items else "NO ACTIVE NWS ALERTS FOR THIS POINT",
             "age_s": env["age_s"], "stale": env["stale"]}

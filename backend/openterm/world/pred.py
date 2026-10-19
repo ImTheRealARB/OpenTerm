@@ -16,6 +16,7 @@ from typing import Any
 
 import orjson
 
+from ..redact import redact
 from ..service import DataError
 
 LABEL = "MARKET-IMPLIED PROBABILITY, NOT A FORECAST"
@@ -235,7 +236,7 @@ def kalshi_detail(body: Any, hist: dict[str, list] | None, hist_note: str | None
 
 # --- service ------------------------------------------------------------------------------------------------------------
 def _reason(e: Exception) -> str:
-    return (getattr(e, "detail", None) or str(e))[:160]
+    return redact(getattr(e, "detail", None) or str(e))[:160]
 
 
 async def _source_rows(svc: Any, name: str) -> dict[str, Any]:
