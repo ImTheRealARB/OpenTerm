@@ -6,7 +6,7 @@
 import { afterPaint, gauges, series } from "../perf/metrics";
 import { createStore, useStore } from "../state/store";
 import { api } from "./api";
-import { applyJob, applyJobFrame, isActive, isFinished, parseJobFrame, sortJobs, type JobFrameUpdate, type JobRec } from "./jobFrames";
+import { applyJob, applyJobFrames, isActive, isFinished, parseJobFrame, sortJobs, type JobFrameUpdate, type JobRec } from "./jobFrames";
 
 interface JobsState {
   jobs: Map<string, JobRec>;
@@ -61,7 +61,7 @@ function flush(): void {
   const batch = queue;
   queue = [];
   if (!batch.length) return;
-  setJobs((m) => batch.reduce((acc, u) => applyJobFrame(acc, u), m));
+  setJobs((m) => applyJobFrames(m, batch));
   for (const u of batch) {
     if (framed.has(u.id)) continue;
     framed.add(u.id);

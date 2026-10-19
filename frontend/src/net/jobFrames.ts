@@ -56,18 +56,30 @@ function regresses(cur: JobState, next: JobState): boolean {
   return RANK[next] < RANK[cur] && !(isFinished(cur) && isFinished(next));
 }
 
-/** New map with the frame merged into any existing job (label and params are kept). Late frames never move a job back. */
-export function applyJobFrame(map: Map<string, JobRec>, u: JobFrameUpdate, now = nowSec()): Map<string, JobRec> {
-  const next = new Map(map);
-  const cur = map.get(u.id);
+/** Merges one frame into `next` in place (`next` is a map the caller owns). */
+function mergeFrame(next: Map<string, JobRec>, u: JobFrameUpdate, now: number): void {
+  const cur = next.get(u.id);
   if (!cur) {
     next.set(u.id, { ...u, seen_at: now, ...(isFinished(u.state) ? { end_at: now } : {}) });
-    return next;
+    return;
   }
-  if (regresses(cur.state, u.state)) return next;
+  if (regresses(cur.state, u.state)) return;
   const rec: JobRec = { ...cur, ...u };
   if (isFinished(u.state) && !isFinished(cur.state)) rec.end_at = now;
   next.set(u.id, rec);
+}
+
+/** New map with the frame merged into any existing job (label and params are kept). Late frames never move a job back. */
+export function applyJobFrame(map: Map<string, JobRec>, u: JobFrameUpdate, now = nowSec()): Map<string, JobRec> {
+  const next = new Map(map);
+  mergeFrame(next, u, now);
+  return next;
+}
+
+/** `updates` applied in order with ONE map copy (applyJobFrame in a loop copies the whole map per frame). */
+export function applyJobFrames(map: Map<string, JobRec>, updates: readonly JobFrameUpdate[], now = nowSec()): Map<string, JobRec> {
+  const next = new Map(map);
+  for (const u of updates) mergeFrame(next, u, now);
   return next;
 }
 
