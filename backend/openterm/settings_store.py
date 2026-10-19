@@ -25,9 +25,9 @@ DECIMALS = (".", ",")
 # Poll intervals in seconds: (min, max). The floors keep free providers inside their rate limits.
 POLL_BOUNDS = {"news": (30, 600), "movers": (30, 600), "crypto": (15, 600), "sources": (5, 120)}
 MAX_CLOCKS = 3
-ZONE_RE = re.compile(r"^(LOCAL|UTC|[A-Za-z]+(?:/[A-Za-z0-9_+-]+){1,2})$")
-ACTION_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,39}$")
-CHORD_RE = re.compile(r"^(?:(?:Ctrl|Alt|Shift)\+){0,3}[^\s+]{1,12}$|^(?:(?:Ctrl|Alt|Shift)\+){1,3}\+$")
+ZONE_RE = re.compile(r"^(LOCAL|UTC|[A-Za-z]+(?:/[A-Za-z0-9_+-]+){1,2})\Z")  # \Z, not `$`: no trailing newline
+ACTION_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,39}\Z")
+CHORD_RE = re.compile(r"^(?:(?:Ctrl|Alt|Shift)\+){0,3}[^\s+]{1,12}\Z|^(?:(?:Ctrl|Alt|Shift)\+){1,3}\+\Z")
 MAX_ACTIONS = 64
 MAX_CHORDS = 4
 
@@ -104,7 +104,7 @@ def _keys(raw) -> dict:
 
 
 AI_PROVIDERS = ("openrouter", "openai", "anthropic", "ollama")
-AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}$")
+AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}\Z")
 
 
 def _ai(raw) -> dict:

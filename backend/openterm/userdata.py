@@ -8,8 +8,8 @@ import orjson
 
 from .symbols import resolve
 
-NAME_RE = re.compile(r"^[A-Z0-9][A-Z0-9_.-]{0,31}$")
-SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9^=.&-]{0,23}$")
+NAME_RE = re.compile(r"^[A-Z0-9][A-Z0-9_.-]{0,31}\Z")
+SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9^=.&-]{0,23}\Z")
 MAX_STATE_BYTES = 64_000
 HISTORY_MAX = 500
 MAX_CMD_LEN = 500

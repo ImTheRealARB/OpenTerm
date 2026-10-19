@@ -12,7 +12,7 @@ from .symbols import resolve
 from .userdata import SYMBOL_RE, UserDataError
 
 MAX_NEWS_ALERTS = 50
-WORD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&'/-]{0,38}[A-Za-z0-9.]$|^[A-Za-z0-9]{2}$")
+WORD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&'/-]{0,38}[A-Za-z0-9.]\Z|^[A-Za-z0-9]{2}\Z")
 COLS = "id, word, symbol, status, created_at, triggered_at, headline, url"
 
 
