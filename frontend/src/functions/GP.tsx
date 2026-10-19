@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { registerChartShot } from "../chart/shot";
 import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent } from "../chart/ChartView";
+import { createDrawSaver } from "../chart/drawSave";
 import { MAX_DRAWINGS, NEEDED, KIND_NAME, cycleSelection, newId, parseDrawings, snapDay, type DPoint, type DrawKind, type Drawing } from "../chart/drawings";
 import { INDICATORS } from "../chart/indicators";
 import { fmtAge } from "../format";
@@ -102,23 +103,11 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
   const [drawNote, setDrawNote] = useState<string | null>(null);
-  const loadedFor = useRef<string | null>(null);
-  const dirty = useRef(false);
-  const latestDrawings = useLatest(drawings);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flush = (sym: string) => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = null;
-    if (!dirty.current || loadedFor.current !== sym) return;
-    dirty.current = false;
-    worldApi
-      .saveDrawings(sym, latestDrawings.current)
-      .then(() => setDrawNote(null))
-      .catch((e: ApiError) => setDrawNote(`DRAWINGS NOT SAVED: ${e.message}`));
-  };
+  // One saver per panel: it saves to the symbol the loaded list belongs to, so a symbol switch in place cannot mis-address a save.
+  const saver = useMemo(() => createDrawSaver((sym, list) => worldApi.saveDrawings(sym, list), setDrawNote), []);
   useEffect(() => {
     let alive = true;
-    loadedFor.current = null;
+    saver.reset();
     setDrawings([]);
     setSelected(null);
     setMode(null);
@@ -127,22 +116,18 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       .then((r) => {
         if (!alive) return;
         setDrawings(parseDrawings(r.drawings));
-        loadedFor.current = symbol;
+        saver.loaded(symbol);
         setDrawNote(null);
       })
       .catch((e: ApiError) => alive && setDrawNote(`DRAWINGS NOT LOADED: ${e.message}`));
     return () => {
       alive = false;
-      flush(symbol);
+      saver.flush();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol]);
+  }, [symbol, saver]);
   const commit = (next: Drawing[]) => {
     setDrawings(next);
-    latestDrawings.current = next;
-    dirty.current = true;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => flush(symbol), 400);
+    saver.change(next);
   };
 
   // --- event markers (EVT) ---
