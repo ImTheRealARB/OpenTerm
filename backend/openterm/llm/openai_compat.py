@@ -21,7 +21,8 @@ BASES = {
 
 class OpenAIStream:
     def __init__(self) -> None:
-        self._calls: dict[int, dict] = {}
+        self._calls: dict[int, dict] = {}  # slot (order of arrival) -> call
+        self._slot: dict[int, int] = {}  # the provider's `index` -> the slot it fills now
         self.finished = False
 
     def _flush_calls(self) -> list[Event]:
@@ -35,6 +36,7 @@ class OpenAIStream:
                 continue
             out.append(Event("tool_call", id=c["id"], name=c["name"], args=args if isinstance(args, dict) else {}))
         self._calls.clear()
+        self._slot.clear()
         return out
 
     def feed(self, payload: str) -> list[Event]:
@@ -55,7 +57,14 @@ class OpenAIStream:
             if text := delta.get("content"):
                 out.append(Event("token", text=text))
             for tc in delta.get("tool_calls") or []:
-                c = self._calls.setdefault(tc.get("index", 0), {"id": None, "name": None, "args": ""})
+                index = tc.get("index", 0)
+                slot = self._slot.get(index)
+                if slot is not None and tc.get("id") and self._calls[slot]["id"] not in (None, tc["id"]):
+                    slot = None  # some providers number every parallel call 0 and tell them apart by id only
+                if slot is None:
+                    slot = self._slot[index] = len(self._calls)
+                    self._calls[slot] = {"id": None, "name": None, "args": ""}
+                c = self._calls[slot]
                 fn = tc.get("function") or {}
                 c["id"] = tc.get("id") or c["id"]
                 c["name"] = fn.get("name") or c["name"]
