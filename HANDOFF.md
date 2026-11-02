@@ -6,6 +6,14 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
 ## Resume here (2026-11-02: repo is PUBLIC; README rewritten for beginners)
+- **Phase 17 (NEXT_SESSION.md Part 2): DONE (2026-11-03, branch `claude/opus-phase-17-mcp-alerts-06250f`, built on top of the GUI-mode commit `d1041b4`).** Spec `docs/specs/PHASE_17.md`.
+  MCP server (`openterm/mcp/`, `POST /mcp` + stdio bridge, `docs/MCP.md`), alert delivery (`openterm/delivery/`, email/Telegram/webhook, `DLVR` panel, migration 15), daily brief (`brief.py`,
+  `BRIEF` panel, apscheduler job). SMTP TLS item closed. Gate ALL PASS (pytest 1694, e2e 223). Bench 34/37 and 32/37; the base commit without Phase 17 scored 32/37 under the same load
+  (`docs/PERFORMANCE.md` "Phase 17 bench"), so the misses are machine load. Live smoke (fixture server): MCP stdio initialize + tools/list (17) + quote OK; brief built all 5 sections.
+  **Not verified:** a real SMTP server, a real Telegram bot and a real webhook (no keys here; all send paths are unit-tested with fakes); Claude Desktop actually connecting to the MCP bridge.
+  **Decision left to the user:** the DLVR `DESKTOP` toggle is stored, but desktop notifications already fire whenever the browser grants permission (`command/alerts.ts` `desktopNotify`, from ALRT);
+  gating them on the toggle would silence existing users, so it was left as is.
+  **Next:** user review, merge `d1041b4` + this branch into `main`, then Part 3 (better strategy editor) in a fresh session.
 - **GUI mode, NEXT_SESSION.md Part 1: DONE, uncommitted (2026-11-02, branch `claude/opus-orchestrator-6b3fee`).** One app, two shells: `mode` setting (`settings/schema.ts`; new user = gui,
   saved object without `mode` = terminal; backend `settings_store.py` accepts `mode`), toggle in the status bar / `Alt+G` / `SETTINGS MODE`. GUI shell in `frontend/src/gui/` (menu bar, sidebar search,
   symbol picker, panel toolbar `toolbars.ts`, help drawer `Alt+H`, banner, welcome card, tour). `functions/categories.ts` maps every function to a menu category (a vitest fails on a missing one).

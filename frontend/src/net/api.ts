@@ -1130,3 +1130,60 @@ export const worldApi = {
   saveDrawings: (symbol: string, drawings: unknown[]) =>
     send<{ symbol: string; drawings: unknown[]; updated_at: number }>("PUT", `/api/drawings/${encodeURIComponent(symbol)}`, { drawings }),
 };
+
+// --- Phase 17: alert delivery (DLVR) and the daily brief (BRIEF) ---
+export type DeliveryChannel = "email" | "telegram" | "webhook" | "desktop";
+
+/** The delivery settings document (backend/openterm/delivery/settings.py). Secrets are never here: they live in APIKEYS. */
+export interface DeliverySettings {
+  channels: Record<DeliveryChannel, boolean>;
+  email_to: string;
+  telegram_chat_id: string;
+  brief: { enabled: boolean; time: string; days: string; tz: string };
+}
+/** GET / PUT /api/delivery. `status` is per push channel: "off" | "ready" | "KEY REQUIRED: ..." (desktop has none). */
+export interface DeliveryPayload {
+  settings: DeliverySettings;
+  status: Partial<Record<DeliveryChannel, string>>;
+}
+/** One row of the delivery log (a send attempt). */
+export interface DeliveryRow {
+  id: number;
+  at: number;
+  kind: string;
+  ref: string;
+  channel: string;
+  status: string;
+  detail: string | null;
+}
+/** A partial settings change; the backend merges it over the saved document. */
+export type DeliveryPatch = Partial<Omit<DeliverySettings, "channels" | "brief">> & {
+  channels?: Partial<Record<DeliveryChannel, boolean>>;
+  brief?: Partial<DeliverySettings["brief"]>;
+};
+
+export const deliveryApi = {
+  get: () => send<DeliveryPayload>("GET", "/api/delivery"),
+  put: (patch: DeliveryPatch) => send<DeliveryPayload>("PUT", "/api/delivery", patch),
+  log: (limit = 100) => send<{ deliveries: DeliveryRow[] }>("GET", `/api/delivery/log?limit=${limit}`),
+  test: (channel: Exclude<DeliveryChannel, "desktop">) => send<{ results: DeliveryRow[] }>("POST", "/api/delivery/test", { channel }),
+};
+
+export interface BriefSection {
+  id: string;
+  title: string;
+  source: string | null;
+  age_s: number | null;
+  stale: boolean;
+  error: string | null;
+  lines: string[];
+}
+export interface Brief {
+  at: number;
+  sections: BriefSection[];
+  watchlist?: string;
+}
+export const briefApi = {
+  get: () => send<{ brief: Brief | null }>("GET", "/api/brief"),
+  run: (sendIt: boolean) => send<{ brief: Brief; delivered: DeliveryRow[] | null }>("POST", `/api/brief/run?send=${sendIt ? 1 : 0}`),
+};

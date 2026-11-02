@@ -249,6 +249,13 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SOURCES` | Data sources: health, latency, quota |  |  | `SOURCES` |
 | `LOG` | Backend log |  |  | `LOG` |
 
+### Other
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `DLVR` | Alert delivery |  |  | `DLVR` |
+| `BRIEF` | Daily brief |  |  | `BRIEF` |
+
 ## Global keyboard shortcuts
 
 Rebind any of these in `SETTINGS KEYS`.

@@ -47,6 +47,8 @@ panels watch it; heavy maths runs in separate worker processes so it never block
 | **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks |
 | **Risk and quant** | Value at Risk, portfolio optimisation, factor and attribution analysis |
 | **AI (optional)** | Ask questions answered with the app's own data, every answer showing which tools it used. Needs an OpenRouter key |
+| **Alerts and briefs** | Alerts can reach you by email, Telegram or a webhook (`DLVR`, all off by default), plus a scheduled daily brief (`BRIEF`) |
+| **MCP server** | Let Claude Desktop, Claude Code or another MCP client read OpenTerm's data (read-only, never orders). See [docs/MCP.md](docs/MCP.md) |
 
 | Charts with indicators | Backtesting |
 |---|---|
@@ -236,7 +238,7 @@ These are unofficial or free-tier endpoints meant for personal use, and they cha
 - AI answers say `AI · model · time`, list the data they used, and say `UNGROUNDED` when they used none.
 - Read [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) before relying on anything. Please respect each source's terms of use.
 
-Not built: placing orders or broker connections, push or email alerts with the browser closed, and a few paid-only data
+Not built: placing orders or broker connections, alerts while no OpenTerm tab is open (alerts are checked in the browser), and a few paid-only data
 sets (`TRAN`, `SEG`, `UNLK`). See [docs/ROADMAP_PHASES_11-19.md](docs/ROADMAP_PHASES_11-19.md).
 
 ## For developers

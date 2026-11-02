@@ -61,6 +61,11 @@ MIGRATIONS: list[str | list[str]] = [
     # 14: hash-chained audit ledger for AI, SWARM, AI AUTO and BT runs (Phase 16)
     ("CREATE TABLE ai_ledger (seq INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, model TEXT NOT NULL,"
      " manifest TEXT NOT NULL, meta TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL)"),
+    # 15: one row per alert/brief delivery attempt, newest 500 kept (Phase 17)
+    [
+        "CREATE TABLE deliveries (id INTEGER PRIMARY KEY, at REAL, kind TEXT, ref TEXT, channel TEXT, status TEXT, detail TEXT)",
+        "CREATE INDEX deliveries_at ON deliveries (at)",
+    ],
 ]
 
 

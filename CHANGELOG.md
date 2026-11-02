@@ -2,6 +2,13 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phase 17: MCP server, alert delivery, daily brief (2026-11-03)
+- MCP server: `POST /mcp` (loopback only, Origin guard) and a stdio bridge `python -m openterm.mcp`; 17 read-only tools from the AI registry, each result labelled with source and age. No order tools (a test scans for them). `docs/MCP.md`.
+- Alert delivery: price and news alerts can be sent by email (SMTP, TLS always verified), Telegram or a webhook (new key `ALERT_WEBHOOK_URL`). Everything off by default; `DLVR` panel with test sends and a delivery log (migration 15 `deliveries`).
+- Daily brief: watchlist movers, alerts of the last 24 h, today's earnings and economic events, top headlines; every section names its source and age. Scheduled with apscheduler (off by default), `BRIEF` panel (`R` build, `S` build and send).
+- Fixes the open SMTP TLS-verification item from the review sprint.
+- Tests: 64 new pytest (1694 total), new vitest suites, 3 Playwright (223 total).
+
 ## GUI mode (2026-11-02)
 - One app, two shells: a `mode` setting (`terminal` | `gui`) switched from the status bar, `Alt+G` or `SETTINGS MODE`. New users start in GUI mode; settings saved before GUI mode existed load as Terminal. Terminal mode is unchanged apart from the toggle.
 - GUI shell (`frontend/src/gui/`): menu bar by category (`functions/categories.ts`), searchable function sidebar, symbol picker, per-panel toolbar that fires the panel's own keys (`gui/toolbars.ts`), `?` help drawer (`Alt+H`), "Switch to Terminal mode" banner, first-run welcome card and a 5-step tour (replay from the Settings menu or HELP).

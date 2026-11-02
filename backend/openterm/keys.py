@@ -67,6 +67,8 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
     KeySpec("telegram", ("TELEGRAM_BOT_TOKEN",), 17, "Push alerts and briefs", "https://core.telegram.org/bots/tutorial"),
     KeySpec("smtp", ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD"), 17, "Email alerts and briefs (app password)",
             "https://support.google.com/accounts/answer/185833", secret_fields=("SMTP_PASSWORD",)),
+    KeySpec("webhook", ("ALERT_WEBHOOK_URL",), 17, "Slack/Discord-style webhook for alerts and briefs (the URL is a secret)",
+            "https://api.slack.com/messaging/webhooks"),
     KeySpec("kite", ("KITE_API_KEY", "KITE_API_SECRET"), 15,
             "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
             "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
@@ -376,16 +378,18 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
 def _smtp_check(k: dict) -> tuple[str, str | None]:
     import smtplib
 
+    from .delivery import DeliveryError
+    from .delivery.email import (
+        smtp_connect,  # the same TLS rules as a real send (verified certificate, no plaintext)
+    )
+
     try:
-        with smtplib.SMTP(k["SMTP_HOST"], int(k["SMTP_PORT"]), timeout=10) as s:
-            s.ehlo()
-            if s.has_extn("starttls"):
-                s.starttls()
-                s.ehlo()
-            s.login(k["SMTP_USER"], k["SMTP_PASSWORD"])
+        smtp_connect(k["SMTP_HOST"], int(k["SMTP_PORT"]), k["SMTP_USER"], k["SMTP_PASSWORD"], 10).close()
         return "OK", None
     except smtplib.SMTPAuthenticationError as e:
         return "INVALID", f"SMTP {e.smtp_code}"
+    except DeliveryError as e:
+        return "ERROR", str(e)
     except (OSError, ValueError, smtplib.SMTPException) as e:
         return "ERROR", type(e).__name__
 
@@ -398,6 +402,15 @@ async def run_test(store: KeyStore, name: str, http: httpx.AsyncClient, fixtures
     if name == "kite":  # no network: a Kite key is only proven by a login (GET /api/kite/login), so UNTESTED until then
         token = await asyncio.to_thread(store.get_hidden, "kite", "KITE_ACCESS_TOKEN")
         state, detail = ("OK", None) if token else ("UNTESTED", "LOG IN WITH KITE LOGIN TO PROVE THE KEY")
+    elif name == "webhook":  # a test would post a real message into someone's channel: only the URL shape is checked
+        from .delivery import DeliveryError
+        from .delivery.webhook import check_url
+
+        try:
+            check_url(values["ALERT_WEBHOOK_URL"])
+            state, detail = "UNTESTED", "SHAPE OK: USE DELIVERY TEST TO SEND A MESSAGE"
+        except DeliveryError as e:
+            state, detail = "INVALID", str(e)
     elif name == "smtp":
         state, detail = ("ERROR", "SMTP IS NOT TESTED IN FIXTURE MODE") if fixtures else \
             await asyncio.to_thread(_smtp_check, values)

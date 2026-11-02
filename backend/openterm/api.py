@@ -459,7 +459,14 @@ async def delete_alert(request: Request, alert_id: int):
 async def trigger_alert(request: Request, alert_id: int):
     try:
         body = await json_object(request)
-        return await alerts_store(request).trigger(alert_id, body.get("price"), body.get("at"))
+        result = await alerts_store(request).trigger(alert_id, body.get("price"), body.get("at"))
+        if result["changed"]:  # exactly once per firing: push it to email/Telegram/webhook in the background
+            from .delivery import format as dfmt
+            from .delivery import spawn
+
+            subject, text = dfmt.alert_message(result["alert"])
+            spawn(request.app, "alert", alert_id, subject, text, {"kind": "alert", "symbol": result["alert"]["symbol"]})
+        return result
     except UserDataError as e:
         return error(e)
 
@@ -511,7 +518,14 @@ async def delete_news_alert(request: Request, alert_id: int):
 async def trigger_news_alert(request: Request, alert_id: int):
     try:
         body = await json_object(request)
-        return await news_alerts_store(request).trigger(alert_id, body.get("headline"), body.get("url"), body.get("at"))
+        result = await news_alerts_store(request).trigger(alert_id, body.get("headline"), body.get("url"), body.get("at"))
+        if result["changed"]:
+            from .delivery import format as dfmt
+            from .delivery import spawn
+
+            subject, text = dfmt.news_alert_message(result["alert"])
+            spawn(request.app, "news", alert_id, subject, text, {"kind": "news", "word": result["alert"]["word"]})
+        return result
     except UserDataError as e:
         return error(e)
 

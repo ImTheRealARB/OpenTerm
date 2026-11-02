@@ -278,3 +278,5 @@ No key is needed for any of them. Each table header shows the source, its age an
 - `GIP` shows only ticks this server received for symbols with a subscriber (ring buffer, 20,000 ticks, 100 symbols, a gap over 4 hours starts a new session). A session that began before the server started is not in it. Sub-minute bars and tick volume (derived from the rise of cumulative day volume) are history only; live bar volume is not updated.
 - `IMAP` uses the Nasdaq screener (US names with a market cap); rows without one have no tile; default 3,000 tiles (`N=` up to 5,000). Colour bands: under 0.25% flat, then 1%, 2%, 3%+.
 - `SEAS` uses the UTC date of each bar and daily history (adjusted close when the source has it); the month or ISO week still in progress is left out.
+
+- **Alert delivery (Phase 17).** Alerts are evaluated in the browser on live ticks, so email, Telegram and webhook messages go out only while an OpenTerm tab is open (the tab reports the firing to the backend, which then sends). Nothing is sent when the app is closed. Each firing is delivered once; every attempt is logged (last 500) in `deliveries`.

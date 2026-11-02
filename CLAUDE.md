@@ -3,7 +3,7 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 1-16 and 19 are DONE and on `main` (merged and pushed to origin = private GitHub repo ImTheRealARB/OpenTerm; Windows full gate 2026-10-18: pytest 1567, e2e 181; the review sprint and the terminal-look restyle (2026-10-19) are merged too: `docs/review/SUMMARY.md`; gate 1628 pytest + 183 e2e, bench 37/37). Open items and what is next: HANDOFF.md "Resume here". **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+Phases 1-16 and 19 are DONE and on `main` (merged and pushed to origin = private GitHub repo ImTheRealARB/OpenTerm; Windows full gate 2026-10-18: pytest 1567, e2e 181; the review sprint and the terminal-look restyle (2026-10-19) are merged too: `docs/review/SUMMARY.md`; gate 1628 pytest + 183 e2e, bench 37/37). Open items and what is next: HANDOFF.md "Resume here". **Phase 17 (MCP server, alert delivery, daily brief) is BUILT (2026-11-03, `docs/specs/PHASE_17.md`); Phase 18 (brokers/orders) stays PAUSED.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Opus may orchestrate (plan, review, run gates) with at most 2 Sonnet subagents building; Opus does not build large
 changes itself (decided 2026-11-02, `docs/specs/NEXT_SESSION.md`; replaces the 2026-10-19 "Sonnet only" rule). Subagents are Sonnet. Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
@@ -216,6 +216,13 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   (`.app-body` is `display: contents` in terminal) so switching never remounts panels. Every new function needs a category in `functions/categories.ts` (vitest). Toolbar buttons fire the panel's own keys via
   `dispatchPanelKey`; add per-function buttons in `gui/toolbars.ts`. Empty/loading/error states use `components/PanelNote.tsx`. **e2e and bench start in Terminal**: `openApp(page)` seeds localStorage
   `openterm.settings`; use `openApp(page, { mode: "gui", welcome: true })` for GUI tests. A real `OPENROUTER_API_KEY` in the shell makes the bench fail (409 env_locked): run it with the var unset.
+- **Phase 17 (MCP, delivery, brief):** `openterm/mcp/` = hand-written JSON-RPC MCP server (no `mcp` SDK) over the AI tool registry (`ai/tools.REGISTRY` minus `doc_only`, run by `ToolRunner`); `POST /mcp` is
+  loopback-only with an Origin guard; `python -m openterm.mcp` is a stdio bridge to it. The word "order" must not appear anywhere in `openterm/mcp/` (a test scans it). Delivery: `openterm/delivery/`
+  (kv `delivery` settings, migration 15 `deliveries` log, channels email/telegram/webhook); it is triggered from the existing `/api/alerts/{id}/trigger` and `/api/newsalerts/{id}/trigger` routes on
+  `changed: true` (background task, `delivery.spawn`). Tests inject senders via `app.state.delivery_senders`; fixture mode never sends. SMTP always verifies TLS (`delivery/email.smtp_connect`, also used by
+  `keys._smtp_check`). Brief: `brief.py` + `brief_routes.py`, kv `brief:last`, apscheduler job id `brief` (`scheduler.schedule_brief`, rescheduled on `PUT /api/delivery`). Desktop notifications were
+  already in `command/alerts.ts` (`desktopNotify`, gated by browser permission only). Panels `DLVR`, `BRIEF`. In fixture mode the brief's earnings section shows ERR (no recording for today).
+- **Bench baselines on Windows:** a worktree under the scratchpad path breaks Python DLL loads (path too long: `httptools` ImportError). Put a baseline worktree at a short path such as `C:\otbase`.
 
 ## Conventions
 - **Keep `docs/FUNCTIONS.md` current:** after any change to `functions/registry.ts`, `keys/keybindings.json` or `keys/keys.ts` labels (or the doc template in `scripts/gen_functions_doc.py`), run `python scripts/gen_functions_doc.py` before committing. `test_functions_doc.py` (pytest, so the gates) fails on a stale doc.

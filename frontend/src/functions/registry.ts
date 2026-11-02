@@ -126,6 +126,8 @@ const defs: FunctionDef[] = [
   { code: "APIKEYS", title: "API keys: set, test, remove (optional, zero keys works)", needsSecurity: false, argsSchema: "[PROVIDER]", phase: 11, load: () => import("./APIKEYS"), idlePreload: false },
   { code: "SOURCES", title: "Data sources: health, latency, quota", needsSecurity: false, phase: 2, load: () => import("./Sources") },
   { code: "LOG", title: "Backend log", needsSecurity: false, phase: 2, load: () => import("./Log") },
+  { code: "DLVR", title: "Alert delivery", needsSecurity: false, phase: 17, load: () => import("./DLVR") },
+  { code: "BRIEF", title: "Daily brief", needsSecurity: false, phase: 17, load: () => import("./BRIEF") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

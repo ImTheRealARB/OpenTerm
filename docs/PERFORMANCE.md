@@ -557,3 +557,16 @@ inside main's 61-110 spread. **Conclusion: every miss is machine load; GUI mode 
 | branch run 3 | 34/37 | 697.6 FAIL | 104.3 / 77.5 FAIL | 33.3 FAIL |
 | main run 1 | 34/37 | 487.7 FAIL | 80.0 / 61.2 | 33.4 FAIL |
 | main run 2 | 32/37 | 665.8 FAIL | 123.1 / 109.7 FAIL | - |
+
+### Phase 17 bench (2026-11-03, branch `claude/opus-phase-17-mcp-alerts-06250f`, Windows)
+MCP server, alert delivery and daily brief. No new budgets (delivery runs as a background task after the trigger route answers; DLVR and BRIEF lazy-load). Full gate ALL PASS
+(pytest 1694, e2e 223, 149.6 s). Bench run with `OPENROUTER_API_KEY` unset, right after the gate, on a busy machine.
+
+| Run | Tree | Result | Misses |
+|---|---|---|---|
+| 1 | Phase 17 | 34 / 37 | BT open to paint 124.6 ms, plus 2 others |
+| 2 | Phase 17 | 32 / 37 | tick-to-pixel 78.5 ms, frame under load 33.4 ms, keystroke echo 20.1 ms, J frame 50.7 ms, BT 10-year 733 ms |
+| 3 | baseline `d1041b4` (no Phase 17 code), same load | 32 / 37 | tick-to-pixel 60.9 ms, chart pan 33.4 ms, BT 10-year 593 ms, BT open 115 ms, IMAP paint 29.3 ms |
+
+Result: the baseline misses as much as Phase 17 under the same load, and the missed rows change from run to run, so the misses are machine load, not this change.
+Bundle 119.7 KB gz on the baseline (budget 400 KB). Optional: one bench on a quiet machine for a clean 37/37 record.

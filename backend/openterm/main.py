@@ -13,11 +13,14 @@ from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, sche
 from .ai import routes_run
 from .ai.routes import router as ai_router
 from .api import router as api_router
+from .brief_routes import router as brief_router
 from .bt.localdata import LocalData
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
+from .delivery.routes import router as delivery_router
 from .kite_routes import router as kite_router
+from .mcp.routes import router as mcp_router
 from .quant_routes import router as quant_router
 from .responses import Orjson
 from .router import Router
@@ -201,6 +204,10 @@ async def lifespan(app: FastAPI):
 
     app.state.jobs = jobs = JobRunner(JobStore(db), hub.broadcast, settings.openterm_job_workers)
     sched = scheduler.start(router)
+    app.state.scheduler = sched
+    from .delivery import settings as delivery_settings
+
+    scheduler.schedule_brief(sched, app, (await delivery_settings.get(db))["brief"])  # Phase 17 C
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
@@ -225,7 +232,10 @@ app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)
 app.include_router(kite_router)
+app.include_router(delivery_router)
+app.include_router(brief_router)
 app.include_router(ai_router)
+app.include_router(mcp_router)
 app.include_router(routes_run.theses_router)
 
 

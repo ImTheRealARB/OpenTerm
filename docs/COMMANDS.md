@@ -113,6 +113,8 @@ SETTINGS MODE GUI     GUI mode: menu bar, sidebar, panel buttons (SETTINGS MODE 
 Alt+H                 GUI mode: help drawer for the focused panel
 SOURCES               data source health and latency
 APIKEYS               optional API keys: Enter edit (masked), T test, D twice delete, O sign-up page, C AI spend cap
+DLVR                  alert delivery: Up/Down move, Space on/off, Enter edit (Esc cancels), T test, L log. Email, Telegram, webhook, desktop, brief schedule
+BRIEF                 last daily brief: R build now, S build and send
 JOBS                  background jobs: Esc/X cancel, R re-run, C clear finished (JOBS TEST 20 100 runs a test job)
 LOG                   backend log
 PERF                  performance monitor (PERF GRID 10000, PERF CHART 50000 load tests)

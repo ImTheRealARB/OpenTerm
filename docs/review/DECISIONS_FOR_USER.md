@@ -18,7 +18,7 @@ Backend
 - Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core).
 - If a leader request is cancelled in `service._once`, waiters get `CancelledError` (backend-core).
 - `DayStore.rows` decodes up to 250 days of msgpack on the event loop (backend-core).
-- `keys.py` `_smtp_check`: `starttls()` without a context does not verify the certificate. Fix is `ssl.create_default_context()`, but a self-signed mail server would show ERROR in APIKEYS (backend-api).
+- **DONE in Phase 17 (2026-11-03):** TLS is always verified (`delivery/email.smtp_connect`); a server with no STARTTLS is refused unless it is on loopback. Original note: `keys.py` `_smtp_check`: `starttls()` without a context does not verify the certificate. Fix is `ssl.create_default_context()`, but a self-signed mail server would show ERROR in APIKEYS (backend-api).
 - No global request-size limit in `main.py`; only `api.json_object` routes are capped (backend-api).
 - `jobs` can reach 200 rows x 8 MB; bt.mc/bt.wf store whole equity arrays in `params` (backend-compute).
 - Worker spawn blocks the event loop; old worker pipes are not closed after a kill (backend-compute).

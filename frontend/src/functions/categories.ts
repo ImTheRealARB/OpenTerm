@@ -22,7 +22,7 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   // Charts: anything that is mainly a picture of a time series or a map
   GP: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",
   // News: headlines and company events
-  N: "News", CN: "News", EVTS: "News",
+  N: "News", CN: "News", EVTS: "News", BRIEF: "News",
   // Research: company fundamentals, ownership, valuation, options analytics, quant tools and the AI layer
   DES: "Research", FA: "Research", FIL: "Research", SEC: "Research", EE: "Research", EEO: "Research", ANR: "Research",
   MGMT: "Research", DVD: "Research", SPLT: "Research", CACS: "Research", SI: "Research", HDS: "Research",
@@ -38,7 +38,7 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   // Settings: help, preferences, layouts, keys, data sources and the other utilities
   HELP: "Settings", SHORTCUTS: "Settings", SETTINGS: "Settings", THEME: "Settings", APIKEYS: "Settings",
   SOURCES: "Settings", LOG: "Settings", PERF: "Settings", JOBS: "Settings", LAYOUT: "Settings", MONITOR: "Settings",
-  KITE: "Settings",
+  KITE: "Settings", DLVR: "Settings",
 });
 
 /** The category a function code belongs to. Throws for an unmapped code: `categories.test.ts` keeps that impossible. */
