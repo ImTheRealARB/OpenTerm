@@ -19,8 +19,17 @@ export const AI_PROVIDERS = ["openrouter", "openai", "anthropic", "ollama"] as c
 export const AI_MODEL_CHOICES = ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_VISION_CHOICES = ["deepseek/deepseek-v4.1-flash", "anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_MODEL_RE = /^[A-Za-z0-9._:/-]{1,80}$/;
+/** GUI mode: which shell wraps the workspace. "terminal" is the keyboard-first look, "gui" adds a menu bar and sidebar. */
+export const MODES = ["terminal", "gui"] as const;
+export type Mode = (typeof MODES)[number];
 
 export interface Settings {
+  /**
+   * Which shell is shown. Defaults to "gui" for a brand-new user (nothing saved anywhere), but a SAVED settings
+   * object with no `mode` field means "terminal": everyone who saved settings before GUI mode existed keeps the
+   * terminal they chose. See `normalize` and `diffFromDefaults`.
+   */
+  mode: Mode;
   theme: ThemeName;
   vim: boolean;
   numberFormat: { thousands: (typeof THOUSANDS)[number]; decimal: (typeof DECIMALS)[number] };
@@ -35,6 +44,7 @@ export interface Settings {
 }
 
 export const DEFAULTS: Settings = Object.freeze({
+  mode: "gui",
   theme: "amber",
   vim: false,
   numberFormat: { thousands: ",", decimal: "." },
@@ -69,6 +79,12 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
   const d = DEFAULTS;
   const r = isObj(raw) ? raw : {};
   if (raw != null && !isObj(raw)) errors.push("settings is not an object");
+  // The mode rule (three cases):
+  //   nothing saved at all (raw is null/undefined)  -> the default, "gui" (a brand-new user)
+  //   a saved object WITHOUT a `mode` field          -> "terminal" (saved before GUI mode existed)
+  //   a saved object with a bad `mode` value         -> "terminal" plus an error note (never block start-up)
+  const mode: Mode = raw == null || !isObj(raw) ? d.mode : oneOf(MODES, r.mode) ? r.mode : "terminal";
+  if (isObj(raw) && r.mode !== undefined && !oneOf(MODES, r.mode)) errors.push("mode");
   const pick = <T>(key: string, ok: boolean, value: T, fallback: T): T => {
     if (r[key] === undefined) return fallback;
     if (ok) return value;
@@ -127,6 +143,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
 
   return {
     settings: {
+      mode,
       theme: pick("theme", isTheme(r.theme), r.theme as ThemeName, d.theme),
       vim: pick("vim", typeof r.vim === "boolean", r.vim as boolean, d.vim),
       numberFormat,
@@ -142,11 +159,18 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** What the backend stores: only the fields that differ from the defaults. */
+/**
+ * What the backend stores: only the fields that differ from the defaults.
+ * `mode` is the exception: its stored form is compared with the LEGACY default ("terminal", what a saved object
+ * without `mode` means), so "gui" is always written out and "terminal" is left out. That keeps every saved
+ * terminal-mode document byte-identical to what it was before GUI mode existed.
+ */
 export function diffFromDefaults(s: Settings): Partial<Settings> {
   const out: Partial<Settings> = {};
   for (const k of Object.keys(DEFAULTS) as (keyof Settings)[]) {
-    if (k === "keys") {
+    if (k === "mode") {
+      if (s.mode === "gui") out.mode = "gui";
+    } else if (k === "keys") {
       if (Object.keys(s.keys).length) out.keys = s.keys;
     } else if (!same(s[k], DEFAULTS[k])) (out as Record<string, unknown>)[k] = s[k];
   }

@@ -7,6 +7,9 @@ import { afterPaint, installObservers } from "./perf/metrics";
 import { connect } from "./net/socket";
 import { pollSources } from "./net/sources";
 import "./styles.css";
+import "./gui/gui.css"; // GUI-mode-only rules, all scoped under :root[data-mode="gui"]
+import "./polish/lists.css"; // panel polish: Q, WL, WEI, N
+import "./polish/analysis.css"; // panel polish: GP, FA, PORT, BT
 import { initSettings, pollMs } from "./settings/runtime";
 import { startSettingsSync } from "./settings/sync";
 

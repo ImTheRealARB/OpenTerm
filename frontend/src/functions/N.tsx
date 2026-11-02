@@ -3,10 +3,11 @@ import { pollMs } from "../settings/runtime";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { checkNewsItems } from "../command/alerts";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
+import { PanelNote } from "../components/PanelNote";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type NewsItem, type NewsPayload } from "../net/api";
-import { newsQuery } from "./newsArgs";
+import { newsEmptyHint, newsQuery } from "./newsArgs";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
@@ -88,18 +89,35 @@ export default function N({ panelId, args, security }: FunctionProps) {
     <div className="fn">
       <div className="line">
         <span className="acc">{title}</span>
-        {d && ` · ${d.items.length} HEADLINES · ${(env.source ?? "").toUpperCase()}`}
+        {d && (
+          <>
+            {" · "}
+            <b className="pv">{d.items.length}</b> HEADLINES · <span className="dim">{(env.source ?? "").toUpperCase()}</span>
+          </>
+        )}
         {env?.stale && <span className="warn"> · STALE {fmtAge(env.age_s)}</span>}
         {d && d.failed.length > 0 && <span className="warn"> · NOT ANSWERING: {d.failed.join(", ")}</span>}
         {loading && <span className="dim"> · LOADING…{query.kind === "keyword" && " (GDELT CAN TAKE 5-15 S)"}</span>}
         <span className="dim"> · J/K MOVE · ENTER OPEN ARTICLE · E CSV · F5 REFRESH</span>
       </div>
-      {error && (
+      {/* A failed fetch with nothing to show is a full-panel error; with old headlines on screen it stays one line above them. */}
+      {error && !env && (
+        <PanelNote kind="error" hint={query.kind === "keyword" ? "GDELT allows one search per 5 s and often answers 429. Wait a moment, then F5." : "Press F5 to retry. The reason is given above."}>
+          {error.message}
+          {error.detail && <span className="dim"> ({error.detail})</span>}
+        </PanelNote>
+      )}
+      {error && env && (
         <div className="err">
           {error.message}
           {error.detail && <span className="dim"> ({error.detail})</span>}
-          {env && <span className="warn"> · SHOWING THE LAST HEADLINES</span>}
+          <span className="warn"> · SHOWING THE LAST HEADLINES</span>
         </div>
+      )}
+      {!error && !loading && env && rows.length === 0 && (
+        <PanelNote kind="empty" hint={newsEmptyHint(query)}>
+          NO HEADLINES
+        </PanelNote>
       )}
       {rows.length > 0 || !error ? <Grid ref={grid} columns={COLUMNS} rows={rows} onSelect={setSel} /> : null}
       {pick && (

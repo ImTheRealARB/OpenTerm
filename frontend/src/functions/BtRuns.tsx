@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtMetric, METRIC_ROWS, type MetricRow } from "../bt/metricsFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
+import { PanelNote } from "../components/PanelNote";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, btApi, type BtCompare, type BtRunCard } from "../net/api";
@@ -164,8 +165,18 @@ export default function BtRuns({ panelId }: { panelId: number }) {
     [panelId, latest],
   );
 
-  if (error) return <div className="fn"><div className="err">ERR: {error}</div></div>;
-  if (!runs) return <div className="fn"><div className="dim">LOADING RUNS…</div></div>;
+  if (error)
+    return (
+      <div className="fn bt">
+        <PanelNote kind="error" hint="Press F5 or run BT RUNS again to retry.">ERR: {error}</PanelNote>
+      </div>
+    );
+  if (!runs)
+    return (
+      <div className="fn bt">
+        <PanelNote kind="loading">LOADING RUNS…</PanelNote>
+      </div>
+    );
   if (cmp) {
     const head = (r: BtRunCard, tag: string) => (
       <div className="line">
@@ -206,7 +217,13 @@ export default function BtRuns({ panelId }: { panelId: number }) {
         <span className="acc">BT RUNS</span> <span className="dim">{runs.length} STORED (LAST 200) · J/K MOVE · ENTER OPEN · C MARK TWO TO COMPARE · E EXPORT</span>
       </div>
       {msg && <div className="dim">{msg}</div>}
-      {runs.length ? <Grid ref={grid} columns={COLS} rows={rows} /> : <div className="dim">NO RUNS YET: BT &lt;SYMBOLS&gt; &lt;RULE&gt; STORES ONE</div>}
+      {runs.length ? (
+        <Grid ref={grid} columns={COLS} rows={rows} />
+      ) : (
+        <PanelNote kind="empty" hint="Start one: BT AAPL SMA20>SMA50 1D 5Y (BT <SYMBOLS> <RULE> stores it here). In GUI mode type it in the sidebar search box.">
+          NO RUNS YET
+        </PanelNote>
+      )}
     </div>
   );
 }

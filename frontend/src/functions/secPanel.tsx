@@ -5,6 +5,9 @@ import type { ApiError, Envelope } from "../net/api";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 
 export const US_ONLY = "SEC DATA COVERS US FILERS ONLY";
+/** SEC answers 403 when no contact User-Agent is set: the error detail mentions it, and the fix is the same everywhere. */
+export const SEC_UA_RE = /SEC_USER_AGENT|403 from SEC/;
+export const SEC_UA_HINT = 'SEC REJECTED THE REQUEST: SET SEC_USER_AGENT="Your Name you@yourdomain" IN .env AND RESTART THE BACKEND';
 
 const SOURCE_NAMES: Record<string, string> = { sec: "SEC EDGAR", yahoo_own: "YAHOO FINANCE", fixtures: "FIXTURES" };
 export const sourceName = (s: string | null | undefined) => SOURCE_NAMES[s ?? ""] ?? (s ?? "").toUpperCase();
@@ -79,9 +82,7 @@ export function ErrorLine({ error, hasData }: { error: ApiError | null; hasData:
       {error.message}
       {error.detail && <span className="dim"> ({error.detail})</span>}
       {hasData && <span className="warn"> · SHOWING THE LAST DATA</span>}
-      {/SEC_USER_AGENT|403 from SEC/.test(error.detail ?? "") && (
-        <div className="warn">SEC REJECTED THE REQUEST: SET SEC_USER_AGENT="Your Name you@yourdomain" IN .env AND RESTART THE BACKEND</div>
-      )}
+      {SEC_UA_RE.test(error.detail ?? "") && <div className="warn">{SEC_UA_HINT}</div>}
     </div>
   );
 }

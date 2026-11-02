@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Download, type Page, type WebSocketRoute } from "@playwright/test";
+import { openApp } from "./app";
 
 /*
  * Phase 12 (spec: docs/specs/PHASE_12.md): BT, BT RUNS, IMPORT.
@@ -105,10 +106,7 @@ async function setup(page: Page) {
     return r.fulfill({ status: 404, json: { error: "not mocked" } });
   });
   await page.route("**/api/jobs/j1", (r) => r.fulfill({ json: { id: "j1", kind: "bt.run", state: "done", progress: 1, msg: "", cached: false, result: { run_id: "r1" } } }));
-  await page.goto("/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
+  await openApp(page); // fresh context: localStorage is already empty; openApp seeds terminal mode
   return { posts };
 }
 

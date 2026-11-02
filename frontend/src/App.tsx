@@ -10,8 +10,9 @@ import { match } from "./keys/keys";
 import { dispatchPanelKey } from "./keys/panelKeys";
 import { exportPanelCsv } from "./functions/tableExport";
 import { PerfTable } from "./perf/PerfTable";
-import { getSettings } from "./settings/runtime";
-import { loadJSON, saveJSON } from "./state/store";
+import { GuiHelpDrawer, GuiOverlays, GuiSidebar, GuiTop, toggleHelp } from "./gui";
+import { getSettings, settingsStore, toggleMode } from "./settings/runtime";
+import { loadJSON, saveJSON, useStore } from "./state/store";
 import {
   closePanel, cyclePanel, focusPanel, historyStep, resizeFocused, split, toggleMaximize, workspace,
 } from "./state/workspace";
@@ -24,6 +25,8 @@ import Shortcuts from "./functions/Shortcuts";
 export function App() {
   const [cheatsheet, setCheatsheet] = useState(false);
   const [hud, setHud] = useState(() => loadJSON("openterm.hud", false));
+  // GUI mode: the same panels and command line, wrapped in a menu bar and sidebar. Terminal mode renders none of that.
+  const gui = useStore(settingsStore, (s) => s.mode === "gui");
 
   useEffect(() => saveJSON("openterm.hud", hud), [hud]);
 
@@ -142,6 +145,14 @@ export function App() {
           input?.blur();
           openWindowMenu();
           break;
+        case "toggleMode":
+          toggleMode();
+          break;
+        case "helpDrawer":
+          // The drawer is part of the GUI shell; in terminal mode say so instead of doing nothing silently.
+          if (getSettings().mode === "gui") toggleHelp(workspace.get().focus);
+          else info("HELP DRAWER IS A GUI MODE FEATURE: ALT+G SWITCHES MODE, OR USE HELP <FUNCTION>");
+          break;
       }
     };
     window.addEventListener("keydown", onKey);
@@ -151,16 +162,24 @@ export function App() {
   return (
     <div className="app">
       <TopBar />
-      <Workspace
-        overlay={
-          cheatsheet && (
-            <div className="overlay">
-              <Shortcuts />
-              <div className="dim">ESC TO CLOSE</div>
-            </div>
-          )
-        }
-      />
+      {gui && <GuiTop />}
+      {/* Same element tree in both modes so switching never remounts the panels. In terminal mode CSS makes .app-body
+          `display: contents`, i.e. the wrapper disappears from the layout and the grid looks exactly as before. */}
+      <div className="app-body">
+        {gui && <GuiSidebar />}
+        {gui && <GuiHelpDrawer />}
+        <Workspace
+          overlay={
+            cheatsheet && (
+              <div className="overlay">
+                <Shortcuts />
+                <div className="dim">ESC TO CLOSE</div>
+              </div>
+            )
+          }
+        />
+      </div>
+      {gui && <GuiOverlays />}
       <StatusBar />
       {hud && (
         <div className="hud">

@@ -17,6 +17,7 @@ KEY = "settings"
 VERSION = 1
 MAX_BYTES = 16_000
 
+MODES = ("terminal", "gui")  # which shell the frontend shows; a saved object with no `mode` means "terminal"
 THEMES = ("amber", "green", "white", "light")
 CHART_RANGES = ("1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX")
 CHART_TYPES = ("CANDLE", "OHLC", "LINE", "AREA")
@@ -131,6 +132,7 @@ def _vim(raw) -> bool:
 
 
 FIELDS = {
+    "mode": lambda v: _choice(v, MODES, "mode"),
     "theme": lambda v: _choice(v, THEMES, "theme"),
     "vim": _vim,
     "numberFormat": _number_format,

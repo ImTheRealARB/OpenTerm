@@ -242,7 +242,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SHORTCUTS` | Keyboard shortcuts |  |  | `SHORTCUTS` |
 | `LAYOUT` | Save / load named workspaces |  | `[SAVE\|LOAD\|DEL] name` | `LAYOUT` |
 | `MONITOR` | Alias of LAYOUT |  | `[SAVE\|LOAD\|DEL] name` | `MONITOR` |
-| `SETTINGS` | Settings: theme, vim mode, shortcuts, number format, clocks |  | `[THEME\|VIM\|CLOCKS\|CHART\|THOUSANDS\|DECIMAL\|POLL\|KEYS\|RESET ...]` | `SETTINGS` |
+| `SETTINGS` | Settings: theme, vim mode, shortcuts, number format, clocks |  | `[MODE\|THEME\|VIM\|CLOCKS\|CHART\|THOUSANDS\|DECIMAL\|POLL\|KEYS\|RESET ...]` | `SETTINGS` |
 | `THEME` | Colour theme |  | `[AMBER\|GREEN\|WHITE\|LIGHT]` | `THEME` |
 | `JOBS` | Background jobs: progress, cancel, results |  | `[TEST [steps] [ms]]` | `JOBS` |
 | `APIKEYS` | API keys: set, test, remove (optional, zero keys works) |  | `[PROVIDER]` | `APIKEYS` |
@@ -277,6 +277,8 @@ Rebind any of these in `SETTINGS KEYS`.
 | `Ctrl+Shift+P` | Toggle PERF HUD |
 | `Alt+X` | Export the focused panel's table to CSV (also E in tables) |
 | `Alt+M` | Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter) |
+| `Alt+G` | Switch between TERMINAL and GUI mode |
+| `Alt+H` | Help drawer for the focused panel (GUI mode) |
 
 ## Data, keys and limits
 

@@ -88,7 +88,7 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
   return (
     <div className="fn">
       <div className="line">
-        <span className="acc">{def.title}</span> {inputs.length} {def.noun}
+        <span className="acc">{def.title}</span> <b className="pv">{inputs.length}</b> {def.noun}
         {loading && <span className="dim"> · LOADING…</span>}
         <span className="dim"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
       </div>

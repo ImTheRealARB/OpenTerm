@@ -152,6 +152,21 @@ The Docker files are written but have not been built by the author yet.
 
 ## Your first five minutes
 
+### Two ways to use it: GUI mode and Terminal mode
+
+The first time you open OpenTerm it starts in **GUI mode**: a menu bar (Markets, Charts, News, Research, Portfolio,
+Backtest, Settings), a sidebar listing every function with a search box, a symbol box, and a row of buttons on each panel.
+A welcome card offers three starting points ("Look up a stock", "See a chart", "Watch my stocks") and a 2-minute tour.
+Click the `?` button on any panel (or press `Alt+H`) for a help drawer that explains it.
+
+**Terminal mode** is the same app with only the command line, built for keyboard speed. Switch with the
+`TERMINAL | GUI` control at the bottom right, `Alt+G`, or `SETTINGS MODE TERMINAL`. Your choice is saved. Everything
+below works in both modes.
+
+![GUI mode](docs/screenshots/gui-mode.png)
+
+### Try these commands
+
 Press `/` to focus the command line at the top, then try these, pressing `Enter` after each:
 
 | Type | You get |

@@ -6,6 +6,17 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
 ## Resume here (2026-11-02: repo is PUBLIC; README rewritten for beginners)
+- **GUI mode, NEXT_SESSION.md Part 1: DONE, uncommitted (2026-11-02, branch `claude/opus-orchestrator-6b3fee`).** One app, two shells: `mode` setting (`settings/schema.ts`; new user = gui,
+  saved object without `mode` = terminal; backend `settings_store.py` accepts `mode`), toggle in the status bar / `Alt+G` / `SETTINGS MODE`. GUI shell in `frontend/src/gui/` (menu bar, sidebar search,
+  symbol picker, panel toolbar `toolbars.ts`, help drawer `Alt+H`, banner, welcome card, tour). `functions/categories.ts` maps every function to a menu category (a vitest fails on a missing one).
+  `components/PanelNote.tsx` = shared loading/empty/error/stale look; 8 panels polished (CSS in `src/polish/lists.css`, `analysis.css`). e2e and bench seed Terminal mode (`openApp(page, {mode, welcome})`).
+  Gate ALL PASS (pytest 1630, e2e 220). Bench 36/37: only the server-side BT 10-year run missed (717 then 500 ms vs 300; back-to-back runs after the gate), see `docs/PERFORMANCE.md` "GUI mode bench".
+  **STOPPED on the bench stop rule:** the BT 10-year line failed 3 runs (717, 500, 698 ms vs 300). Backend code differs from `main` only by the settings `mode` field, so this is very
+  likely machine load (about 23% idle CPU from Hermes, Google Drive, Brave, `serve.py` servers). Third run was 34/37 (also chart pan 33 ms, BT open-to-paint 104 ms; both passed earlier).
+  **Resolved by a `main` baseline (2026-11-02):** `main` under the same load scored 34/37 and 32/37 with the same misses (BT 10-year 488-666 ms, BT open up to 123 ms), so the misses are
+  machine load, not GUI mode (table in `docs/PERFORMANCE.md` "GUI mode bench"). Optional: one bench on a quiet machine for a clean 37/37 record.
+  **Next:** user review + commit, then Part 2 (Phase 17) in a fresh session.
+  Known gaps: FA statement table is a canvas grid, so it was not restyled (needs `Grid.tsx`); the tour text names `Alt+H` literally; the bench needs `OPENROUTER_API_KEY` unset in its shell (env key = 409 on the fake key).
 - **Next session plan (2026-11-02):** `docs/specs/NEXT_SESSION.md` is the Opus-orchestrator super prompt: GUI mode + redesign, then Phase 17 (MCP, alert delivery, daily brief), then a better strategy editor. The editor itself already exists (`BtEditor.tsx`); the "not built" note at the step-4 line below is stale.
 - **Public release (2026-11-02):** `ImTheRealARB/OpenTerm` is a public GitHub repo (history scanned, no secrets; a fresh clone installs in about 40 s and serves HTTP 200).
   README rewritten (beginner install steps, speed table from `docs/PERFORMANCE.md`, disclaimers) with new screenshots in `docs/screenshots/`. `scripts/setup(.ps1)` is now the LIGHT install

@@ -108,7 +108,9 @@ and slippage. Imported bars are labelled LOCAL DATA. Python strategies run in a 
 ```
 LAYOUT SAVE MYDESK    save panels (LAYOUT lists, LAYOUT MYDESK loads, Ctrl+S / Ctrl+O)
 THEME GREEN           AMBER GREEN WHITE LIGHT
-SETTINGS              vim mode, clocks, number format, refresh rates, key rebinding
+SETTINGS              vim mode, clocks, number format, refresh rates, key rebinding, interface mode
+SETTINGS MODE GUI     GUI mode: menu bar, sidebar, panel buttons (SETTINGS MODE TERMINAL, or Alt+G, switches back)
+Alt+H                 GUI mode: help drawer for the focused panel
 SOURCES               data source health and latency
 APIKEYS               optional API keys: Enter edit (masked), T test, D twice delete, O sign-up page, C AI spend cap
 JOBS                  background jobs: Esc/X cancel, R re-run, C clear finished (JOBS TEST 20 100 runs a test job)

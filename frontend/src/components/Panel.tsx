@@ -1,6 +1,8 @@
 import { Component, Profiler, useEffect, useReducer, type ReactNode } from "react";
 import { FUNCTIONS, loadModule, loadedModule } from "../functions/registry";
 import { panelPainted, recordPanelRender } from "../perf/metrics";
+import { PanelToolbar } from "../gui/PanelToolbar";
+import { settingsStore } from "../settings/runtime";
 import { PanelIdContext } from "../state/panelContext";
 import { useStore } from "../state/store";
 import { currentView, focusPanel, workspace } from "../state/workspace";
@@ -91,6 +93,8 @@ export function Panel({ id }: { id: number }) {
   const panel = useStore(workspace, (s) => s.panels[id]);
   const menu = useStore(windowMenu, (s) => (s?.panel === id ? s : null));
   const focused = useStore(workspace, (s) => s.focus === id);
+  // GUI mode adds a button row under the title bar. Terminal mode renders nothing extra.
+  const gui = useStore(settingsStore, (s) => s.mode === "gui");
   const view = currentView(panel);
   // The sticky security stays on the panel, but the tab only names it when this function uses it
   // (bare `N` shows that security's news).
@@ -128,6 +132,7 @@ export function Panel({ id }: { id: number }) {
         ))}
       </header>
       {menu && <WindowMenu id={id} />}
+      {gui && <PanelToolbar id={id} fn={view.fn} args={view.args} />}
       <div className="pb">
         <PanelBoundary resetKey={resetKey}>
           <Profiler id={String(id)} onRender={(_id, _phase, ms) => recordPanelRender(id, ms)}>

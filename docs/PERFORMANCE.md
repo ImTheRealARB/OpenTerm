@@ -528,3 +528,32 @@ Selected run-2 numbers: cached /api/quote 1.0 ms; tick to pixel p95 36.3 ms (50)
 
 ### Terminal look bench (2026-10-19, branch `claude/ui-terminal-look`, Windows)
 Restyle of the chrome and data views (command field, key-hint row, panel bands, grid rules, chart colours). Full gate ALL PASS (pytest 1628, e2e 183, 123.1 s). Bench: **37 pass, 0 fail**. Grid and tick budgets: frame p95 10k-row grid scroll 16.8 ms (20), tick to pixel p95 36.2 ms (50), command submit to first paint 16.9 ms (100), IMAP paint 5.1 ms (16).
+
+### GUI mode bench (2026-11-02, branch `claude/opus-orchestrator-6b3fee`, Windows)
+GUI shell, panel toolbars, help drawer, welcome card, tour and polish of 8 panels. Full gate ALL PASS (pytest 1630, e2e 220, 147.8 s). The 37 budgets run on the
+Terminal shell (the bench seeds `mode` = terminal); a new INFO line measures GUI-mode cold start, the new-user default. Run with `OPENROUTER_API_KEY` unset (a key in env makes the fake-key PUT return 409).
+Before = terminal-look bench above (2026-10-19). After = second run (rested only briefly: it followed the full gate and a first bench run).
+
+| Metric | Budget | Before | After |
+|---|---|---|---|
+| Cold start to usable command line (Terminal) | 1500 ms | - | 135.9 ms |
+| Cold start, GUI mode (INFO) | - | - | 154.7 ms (first run 129.6 ms vs 125.8 ms Terminal) |
+| Command submit to first paint, cached p95 | 100 ms | 16.9 ms | 18.2 ms |
+| Frame p95, 10k-row grid scroll | 20 ms | 16.8 ms | 16.7 ms |
+| Frame p95, 50k-bar chart pan/zoom | 20 ms | - | 16.8 ms (first run 33.3 ms, known noise) |
+| IMAP canvas paint, 5,000 tiles | 16 ms | 5.1 ms | 9.4 ms |
+| BT 10-year daily rule run, server-side | 300 ms | - | **500.5 ms FAIL** (first run 717 ms) |
+
+Result: **36 pass, 1 fail.** The BT miss is server-side (job created to finished); this change touches no backend code beyond one settings field, and CLAUDE.md records 230 ms rested vs 380-490 ms
+after back-to-back runs. Third run after about 15 minutes of rest: **34 pass, 3 fail** (BT 10-year 697.6 ms; chart pan 33.3 ms; BT result open to first paint 104.3 ms vs 100, p50 77.5,
+which passed in both earlier runs with the same code). Cold start Terminal 129.1 ms, GUI 110.1 ms. The machine was not idle: about 23% CPU from other apps (Hermes gateway,
+Google Drive, Brave, several `serve.py` servers). **`main` baseline under the same load** (main checkout, commit 85749a8, same code as this branch's base): run 1 **34/37** (BT 10-year 487.7 ms, chart pan 33.4 ms,
+tick to pixel 61.7 ms all FAIL; BT open p95 80.0, p50 61.2), run 2 **32/37** (BT 10-year 665.8 ms, BT open p95 123.1 / p50 109.7 FAIL). Branch BT open p50 was 70.9 / 71.7 / 77.5,
+inside main's 61-110 spread. **Conclusion: every miss is machine load; GUI mode adds no measurable regression.** A clean 37/37 needs a quiet machine.
+
+| Run (same load) | Score | BT 10-year | BT open p95 / p50 | Chart pan |
+|---|---|---|---|---|
+| branch run 2 | 36/37 | 500.5 FAIL | 96.7 / 71.7 | 16.8 |
+| branch run 3 | 34/37 | 697.6 FAIL | 104.3 / 77.5 FAIL | 33.3 FAIL |
+| main run 1 | 34/37 | 487.7 FAIL | 80.0 / 61.2 | 33.4 FAIL |
+| main run 2 | 32/37 | 665.8 FAIL | 123.1 / 109.7 FAIL | - |

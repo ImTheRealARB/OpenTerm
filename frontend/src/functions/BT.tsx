@@ -14,6 +14,7 @@ import { BT_USAGE, isBtRun, parseBtArgs, parseRule, type BtRun } from "../bt/rul
 import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
+import { PanelNote } from "../components/PanelNote";
 import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -413,10 +414,14 @@ export default function BT({ panelId, args }: FunctionProps) {
   if (parsed.ok && parsed.sub === "RUNS") return <BtRuns panelId={panelId} />;
   if (parsed.ok && (parsed.sub === "EDIT" || parsed.sub === "LOAD")) return <BtEditor panelId={panelId} name={parsed.args[0]} />;
   return (
-    <div className="fn">
+    <div className="fn bt">
       <Head parsed={isBtRun(parsed) ? parsed : null} run={run} />
       {state.k === "usage" && (
         <>
+          {/* Nothing open yet: say how to start one (the full usage stays below for reference). */}
+          <PanelNote kind="empty" hint="Run one: BT AAPL SMA20>SMA50 1D 5Y. BT RUNS lists stored runs. In GUI mode the sidebar search box takes the same command.">
+            NO BACKTEST OPEN
+          </PanelNote>
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
@@ -428,7 +433,7 @@ export default function BT({ panelId, args }: FunctionProps) {
       {state.k === "bad" && <BadRule {...state} />}
       {state.k === "later" && <div className="warn">{state.text}</div>}
       {state.k === "note" && <div className="dim">{state.text}</div>}
-      {state.k === "submitting" && <div className="dim">FETCHING BARS AND SUBMITTING…</div>}
+      {state.k === "submitting" && <PanelNote kind="loading">FETCHING BARS AND SUBMITTING…</PanelNote>}
       {state.k === "running" && (
         <div className="line">
           <span className="acc">RUNNING </span>
@@ -441,8 +446,12 @@ export default function BT({ panelId, args }: FunctionProps) {
           {progressText(valJob?.progress ?? 0)} <span className="dim">{valJob?.msg ?? valJob?.state.toUpperCase() ?? "QUEUED"} · X CANCEL</span>
         </div>
       )}
-      {state.k === "loading" && <div className="dim">LOADING RUN {state.runId}…</div>}
-      {state.k === "failed" && <div className="err">ERR: {state.error}</div>}
+      {state.k === "loading" && <PanelNote kind="loading">LOADING RUN {state.runId}…</PanelNote>}
+      {state.k === "failed" && (
+        <PanelNote kind="error" hint="Fix the command and run it again, or BT RUNS to open an earlier run.">
+          ERR: {state.error}
+        </PanelNote>
+      )}
       {msg && <div className="dim">{msg}</div>}
       {run && (
         <>
@@ -456,7 +465,7 @@ export default function BT({ panelId, args }: FunctionProps) {
             <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
           )}
           {shown === "METRICS" && <Grid ref={grid} columns={METRIC_COLS} rows={metricRows} />}
-          {shown === "TRADES" && (trades.length ? <Grid ref={grid} columns={TRADE_COLS} rows={trades} /> : <div className="dim">NO TRADES IN THIS RUN</div>)}
+          {shown === "TRADES" && (trades.length ? <Grid ref={grid} columns={TRADE_COLS} rows={trades} /> : <PanelNote kind="empty" hint="The rule never fired in this window. Try a longer range or a looser rule, e.g. BT AAPL SMA20>SMA50 1D 10Y.">NO TRADES IN THIS RUN</PanelNote>)}
           {shown === "CODE" && <pre className="desc">{run.rule ?? run.code ?? (run.strategy ? `STRATEGY ${run.strategy}` : "—")}</pre>}
           {shown === "MC" && mc && <McView mc={mc} />}
           {shown === "WF" && wf && (
@@ -564,11 +573,11 @@ function Labels({ run }: { run: BtRunFull }) {
   const sources = l.sources ?? [];
   return (
     <>
-      <div className="line warn">
+      <div className="line warn bt-sim">
         {l.headline} · {l.prices} CLOSES · FEES {fmtNum(l.fees_bps, 0)} BPS · SLIP {fmtNum(l.slip_bps, 0)} BPS · WARM-UP {l.warmup_bars} BARS
         {l.short ? " · SHORTS ALLOWED" : " · LONG ONLY"}
       </div>
-      <div className="line dim">
+      <div className="line dim bt-data">
         DATA:{" "}
         {sources.length
           ? sources.map((s, i) => (
@@ -594,12 +603,12 @@ function Headline({ run }: { run: BtRunFull }) {
   const item = (label: string, key: string, signed = true) => (
     <>
       {" · "}
-      {label} <span className={signed ? (m[key] == null || m[key] === 0 ? "" : m[key]! > 0 ? "up" : "down") : ""}>{fmtMetric(key, m[key])}</span>
+      <span className="ps-l">{label} </span><span className={`ps-v ${signed ? (m[key] == null || m[key] === 0 ? "" : m[key]! > 0 ? "up" : "down") : ""}`}>{fmtMetric(key, m[key])}</span>
     </>
   );
   return (
-    <div className="line">
-      FINAL {fmtMetric("final_value", m.final_value)}
+    <div className="line bt-head">
+      <span className="ps-l">FINAL </span><span className="ps-v">{fmtMetric("final_value", m.final_value)}</span>
       {item("TOTAL", "total_return")}
       {item("ANNUAL", "annual_return")}
       {item("MAX DD", "max_drawdown")}

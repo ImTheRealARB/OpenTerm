@@ -1,11 +1,13 @@
 /** Financial analysis: income statement, balance sheet and cash flow from SEC XBRL company facts (annual or quarterly). */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
+import { PanelNote } from "../components/PanelNote";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { secApi } from "../net/api";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
-import { ErrorLine, Header, useEnvelope } from "./secPanel";
+import { isKeyRequired } from "./KeyRequiredLine";
+import { ErrorLine, Header, SEC_UA_HINT, SEC_UA_RE, US_ONLY, useEnvelope } from "./secPanel";
 import { STATEMENT_TABS, faArgs, faRows, unitNote, type FaGridRow, type FaPayload, type FaPeriod, type StatementTab } from "./secTables";
 import { useCsvExport } from "./tableExport";
 
@@ -89,8 +91,11 @@ export default function FA({ panelId, security, args }: FunctionProps) {
   const cols = shaped?.periods ?? [];
   const newest = cols[0];
   const anyDerived = cols.some((p) => p.derived);
+  // A plain failure with nothing to show yet gets the shared error note. Key-required and "US filers only" are not
+  // failures (they have their own wording), and when older data is on screen ErrorLine says "SHOWING THE LAST DATA".
+  const failedNote = !!error && !env && !isKeyRequired(error) && error.message !== US_ONLY;
   return (
-    <div className="fn">
+    <div className="fn fa">
       <Header
         title={`FA ${symbol}${d?.name ? ` · ${d.name.toUpperCase()}` : ""}`}
         env={env}
@@ -105,10 +110,21 @@ export default function FA({ panelId, security, args }: FunctionProps) {
           </span>
         ))}
       </div>
-      <ErrorLine error={error} hasData={!!env} />
-      {d && rows.length === 0 && !error && <div className="warn">NO {tab} DATA REPORTED FOR {symbol}</div>}
+      <ErrorLine error={failedNote ? null : error} hasData={!!env} />
+      {failedNote && (
+        <PanelNote kind="error" hint={SEC_UA_RE.test(error.detail ?? "") ? SEC_UA_HINT : "F5 TO RETRY."}>
+          {error.message}
+          {error.detail && ` (${error.detail})`}
+        </PanelNote>
+      )}
+      {loading && !env && !error && <PanelNote kind="loading">LOADING FA {symbol}…</PanelNote>}
+      {d && rows.length === 0 && !error && (
+        <PanelNote kind="empty" hint="Press 1-3 for another statement, A / Q for annual or quarterly, or H to look at older periods.">
+          NO {tab} DATA REPORTED FOR {symbol}
+        </PanelNote>
+      )}
       <Grid ref={grid} columns={columns} rows={rows} onSelect={setSel} />
-      <div className="summary dim">
+      <div className="summary dim fa-sum">
         {cur && newest ? `${cur.label} · ${newest.label} · ${cur.tags[0] ?? "—"}` : "SEC EDGAR XBRL"}
         {newest?.filed && ` · FILED ${newest.filed}`}
         {newest?.form && ` · ${newest.form}`}

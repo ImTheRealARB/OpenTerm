@@ -6,7 +6,7 @@
 import { setNumberFormat } from "../format";
 import { setKeyOverrides } from "../keys/keys";
 import { createStore, loadJSON, saveJSON } from "../state/store";
-import { DEFAULTS, diffFromDefaults, normalize, type PollKey, type Settings } from "./schema";
+import { DEFAULTS, diffFromDefaults, normalize, type Mode, type PollKey, type Settings } from "./schema";
 import { applyTheme } from "./themes";
 
 const MIRROR = "openterm.settings";
@@ -19,12 +19,16 @@ interface Mirror {
   dirty: boolean;
 }
 
-const mirror: Mirror = (() => {
-  const m = loadJSON<Partial<Mirror> | null>(MIRROR, null);
-  return { settings: m?.settings ?? {}, updatedAt: typeof m?.updatedAt === "number" ? m.updatedAt : 0, dirty: m?.dirty === true };
-})();
+const saved = loadJSON<Partial<Mirror> | null>(MIRROR, null);
+const mirror: Mirror = {
+  settings: saved?.settings ?? {},
+  updatedAt: typeof saved?.updatedAt === "number" ? saved.updatedAt : 0,
+  dirty: saved?.dirty === true,
+};
 
-export const settingsStore = createStore<Settings>(normalize(mirror.settings).settings);
+// No mirror in localStorage at all = a brand-new user: pass `undefined` so `normalize` picks the default mode (gui).
+// A mirror that exists (even an empty `{}`) is saved settings, and `normalize` reads a missing `mode` as terminal.
+export const settingsStore = createStore<Settings>(normalize(saved ? mirror.settings : undefined).settings);
 /** Bumped when anything canvas code caches changes (theme colours, number format). Grid/charts redraw on it. */
 export const displayVersion = createStore(0);
 
@@ -43,6 +47,8 @@ function apply(next: Settings): void {
     setNumberFormat(next.numberFormat.thousands, next.numberFormat.decimal);
     display = true;
   }
+  // CSS scopes the GUI-only look with :root[data-mode="gui"], so the attribute must always be present.
+  if ((!prev || prev.mode !== next.mode) && typeof document !== "undefined") document.documentElement.dataset.mode = next.mode;
   if (!prev || JSON.stringify(prev.keys) !== JSON.stringify(next.keys)) setKeyOverrides(next.keys);
   if (display && prev) displayVersion.set((v) => v + 1);
 }
@@ -72,8 +78,18 @@ export function updateSettings(fn: (s: Settings) => Settings): Settings {
   return next;
 }
 
+/** Reset everything except the shell: a reset must not throw a terminal user into GUI mode (or the reverse). */
 export function resetSettings(): Settings {
-  return updateSettings(() => ({ ...DEFAULTS, keys: {} }));
+  return updateSettings((cur) => ({ ...DEFAULTS, mode: cur.mode, keys: {} }));
+}
+
+/** Switches the shell ("terminal" <-> "gui") and saves it like any other setting. */
+export function setMode(mode: Mode): void {
+  updateSettings((s) => ({ ...s, mode }));
+}
+
+export function toggleMode(): void {
+  setMode(settingsStore.get().mode === "gui" ? "terminal" : "gui");
 }
 
 // --- used by sync.ts ---------------------------------------------------------------------

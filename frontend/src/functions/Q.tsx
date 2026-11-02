@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commandInputRef } from "../components/CommandLine";
+import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { navigate, replaceView } from "../state/workspace";
@@ -71,10 +72,16 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   return (
     <div className="fn">
       <div className="line">
-        <span className="acc">QUOTE MONITOR</span> {rows.length} SECURITIES{usingDefault && " (DEFAULT LIST)"} · SORT {sort}
+        <span className="acc">QUOTE MONITOR</span> <b className="pv">{rows.length}</b> SECURITIES{usingDefault && " (DEFAULT LIST)"} · <span className="dim">SORT</span> {sort}
         {loading && <span className="dim"> · LOADING…</span>}
         <span className="dim"> · J/K MOVE · ENTER DES · A ADD · D DEL · S SORT · E CSV · F5 REFRESH</span>
       </div>
+      {/* Only reachable if there are no inputs at all: say what to do instead of showing a blank grid. */}
+      {!loading && rows.length === 0 && (
+        <PanelNote kind="empty" hint="Type a ticker before Q, e.g. AAPL Q, or Q AAPL MSFT NVDA.">
+          NO SECURITIES
+        </PanelNote>
+      )}
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>
   );

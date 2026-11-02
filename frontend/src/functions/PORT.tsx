@@ -9,6 +9,7 @@ import {
 } from "../command/portfolios";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
+import { PanelNote } from "../components/PanelNote";
 import { fmtChg, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api8, type ApiError, type Position } from "../net/api";
@@ -34,7 +35,12 @@ const fmtMoney = (v: number | null | undefined) => fmtPrice(v);
 export default function PORT({ panelId, args }: FunctionProps) {
   const name = args[0]?.toUpperCase();
   if (!name) return <PortfolioIndex panelId={panelId} />;
-  if (!LAYOUT_NAME_RE.test(name)) return <div className="err">PORTFOLIO NAME: 1-32 OF A-Z 0-9 _ . -</div>;
+  if (!LAYOUT_NAME_RE.test(name))
+    return (
+      <PanelNote kind="error" hint="Example: PORT MAIN ADD AAPL 10 150">
+        PORTFOLIO NAME: 1-32 OF A-Z 0-9 _ . -
+      </PanelNote>
+    );
   return <PortfolioView key={name} panelId={panelId} name={name} />;
 }
 
@@ -341,7 +347,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
   const t = tot.current;
   const tc = (v: number | null) => (v == null ? "" : v > 0 ? "up" : v < 0 ? "down" : "");
   return (
-    <div className="fn">
+    <div className="fn port">
       <div className="line">
         <span className="acc">PORTFOLIO {name}</span> {rows.length} POSITIONS · BASE {base} · SORT {sort}
         {(loading || pf === null) && <span className="dim"> · LOADING…</span>}
@@ -349,13 +355,24 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
         {confirm && <span className="err"> · REMOVE {confirm}? PRESS D AGAIN</span>}
         <span className="dim"> · J/K MOVE · ENTER GP · A ADD · D REMOVE · U UNDO · S SORT · E EXPORT · I IMPORT FILE · V PASTE CSV · B BASE · F5</span>
       </div>
-      {missing && <div className="dim">NO PORTFOLIO {name}. PORT {name} ADD AAPL 10 150 CREATES IT (OR I / V TO IMPORT A CSV).</div>}
-      {!missing && pf && positions.length === 0 && <div className="dim">EMPTY. A ADDS A POSITION (PORT {name} ADD SYM QTY [COST]).</div>}
+      {/* The three "nothing to show" states use the shared PanelNote; every empty one says what to do next. */}
+      {!pf && !missing && !err && <PanelNote kind="loading">LOADING PORTFOLIO {name}…</PanelNote>}
+      {missing && (
+        <PanelNote kind="empty" hint={`Create it: PORT ${name} ADD AAPL 10 150, or press I / V to import a CSV. In GUI mode use the Add button.`}>
+          NO PORTFOLIO {name}
+        </PanelNote>
+      )}
+      {!missing && pf && positions.length === 0 && (
+        <PanelNote kind="empty" hint={`Add one: PORT ${name} ADD AAPL 10 150 (SYM QTY [COST]), or press A. In GUI mode use the Add button.`}>
+          NO POSITIONS IN {name}
+        </PanelNote>
+      )}
       <Grid ref={grid} columns={columns} rows={rows} />
+      {/* ps-l = label (dim), ps-v = value (bold amber, or up/down colour). Spaces stay inside the text so the plain text is unchanged. */}
       <div className="summary" data-testid="port-summary">
-        TOTAL {base} MKT VAL <span className="acc">{fmtMoney(t.mv)}</span> · DAY{" "}
-        <span className={tc(t.day)}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · UNRL{" "}
-        <span className={tc(t.unrl)}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · COST {fmtMoney(t.cost)}
+        <span className="ps-l">TOTAL {base} MKT VAL </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l">DAY </span>
+        <span className={`ps-v ${tc(t.day)}`}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · <span className="ps-l">UNRL </span>
+        <span className={`ps-v ${tc(t.unrl)}`}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · <span className="ps-l">COST </span><span className="ps-v">{fmtMoney(t.cost)}</span>
         {t.converted.length > 0 && <span className="acc"> · CONVERTED AT LIVE FX: {t.converted.map((c) => `${c}${base}=X`).join(" ")}</span>}
         {t.unconverted.map((u) => (
           <span key={u.ccy} className="warn">
@@ -488,15 +505,24 @@ function PortfolioIndex({ panelId }: { panelId: number }) {
     [panelId, state],
   );
 
-  if (!list) return <div className={err ? "err" : "dim"}>{err ? `PORTFOLIOS UNAVAILABLE: ${err}` : "LOADING…"}</div>;
+  if (!list)
+    return err ? (
+      <PanelNote kind="error" hint="F5 TO RETRY.">
+        PORTFOLIOS UNAVAILABLE: {err}
+      </PanelNote>
+    ) : (
+      <PanelNote kind="loading">LOADING PORTFOLIOS…</PanelNote>
+    );
   const i = Math.min(sel, list.length - 1);
   return (
-    <div>
+    <div className="port-index">
       <h2>
         PORTFOLIOS {err && <span className="err">STALE: {err}</span>}
       </h2>
       {list.length === 0 ? (
-        <div className="dim">NO PORTFOLIOS. PORT NAME ADD AAPL 10 150 CREATES ONE.</div>
+        <PanelNote kind="empty" hint="Create one: PORT MAIN ADD AAPL 10 150 (any name of A-Z 0-9 _ . -), or press N to start typing the command.">
+          NO PORTFOLIOS YET
+        </PanelNote>
       ) : (
         <table className="t">
           <colgroup>

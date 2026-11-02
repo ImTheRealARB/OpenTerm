@@ -1,7 +1,7 @@
 /**
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
- *   SETTINGS THEME name | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
+ *   SETTINGS MODE GUI|TERMINAL | THEME name | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
  *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
  */
 import {
@@ -31,6 +31,9 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
   switch (key) {
     case "THEME":
       return themeArgs(rest, cur) ?? fail(`SETTINGS THEME ${THEMES.join("|").toUpperCase()}`);
+    case "MODE":
+      if (word !== "GUI" && word !== "TERMINAL") return fail("SETTINGS MODE GUI|TERMINAL");
+      return { ok: true, next: { ...cur, mode: word.toLowerCase() as Settings["mode"] }, message: `MODE ${word}` };
     case "VIM":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS VIM ON|OFF");
       return { ok: true, next: { ...cur, vim: word === "ON" }, message: `VIM MODE ${word}` };
@@ -91,8 +94,9 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       if (word !== "RESET") return fail("SETTINGS KEYS RESET (EDIT SHORTCUTS IN THE SETTINGS PANEL)");
       return { ok: true, next: { ...cur, keys: {} }, message: "SHORTCUTS RESET TO DEFAULTS" };
     case "RESET":
-      return { ok: true, next: { ...DEFAULTS, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
+      // The shell (mode) is kept: RESET restores preferences, it must not switch between TERMINAL and GUI.
+      return { ok: true, next: { ...DEFAULTS, mode: cur.mode, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
     default:
-      return fail("SETTINGS THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
+      return fail("SETTINGS MODE|THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
   }
 }

@@ -1,6 +1,7 @@
 /** Watchlists: `WL` lists them, `WL NAME` shows one as a live quote grid. Stored in SQLite. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { prefillCommand } from "../components/CommandLine";
+import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
 import { deleteWatchlist, editWatchlist, putWatchlist, refreshWatchlists, watchlistList, watchlistVersion } from "../command/watchlists";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -22,7 +23,12 @@ const when = (t: number) => {
 export default function WL({ panelId, args }: FunctionProps) {
   const name = args[0]?.toUpperCase();
   if (!name) return <WatchlistIndex panelId={panelId} />;
-  if (!LAYOUT_NAME_RE.test(name)) return <div className="err">WATCHLIST NAME: 1-32 OF A-Z 0-9 _ . -</div>;
+  if (!LAYOUT_NAME_RE.test(name))
+    return (
+      <PanelNote kind="error" hint="Example: WL TECH, or WL INDIA ADD RELIANCE.NS. Names are letters, digits, underscore, dot and dash.">
+        WATCHLIST NAME: 1-32 OF A-Z 0-9 _ . -
+      </PanelNote>
+    );
   return <WatchlistView key={name} panelId={panelId} name={name} />;
 }
 
@@ -114,13 +120,27 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   return (
     <div className="fn">
       <div className="line">
-        <span className="acc">WATCHLIST {name}</span> {rows.length} SECURITIES · SORT {sort}
-        {(loading || symbols === null) && <span className="dim"> · LOADING…</span>}
-        {err && <span className="err"> · STALE: {err}</span>}
+        <span className="acc">WATCHLIST {name}</span> <b className="pv">{rows.length}</b> SECURITIES · <span className="dim">SORT</span> {sort}
+        {(loading || (symbols === null && !err)) && <span className="dim"> · LOADING…</span>}
+        {/* With a list on screen the error means the data is old; with none, the PanelNote below carries it. */}
+        {err && symbols !== null && <span className="err"> · STALE: {err}</span>}
         <span className="dim"> · J/K MOVE · ENTER DES · A ADD · D REMOVE · U UNDO · S SORT · E CSV · F5 REFRESH</span>
       </div>
-      {missing && <div className="dim">NO WATCHLIST {name}. WL {name} ADD AAPL MSFT CREATES IT.</div>}
-      {!missing && symbols?.length === 0 && <div className="dim">EMPTY. A ADDS SYMBOLS (WL {name} ADD SYM...).</div>}
+      {err && symbols === null && (
+        <PanelNote kind="error" hint="The list could not be read, so nothing is shown. Press F5 to retry.">
+          WATCHLIST {name} UNAVAILABLE: {err}
+        </PanelNote>
+      )}
+      {missing && (
+        <PanelNote kind="empty" hint={`Create it: WL ${name} ADD AAPL MSFT, or press A and type the symbols (GUI mode: the Add button).`}>
+          NO WATCHLIST {name}. WL {name} ADD AAPL MSFT CREATES IT.
+        </PanelNote>
+      )}
+      {!missing && symbols?.length === 0 && (
+        <PanelNote kind="empty" hint={`Add one: WL ${name} ADD AAPL, or press A and type the symbols (GUI mode: the Add button).`}>
+          EMPTY. A ADDS SYMBOLS (WL {name} ADD SYM...).
+        </PanelNote>
+      )}
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>
   );
@@ -193,7 +213,14 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
     [panelId, state],
   );
 
-  if (!list) return <div className={err ? "err" : "dim"}>{err ? `WATCHLISTS UNAVAILABLE: ${err}` : "LOADING…"}</div>;
+  if (!list)
+    return err ? (
+      <PanelNote kind="error" hint="The saved lists could not be read. Press F5 to retry.">
+        WATCHLISTS UNAVAILABLE: {err}
+      </PanelNote>
+    ) : (
+      <PanelNote kind="loading">LOADING…</PanelNote>
+    );
   const i = Math.min(sel, list.length - 1);
   return (
     <div>
@@ -201,9 +228,11 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
         WATCHLISTS {err && <span className="err">STALE: {err}</span>}
       </h2>
       {list.length === 0 ? (
-        <div className="dim">NO WATCHLISTS. WL NAME ADD AAPL MSFT CREATES ONE.</div>
+        <PanelNote kind="empty" hint="Create one: WL TECH ADD AAPL MSFT NVDA (any name), or press N to start the command.">
+          NO WATCHLISTS. WL NAME ADD AAPL MSFT CREATES ONE.
+        </PanelNote>
       ) : (
-        <table className="t">
+        <table className="t wl-index">
           <colgroup>
             <col style={{ width: 20 }} />
             <col style={{ width: 260 }} />

@@ -245,8 +245,26 @@ async function quantBench() {
   return { risk: p95(riskRuns), hrp: p95(hrpRuns), rp: p95(rpRuns), regime: p95(regimeRuns), alpha: p95(alphaRuns), alphaN: alphaRuns.length };
 }
 
+/**
+ * The budgets were set on the terminal shell, but a brand-new browser profile now starts in GUI mode. Seed the settings
+ * mirror (localStorage `openterm.settings`) with `{}`, i.e. "saved settings without a mode" = terminal, before every page
+ * load of this context. Only when nothing is stored yet, so a bench that clears localStorage and reloads is seeded again.
+ */
+async function seedTerminalMode(ctx) {
+  await ctx.addInitScript(() => {
+    try {
+      if (localStorage.getItem("openterm.settings") === null) {
+        localStorage.setItem("openterm.settings", JSON.stringify({ settings: {}, updatedAt: 0, dirty: false }));
+      }
+    } catch {
+      /* storage unavailable: nothing to seed */
+    }
+  });
+}
+
 async function freshPage(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+  await seedTerminalMode(ctx);
   const page = await ctx.newPage();
   await page.goto(FRONTEND);
   await page.evaluate(() => localStorage.clear());
@@ -279,6 +297,7 @@ async function browserBench() {
     const cold = [];
     for (let i = 0; i < 5; i++) {
       const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+      await seedTerminalMode(ctx);
       const page = await ctx.newPage();
       await page.goto(FRONTEND);
       await page.waitForFunction(() => window.__openterm_perf?.ready);
@@ -286,7 +305,19 @@ async function browserBench() {
       await ctx.close();
     }
 
-    const out = { cold: p95(cold) };
+    // Same cold start in GUI mode (what a brand-new user sees: menu bar, sidebar, welcome card). No seed, so the
+    // app starts in its default GUI shell. Reported as INFO, not a budget: the 37 budgets stay on the terminal shell.
+    const coldGui = [];
+    for (let i = 0; i < 5; i++) {
+      const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+      const page = await ctx.newPage();
+      await page.goto(FRONTEND);
+      await page.waitForFunction(() => window.__openterm_perf?.ready);
+      coldGui.push(await page.evaluate(() => window.__openterm_perf.ready));
+      await ctx.close();
+    }
+
+    const out = { cold: p95(cold), coldGui: p95(coldGui) };
 
     // A. Keystrokes, cached commands, 8 panels.
     {
@@ -489,6 +520,7 @@ async function main() {
   const r = await browserBench();
   const { a, stream: st } = r;
   add("Cold start to usable command line (web)", r.cold, 1500, "ms", "p95 of 5 fresh contexts");
+  add("Cold start, GUI mode (new-user default)", r.coldGui, null, "ms", "p95 of 5 fresh contexts; measured, not gated");
   add("Keystroke to echo p95 (keydown to next frame)", a.keyEcho.p95, 16.7, "ms", `one 60Hz frame; n=${a.keyEcho.n}`);
   add("Command submit to first paint, cached, p95", a.cmdToPaint.p95, 100, "ms", `n=${a.cmdToPaint.n}`);
   add("Frame time p95, 8-panel workload", a.frameP95, 20, "ms", "60Hz vsync = 16.7; >25 = dropped frame");

@@ -2,6 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## GUI mode (2026-11-02)
+- One app, two shells: a `mode` setting (`terminal` | `gui`) switched from the status bar, `Alt+G` or `SETTINGS MODE`. New users start in GUI mode; settings saved before GUI mode existed load as Terminal. Terminal mode is unchanged apart from the toggle.
+- GUI shell (`frontend/src/gui/`): menu bar by category (`functions/categories.ts`), searchable function sidebar, symbol picker, per-panel toolbar that fires the panel's own keys (`gui/toolbars.ts`), `?` help drawer (`Alt+H`), "Switch to Terminal mode" banner, first-run welcome card and a 5-step tour (replay from the Settings menu or HELP).
+- Panel polish for Q, WL, WEI/FX/CMDTY, N, GP, FA, PORT, BT: one `PanelNote` look for loading, empty, error and stale states, with a next-step hint on every empty state; clearer summary-line hierarchy; tabular digits.
+- Tests: 37 new Playwright tests (220 total), new vitest suites for settings mode, categories, GUI search, toolbars and news hints. Bench adds an INFO line for GUI-mode cold start.
+
 ## Public release and docs (2026-11-02)
 - Repo made public. README rewritten for beginners (tool install with winget/brew, three-command setup, first-five-minutes table, troubleshooting) and now leads with the measured speed budgets.
 - New screenshots in `docs/screenshots/` (workspace, chart with indicators, backtest, fundamentals, rates and calendar) replace `docs/screenshot-phase3.png`.

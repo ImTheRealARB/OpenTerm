@@ -1,0 +1,68 @@
+/* Step C polish for GP, FA, PORT, BT. Both modes unless scoped under :root[data-mode="gui"].
+ *
+ * Rules kept: no shadows, gradients, transitions, animations or web fonts; colour only carries meaning.
+ * Anything that changes box sizes (padding, wrapping, borders) is GUI-only, so the terminal look and the
+ * canvas grid / chart geometry that scripts/bench.mjs measures stay exactly as they were.
+ */
+
+/* Digits keep one width so columns of numbers line up (the font is monospace already; this makes it explicit
+   for any fallback font). Affects text only, never box sizes. */
+.fn.gp, .fn.fa, .fn.port, .fn.bt { font-variant-numeric: tabular-nums; }
+
+/* Label / value hierarchy used by the PORT summary and the BT headline:
+   .ps-l = the label (dim), .ps-v = the number (bold, panel colour; .up / .down still recolour it). */
+.fn .ps-l { color: var(--fg-dim); }
+.fn .ps-v { font-weight: bold; }
+
+/* FA footer: the source line (statement, period, filing date) stays dim; only the derived-period warning is loud. */
+.fn.fa .fa-sum { color: var(--fg-dim); }
+
+/* ---- GUI mode only: roomier spacing and softer corners ------------------------------------------------ */
+
+/* Summary strips under the grids: a little padding, and wrap instead of cutting numbers off in a narrow panel. */
+:root[data-mode="gui"] .fn.port .summary,
+:root[data-mode="gui"] .fn.fa .summary {
+  padding: 3px 8px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* FA statement tabs: a pill for the active one, a little air around them. */
+:root[data-mode="gui"] .fn.fa .tabs { padding: 2px 6px; gap: 6px; }
+:root[data-mode="gui"] .fn.fa .tabs span { padding: 1px 8px; border-radius: 3px; }
+
+/* BT: the disclaimer, data sources and headline must never be clipped, so they wrap in GUI mode. The simulation
+   label also gets a warn-coloured edge so it reads as a standing notice. */
+:root[data-mode="gui"] .fn.bt .bt-sim,
+:root[data-mode="gui"] .fn.bt .bt-data,
+:root[data-mode="gui"] .fn.bt .bt-head {
+  white-space: normal;
+  overflow: visible;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+:root[data-mode="gui"] .fn.bt .bt-sim { border-left: 2px solid var(--warn); }
+
+/* Empty / loading / error notes inside these panels become a small bordered card. */
+:root[data-mode="gui"] .fn.gp .pnote,
+:root[data-mode="gui"] .fn.fa .pnote,
+:root[data-mode="gui"] .fn.port .pnote,
+:root[data-mode="gui"] .fn.bt .pnote {
+  margin: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+:root[data-mode="gui"] .fn.bt .pnote-error,
+:root[data-mode="gui"] .fn.gp .pnote-error,
+:root[data-mode="gui"] .fn.fa .pnote-error,
+:root[data-mode="gui"] .fn.port .pnote-error { border-color: var(--err); }
+
+/* PORT index and import preview (DOM tables): numbers right-aligned with tabular digits (the table's own .n class
+   already right-aligns), a clear header band (shared .t th), roomier cells and a row hover in GUI mode. Scoped to
+   PORT's two containers so other panels' tables are untouched. */
+.port-index .t .n, .fn.port .t .n { font-variant-numeric: tabular-nums; }
+:root[data-mode="gui"] :is(.port-index, .fn.port) .t th { padding: 3px 8px 3px 4px; }
+:root[data-mode="gui"] :is(.port-index, .fn.port) .t td { padding: 2px 8px 2px 4px; }
+:root[data-mode="gui"] :is(.port-index, .fn.port) .t tbody tr:hover { background: var(--sel); }
+:root[data-mode="gui"] .port-index .pnote { margin: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; }

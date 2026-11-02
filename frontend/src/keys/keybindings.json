@@ -20,5 +20,7 @@
   "cheatsheet": ["?"],
   "perfHud": ["Ctrl+Shift+P"],
   "exportCsv": ["Alt+X"],
-  "windowMenu": ["Alt+M"]
+  "windowMenu": ["Alt+M"],
+  "toggleMode": ["Alt+G"],
+  "helpDrawer": ["Alt+H"]
 }

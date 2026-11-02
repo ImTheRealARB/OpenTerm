@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isBtRun, parseBtArgs } from "../bt/ruleParse";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
+import { PanelNote } from "../components/PanelNote";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, btApi, type BtStrategy, type BtStrategyCard } from "../net/api";
@@ -105,7 +106,11 @@ function Saved({ panelId }: { panelId: number }) {
       </div>
       {msg && <div className="dim">{msg}</div>}
       {rows && rows.length > 0 && <Grid ref={grid} columns={COLS} rows={rows} />}
-      {rows && !rows.length && <div className="dim">NO SAVED STRATEGIES YET</div>}
+      {rows && !rows.length && (
+        <PanelNote kind="empty" hint="Create one: BT EDIT MYSTRAT (Python editor) or BT SAVE MYRULE SMA20>SMA50 (a rule). Run it with BT AAPL @MYRULE 1D 5Y.">
+          NO SAVED STRATEGIES YET
+        </PanelNote>
+      )}
     </div>
   );
 }

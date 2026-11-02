@@ -42,6 +42,57 @@ describe("normalize", () => {
   });
 });
 
+describe("mode (GUI / terminal)", () => {
+  it("defaults to gui when nothing was ever saved", () => {
+    expect(DEFAULTS.mode).toBe("gui");
+    expect(normalize(undefined).settings.mode).toBe("gui");
+    expect(normalize(null).settings.mode).toBe("gui");
+  });
+
+  it("reads a saved object without a mode as terminal (existing users keep their terminal)", () => {
+    expect(normalize({}).settings.mode).toBe("terminal");
+    expect(normalize({ theme: "green" }).settings.mode).toBe("terminal");
+    expect(normalize({}).errors).toEqual([]);
+  });
+
+  it("keeps a valid saved mode", () => {
+    expect(normalize({ mode: "gui" }).settings.mode).toBe("gui");
+    expect(normalize({ mode: "terminal" }).settings.mode).toBe("terminal");
+  });
+
+  it("reports an invalid mode and falls back to terminal", () => {
+    for (const bad of ["tui", 1, true, "GUI"]) {
+      const r = normalize({ mode: bad });
+      expect(r.settings.mode).toBe("terminal");
+      expect(r.errors).toContain("mode");
+    }
+  });
+
+  it("round-trips through diffFromDefaults: gui is stored, terminal is the absent-field default", () => {
+    const gui = { ...DEFAULTS, mode: "gui" as const };
+    const term = { ...DEFAULTS, mode: "terminal" as const };
+    expect(diffFromDefaults(gui)).toEqual({ mode: "gui" });
+    expect(diffFromDefaults(term)).toEqual({}); // same stored document as before GUI mode existed
+    expect(normalize(diffFromDefaults(gui)).settings.mode).toBe("gui");
+    expect(normalize(diffFromDefaults(term)).settings.mode).toBe("terminal");
+  });
+
+  it("SETTINGS MODE switches the shell and rejects other words", () => {
+    const r = settingsArgs(["MODE", "TERMINAL"], DEFAULTS);
+    expect(r && r.ok && r.next.mode).toBe("terminal");
+    const g = settingsArgs(["MODE", "gui"], { ...DEFAULTS, mode: "terminal" });
+    expect(g && g.ok && g.next.mode).toBe("gui");
+    expect(settingsArgs(["MODE", "FANCY"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["MODE"], DEFAULTS)).toMatchObject({ ok: false });
+  });
+
+  it("SETTINGS RESET keeps the current mode", () => {
+    const r = settingsArgs(["RESET"], { ...DEFAULTS, mode: "terminal", theme: "green" });
+    expect(r && r.ok && r.next.mode).toBe("terminal");
+    expect(r && r.ok && r.next.theme).toBe("amber");
+  });
+});
+
 describe("zones", () => {
   it("knows LOCAL, UTC and IANA zones only", () => {
     expect(isZone("LOCAL")).toBe(true);
@@ -55,8 +106,10 @@ describe("zones", () => {
 
 describe("diffFromDefaults", () => {
   it("is empty for the defaults and holds only changed fields otherwise", () => {
-    expect(diffFromDefaults(DEFAULTS)).toEqual({});
-    const s = { ...DEFAULTS, theme: "light" as const, keys: { help: ["Ctrl+H"] } };
+    // DEFAULTS is gui mode, and "gui" is always written out (see the mode tests above).
+    expect(diffFromDefaults(DEFAULTS)).toEqual({ mode: "gui" });
+    expect(diffFromDefaults({ ...DEFAULTS, mode: "terminal" })).toEqual({});
+    const s = { ...DEFAULTS, mode: "terminal" as const, theme: "light" as const, keys: { help: ["Ctrl+H"] } };
     expect(diffFromDefaults(s)).toEqual({ theme: "light", keys: { help: ["Ctrl+H"] } });
   });
 });

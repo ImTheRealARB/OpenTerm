@@ -3,6 +3,7 @@ import { registerChartShot } from "../chart/shot";
 import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent } from "../chart/ChartView";
 import { createDrawSaver } from "../chart/drawSave";
 import { MAX_DRAWINGS, NEEDED, KIND_NAME, cycleSelection, newId, parseDrawings, snapDay, type DPoint, type DrawKind, type Drawing } from "../chart/drawings";
+import { PanelNote } from "../components/PanelNote";
 import { INDICATORS } from "../chart/indicators";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -290,7 +291,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const overlayCompare = !p.pane && L?.compares.length ? L.compares[0] : null;
   const shownEvents = markers?.length ?? 0;
   return (
-    <div className="fn" style={{ position: "relative" }}>
+    <div className="fn gp" style={{ position: "relative" }}>
       <div className="line">
         <span className="acc">{L?.bars.symbol ?? symbol}</span> {p.range} {L?.bars.interval ?? p.interval ?? ""}{" "}
         {p.compare.length ? `VS ${p.compare.join(" ")} ${p.pane ? "(PANES)" : "(%)"}` : p.type}
@@ -332,12 +333,13 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       )}
       {overlayCompare && drawings.length > 0 && <div className="warn">DRAWINGS HIDDEN WHILE A % OVERLAY (VS) IS ON: USE PANE TO KEEP THEM</div>}
       {p.compare.length > 1 && !p.pane && <div className="warn">VS OVERLAYS ONLY {p.compare[0]}; ADD PANE TO SHOW ALL {p.compare.length}</div>}
+      {/* Same look as every other panel (components/PanelNote): the error keeps its text, the hint says what to do next. */}
       {state.error && !L && (
-        <div className="err">
-          {state.error} ({symbol} {p.range}). F5 TO RETRY.
-        </div>
+        <PanelNote kind="error" hint="F5 TO RETRY.">
+          {state.error} ({symbol} {p.range}).
+        </PanelNote>
       )}
-      {!L && !state.error && <div className="dim">LOADING {symbol} {p.range}…</div>}
+      {!L && !state.error && <PanelNote kind="loading">LOADING {symbol} {p.range}…</PanelNote>}
       {L && (
         <ChartView
           ref={chart}

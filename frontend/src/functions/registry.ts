@@ -75,7 +75,7 @@ const defs: FunctionDef[] = [
   { code: "HIST", title: "Historical price table", needsSecurity: true, argsSchema: "[1M..MAX] [D|W|MO]", phase: 9, load: () => import("./HIST") },
   { code: "LAYOUT", title: "Save / load named workspaces", needsSecurity: false, argsSchema: "[SAVE|LOAD|DEL] name", phase: 4, load: () => import("./Layout") },
   { code: "MONITOR", title: "Alias of LAYOUT", needsSecurity: false, argsSchema: "[SAVE|LOAD|DEL] name", phase: 4, load: () => import("./Layout") },
-  { code: "SETTINGS", title: "Settings: theme, vim mode, shortcuts, number format, clocks", needsSecurity: false, argsSchema: "[THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|KEYS|RESET ...]", phase: 10, load: () => import("./SETTINGS") },
+  { code: "SETTINGS", title: "Settings: theme, vim mode, shortcuts, number format, clocks", needsSecurity: false, argsSchema: "[MODE|THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|KEYS|RESET ...]", phase: 10, load: () => import("./SETTINGS") },
   { code: "THEME", title: "Colour theme", needsSecurity: false, argsSchema: "[AMBER|GREEN|WHITE|LIGHT]", phase: 10, load: () => import("./SETTINGS") },
   { code: "JOBS", title: "Background jobs: progress, cancel, results", needsSecurity: false, argsSchema: "[TEST [steps] [ms]]", phase: 11, load: () => import("./JOBS"), idlePreload: false },
   { code: "BT", title: "Backtest a rule on historical bars (historical simulation, not a forecast)", needsSecurity: false, argsSchema: "<SYMS> <RULE|@NAME> [1D|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [MKT=engine]", phase: 12, load: () => import("./BT"), idlePreload: false },

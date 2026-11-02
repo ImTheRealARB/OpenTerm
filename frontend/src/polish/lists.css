@@ -1,0 +1,19 @@
+/* Step C polish for Q, WL, WEI (Board), N. Both modes unless scoped under :root[data-mode="gui"]. */
+
+/* The first value in a panel's header band (count of securities / headlines): bold so the eye lands on it.
+   The band is white-on-red, so it keeps the band's own colour and only gains weight. */
+.fn > .line .pv { font-weight: bold; }
+
+/* A PanelNote sitting above a grid must not stretch: the grid below keeps the remaining height. */
+.fn > .pnote { flex: none; }
+
+/* WL index (DOM table): numbers line up in a column, and the note text wraps instead of being clipped. */
+.wl-index td.n, .wl-index th.n { font-variant-numeric: tabular-nums; }
+.pnote-msg, .pnote-hint { white-space: normal; overflow-wrap: anywhere; }
+
+/* GUI mode only: a little more room and a soft frame so a note reads as a message, not a stray line. */
+:root[data-mode="gui"] .pnote { padding: 8px 10px; margin: 6px; border: 1px solid var(--line); border-radius: 4px; }
+:root[data-mode="gui"] .pnote-empty .pnote-hint,
+:root[data-mode="gui"] .pnote-error .pnote-hint { margin-top: 6px; }
+/* WL index rows get a hover highlight with the mouse (keyboard selection `tr.on` is unchanged). */
+:root[data-mode="gui"] .wl-index tbody tr:hover { background: var(--sel); }

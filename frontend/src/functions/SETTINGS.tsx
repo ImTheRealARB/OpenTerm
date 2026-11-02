@@ -10,7 +10,7 @@ import { ACTION_LABELS, KEYBINDINGS, chord, effectiveBindings, type Action } fro
 import { FIXED_ACTIONS, checkChord, diffBindings } from "../keys/overrides";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { resetSettings, settingsStore, updateSettings } from "../settings/runtime";
-import { AI_MODEL_CHOICES, AI_PROVIDERS, AI_VISION_CHOICES, CHART_RANGES, CHART_TYPES, DECIMALS, POLL_BOUNDS, THOUSANDS, cycle, stepPoll, type PollKey, type Settings } from "../settings/schema";
+import { AI_MODEL_CHOICES, AI_PROVIDERS, AI_VISION_CHOICES, CHART_RANGES, CHART_TYPES, DECIMALS, MODES, POLL_BOUNDS, THOUSANDS, cycle, stepPoll, type PollKey, type Settings } from "../settings/schema";
 import { THEMES, THEME_LABELS } from "../settings/themes";
 import { useStore } from "../state/store";
 import { listNav } from "./listNav";
@@ -84,6 +84,8 @@ const SETTING_ROWS: SettingRow[] = [
     kind: "setting", id: "ai.provider", label: "AI PROVIDER (KEY IN APIKEYS)", value: (s) => s.ai.provider.toUpperCase(),
     change: (s, d) => ({ ...s, ai: { ...s.ai, provider: cycle(AI_PROVIDERS, s.ai.provider, d) } }),
   },
+  // Last on purpose: the rows above keep their positions (THEME is first). Same switch as the status bar toggle and Alt+G.
+  { kind: "setting", id: "mode", label: "INTERFACE MODE (TERMINAL OR GUI, ALT+G)", value: (s) => s.mode.toUpperCase(), change: (s, d) => ({ ...s, mode: cycle(MODES, s.mode, d) }) },
 ];
 
 const MODIFIER_KEYS = new Set(["Control", "Alt", "Shift", "Meta", "AltGraph", "CapsLock"]);

@@ -45,10 +45,19 @@ def test_settings_partial_and_replace(client):
     assert client.get("/api/settings").json()["settings"] == {"vim": True}
 
 
+def test_settings_mode_roundtrip(client):
+    """GUI mode: `mode` is a stored setting ("terminal" or "gui"); a document without it is valid (it means terminal)."""
+    for mode in ("gui", "terminal"):
+        r = client.put("/api/settings", json={"settings": {"mode": mode}})
+        assert r.status_code == 200, r.text
+        assert client.get("/api/settings").json()["settings"] == {"mode": mode}
+
+
 @pytest.mark.parametrize(
     "bad, needle",
     [
         ({"theme": "neon"}, "theme"),
+        ({"mode": "tui"}, "mode"),
         ({"vim": "yes"}, "vim"),
         ({"colour": "red"}, "UNKNOWN FIELD"),
         ({"numberFormat": {"thousands": ",", "decimal": ","}}, "MUST DIFFER"),

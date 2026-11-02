@@ -1,0 +1,114 @@
+/*
+ * GUI mode only. Every rule is scoped under :root[data-mode="gui"] (set by settings/runtime.ts), so terminal mode
+ * is untouched. Same ground rules as the rest of the app: no shadows, gradients, transitions or web fonts; colours
+ * come from the theme variables (so THEME works here too). The ONE exception to the "no rounding, no hover
+ * effects" rule is GUI-only: a small border radius and a hover highlight on buttons and inputs.
+ */
+
+/* One more grid row for the menu bar (terminal: top bar, workspace, key hints, status bar). */
+:root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 16px 18px; }
+/* Wrapper of the menu bar and the banner under it: one grid row whose height is the sum. */
+:root[data-mode="gui"] .gm-top { min-width: 0; }
+/* The wrapper becomes a real flex row: sidebar on the left, workspace taking the rest. */
+:root[data-mode="gui"] .app-body { display: flex; min-height: 0; min-width: 0; position: relative; }
+:root[data-mode="gui"] .app-body > .ws { flex: 1 1 0; }
+
+/* --- Menu bar --- */
+:root[data-mode="gui"] .gm-bar { display: flex; align-items: center; height: 22px; background: var(--bar); border-bottom: 1px solid var(--line); padding: 0 4px; gap: 2px; min-width: 0; }
+:root[data-mode="gui"] .gm-slot { position: relative; height: 100%; display: flex; align-items: center; }
+:root[data-mode="gui"] .gm-cat { height: 18px; padding: 0 10px; color: var(--hdr); border-radius: 3px; cursor: pointer; }
+:root[data-mode="gui"] .gm-cat:hover { background: var(--bar-hi); }
+:root[data-mode="gui"] .gm-cat.on { background: var(--fg); color: var(--bg); font-weight: bold; }
+:root[data-mode="gui"] .gm-fill { flex: 1 1 auto; }
+:root[data-mode="gui"] .gm-drop { position: absolute; left: 0; top: 21px; z-index: 40; min-width: 340px; max-width: min(640px, 90vw); max-height: calc(100vh - 90px); overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; padding: 2px 0; }
+:root[data-mode="gui"] .gm-item { display: grid; grid-template-columns: 84px 1fr; gap: 8px; width: 100%; text-align: left; padding: 0 8px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+:root[data-mode="gui"] .gm-item > span:last-child { overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
+:root[data-mode="gui"] .gm-item .gm-code { color: var(--fg); font-weight: bold; }
+:root[data-mode="gui"] .gm-item:hover, :root[data-mode="gui"] .gm-item:focus-visible { background: var(--sel); }
+:root[data-mode="gui"] .gm-item:hover > span:last-child, :root[data-mode="gui"] .gm-item:focus-visible > span:last-child { color: var(--val); }
+:root[data-mode="gui"] .gm-sep { border-top: 1px solid var(--line); margin-top: 2px; }
+
+/* --- Symbol picker (right end of the menu bar) --- */
+:root[data-mode="gui"] .gm-symbol { display: flex; align-items: center; gap: 6px; flex: none; }
+:root[data-mode="gui"] .gm-symbol-label { color: var(--fg-dim); font-size: 10px; letter-spacing: 0.05em; }
+:root[data-mode="gui"] .gm-symbol input { width: 170px; height: 18px; padding: 0 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; color: var(--warn); text-transform: uppercase; }
+:root[data-mode="gui"] .gm-symbol input::placeholder { color: var(--fg-dim); text-transform: none; }
+:root[data-mode="gui"] .gm-symbol input:hover { background: var(--bar-hi); }
+:root[data-mode="gui"] .gm-symbol input:focus { border-color: var(--warn); }
+
+/* --- Sidebar --- */
+:root[data-mode="gui"] .gs { flex: none; width: 232px; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--bg); }
+:root[data-mode="gui"] .gs-search { flex: none; margin: 4px; height: 20px; padding: 0 6px; background: var(--bar); border: 1px solid var(--line); border-radius: 3px; color: var(--warn); }
+:root[data-mode="gui"] .gs-search::placeholder { color: var(--fg-dim); }
+:root[data-mode="gui"] .gs-search:hover { background: var(--bar-hi); }
+:root[data-mode="gui"] .gs-search:focus { border-color: var(--warn); }
+:root[data-mode="gui"] .gs-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 4px; }
+:root[data-mode="gui"] .gs-head { display: flex; gap: 6px; width: 100%; text-align: left; padding: 0 6px; margin-top: 2px; color: var(--hdr); background: var(--bar); text-transform: uppercase; font-weight: bold; cursor: pointer; }
+:root[data-mode="gui"] .gs-head:hover { background: var(--bar-hi); }
+:root[data-mode="gui"] .gs-caret { width: 1ch; color: var(--accent); }
+:root[data-mode="gui"] .gs-item { display: grid; grid-template-columns: 7ch 1fr; gap: 6px; width: 100%; text-align: left; padding: 0 6px 0 14px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+:root[data-mode="gui"] .gs-hit { position: relative; }
+:root[data-mode="gui"] .gs-hit .gs-item { padding-left: 6px; padding-right: 74px; }
+:root[data-mode="gui"] .gs-hit .gs-cat { position: absolute; right: 6px; top: 0; font-size: 10px; pointer-events: none; }
+:root[data-mode="gui"] .gs-code { color: var(--fg); font-weight: bold; }
+:root[data-mode="gui"] .gs-title { overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
+:root[data-mode="gui"] .gs-item.dim .gs-code, :root[data-mode="gui"] .gs-item.dim .gs-title { color: var(--fg-dim); }
+:root[data-mode="gui"] .gs-item:hover, :root[data-mode="gui"] .gs-item.top { background: var(--sel); }
+:root[data-mode="gui"] .gs-item:hover .gs-title, :root[data-mode="gui"] .gs-item.top .gs-title { color: var(--val); }
+:root[data-mode="gui"] .gs-empty { padding: 4px 8px; }
+
+/* --- Status-bar mode switch: hover highlight and rounding are GUI-only --- */
+:root[data-mode="gui"] .mode-toggle .mt-btn { border-radius: 3px; }
+:root[data-mode="gui"] .mode-toggle .mt-btn:not(.on):hover { background: var(--bar-hi); }
+
+/* --- Buttons shared by the panel toolbar, banner, drawer, welcome card and tour: small radius + hover highlight (GUI-only exception) --- */
+:root[data-mode="gui"] .pt-b { height: 16px; padding: 0 7px; color: var(--hdr); background: var(--bar); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; white-space: nowrap; }
+:root[data-mode="gui"] .pt-b:hover:not(:disabled), :root[data-mode="gui"] .pt-b:focus-visible { background: var(--bar-hi); color: var(--val); }
+:root[data-mode="gui"] .pt-b:disabled { color: var(--fg-dim); cursor: default; }
+:root[data-mode="gui"] .pt-sp { flex: 1 1 auto; }
+
+/* --- Panel toolbar: a wrapping row of buttons under the panel title bar --- */
+:root[data-mode="gui"] .pt { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; flex: none; min-height: 20px; padding: 2px 4px; border-bottom: 1px solid var(--line); background: var(--bg); }
+:root[data-mode="gui"] .pt-fn { color: var(--fg); }
+:root[data-mode="gui"] .pt-help { color: var(--accent); font-weight: bold; min-width: 18px; }
+:root[data-mode="gui"] .pt-close:hover { color: var(--err); }
+:root[data-mode="gui"] .pt-ask-l { color: var(--warn); font-weight: bold; }
+:root[data-mode="gui"] .pt-ask { flex: 1 1 160px; min-width: 100px; height: 16px; padding: 0 6px; background: var(--bg); border: 1px solid var(--warn); border-radius: 3px; color: var(--warn); }
+
+/* --- Banner under the menu bar --- */
+:root[data-mode="gui"] .gb { display: flex; align-items: center; gap: 8px; height: 20px; padding: 0 6px; background: var(--sel); color: var(--val); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+
+/* --- Help drawer: right-hand side of the workspace --- */
+:root[data-mode="gui"] .hd { position: absolute; top: 0; right: 0; bottom: 0; width: 340px; max-width: 90%; z-index: 35; display: flex; flex-direction: column; background: var(--bg); border-left: 2px solid var(--fg); outline: none; }
+:root[data-mode="gui"] .hd-top { display: flex; align-items: center; gap: 6px; flex: none; padding: 2px 6px; background: var(--bar-hi); border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .hd-h { color: var(--val); font-weight: bold; }
+:root[data-mode="gui"] .hd-body { flex: 1 1 auto; overflow-y: auto; padding: 4px 8px 8px; }
+:root[data-mode="gui"] .hd-body p { margin: 4px 0; }
+:root[data-mode="gui"] .hd-t { color: var(--val); font-weight: bold; margin-bottom: 2px; }
+:root[data-mode="gui"] .hd-code { color: var(--fg); }
+:root[data-mode="gui"] .hd-s { color: var(--accent); font-weight: bold; margin-top: 8px; text-transform: uppercase; }
+:root[data-mode="gui"] .hd-use { color: var(--warn); }
+:root[data-mode="gui"] .hd-keys td { padding: 0 8px 0 0; vertical-align: top; }
+:root[data-mode="gui"] .hd-k { color: var(--fg); font-weight: bold; white-space: nowrap; }
+:root[data-mode="gui"] .hd-rel { display: flex; flex-wrap: wrap; gap: 3px; }
+
+/* --- Welcome card: centred over the workspace --- */
+:root[data-mode="gui"] .gw { position: fixed; left: 0; right: 0; margin: 0 auto; top: 18%; z-index: 50; width: min(560px, 92vw); padding: 12px 16px; background: var(--bg); border: 2px solid var(--fg); border-radius: 4px; }
+:root[data-mode="gui"] .gw-title { color: var(--fg); font-weight: bold; font-size: 16px; }
+:root[data-mode="gui"] .gw-sub { color: var(--hdr); margin: 6px 0 10px; }
+:root[data-mode="gui"] .gw-choices { display: flex; flex-direction: column; gap: 6px; }
+:root[data-mode="gui"] .gw-big { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 6px 10px; text-align: left; background: var(--bar); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+:root[data-mode="gui"] .gw-big:hover, :root[data-mode="gui"] .gw-big:focus-visible { background: var(--bar-hi); border-color: var(--fg); }
+:root[data-mode="gui"] .gw-big-l { color: var(--val); font-weight: bold; font-size: 14px; }
+:root[data-mode="gui"] .gw-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+:root[data-mode="gui"] .gw-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
+:root[data-mode="gui"] .gw-link:hover, :root[data-mode="gui"] .gw-link:focus-visible { color: var(--val); }
+
+/* --- Tour: solid 2px amber ring around the target, a plain caption box. No animation. --- */
+:root[data-mode="gui"] .gt-ring { position: fixed; z-index: 60; border: 2px solid var(--fg); pointer-events: none; box-sizing: border-box; }
+:root[data-mode="gui"] .gt-cap { position: fixed; z-index: 61; padding: 8px 10px; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
+:root[data-mode="gui"] .gt-n { color: var(--fg-dim); font-size: 10px; }
+:root[data-mode="gui"] .gt-t { color: var(--val); font-weight: bold; margin: 2px 0; }
+:root[data-mode="gui"] .gt-btns { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+:root[data-mode="gui"] .gt-next { color: var(--fg); font-weight: bold; }

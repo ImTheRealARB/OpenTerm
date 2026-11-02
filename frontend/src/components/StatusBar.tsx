@@ -7,6 +7,7 @@ import { useRunningJobs } from "../net/jobs";
 import { link } from "../net/socket";
 import { sources } from "../net/sources";
 import { useStore } from "../state/store";
+import { ModeToggle } from "../gui/ModeToggle";
 import { AlertFlash } from "./AlertFlash"; // Phase 8
 import { workspace } from "../state/workspace";
 
@@ -114,6 +115,7 @@ export function StatusBar() {
       <KiteState />
       <AlertFlash />
       <span className="sp" />
+      <ModeToggle />
       <span>{DISCLAIMER}</span>
     </footer>
     </>

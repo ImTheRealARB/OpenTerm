@@ -5,8 +5,8 @@ The full spec is the "SUPER PROMPT" the user gave in the first session. Its buil
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
 Phases 1-16 and 19 are DONE and on `main` (merged and pushed to origin = private GitHub repo ImTheRealARB/OpenTerm; Windows full gate 2026-10-18: pytest 1567, e2e 181; the review sprint and the terminal-look restyle (2026-10-19) are merged too: `docs/review/SUMMARY.md`; gate 1628 pytest + 183 e2e, bench 37/37). Open items and what is next: HANDOFF.md "Resume here". **Phases 17 and 18 are PAUSED by the user (2026-10-18): skip them.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
-**Usage rule:** Sonnet only, for the main session and subagents (Opus drains the Pro 5-hour window in minutes; decided
-2026-10-19). Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
+**Usage rule:** Opus may orchestrate (plan, review, run gates) with at most 2 Sonnet subagents building; Opus does not build large
+changes itself (decided 2026-11-02, `docs/specs/NEXT_SESSION.md`; replaces the 2026-10-19 "Sonnet only" rule). Subagents are Sonnet. Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
 Pause at 95% of the 5-hour window when the user asked for unattended work, else at 60%. If the same gate fails twice on the same problem, stop, write the state and
 exact next action to HANDOFF.md, commit, and tell the user (they may switch to Opus for that one problem). When the
 5-hour or weekly plan window reaches the pause level, stop all subagents, update HANDOFF.md so another account can resume, commit,
@@ -210,6 +210,12 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - README is written for beginners (winget/brew install steps, first-five-minutes table, troubleshooting) and leads with the speed table: when `docs/PERFORMANCE.md` numbers change, update the README table.
 - Screenshots live in `docs/screenshots/` (2x, 1600x900 viewport, live Yahoo data, taken with a Playwright script against `OPENTERM_STATIC_DIR=frontend/dist` and a temp `OPENTERM_DB_PATH`; a fresh browser context per shot, or panels pile up from the saved layout).
 - Never write real keys, emails or personal paths into docs or fixtures; history was scanned clean on 2026-11-02.
+
+- **GUI mode (2026-11-02):** `settings.mode` is `terminal | gui`; `normalize`: nothing saved = gui, a saved object without `mode` = terminal, so `diffFromDefaults` always writes `mode: "gui"` and never `terminal`.
+  `document.documentElement.dataset.mode` scopes GUI-only CSS (`:root[data-mode="gui"]`, the only place radius and hover are allowed). The GUI shell lives in `frontend/src/gui/`; `App.tsx` keeps one element tree
+  (`.app-body` is `display: contents` in terminal) so switching never remounts panels. Every new function needs a category in `functions/categories.ts` (vitest). Toolbar buttons fire the panel's own keys via
+  `dispatchPanelKey`; add per-function buttons in `gui/toolbars.ts`. Empty/loading/error states use `components/PanelNote.tsx`. **e2e and bench start in Terminal**: `openApp(page)` seeds localStorage
+  `openterm.settings`; use `openApp(page, { mode: "gui", welcome: true })` for GUI tests. A real `OPENROUTER_API_KEY` in the shell makes the bench fail (409 env_locked): run it with the var unset.
 
 ## Conventions
 - **Keep `docs/FUNCTIONS.md` current:** after any change to `functions/registry.ts`, `keys/keybindings.json` or `keys/keys.ts` labels (or the doc template in `scripts/gen_functions_doc.py`), run `python scripts/gen_functions_doc.py` before committing. `test_functions_doc.py` (pytest, so the gates) fails on a stale doc.

@@ -48,6 +48,10 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 
 .app { display: grid; grid-template-rows: 22px 1fr 16px 18px; height: 100%; }
 
+/* The wrapper around [sidebar] + workspace exists in both modes (so switching never remounts panels). In terminal mode it
+   vanishes from the layout; gui.css makes it a flex row. */
+.app-body { display: contents; }
+
 /* Top bar */
 .top { display: flex; align-items: center; border-bottom: 1px solid var(--line); height: 22px; min-width: 0; }
 .brand { padding: 0 6px; color: var(--bg); background: var(--fg); font-weight: bold; height: 100%; line-height: 22px; }
@@ -111,6 +115,13 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .up { color: var(--up); }
 .down { color: var(--down); }
 .err { color: var(--err); }
+/* PanelNote (components/PanelNote.tsx): loading / empty / error / stale states, same look in both modes. */
+.pnote { padding: 12px 10px; line-height: 1.5; }
+.pnote-loading .pnote-msg { color: var(--fg-dim); }
+.pnote-empty .pnote-msg { color: var(--fg); }
+.pnote-error .pnote-msg { color: var(--err); }
+.pnote-stale .pnote-msg { color: var(--fg-dim); }
+.pnote-hint { color: var(--fg-dim); margin-top: 4px; }
 .warn { color: var(--warn); }
 h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(--bar); padding: 0 4px; margin: 4px 0 2px; text-transform: uppercase; }
 
@@ -119,6 +130,10 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 .status .sp { flex: 1; }
 .status > span + span { border-left: 1px solid var(--line); padding-left: 8px; }
 .status .sp, .status .alrt-flash { border-left: 0; }
+/* TERMINAL | GUI switch (both modes): the current shell is in reverse video. Hover and rounding are GUI-only (gui.css). */
+.mode-toggle { display: inline-flex; gap: 4px; align-items: center; }
+.mode-toggle .mt-btn { padding: 0 4px; cursor: pointer; color: var(--hdr); }
+.mode-toggle .mt-btn.on { color: var(--bg); background: var(--fg); font-weight: bold; }
 .dot::before { content: "\25A0"; }
 .dot { margin-right: 4px; }
 /* Function-key hint row: one line, keys in reverse video. Text comes from the bindings in force. */
