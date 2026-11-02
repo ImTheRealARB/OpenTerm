@@ -6,6 +6,7 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
 ## Resume here (2026-11-02: repo is PUBLIC; README rewritten for beginners)
+- **Next session plan (2026-11-02):** `docs/specs/NEXT_SESSION.md` is the Opus-orchestrator super prompt: GUI mode + redesign, then Phase 17 (MCP, alert delivery, daily brief), then a better strategy editor. The editor itself already exists (`BtEditor.tsx`); the "not built" note at the step-4 line below is stale.
 - **Public release (2026-11-02):** `ImTheRealARB/OpenTerm` is a public GitHub repo (history scanned, no secrets; a fresh clone installs in about 40 s and serves HTTP 200).
   README rewritten (beginner install steps, speed table from `docs/PERFORMANCE.md`, disclaimers) with new screenshots in `docs/screenshots/`. `scripts/setup(.ps1)` is now the LIGHT install
   (`uv sync --no-dev`, `npm ci`, about 330 MB); `-Dev` / `--dev` adds test tools and Chromium (about 1.5 GB more). The `start` scripts run `uv run --no-dev`.
