@@ -52,6 +52,17 @@ table (adjusted close when available), and CSV export from every table panel (`E
   `Ctrl+1..9`) and the fixed `Esc` / panel-focus keys are refused with a reason. `SHORTCUTS` shows the effective keys.
 - **Packaging:** `Dockerfile`, `docker-compose.yml`, static frontend serving via `OPENTERM_STATIC_DIR`, Tauri scaffold in `desktop/`.
 
+## New since 0.1.0 (2026-11-02 to 2026-11-03, on `main`)
+- **GUI mode:** one app, two shells. A new user starts in GUI mode (menu bar, sidebar with search, symbol picker, a toolbar on each panel,
+  `Alt+H` help drawer, welcome card and a 2-minute tour). Switch with the `TERMINAL | GUI` status-bar control, `Alt+G` or `SETTINGS MODE`.
+  Terminal mode is unchanged. Eight panels (Q, GP, WL, N, WEI, FA, PORT, BT) got clearer loading, empty and error states.
+- **MCP server (Phase 17):** `POST /mcp` (loopback only) and a stdio bridge `python -m openterm.mcp`, 17 read-only tools, no order tools. See [MCP.md](MCP.md).
+- **Alert delivery (Phase 17):** email (SMTP, TLS always verified), Telegram or a webhook; all off by default; `DLVR` panel with test sends and a delivery log.
+- **Daily brief (Phase 17):** movers, alerts, earnings, economic events and headlines with sources; scheduled (off by default); `BRIEF` panel.
+- **Strategy editor:** `BT EDIT` is a code editor (CodeMirror 6: Python colours, line numbers) with starter templates
+  (SMA cross, RSI mean reversion, breakout) and sandbox errors shown under the offending line while you type.
+- Gate: pytest 1708, e2e 226. Startup bundle 119.9 KB gzip (budget 400 KB).
+
 ## Known limits
 - Docker image and Tauri shell are written but not built or run (no Docker or Rust on the build machine).
 - Free sources throttle: GDELT answers slowly and rate-limits; Yahoo needs a cookie and crumb. See `docs/DATA_LIMITS.md`.

@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 DONE 2026-10-18 (live smoke of SWARM and AI AUTO done); Phases 17 and 18 PAUSED by the user on 2026-10-18; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 DONE 2026-10-18 (live smoke of SWARM and AI AUTO done); Phases 17 and 18 PAUSED by the user on 2026-10-18; Phase 17 BUILT 2026-11-03 (`docs/specs/PHASE_17.md`), Phase 18 still paused; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
@@ -41,8 +41,8 @@ Create them when the phase that needs them starts. Free tiers change: re-check l
 | EIA | Free | Energy inventories (`NRG`) | 19 |
 | OpenFIGI | Free (raises rate limit) | `SECF` identifier mapping | 19 |
 | Tradier | Free sandbox | Options chain with Greeks fallback | 14 |
-| Telegram bot token | Free | Push alerts and briefs | 17 (paused) |
-| SMTP (app password) | Free | Email alerts and briefs | 17 (paused) |
+| Telegram bot token | Free | Push alerts and briefs | 17 (built) |
+| SMTP (app password) | Free | Email alerts and briefs | 17 (built) |
 | Zerodha Kite Connect | Plan-dependent | Read-only holdings sync, later orders (India) | 18 (paused) |
 | IBKR | Free with an account | Read-only portfolio sync via TWS/Gateway | 18 (paused) |
 | Optional: Tiingo, Alpha Vantage, Polygon.io, CoinGecko demo, Marketaux | Free tiers | Extra fallbacks in the router | as needed |

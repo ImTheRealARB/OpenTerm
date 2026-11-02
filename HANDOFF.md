@@ -5,7 +5,17 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
-## Resume here (2026-11-02: repo is PUBLIC; README rewritten for beginners)
+## Resume here (updated 2026-11-03)
+**Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
+Phase 17 MCP server / alert delivery / daily brief (Part 2), strategy editor (Part 3). Phases 1-17 and 19 are built; **Phase 18 (brokers/orders) stays PAUSED.**
+Last full gate: pytest 1708, e2e 226 (ALL PASS). Bench on this busy machine scores 29-36 of 37, the same as the base commits under the same load (`docs/PERFORMANCE.md`).
+- **Run it:** `openterm` in PowerShell (installed at `C:\Users\Asus\.local\bin\openterm.cmd`; runs `scripts/start.ps1` of the main checkout `C:\Users\Asus\Documents\OpenTerm`).
+  That checkout must be on the latest `main` (`git pull`); its uncommitted CLAUDE.md block "Imported from AGENTS.md" is the user's own and was kept.
+- **Never verified for real:** SMTP / Telegram / webhook delivery with real credentials; Claude Desktop connecting to the MCP bridge; a 37/37 bench on a quiet machine; Docker and Tauri builds; macOS/Linux scripts.
+- **Decisions left to the user:** whether the DLVR `DESKTOP` toggle should gate desktop notifications (today they fire whenever the browser allows); whether the BT editor should fill the panel (fixed 22em now).
+- **Ideas for next:** plain-English rule builder for GUI mode (deferred in NEXT_SESSION.md); items in `docs/review/DECISIONS_FOR_USER.md`; Phase 18 only if the user unpauses it.
+
+### Entries per part (newest first)
 - **Strategy editor (NEXT_SESSION.md Part 3): DONE, uncommitted (2026-11-03, branch `claude/strategy-editor-part-3-588d90`, fast-forwarded onto the Phase 17 commit `20b5bd0`).**
   `BT EDIT` is CodeMirror 6 (`frontend/src/bt/codeEditor.ts`, reached only by a dynamic `import()` in `BtEditor.tsx`: own 126 KB gz chunk, startup bundle unchanged 119.9 KB).
   Templates in `backend/openterm/bt/templates.py` (`GET /api/bt/templates`); a new name opens the template list, `T` after Esc reopens it (GUI toolbar button too). Live check
@@ -13,7 +23,7 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
   Gate ALL PASS (pytest 1708, e2e 226; the first gate run had 2 BT e2e flakes "failed to fetch dynamically imported module", spec alone 23/23, rerun green).
   Bench 35/37, then 29/37 under heavier load; baseline `20b5bd0` in `C:\otbase` scored 36/37 and 29/37 alternated with it (`docs/PERFORMANCE.md` "Strategy editor bench").
   Real-backend smoke (fixture server + built frontend): templates load, RSI template opens, `import os` marked on line 1, Ctrl+K reaches the command line.
-  **Next:** user review and commit; merge `d1041b4`, `20b5bd0` and this branch into `main`. `C:\otbase` is a throwaway worktree (`git worktree remove C:/otbase` when done).
+  **Pushed to `origin/main` (fast-forward to `96ed188`, includes GUI mode and Phase 17).** The main checkout's local `main` still needs `git pull`. `C:\otbase` is a throwaway worktree (`git worktree remove C:/otbase` when done).
   Possible follow-up: the editor box is a fixed 22em tall instead of filling the panel.
 - **Phase 17 (NEXT_SESSION.md Part 2): DONE (2026-11-03, branch `claude/opus-phase-17-mcp-alerts-06250f`, built on top of the GUI-mode commit `d1041b4`).** Spec `docs/specs/PHASE_17.md`.
   MCP server (`openterm/mcp/`, `POST /mcp` + stdio bridge, `docs/MCP.md`), alert delivery (`openterm/delivery/`, email/Telegram/webhook, `DLVR` panel, migration 15), daily brief (`brief.py`,

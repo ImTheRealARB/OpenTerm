@@ -58,6 +58,10 @@ panels watch it; heavy maths runs in separate worker processes so it never block
 |---|---|
 | ![DES and FA: Apple profile and income statement](docs/screenshots/fundamentals.png) | ![RATES and ECO: yield curve and calendar](docs/screenshots/macro.png) |
 
+| Strategy editor (`BT EDIT`) |
+|---|
+| ![BT EDIT: RSI template with a sandbox error shown under line 1](docs/screenshots/bt-editor.png) |
+
 All of it works with **zero API keys**. A key (all free to sign up for, except the optional AI one) unlocks more. The full list
 of functions is in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 
@@ -134,6 +138,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 After this, typing `openterm` in any PowerShell or Command Prompt window starts the app. It only adds one small file to a
 folder that is already on your PATH; `.\scripts\install-launcher.ps1 -Remove` undoes it. macOS/Linux: `./scripts/install-launcher`.
+`openterm` always runs the copy in the folder you installed it from, so new features arrive only after `git pull` there (see Updating).
 
 ### Updating
 
