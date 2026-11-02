@@ -10,6 +10,14 @@ rebuild=0; browser=1
 for a in "$@"; do
   case "$a" in --rebuild) rebuild=1 ;; --no-browser) browser=0 ;; esac
 done
+# Reinstall frontend packages when package-lock.json changed since the last install (e.g. after `git pull`).
+# npm writes node_modules/.package-lock.json on every install, so a lockfile newer than it means new packages.
+# The backend needs no check: `uv run` below already syncs its packages to uv.lock on every start.
+if [ ! -f "$fe/node_modules/.package-lock.json" ] || [ "$fe/package-lock.json" -nt "$fe/node_modules/.package-lock.json" ]; then
+  echo "Frontend packages changed: installing (npm ci)..."
+  (cd "$fe" && npm ci --no-audit --no-fund)
+  rebuild=1
+fi
 if [ "$rebuild" = 1 ] || [ ! -f "$index" ] || [ -n "$(find "$fe/src" "$fe/index.html" "$fe/package.json" -newer "$index" -type f | head -n 1)" ]; then
   echo "Building the frontend..."
   (cd "$fe" && npm run build)

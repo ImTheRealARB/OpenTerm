@@ -147,7 +147,9 @@ git pull
 .\scripts\setup.ps1
 ```
 
-The next `start.ps1` rebuilds the screen automatically if the code changed.
+The next `start.ps1` (or `openterm`) rebuilds the screen automatically if the code changed, and reinstalls the
+frontend packages first if `git pull` changed them; the backend's packages are synced on every start. So after a pull,
+`openterm` alone is usually enough; `setup.ps1` is still the safe full refresh.
 
 ### Prefer Docker?
 

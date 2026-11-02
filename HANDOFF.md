@@ -11,6 +11,7 @@ Phase 17 MCP server / alert delivery / daily brief (Part 2), strategy editor (Pa
 Last full gate: pytest 1708, e2e 226 (ALL PASS). Bench on this busy machine scores 29-36 of 37, the same as the base commits under the same load (`docs/PERFORMANCE.md`).
 - **Run it:** `openterm` in PowerShell (installed at `C:\Users\Asus\.local\bin\openterm.cmd`; runs `scripts/start.ps1` of the main checkout `C:\Users\Asus\Documents\OpenTerm`).
   That checkout must be on the latest `main` (`git pull`); its uncommitted CLAUDE.md block "Imported from AGENTS.md" is the user's own and was kept.
+  Since 2026-11-03 `start.ps1` / `start` run `npm ci` when `package-lock.json` changed (a pull that added CodeMirror broke `openterm` before; tested on port 8011: install, build, start; second start skips it).
 - **Never verified for real:** SMTP / Telegram / webhook delivery with real credentials; Claude Desktop connecting to the MCP bridge; a 37/37 bench on a quiet machine; Docker and Tauri builds; macOS/Linux scripts.
 - **Decisions left to the user:** whether the DLVR `DESKTOP` toggle should gate desktop notifications (today they fire whenever the browser allows); whether the BT editor should fill the panel (fixed 22em now).
 - **Ideas for next:** plain-English rule builder for GUI mode (deferred in NEXT_SESSION.md); items in `docs/review/DECISIONS_FOR_USER.md`; Phase 18 only if the user unpauses it.

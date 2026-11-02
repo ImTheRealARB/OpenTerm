@@ -57,7 +57,7 @@ node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then 
 python scripts/new_function.py FOO --title "..." [--security] [--args "..."] [--dry-run]   # panel + registry entry + vitest stub + docs/FUNCTIONS.md
 .\scripts\dev.ps1               # backend :8000 + vite :5173 (vite binds to localhost / ::1, use http://localhost:5173)
 openterm                        # after `.\scripts\install-launcher.ps1` once: same as start.ps1 from any terminal (flags -NoBrowser, -Rebuild)
-.\scripts\start.ps1             # user mode: builds frontend if stale, backend serves it on :8000, opens the browser
+.\scripts\start.ps1             # user mode: npm ci if package-lock.json is newer than node_modules/.package-lock.json, builds frontend if stale, backend (uv run syncs uv.lock) serves it on :8000, opens the browser
 ```
 Env flags: `OPENTERM_FIXTURES=1` (replay `backend/tests/fixtures`), `OPENTERM_SYNTHETIC=1` (SYN0000-SYN9999 + tick
 stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.

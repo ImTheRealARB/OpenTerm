@@ -8,7 +8,20 @@ $fe = Join-Path $root "frontend"
 $dist = Join-Path $fe "dist"
 $index = Join-Path $dist "index.html"
 
-$stale = $Rebuild -or -not (Test-Path $index)
+# Reinstall frontend packages when package-lock.json changed since the last install (e.g. after `git pull`).
+# npm writes node_modules/.package-lock.json on every install, so a lockfile newer than it means new packages.
+# The backend needs no check: `uv run` below already syncs its packages to uv.lock on every start.
+$lock = Join-Path $fe "package-lock.json"
+$installed = Join-Path $fe "node_modules\.package-lock.json"
+$needInstall = -not (Test-Path $installed)
+if (-not $needInstall) { $needInstall = (Get-Item $lock).LastWriteTimeUtc -gt (Get-Item $installed).LastWriteTimeUtc }
+if ($needInstall) {
+  Write-Host "Frontend packages changed: installing (npm ci)..."
+  Push-Location $fe
+  try { npm ci --no-audit --no-fund; if ($LASTEXITCODE -ne 0) { throw "npm ci failed" } } finally { Pop-Location }
+}
+
+$stale = $Rebuild -or $needInstall -or -not (Test-Path $index)
 if (-not $stale) {
   $built = (Get-Item $index).LastWriteTimeUtc
   $inputs = @(Get-ChildItem -Recurse -File (Join-Path $fe "src")) + @(Get-Item (Join-Path $fe "index.html"), (Join-Path $fe "package.json"))
