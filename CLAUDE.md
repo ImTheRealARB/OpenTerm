@@ -205,6 +205,12 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `config.yaml` `providers:` OVERRIDES `DEFAULT_ORDER` per capability: a new provider for an existing capability (`history`) must be added there too. On Linux cloud sessions the pinned Playwright wants a newer headless shell than `/opt/pw-browsers` has: point `PLAYWRIGHT_BROWSERS_PATH` at a scratch dir with a `chromium_headless_shell-<rev>/chrome-headless-shell-linux64/chrome-headless-shell` symlink to the installed one.
   Tool gotchas: the Bash tool cannot parse heredocs containing `'''` (use the Write tool + `python file.py`); the PowerShell tool keeps its cwd between calls (use absolute `Set-Location`).
 
+## Public repo (2026-11-02)
+- The repo is public. `scripts/setup(.ps1)` is the LIGHT install (`uv sync --no-dev`, `npm ci`, about 330 MB); `-Dev`/`--dev` adds test tools and Chromium (about 1.5 GB). `start` scripts use `uv run --no-dev`.
+- README is written for beginners (winget/brew install steps, first-five-minutes table, troubleshooting) and leads with the speed table: when `docs/PERFORMANCE.md` numbers change, update the README table.
+- Screenshots live in `docs/screenshots/` (2x, 1600x900 viewport, live Yahoo data, taken with a Playwright script against `OPENTERM_STATIC_DIR=frontend/dist` and a temp `OPENTERM_DB_PATH`; a fresh browser context per shot, or panels pile up from the saved layout).
+- Never write real keys, emails or personal paths into docs or fixtures; history was scanned clean on 2026-11-02.
+
 ## Conventions
 - **Keep `docs/FUNCTIONS.md` current:** after any change to `functions/registry.ts`, `keys/keybindings.json` or `keys/keys.ts` labels (or the doc template in `scripts/gen_functions_doc.py`), run `python scripts/gen_functions_doc.py` before committing. `test_functions_doc.py` (pytest, so the gates) fails on a stale doc.
 - Commits end with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Commit only when the user says so. Remote `origin` is a private GitHub repo; push the working branch after each step.

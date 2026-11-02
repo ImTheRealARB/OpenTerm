@@ -18,7 +18,7 @@ fi
 port="${OPENTERM_PORT:-8000}"
 url="http://localhost:$port"
 export OPENTERM_STATIC_DIR="$fe/dist"
-(cd "$root/backend" && uv run python -m openterm) &
+(cd "$root/backend" && uv run --no-dev python -m openterm) &
 be=$!
 trap 'kill $be 2>/dev/null' EXIT INT TERM
 i=0

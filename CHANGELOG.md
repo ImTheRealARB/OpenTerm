@@ -2,6 +2,11 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Public release and docs (2026-11-02)
+- Repo made public. README rewritten for beginners (tool install with winget/brew, three-command setup, first-five-minutes table, troubleshooting) and now leads with the measured speed budgets.
+- New screenshots in `docs/screenshots/` (workspace, chart with indicators, backtest, fundamentals, rates and calendar) replace `docs/screenshot-phase3.png`.
+- `scripts/setup` is the light install by default (about 330 MB); `-Dev` / `--dev` adds test and lint tools and Chromium. The `start` scripts use `uv run --no-dev`.
+
 ## Review sprint and terminal look (2026-10-19)
 - Review sprint (13 agents, details in `docs/review/SUMMARY.md`): about 30 bugs fixed, each with a test (hub and WebSocket leaks, jobs runner races, redaction gaps, AI tool-path bypass, validation `$` vs `\Z`, load races in HIST / ECO / CRYP / MACRO / N / COMP, chart and drawing bugs, option and JGB parsers); speedups (`Cache.get_many` 527 -> 11.5 ms, `JobStore.recent` 1070 -> ~0.5 ms, GIP bucket 24 -> 5 ms, `doc_search` 171 -> 3.3 ms); two risky commits reverted (`docs/review/REVERTED.md`).
 - Dev loop: `scripts/check.ps1` / `check.sh` (affected tests only), `gates.mjs` runs ruff + tsc first then the heavy suites in parallel with per-gate timing, CI split into 5 jobs, `scripts/new_function.py`, Playwright on 4 workers. Full gate 123 s (was 167 s, with 9 flaky e2e).

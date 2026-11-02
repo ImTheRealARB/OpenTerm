@@ -5,7 +5,14 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
-## Resume here (2026-10-19, end of the review sprint and terminal-look session)
+## Resume here (2026-11-02: repo is PUBLIC; README rewritten for beginners)
+- **Public release (2026-11-02):** `ImTheRealARB/OpenTerm` is a public GitHub repo (history scanned, no secrets; a fresh clone installs in about 40 s and serves HTTP 200).
+  README rewritten (beginner install steps, speed table from `docs/PERFORMANCE.md`, disclaimers) with new screenshots in `docs/screenshots/`. `scripts/setup(.ps1)` is now the LIGHT install
+  (`uv sync --no-dev`, `npm ci`, about 330 MB); `-Dev` / `--dev` adds test tools and Chromium (about 1.5 GB more). The `start` scripts run `uv run --no-dev`.
+  **Open (needs the user):** commit and push these doc changes; optional prebuilt-frontend GitHub Release (users then need no Node); optional lite/full split of scipy, statsmodels and arch (about 160 MB);
+  macOS/Linux scripts and Docker are still untested.
+
+## Earlier: end of the review sprint and terminal-look session (2026-10-19)
 - **State:** everything is on `main` (local; the user decides when to push `origin/main`): Phases 1-16 and 19, the review sprint (`docs/review/SUMMARY.md`, `DECISIONS_FOR_USER.md`,
   `REVERTED.md`, `BASELINE.md`) and the terminal-look restyle (yellow command field with GO, key-hint row, ticker/name title bands, amber grid headers with rules, blue selection,
   `components/dataColors.css`). Final gate ALL PASS (pytest 1628, ruff, tsc, vitest, e2e 183) in 123 s; bench 37/37 (BT rows can miss when throttled: rest 2 min, rerun once).
@@ -420,4 +427,4 @@ To develop: `.\scripts\dev.ps1`, then open http://localhost:5173 (hot reload). F
 `$env:OPENTERM_FIXTURES = '1'` before starting the backend. For `FA`/`FIL`/`OWN` against live SEC data, set
 `$env:SEC_USER_AGENT = 'Your Name you@example.com'` first. To get a screenshot without the preview pane,
 run a small Playwright script against a production build (`npx vite preview --port 4173 --host 127.0.0.1`).
-The pattern is in `frontend/e2e/*.spec.ts`. Current look: `docs/screenshot-phase3.png`.
+The pattern is in `frontend/e2e/*.spec.ts`. Current look: `docs/screenshots/` (five 2x shots of the live app, taken 2026-11-02).

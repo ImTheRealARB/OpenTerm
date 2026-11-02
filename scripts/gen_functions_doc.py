@@ -105,7 +105,7 @@ Every action works from the keyboard; the mouse is optional. It runs with **zero
 Windows (PowerShell):
 
 ```powershell
-.\\scripts\\setup.ps1     # once: installs backend (uv) and frontend (npm) dependencies
+.\\scripts\\setup.ps1     # once: installs backend (uv) and frontend (npm) dependencies, about 330 MB (-Dev adds the test tools)
 .\\scripts\\start.ps1     # builds the frontend if needed, serves http://localhost:8000, opens the browser
 .\\scripts\\install-launcher.ps1   # once: adds an `openterm` command, so typing `openterm` in any terminal starts the app
 ```

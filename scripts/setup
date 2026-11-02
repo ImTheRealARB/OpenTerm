@@ -1,8 +1,15 @@
 #!/usr/bin/env sh
 # One-command setup (macOS/Linux). Requires: uv, Node 20+.
+# Default is the light install (just what it takes to RUN OpenTerm, about 330 MB).
+# Pass --dev to also install the test and lint tools and Chromium for the end-to-end tests (about 1.5 GB more).
 set -e
 root="$(cd "$(dirname "$0")/.." && pwd)"
-(cd "$root/backend" && uv sync)
-(cd "$root/frontend" && npm install --no-audit --no-fund && npx playwright install chromium)
+if [ "$1" = "--dev" ]; then
+  (cd "$root/backend" && uv sync)
+  (cd "$root/frontend" && npm install --no-audit --no-fund && npx playwright install chromium)
+else
+  (cd "$root/backend" && uv sync --no-dev)
+  (cd "$root/frontend" && npm ci --no-audit --no-fund)
+fi
 [ -f "$root/.env" ] || cp "$root/.env.example" "$root/.env"
-echo "Setup done. Run: ./scripts/dev"
+echo "Setup done. Run: ./scripts/start"

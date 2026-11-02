@@ -23,7 +23,7 @@ if ($stale) {
 $port = if ($env:OPENTERM_PORT) { $env:OPENTERM_PORT } else { "8000" }
 $url = "http://localhost:$port"
 $env:OPENTERM_STATIC_DIR = $dist
-$be = Start-Process -PassThru -NoNewWindow -WorkingDirectory "$root\backend" uv -ArgumentList "run", "python", "-m", "openterm"
+$be = Start-Process -PassThru -NoNewWindow -WorkingDirectory "$root\backend" uv -ArgumentList "run", "--no-dev", "python", "-m", "openterm"
 try {
   $ready = $false
   for ($i = 0; $i -lt 60 -and -not $ready -and -not $be.HasExited; $i++) {
