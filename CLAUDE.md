@@ -174,6 +174,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Vibe-Trading's symbol detector (`bt/engines/hooks.py` `_detect_market`) reads Yahoo-style `BTCUSDT.P`, `BRK-B`, `^GSPC` as China A** (its catch-all).
   Composite runs go through `composite.market_of`, which fails closed. Vibe's crypto `perpetual_strict` mode is not ported.
 - **A textarea that stops key propagation also swallows Ctrl+K.** IMPORT and BT EDIT let Ctrl+K through; copy that if you add another text box.
+  BT EDIT is CodeMirror 6 (`bt/codeEditor.ts`): only Ctrl/Cmd+K bubbles (Ctrl+S bubbling would also fire the global workspace save); `App.tsx` ignores `defaultPrevented` keys, so CodeMirror's
+  mac `Ctrl-k` binding is filtered out of `defaultKeymap`. Import `codeEditor` only via dynamic `import()` (keeps it out of the startup bundle and the BT chunk). Templates: `bt/templates.py`; live check: `POST /api/bt/check`.
+  `sandbox.load()` disables sockets for the whole process: tests that load a strategy in-process monkeypatch `sandbox.disable_network`.
   The mocked Playwright suites cannot see this: run the real-backend smoke (build the frontend, `OPENTERM_FIXTURES=1 OPENTERM_STATIC_DIR=frontend/dist`).
 - **Bench throttling:** the BT 10-year run (budget 300 ms) reads 230 ms rested and 380-490 ms after several back-to-back bench runs. Rest, then rerun once.
 - **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;

@@ -2,6 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Strategy editor (2026-11-03)
+- `BT EDIT` uses CodeMirror 6: Python syntax colours, line numbers, bracket matching, undo history. It loads as its own chunk (126 KB gzip) only when an editor opens; startup bundle unchanged (119.9 KB).
+- Starter templates: SMA cross, RSI mean reversion, breakout (`GET /api/bt/templates`). A new strategy name opens the template list; `T` (after Esc) reopens it.
+- Inline sandbox errors: 0.4 s after typing stops, `POST /api/bt/check` runs the sandbox check (nothing saved) and the message shows under the offending line and as a `SANDBOX:` line.
+- Tests: 14 new pytest (1708 total), 6 vitest, new Playwright cases (226 total).
+
 ## Phase 17: MCP server, alert delivery, daily brief (2026-11-03)
 - MCP server: `POST /mcp` (loopback only, Origin guard) and a stdio bridge `python -m openterm.mcp`; 17 read-only tools from the AI registry, each result labelled with source and age. No order tools (a test scans for them). `docs/MCP.md`.
 - Alert delivery: price and news alerts can be sent by email (SMTP, TLS always verified), Telegram or a webhook (new key `ALERT_WEBHOOK_URL`). Everything off by default; `DLVR` panel with test sends and a delivery log (migration 15 `deliveries`).

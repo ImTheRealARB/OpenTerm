@@ -96,7 +96,7 @@ BT WF AAPL SMA20>SMA50 1D 10Y             run it, then walk-forward windows; W o
 BT RUNS                                   stored runs (last 200): Enter opens, C marks two to compare, V switches to equity lines
 BT OPEN <runid>   BT EXPORT <runid> PINE  open a run; export Pine Script (rule runs) or TRADES / EQUITY / METRICS as CSV (P, E in a run)
 BT SAVE golden SMA20>SMA50                save a rule;  BT AAPL @golden 1D 5Y  runs it;  BT DEL golden removes it
-BT EDIT mysma                             Python strategy editor (SignalEngine): Ctrl+S save, Ctrl+Enter save and run; BT EDIT lists them
+BT EDIT mysma                             Python strategy editor (SignalEngine): a new name first offers templates (SMA cross, RSI mean reversion, breakout); T after Esc reopens them; sandbox errors show under the line; Ctrl+S save, Ctrl+Enter save and run; BT EDIT lists them
 IMPORT MYBARS                             paste daily bars (date,open,high,low,close[,volume]); then GP MYBARS or BT MYBARS CLOSE>SMA20
 IMPORT                                    list imported symbols (D twice removes; IMPORT DEL MYBARS)
 ```

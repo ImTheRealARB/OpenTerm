@@ -29,6 +29,8 @@ export interface ToolbarButton {
    * "noargs" = it has none (WL alone: the index of saved lists). Both views of WL and PORT use different keys.
    */
   when?: "args" | "noargs";
+  /** Show the button only when the view's first argument is this word (BT: "EDIT" = the strategy editor). Case-insensitive. */
+  firstArg?: string;
   /**
    * Needs text first. `command` is the command line text to run once the user typed it: `{arg0}` becomes the view's
    * first argument (the list name), `{input}` the typed text.
@@ -112,13 +114,18 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Monte Carlo", key: "m", title: "Monte Carlo robustness check (M)" },
     { label: "Walk-forward", key: "w", title: "Walk-forward validation (W)" },
     { label: "Pine", key: "p", title: "Export as a Pine script (P)" },
+    // Only in the strategy editor (BT EDIT <name>). The panel handles T only while the code box is not focused,
+    // and a press from this button moves focus to the panel first, so it works from the mouse too.
+    { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },
   ],
 };
 
 /** The buttons to show for a function and its current arguments (applies each button's `when`). */
 export function buttonsFor(code: string | undefined, args: readonly string[]): ToolbarButton[] {
   if (!code) return [];
-  return (TOOLBARS[code] ?? []).filter((b) => !b.when || (b.when === "args") === (args.length > 0));
+  return (TOOLBARS[code] ?? []).filter(
+    (b) => (!b.when || (b.when === "args") === (args.length > 0)) && (!b.firstArg || b.firstArg.toUpperCase() === (args[0] ?? "").toUpperCase()),
+  );
 }
 
 /** The `KeyboardEvent` init for a button's key: exactly what the browser would send for that key press. */

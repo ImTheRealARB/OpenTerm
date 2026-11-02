@@ -6,6 +6,15 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
 ## Resume here (2026-11-02: repo is PUBLIC; README rewritten for beginners)
+- **Strategy editor (NEXT_SESSION.md Part 3): DONE, uncommitted (2026-11-03, branch `claude/strategy-editor-part-3-588d90`, fast-forwarded onto the Phase 17 commit `20b5bd0`).**
+  `BT EDIT` is CodeMirror 6 (`frontend/src/bt/codeEditor.ts`, reached only by a dynamic `import()` in `BtEditor.tsx`: own 126 KB gz chunk, startup bundle unchanged 119.9 KB).
+  Templates in `backend/openterm/bt/templates.py` (`GET /api/bt/templates`); a new name opens the template list, `T` after Esc reopens it (GUI toolbar button too). Live check
+  `POST /api/bt/check` (sandbox only, nothing saved) 0.4 s after typing; `bt/sandboxError.ts` parses `LINE n:`; error shows under the line (`.cm-sbx-msg`) and as `SANDBOX:` text.
+  Gate ALL PASS (pytest 1708, e2e 226; the first gate run had 2 BT e2e flakes "failed to fetch dynamically imported module", spec alone 23/23, rerun green).
+  Bench 35/37, then 29/37 under heavier load; baseline `20b5bd0` in `C:\otbase` scored 36/37 and 29/37 alternated with it (`docs/PERFORMANCE.md` "Strategy editor bench").
+  Real-backend smoke (fixture server + built frontend): templates load, RSI template opens, `import os` marked on line 1, Ctrl+K reaches the command line.
+  **Next:** user review and commit; merge `d1041b4`, `20b5bd0` and this branch into `main`. `C:\otbase` is a throwaway worktree (`git worktree remove C:/otbase` when done).
+  Possible follow-up: the editor box is a fixed 22em tall instead of filling the panel.
 - **Phase 17 (NEXT_SESSION.md Part 2): DONE (2026-11-03, branch `claude/opus-phase-17-mcp-alerts-06250f`, built on top of the GUI-mode commit `d1041b4`).** Spec `docs/specs/PHASE_17.md`.
   MCP server (`openterm/mcp/`, `POST /mcp` + stdio bridge, `docs/MCP.md`), alert delivery (`openterm/delivery/`, email/Telegram/webhook, `DLVR` panel, migration 15), daily brief (`brief.py`,
   `BRIEF` panel, apscheduler job). SMTP TLS item closed. Gate ALL PASS (pytest 1694, e2e 223). Bench 34/37 and 32/37; the base commit without Phase 17 scored 32/37 under the same load

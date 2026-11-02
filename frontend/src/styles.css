@@ -174,7 +174,6 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 /* --- Phase 8 --- */
 .alrt-flash { background: var(--warn); color: var(--bg); padding: 0 4px; }
 .import { flex: none; border-top: 1px solid var(--line); max-height: 60%; overflow: auto; }
-.import.editor textarea { height: 22em; tab-size: 4; white-space: pre; overflow: auto; }
 .ai-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px 0; }
 .ai-turn { margin-bottom: 8px; }
 .ai-answer { white-space: pre-wrap; word-break: break-word; }
@@ -214,3 +213,6 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 .imap canvas { display: block; }
 .imap-legend { flex: none; display: flex; gap: 1px; margin: 2px 0; }
 .imap-legend span { color: var(--bg); padding: 0 6px; }
+
+/* --- Strategy editor (BT EDIT, CodeMirror): the box and the sandbox error marker are styled in bt/codeEditor.ts --- */
+.import.editor { overflow: hidden; }

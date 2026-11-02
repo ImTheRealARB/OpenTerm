@@ -44,7 +44,7 @@ panels watch it; heavy maths runs in separate worker processes so it never block
 | **Derivatives and fixed income** | Options chains and pricing, implied volatility, futures, bond maths, credit |
 | **Crypto** | Order book depth, funding rates, basis, stablecoin supply, DeFi yields, prediction-market odds |
 | **Portfolio** | Track positions with live profit and loss, price alerts, CSV import and export |
-| **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks |
+| **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks; or write a Python strategy in `BT EDIT` (code editor with starter templates and errors shown on the offending line) |
 | **Risk and quant** | Value at Risk, portfolio optimisation, factor and attribution analysis |
 | **AI (optional)** | Ask questions answered with the app's own data, every answer showing which tools it used. Needs an OpenRouter key |
 | **Alerts and briefs** | Alerts can reach you by email, Telegram or a webhook (`DLVR`, all off by default), plus a scheduled daily brief (`BRIEF`) |

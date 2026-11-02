@@ -1121,6 +1121,37 @@ async def bt_strategies(request: Request):
     return {"strategies": await bt_of(request).strategies()}
 
 
+@router.get("/bt/templates")
+async def bt_templates():
+    # Starter strategies for the editor (plain text, see bt/templates.py).
+    from .bt.templates import TEMPLATES
+
+    return {"templates": TEMPLATES}
+
+
+@router.post("/bt/check")
+async def bt_check(request: Request):
+    """Dry-run the sandbox check on editor text. Saves nothing and runs nothing, so any caller may use it.
+    A rejected strategy is still HTTP 200 with ok=false: the text is a normal answer, not a failed request."""
+    from .bt import sandbox
+    from .bt.store import BtError
+
+    try:
+        body = await json_object(request)
+        code = body.get("code")
+        if not isinstance(code, str):
+            raise BtError("bad_request", "CODE MUST BE A STRING")
+    except BtError as e:
+        return bt_error(e)
+    except UserDataError as e:
+        return error(e)
+    try:
+        sandbox.check(code)
+    except sandbox.SandboxError as e:
+        return {"ok": False, "error": redact(str(e))}
+    return {"ok": True}
+
+
 @router.get("/bt/strategies/{name}")
 async def bt_strategy_get(request: Request, name: str):
     from .bt.store import BtError

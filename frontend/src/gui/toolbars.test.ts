@@ -58,3 +58,13 @@ describe("GUI panel toolbars", () => {
     expect(expandAsk("PORT {arg0} BASE {input}", [], "INR")).toBe("PORT  BASE INR");
   });
 });
+
+describe("firstArg buttons", () => {
+  it("BT Templates shows only in the strategy editor", () => {
+    const labels = (args: string[]) => buttonsFor("BT", args).map((b) => b.label);
+    expect(labels(["EDIT", "mysma"])).toContain("Templates");
+    expect(labels(["edit", "mysma"])).toContain("Templates");
+    expect(labels(["AAPL", "@mysma"])).not.toContain("Templates");
+    expect(labels([])).not.toContain("Templates");
+  });
+});

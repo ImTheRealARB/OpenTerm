@@ -703,7 +703,21 @@ export interface BtStrategy extends BtStrategyCard {
   code: string;
 }
 
+/** One starter strategy offered by BT EDIT <NEW NAME> (GET /api/bt/templates). */
+export interface BtTemplate {
+  id: string;
+  title: string;
+  summary: string;
+  code: string;
+}
+
+/** The sandbox check answer: `ok`, or `ok: false` with the text ("LINE 3: IMPORT os IS NOT ALLOWED ...", or no LINE prefix). */
+export type BtCheck = { ok: true } | { ok: false; error: string };
+
 export const btApi = {
+  templates: () => send<{ templates: BtTemplate[] }>("GET", "/api/bt/templates"),
+  /** Runs the sandbox rules over the code without saving it (the editor's live check). */
+  check: (code: string) => send<BtCheck>("POST", "/api/bt/check", { code }),
   strategies: () => send<{ strategies: BtStrategyCard[] }>("GET", "/api/bt/strategies"),
   strategy: (name: string) => send<BtStrategy>("GET", `/api/bt/strategies/${encodeURIComponent(name)}`),
   /** Python code, or a rule. The server checks both (the sandbox allowlist for code) and says why it refuses. */

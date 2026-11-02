@@ -11,6 +11,16 @@ import { openApp } from "./app";
 const now = () => Date.now() / 1000;
 let ws: WebSocketRoute | null = null;
 
+// Strategy editor mocks. `checkReply` is what POST /api/bt/check answers; a test changes it to simulate a sandbox error.
+const TEMPLATE_CODE = "import numpy as np\nimport pandas as pd\n\n\nclass SignalEngine:\n    def generate(self, data_map):\n        return {}\n";
+const TEMPLATES = [
+  { id: "sma_cross", title: "SMA CROSSOVER", summary: "Long when the fast average is above the slow one.", code: TEMPLATE_CODE },
+  { id: "rsi_mean_reversion", title: "RSI MEAN REVERSION", summary: "Buy oversold, sell overbought.", code: "# rsi\n" + TEMPLATE_CODE },
+  { id: "breakout", title: "CHANNEL BREAKOUT", summary: "Long above the 20-day high.", code: "# breakout\n" + TEMPLATE_CODE },
+];
+let checkReply: (code: string) => unknown = () => ({ ok: true });
+const box = (page: Page) => panel(page).locator('.cm-content[aria-label="strategy code"]');
+
 const DAYS = Array.from({ length: 60 }, (_, i) => 1_700_000_000 + i * 86_400);
 const run = (id: string, rule: string, total: number) => ({
   id, rule, strategy: null, symbols: ["AAPL"], interval: "1D", range: "5Y", created_at: now(),
@@ -50,6 +60,7 @@ const WF = {
 
 async function setup(page: Page) {
   ws = null;
+  checkReply = () => ({ ok: true });
   const posts: { url: string; body: unknown }[] = [];
   const runs = new Map([["r1", run("r1", "SMA20>SMA50", 3.2)], ["r2", run("r2", "CLOSE>SMA200", 1.4)]]);
   await page.routeWebSocket(/\/ws$/, (route) => {
@@ -72,6 +83,8 @@ async function setup(page: Page) {
       }
       posts.push({ url: path, body });
     }
+    if (path === "/api/bt/templates") return r.fulfill({ json: { templates: TEMPLATES } });
+    if (path === "/api/bt/check") return r.fulfill({ json: checkReply((req.postDataJSON() as { code: string }).code) });
     if (path === "/api/bt/run") return r.fulfill({ json: { id: "j1", kind: "bt.run", state: "queued", progress: 0, msg: "", cached: false } });
     if (path === "/api/bt/runs") return r.fulfill({ json: { runs: [...runs.values()].map(({ equity, benchmark, trades, ...card }) => card) } });
     if (path === "/api/bt/strategies") {
@@ -341,43 +354,116 @@ test("BT EDIT: lists saved strategies and Enter opens one in the editor", async 
     await page.keyboard.press("Enter");
     await expect(p).toContainText("BT EDIT mysma", { timeout: 500 });
   }).toPass();
-  await expect(p.locator("textarea")).toHaveValue(/class SignalEngine/);
+  await expect(box(page)).toContainText("class SignalEngine");
   await expect(p).toContainText("SAVED PYTHON STRATEGY");
+  // CodeMirror draws line numbers in a gutter next to the text
+  await expect(p.locator(".cm-lineNumbers")).toBeVisible();
 });
 
-test("BT EDIT: a new strategy starts from the template, Tab indents, Ctrl+S saves it", async ({ page }) => {
+test("BT EDIT: a new name shows the three templates; Enter loads one, Tab indents, Ctrl+S saves it", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "BT EDIT newone");
-  const box = panel(page).locator("textarea");
-  await expect(box).toHaveValue(/class SignalEngine/);
-  await expect(panel(page)).toContainText("NEW PYTHON STRATEGY");
-  await expect(box).toBeFocused();
-  await box.press("Control+Home");
-  await box.press("Tab");
-  expect((await box.inputValue()).startsWith("    import numpy")).toBe(true);
-  await expect(panel(page)).toContainText("UNSAVED CHANGES");
-  await box.press("Control+s");
-  await expect(panel(page)).toContainText("SAVED newone (PYTHON)");
+  const p = panel(page);
+  await expect(p).toContainText("NEW PYTHON STRATEGY");
+  await expect(p.locator(".grid .sr")).toContainText("SMA CROSSOVER");
+  // move down once: the chooser is keyboard driven like every other list
+  await expect(async () => {
+    await page.keyboard.press("j");
+    await expect(p.locator(".grid .sr")).toContainText("RSI MEAN REVERSION", { timeout: 500 });
+  }).toPass();
+  await page.keyboard.press("Enter");
+  await expect(box(page)).toContainText("# rsi");
+  await expect(box(page)).toContainText("class SignalEngine");
+  await expect(p.locator(".cm-lineNumbers")).toBeVisible();
+  await expect(box(page)).toBeFocused();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Tab");
+  // the first line now starts with four spaces (textContent keeps them; toHaveText would collapse them)
+  expect(await p.locator(".cm-line").first().evaluate((el) => el.textContent)).toBe("    # rsi");
+  await expect(p).toContainText("UNSAVED CHANGES");
+  await page.keyboard.press("Control+s");
+  await expect(p).toContainText("SAVED newone (PYTHON)");
   const put = posts.find((x) => x.url === "/api/bt/strategies/newone");
   expect((put!.body as { code: string }).code).toContain("class SignalEngine");
+  // Ctrl+S in the editor must not ALSO trigger the global "save workspace" shortcut (which prefills the command line)
+  await expect(page.locator("#cmdline")).not.toHaveValue(/LAYOUT SAVE/);
 });
 
-test("BT EDIT: the server's reason for refusing code is shown and nothing runs", async ({ page }) => {
+test("BT EDIT: T reopens the templates; unsaved changes need a second T", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT EDIT mysma");
+  const p = panel(page);
+  await expect(box(page)).toContainText("class SignalEngine");
+  await box(page).click();
+  await page.keyboard.type("# edit");
+  await expect(p).toContainText("UNSAVED CHANGES");
+  await page.keyboard.press("Escape");
+  await expect(async () => {
+    await page.keyboard.press("t");
+    await expect(p).toContainText("UNSAVED CHANGES: PRESS T AGAIN TO REPLACE", { timeout: 500 });
+  }).toPass();
+  await page.keyboard.press("t");
+  await expect(p.locator(".grid .sr")).toContainText("SMA CROSSOVER");
+  await page.keyboard.press("Enter");
+  await expect(box(page)).toContainText("class SignalEngine");
+  await expect(box(page)).not.toContainText("# edit");
+});
+
+test("BT EDIT: the server's reason for refusing code is shown on its line and nothing runs", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "BT EDIT bad");
-  const box = panel(page).locator("textarea");
-  await expect(box).toHaveValue(/class SignalEngine/);
-  await box.press("Control+Enter");
+  await expect(panel(page).locator(".grid .sr")).toContainText("SMA CROSSOVER");
+  await page.keyboard.press("Enter");
+  await expect(box(page)).toContainText("class SignalEngine");
+  await page.keyboard.press("Control+Enter");
   await expect(panel(page)).toContainText("NOT SAVED: STRATEGY REJECTED: LINE 2: IMPORT OF os IS NOT ALLOWED");
+  // the same reason, drawn inline under line 2 and in the DOM line under the editor
+  await expect(panel(page).locator(".cm-sbx-msg")).toHaveText("IMPORT OF os IS NOT ALLOWED");
+  await expect(panel(page).locator(".cm-sbx-errline")).toHaveCount(1);
+  await expect(panel(page)).toContainText("SANDBOX: LINE 2: IMPORT OF os IS NOT ALLOWED");
   expect(posts.filter((x) => x.url === "/api/bt/run")).toHaveLength(0);
+});
+
+test("BT EDIT: the live check marks the offending line 400 ms after typing and clears when fixed", async ({ page }) => {
+  const { posts } = await setup(page);
+  checkReply = (code) => (code.includes("import os") ? { ok: false, error: "LINE 2: IMPORT os IS NOT ALLOWED (allowed: numpy pandas)" } : { ok: true });
+  await cmd(page, "BT EDIT mysma");
+  const p = panel(page);
+  await expect(box(page)).toContainText("class SignalEngine");
+  await expect(p.locator(".cm-sbx-msg")).toHaveCount(0);
+  await box(page).click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.type("import os\n");
+  await expect(p.locator(".cm-sbx-msg")).toHaveText("IMPORT os IS NOT ALLOWED (allowed: numpy pandas)");
+  await expect(p.locator(".cm-sbx-errline")).toHaveCount(1);
+  await expect(p).toContainText("SANDBOX: LINE 2: IMPORT os IS NOT ALLOWED");
+  expect(posts.some((x) => x.url === "/api/bt/check")).toBe(true);
+  // select the first line (Shift+Down) and delete it: the next check answers ok and both displays go
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Shift+ArrowDown");
+  await page.keyboard.press("Backspace");
+  await expect(p.locator(".cm-sbx-msg")).toHaveCount(0);
+  await expect(p).not.toContainText("SANDBOX:");
+});
+
+test("BT EDIT: Ctrl+K pressed inside the editor still opens the command line", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT EDIT mysma");
+  await expect(box(page)).toContainText("class SignalEngine");
+  await box(page).click();
+  await expect(box(page)).toBeFocused();
+  await page.keyboard.press("Control+k");
+  await expect(page.locator("#cmdline")).toBeFocused();
+  // and the editor kept its text: Ctrl+K did not delete a line (macOS binds it to "delete to line end" in CodeMirror)
+  await expect(box(page)).toContainText("class SignalEngine");
 });
 
 test("BT EDIT: Ctrl+Enter saves and runs the strategy with the RUN line", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "BT EDIT mysma");
-  await expect(panel(page).locator("textarea")).toHaveValue(/class SignalEngine/);
+  await expect(box(page)).toContainText("class SignalEngine");
   await panel(page).getByLabel("run line").fill("SPY,QQQ 1W 10Y SHORT");
-  await panel(page).locator("textarea").press("Control+Enter");
+  await panel(page).getByLabel("run line").press("Control+Enter");
   await expect.poll(() => posts.some((x) => x.url === "/api/bt/run")).toBe(true);
   expect(posts.find((x) => x.url === "/api/bt/run")!.body).toMatchObject({ strategy: "mysma", symbols: ["SPY", "QQQ"], interval: "1W", range: "10Y", options: { short: true } });
   expect((posts.find((x) => x.url === "/api/bt/run")!.body as { rule?: string }).rule).toBeUndefined();

@@ -570,3 +570,17 @@ MCP server, alert delivery and daily brief. No new budgets (delivery runs as a b
 
 Result: the baseline misses as much as Phase 17 under the same load, and the missed rows change from run to run, so the misses are machine load, not this change.
 Bundle 119.7 KB gz on the baseline (budget 400 KB). Optional: one bench on a quiet machine for a clean 37/37 record.
+
+### Strategy editor bench (2026-11-03, branch `claude/strategy-editor-part-3-588d90`, Windows)
+CodeMirror 6 in `BT EDIT`, loaded by a dynamic `import()` inside the editor (its own chunk, never preloaded). Sizes (gzip): startup bundle 119.9 KB before and after;
+BT chunk 13.1 KB to 13.9 KB (template list); new `codeEditor` chunk 125.9 KB, fetched only when an editor opens. Gate ALL PASS (pytest 1708, e2e 226). `OPENROUTER_API_KEY` unset.
+Baseline = `20b5bd0` (Phase 17, no editor change) in `C:\otbase`, runs alternated on a busy machine.
+
+| Run | Tree | Result | Misses |
+|---|---|---|---|
+| 1 | editor | 35 / 37 | tick-to-pixel 53.1 ms, BT 10-year 308 ms |
+| 2 | baseline | 36 / 37 | BT 10-year 301.6 ms |
+| 3 | editor | 29 / 37 | frame under load 33.4, keystroke echo 20.7, layout load 100.6, chart pan 33.4, BT 10-year 461, BT open 130.7, SEAS 21.5 ms, +1 |
+| 4 | baseline, same load | 29 / 37 | tick-to-pixel 76.1, frame under load 33.4, keystroke echo 17.5, chart pan 33.4, BT 10-year 695, BT open 117.9, SEAS 29.6, IMAP 24.9 ms |
+
+Result: the baseline misses as much under the same load; none of the missed rows run editor code (the BT open line paints a cached run, not the editor). Machine load, not this change.
