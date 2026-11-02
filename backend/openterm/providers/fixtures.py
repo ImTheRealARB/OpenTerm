@@ -219,7 +219,8 @@ def _route(request: httpx.Request) -> httpx.Response:
 # --- Phase 11 step 5: LLM gateway ---
 # Nothing listens for Ollama in fixture mode. OpenRouter chat replays the one recorded stream when it exists
 # (llm_openrouter_stream.txt, raw SSE); every other LLM call is "not recorded".
-LLM_HOSTS = {"openrouter.ai", "api.openai.com", "api.anthropic.com"}
+LLM_HOSTS = {"openrouter.ai", "api.openai.com", "api.anthropic.com", "opencode.ai", "api.deepseek.com", "api.groq.com",
+             "api.mistral.ai", "api.x.ai", "api.together.xyz", "api.fireworks.ai", "generativelanguage.googleapis.com"}
 _route_before_llm = _route
 
 

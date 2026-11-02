@@ -104,7 +104,8 @@ def _keys(raw) -> dict:
     return out
 
 
-AI_PROVIDERS = ("openrouter", "openai", "anthropic", "ollama")
+AI_PROVIDERS = ("openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks",
+                "gemini", "ollama")  # keep equal to llm.client.PROVIDERS (not imported: the gateway loads on first use)
 AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}\Z")
 
 

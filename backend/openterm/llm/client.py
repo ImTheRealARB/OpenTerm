@@ -19,8 +19,8 @@ from . import anthropic, openai_compat, spend
 from .events import Event
 from .sse import SSEParser
 
-PROVIDERS = ("openrouter", "openai", "anthropic", "ollama")
-KEYED = ("openrouter", "openai", "anthropic")
+KEYED = (*openai_compat.HOSTED[:2], "anthropic", *openai_compat.HOSTED[2:])  # keeps the old order, new ones after
+PROVIDERS = (*KEYED, "ollama")
 OLLAMA = "http://127.0.0.1:11434"
 TIMEOUT = httpx.Timeout(60.0, connect=5.0)  # read: 60 s between chunks
 MODELS_TTL = 3600.0

@@ -9,6 +9,8 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
 Phase 17 MCP server / alert delivery / daily brief (Part 2), strategy editor (Part 3). Phases 1-17 and 19 are built; **Phase 18 (brokers/orders) stays PAUSED.**
 Last full gate: pytest 1708, e2e 226 (ALL PASS). Bench on this busy machine scores 29-36 of 37, the same as the base commits under the same load (`docs/PERFORMANCE.md`).
+- **More AI providers (2026-11-03, uncommitted):** APIKEYS and the AI gateway now also take `opencodego`, `deepseek`, `groq`, `mistral`, `xai`, `together`, `fireworks`, `gemini`
+  (all OpenAI-compatible; base URLs in `llm/openai_compat.BASES`, key specs and key tests in `keys.py`). Not run against real keys. Models need a price in `config.yaml llm.prices` while a spend cap is set.
 - **Run it:** `openterm` in PowerShell (installed at `C:\Users\Asus\.local\bin\openterm.cmd`; runs `scripts/start.ps1` of the main checkout `C:\Users\Asus\Documents\OpenTerm`).
   That checkout must be on the latest `main` (`git pull`); its uncommitted CLAUDE.md block "Imported from AGENTS.md" is the user's own and was kept.
   Since 2026-11-03 `start.ps1` / `start` run `npm ci` when `package-lock.json` changed (a pull that added CodeMirror broke `openterm` before; tested on port 8011: install, build, start; second start skips it).

@@ -14,7 +14,9 @@ export const DECIMALS = [".", ","] as const;
 export const POLL_BOUNDS = { news: [30, 600], movers: [30, 600], crypto: [15, 600], sources: [5, 120] } as const;
 export type PollKey = keyof typeof POLL_BOUNDS;
 export const MAX_CLOCKS = 3;
-export const AI_PROVIDERS = ["openrouter", "openai", "anthropic", "ollama"] as const;
+export const AI_PROVIDERS = [
+  "openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini", "ollama",
+] as const;
 /** Models the AI rows cycle through (any other id works via `SETTINGS AI MODEL <id>`). */
 export const AI_MODEL_CHOICES = ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_VISION_CHOICES = ["deepseek/deepseek-v4.1-flash", "anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "google/gemma-4-31b-it:free"] as const;

@@ -16,7 +16,18 @@ BASES = {
     "openrouter": "https://openrouter.ai/api/v1",
     "openai": "https://api.openai.com/v1",
     "ollama": "http://127.0.0.1:11434/v1",
+    # Hosted OpenAI-compatible providers (all speak `/chat/completions`, Bearer key, SSE stream).
+    "opencodego": "https://opencode.ai/inference/go/openai/v1",  # OpenCode Go subscription, OpenAI-style models only
+    "deepseek": "https://api.deepseek.com/v1",
+    "groq": "https://api.groq.com/openai/v1",
+    "mistral": "https://api.mistral.ai/v1",
+    "xai": "https://api.x.ai/v1",
+    "together": "https://api.together.xyz/v1",
+    "fireworks": "https://api.fireworks.ai/inference/v1",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta/openai",
 }
+# Keyed providers that use the OpenAI-compatible request/stream code (everything in BASES except local Ollama).
+HOSTED = tuple(p for p in BASES if p != "ollama")
 
 
 class OpenAIStream:
