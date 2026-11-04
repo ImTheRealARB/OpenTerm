@@ -341,7 +341,7 @@ test("10. recover from an unknown symbol without help", async ({ page }) => {
   await search(page, "zzzzqq");
   await page.getByTestId("gui-symbol").press("Enter"); // Enter is the keyboard equivalent of the Go button; not a click
   const note = panel(page).getByTestId("note-action");
-  await expect(note).toBeVisible();
+  await expect(note.first()).toBeVisible();
   await expect(panel(page)).toContainText(/NO DATA/i); // exact error text stays
   await c.click(note.first()); // e.g. "Try AAPL"
   await expect(header(page)).toContainText(/AAPL|MSFT|NVDA|TSLA/);
