@@ -34,7 +34,10 @@ const add = (metric, value, budget, unit, note = "") => {
 const p95 = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.round(0.95 * (a.length - 1))] : NaN);
 
 function start(cmd, cwd, env = {}) {
-  const child = spawn(cmd, { cwd, shell: true, stdio: "ignore", env: { ...process.env, ...env } });
+  // detached on POSIX makes the child its own process group leader, so stopAll's process.kill(-pid) reaches the whole tree
+  // (shell -> uv -> python). Without it the kill threw, the fallback c.kill() only stopped the shell, and the old backend
+  // kept port 8000 with its old DB: the next bench run talked to it and saw "served from the cache".
+  const child = spawn(cmd, { cwd, shell: true, stdio: "ignore", detached: !isWin, env: { ...process.env, ...env } });
   children.push(child);
   return child;
 }
@@ -494,6 +497,10 @@ async function main() {
   if (!existsSync(join(FE, "dist", "index.html"))) throw new Error("frontend/dist missing");
 
   // Fixture mode: recorded provider responses, so the bench never depends on (or hammers) Yahoo.
+  for (const url of [`${BACKEND}/api/health`, FRONTEND]) {
+    // a leftover server would answer instead of ours (old DB, old jobs cache): refuse to run against it
+    if (await fetch(url).then((r) => r.ok, () => false)) throw new Error(`${url} already answers: stop the leftover server first`);
+  }
   const dbDir = mkdtempSync(join(tmpdir(), "openterm-bench-"));
   start("uv run python -m openterm", BE, {
     OPENTERM_FIXTURES: "1",

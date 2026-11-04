@@ -3,8 +3,6 @@
 import asyncio
 import time
 
-import orjson
-
 from openterm.cache import Cache
 from openterm.db import open_db
 
@@ -147,3 +145,39 @@ def test_xirr_finds_root_when_ends_have_same_sign():
     assert abs(r - 0.10) < 1e-6
     # no sign change in the scan range -> explicit None, not a wrong root
     assert xirr([(date(2026, 1, 1), -100.0), (date(2027, 1, 1), -50.0)]) is None
+
+
+# --- 6. RISK values holdings on the last COMMON day ------------------------------------------------
+def test_risk_valued_on_last_common_day(monkeypatch):
+    import json
+
+    from openterm.quantjobs import common as cm
+    from openterm.quantjobs import risk
+
+    day = 86400
+    t0 = 1_700_000_000 // day * day
+    n = 300
+
+    def bars(count, level=100.0):
+        return {"t": [t0 + i * day for i in range(count)], "c": [level + (i % 7) * 0.5 for i in range(count)]}
+
+    data = {"bars": {"AAA": bars(n), "BBB": bars(n - 3, 50.0)}, "fx": {}}  # BBB stops three days earlier
+    monkeypatch.setattr(cm, "load", lambda params: data)
+    params = {"positions": [{"symbol": "AAA", "qty": 1, "ccy": ""}, {"symbol": "BBB", "qty": 1, "ccy": ""}], "name": "T", "range": "1y"}
+    out = json.dumps(risk.run(params, lambda *a: None))
+    common_day = cm.iso((t0 + (n - 4) * day) // day)
+    assert f"VALUED AT {common_day}" in out
+
+
+# --- 7. Deribit forward = true median -----------------------------------------------------------------
+def test_deribit_forward_is_true_median():
+    from openterm.options.chain import parse_deribit
+
+    def inst(name, under):
+        return {"instrument_name": name, "underlying_price": under, "mark_iv": 50.0, "mark_price": 0.01, "open_interest": 1,
+                "volume": 1, "bid_price": 0.01, "ask_price": 0.02}
+
+    book = {"result": [inst("BTC-27DEC30-80000-C", 100.0), inst("BTC-27DEC30-80000-P", 102.0),
+                       inst("BTC-27DEC30-90000-C", 104.0), inst("BTC-27DEC30-90000-P", 110.0)]}
+    out = parse_deribit(book, {"result": {"index_price": 100.0}}, "BTC", "deribit")
+    assert out["expiries"][0]["forward"] == 103.0  # mean of 102 and 104, not the upper middle 104

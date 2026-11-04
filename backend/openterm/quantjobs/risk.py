@@ -75,7 +75,9 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     if days.size < MIN_DAYS:
         return cm.not_runnable(title, f"ONLY {days.size} DAYS COMMON TO ALL HOLDINGS (NEED {MIN_DAYS})", labels)
     fx = data.get("fx") or {}
-    mv = np.array([p["qty"] * cols[p["symbol"]][1][-1] * fx.get(p.get("ccy") or "", 1.0) for p in pos])
+    # every holding is valued at the same day (the last one all series share), not at each series' own last close,
+    # so one stale symbol cannot mix prices from different days into the weights
+    mv = np.array([p["qty"] * px[-1, i] * fx.get(p.get("ccy") or "", 1.0) for i, p in enumerate(pos)])
     value = float(mv.sum())
     if not value > 0:
         return cm.not_runnable(title, "NET PORTFOLIO VALUE IS NOT POSITIVE", labels)
@@ -212,7 +214,8 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     ]
     if h95 and h95["var_pct"] is not None:
         heads.append(head(f"VAR 95% {hor}D HIST", f"{h95['var_pct'] * 100:.2f}%", h95["var_pct"]))
-    notes = ["CURRENT WEIGHTS HELD CONSTANT: TODAY'S QUANTITY X LAST CLOSE, REBALANCED DAILY OVER THE WINDOW",
+    notes = [("CURRENT WEIGHTS HELD CONSTANT: TODAY'S QUANTITY X CLOSE, REBALANCED DAILY OVER THE WINDOW; "
+              f"VALUED AT {cm.iso(int(days[-1]))}, THE LAST DAY COMMON TO ALL HOLDINGS"),
              f"COMPUTED HERE FROM {n} DAILY RETURNS ({params.get('range', '')}); NOT A FORECAST", *cm.data_notes(labels)]
     if params.get("mixed_ccy"):
         notes.append("LOCAL-CURRENCY RETURNS, FX RISK NOT INCLUDED")

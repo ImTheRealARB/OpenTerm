@@ -196,7 +196,8 @@ def parse_deribit(book: dict, index: dict, currency: str, source: str) -> dict:
                                                      "volume": r.get("volume") or 0})
     for ep, e in by.items():
         u = sorted(unders[ep])
-        e["forward"] = u[len(u) // 2]
+        mid = len(u) // 2
+        e["forward"] = u[mid] if len(u) % 2 else (u[mid - 1] + u[mid]) / 2  # even count: mean of the two middle values
     if not by:
         raise ProviderError("not_found", "no option book")
     return {"currency": currency, "index": float(idx), "expiries": [by[k] for k in sorted(by)], "source": source}

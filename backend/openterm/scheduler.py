@@ -1,7 +1,7 @@
 """Background jobs so user requests hit warm caches and tripped providers recover on their own."""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -40,7 +40,7 @@ def start(router: Router, cache: Cache | None = None) -> AsyncIOScheduler:
     if cache is not None:
         # first run 5 min after start (not at boot, which is busy), then every 6 hours
         sched.add_job(prune_cache, "interval", hours=6, args=[cache], id="cache_prune", max_instances=1, coalesce=True,
-                      next_run_time=datetime.now(timezone.utc) + timedelta(minutes=5))
+                      next_run_time=datetime.now(UTC) + timedelta(minutes=5))
     sched.start()
     return sched
 
