@@ -19,6 +19,8 @@ import { termProps } from "../gui/term";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { BtStarter } from "./BtStarter";
+import { BtRuleLazy } from "./BtRuleLazy";
+import { ruleToSentence } from "./ruleSentence";
 import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -191,6 +193,10 @@ export default function BT({ panelId, args }: FunctionProps) {
   /** Starter template (GUI empty state): the template's Python code on one symbol, 1D bars over 5Y, default costs. */
   const runStarter = (code: string, symbol: string) =>
     post({ code, symbols: [symbol.toUpperCase()], interval: "1D", range: "5Y", options: {} });
+
+  /** Rule builder (GUI empty state): the generated rule text on one symbol, 1D bars over 5Y, default costs. */
+  const runRuleForm = (rule: string, symbol: string) =>
+    post({ rule, symbols: [symbol.toUpperCase()], interval: "1D", range: "5Y", options: {} }, rule);
 
   /** BT SAVE <NAME> <RULE>: a named rule, run later as `BT <SYMBOLS> @<NAME>`. (Python strategies are saved from BT EDIT.) */
   const saveRule = (name: string | undefined, rule: string) => {
@@ -452,6 +458,7 @@ export default function BT({ panelId, args }: FunctionProps) {
             NO BACKTEST OPEN
           </PanelNote>
           <BtStarter onRun={runStarter} />
+          <BtRuleLazy onRun={runRuleForm} />
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
@@ -572,13 +579,17 @@ function Head({ parsed, run }: { parsed: BtRun | null; run: BtRunFull | null }) 
   const syms = run?.symbols ?? parsed?.symbols;
   if (!syms) return <div className="line"><span className="acc">BT</span> <span className="dim">BACKTEST</span></div>;
   const rule = run ? (run.rule ?? (run.strategy ? `STRATEGY ${run.strategy}` : "PYTHON STRATEGY")) : parsed?.rule;
+  const sentence = gui && rule ? ruleToSentence(rule) : null;
   return (
-    <div className="line">
-      <span className="acc">BT</span> {syms.join(",")} · {rule} · {run?.interval ?? parsed?.interval} {run?.range ?? parsed?.range}
-      {run?.engine && (
-        <span className="dim"> · <span {...termProps("ENGINE", gui)}>{gui ? "MARKET" : "ENGINE"}</span> {run.engine.toUpperCase()}</span>
-      )}
-    </div>
+    <>
+      <div className="line">
+        <span className="acc">BT</span> {syms.join(",")} · {rule} · {run?.interval ?? parsed?.interval} {run?.range ?? parsed?.range}
+        {run?.engine && (
+          <span className="dim"> · <span {...termProps("ENGINE", gui)}>{gui ? "MARKET" : "ENGINE"}</span> {run.engine.toUpperCase()}</span>
+        )}
+      </div>
+      {sentence && <div className="line dim bt-rule-says" data-testid="bt-rule-says">{sentence}</div>}
+    </>
   );
 }
 

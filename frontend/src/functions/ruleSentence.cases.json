@@ -1,0 +1,31 @@
+{
+  "note": "Shared by ruleSentence.test.ts (vitest) and backend/tests/test_rule_sentence_cases.py: every rule must parse in both parsers; sentence is what ruleToSentence must return; canon is formToRule(ruleToForm(rule)).",
+  "cases": [
+    { "rule": "SMA20 CROSS> SMA50", "canon": "SMA20 CROSS> SMA50", "sentence": "Buy when the 20-day average crosses above the 50-day average; sell when it crosses back below." },
+    { "rule": "SMA20 CROSS< SMA50", "canon": "SMA20 CROSS< SMA50", "sentence": "Buy when the 20-day average crosses below the 50-day average; sell when it crosses back above." },
+    { "rule": "SMA20>SMA50", "canon": "SMA20 > SMA50", "sentence": "Buy when the 20-day average is above the 50-day average; sell when that stops being true." },
+    { "rule": "SMA20<SMA50", "canon": "SMA20 < SMA50", "sentence": "Buy when the 20-day average is below the 50-day average; sell when that stops being true." },
+    { "rule": "EMA12 CROSS> EMA26", "canon": "EMA12 CROSS> EMA26", "sentence": "Buy when the 12-day exponential average crosses above the 26-day exponential average; sell when it crosses back below." },
+    { "rule": "CLOSE>SMA200", "canon": "CLOSE > SMA200", "sentence": "Buy when the price is above the 200-day average; sell when that stops being true." },
+    { "rule": "CLOSE<SMA200", "canon": "CLOSE < SMA200", "sentence": "Buy when the price is below the 200-day average; sell when that stops being true." },
+    { "rule": "CLOSE CROSS> SMA50", "canon": "CLOSE CROSS> SMA50", "sentence": "Buy when the price crosses above the 50-day average; sell when it crosses back below." },
+    { "rule": "RSI14<30", "canon": "RSI14 < 30", "sentence": "Buy when the 14-day RSI is below 30; sell when that stops being true." },
+    { "rule": "RSI14 CROSS> 30", "canon": "RSI14 CROSS> 30", "sentence": "Buy when the 14-day RSI crosses above 30; sell when it crosses back below." },
+    { "rule": "RSI2<10 AND CLOSE>SMA200", "canon": "RSI2 < 10 AND CLOSE > SMA200", "sentence": "Buy when the 2-day RSI is below 10 and the price is above the 200-day average; sell when that stops being true." },
+    { "rule": "RSI14<30 OR RSI14>70", "canon": "RSI14 < 30 OR RSI14 > 70", "sentence": "Buy when the 14-day RSI is below 30, or when the 14-day RSI is above 70; sell when that stops being true." },
+    { "rule": "CLOSE>HIGH20", "canon": "CLOSE > HIGH20", "sentence": "Buy when the price is above the 20-day high; sell when that stops being true." },
+    { "rule": "CLOSE<LOW20", "canon": "CLOSE < LOW20", "sentence": "Buy when the price is below the 20-day low; sell when that stops being true." },
+    { "rule": "RET20>0", "canon": "RET20 > 0", "sentence": "Buy when the 20-day return is above 0; sell when that stops being true." },
+    { "rule": "RET60>=0.05", "canon": "RET60 >= 0.05", "sentence": "Buy when the 60-day return is at least 0.05; sell when that stops being true." },
+    { "rule": "RET5<=.02", "canon": "RET5 <= 0.02", "sentence": "Buy when the 5-day return is at most 0.02; sell when that stops being true." },
+    { "rule": "VOLUME>1000000", "canon": "VOLUME > 1000000", "sentence": "Buy when the volume is above 1000000; sell when that stops being true." },
+    { "rule": "OPEN>CLOSE", "canon": "OPEN > CLOSE", "sentence": "Buy when the opening price is above the price; sell when that stops being true." },
+    { "rule": "HIGH>HIGH20 AND LOW>LOW20", "canon": "HIGH > HIGH20 AND LOW > LOW20", "sentence": "Buy when the day's high is above the 20-day high and the day's low is above the 20-day low; sell when that stops being true." },
+    { "rule": "30>RSI14", "canon": "30 > RSI14", "sentence": "Buy when 30 is above the 14-day RSI; sell when that stops being true." },
+    { "rule": "sma20 cross> sma50 and rsi14 < 70", "canon": "SMA20 CROSS> SMA50 AND RSI14 < 70", "sentence": "Buy when the 20-day average crosses above the 50-day average and the 14-day RSI is below 70; sell when that stops being true." },
+    { "rule": "SMA10>SMA20 AND SMA20>SMA50 OR CLOSE>SMA200", "canon": "SMA10 > SMA20 AND SMA20 > SMA50 OR CLOSE > SMA200", "sentence": "Buy when the 10-day average is above the 20-day average and the 20-day average is above the 50-day average, or when the price is above the 200-day average; sell when that stops being true." },
+    { "rule": "EMA9<EMA21", "canon": "EMA9 < EMA21", "sentence": "Buy when the 9-day exponential average is below the 21-day exponential average; sell when that stops being true." },
+    { "rule": "SMA1000>SMA999", "canon": "SMA1000 > SMA999", "sentence": "Buy when the 1000-day average is above the 999-day average; sell when that stops being true." }
+  ],
+  "invalid": ["", "SMA20", "RSI1<30", "SMA0>SMA5", "SMA20 >", "@golden", "FOO>1", "SMA1001>SMA5"]
+}
