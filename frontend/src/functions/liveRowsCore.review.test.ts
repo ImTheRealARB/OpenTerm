@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  buildSymbolIndex,
-  cachedIndex,
-  hitRows,
-  sameLayout,
+  buildRowIndex,
+  markHits,
+  rowIds,
   startAgeRedraw,
   subscriptionKey,
   symbolLayout,
-  type IndexCache,
   type VisibilityDoc,
 } from "./liveRowsCore";
+import { bitHas } from "../state/bitset";
+import { NO_SYM, symId } from "../state/symbols";
 
 interface R {
   s?: string;
@@ -20,10 +20,16 @@ describe("symbol layout and index", () => {
   it("maps symbols to every row that shows them and skips rows without one", () => {
     const layout = symbolLayout([{ s: "A" }, {}, { s: "B" }, { s: "A" }], symOf);
     expect(layout).toEqual(["A", "", "B", "A"]);
-    const idx = buildSymbolIndex(layout);
-    expect(idx.get("A")).toEqual([0, 3]);
-    expect(idx.get("B")).toEqual([2]);
-    expect(idx.has("")).toBe(false);
+    const ids = rowIds(layout);
+    expect(ids[1]).toBe(NO_SYM);
+    const idx = buildRowIndex(ids);
+    const rowsOf = (id: number) => {
+      const out: number[] = [];
+      for (let r = idx.head[id]; r >= 0; r = idx.next[r]) out.push(r);
+      return out;
+    };
+    expect(rowsOf(symId("A"))).toEqual([0, 3]);
+    expect(rowsOf(symId("B"))).toEqual([2]);
   });
 
   it("subscribes each symbol once, in first-seen order", () => {
@@ -31,21 +37,13 @@ describe("symbol layout and index", () => {
     expect(subscriptionKey(["", ""])).toBe("");
   });
 
-  it("returns the rows to repaint for changed symbols", () => {
-    const idx = buildSymbolIndex(["A", "B", "A"]);
-    expect(hitRows(idx, new Set(["A", "Z"]))).toEqual([0, 2]);
-    expect(hitRows(idx, new Set(["Z"]))).toEqual([]);
-  });
-
-  it("reuses the index while the layout is unchanged and rebuilds when a symbol moves", () => {
-    const cache: { current: IndexCache | null } = { current: null };
-    const a = cachedIndex(cache, ["A", "B"]);
-    expect(cachedIndex(cache, ["A", "B"])).toBe(a); // new array, same symbols: same index
-    const b = cachedIndex(cache, ["B", "A"]); // sorted: positions changed
-    expect(b).not.toBe(a);
-    expect(b.get("A")).toEqual([1]);
-    expect(cachedIndex(cache, ["B", "A", "C"])).not.toBe(b);
-    expect(sameLayout(["A"], ["A", ""])).toBe(false);
+  it("marks the rows to repaint for changed symbols", () => {
+    const idx = buildRowIndex(rowIds(["A", "B", "A"]));
+    const changed = Uint32Array.of(symId("A"), symId("Z-never-in-grid"));
+    expect(markHits(idx, changed, 2)).toBe(2);
+    expect([0, 1, 2].map((r) => bitHas(idx.dirty, r))).toEqual([true, false, true]);
+    idx.dirty.fill(0);
+    expect(markHits(idx, Uint32Array.of(symId("Z-never-in-grid")), 1)).toBe(0);
   });
 });
 

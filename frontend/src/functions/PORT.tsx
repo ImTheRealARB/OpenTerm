@@ -19,6 +19,7 @@ import { subscribe } from "../net/socket";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
 import { termProps } from "../gui/term";
 import { useStore } from "../state/store";
+import { symId } from "../state/symbols";
 import { getLive, onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import { exportPositions, importPositions, type ImportResult } from "./portfolioCsv";
@@ -153,13 +154,13 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
 
   // Totals and weights move with every tick of any leg: refresh them at most 4 times a second.
   useEffect(() => {
-    const watched = new Set([...inputs, ...fxInputs]);
+    const watched = [...inputs, ...fxInputs].map(symId); // integer ids, interned once
     let pending = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const off = onTicks((changed) => {
+    const off = onTicks((batch) => {
       if (pending) return;
-      for (const s of changed) {
-        if (!watched.has(s)) continue;
+      for (let i = 0; i < watched.length; i++) {
+        if (!batch.has(watched[i])) continue;
         pending = true;
         timer = setTimeout(() => {
           pending = false;

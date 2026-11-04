@@ -1,5 +1,6 @@
 import { gauges, series } from "../perf/metrics";
 import { createStore } from "../state/store";
+import { symCount, symId, symName } from "../state/symbols";
 import { ingest } from "../state/ticks";
 import { heartbeatDead, heartbeatMissed } from "./heartbeat";
 import { ingestJobFrame } from "./jobs";
@@ -12,8 +13,12 @@ export interface LinkState {
 
 export const link = createStore<LinkState>({ status: "CONNECTING", rttMs: NaN, lastMsgAt: 0 });
 
-/** Symbol -> number of panels/components subscribed. The server sees one subscription per symbol. */
-const refs = new Map<string, number>();
+/**
+ * Subscription reference counts, one slot per interned symbol id (see state/symbols.ts): refs[id] = how many panels/components
+ * subscribed to that symbol. A flat Int32Array instead of a Map<string, number>: no string hashing, and "is it subscribed?" is
+ * `refs[id] > 0`. The server still sees one subscription per symbol (we send only on 0 -> 1 and 1 -> 0).
+ */
+let refs: Int32Array = new Int32Array(256);
 let socket: WebSocket | null = null;
 let frames = 0;
 
@@ -23,11 +28,13 @@ function send(msg: unknown): void {
 
 /** Subscribe to live ticks. Returns the matching unsubscribe. Safe to call before the socket opens. */
 export function subscribe(symbols: string[]): () => void {
+  // Subscribing is a cold path (when a panel's symbols change), so the small arrays here are fine.
+  const idList = symbols.map(symId);
   const added: string[] = [];
-  for (const s of symbols) {
-    const n = (refs.get(s) ?? 0) + 1;
-    refs.set(s, n);
-    if (n === 1) added.push(s);
+  for (let i = 0; i < idList.length; i++) {
+    const id = idList[i];
+    if (id >= refs.length) refs = grown(refs, id + 1);
+    if (++refs[id] === 1) added.push(symbols[i]);
   }
   if (added.length) send(["sub", added]);
   let done = false;
@@ -35,15 +42,25 @@ export function subscribe(symbols: string[]): () => void {
     if (done) return;
     done = true;
     const removed: string[] = [];
-    for (const s of symbols) {
-      const n = (refs.get(s) ?? 1) - 1;
-      if (n <= 0) {
-        refs.delete(s);
-        removed.push(s);
-      } else refs.set(s, n);
+    for (let i = 0; i < idList.length; i++) {
+      const id = idList[i];
+      if (refs[id] > 0 && --refs[id] === 0) removed.push(symbols[i]);
     }
     if (removed.length) send(["unsub", removed]);
   };
+}
+
+function grown(a: Int32Array, n: number): Int32Array {
+  const out = new Int32Array(Math.max(n, a.length * 2));
+  out.set(a);
+  return out;
+}
+
+/** Every symbol with at least one subscriber (used to resubscribe after a reconnect). */
+function subscribedSymbols(): string[] {
+  const out: string[] = [];
+  for (let id = 0; id < refs.length && id < symCount(); id++) if (refs[id] > 0) out.push(symName(id));
+  return out;
 }
 
 /**
@@ -92,7 +109,8 @@ export function connect(): void {
 
     ws.onopen = () => {
       backoff = 500;
-      if (refs.size) send(["sub", [...refs.keys()]]);
+      const subs = subscribedSymbols();
+      if (subs.length) send(["sub", subs]);
       ping();
       pingTimer = window.setInterval(ping, 5000);
     };

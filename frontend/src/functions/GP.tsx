@@ -10,6 +10,7 @@ import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, worldApi, type ChartEvents, type Envelope } from "../net/api";
 import { subscribe } from "../net/socket";
+import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { navigate, replaceView } from "../state/workspace";
 import { settingsStore } from "../settings/runtime";
@@ -89,8 +90,9 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   useEffect(() => {
     if (!resolved) return;
     const unsub = subscribe([resolved]);
-    const off = onTicks((changed) => {
-      if (!changed.has(resolved)) return;
+    const id = symId(resolved);
+    const off = onTicks((batch) => {
+      if (!batch.has(id)) return;
       const l = getLive(resolved)!;
       chart.current?.live(l.price, l.t, l.volume);
     });

@@ -4,6 +4,7 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
+import { bitClear, bitGrow, bitHas, bitSet } from "../state/bitset";
 import { wheelTop } from "../state/gridScroll";
 import "./dataColors.css";
 
@@ -23,8 +24,11 @@ export interface Column<R> {
 
 export interface GridHandle {
   redraw(): void;
-  /** Repaint just these rows; `frame` enables the one-frame highlight for cells that changed in it. */
-  redrawRows(rows: Iterable<number>, frame: number): void;
+  /**
+   * Repaint the rows whose bit is set in `dirty` (a bitset, one bit per row position) that are on screen, then clear `dirty`.
+   * `frame` enables the one-frame highlight for cells that changed in it.
+   */
+  redrawDirty(dirty: Uint32Array, frame: number): void;
   move(delta: number): void;
   moveTo(index: number): void;
   page(dir: 1 | -1): void;
@@ -84,6 +88,21 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[] });
   const data = useRef({ columns, rows, band });
   data.current = { columns, rows, band };
+
+  // Rows currently painted with the one-frame highlight, as a bitset (`bits`); `end` = 1 + highest row that may be set.
+  const flash = useRef({ bits: new Uint32Array(0) as Uint32Array, end: 0, scheduled: false });
+  /** Prebuilt once (no closure per frame): repaints every highlighted row plain and clears the bitset. */
+  const unflash = useRef<() => void>(() => undefined);
+  unflash.current = () => {
+    const fl = flash.current;
+    fl.scheduled = false;
+    for (let i = 0; i < fl.end; i++) {
+      if (!bitHas(fl.bits, i)) continue;
+      bitClear(fl.bits, i);
+      drawRow(i, -1);
+    }
+    fl.end = 0;
+  };
 
   const visibleCount = () => Math.max(1, Math.floor((st.current.h - ROW_H) / ROW_H));
 
@@ -212,14 +231,28 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
 
   useImperativeHandle(ref, () => ({
     redraw,
-    redrawRows(list, frame) {
-      const flashed: number[] = [];
-      for (const i of list) {
+    redrawDirty(dirty, frame) {
+      const s = st.current;
+      const end = Math.min(data.current.rows.length, s.top + visibleCount());
+      // Only the visible rows can be painted, so only they are tested. Off-screen dirty bits are simply dropped.
+      const fl = flash.current;
+      fl.bits = bitGrow(fl.bits, end);
+      let any = false;
+      for (let i = s.top; i < end; i++) {
+        if (!bitHas(dirty, i)) continue;
         drawRow(i, frame);
-        flashed.push(i);
+        any = true;
+        if (frame >= 0) {
+          bitSet(fl.bits, i);
+          fl.end = Math.max(fl.end, i + 1);
+        }
       }
-      // One-frame highlight: repaint plain on the next frame.
-      if (flashed.length && frame >= 0) requestAnimationFrame(() => flashed.forEach((i) => drawRow(i, -1)));
+      dirty.fill(0);
+      // One-frame highlight: repaint plain on the next frame. ONE prebuilt callback, scheduled at most once.
+      if (any && frame >= 0 && !fl.scheduled) {
+        fl.scheduled = true;
+        requestAnimationFrame(unflash.current);
+      }
     },
     move: (d) => moveTo(st.current.sel + d),
     moveTo,

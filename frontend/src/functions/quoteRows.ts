@@ -7,8 +7,9 @@ import type { CellColor, Column, GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice, fmtTime, sign } from "../format";
 import { ApiError, api, type Quote, type QuoteResult } from "../net/api";
 import { subscribe } from "../net/socket";
-import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
-import { cachedIndex, hitRows, startAgeRedraw, subscriptionKey, symbolLayout, type IndexCache } from "./liveRowsCore";
+import { NO_SYM, symId } from "../state/symbols";
+import { hasLive, live, onTicks, SRC_SYNTHETIC, srcLabel } from "../state/ticks";
+import { buildRowIndex, markHits, rowIds, startAgeRedraw, subscriptionKey, symbolLayout } from "./liveRowsCore";
 
 export interface QRow {
   input: string;
@@ -18,36 +19,64 @@ export interface QRow {
   fetchedAt: number;
   ageAtFetch: number;
   error?: string;
+  /** Interned symbol id, filled in lazily by `rowId`. */
+  sid?: number;
 }
 
-export const price = (r: QRow) => getLive(r.symbol)?.price ?? r.q?.price ?? null;
-export const pct = (r: QRow) => getLive(r.symbol)?.pct ?? r.q?.change_pct ?? null;
-export const chg = (r: QRow) => getLive(r.symbol)?.change ?? r.q?.change ?? null;
-export const vol = (r: QRow) => getLive(r.symbol)?.volume ?? r.q?.volume ?? null;
+// --- Live reads by integer id ----------------------------------------------------------------------------------
+// A grid row used to look its symbol up in a Map on EVERY cell paint. Now the row carries its interned id (`sid`, filled in
+// once, the first time the row is painted) and a cell reads the typed array `live.price[id]` directly.
+
+/** The row's interned symbol id (NO_SYM for rows with no symbol: section headers). Cached on the row itself. */
+export function rowId(r: QRow): number {
+  return r.sid ?? (r.sid = r.symbol ? symId(r.symbol) : NO_SYM);
+}
+
+/** `column[id]` as number-or-null when the symbol has live data (NaN means "the tick did not carry this field"). */
+function liveNum(column: Float64Array, id: number): number | null {
+  if (!hasLive(id)) return null;
+  const v = column[id];
+  return v === v ? v : null;
+}
+
+export const price = (r: QRow) => {
+  const id = rowId(r);
+  return hasLive(id) ? live.price[id] : (r.q?.price ?? null);
+};
+export const pct = (r: QRow) => liveNum(live.pct, rowId(r)) ?? r.q?.change_pct ?? null;
+export const chg = (r: QRow) => liveNum(live.change, rowId(r)) ?? r.q?.change ?? null;
+export const vol = (r: QRow) => liveNum(live.volume, rowId(r)) ?? r.q?.volume ?? null;
+export const high = (r: QRow) => liveNum(live.high, rowId(r)) ?? r.q?.high ?? null;
+export const low = (r: QRow) => liveNum(live.low, rowId(r)) ?? r.q?.low ?? null;
 export const dirColor = (v: number | null): CellColor => (sign(v) > 0 ? "up" : sign(v) < 0 ? "down" : "val");
-export const quoteTime = (r: QRow) => getLive(r.symbol)?.t ?? (r.q?.market_time ? r.q.market_time * 1000 : null);
+export const quoteTime = (r: QRow) => {
+  const id = rowId(r);
+  return hasLive(id) ? live.t[id] : r.q?.market_time ? r.q.market_time * 1000 : null;
+};
 
 export function srcText(r: QRow): string {
-  const l = getLive(r.symbol);
-  if (l) return SRC_LABEL[l.src] ?? l.src;
+  const id = rowId(r);
+  if (hasLive(id)) return srcLabel(live.src[id]);
   if (r.error || !r.q) return "";
   const age = r.ageAtFetch + (Date.now() - r.fetchedAt) / 1000;
   return r.stale ? `STALE ${fmtAge(age)}` : (r.q.source ?? "").toUpperCase();
 }
 
 export function srcColor(r: QRow): CellColor {
-  const l = getLive(r.symbol);
-  if (l) return l.src === "s" ? "warn" : "up";
+  const id = rowId(r);
+  if (hasLive(id)) return live.src[id] === SRC_SYNTHETIC ? "warn" : "up";
   return r.stale ? "warn" : "dim";
 }
 
 export const lastColor = (r: QRow): CellColor => {
-  const l = getLive(r.symbol);
-  return l ? dirColor(l.dir) : "val";
+  const id = rowId(r);
+  return hasLive(id) ? dirColor(live.dir[id]) : "val";
 };
 export const lastFlash = (r: QRow, f: number): CellColor | null => {
-  const l = getLive(r.symbol);
-  return l && l.frame === f && l.dir ? (l.dir > 0 ? "up" : "down") : null;
+  const id = rowId(r);
+  if (!hasLive(id) || live.frame[id] !== f) return null;
+  const d = live.dir[id];
+  return d > 0 ? "up" : d < 0 ? "down" : null;
 };
 
 export const QUOTE_COLUMNS: Column<QRow>[] = [
@@ -58,8 +87,8 @@ export const QUOTE_COLUMNS: Column<QRow>[] = [
   { title: "CHG", width: 10, align: "right", text: (r) => fmtChg(chg(r)), color: (r) => dirColor(chg(r)) },
   { title: "%CHG", width: 8, align: "right", text: (r) => fmtPct(pct(r)), color: (r) => dirColor(pct(r)) },
   { title: "VOLUME", width: 9, align: "right", text: (r) => fmtBig(vol(r)) },
-  { title: "HIGH", width: 11, align: "right", text: (r) => fmtPrice(getLive(r.symbol)?.high ?? r.q?.high) },
-  { title: "LOW", width: 11, align: "right", text: (r) => fmtPrice(getLive(r.symbol)?.low ?? r.q?.low) },
+  { title: "HIGH", width: 11, align: "right", text: (r) => fmtPrice(high(r)) },
+  { title: "LOW", width: 11, align: "right", text: (r) => fmtPrice(low(r)) },
   { title: "TIME", width: 8, align: "right", text: (r) => fmtTime(quoteTime(r)) },
   { title: "CCY", width: 4, text: (r) => r.q?.currency ?? "", color: () => "dim" },
 ];
@@ -121,23 +150,23 @@ export function useQuotes(inputs: string[], reload: number) {
   return { rows, setRows, loading };
 }
 
-/** One subscription for the symbols in `rows`; ticks repaint only their rows. */
+/**
+ * One subscription for the symbols in `rows`; ticks repaint only their rows.
+ * Per frame: the tick batch lists the ids that ticked; `markHits` walks each id's row chain in a flat index and sets a bit per
+ * row in a "dirty rows" bitset; the grid then repaints only the dirty rows that are on screen. No arrays or closures per frame.
+ */
 export function useLiveRows<R>(rows: R[], grid: RefObject<GridHandle | null>, symbolOf: (r: R) => string | undefined) {
-  const layout = symbolLayout(rows, symbolOf);
-  const key = subscriptionKey(layout);
+  const names = symbolLayout(rows, symbolOf);
+  const key = subscriptionKey(names);
   useEffect(() => (key ? subscribe(key.split(",")) : undefined), [key]);
 
-  // The index is rebuilt only when a symbol moves, appears or goes; a refresh with the same symbols reuses it.
-  const cache = useRef<IndexCache | null>(null);
-  const index = cachedIndex(cache, layout);
-
+  // The row index is rebuilt whenever `rows` changes (a REST refresh, a sort): a few typed-array writes, cheaper than comparing layouts.
   useEffect(() => {
-    const off = onTicks((changed, frame) => {
-      const hit = hitRows(index, changed);
-      if (hit.length) grid.current?.redrawRows(hit, frame);
+    const index = buildRowIndex(rowIds(names));
+    return onTicks((batch, frame) => {
+      if (markHits(index, batch.ids, batch.count) > 0) grid.current?.redrawDirty(index.dirty, frame);
     });
-    return off;
-  }, [index, grid]);
+  }, [rows, grid]); // eslint-disable-line react-hooks/exhaustive-deps -- `names` is derived from `rows`
 
   // AGE/STALE text keeps counting, but not while the tab is hidden; one redraw when it comes back.
   useEffect(() => startAgeRedraw(() => grid.current?.redraw(), 5000, typeof document === "undefined" ? undefined : document), [grid]);

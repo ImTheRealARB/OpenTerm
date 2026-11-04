@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { fmtChg, fmtPct, fmtPrice, fmtTime } from "../format";
 import type { Quote } from "../net/api";
 import { subscribe } from "../net/socket";
+import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 
 /**
@@ -29,7 +30,10 @@ export function LivePrice({ quote, stale, ageS }: { quote: Quote; stale: boolean
       src.current!.className = l ? (l.src === "s" ? "warn" : "up") : stale ? "warn" : "dim";
     };
     paint();
-    return onTicks((changed) => changed.has(quote.symbol) && paint());
+    const id = symId(quote.symbol); // intern once; the per-frame check is then one bit test
+    return onTicks((batch) => {
+      if (batch.has(id)) paint();
+    });
   }, [quote, stale, ageS]);
 
   // Subscribed per symbol, not per quote refresh: a refresh used to send unsub then sub for the same symbol.

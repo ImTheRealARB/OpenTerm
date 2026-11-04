@@ -10,7 +10,8 @@ import { fmtPrice } from "../format";
 import { api, api8, newsAlertsApi, type Alert, type ApiError, type NewsAlert, type NewsItem } from "../net/api";
 import { subscribe } from "../net/socket";
 import { createStore } from "../state/store";
-import { onRawTicks } from "../state/ticks";
+import { symName } from "../state/symbols";
+import { onRawTicks, orNull, type RawTicks } from "../state/ticks";
 import { sendWithRetry } from "./triggerRetry";
 import { alertMet, describeRule, newsMatch, parseAlrt } from "./alertArgs";
 import type { SecurityRef } from "./markets";
@@ -86,6 +87,8 @@ function desktopNotify(title: string, body: string, tag: string): void {
   }
 }
 
+const srcLabelChar = (code: number): string => String.fromCharCode(code);
+
 function fire(a: Alert, price: number, src: string): void {
   firing.add(a.id);
   const at = Date.now() / 1000;
@@ -106,14 +109,19 @@ function fire(a: Alert, price: number, src: string): void {
   });
 }
 
-function onTicksForAlerts(rows: readonly (readonly unknown[])[]): void {
+/**
+ * Raw ticks arrive as parallel typed arrays (`RawTicks`, one slot per tick). A missing pct/change is NaN there; `orNull` turns it
+ * back into the null `alertMet` expects. The symbol is an integer id; `symName(id)` is a flat-array read, compared with the alert's string.
+ */
+function onTicksForAlerts(t: RawTicks): void {
   const list = alerts.get();
   if (!list?.length) return;
-  for (const r of rows) {
-    const sym = r[0] as string;
-    for (const a of list) {
+  for (let i = 0; i < t.n; i++) {
+    const sym = symName(t.id[i]);
+    for (let j = 0; j < list.length; j++) {
+      const a = list[j];
       if (a.status !== "active" || a.symbol !== sym || firing.has(a.id)) continue;
-      if (alertMet(a, r[1] as number, r[3] as number | null, r[2] as number | null)) fire(a, r[1] as number, r[8] as string);
+      if (alertMet(a, t.price[i], orNull(t.pct[i]), orNull(t.change[i]))) fire(a, t.price[i], srcLabelChar(t.src[i]));
     }
   }
 }

@@ -5,10 +5,9 @@ import { fmtChg, fmtPct, fmtPrice, fmtRate, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { getLive } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import type { BoardDef } from "./boards";
-import { chg, dirColor, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { chg, dirColor, high, low, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -33,8 +32,8 @@ function columns(def: BoardDef, gui = false): Column<BRow>[] {
     { title: "LAST", width: 12, align: "right", text: (r) => num(price(r)), color: lastColor, flash: lastFlash },
     { title: "CHG", width: 10, align: "right", text: (r) => signed(chg(r)), color: (r) => dirColor(chg(r)) },
     { title: "%CHG", width: 8, align: "right", text: (r) => fmtPct(pct(r)), color: (r) => dirColor(pct(r)) },
-    { title: "HIGH", width: 11, align: "right", text: (r) => num(getLive(r.symbol)?.high ?? r.q?.high) },
-    { title: "LOW", width: 11, align: "right", text: (r) => num(getLive(r.symbol)?.low ?? r.q?.low) },
+    { title: "HIGH", width: 11, align: "right", text: (r) => num(high(r)) },
+    { title: "LOW", width: 11, align: "right", text: (r) => num(low(r)) },
     { title: "TIME", width: 8, align: "right", text: (r) => fmtTime(quoteTime(r)) },
   ];
   if (def.sections.some((s) => s.items.some((i) => i.unit))) cols.push({ title: "UNIT", width: 9, text: (r) => r.unit ?? "", color: () => "dim" });
