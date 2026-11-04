@@ -7,7 +7,7 @@ import { isTheme, type ThemeName } from "./themes";
 
 export const SETTINGS_VERSION = 1;
 export const CHART_RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"] as const;
-export const CHART_TYPES = ["CANDLE", "OHLC", "LINE", "AREA"] as const;
+export const CHART_TYPES = ["CANDLE", "HOLLOW", "OHLC", "LINE", "AREA", "BASELINE", "HEIKIN"] as const;
 export const THOUSANDS = [",", ".", " ", "'", ""] as const;
 export const DECIMALS = [".", ","] as const;
 /** Seconds, [min, max]. The floors keep the free providers inside their rate limits. */

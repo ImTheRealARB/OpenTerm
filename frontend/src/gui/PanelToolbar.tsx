@@ -5,12 +5,16 @@ import { runItem } from "../components/windowMenuRun";
 import type { OptionAction } from "../components/windowMenu";
 import { effectiveBindings } from "../keys/keys";
 import { dispatchPanelKey } from "../keys/panelKeys";
-import { focusPanel, workspace } from "../state/workspace";
+import { CHART_TYPES, CHART_TYPE_LABELS, type ChartType } from "../chart/chartTypes";
+import { INTERVAL_CHOICES, parseGpArgs, withChartType, withInterval } from "../functions/gpArgs";
+import { settingsStore } from "../settings/runtime";
+import { focusPanel, replaceView, workspace } from "../state/workspace";
 import { useStore } from "../state/store";
 import { onAskRequest } from "./askBus";
 import { chromeKeyDown, focusCommandLine } from "./chrome";
 import { openHelp } from "./helpState";
 import { runCommand } from "./run";
+import { useTabsOn } from "./tabsState";
 import { askButton, askCommands, buttonsFor, keyInit, type ToolbarButton } from "./toolbars";
 
 /**
@@ -25,6 +29,7 @@ import { askButton, askCommands, buttonsFor, keyInit, type ToolbarButton } from 
  */
 export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string | undefined; args: readonly string[]; symbol?: string }) {
   const maximized = useStore(workspace, (s) => s.maximized === id);
+  const tabs = useTabsOn(); // PanelToolbar only renders in GUI mode, so this alone means "GUI tabs layout"
   // The button whose inline prompt is open (WL "Add" asks for symbols), or null.
   const [ask, setAsk] = useState<ToolbarButton | null>(null);
   const [text, setText] = useState("");
@@ -127,6 +132,50 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
           {b.label}
         </button>
       ))}
+      {fn === "GP" && (
+        // Chart type (candles, line, ...). Same path as typing "GP LINE"; the C key still cycles through them.
+        <select
+          className="pt-b pt-sel"
+          data-testid="gp-type"
+          title="Chart type"
+          aria-label="Chart type"
+          value={parseGpArgs([...args], settingsStore.get().chart).type}
+          onChange={(e) => {
+            const v = e.target.value as ChartType;
+            const d = settingsStore.get().chart;
+            replaceView(id, (view) => ({ ...view, args: withChartType(view.args, v, d) }));
+            e.currentTarget.blur();
+          }}
+        >
+          {CHART_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {CHART_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      )}
+      {fn === "GP" && (
+        // Candle length. Changing it rewrites the panel's args (same path as typing "GP 5D 15MIN"); the range buttons reset it to Auto.
+        <select
+          className="pt-b pt-sel"
+          data-testid="gp-interval"
+          title="Candle length (Auto = chosen by the range). Minute candles only reach back days or weeks."
+          aria-label="Candle length"
+          value={INTERVAL_CHOICES.some(([, t]) => t === parseGpArgs([...args]).interval) ? parseGpArgs([...args]).interval : ""}
+          onChange={(e) => {
+            const v = e.target.value;
+            const d = settingsStore.get().chart;
+            replaceView(id, (view) => ({ ...view, args: withInterval(view.args, v, d) }));
+            e.currentTarget.blur();
+          }}
+        >
+          {INTERVAL_CHOICES.map(([label, token]) => (
+            <option key={label} value={token}>
+              {label}
+            </option>
+          ))}
+        </select>
+      )}
       <span className="pt-sp" />
       <button type="button" className="pt-b pt-help" title={`Help for this panel (${effectiveBindings().helpDrawer[0] ?? "no key bound"})`} aria-label="Help for this panel" onClick={(e) => { openHelp(id, e.currentTarget); }}>
         ?
@@ -137,9 +186,12 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
       <button type="button" className="pt-b" title="Reload the panel's data (F5)" onClick={(e) => option("refresh", "REFRESH", e)}>
         Refresh
       </button>
-      <button type="button" className="pt-b" title="Maximize or restore this panel (Ctrl+Shift+F)" onClick={(e) => option("maximize", "MAXIMIZE / RESTORE", e)}>
-        {maximized ? "Restore" : "Max"}
-      </button>
+      {/* In tabs mode every panel already fills the workspace, so Max would do nothing visible. */}
+      {!tabs && (
+        <button type="button" className="pt-b" title="Maximize or restore this panel (Ctrl+Shift+F)" onClick={(e) => option("maximize", "MAXIMIZE / RESTORE", e)}>
+          {maximized ? "Restore" : "Max"}
+        </button>
+      )}
       <button type="button" className="pt-b pt-close" title="Close this panel (Alt+W)" aria-label="Close this panel" onClick={(e) => option("closePanel", "CLOSE PANEL", e)}>
         Close
       </button>

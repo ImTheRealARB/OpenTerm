@@ -6,6 +6,8 @@ import { chromeKeyDown, focusCommandLine, moveFocus } from "./chrome";
 import { runCommand } from "./run";
 import { showWelcome, startTour } from "./onboarding";
 import { SymbolPicker } from "./SymbolPicker";
+import { toggleSidebar, useSidebarHidden } from "./sidebarState";
+import { setTabs, useTabsOn } from "./tabsState";
 import { TEMPLATE_INFO } from "./templateMenu";
 
 /** One row of a dropdown: a function, or one of the extra entries under Settings (switch mode, tour, welcome card). */
@@ -29,6 +31,8 @@ export function MenuBar() {
   // Set when a menu was opened from the keyboard, so the effect below moves focus into it (a mouse open must not steal focus).
   const focusOnOpen = useRef(false);
   const groups = useMemo(() => groupByCategory(FUNCTION_LIST), []);
+  const sidebarHidden = useSidebarHidden();
+  const tabsOn = useTabsOn();
 
   const entries = (c: Category): Entry[] => {
     const list: Entry[] = (groups.find((g) => g.category === c)?.items ?? []).map((f) => ({ kind: "fn", code: f.code, title: f.title, built: !!f.load }));
@@ -98,6 +102,14 @@ export function MenuBar() {
 
   return (
     <div className="gm-bar" ref={bar} role="menubar" data-testid="gui-menubar" onKeyDown={onKeyDown}>
+      {/* Shows or hides the left sidebar (the menu bar above already reaches every function). */}
+      <button type="button" className="gm-side" data-testid="sidebar-toggle" aria-pressed={!sidebarHidden} title="Show or hide the sidebar" onClick={toggleSidebar}>
+        {sidebarHidden ? "▸" : "◂"} Sidebar
+      </button>
+      {/* Panels as browser-style tabs (one at a time) or tiles (side by side). */}
+      <button type="button" className="gm-side" data-testid="layout-toggle" title={tabsOn ? "Show the open panels side by side" : "Show the open panels as tabs"} onClick={() => setTabs(!tabsOn)}>
+        {tabsOn ? "Tiles" : "Tabs"}
+      </button>
       {CATEGORIES.map((c) => (
         <div key={c} className="gm-slot">
           <button

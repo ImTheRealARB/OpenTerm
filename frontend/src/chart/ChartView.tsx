@@ -6,7 +6,7 @@
 import "../components/dataColors.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
-  AreaSeries, BarSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle,
+  AreaSeries, BarSeries, BaselineSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle,
   PriceScaleMode, TickMarkType, createChart, createSeriesMarkers,
   type IChartApi, type ISeriesApi, type ISeriesMarkersPluginApi, type Logical, type SeriesMarker, type SeriesType, type Time, type UTCTimestamp,
 } from "lightweight-charts";
@@ -20,7 +20,8 @@ import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Draw
 import { PATTERN_INFO } from "./patterns";
 import type { LibraryRes } from "./libraryWorker";
 
-import { CHART_TYPES, type ChartType } from "./chartTypes";
+import { CHART_TYPES, isOhlcType, type ChartType } from "./chartTypes";
+import { heikinAshi } from "./heikin";
 
 export { CHART_TYPES };
 export type { ChartType };
@@ -220,7 +221,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, fontFamily: c.font, fontSize: 11, attributionLogo: false, panes: { separatorColor: c.line, enableResize: false } },
       grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       rightPriceScale: { borderColor: c.line },
-      timeScale: { borderColor: c.line, timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: false, rightOffset: 3 },
+      timeScale: { borderColor: c.line, timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: false, rightOffset: 3, lockVisibleTimeRangeOnResize: true },
       crosshair: { mode: CrosshairMode.Normal, vertLine: { color: c.dim, labelBackgroundColor: c.sel }, horzLine: { color: c.dim, labelBackgroundColor: c.sel } },
       kineticScroll: { mouse: false, touch: false },
       localization: { timeFormatter: (t: Time) => fmt.current.full(t) },
@@ -298,19 +299,28 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const n = data.c.length;
     const kind: ChartType = compare ? "LINE" : type;
     let s: ISeriesApi<SeriesType>;
-    if (kind === "CANDLE" || kind === "OHLC") {
+    if (isOhlcType(kind)) {
+      // Heikin Ashi draws smoothed bars (heikin.ts); every other OHLC type draws the real ones.
+      const src = kind === "HEIKIN" ? heikinAshi(data.o, data.h, data.l, data.c) : data;
       const ohlc = new Array(n);
-      for (let i = 0; i < n; i++) ohlc[i] = { time: toTime(data.t[i]), open: data.o[i], high: data.h[i], low: data.l[i], close: data.c[i] };
-      s = kind === "CANDLE"
-        ? chart.addSeries(CandlestickSeries, { upColor: c.cup, downColor: c.cdown, wickUpColor: c.cup, wickDownColor: c.cdown, borderVisible: false })
-        : chart.addSeries(BarSeries, { upColor: c.cup, downColor: c.cdown, thinBars: true });
+      for (let i = 0; i < n; i++) ohlc[i] = { time: toTime(data.t[i]), open: src.o[i], high: src.h[i], low: src.l[i], close: src.c[i] };
+      s = kind === "OHLC"
+        ? chart.addSeries(BarSeries, { upColor: c.cup, downColor: c.cdown, thinBars: true })
+        : kind === "HOLLOW"
+          // Hollow candles: rising bodies are empty outlines, falling ones are filled.
+          ? chart.addSeries(CandlestickSeries, { upColor: "rgba(0,0,0,0)", downColor: c.cdown, borderUpColor: c.cup, borderDownColor: c.cdown, wickUpColor: c.cup, wickDownColor: c.cdown, borderVisible: true })
+          : chart.addSeries(CandlestickSeries, { upColor: c.cup, downColor: c.cdown, wickUpColor: c.cup, wickDownColor: c.cdown, borderVisible: false });
       s.setData(ohlc);
     } else {
       const pts = new Array(n);
       for (let i = 0; i < n; i++) pts[i] = { time: toTime(data.t[i]), value: data.c[i] };
+      // Baseline: green above the first close of the range, red below it.
+      const base = n ? data.c[0] : 0;
       s = kind === "AREA"
         ? chart.addSeries(AreaSeries, { lineColor: c.cline, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
-        : chart.addSeries(LineSeries, { color: c.cline, lineWidth: 1 });
+        : kind === "BASELINE"
+          ? chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: base }, lineWidth: 1, topLineColor: c.cup, bottomLineColor: c.cdown, topFillColor1: c.cup + "55", topFillColor2: c.cup + "05", bottomFillColor1: c.cdown + "05", bottomFillColor2: c.cdown + "55" })
+          : chart.addSeries(LineSeries, { color: c.cline, lineWidth: 1 });
       s.setData(pts);
     }
     main.current = s;
@@ -819,7 +829,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     live(price, timeMs, dayVolume) {
       const s = main.current;
       const b = last.current;
-      if (!s || !b || compare) return;
+      if (!s || !b || compare || type === "HEIKIN") return; // Heikin Ashi bars chain from the previous bar: they refresh with the next history load
       const iv = INTERVAL_S[data.interval] ?? 86400;
       const ts = Math.floor(timeMs / 1000);
       if (ts < b.t) return;
@@ -837,7 +847,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         return; // new daily+ bar: arrives with the next history refresh rather than guessed here
       }
       const time = toTime(b.t);
-      if (type === "CANDLE" || type === "OHLC") s.update({ time, open: b.o, high: b.h, low: b.l, close: b.c });
+      if (isOhlcType(type)) s.update({ time, open: b.o, high: b.h, low: b.l, close: b.c });
       else s.update({ time, value: b.c });
     },
   }));

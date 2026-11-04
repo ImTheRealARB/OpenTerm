@@ -4,6 +4,7 @@ import { CATEGORIES, categoryOf, groupByCategory, type Category } from "../funct
 import { chromeKeyDown, moveFocus } from "./chrome";
 import { runCommand, runSymbol, runTyped } from "./run";
 import { searchFunctions, sidebarEnter } from "./search";
+import { useSidebarHidden } from "./sidebarState";
 import { useCompanies } from "./useCompanies";
 
 type Def = (typeof FUNCTION_LIST)[number];
@@ -33,6 +34,11 @@ const START_HERE: readonly { label: string; code: string; text: string }[] = [
  * word (see `sidebarEnter`). Clicking a row runs that function in the focused panel. Groups collapse and expand.
  */
 export function Sidebar() {
+  // A wrapper, so the hooks inside SidebarPanel always run in the same order (it simply is not mounted while hidden).
+  return useSidebarHidden() ? null : <SidebarPanel />;
+}
+
+function SidebarPanel() {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<ReadonlySet<Category>>(() => new Set(CATEGORIES.filter((c) => !OPEN_AT_START.includes(c))));
   const root = useRef<HTMLElement>(null);

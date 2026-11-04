@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGpArgs, serializeGp } from "./gpArgs";
+import { parseGpArgs, serializeGp, withInterval } from "./gpArgs";
 
 describe("GP arguments", () => {
   it("keeps the old forms working", () => {
@@ -45,5 +45,18 @@ describe("GP arguments", () => {
     const p = parseGpArgs(["VS", "MSFT", "ATR(14)"]);
     expect(p.compare).toEqual(["MSFT"]);
     expect(p.custom).toHaveLength(1);
+  });
+});
+
+describe("withInterval (GUI candle-length dropdown)", () => {
+  const d = { range: "1Y", type: "CANDLE" as const };
+  it("sets the interval and keeps range and indicators", () => {
+    expect(withInterval(["5D", "RSI"], "15m", d)).toEqual(["5D", "15m", "RSI"]);
+  });
+  it("replaces an existing interval", () => {
+    expect(withInterval(["5D", "5m"], "1d", d)).toEqual(["5D", "1d"]);
+  });
+  it("empty token goes back to Auto", () => {
+    expect(withInterval(["5D", "5m"], "", d)).toEqual(["5D"]);
   });
 });

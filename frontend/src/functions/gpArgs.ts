@@ -132,6 +132,21 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
   return p;
 }
 
+/** The candle lengths the GUI dropdown offers: [label, token]. An empty token means "Auto" (the range picks the interval). */
+export const INTERVAL_CHOICES: readonly (readonly [string, string])[] = [
+  ["Auto", ""], ["1 min", "1m"], ["5 min", "5m"], ["15 min", "15m"], ["30 min", "30m"], ["1 hour", "60m"], ["Daily", "1d"], ["Weekly", "1wk"], ["Monthly", "1mo"],
+];
+
+/** The args of a GP view with its candle length replaced ("" = back to Auto). Everything else (range, indicators...) is kept. */
+export function withInterval(args: string[], interval: string, defaults: { range: string; type: ChartType }): string[] {
+  return serializeGp({ ...parseGpArgs(args, defaults), interval: interval || undefined }, defaults.type);
+}
+
+/** The args of a GP view with its chart type replaced (candles, line, ...). Everything else is kept. */
+export function withChartType(args: string[], type: ChartType, defaults: { range: string; type: ChartType }): string[] {
+  return serializeGp({ ...parseGpArgs(args, defaults), type }, defaults.type);
+}
+
 export function serializeGp(p: GpParsed, defaultType: ChartType = "CANDLE"): string[] {
   return [
     p.range,
