@@ -18,6 +18,19 @@ export function daysFromCivil(y: number, m: number, d: number): number {
   return era * 146097 + doe - 719468;
 }
 
+/** Inverse of daysFromCivil: year, month (1-12) and day of a day number. */
+export function civilFromDays(days: number): { y: number; m: number; d: number } {
+  const z = days + 719468;
+  const era = Math.floor(z / 146097);
+  const doe = z - era * 146097; // day of the 400-year era, 0..146096
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)); // day of the year counted from March 1
+  const mp = Math.floor((5 * doy + 2) / 153); // month counted from March (0 = March)
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp < 10 ? mp + 3 : mp - 9;
+  return { y: yoe + era * 400 + (m <= 2 ? 1 : 0), m, d };
+}
+
 const UTC_NAMES = new Set(["UTC", "Etc/UTC", "GMT"]);
 
 /** UTC offset (seconds, local minus UTC) of a zone at an instant, read from Intl. Used a few hundred times per call, never per bar. */

@@ -5,7 +5,7 @@
  * A period needs a previous period in the data, so the first (partial) month or week is never counted.
  */
 
-import { daysFromCivil, localDayNumbers } from "./dayMath";
+import { civilFromDays, daysFromCivil, localDayNumbers } from "./dayMath";
 
 export type SeasKind = "MONTH" | "WEEKDAY" | "DOM" | "WOY";
 export const SEAS_KINDS: SeasKind[] = ["MONTH", "WEEKDAY", "DOM", "WOY"];
@@ -47,19 +47,8 @@ export function parseSeasArgs(args: string[]): { kind: SeasKind } {
  * Integer calendar math. A "day number" is the count of days since 1970-01-01 (a whole number, so no Date objects are
  * needed per bar). These two functions are the standard "civil from days" / "days from civil" algorithms (H. Hinnant).
  */
-export function civilFromDays(days: number): { y: number; m: number; d: number } {
-  const z = days + 719468;
-  const era = Math.floor(z / 146097);
-  const doe = z - era * 146097; // day of the 400-year era, 0..146096
-  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
-  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)); // day of the year counted from March 1
-  const mp = Math.floor((5 * doy + 2) / 153); // month counted from March (0 = March)
-  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
-  const m = mp < 10 ? mp + 3 : mp - 9;
-  return { y: yoe + era * 400 + (m <= 2 ? 1 : 0), m, d };
-}
-
 /** Monday = 0 .. Sunday = 6 (1970-01-01 was a Thursday, which is 3). */
+export { civilFromDays };
 export function weekdayMon0(days: number): number {
   return (((days + 3) % 7) + 7) % 7;
 }

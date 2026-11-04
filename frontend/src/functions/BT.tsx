@@ -116,9 +116,17 @@ function chartData(run: BtRunFull) {
   }
   const data: BarData = { symbol: "EQUITY", interval: run.interval === "1W" ? "1wk" : "1d", tz: "UTC", t, o: c, h: c, l: c, c, v: new Float64Array(n) };
   const bn = run.benchmark.length;
-  const compare = bn
-    ? { symbol: "BENCH", t: Float64Array.from(run.benchmark, (p) => p[0]), c: Float64Array.from(run.benchmark, (p) => p[1]) }
-    : null;
+  // Typed arrays filled in one plain loop (no callback or temporary array per point).
+  let compare: { symbol: string; t: Float64Array; c: Float64Array } | null = null;
+  if (bn) {
+    const bt = new Float64Array(bn);
+    const bc = new Float64Array(bn);
+    for (let i = 0; i < bn; i++) {
+      bt[i] = run.benchmark[i][0];
+      bc[i] = run.benchmark[i][1];
+    }
+    compare = { symbol: "BENCH", t: bt, c: bc };
+  }
   return { data, compare, drawdown: { title: "DRAWDOWN", v: dd } };
 }
 

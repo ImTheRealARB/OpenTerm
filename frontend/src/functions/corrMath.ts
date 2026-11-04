@@ -6,6 +6,8 @@
  * 1 ms in V8, so it runs on the main thread (measured in corr.test.ts; see PHASE_9_NOTES.md).
  */
 
+import { civilFromDays, localDayNumbers } from "./dayMath";
+
 export interface CloseSeries {
   symbol: string;
   /** Bar times, epoch seconds. */
@@ -16,33 +18,10 @@ export interface CloseSeries {
   tz?: string | null;
 }
 
-const fmts = new Map<string, Intl.DateTimeFormat>();
-// Intl formatting costs ~2 us a call; symbols on one exchange share bar times, so cache per zone + time.
-const keys = new Map<string, string>();
-
-/** Trading date "YYYY-MM-DD" of a bar in its exchange's time zone (UTC when unknown or invalid). */
+/** Trading date "YYYY-MM-DD" of a bar in its exchange's time zone (UTC when unknown or invalid). Integer date math, no cache. */
 export function dayKey(t: number, tz?: string | null): string {
-  const zone = tz || "UTC";
-  const ck = `${zone}|${t}`;
-  const hit = keys.get(ck);
-  if (hit !== undefined) return hit;
-  if (keys.size > 200_000) keys.clear();
-  const key = formatter(zone).format(new Date(t * 1000));
-  keys.set(ck, key);
-  return key;
-}
-
-function formatter(zone: string): Intl.DateTimeFormat {
-  let f = fmts.get(zone);
-  if (!f) {
-    try {
-      f = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" });
-    } catch {
-      f = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit" });
-    }
-    fmts.set(zone, f);
-  }
-  return f;
+  const { y, m, d } = civilFromDays(localDayNumbers([t], tz)[0]);
+  return `${y}-${m < 10 ? "0" : ""}${m}-${d < 10 ? "0" : ""}${d}`;
 }
 
 export interface Aligned {
@@ -54,16 +33,49 @@ export interface Aligned {
 /** Dates on which every series has a positive close, in ascending order. */
 export function alignCloses(series: CloseSeries[]): Aligned {
   if (!series.length) return { dates: [], closes: [] };
-  const maps = series.map((s) => {
-    const m = new Map<string, number>();
-    for (let i = 0; i < s.t.length; i++) {
+  // Struct-of-arrays per series: one day number and one close per trading day (the last bar of a day wins).
+  const cols = series.map((s) => {
+    const days = localDayNumbers(s.t, s.tz);
+    const n = days.length;
+    let order: ArrayLike<number> | null = null; // only built when bar times are not already ascending
+    for (let i = 1; i < n; i++)
+      if (days[i] < days[i - 1]) {
+        order = Array.from({ length: n }, (_, k) => k).sort((a, b) => days[a] - days[b] || a - b);
+        break;
+      }
+    const dd = new Float64Array(n);
+    const cc = new Float64Array(n);
+    let m = 0;
+    for (let k = 0; k < n; k++) {
+      const i = order ? order[k] : k;
       const c = s.c[i];
-      if (c != null && Number.isFinite(c) && c > 0) m.set(dayKey(s.t[i], s.tz), c); // last bar of a day wins
+      if (c == null || !Number.isFinite(c) || !(c > 0)) continue;
+      if (m > 0 && dd[m - 1] === days[i]) cc[m - 1] = c;
+      else {
+        dd[m] = days[i];
+        cc[m++] = c;
+      }
     }
-    return m;
+    return { dd, cc, m };
   });
-  const dates = [...maps[0].keys()].filter((d) => maps.every((m) => m.has(d))).sort();
-  return { dates, closes: maps.map((m) => dates.map((d) => m.get(d)!)) };
+  // Walk all series together (merge intersection): a day is kept when every series has it.
+  const pos = new Int32Array(cols.length);
+  const dates: string[] = [];
+  const closes: number[][] = cols.map(() => []);
+  const first = cols[0];
+  outer: for (let i = 0; i < first.m; i++) {
+    const day = first.dd[i];
+    for (let k = 1; k < cols.length; k++) {
+      const col = cols[k];
+      while (pos[k] < col.m && col.dd[pos[k]] < day) pos[k]++;
+      if (pos[k] >= col.m || col.dd[pos[k]] !== day) continue outer;
+    }
+    const { y, m, d } = civilFromDays(day);
+    dates.push(`${y}-${m < 10 ? "0" : ""}${m}-${d < 10 ? "0" : ""}${d}`);
+    closes[0].push(first.cc[i]);
+    for (let k = 1; k < cols.length; k++) closes[k].push(cols[k].cc[pos[k]]);
+  }
+  return { dates, closes };
 }
 
 export function logReturns(closes: number[]): number[] {
