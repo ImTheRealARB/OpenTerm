@@ -131,7 +131,7 @@ const defs: FunctionDef[] = [
   { code: "BRIEF", title: "Daily brief", needsSecurity: false, phase: 17, load: () => import("./BRIEF") },
   { code: "TMPL", title: "Workspace templates: Long-term, Day trader, Macro, India", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", phase: 20, load: () => import("./TMPL"), idlePreload: false },
   { code: "IND", title: "Indicator library, formulas and presets for GP", needsSecurity: false, argsSchema: "[search]", phase: 20, load: () => import("./IND"), idlePreload: false },
-  { code: "FUNC", title: "Function directory: every function code with its purpose; type to filter, Enter opens", needsSecurity: false, phase: 20, load: () => import("./FUNC") },
+  { code: "FUNC", title: "Function directory: type to filter, Enter opens", needsSecurity: false, phase: 20, load: () => import("./FUNC") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

@@ -4,9 +4,10 @@
  * a small `Ui` object with its state setters; this file holds the timers and decisions.
  */
 import { FUNCTIONS, isFunction } from "../functions/registry";
+import { execute } from "./execute";
 import { history } from "./history";
 import { needsNatural, resolveNatural } from "./nlRun";
-import { info } from "./status";
+import { fail, info } from "./status";
 import type { ReactNode } from "react";
 import { syntaxHint, type Hint } from "./syntaxHint";
 
@@ -57,16 +58,24 @@ export function previewNl(v: string, ui: Ui): void {
   }, NL_DEBOUNCE_MS);
 }
 
-/** Enter on text that may be plain English. `run` executes a command; `again` runs the text as typed (normal error path). */
-export async function viaNatural(text: string, ui: Ui, run: (command: string) => void, again: () => void): Promise<void> {
+/** Runs the command a plain-English phrase stands for and tells the user the code, so they learn it. */
+export function runNl(command: string, typed: string, newPanel: boolean, finish: () => void): void {
+  if (!execute(command, { newPanel })) return;
+  finish();
+  info(`${typed.trim().toUpperCase()} -> ${command}`);
+}
+
+/** Enter on text that may be plain English; falls back to running it as typed (normal error path). */
+export async function viaNatural(text: string, newPanel: boolean, ui: Ui, finish: () => void): Promise<void> {
   const r = await resolveNatural(text).catch(() => ({ kind: "asis" }) as const);
   if (ui.value() !== text) return; // the user kept typing
-  if (r.kind === "command") run(r.command);
+  if (r.kind === "command") runNl(r.command, text, newPanel, finish);
   else if (r.kind === "choices") {
     ui.setItems(meaning(r));
     ui.setSel(0);
     info("DID YOU MEAN: UP/DOWN + ENTER");
-  } else again();
+  } else if (r.kind === "error") fail(r.message);
+  else if (execute(text, { newPanel })) finish();
 }
 
 function hintLine(h: Hint): ReactNode {

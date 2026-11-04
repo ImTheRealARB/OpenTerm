@@ -25,10 +25,10 @@ async function load(): Promise<UniverseEntry[]> {
 /** Interprets typed text. `asis`: run it exactly as typed (a real ticker, or nothing understood for a single word). */
 export async function resolveNatural(input: string): Promise<NlOutcome> {
   const { prefix, body } = split(input);
-  const [uni, nat] = await Promise.all([load(), import("./natural")]);
+  const [uni, nat] = await Promise.all([load(), import("./nlRoute")]);
   const single = !/\s/.test(body);
   if (single && known.symbols?.has(body.toUpperCase())) return { kind: "asis" };
-  const r = nat.interpretNatural(body, { isFunction, companies: uni.length ? uni : null });
+  const r = nat.routeNatural(body, { isFunction, companies: uni.length ? uni : null });
   if (r.kind === "command") return { ...r, command: prefix + r.command };
   if (r.kind === "choices") return { kind: "choices", choices: r.choices.map((c) => ({ ...c, command: prefix + c.command })) };
   return single ? { kind: "asis" } : r;

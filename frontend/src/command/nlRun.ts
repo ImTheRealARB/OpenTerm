@@ -5,9 +5,9 @@
  */
 import { isFunction } from "../functions/registry";
 import { parseCommand } from "./parser";
-import type { NlResult } from "./natural";
+import type { RouteResult } from "./nlRoute";
 
-export type NlOutcome = NlResult | { kind: "asis" };
+export type NlOutcome = RouteResult | { kind: "asis" };
 
 /** Tickers of the company list once it has been loaded (set by nlResolve.ts); null before that. */
 export const known: { symbols: Set<string> | null } = { symbols: null };

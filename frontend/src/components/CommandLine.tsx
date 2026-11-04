@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { execute, statusMsg } from "../command/execute";
 import { needsNatural } from "../command/nlRun";
-import { info } from "../command/status";
 import type { Suggestion, Ui } from "../command/cmdExtras";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
@@ -10,12 +9,16 @@ import { refreshWatchlists, watchlistList } from "../command/watchlists";
 import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
-import { VIM_INSERT, vimKey, type VimMode } from "../command/vim";
+import type { VimMode, VimState } from "../command/vim";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 
 
 const SEARCH_DEBOUNCE_MS = 80;
+
+// Vim editing is opt-in, so its key logic is a lazy chunk loaded when the setting is turned on.
+const VIM_INSERT: VimState = { mode: "insert", pending: "" };
+let vimMod: typeof import("../command/vim") | null = null;
 
 type Extras = typeof import("../command/cmdExtras");
 let extrasMod: Extras | null = null;
@@ -118,6 +121,7 @@ export function CommandLine() {
   };
   useEffect(() => {
     if (!vimOn) setVim("insert");
+    else if (!vimMod) void import("../command/vim").then((m) => (vimMod = m));
   }, [vimOn]);
 
   // Predictive prefetch: a highlighted security will most likely be charted or quoted next.
@@ -168,13 +172,6 @@ export function CommandLine() {
     if (vimOn) setVim("insert");
   };
 
-  /** Runs the command a plain-English phrase stands for and tells the user the code, so they learn it. */
-  const runNl = (command: string, typed: string, newPanel: boolean) => {
-    if (!execute(command, { newPanel })) return;
-    finish();
-    info(`${typed.trim().toUpperCase()} -> ${command}`);
-  };
-
   // The plain-English and syntax-hint logic is a lazy chunk (command/cmdExtras.ts); `ui` hands it this component's state.
   const ui: Ui = {
     value: () => input.current?.value ?? "",
@@ -184,19 +181,16 @@ export function CommandLine() {
     nl: nlItems,
   };
   const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
-  const viaNatural = (text: string, newPanel: boolean) =>
-    extras((m) =>
-      void m.viaNatural(text, ui, (c) => runNl(c, text, newPanel), () => {
-        if (execute(text, { newPanel })) finish();
-      }),
-    );
+  const runNl = (command: string, typed: string, newPanel: boolean) => extras((m) => m.runNl(command, typed, newPanel, finish));
+  const viaNatural = (text: string, newPanel: boolean) => extras((m) => void m.viaNatural(text, newPanel, ui, finish));
 
   /** Vim normal-mode keys (and Esc from insert mode). Returns true when the key was consumed. */
   const vimHandle = (e: React.KeyboardEvent<HTMLInputElement>): boolean => {
     if (e.ctrlKey || e.altKey || e.metaKey) return false;
     if (vim.current.mode === "insert" && (e.key !== "Escape" || items.length)) return false; // Esc closes suggestions first
     const el = e.currentTarget;
-    const r = vimKey(vim.current, e.key, el.value, el.selectionStart ?? el.value.length);
+    if (!vimMod) return false;
+    const r = vimMod.vimKey(vim.current, e.key, el.value, el.selectionStart ?? el.value.length);
     if (!r.handled) return false;
     e.preventDefault();
     e.stopPropagation();

@@ -32,10 +32,11 @@ export function SymbolPicker() {
 
   /** Loads a stock and empties the box (only when the command ran: a failed one keeps the text so it can be fixed). */
   const go = (value: string) => {
-    if (runSymbol(value)) {
+    void Promise.resolve(runSymbol(value)).then((ok) => {
+      if (!ok) return;
       setText("");
       setActive(-1);
-    }
+    });
   };
 
   return (

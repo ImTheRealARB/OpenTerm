@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { FUNCTION_LIST, isFunction } from "../functions/registry";
 import { CATEGORIES, categoryOf, groupByCategory, type Category } from "../functions/categories";
 import { chromeKeyDown, moveFocus } from "./chrome";
-import { runCommand, runSymbol } from "./run";
+import { runCommand, runSymbol, runTyped } from "./run";
 import { searchFunctions, sidebarEnter } from "./search";
 import { useCompanies } from "./useCompanies";
 
@@ -91,7 +91,7 @@ export function Sidebar() {
           e.preventDefault();
           const cmd = sidebarEnter(query, matches[0], isFunction);
           // Clear the box only when the command ran (a failed one keeps its text and the error shows in the top bar).
-          if (cmd !== null && runCommand(cmd)) setQuery("");
+          if (cmd !== null) void (/\s/.test(cmd) ? runTyped(cmd) : Promise.resolve(runCommand(cmd))).then((ok) => ok && setQuery(""));
         }}
       />
       <div className="gs-list">
