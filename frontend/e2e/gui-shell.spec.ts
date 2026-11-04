@@ -7,7 +7,7 @@ import { bars, env, quote } from "./p19util";
  * Every other spec runs in terminal mode (openApp's default); these tests ask for the GUI shell with { mode: "gui" }.
  */
 
-async function setupGui(page: Page) {
+async function setupGui(page: Page, opts: { statusBar?: boolean } = {}) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.routeWebSocket(/\/ws$/, (route) => {
@@ -24,9 +24,18 @@ async function setupGui(page: Page) {
     const u = new URL(r.request().url());
     return r.fulfill({ json: env(bars(u.searchParams.get("symbol")!, u.searchParams.get("range") ?? "", u.searchParams.get("interval") ?? "")) });
   });
-  await openApp(page, { mode: "gui" });
+  await openApp(page, { mode: "gui", statusBar: opts.statusBar });
   return { errors };
 }
+
+test("the bottom status bar is hidden by default in GUI mode and the Status button toggles it", async ({ page }) => {
+  await setupGui(page, { statusBar: false });
+  await expect(page.getByTestId("mode-gui")).toHaveCount(0); // the mode switch lives in the status bar
+  await page.getByTestId("statusbar-toggle").click();
+  await expect(page.getByTestId("mode-gui")).toBeVisible();
+  await page.getByTestId("statusbar-toggle").click();
+  await expect(page.getByTestId("mode-gui")).toHaveCount(0);
+});
 
 const header = (page: Page) => page.locator('[data-panel="1"] .ph');
 

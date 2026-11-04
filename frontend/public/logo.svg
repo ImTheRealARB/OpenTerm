@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 200" width="280" height="200" role="img" aria-label="OpenTerm">
+  <title>OpenTerm</title>
+  <rect width="280" height="200" fill="#000000"/>
+  <g fill="none" stroke="#FFB000" stroke-width="12" stroke-linejoin="miter">
+    <path d="M40 10H250A22 22 0 0 1 272 32V168A22 22 0 0 1 250 190H30A22 22 0 0 1 8 168V42Z"/>
+    <path d="M8 62H272" stroke-width="10"/>
+  </g>
+  <g fill="#FFB000">
+    <rect x="196" y="30" width="14" height="14"/>
+    <rect x="218" y="30" width="14" height="14"/>
+    <rect x="240" y="30" width="14" height="14"/>
+    <rect x="112" y="83" width="60" height="14"/>
+    <rect x="135" y="83" width="14" height="84"/>
+  </g>
+  <g fill="none" stroke="#FFB000" stroke-linejoin="miter">
+    <polygon points="46,90 84,90 96,102 96,148 84,160 46,160 34,148 34,102" stroke-width="14"/>
+    <polyline points="188,112 208,128 188,144" stroke-width="9"/>
+    <path d="M216 150H246" stroke-width="9"/>
+  </g>
+</svg>

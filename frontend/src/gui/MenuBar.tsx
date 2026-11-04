@@ -7,6 +7,7 @@ import { runCommand } from "./run";
 import { showWelcome, startTour } from "./onboarding";
 import { SymbolPicker } from "./SymbolPicker";
 import { toggleSidebar, useSidebarHidden } from "./sidebarState";
+import { toggleStatusBar, useStatusBarShown } from "./statusBarState";
 import { setTabs, useTabsOn } from "./tabsState";
 import { TEMPLATE_INFO } from "./templateMenu";
 
@@ -32,6 +33,7 @@ export function MenuBar() {
   const focusOnOpen = useRef(false);
   const groups = useMemo(() => groupByCategory(FUNCTION_LIST), []);
   const sidebarHidden = useSidebarHidden();
+  const statusShown = useStatusBarShown();
   const tabsOn = useTabsOn();
 
   const entries = (c: Category): Entry[] => {
@@ -109,6 +111,10 @@ export function MenuBar() {
       {/* Panels as browser-style tabs (one at a time) or tiles (side by side). */}
       <button type="button" className="gm-side" data-testid="layout-toggle" title={tabsOn ? "Show the open panels side by side" : "Show the open panels as tabs"} onClick={() => setTabs(!tabsOn)}>
         {tabsOn ? "Tiles" : "Tabs"}
+      </button>
+      {/* The bottom status bar (data source, backend, alert flashes) is off by default in GUI mode. */}
+      <button type="button" className="gm-side" data-testid="statusbar-toggle" aria-pressed={statusShown} title="Show or hide the bottom status bar" onClick={toggleStatusBar}>
+        Status
       </button>
       {CATEGORIES.map((c) => (
         <div key={c} className="gm-slot">
