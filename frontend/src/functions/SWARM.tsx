@@ -14,6 +14,7 @@ import { citeSegments, parseSse } from "./aiStream";
 import type { FunctionProps } from "./registry";
 import { subjectSymbol, swarmArgs } from "./swarmArgs";
 import { newSwarm, reduceSwarm, type RoleState, type SwarmEvent, type SwarmState } from "./swarmStream";
+import { watchPanelGone } from "./panelGoneWatch";
 
 interface Preset {
   code: string;
@@ -85,6 +86,8 @@ export default function SWARM({ panelId, args }: FunctionProps) {
   const stream = useCallback(async (url: string, body: unknown) => {
     const ac = new AbortController();
     abort.current = ac;
+    // Stop the (paid) run if this panel is closed. A maximize remount does not count as closing.
+    const unwatch = watchPanelGone(panelId, () => ac.abort());
     let cur = newSwarm();
     setRun(cur);
     const apply = (e: SwarmEvent) => {
@@ -114,10 +117,11 @@ export default function SWARM({ panelId, args }: FunctionProps) {
       if ((e as Error).name === "AbortError") setRun({ ...cur, status: "done", final: { answer: "", unsourced: [], grounded: false, label: "INCOMPLETE", failed: [] } });
       else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
     } finally {
+      unwatch();
       abort.current = null;
       void loadLists();
     }
-  }, [loadLists]);
+  }, [loadLists, panelId]);
 
   const asked = useRef(false);
   useEffect(() => {

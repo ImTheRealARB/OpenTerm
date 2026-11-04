@@ -18,6 +18,7 @@ import { replaceView } from "../state/workspace";
 import { aiArgs } from "./aiArgs";
 import { citeSegments, newTurn, parseSse, reduceTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
 import type { FunctionProps } from "./registry";
+import { watchPanelGone } from "./panelGoneWatch";
 
 const MAX_TURNS = 30;
 interface DocCard {
@@ -161,6 +162,8 @@ export default function AI({ panelId, args }: FunctionProps) {
       const apply = (e: AiEvent) => setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? reduceTurn(t, e) : t)));
       const ac = new AbortController();
       abort.current = ac;
+      // Stop the (paid) stream if this panel is closed. A maximize remount does not count as closing.
+      const unwatch = watchPanelGone(panelId, () => ac.abort());
       const t0 = performance.now();
       let sawEvent = false;
       let sawToken = false;
@@ -214,11 +217,12 @@ export default function AI({ panelId, args }: FunctionProps) {
           setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? { ...t, status: "done", label: "INCOMPLETE", notices: [...t.notices, "CANCELLED (ESC)"] } : t)));
         } else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
       } finally {
+        unwatch();
         abort.current = null;
         void refreshSpend();
       }
     },
-    [refreshSpend],
+    [refreshSpend, panelId],
   );
 
   const sendInput = useCallback(() => {
