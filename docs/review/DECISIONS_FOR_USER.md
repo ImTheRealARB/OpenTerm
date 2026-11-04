@@ -12,7 +12,7 @@ Nothing below was changed in code unless it says so. Full detail is in each area
 Quant
 - `quantjobs/attr.py` `return_measures`: Modified Dietz can divide by zero or go negative after large withdrawals; `xirr` bisection assumes a flow sign pattern and can return a wrong root; `quantjobs/risk.py` values holdings at each series' own last close, not the last common day; `parse_deribit` forward is the upper median for an even instrument count (backend-quant). **DONE** (cloud 2026-11-04, `23fd1a2`).
 AI/SWARM
-- SWARM and AI panels never abort their paid SSE stream when closed (SWARM abort `c820e22` was reverted because maximize remounts the panel and would kill the run). A close-vs-remount distinction is needed.
+- SWARM and AI panels never abort their paid SSE stream when closed (SWARM abort `c820e22` was reverted because maximize remounts the panel and would kill the run). A close-vs-remount distinction is needed. **DONE** (cloud 2026-11-04, see commit for Part 2 frontend bugs)
 Backend
 - `cache` table is never pruned; the DB file grows for ever (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
 - Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
@@ -28,7 +28,7 @@ Frontend
 - After first paint `main.tsx` starts loading about 88 chunks (about 500 kB) at once; staggering is unverified without the bench (frontend-functions-b).
 - Percent alerts read only the raw tick row, so a price-only tick could miss one (frontend-functions-b).
 - `LivePrice` resubscribes the symbol on every quote refresh (frontend-functions-b).
-- `AI.tsx` does not abort its SSE stream on unmount (frontend-functions-a).
+- `AI.tsx` does not abort its SSE stream on unmount (frontend-functions-a). **DONE** (cloud 2026-11-04, see commit for Part 2 frontend bugs)
 - Toggling any indicator rebuilds the chart and resets zoom; the readout does not follow live ticks; the indicator worker has no `onerror` (frontend-chart).
 - `functions/quoteRows.ts` `useLiveRows` redraws every 5 s in a hidden tab and rebuilds its symbol index on every `rows` change (frontend-core).
 Tests and branches
