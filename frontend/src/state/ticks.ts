@@ -125,15 +125,15 @@ function ensure(id: number): void {
 export class RawTicks {
   /** Number of valid entries in the arrays below. */
   n = 0;
-  id = new Uint32Array(64);
-  price = new Float64Array(64);
-  change = new Float64Array(64);
-  pct = new Float64Array(64);
-  volume = new Float64Array(64);
-  high = new Float64Array(64);
-  low = new Float64Array(64);
-  t = new Float64Array(64);
-  src = new Uint8Array(64);
+  /** Interned symbol id (see symbols.ts) of each tick. */
+  id: Uint32Array = new Uint32Array(64);
+  price: Float64Array = new Float64Array(64);
+  /** NaN = the tick did not carry it. */
+  change: Float64Array = new Float64Array(64);
+  pct: Float64Array = new Float64Array(64);
+  /** Char code of the source letter (y p s a). */
+  src: Uint8Array = new Uint8Array(64);
+  /** Make room for `n` ticks. Doubles, so it reallocates rarely (only when a bigger burst than ever before arrives). */
   reserve(n: number): void {
     if (n <= this.id.length) return;
     const m = Math.max(n, this.id.length * 2);
@@ -141,10 +141,6 @@ export class RawTicks {
     this.price = grown(this.price, m);
     this.change = grown(this.change, m);
     this.pct = grown(this.pct, m);
-    this.volume = grown(this.volume, m);
-    this.high = grown(this.high, m);
-    this.low = grown(this.low, m);
-    this.t = grown(this.t, m);
     this.src = grown(this.src, m);
   }
 }
@@ -173,10 +169,20 @@ let gaugeAt = performance.now();
 export function ingest(rows: Row[], recvAt: number): void {
   const n = rows.length;
   raw.reserve(n);
+  // Hoist the typed arrays into locals once: reading `pend.price` (a property) per tick costs more than the work itself.
+  // `ensure` can REPLACE the per-id arrays when a new symbol needs more room, so the locals are reloaded right after it grows.
+  let pPrice = pend.price, pChange = pend.change, pPct = pend.pct, pVol = pend.volume, pHigh = pend.high, pLow = pend.low;
+  let pT = pend.t, pSrc = pend.src, bits = batch.bits, bIds = batch.ids;
+  const rId = raw.id, rPrice = raw.price, rChange = raw.change, rPct = raw.pct, rSrc = raw.src;
+  let count = batch.count;
   for (let i = 0; i < n; i++) {
     const r = rows[i];
     const id = symId(r[0]);
-    ensure(id);
+    if (id >= cap) {
+      ensure(id);
+      pPrice = pend.price; pChange = pend.change; pPct = pend.pct; pVol = pend.volume; pHigh = pend.high; pLow = pend.low;
+      pT = pend.t; pSrc = pend.src; bits = batch.bits; bIds = batch.ids;
+    }
     // `x == null ? NaN : x`: null (field not in this tick) becomes NaN, the typed-array spelling of "missing".
     const change = r[2] == null ? NaN : r[2];
     const pct = r[3] == null ? NaN : r[3];
@@ -185,38 +191,38 @@ export function ingest(rows: Row[], recvAt: number): void {
     const low = r[6] == null ? NaN : r[6];
     const src = r[8].charCodeAt(0);
 
-    raw.id[i] = id;
-    raw.price[i] = r[1];
-    raw.change[i] = change;
-    raw.pct[i] = pct;
-    raw.volume[i] = volume;
-    raw.high[i] = high;
-    raw.low[i] = low;
-    raw.t[i] = r[7];
-    raw.src[i] = src;
+    // Raw copy for alerts: only what they read (id, price, pct, change, src).
+    rId[i] = id;
+    rPrice[i] = r[1];
+    rChange[i] = change;
+    rPct[i] = pct;
+    rSrc[i] = src;
 
-    if (!bitHas(batch.bits, id)) {
+    const w = id >>> 5;
+    const m = 1 << (id & 31);
+    if ((bits[w] & m) === 0) {
       // First tick of this symbol in this frame: take every field as is (NaN included).
-      bitSet(batch.bits, id);
-      batch.ids[batch.count++] = id;
-      pend.change[id] = change;
-      pend.pct[id] = pct;
-      pend.volume[id] = volume;
-      pend.high[id] = high;
-      pend.low[id] = low;
+      bits[w] |= m;
+      bIds[count++] = id;
+      pChange[id] = change;
+      pPct[id] = pct;
+      pVol[id] = volume;
+      pHigh[id] = high;
+      pLow[id] = low;
     } else {
       // Second tick in the same frame: the later one wins, but a field it did not carry (NaN) must not erase
-      // a value the earlier tick had (the old `carryNulls`).
-      if (change === change) pend.change[id] = change;
-      if (pct === pct) pend.pct[id] = pct;
-      if (volume === volume) pend.volume[id] = volume;
-      if (high === high) pend.high[id] = high;
-      if (low === low) pend.low[id] = low;
+      // a value the earlier tick had.
+      if (change === change) pChange[id] = change;
+      if (pct === pct) pPct[id] = pct;
+      if (volume === volume) pVol[id] = volume;
+      if (high === high) pHigh[id] = high;
+      if (low === low) pLow[id] = low;
     }
-    pend.price[id] = r[1];
-    pend.t[id] = r[7];
-    pend.src[id] = src;
+    pPrice[id] = r[1];
+    pT[id] = r[7];
+    pSrc[id] = src;
   }
+  batch.count = count;
   raw.n = n;
   const rl = rawListeners;
   for (let i = 0; i < rl.length; i++) rl[i](raw); // Phase 8: alerts (runs even when rAF is paused in a hidden tab)
