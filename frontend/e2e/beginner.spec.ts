@@ -10,7 +10,7 @@ import { bars, env, now, quote } from "./p19util";
  * Every click goes through `clicker()` so the test can assert "at most 4 clicks" after it has asserted the outcome.
  *
  * Each test is written as the IDEAL beginner flow (plain-word buttons, company-name search, glossary tooltip, "Add a stock"
- * buttons in empty states). Where today's UI cannot do that yet the test is marked `todo` = `test.fail()` (tests-first rule:
+ * buttons in empty states). All ten pass now; a task that regresses should be marked `test.fail()` again (tests-first rule:
  * the suite stays green, and a strict pass turns red, so the build step must delete the marker). To see why a test fails,
  * run with BEGINNER_REAL=1 (the markers are skipped and the real failure prints).
  *
@@ -22,8 +22,6 @@ import { bars, env, now, quote } from "./p19util";
 // reports as a real failure even under test.fail).
 test.use({ actionTimeout: 3_000 });
 
-/** `todo(...)` is `test.fail(...)` until the build step makes the task pass (BEGINNER_REAL=1 runs them as plain tests). */
-const todo = process.env.BEGINNER_REAL ? test : test.fail;
 
 /** Counts mouse clicks. Hover and typing are not clicks; they are not counted. */
 function clicker() {
@@ -171,7 +169,7 @@ async function setupGui(page: Page): Promise<Mocks> {
   await page.route("**/api/bt/**", (r) => {
     const req = r.request();
     const path = new URL(req.url()).pathname;
-    if (path === "/api/bt/templates") return r.fulfill({ json: { templates: [] } });
+    if (path === "/api/bt/templates") return r.fulfill({ json: { templates: [{ id: "sma_cross", title: "SMA CROSS", summary: "Buy when the 20-day average is above the 50-day average.", code: "class SignalEngine: pass" }] } });
     if (path === "/api/bt/run") {
       m.posts.push({ url: path, body: req.postDataJSON() });
       return r.fulfill({ json: { id: "j1", kind: "bt.run", state: "queued", progress: 0, msg: "", cached: false } });
@@ -232,8 +230,7 @@ test("2. chart Tesla over 1 year", async ({ page }) => {
 });
 
 // 3. Make a watchlist with 3 stocks.
-// MISSING: the empty watchlist has no "Add a stock" button (today the Add button needs a named list, which needs a typed command).
-todo("3. make a watchlist with 3 stocks", async ({ page }) => {
+test("3. make a watchlist with 3 stocks", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -270,8 +267,7 @@ test("5. see how the major world indices are doing", async ({ page }) => {
 });
 
 // 6. Set a price alert on a stock.
-// MISSING: company-name search; a "Set alert" button on the stock overview that asks for a price (today ALRT is typed commands only).
-todo("6. set a price alert on a stock", async ({ page }) => {
+test("6. set a price alert on a stock", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -285,8 +281,7 @@ todo("6. set a price alert on a stock", async ({ page }) => {
 });
 
 // 7. Track a small portfolio (2 positions) and see its value.
-// MISSING: "My portfolio" button; empty state "Add a stock"; the Add box takes several comma-separated positions in one go.
-todo("7. track a small portfolio of 2 positions and see its value", async ({ page }) => {
+test("7. track a small portfolio of 2 positions and see its value", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -300,9 +295,8 @@ todo("7. track a small portfolio of 2 positions and see its value", async ({ pag
 });
 
 // 8. Run a sample backtest from a starter template.
-// MISSING: "Try a backtest" button; BT panel with no arguments shows starter-template buttons and a Run button
 // (today templates exist only inside the strategy editor, reached by typing "BT EDIT name").
-todo("8. run a sample backtest from a starter template", async ({ page }) => {
+test("8. run a sample backtest from a starter template", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();

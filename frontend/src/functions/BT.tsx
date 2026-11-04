@@ -15,10 +15,11 @@ import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
+import { BtStarter } from "./BtStarter";
 import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtMcResult, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
+import { ApiError, btApi, type BtMcResult, type BtRunRequest, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
 import { isActive, progressText } from "../net/jobFrames";
 import { adoptJob, cancelJob, fetchJob, useJob } from "../net/jobs";
 import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
@@ -145,18 +146,13 @@ export default function BT({ panelId, args }: FunctionProps) {
       .catch((e) => setState({ k: "failed", error: errText(e) }));
   };
 
-  const submit = (a: BtRun) => {
-    let structure: Record<string, unknown> | undefined;
-    if (a.mkt === "options") {
-      const os = lastOsa(a.symbols[0]);
-      if (!os) return setState({ k: "failed", error: NO_OSA });
-      structure = btStructure(os, a);
-    }
+  /** Sends one run request and follows the job. `rule` is only used to point at the column of a bad rule. */
+  const post = (req: BtRunRequest, rule?: string) => {
     setState({ k: "submitting" });
     setMsg(null);
     const t = performance.now();
     btApi
-      .run(request(a, structure))
+      .run(req)
       .then((j) => {
         gauges.set("bt.postMs", performance.now() - t);
         const rec = adoptJob(j);
@@ -167,9 +163,23 @@ export default function BT({ panelId, args }: FunctionProps) {
         else setState({ k: "running", jobId: rec.id });
       })
       .catch((e: ApiError) =>
-        setState(e.col != null && e.col >= 0 ? { k: "bad", error: e.message, rule: a.rule, col: e.col } : { k: "failed", error: errText(e) }),
+        setState(e.col != null && e.col >= 0 ? { k: "bad", error: e.message, rule, col: e.col } : { k: "failed", error: errText(e) }),
       );
   };
+
+  const submit = (a: BtRun) => {
+    let structure: Record<string, unknown> | undefined;
+    if (a.mkt === "options") {
+      const os = lastOsa(a.symbols[0]);
+      if (!os) return setState({ k: "failed", error: NO_OSA });
+      structure = btStructure(os, a);
+    }
+    post(request(a, structure), a.rule);
+  };
+
+  /** Starter template (GUI empty state): the template's Python code on one symbol, 1D bars over 5Y, default costs. */
+  const runStarter = (code: string, symbol: string) =>
+    post({ code, symbols: [symbol.toUpperCase()], interval: "1D", range: "5Y", options: {} });
 
   /** BT SAVE <NAME> <RULE>: a named rule, run later as `BT <SYMBOLS> @<NAME>`. (Python strategies are saved from BT EDIT.) */
   const saveRule = (name: string | undefined, rule: string) => {
@@ -422,6 +432,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <PanelNote kind="empty" hint="Run one: BT AAPL SMA20>SMA50 1D 5Y. BT RUNS lists stored runs. In GUI mode the sidebar search box takes the same command.">
             NO BACKTEST OPEN
           </PanelNote>
+          <BtStarter onRun={runStarter} />
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>

@@ -135,3 +135,14 @@
 :root[data-mode="gui"] .pnote-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 :root[data-mode="gui"] .pnote-actions button { padding: 1px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--bar); color: var(--fg); cursor: pointer; }
 :root[data-mode="gui"] .pnote-actions button:hover, :root[data-mode="gui"] .pnote-actions button:focus-visible { background: var(--sel); color: var(--val); border-color: var(--warn); }
+
+/* BT empty state: starter strategies (functions/BtStarter.tsx). */
+:root[data-mode="gui"] .bt-starter { margin: 8px 0; }
+:root[data-mode="gui"] .bt-starter-h { margin-bottom: 6px; color: var(--val); }
+:root[data-mode="gui"] .bt-starter-list { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+:root[data-mode="gui"] .bt-template, :root[data-mode="gui"] .bt-starter-run button { padding: 2px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--bar); color: var(--fg); cursor: pointer; font: inherit; text-align: left; }
+:root[data-mode="gui"] .bt-template:hover, :root[data-mode="gui"] .bt-template:focus-visible, :root[data-mode="gui"] .bt-starter-run button:not(:disabled):hover { background: var(--sel); color: var(--val); border-color: var(--warn); }
+:root[data-mode="gui"] .bt-template.on { border-color: var(--warn); color: var(--val); }
+:root[data-mode="gui"] .bt-starter-run { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+:root[data-mode="gui"] .bt-starter-run button:disabled { opacity: 0.5; cursor: default; }
+:root[data-mode="gui"] .bt-starter-sym { width: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; font: inherit; padding: 1px 4px; }
