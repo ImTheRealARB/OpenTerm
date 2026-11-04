@@ -15,14 +15,17 @@ import type { Page } from "@playwright/test";
  *
  * `welcome: true` leaves the first-run welcome card unseeded, so a GUI-mode test sees it once (default: already seen).
  */
-export async function openApp(page: Page, opts: { mode?: "terminal" | "gui"; welcome?: boolean } = {}) {
+export async function openApp(page: Page, opts: { mode?: "terminal" | "gui"; welcome?: boolean; tabs?: boolean } = {}) {
   const settings = opts.mode === "gui" ? { mode: "gui" } : {};
   const seedWelcomed = !opts.welcome;
-  await page.addInitScript(({ seed, seedWelcomed }) => {
+  // GUI mode shows panels as tabs by default; older tests expect tiles, so they start with tabs off unless `tabs: true`.
+  const seedTabs = opts.tabs ? "1" : "0";
+  await page.addInitScript(({ seed, seedWelcomed, seedTabs }) => {
     try {
       // The first-run welcome card (GUI mode, localStorage `openterm.welcomed`) would cover the workspace in every GUI test,
       // so it counts as already seen unless the test asks for it with `welcome: true`.
       if (seedWelcomed && localStorage.getItem("openterm.welcomed") === null) localStorage.setItem("openterm.welcomed", "1");
+      if (localStorage.getItem("openterm.guiTabs") === null) localStorage.setItem("openterm.guiTabs", seedTabs);
       if (localStorage.getItem("openterm.settings") === null) {
         // updatedAt 0 + dirty false: this is not an edit, so settings sync neither pushes it nor treats it as newer than the server's copy.
         localStorage.setItem("openterm.settings", JSON.stringify({ settings: seed, updatedAt: 0, dirty: false }));
@@ -30,7 +33,7 @@ export async function openApp(page: Page, opts: { mode?: "terminal" | "gui"; wel
     } catch {
       /* storage unavailable: the app then starts in its default shell */
     }
-  }, { seed: settings, seedWelcomed });
+  }, { seed: settings, seedWelcomed, seedTabs });
   await page.goto("/");
   await page.waitForFunction(() => window.__openterm_perf?.ready);
 }

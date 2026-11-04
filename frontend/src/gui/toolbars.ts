@@ -66,7 +66,6 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "1Y", key: "6", title: "Range 1 year (6)" },
     { label: "5Y", key: "7", title: "Range 5 years (7)" },
     { label: "MAX", key: "8", title: "Range maximum (8)" },
-    { label: "Type", key: "c", title: "Cycle the chart type: candles, OHLC, line, area (C)" },
     { label: "Log", key: "l", title: "Toggle the logarithmic price scale (L)" },
     { label: "Indicators", key: "i", title: "Pick indicators (I); then press the letter shown next to each one" },
     { label: "Indicators…", key: "i", open: "IND", title: "Indicator library: search, write a formula, Enter adds it to this chart" },
