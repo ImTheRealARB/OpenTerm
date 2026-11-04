@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { onboarding, readFlag, showWelcome, WELCOMED_KEY } from "./onboarding";
-import { Tour } from "./Tour";
-import { Welcome } from "./Welcome";
+import { LazyTour as Tour, LazyWelcome as Welcome } from "./LazyGui";
 
 /**
  * Everything GUI mode lays over the app: the first-run welcome card and the tour. Rendered only in GUI mode, so mounting

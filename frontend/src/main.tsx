@@ -3,6 +3,7 @@ import { App } from "./App";
 import { startAlerts } from "./command/alerts"; // Phase 8
 import { history } from "./command/history";
 import { createSyncGate } from "./command/syncGate";
+import { idlePreload } from "./functions/idlePreload";
 import { FUNCTION_LIST, loadModule } from "./functions/registry";
 import { afterPaint, installObservers } from "./perf/metrics";
 import { connect, link } from "./net/socket";
@@ -32,5 +33,10 @@ afterPaint(() => {
   addEventListener("pagehide", () => history.flushOnExit());
   // Warm function modules while idle so the first command doesn't wait on a chunk download.
   const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
-  idle(() => FUNCTION_LIST.forEach((f) => f.idlePreload !== false && f.load && loadModule(f.code).catch(() => {})));
+  // A few chunks per idle slot, not all ~88 at once, so the first keystrokes and the first quote fetch are not starved.
+  idlePreload(
+    FUNCTION_LIST.filter((f) => f.idlePreload !== false && f.load).map((f) => f.code),
+    loadModule,
+    idle,
+  );
 });
