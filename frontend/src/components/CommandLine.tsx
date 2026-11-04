@@ -1,31 +1,24 @@
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { execute, statusMsg } from "../command/execute";
-import { needsNatural, resolveNatural } from "../command/nlRun";
+import { needsNatural } from "../command/nlRun";
 import { info } from "../command/status";
-import type { Hint } from "../command/syntaxHint";
+import type { Suggestion, Ui } from "../command/cmdExtras";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
 import { refreshWatchlists, watchlistList } from "../command/watchlists";
-import { FUNCTIONS, FUNCTION_LIST, isFunction, loadModule } from "../functions/registry";
+import { FUNCTION_LIST, isFunction, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
 import { VIM_INSERT, vimKey, type VimMode } from "../command/vim";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 
-interface Suggestion {
-  value: string;
-  label: string;
-  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT" | "LIST" | "ARG" | "NL" | "MEAN";
-}
 
 const SEARCH_DEBOUNCE_MS = 80;
-const NL_DEBOUNCE_MS = 150;
 
-// The syntax-hint helper is a lazy chunk (it is not needed before the first space is typed).
-type HintModule = typeof import("../command/syntaxHint");
-let hintMod: HintModule | null = null;
+type Extras = typeof import("../command/cmdExtras");
+let extrasMod: Extras | null = null;
 
 export const commandInputRef: { current: HTMLInputElement | null } = { current: null };
 const prefillRef: { current: ((text: string) => void) | null } = { current: null };
@@ -106,11 +99,9 @@ export function CommandLine() {
   const [, startTransition] = useTransition();
   const searchSeq = useRef(0);
   const searchTimer = useRef(0);
-  const nlTimer = useRef(0);
-  const nlSeq = useRef(0);
   /** The plain-English reading of the typed text ("-> AAPL GP"); always listed first. */
   const nlItems = useRef<Suggestion[]>([]);
-  const [hint, setHint] = useState<Hint | null>(null);
+  const [hint, setHint] = useState<ReactNode>(null);
   // Phase 10: opt-in vim editing (SETTINGS). Off by default; the default path is one boolean check.
   const vimOn = useStore(settingsStore, (st) => st.vim);
   const vim = useRef(VIM_INSERT);
@@ -200,8 +191,6 @@ export function CommandLine() {
     extras((m) =>
       void m.viaNatural(text, ui, (c) => runNl(c, text, newPanel), () => {
         if (execute(text, { newPanel })) finish();
-      }).then(() => {
-        if (items.length === 0 && nlItems.current.length === 0) return;
       }),
     );
 
@@ -344,14 +333,7 @@ export function CommandLine() {
       />
       <span className="cmd-go" aria-hidden="true">GO</span>
       {vimOn && focused && <span className="vim">{vimMode === "normal" ? "-- NORMAL --" : "-- INSERT --"}</span>}
-      {focused && hint && items.length === 0 && (
-        <div className="hint" role="note" data-testid="syntax-hint" aria-label="Command syntax">
-          <span className="hc">{hint.code}</span>
-          {hint.slots.map((sl, i) => (sl.active ? <b key={i}> {sl.text}</b> : <span key={i}> {sl.text}</span>))}
-          {hint.slots.length === 0 && <span className="dim"> (no arguments)</span>}
-          {hint.values.length > 0 && <span className="dim hv" data-testid="syntax-values"> : {hint.values.slice(0, 12).join(" ")}</span>}
-        </div>
-      )}
+      {focused && items.length === 0 && hint}
       {focused && items.length > 0 && (
         <div className="ac" role="listbox">
           {items.map((s, i) => (

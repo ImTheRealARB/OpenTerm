@@ -216,8 +216,3 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 
 /* --- Strategy editor (BT EDIT, CodeMirror): the box and the sandbox error marker are styled in bt/codeEditor.ts --- */
 .import.editor { overflow: hidden; }
-/* Syntax hint under the command line (Excel-style): the argument being typed is bold. No colour beyond theme vars. */
-.hint { position: absolute; left: 0; top: 22px; z-index: 19; max-width: 100%; padding: 0 6px; white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; background: var(--bg); border: 1px solid var(--fg-dim); pointer-events: none; }
-.hint .hc { font-weight: bold; color: var(--warn); }
-.hint b { color: var(--val); }

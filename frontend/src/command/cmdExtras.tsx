@@ -6,6 +6,8 @@
 import { FUNCTIONS, isFunction } from "../functions/registry";
 import { history } from "./history";
 import { needsNatural, resolveNatural } from "./nlRun";
+import { info } from "./status";
+import type { ReactNode } from "react";
 import { syntaxHint, type Hint } from "./syntaxHint";
 
 export interface Suggestion {
@@ -18,7 +20,7 @@ export interface Ui {
   value(): string;
   setItems(items: Suggestion[]): void;
   setSel(n: number): void;
-  setHint(h: Hint | null): void;
+  setHint(h: ReactNode): void;
   /** The plain-English reading of the text, listed first. */
   nl: { current: Suggestion[] };
 }
@@ -62,14 +64,26 @@ export async function viaNatural(text: string, ui: Ui, run: (command: string) =>
   else if (r.kind === "choices") {
     ui.setItems(meaning(r));
     ui.setSel(0);
+    info("DID YOU MEAN: UP/DOWN + ENTER");
   } else again();
+}
+
+function hintLine(h: Hint): ReactNode {
+  return (
+    <div className="ac hint" role="note" data-testid="syntax-hint" aria-label="Command syntax" onMouseDown={(e) => e.preventDefault()}>
+      <span>{h.code}</span>
+      {h.slots.map((sl, i) => (sl.active ? <b key={i}> {sl.text}</b> : <span key={i}> {sl.text}</span>))}
+      {h.slots.length === 0 && <span className="dim"> (no arguments)</span>}
+      {h.values.length > 0 && <span className="dim hv" data-testid="syntax-values"> : {h.values.slice(0, 12).join(" ")}</span>}
+    </div>
+  );
 }
 
 /** Syntax hint line: the function's argument slots with the one being typed in bold. */
 export function updateHint(v: string, ui: Ui): void {
   if (ui.value() !== v) return;
   const h = syntaxHint(v, { isFunction, argsSchema: (c) => FUNCTIONS.get(c)?.argsSchema, symbols: history.recentSecurities() });
-  ui.setHint(h);
+  ui.setHint(h && hintLine(h));
   // Typing a value of the active slot ("AAPL GP 5"): list the matches so Tab completes them.
   if (h && h.token && h.values.length && !ui.nl.current.length) {
     ui.setItems(h.values.slice(0, 8).map((value) => ({ value, label: h.wantsSymbol ? "" : "ARGUMENT", kind: "ARG" as const })));
