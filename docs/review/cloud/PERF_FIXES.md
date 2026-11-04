@@ -15,3 +15,12 @@ Local measurement (own harness, same fixture setup as bench): btOpen p95 175 ms 
 
 ## Not changed
 Backend data/job/SWR caches stay. `bt.getMs` stays NaN on the cached path.
+
+## Bench results (this box)
+| Run | BT open p95 | SEAS p95 | Other FAIL lines |
+|---|---|---|---|
+| 1 | 36.2 ms | 12.0 ms | none |
+| 2 | 40.3 ms | 14.0 ms | 50k-bar chart pan 33.3 ms (known lone miss) |
+| 3 (after removing per-bar key objects in `periodReturns`) | 35.0 ms | 12.2 ms | long tasks 1.0 (streaming load, not on my paths) |
+
+SEAS: warm cost in vitest is about 4.5 ms for the three kinds, but the bench p95 of 15 samples picks up the cold-JIT first runs (20+ ms in vitest, 12-14 ms in the browser), so the line passes but is not at the 8 ms target.

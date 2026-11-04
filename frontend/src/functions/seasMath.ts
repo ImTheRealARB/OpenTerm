@@ -80,7 +80,7 @@ function row(label: string, rets: number[]): SeasRow {
 }
 
 /** Period returns: groups bars by `keyOf`, takes each group's last close, returns {bucket, ret} for groups with a previous group. */
-function periodReturns(t: Float64Array, c: Float64Array, keyOf: (i: number) => { key: number; bucket: number; year: number }, skipLast: boolean) {
+function periodReturns(t: Float64Array, c: Float64Array, keyOf: (i: number) => number, infoOf: (i: number) => { bucket: number; year: number }, skipLast: boolean) {
   const out: { bucket: number; ret: number; year: number }[] = [];
   let prevKey = -1;
   let prevClose = NaN;
@@ -93,16 +93,17 @@ function periodReturns(t: Float64Array, c: Float64Array, keyOf: (i: number) => {
   };
   for (let i = 0; i < t.length; i++) {
     if (!Number.isFinite(c[i])) continue;
-    const k = keyOf(i);
-    if (k.key !== curKey) {
+    const key = keyOf(i); // a plain number per bar: no object allocated here
+    if (key !== curKey) {
       flush();
       if (curKey >= 0) {
         prevKey = curKey;
         prevClose = curClose;
       }
-      curKey = k.key;
-      curBucket = k.bucket;
-      curYear = k.year;
+      curKey = key;
+      const info = infoOf(i); // bucket and year are only needed once per month/week, not per bar
+      curBucket = info.bucket;
+      curYear = info.year;
     }
     curClose = c[i];
   }
@@ -119,21 +120,30 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
   const openAt = opts.excludeOpenPeriodAt;
   const days = localDayNumbers(tt, tz); // one day number per bar, shared by every kind below
   const dayOf = (sec: number) => localDayNumbers([sec], tz)[0];
-  // Bar index -> group key. Months: year*12+month. ISO weeks: year*60+week.
+  // Group key per bar: months = year*12+month, ISO weeks = year*60+week. Numbers only; bucket/year come from infoOf.
   const monthKeyOfDay = (dn: number) => {
     const { y, m } = civilFromDays(dn);
-    return { key: y * 12 + (m - 1), bucket: m - 1, year: y };
+    return y * 12 + (m - 1);
   };
   const weekKeyOfDay = (dn: number) => {
     const w = isoWeekOfDays(dn);
-    return { key: w.year * 60 + w.week, bucket: w.week - 1, year: w.year };
+    return w.year * 60 + w.week;
+  };
+  const monthInfo = (dn: number) => {
+    const { y, m } = civilFromDays(dn);
+    return { bucket: m - 1, year: y };
+  };
+  const weekInfo = (dn: number) => {
+    const w = isoWeekOfDays(dn);
+    return { bucket: w.week - 1, year: w.year };
   };
   let rows: SeasRow[];
   let obs = 0;
   if (kind === "MONTH" || kind === "WOY") {
     const ofDay = kind === "MONTH" ? monthKeyOfDay : weekKeyOfDay;
-    const skipLast = openAt !== undefined && n > 0 && ofDay(dayOf(openAt)).key === ofDay(days[n - 1]).key;
-    const pr = periodReturns(tt, cc, (i) => ofDay(days[i]), skipLast);
+    const infoOfDay = kind === "MONTH" ? monthInfo : weekInfo;
+    const skipLast = openAt !== undefined && n > 0 && ofDay(dayOf(openAt)) === ofDay(days[n - 1]);
+    const pr = periodReturns(tt, cc, (i) => ofDay(days[i]), (i) => infoOfDay(days[i]), skipLast);
     const size = kind === "MONTH" ? 12 : 53;
     const buckets: number[][] = Array.from({ length: size }, () => []);
     for (const p of pr) if (p.bucket < size) buckets[p.bucket].push(p.ret);
