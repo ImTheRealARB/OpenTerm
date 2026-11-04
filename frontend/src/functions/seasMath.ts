@@ -106,6 +106,12 @@ function periodReturns(t: Float64Array, c: Float64Array, keyOf: (tSec: number) =
  * getUTC* calls below read the exchange date.
  */
 function localDay(sec: number, tz?: string | null): Date {
+  // Fast path: with no exchange zone (or UTC) the UTC date IS the bar's date, so skip the Intl formatter. Intl costs a few
+  // microseconds per call, which made 10,000 bars ~4x slower than the 15 ms PERF CALC budget.
+  if (!tz || tz === "UTC" || tz === "Etc/UTC" || tz === "GMT") {
+    // Same as before the time-zone fix: callers read only getUTC* date fields, so the time of day does not matter.
+    return new Date(sec * 1000);
+  }
   const [y, m, d] = dayKey(sec, tz).split("-").map(Number); // "YYYY-MM-DD"
   return new Date(Date.UTC(y, m - 1, d));
 }
@@ -122,7 +128,7 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
     return { key: d.getUTCFullYear() * 12 + d.getUTCMonth(), bucket: d.getUTCMonth(), year: d.getUTCFullYear() };
   };
   const weekKey = (s: number) => {
-    const w = isoWeek(localDay(s, tz).getTime() / 1000);
+    const w = isoWeek(tz ? localDay(s, tz).getTime() / 1000 : s); // no zone: the bar time itself, as before
     return { key: w.year * 60 + w.week, bucket: w.week - 1, year: w.year };
   };
   let rows: SeasRow[];
