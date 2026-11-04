@@ -5,7 +5,7 @@
  * A period needs a previous period in the data, so the first (partial) month or week is never counted.
  */
 
-import { dayKey } from "./corrMath";
+import { daysFromCivil, localDayNumbers } from "./dayMath";
 
 export type SeasKind = "MONTH" | "WEEKDAY" | "DOM" | "WOY";
 export const SEAS_KINDS: SeasKind[] = ["MONTH", "WEEKDAY", "DOM", "WOY"];
@@ -57,15 +57,6 @@ export function civilFromDays(days: number): { y: number; m: number; d: number }
   const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
   const m = mp < 10 ? mp + 3 : mp - 9;
   return { y: yoe + era * 400 + (m <= 2 ? 1 : 0), m, d };
-}
-
-function daysFromCivil(y: number, m: number, d: number): number {
-  const yy = m <= 2 ? y - 1 : y;
-  const era = Math.floor(yy / 400);
-  const yoe = yy - era * 400;
-  const doy = Math.floor((153 * (m > 2 ? m - 3 : m + 9) + 2) / 5) + d - 1;
-  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
-  return era * 146097 + doe - 719468;
 }
 
 /** Monday = 0 .. Sunday = 6 (1970-01-01 was a Thursday, which is 3). */
@@ -131,33 +122,14 @@ function periodReturns(t: Float64Array, c: Float64Array, keyOf: (i: number) => {
   return out;
 }
 
-/**
- * Calendar day number (days since 1970-01-01) of every bar in the exchange's zone. Yahoo stamps a daily bar at the exchange
- * open, which for Sydney is 23:00 UTC the day before, so the UTC date would be one day early.
- * With no zone (or UTC) this is just floor(seconds / 86400): no Date, no Intl. With a zone only the day number changes
- * (dayKey caches the formatted date per bar), everything after this step is the same integer math.
- */
-function localDays(t: ArrayLike<number>, tz?: string | null): Float64Array {
-  const out = new Float64Array(t.length);
-  if (!tz || tz === "UTC" || tz === "Etc/UTC" || tz === "GMT") {
-    for (let i = 0; i < t.length; i++) out[i] = Math.floor(t[i] / 86400);
-    return out;
-  }
-  for (let i = 0; i < t.length; i++) {
-    const k = dayKey(t[i], tz); // "YYYY-MM-DD"
-    out[i] = daysFromCivil(+k.slice(0, 4), +k.slice(5, 7), +k.slice(8, 10));
-  }
-  return out;
-}
-
 export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, opts: { excludeOpenPeriodAt?: number; tz?: string | null } = {}): SeasResult {
   const tz = opts.tz;
   const n = Math.min(t.length, c.length);
   const tt = t.subarray(0, n);
   const cc = c.subarray(0, n);
   const openAt = opts.excludeOpenPeriodAt;
-  const days = localDays(tt, tz); // one day number per bar, shared by every kind below
-  const dayOf = (sec: number) => localDays([sec], tz)[0];
+  const days = localDayNumbers(tt, tz); // one day number per bar, shared by every kind below
+  const dayOf = (sec: number) => localDayNumbers([sec], tz)[0];
   // Bar index -> group key. Months: year*12+month. ISO weeks: year*60+week.
   const monthKeyOfDay = (dn: number) => {
     const { y, m } = civilFromDays(dn);

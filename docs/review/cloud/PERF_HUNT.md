@@ -24,3 +24,9 @@ Checks: `tsc` clean, vitest 589 pass, Playwright `beginner.spec.ts` 11 pass and 
 - `alerts.ts` must stay (alerts are evaluated app-wide from first tick).
 - Indicator-toggle chart rebuild: ChartView effect rewrite broke GP e2e before (docs/review/REVERTED.md).
 - Not reached: Grid/ticks per-frame allocation audit, screener compression, backend cached-route overhead (no budget left; need bench/browser).
+
+## Data-oriented rewrite (method update): not started, design only
+Target: `state/ticks.ts` (`live`/`pending` Maps keyed by symbol, a fresh `changed` Set per frame) -> `liveRowsCore.hitRows` (Map lookup, new `hit` array per tick) -> `Grid.redrawRows`.
+Plan: intern each symbol once to an int id (rule 2); `Float64Array` price/change/pct; dirty ids as a `Uint32Array` bitset (rule 5) reused every frame (rule 4);
+`useLiveRows` keeps an `Int32Array` id -> row position. Touches `TickListener`'s `ReadonlySet<string>` signature used by LivePrice, alerts, quoteRows, Board, PORT,
+so it is a cross-cutting change that needs a browser tick-to-pixel measurement (bench is the other agent's) and a full e2e run. Left undone rather than done unmeasured.
