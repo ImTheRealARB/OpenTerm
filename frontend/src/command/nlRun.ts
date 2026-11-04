@@ -12,17 +12,11 @@ export type NlOutcome = NlResult | { kind: "asis" };
 /** Tickers of the company list once it has been loaded (set by nlResolve.ts); null before that. */
 export const known: { symbols: Set<string> | null } = { symbols: null };
 
-const PANEL_PREFIX = /^([1-9])\s*:\s*/;
-
-export function split(input: string): { prefix: string; body: string } {
-  const t = input.trim();
-  const m = PANEL_PREFIX.exec(t);
-  return { prefix: m ? `${m[1]}: ` : "", body: m ? t.slice(m[0].length) : t };
-}
+export const PANEL_PREFIX = /^\s*([1-9])\s*:\s*/;
 
 /** True when the typed text should be tried as plain English before (or instead of) running it as a command. */
 export function needsNatural(input: string): boolean {
-  const { body } = split(input);
+  const body = input.replace(PANEL_PREFIX, "").trim();
   if (body.length < 3 || !/[a-zA-Z]/.test(body)) return false;
   const p = parseCommand(input, isFunction);
   if (!p.ok) return true; // BAD SYMBOL / UNKNOWN FUNCTION: the error is shown only if natural language finds nothing

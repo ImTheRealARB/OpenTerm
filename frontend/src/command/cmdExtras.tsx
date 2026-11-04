@@ -10,8 +10,6 @@ import { info } from "./status";
 import type { ReactNode } from "react";
 import { syntaxHint, type Hint } from "./syntaxHint";
 
-export { needsNatural };
-
 export interface Suggestion {
   value: string;
   label: string;

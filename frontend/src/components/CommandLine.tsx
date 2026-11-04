@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { execute, statusMsg } from "../command/execute";
+import { needsNatural } from "../command/nlRun";
 import { info } from "../command/status";
 import type { Suggestion, Ui } from "../command/cmdExtras";
 import { fuzzyRank } from "../command/fuzzy";
@@ -100,7 +101,13 @@ export function CommandLine() {
   const searchTimer = useRef(0);
   /** The plain-English reading of the typed text ("-> AAPL GP"); always listed first. */
   const nlItems = useRef<Suggestion[]>([]);
-  const [hint, setHint] = useState<ReactNode>(null);
+  const [hint, setHintState] = useState<ReactNode>(null);
+  // A ref too: Esc right after Enter must see that the hint is already gone (the render has not happened yet).
+  const hintOn = useRef(false);
+  const setHint = (h: ReactNode) => {
+    hintOn.current = !!h;
+    setHintState(h);
+  };
   // Phase 10: opt-in vim editing (SETTINGS). Off by default; the default path is one boolean check.
   const vimOn = useStore(settingsStore, (st) => st.vim);
   const vim = useRef(VIM_INSERT);
@@ -177,13 +184,6 @@ export function CommandLine() {
     nl: nlItems,
   };
   const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
-  // Enter: plain commands run at once; text that may be plain English waits for the interpreter (the chunk loads on the first keystroke).
-  const submit = (text: string, newPanel: boolean) =>
-    extras((m) => {
-      if (input.current?.value !== text) return;
-      if (m.needsNatural(text)) void viaNatural(text, newPanel);
-      else if (execute(text, { newPanel })) finish();
-    });
   const viaNatural = (text: string, newPanel: boolean) =>
     extras((m) =>
       void m.viaNatural(text, ui, (c) => runNl(c, text, newPanel), () => {
@@ -224,7 +224,8 @@ export function CommandLine() {
       e.preventDefault();
       const picked = items[sel];
       if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, el.value, e.shiftKey);
-      else submit(el.value, e.shiftKey);
+      else if (needsNatural(el.value)) viaNatural(el.value, e.shiftKey);
+      else if (execute(el.value, { newPanel: e.shiftKey })) finish();
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();
       accept(items[Math.max(0, sel)]);
@@ -243,7 +244,7 @@ export function CommandLine() {
         e.stopPropagation();
         setItems([]);
         setSel(-1);
-      } else if (hint) {
+      } else if (hintOn.current) {
         e.stopPropagation();
         setHint(null);
       }

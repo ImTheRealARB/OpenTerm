@@ -3,7 +3,13 @@
  */
 import { isFunction } from "../functions/registry";
 import type { UniverseEntry } from "../gui/companySearch";
-import { known, split, type NlOutcome } from "./nlRun";
+import { PANEL_PREFIX, known, type NlOutcome } from "./nlRun";
+
+function split(input: string): { prefix: string; body: string } {
+  const t = input.trim();
+  const m = PANEL_PREFIX.exec(t);
+  return { prefix: m ? `${m[1]}: ` : "", body: m ? t.slice(m[0].length) : t };
+}
 
 let universe: UniverseEntry[] | null = null;
 
