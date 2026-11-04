@@ -15,6 +15,7 @@ import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { useStore } from "../state/store";
 import type { IndicatorName } from "./indicators";
+import { diffIndicators } from "./indicatorDiff";
 import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
 
@@ -123,7 +124,12 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   // Phase 19 refs: the overlay canvas, the marker plugin of the price series, the latest props the overlay paints from.
   const overlay = useRef<HTMLCanvasElement>(null);
   const markersApi = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
-  const patMarks = useRef<SeriesMarker<Time>[]>([]);
+  // Indicators drawn so far, by name: their series and pattern marks. A toggle touches only its own entry.
+  const ind = useRef(new Map<IndicatorName, { series: ISeriesApi<SeriesType>[]; marks: SeriesMarker<Time>[] }>());
+  const indReq = useRef(new Map<number, IndicatorName>());
+  const indWant = useRef(new Set<IndicatorName>());
+  const basePanes = useRef(1);
+  const onIndResult = useRef<(id: number, r: Record<string, Float64Array>) => void>(() => {});
   const eventsRef = useRef<ChartMarkerEvent[] | undefined>(events);
   eventsRef.current = events;
   const drawRef = useRef<DrawState | undefined>(draw);
@@ -186,6 +192,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       if (rafRef.current) return;
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = 0;
+        const vr = chart.timeScale().getVisibleLogicalRange();
+        if (vr) {
+          gauges.set("chart.visFrom", vr.from);
+          gauges.set("chart.visTo", vr.to);
+        }
         paintRef.current();
       });
     };
@@ -228,8 +239,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     chart.applyOptions({
       timeScale: { timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: (INTERVAL_S[data.interval] ?? 86400) < 60, tickMarkFormatter: fmt.current.tick },
     });
-    for (const s of [main.current, vol.current, ...extra.current]) if (s) chart.removeSeries(s);
+    for (const s of [main.current, vol.current, ...extra.current, ...[...ind.current.values()].flatMap((e) => e.series)]) if (s) chart.removeSeries(s);
     extra.current = [];
+    ind.current.clear();
+    indReq.current.clear();
+    indWant.current.clear();
     main.current = null;
     vol.current = null;
 
@@ -252,7 +266,6 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       s.setData(pts);
     }
     main.current = s;
-    patMarks.current = [];
     markersApi.current = createSeriesMarkers(s, []);
     applyMarkers();
     last.current = n ? { t: data.t[n - 1], o: data.o[n - 1], h: data.h[n - 1], l: data.l[n - 1], c: data.c[n - 1], v: data.v[n - 1] } : null;
@@ -291,148 +304,204 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       extra.current.push(ls);
       chart.panes()[pane]?.setHeight(110);
     });
-    gauges.set("chart.extraSeries", extra.current.length);
     chart.priceScale("right").applyOptions({
       mode: compare ? PriceScaleMode.Percentage : log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
     });
     chart.timeScale().fitContent();
     writeReadout(n - 1);
 
-    // Indicators: computed off the main thread, drawn when they arrive (unless superseded).
-    if (indicators.length && n) {
+    basePanes.current = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
+    gauges.set("chart.rebuilds", (gauges.get("chart.rebuilds") ?? 0) + 1);
+    publish();
+  }, [data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  function publish() {
+    let n = extra.current.length;
+    for (const e of ind.current.values()) n += e.series.length;
+    gauges.set("chart.extraSeries", n);
+    gauges.set("chart.panes", chartRef.current?.panes().length ?? 0);
+  }
+
+  /** Runs `fn` (series added or removed) and puts the visible range back if lightweight-charts moved it. */
+  function keepRange(fn: () => void) {
+    const ts = chartRef.current?.timeScale();
+    const before = ts?.getVisibleLogicalRange();
+    fn();
+    if (!ts || !before) return;
+    const after = ts.getVisibleLogicalRange();
+    if (!after || Math.abs(after.from - before.from) > 1e-6 || Math.abs(after.to - before.to) > 1e-6) ts.setVisibleLogicalRange(before);
+  }
+
+  function layoutPanes(ch: IChartApi) {
+    const panes = ch.panes();
+    for (let i = panes.length - 1; i >= 1; i--) if (panes[i].getSeries().length === 0) ch.removePane(i);
+    const rest = ch.panes();
+    for (let i = 1; i < rest.length; i++) rest[i].setHeight(i < basePanes.current ? 110 : 90);
+  }
+
+  // Indicators: a toggle adds or removes only that indicator's series (and its pane); zoom and scroll stay.
+  // Runs after the series effect above, which clears `indWant` whenever it rebuilds, so a rebuild re-adds them all.
+  useEffect(() => {
+    const ch = chartRef.current;
+    if (!ch) return;
+    const { add, remove } = diffIndicators(indWant.current, indicators);
+    if (!remove.length && !(add.length && data.c.length)) return;
+    keepRange(() => {
+      for (const name of remove) {
+        for (const s of ind.current.get(name)?.series ?? []) ch.removeSeries(s);
+        ind.current.delete(name);
+        indWant.current.delete(name);
+        for (const [id, nm] of indReq.current) if (nm === name) indReq.current.delete(id);
+      }
+      if (remove.length) {
+        layoutPanes(ch);
+        applyMarkers();
+        publish();
+      }
+    });
+    if (add.length && data.c.length) {
       // Started on the first indicator request: line-only charts (FRED, BT) never pay for the worker.
-      worker.current ??= new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
-      const id = ++reqId.current;
-      const w = worker.current;
-      w.onmessage = (ev: MessageEvent<{ id: number; results: Record<string, Float64Array> }>) => {
-        if (ev.data.id !== reqId.current || !chartRef.current) return;
-        drawIndicators(chartRef.current, ev.data.results);
-      };
-      // Copies: the worker gets its own buffers so `data` stays usable here.
-      w.postMessage({ id, which: indicators, series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
-    } else {
-      reqId.current++;
+      if (!worker.current) {
+        worker.current = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
+        worker.current.onmessage = (ev: MessageEvent<{ id: number; results: Record<string, Float64Array> }>) => onIndResult.current(ev.data.id, ev.data.results);
+      }
+      for (const name of add) {
+        const id = ++reqId.current;
+        indReq.current.set(id, name);
+        indWant.current.add(name);
+        // Copies: the worker gets its own buffers so `data` stays usable here.
+        worker.current.postMessage({ id, which: [name], series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
+      }
     }
+  }, [indicators, data, compare, type, log, lowerPane, comparePanes, ver]);
 
-    function drawIndicators(ch: IChartApi, r: Record<string, Float64Array>) {
-      const line = (vals: Float64Array, color: string, pane = 0, title = "") => {
-        const ls = ch.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title }, pane);
-        const pts = [];
-        for (let i = 0; i < vals.length; i++) pts.push(Number.isFinite(vals[i]) ? { time: toTime(data.t[i]), value: vals[i] } : { time: toTime(data.t[i]) });
-        ls.setData(pts);
-        extra.current.push(ls);
-        return ls;
-      };
-      let pane = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
-      if (r.SMA20) line(r.SMA20, c.acc, 0, "SMA20");
-      if (r.SMA50) line(r.SMA50, c.warn, 0, "SMA50");
-      if (r.EMA20) line(r.EMA20, c.fg, 0, "EMA20");
-      if (r.BB_MID) {
-        line(r.BB_UP, c.dim, 0, "BB");
-        line(r.BB_MID, c.dim, 0);
-        line(r.BB_LO, c.dim, 0);
-      }
-      if (r.VWAP) line(r.VWAP, c.warn, 0, "VWAP");
-      if (r.RSI) {
-        const rs = line(r.RSI, c.acc, pane, "RSI14");
-        rs.createPriceLine({ price: 70, color: c.line, lineWidth: 1, axisLabelVisible: false });
-        rs.createPriceLine({ price: 30, color: c.line, lineWidth: 1, axisLabelVisible: false });
-        pane++;
-      }
-      if (r.MACD) {
-        const hist = ch.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pane);
-        const hp = [];
-        for (let i = 0; i < r.MACD_HIST.length; i++) {
-          const v = r.MACD_HIST[i];
-          hp.push(Number.isFinite(v) ? { time: toTime(data.t[i]), value: v, color: v >= 0 ? c.up : c.down } : { time: toTime(data.t[i]) });
-        }
-        hist.setData(hp);
-        extra.current.push(hist);
-        line(r.MACD, c.acc, pane, "MACD");
-        line(r.MACD_SIG, c.warn, pane);
-        pane++;
-      }
-      // Phase 19 overlays on the price pane.
-      const tri = (k: string, col: string, title: string) => {
-        if (!r[k + "_UP"]) return;
-        line(r[k + "_UP"], col, 0, title);
-        line(r[k + "_MID"], col, 0);
-        line(r[k + "_LO"], col, 0);
-      };
-      tri("KELT", c.dim, "KELT");
-      tri("DONCH", c.dim, "DONCH");
-      if (r.SUPERTREND) {
-        const ls = ch.addSeries(LineSeries, { color: c.up, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "SUPERTREND" }, 0);
-        const pts = [];
-        for (let i = 0; i < r.SUPERTREND.length; i++) {
-          pts.push(Number.isFinite(r.SUPERTREND[i]) ? { time: toTime(data.t[i]), value: r.SUPERTREND[i], color: r.SUPERTREND_DIR[i] > 0 ? c.up : c.down } : { time: toTime(data.t[i]) });
-        }
-        ls.setData(pts);
-        extra.current.push(ls);
-      }
-      if (r.PSAR) {
-        const ls = ch.addSeries(LineSeries, { color: c.warn, lineVisible: false, pointMarkersVisible: true, pointMarkersRadius: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "PSAR" }, 0);
-        const pts = [];
-        for (let i = 0; i < r.PSAR.length; i++) pts.push(Number.isFinite(r.PSAR[i]) ? { time: toTime(data.t[i]), value: r.PSAR[i] } : { time: toTime(data.t[i]) });
-        ls.setData(pts);
-        extra.current.push(ls);
-      }
-      if (r.ICHI_TENKAN) {
-        line(r.ICHI_TENKAN, c.acc, 0, "TENKAN");
-        line(r.ICHI_KIJUN, c.warn, 0, "KIJUN");
-        line(r.ICHI_SPANA, c.up, 0, "SPAN A");
-        line(r.ICHI_SPANB, c.down, 0, "SPAN B");
-        line(r.ICHI_CHIKOU, c.dim, 0, "CHIKOU");
-      }
-      // Oscillators, one pane each.
-      const osc = (vals: Float64Array | undefined, col: string, title: string, levels: number[] = []) => {
-        if (!vals) return null;
-        const ls = line(vals, col, pane, title);
-        for (const price of levels) ls.createPriceLine({ price, color: c.line, lineWidth: 1, axisLabelVisible: false });
-        return ls;
-      };
-      if (r.ATR) { osc(r.ATR, c.acc, "ATR14"); pane++; }
-      if (r.STOCH_K) { osc(r.STOCH_K, c.acc, "STOCH K", [80, 20]); line(r.STOCH_D, c.warn, pane); pane++; }
-      if (r.ADX) { osc(r.ADX, c.fg, "ADX14", [25]); line(r.ADX_PDI, c.up, pane); line(r.ADX_MDI, c.down, pane); pane++; }
-      if (r.OBV) { osc(r.OBV, c.acc, "OBV"); pane++; }
-      if (r.CCI) { osc(r.CCI, c.acc, "CCI20", [100, -100]); pane++; }
-      if (r.WILLR) { osc(r.WILLR, c.acc, "%R14", [-20, -80]); pane++; }
-      if (r.MFI) { osc(r.MFI, c.acc, "MFI14", [80, 20]); pane++; }
-
-      // Pattern marks (rule-based, not signals) on the price series; SMC zones as dashed edges.
-      const marks: SeriesMarker<Time>[] = [];
-      if (r.PAT_CANDLE) {
-        for (let i = 0; i < r.PAT_CANDLE.length; i++) {
-          const info = PATTERN_INFO[r.PAT_CANDLE[i]];
-          if (!info) continue;
-          marks.push({ time: toTime(data.t[i]), position: info.dir < 0 ? "aboveBar" : "belowBar", shape: info.dir < 0 ? "arrowDown" : info.dir > 0 ? "arrowUp" : "circle", color: info.dir < 0 ? c.down : info.dir > 0 ? c.up : c.dim, text: info.short });
-        }
-      }
-      if (r.SMC_SWING && r.SMC_BOS) {
-        for (let i = 0; i < r.SMC_SWING.length; i++) {
-          const sw = r.SMC_SWING[i];
-          const b = r.SMC_BOS[i];
-          if (sw) marks.push({ time: toTime(data.t[i]), position: sw > 0 ? "aboveBar" : "belowBar", shape: "circle", color: c.dim, size: 0.5 });
-          if (b) marks.push({ time: toTime(data.t[i]), position: b > 0 ? "belowBar" : "aboveBar", shape: b > 0 ? "arrowUp" : "arrowDown", color: b > 0 ? c.up : c.down, text: Math.abs(b) === 2 ? "CHOCH" : "BOS" });
-        }
-        const z = r.SMC_ZONES ?? new Float64Array(0);
-        for (let j = 0; j + 5 < z.length; j += 6) {
-          const col = z[j] === 1 ? c.dim : z[j + 1] > 0 ? c.up : c.down;
-          for (const price of [z[j + 4], z[j + 5]]) {
-            const zs = ch.addSeries(LineSeries, { color: col, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: price === z[j + 4] ? (z[j] === 1 ? "FVG" : "OB") : "" }, 0);
-            zs.setData([{ time: toTime(data.t[z[j + 2]]), value: price }, { time: toTime(data.t[z[j + 3]]), value: price }]);
-            extra.current.push(zs);
-          }
-        }
-      }
-      patMarks.current = marks;
+  onIndResult.current = (id, r) => {
+    const name = indReq.current.get(id);
+    const ch = chartRef.current;
+    if (name === undefined || !ch) return;
+    indReq.current.delete(id);
+    keepRange(() => {
+      drawIndicator(ch, name, r);
+      layoutPanes(ch);
       applyMarkers();
-      gauges.set("chart.extraSeries", extra.current.length);
-      gauges.set("chart.markers", marks.length);
-      const panes = ch.panes();
-      for (let i = 1; i < panes.length; i++) panes[i].setHeight(panes[i] === undefined || i <= (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0) ? 110 : 90);
+      publish();
+    });
+  };
+
+  function drawIndicator(ch: IChartApi, name: IndicatorName, r: Record<string, Float64Array>) {
+    const c = colors.current;
+    const t = dataRef.current.t;
+    const mine: ISeriesApi<SeriesType>[] = [];
+    const pane = ch.panes().length; // at most one new pane per indicator
+    const line = (vals: Float64Array, color: string, pn = 0, title = "") => {
+      const ls = ch.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title }, pn);
+      const pts = [];
+      for (let i = 0; i < vals.length; i++) pts.push(Number.isFinite(vals[i]) ? { time: toTime(t[i]), value: vals[i] } : { time: toTime(t[i]) });
+      ls.setData(pts);
+      mine.push(ls);
+      return ls;
+    };
+    if (r.SMA20) line(r.SMA20, c.acc, 0, "SMA20");
+    if (r.SMA50) line(r.SMA50, c.warn, 0, "SMA50");
+    if (r.EMA20) line(r.EMA20, c.fg, 0, "EMA20");
+    if (r.BB_MID) {
+      line(r.BB_UP, c.dim, 0, "BB");
+      line(r.BB_MID, c.dim, 0);
+      line(r.BB_LO, c.dim, 0);
     }
-  }, [data, compare, type, log, indicators, lowerPane, comparePanes, ver]);
+    if (r.VWAP) line(r.VWAP, c.warn, 0, "VWAP");
+    if (r.RSI) {
+      const rs = line(r.RSI, c.acc, pane, "RSI14");
+      rs.createPriceLine({ price: 70, color: c.line, lineWidth: 1, axisLabelVisible: false });
+      rs.createPriceLine({ price: 30, color: c.line, lineWidth: 1, axisLabelVisible: false });
+    }
+    if (r.MACD) {
+      const hist = ch.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pane);
+      const hp = [];
+      for (let i = 0; i < r.MACD_HIST.length; i++) {
+        const v = r.MACD_HIST[i];
+        hp.push(Number.isFinite(v) ? { time: toTime(t[i]), value: v, color: v >= 0 ? c.up : c.down } : { time: toTime(t[i]) });
+      }
+      hist.setData(hp);
+      mine.push(hist);
+      line(r.MACD, c.acc, pane, "MACD");
+      line(r.MACD_SIG, c.warn, pane);
+    }
+    // Phase 19 overlays on the price pane.
+    const tri = (k: string, col: string, title: string) => {
+      if (!r[k + "_UP"]) return;
+      line(r[k + "_UP"], col, 0, title);
+      line(r[k + "_MID"], col, 0);
+      line(r[k + "_LO"], col, 0);
+    };
+    tri("KELT", c.dim, "KELT");
+    tri("DONCH", c.dim, "DONCH");
+    if (r.SUPERTREND) {
+      const ls = ch.addSeries(LineSeries, { color: c.up, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "SUPERTREND" }, 0);
+      const pts = [];
+      for (let i = 0; i < r.SUPERTREND.length; i++) {
+        pts.push(Number.isFinite(r.SUPERTREND[i]) ? { time: toTime(t[i]), value: r.SUPERTREND[i], color: r.SUPERTREND_DIR[i] > 0 ? c.up : c.down } : { time: toTime(t[i]) });
+      }
+      ls.setData(pts);
+      mine.push(ls);
+    }
+    if (r.PSAR) {
+      const ls = ch.addSeries(LineSeries, { color: c.warn, lineVisible: false, pointMarkersVisible: true, pointMarkersRadius: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "PSAR" }, 0);
+      const pts = [];
+      for (let i = 0; i < r.PSAR.length; i++) pts.push(Number.isFinite(r.PSAR[i]) ? { time: toTime(t[i]), value: r.PSAR[i] } : { time: toTime(t[i]) });
+      ls.setData(pts);
+      mine.push(ls);
+    }
+    if (r.ICHI_TENKAN) {
+      line(r.ICHI_TENKAN, c.acc, 0, "TENKAN");
+      line(r.ICHI_KIJUN, c.warn, 0, "KIJUN");
+      line(r.ICHI_SPANA, c.up, 0, "SPAN A");
+      line(r.ICHI_SPANB, c.down, 0, "SPAN B");
+      line(r.ICHI_CHIKOU, c.dim, 0, "CHIKOU");
+    }
+    // Oscillators, one pane each.
+    const osc = (vals: Float64Array | undefined, col: string, title: string, levels: number[] = []) => {
+      if (!vals) return null;
+      const ls = line(vals, col, pane, title);
+      for (const price of levels) ls.createPriceLine({ price, color: c.line, lineWidth: 1, axisLabelVisible: false });
+      return ls;
+    };
+    if (r.ATR) osc(r.ATR, c.acc, "ATR14");
+    if (r.STOCH_K) { osc(r.STOCH_K, c.acc, "STOCH K", [80, 20]); line(r.STOCH_D, c.warn, pane); }
+    if (r.ADX) { osc(r.ADX, c.fg, "ADX14", [25]); line(r.ADX_PDI, c.up, pane); line(r.ADX_MDI, c.down, pane); }
+    if (r.OBV) osc(r.OBV, c.acc, "OBV");
+    if (r.CCI) osc(r.CCI, c.acc, "CCI20", [100, -100]);
+    if (r.WILLR) osc(r.WILLR, c.acc, "%R14", [-20, -80]);
+    if (r.MFI) osc(r.MFI, c.acc, "MFI14", [80, 20]);
+
+    // Pattern marks (rule-based, not signals) on the price series; SMC zones as dashed edges.
+    const marks: SeriesMarker<Time>[] = [];
+    if (r.PAT_CANDLE) {
+      for (let i = 0; i < r.PAT_CANDLE.length; i++) {
+        const info = PATTERN_INFO[r.PAT_CANDLE[i]];
+        if (!info) continue;
+        marks.push({ time: toTime(t[i]), position: info.dir < 0 ? "aboveBar" : "belowBar", shape: info.dir < 0 ? "arrowDown" : info.dir > 0 ? "arrowUp" : "circle", color: info.dir < 0 ? c.down : info.dir > 0 ? c.up : c.dim, text: info.short });
+      }
+    }
+    if (r.SMC_SWING && r.SMC_BOS) {
+      for (let i = 0; i < r.SMC_SWING.length; i++) {
+        const sw = r.SMC_SWING[i];
+        const b = r.SMC_BOS[i];
+        if (sw) marks.push({ time: toTime(t[i]), position: sw > 0 ? "aboveBar" : "belowBar", shape: "circle", color: c.dim, size: 0.5 });
+        if (b) marks.push({ time: toTime(t[i]), position: b > 0 ? "belowBar" : "aboveBar", shape: b > 0 ? "arrowUp" : "arrowDown", color: b > 0 ? c.up : c.down, text: Math.abs(b) === 2 ? "CHOCH" : "BOS" });
+      }
+      const z = r.SMC_ZONES ?? new Float64Array(0);
+      for (let j = 0; j + 5 < z.length; j += 6) {
+        const col = z[j] === 1 ? c.dim : z[j + 1] > 0 ? c.up : c.down;
+        for (const price of [z[j + 4], z[j + 5]]) {
+          const zs = ch.addSeries(LineSeries, { color: col, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: price === z[j + 4] ? (z[j] === 1 ? "FVG" : "OB") : "" }, 0);
+          zs.setData([{ time: toTime(t[z[j + 2]]), value: price }, { time: toTime(t[z[j + 3]]), value: price }]);
+          mine.push(zs);
+        }
+      }
+    }
+    ind.current.set(name, { series: mine, marks });
+  }
 
   /** Pattern marks and event marks share the price series' marker plugin. */
   function applyMarkers() {
@@ -440,10 +509,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     if (!api) return;
     const c = colors.current;
     const ev: SeriesMarker<Time>[] = (eventsRef.current ?? []).map((e) => ({ time: toTime(e.t), position: "aboveBar", shape: "square", color: c.fg, text: e.kind }));
-    const all = [...patMarks.current, ...ev];
+    const pat = [...ind.current.values()].flatMap((e) => e.marks);
+    const all = [...pat, ...ev];
     all.sort((a, b) => (a.time as number) - (b.time as number));
     api.setMarkers(all);
-    gauges.set("chart.markers", patMarks.current.length);
+    gauges.set("chart.markers", pat.length);
     gauges.set("chart.events", ev.length);
   }
   useEffect(() => {
