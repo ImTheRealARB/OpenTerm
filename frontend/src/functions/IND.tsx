@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { requestIndicator, type IndicatorRequest } from "../chart/indicatorBus";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { getChartIndicators, onChartIndicators, requestIndicator, requestKey, type IndicatorRequest } from "../chart/indicatorBus";
 import { CATALOG, resolveParams } from "../chart/library/catalog";
 import { validateFormula, MAX_FORMULA_LENGTH } from "../chart/formula";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -25,6 +25,7 @@ const FORMULA_ROW = { id: "FORMULA", name: "Custom formula", category: "other", 
 const itemLabel = (it: PresetItem) => it.label || (it.formula ? it.formula : `${it.id}${it.params.length ? `(${it.params.join(",")})` : ""}`);
 
 export default function IND({ panelId, args }: FunctionProps) {
+  const onChart = useSyncExternalStore(onChartIndicators, getChartIndicators);
   const [mode, setMode] = useState<Mode>("browse");
   const [query, setQuery] = useState(args.join(" "));
   const [sel, setSel] = useState(0);
@@ -46,7 +47,7 @@ export default function IND({ panelId, args }: FunctionProps) {
     return wantsFormula ? [{ kind: "formula" }, ...base] : base;
   }, [query]);
   const fcheck = useMemo(() => (formula.trim() ? validateFormula(formula) : null), [formula]);
-  const latest = useLatest({ rows, sel, mode, query, formula, fcheck, picked, presets, psel, presetName });
+  const latest = useLatest({ onChart, rows, sel, mode, query, formula, fcheck, picked, presets, psel, presetName });
 
   useEffect(() => setSel(0), [query]);
   useEffect(() => {
@@ -61,8 +62,9 @@ export default function IND({ panelId, args }: FunctionProps) {
   const say = (text: string, kind: "ok" | "err" | "warn" = "ok") => setMsg({ text, kind });
 
   function emit(req: IndicatorRequest, label: string) {
-    const answered = requestIndicator(req);
-    say(answered ? `ADDED ${label} TO CHART` : "OPEN A CHART (GP) FIRST", answered ? "ok" : "warn");
+    const was = latest.current.onChart.includes(requestKey(req));
+    const answered = requestIndicator({ ...req, op: "toggle" });
+    say(answered ? `${was ? "REMOVED" : "ADDED"} ${label} ${was ? "FROM" : "TO"} CHART` : "OPEN A CHART (GP) FIRST", answered ? "ok" : "warn");
     return answered;
   }
 
@@ -292,9 +294,10 @@ export default function IND({ panelId, args }: FunctionProps) {
         ) : (
           rows.map((r, i) => {
             const d = r.kind === "formula" ? FORMULA_ROW : r;
+            const on = r.kind === "ind" && onChart.some((k) => k === `LIB:${r.id}` || k.startsWith(`LIB:${r.id}:`));
             return (
               <div key={d.id} role="option" aria-selected={i === sel} className={`ind-row${i === sel ? " sel" : ""}`} data-id={d.id} onClick={() => setSel(i)} onDoubleClick={addSelected}>
-                <span className="acc ind-id">{d.id}</span> <span>{d.name}</span> <span className="dim">[{d.category}]</span>
+                <span className="acc ind-id">{d.id}</span> {on && <span className="up" data-testid="ind-on">ON </span>}<span>{d.name}</span> <span className="dim">[{d.category}]</span>
                 <div className="dim ind-plain">{d.plain}</div>
               </div>
             );

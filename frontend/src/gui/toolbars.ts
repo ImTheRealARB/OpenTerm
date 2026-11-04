@@ -24,6 +24,8 @@ export interface ToolbarButton {
   shift?: boolean;
   /** Tooltip and help-drawer text. */
   title?: string;
+  /** Opens this command in a NEW panel next to this one (GP: "IND" = the indicator library) instead of pressing `key`. */
+  open?: string;
   /**
    * Show the button only for one shape of the view: "args" = the view has arguments (WL TECH: a named list),
    * "noargs" = it has none (WL alone: the index of saved lists). Both views of WL and PORT use different keys.
@@ -67,6 +69,7 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Type", key: "c", title: "Cycle the chart type: candles, OHLC, line, area (C)" },
     { label: "Log", key: "l", title: "Toggle the logarithmic price scale (L)" },
     { label: "Indicators", key: "i", title: "Pick indicators (I); then press the letter shown next to each one" },
+    { label: "Indicators…", key: "i", open: "IND", title: "Open the indicator library next to the chart: search about 110 indicators, write your own formula, then Enter adds one to this chart" },
     { label: "Crosshair", key: "x", title: "Toggle the crosshair (X)" },
     { label: "Alert at price", key: "A", shift: true, title: "Click the chart at the price you want an alert for (Shift+A; A alerts at the crosshair or last price, Alt+click works too)" },
     { label: "Zoom +", key: "+", title: "Zoom in (+)" },

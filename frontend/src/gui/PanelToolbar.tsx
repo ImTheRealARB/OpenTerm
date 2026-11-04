@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { execute } from "../command/execute";
 import { info } from "../command/status";
 import { runItem } from "../components/windowMenuRun";
 import type { OptionAction } from "../components/windowMenu";
@@ -55,6 +56,12 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
       setAsk(b);
       // The input mounts on the next render; focus it then.
       setTimeout(() => input.current?.focus(), 0);
+      return;
+    }
+    if (b.open) {
+      focusPanel(id);
+      execute(b.open, { newPanel: true });
+      afterClick(e);
       return;
     }
     focusPanel(id);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { registerChartShot } from "../chart/shot";
-import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent } from "../chart/ChartView";
+import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent, type CustomItem } from "../chart/ChartView";
+import { onIndicatorRequest, setChartIndicators, type IndicatorRequest } from "../chart/indicatorBus";
 import { alertDirection, fmtAlertPrice, roundAlertPrice } from "../chart/alertPrice";
 import { createDrawSaver } from "../chart/drawSave";
 import { MAX_DRAWINGS, NEEDED, KIND_NAME, cycleSelection, newId, parseDrawings, snapDay, type DPoint, type DrawKind, type Drawing } from "../chart/drawings";
@@ -15,10 +16,10 @@ import { ApiError, api, worldApi, type ChartEvents, type Envelope } from "../net
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
-import { navigate, replaceView } from "../state/workspace";
+import { currentView, navigate, replaceView, workspace } from "../state/workspace";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { KEY_RANGES, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
+import { KEY_RANGES, MAX_CUSTOM, formulaInd, libraryInd, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
 import { useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 
@@ -39,6 +40,9 @@ interface Loaded {
   compareErrors: string[];
 }
 
+/** The GP panel that answers IND requests: the focused GP, else the GP focused last. */
+const gpLast: { id: number | null } = { id: null };
+
 interface Mode {
   kind: DrawKind;
   pts: DPoint[];
@@ -58,7 +62,57 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   pRef.current = p;
   useEffect(() => registerChartShot(panelId, { symbol, range: p.range, shot: () => chart.current?.screenshot() ?? null }), [panelId, symbol, p.range]);
 
-  const update = (fn: (q: GpParsed) => GpParsed) => replaceView(panelId, (v) => ({ ...v, args: serializeGp(fn(pRef.current), chartDefaults.type) }));
+  // `pRef` moves on at once, so several changes in one tick (a preset adding 20 indicators) build on each other.
+  const update = (fn: (q: GpParsed) => GpParsed) => {
+    const next = fn(pRef.current);
+    pRef.current = next;
+    replaceView(panelId, (v) => ({ ...v, args: serializeGp(next, chartDefaults.type) }));
+  };
+
+  // --- library indicators and formulas (IND): one GP answers, the same add/remove path as the toolbar toggles ---
+  const [customErrors, setCustomErrors] = useState<Record<string, string>>({});
+  const custom = useMemo<CustomItem[]>(() => p.custom.map((c) => ({ key: c.key, label: c.label, id: c.id, params: c.params, formula: c.formula })), [p.custom]);
+  const customKeys = p.custom.map((c) => c.key);
+  const customKeyStr = customKeys.join("\n");
+  const isAnswering = () => {
+    const f = workspace.get().focus;
+    const fv = workspace.get().panels[f];
+    return f === panelId || (gpLast.id === panelId && (!fv || currentView(fv).fn !== "GP"));
+  };
+  useEffect(() => {
+    const track = () => {
+      // A GP mounted while nothing else claims the role (reloaded layout, remount after a split) takes it.
+      if (workspace.get().focus === panelId || gpLast.id === null) gpLast.id = panelId;
+      if (isAnswering()) setChartIndicators(pRef.current.custom.map((c) => c.key));
+    };
+    track();
+    const off = workspace.subscribe(track);
+    const offReq = onIndicatorRequest((req: IndicatorRequest) => {
+      if (!isAnswering()) return false;
+      const ind = "formula" in req ? formulaInd(req.formula) : libraryInd(req.id, req.params ?? []);
+      const has = pRef.current.custom.some((c) => c.key === ind.key);
+      if (has && req.op !== "toggle") return true;
+      if (!has && pRef.current.custom.length >= MAX_CUSTOM) {
+        fail(`AT MOST ${MAX_CUSTOM} CUSTOM INDICATORS ON ONE CHART`);
+        return true;
+      }
+      update((q) => ({ ...q, custom: has ? q.custom.filter((c) => c.key !== ind.key) : [...q.custom, ind] }));
+      return true;
+    });
+    return () => {
+      off();
+      offReq();
+      if (gpLast.id === panelId) {
+        gpLast.id = null;
+        setChartIndicators([]);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelId]);
+  useEffect(() => {
+    if (isAnswering()) setChartIndicators(customKeyStr ? customKeyStr.split("\n") : []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customKeyStr]);
 
   // --- bars (and compare symbols) ---
   const compareKey = p.compare.join(",");
@@ -337,7 +391,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       <div className="line">
         <span className="acc">{L?.bars.symbol ?? symbol}</span> {p.range} {L?.bars.interval ?? p.interval ?? ""}{" "}
         {p.compare.length ? `VS ${p.compare.join(" ")} ${p.pane ? "(PANES)" : "(%)"}` : p.type}
-        {p.log && !overlayCompare && " LOG"} {p.indicators.join(" ")}
+        {p.log && !overlayCompare && " LOG"} {p.indicators.join(" ")} {p.custom.map((c) => c.label).join(" ")}
         {L && (
           <span className="dim">
             {" · "}
@@ -362,6 +416,9 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         )}
         {armed && <span className="acc"> · CLICK THE CHART TO SET AN ALERT, ESC TO CANCEL</span>}
         {drawNote && <span className="err"> · {drawNote}</span>}
+        {Object.values(customErrors).map((m) => (
+          <span className="err" key={m} data-testid="gp-custom-err"> · {m}</span>
+        ))}
         <span className="dim"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · T/H/B DRAW · A ALERT (SHIFT+A OR ALT+CLICK: AT A CLICKED PRICE) · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
       </div>
       {p.evt && (
@@ -404,6 +461,8 @@ export default function GP({ panelId, security, args }: FunctionProps) {
           type={p.type}
           log={p.log}
           indicators={p.indicators}
+          custom={custom}
+          onCustomErrors={setCustomErrors}
           draw={drawState}
           events={markers}
           onPick={(id) => setSelected(id)}

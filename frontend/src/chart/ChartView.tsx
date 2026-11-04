@@ -18,6 +18,7 @@ import type { IndicatorName } from "./indicators";
 import { diffIndicators } from "./indicatorDiff";
 import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
+import type { LibraryRes } from "./libraryWorker";
 
 import { CHART_TYPES, type ChartType } from "./chartTypes";
 
@@ -87,6 +88,19 @@ interface Props {
   /** Alt+click on the chart, or any click while `pickArmed`: the price under the pointer. */
   onPickPrice?: (price: number) => void;
   pickArmed?: boolean;
+  /** Library indicators and formulas (IND). Diffed by `key` like `indicators`: a change adds or removes only that entry's series. */
+  custom?: CustomItem[];
+  /** Worker errors per custom key ("FORMULA ERROR: ... AT 12"); called when the set of errors changes. */
+  onCustomErrors?: (errors: Record<string, string>) => void;
+}
+
+/** One library indicator (`id` + `params`) or formula on the chart. `key` is stable (`LIB:ATR:14`, `F:<encoded formula>`); `label` titles its series. */
+export interface CustomItem {
+  key: string;
+  label: string;
+  id?: string;
+  params?: number[];
+  formula?: string;
 }
 
 export const INTERVAL_S: Record<string, number> = {
@@ -118,7 +132,7 @@ function formatters(tz: string, intraday: boolean, seconds = false) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick, alertLevels, onPickPrice, pickArmed }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick, alertLevels, onPickPrice, pickArmed, custom, onCustomErrors }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -137,6 +151,16 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const ind = useRef(new Map<IndicatorName, { series: ISeriesApi<SeriesType>[]; marks: SeriesMarker<Time>[] }>());
   const indReq = useRef(new Map<number, IndicatorName>());
   const indWant = useRef(new Set<IndicatorName>());
+  // Library / formula indicators, by key; same lifecycle as `ind` (own requests to the same worker).
+  const lib = useRef(new Map<string, ISeriesApi<SeriesType>[]>());
+  const libReq = useRef(new Map<number, string[]>());
+  const libWant = useRef(new Set<string>());
+  const libErr = useRef(new Map<string, string>());
+  const customRef = useRef<CustomItem[]>(custom ?? []);
+  customRef.current = custom ?? [];
+  const errCb = useRef(onCustomErrors);
+  errCb.current = onCustomErrors;
+  const onLibResult = useRef<(m: LibraryRes) => void>(() => {});
   const basePanes = useRef(1);
   const onIndResult = useRef<(id: number, r: Record<string, Float64Array>) => void>(() => {});
   const eventsRef = useRef<ChartMarkerEvent[] | undefined>(events);
@@ -250,11 +274,18 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     chart.applyOptions({
       timeScale: { timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: (INTERVAL_S[data.interval] ?? 86400) < 60, tickMarkFormatter: fmt.current.tick },
     });
-    for (const s of [main.current, vol.current, ...extra.current, ...[...ind.current.values()].flatMap((e) => e.series)]) if (s) chart.removeSeries(s);
+    for (const s of [main.current, vol.current, ...extra.current, ...[...ind.current.values()].flatMap((e) => e.series), ...[...lib.current.values()].flat()]) if (s) chart.removeSeries(s);
     extra.current = [];
     ind.current.clear();
     indReq.current.clear();
     indWant.current.clear();
+    lib.current.clear();
+    libReq.current.clear();
+    libWant.current.clear();
+    if (libErr.current.size) {
+      libErr.current.clear();
+      errCb.current?.({});
+    }
     main.current = null;
     vol.current = null;
 
@@ -352,6 +383,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   function publish() {
     let n = extra.current.length;
     for (const e of ind.current.values()) n += e.series.length;
+    for (const s of lib.current.values()) n += s.length;
     gauges.set("chart.extraSeries", n);
     gauges.set("chart.panes", chartRef.current?.panes().length ?? 0);
   }
@@ -395,19 +427,103 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     });
     if (add.length && data.c.length) {
       // Started on the first indicator request: line-only charts (FRED, BT) never pay for the worker.
-      if (!worker.current) {
-        worker.current = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
-        worker.current.onmessage = (ev: MessageEvent<{ id: number; results: Record<string, Float64Array> }>) => onIndResult.current(ev.data.id, ev.data.results);
-      }
+      ensureWorker();
       for (const name of add) {
         const id = ++reqId.current;
         indReq.current.set(id, name);
         indWant.current.add(name);
         // Copies: the worker gets its own buffers so `data` stays usable here.
-        worker.current.postMessage({ id, which: [name], series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
+        ensureWorker().postMessage({ id, which: [name], series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
       }
     }
   }, [indicators, data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  function ensureWorker() {
+    if (worker.current) return worker.current;
+    const w = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
+    w.onmessage = (ev: MessageEvent<{ type?: string; id: number; results: Record<string, Float64Array> }>) => {
+      if (ev.data.type === "library") onLibResult.current(ev.data as unknown as LibraryRes);
+      else onIndResult.current(ev.data.id, ev.data.results);
+    };
+    worker.current = w;
+    return w;
+  }
+
+  // Library / formula indicators: the same add/remove-only-this-entry rule, one worker request for a batch of adds.
+  const customKey = (custom ?? []).map((x) => x.key).join("\n");
+  useEffect(() => {
+    const ch = chartRef.current;
+    if (!ch) return;
+    const items = customRef.current;
+    const { add, remove } = diffIndicators(libWant.current, items.map((x) => x.key));
+    if (!remove.length && !(add.length && data.c.length)) return;
+    if (remove.length) {
+      keepRange(() => {
+        for (const key of remove) {
+          for (const s of lib.current.get(key) ?? []) ch.removeSeries(s);
+          lib.current.delete(key);
+          libWant.current.delete(key);
+          libErr.current.delete(key);
+        }
+        for (const [id, keys] of libReq.current) {
+          const rest = keys.filter((k) => !remove.includes(k));
+          if (rest.length) libReq.current.set(id, rest);
+          else libReq.current.delete(id);
+        }
+        layoutPanes(ch);
+        publish();
+      });
+      errCb.current?.(Object.fromEntries(libErr.current));
+    }
+    if (add.length && data.c.length) {
+      const id = ++reqId.current;
+      const send = items.filter((x) => add.includes(x.key)).slice(0, 20);
+      libReq.current.set(id, send.map((x) => x.key));
+      for (const x of send) libWant.current.add(x.key);
+      ensureWorker().postMessage({
+        type: "library",
+        id,
+        series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() },
+        items: send.map((x) => ({ key: x.key, id: x.id, params: x.params, formula: x.formula })),
+      });
+    }
+  }, [customKey, data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  onLibResult.current = (m) => {
+    const ch = chartRef.current;
+    const keys = libReq.current.get(m.id);
+    if (!ch || !keys) return;
+    libReq.current.delete(m.id);
+    const c = colors.current;
+    const t = dataRef.current.t;
+    const palette = [c.acc, c.warn, c.fg, c.up, c.down, c.dim];
+    let errChanged = false;
+    keepRange(() => {
+      for (const key of keys) {
+        const r = m.results[key];
+        const item = customRef.current.find((x) => x.key === key);
+        if (!r || !item || !libWant.current.has(key)) continue;
+        if (!r.ok) {
+          libErr.current.set(key, `${item.formula !== undefined ? "FORMULA" : "INDICATOR"} ERROR: ${r.error}`);
+          errChanged = true;
+          continue;
+        }
+        const pane = r.pane === "price" ? 0 : ch.panes().length;
+        const mine: ISeriesApi<SeriesType>[] = [];
+        r.data.forEach((vals, j) => {
+          const ls = ch.addSeries(LineSeries, { color: palette[j % palette.length], lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: j === 0 ? item.label : r.outputs[j] ?? "" }, pane);
+          const pts = [];
+          for (let i = 0; i < vals.length && i < t.length; i++) pts.push(Number.isFinite(vals[i]) ? { time: toTime(t[i]), value: vals[i] } : { time: toTime(t[i]) });
+          ls.setData(pts);
+          mine.push(ls);
+        });
+        lib.current.set(key, mine);
+      }
+      layoutPanes(ch);
+      publish();
+    });
+    if (errChanged) errCb.current?.(Object.fromEntries(libErr.current));
+  };
 
   onIndResult.current = (id, r) => {
     const name = indReq.current.get(id);
