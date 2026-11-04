@@ -134,7 +134,7 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
 
 /** The candle lengths the GUI dropdown offers: [label, token]. An empty token means "Auto" (the range picks the interval). */
 export const INTERVAL_CHOICES: readonly (readonly [string, string])[] = [
-  ["Auto", ""], ["1 min", "1m"], ["5 min", "5m"], ["15 min", "15m"], ["30 min", "30m"], ["1 hour", "60m"], ["Daily", "1d"], ["Weekly", "1wk"], ["Monthly", "1mo"],
+  ["Auto", ""], ["5 min", "5m"], ["15 min", "15m"], ["30 min", "30m"], ["1 hour", "60m"], ["Daily", "1d"], ["Weekly", "1wk"], ["Monthly", "1mo"],
 ];
 
 /** The args of a GP view with its candle length replaced ("" = back to Auto). Everything else (range, indicators...) is kept. */

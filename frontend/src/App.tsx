@@ -18,6 +18,7 @@ import { LazyPiece } from "./components/LazyPiece";
 import { GuiHelpDrawer, GuiOverlays, GuiSidebar, GuiTop, toggleHelp } from "./gui";
 import { TabStrip } from "./gui/TabStrip";
 import { useTabsOn } from "./gui/tabsState";
+import { useStatusBarShown } from "./gui/statusBarState";
 import { getSettings, settingsStore, toggleMode } from "./settings/runtime";
 import { loadJSON, saveJSON, useStore } from "./state/store";
 import {
@@ -43,6 +44,8 @@ export function App() {
   const [hud, setHud] = useState(() => loadJSON("openterm.hud", false));
   // GUI mode: the same panels and command line, wrapped in a menu bar and sidebar. Terminal mode renders none of that.
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
+  // GUI mode hides the status bar until the user turns it on (menu bar button); Terminal mode always shows it.
+  const statusShown = useStatusBarShown();
   const tabsPref = useTabsOn();
   const tabs = gui && tabsPref; // GUI tabs layout: the tab strip sits above the command line, like a browser
 
@@ -270,7 +273,7 @@ export function App() {
         />
       </div>
       {gui && <GuiOverlays />}
-      <StatusBar />
+      {(!gui || statusShown) && <StatusBar />}
       {hud && (
         <div className="hud">
           <LazyPiece load={loadHud} />
