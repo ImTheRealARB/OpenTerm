@@ -5,7 +5,7 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
-## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`, draft PR to `main`)
+## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`, draft PR https://github.com/ImTheRealARB/OpenTerm/pull/1)
 `docs/specs/GUI_SIMPLE_AND_BUGS.md` Parts 0-5 are DONE on the branch (not merged; the user reviews the draft PR). Last gate: ALL PASS
 (pytest 1726, vitest 586, e2e 245). Bench vs the cloud baseline: `docs/PERFORMANCE.md` "Cloud session end 2026-11-04". Commits labelled WIP are
 unreviewed checkpoints; the reviewed step commit follows each one.
