@@ -101,7 +101,8 @@ test("SETTINGS: a fresh browser adopts the copy stored on the server", async ({ 
 test("SETTINGS: Shift+R twice resets everything", async ({ page }) => {
   const { puts } = await setup(page);
   await run(page, "THEME white");
-  expect(await theme(page)).toBe("white");
+  // THEME/SETTINGS parsing is a lazy chunk (warmed at idle); a command typed before it arrives runs once it loads.
+  await expect.poll(() => theme(page)).toBe("white");
   await openSettings(page);
   await page.keyboard.press("Shift+R");
   await expect(panel(page)).toContainText("RESET ALL SETTINGS? PRESS SHIFT+R AGAIN");

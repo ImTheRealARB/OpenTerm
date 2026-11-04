@@ -3,6 +3,7 @@ import { App } from "./App";
 import { startAlerts } from "./command/alerts"; // Phase 8
 import { history } from "./command/history";
 import { createSyncGate } from "./command/syncGate";
+import { preloadSettingsCommands } from "./command/execute";
 import { idlePreload } from "./functions/idlePreload";
 import { FUNCTION_LIST, loadModule } from "./functions/registry";
 import { afterPaint, installObservers } from "./perf/metrics";
@@ -39,4 +40,5 @@ afterPaint(() => {
     loadModule,
     idle,
   );
+  idle(() => void preloadSettingsCommands().catch(() => {})); // THEME / SETTINGS parser chunk (see command/execute.ts)
 });

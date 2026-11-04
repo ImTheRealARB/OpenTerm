@@ -1,4 +1,5 @@
-import { ACTION_LABELS, effectiveBindings, type Action } from "../keys/keys";
+import { ACTION_LABELS } from "../keys/actionLabels";
+import { effectiveBindings, type Action } from "../keys/keys";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 

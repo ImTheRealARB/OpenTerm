@@ -1,3 +1,4 @@
+import "./glossaryTip.css"; // tooltip box rule, loaded with this chunk
 /**
  * The glossary tooltip: ONE delegated listener on `document` instead of wrapping every label.
  * Any element with `data-term="EPS"` shows the glossary line in a small box when the mouse is over it or it has

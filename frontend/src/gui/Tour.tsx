@@ -1,3 +1,4 @@
+import "./Tour.css"; // this component's GUI-only rules, loaded with its chunk
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { chromeKeyDown } from "./chrome";

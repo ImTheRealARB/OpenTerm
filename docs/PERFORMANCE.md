@@ -703,3 +703,8 @@ Bench: run 1 **37/37 PASS** (first clean run on this box), run 2 36/37 (Job J fr
 | IMAP treemap layout, 5,000 tiles p95 | 5.2 ms | 4.2 ms | 4.1 ms | 30 ms |
 | SECF fuzzy rank, 7,000 names, per query p95 | 11.9 ms | 11.9 ms | 15.0 ms | 25 ms |
 | IMAP canvas paint, 5,000 tiles p95 | 9.4 ms | 10.2 ms | 10.1 ms | 16 ms |
+
+## Bundle under 120 KB + SEAS allocation-free core (2026-11-04, same cloud box)
+- Startup JS+CSS: 124.8 -> **119.5 KB gz** (main: 120.0). Moves: Vite modulepreload JS dependency lists dropped from the entry (-2.2 KB; lazy chunks fetch their own imports, idle preload warms them), shortcut sheet + PERF HUD lazy (-1.3), THEME/SETTINGS parser a lazy chunk warmed at idle (-1.0; a command typed before it arrives runs once it loads), ACTION_LABELS split (-0.5), lazy-component CSS moved with its component (-0.3). `docs/review/cloud/PERF_HUNT.md`.
+- SEAS core: packed-integer dates (year*512+month*32+day) instead of {y,m,d} objects, counting-sort grouping into one Float64Array instead of number[][] + push. Identical output (all kinds, 3 zones); vitest cold p95 5.7 -> 4.2 ms.
+- Bench: run 1 **37/37** (SEAS 10.6 ms), run 2 35/37 (50k-bar chart pan 33.3 ms, the known lone miss; SEAS 17.1 ms: this line swings 10-17 ms between back-to-back runs on 4 vCPU). Cold start 104-114 ms (baseline 129), BT open 42-56 ms (baseline 133).

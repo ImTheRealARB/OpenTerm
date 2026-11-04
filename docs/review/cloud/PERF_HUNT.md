@@ -59,3 +59,17 @@ Micro-benchmark `state/ticks.bench.test.ts` (old code copied into the test; `TIC
 Medians are ~1.2-1.8x faster; the p95 is dominated by JIT/GC jitter on this shared machine (old p95 includes its GC pauses; new has none from this path). Allocation is the real win: heap growth per frame measured from a forced GC over 5-frame batches. NOT measured here: the browser bench (`tick-to-pixel`, owned by the other agent); run `node scripts/bench.mjs` before/after to confirm "Tick received to pixel p95" does not regress.
 
 Tests: tsc clean, vitest 597 pass, full Playwright 242 pass / 3 fail: `gui-panels` welcome-card focus and `phase17` DLVR are flaky on the base commit too (pass/fail alternating over 4 reruns there), `phase12` BT EDIT belongs to the concurrent BT work.
+
+## Bundle under 120 KB (2026-11-04)
+
+Bench line "Initial JS+CSS bundle (gzip)" = gzip of the entry JS + CSS files named in `dist/index.html` (`bundleSize()` in `scripts/bench.mjs`). Reproduced with a small script on `vite build`: **124.80 KB -> 119.47 KB** (JS 122.59 -> 117.57, CSS 5.21 -> 4.77). Behaviour unchanged. Savings measured one after another (gzip KB of the bench total):
+
+| move | saved |
+|---|---|
+| `App.tsx`: the shortcut sheet (`SHORTCUTS` module via `loadModule`) and the PERF HUD (`perf/PerfTable`) render through `components/LazyPiece.tsx` (plain `import()`, no Suspense); both were static imports | 1.28 |
+| GUI-only CSS that is not visible at first paint moved next to its lazy component (`HelpDrawer.css`, `Welcome.css`, `Tour.css`, `glossaryTip.css`; arrive with the chunk). `.gw-link` stays in `gui.css` (HELP uses it) | 0.32 |
+| `settings/commands` (THEME / SETTINGS parser) is its own chunk, warmed at idle from `main.tsx`; `execute()` replays the command once the chunk arrives if it is typed before that (history is not written twice) | 1.0 |
+| `build.modulePreload.resolveDependencies` keeps only CSS deps: Vite had written every lazy chunk's JS dependency list (hashed file names, incompressible) into the entry. The browser still follows the import graph; idle preload warms chunks | 2.2 |
+| `ACTION_LABELS` moved from `keys/keys.ts` to `keys/actionLabels.ts` (only SHORTCUTS and SETTINGS use it); `scripts/gen_functions_doc.py` reads the new file, `docs/FUNCTIONS.md` is unchanged | 0.5 |
+
+Not done: `argsSchema` out of the registry (about 1.2 KB, but `gen_functions_doc.py` and `new_function.py` parse it from `registry.ts`); `alertArgs` / `portfolioArgs` / `sectors` / `vim` (used synchronously on key press or every tick). Run `node scripts/bench.mjs` to confirm cold start and panel-open budgets: the dependency-preload change means a never-opened panel now loads its imports one level at a time (local, tiny) unless idle preload already fetched it.

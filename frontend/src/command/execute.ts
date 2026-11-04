@@ -8,16 +8,28 @@ import { fail, info, statusMsg } from "./status";
 import { deleteWatchlist, editWatchlist, parseWl } from "./watchlists";
 import { alrtCommand } from "./alerts"; // Phase 8
 import { portCommand } from "./portfolios"; // Phase 8
-import { settingsArgs, themeArgs } from "../settings/commands";
 import { getSettings, updateSettings } from "../settings/runtime";
 
 export { statusMsg, type StatusMsg } from "./status";
 
-/** Parses and runs a command. Returns true on success (command line clears). */
-export function execute(input: string, opts: { newPanel?: boolean } = {}): boolean {
+// The THEME / SETTINGS argument parser is only needed by those two commands, so it lives in its own chunk (not the
+// startup bundle). main.tsx asks for it while the browser is idle, so by the time anyone types THEME it is nearly
+// always here and `execute` stays synchronous.
+type SettingsCommands = typeof import("../settings/commands");
+let settingsCommands: SettingsCommands | undefined;
+export function preloadSettingsCommands(): Promise<unknown> {
+  return import("../settings/commands").then((m) => (settingsCommands = m));
+}
+
+/**
+ * Parses and runs a command. Returns true on success (command line clears).
+ * `replay` is internal: the same input run a second time (see the THEME / SETTINGS case below), so it is not
+ * written to the command history twice.
+ */
+export function execute(input: string, opts: { newPanel?: boolean; replay?: boolean } = {}): boolean {
   const parsed = parseCommand(input, isFunction);
   if (!parsed.ok) return fail(parsed.error);
-  history.push(parsed.raw.toUpperCase());
+  if (!opts.replay) history.push(parsed.raw.toUpperCase());
   // An alias (WCRS, MOST ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
   if (parsed.fn) parsed.fn = FUNCTIONS.get(parsed.fn)?.code ?? parsed.fn;
 
@@ -36,7 +48,12 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
     fnOverride = "APIKEYS";
     args = args.slice(1);
   } else if (parsed.fn === "THEME" || parsed.fn === "SETTINGS") {
-    const cmd = (parsed.fn === "THEME" ? themeArgs : settingsArgs)(args, getSettings());
+    if (!settingsCommands) {
+      // Chunk not downloaded yet (only in the first moments after startup): fetch it, then run this same command again.
+      void preloadSettingsCommands().then(() => execute(input, { ...opts, replay: true }));
+      return true;
+    }
+    const cmd = (parsed.fn === "THEME" ? settingsCommands.themeArgs : settingsCommands.settingsArgs)(args, getSettings());
     if (cmd && !cmd.ok) return fail(cmd.error);
     if (cmd) {
       updateSettings(() => cmd.next);

@@ -1,0 +1,12 @@
+/* Welcome card: GUI-only rules split out of gui.css so the startup bundle does not carry them. Imported by Welcome.tsx,
+   so the stylesheet arrives with the chunk (before the component first renders). */
+/* --- Welcome card: centred over the workspace --- */
+:root[data-mode="gui"] .gw { position: fixed; left: 0; right: 0; margin: 0 auto; top: 18%; z-index: 50; width: min(560px, 92vw); padding: 12px 16px; background: var(--bg); border: 2px solid var(--fg); border-radius: 4px; }
+:root[data-mode="gui"] .gw-title { color: var(--fg); font-weight: bold; font-size: 16px; }
+:root[data-mode="gui"] .gw-sub { color: var(--hdr); margin: 6px 0 10px; }
+:root[data-mode="gui"] .gw-choices { display: flex; flex-direction: column; gap: 6px; }
+:root[data-mode="gui"] .gw-big { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 6px 10px; text-align: left; background: var(--bar); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+:root[data-mode="gui"] .gw-big:hover, :root[data-mode="gui"] .gw-big:focus-visible { background: var(--bar-hi); border-color: var(--fg); }
+:root[data-mode="gui"] .gw-big-l { color: var(--val); font-weight: bold; font-size: 14px; }
+:root[data-mode="gui"] .gw-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+:root[data-mode="gui"] .gw-big-s, :root[data-mode="gui"] .gw-big span:not(.gw-big-l) { color: var(--hdr); }

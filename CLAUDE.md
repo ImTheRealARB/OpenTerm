@@ -233,6 +233,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Beginner suite:** `frontend/e2e/beginner.spec.ts` asserts <= 4 clicks per task in GUI mode; keep it green when changing the GUI. Glossary terms (`data-term`) must
   have an entry in `gui/glossary.ts` (vitest scans the source). `PanelNote` takes `plain`, `actions`, `onRetry` (GUI only). New GUI user = starter layout (`gui/starterLayout.ts`).
 - **Intl.DateTimeFormat per bar is slow** (~4 us): SEAS went 12 -> 46 ms on 10k bars. Keep a UTC fast path when there is no exchange zone (`seasMath.localDay`).
+- **Startup bundle is 119.5 KB gz (2026-11-04):** `vite.config.ts` `modulePreload.resolveDependencies` keeps only CSS deps (lazy chunks load their own imports); THEME/SETTINGS parsing (`settings/commands`), the shortcut sheet, PERF HUD, help drawer, welcome card and tour are lazy chunks (`components/LazyPiece.tsx`, `gui/LazyGui.tsx`, `functions/idlePreload.ts`). In e2e, wait for the visible result (`expect.poll`, `toBeVisible`) instead of reading state right after a command or page load.
 - **Terminal grammar:** a sector word after the ticker maps symbols (`command/sectors.ts`); CORP / unmapped GOVT is an error. F5/F11/F12 stay unbound (browser).
 
 ## Conventions

@@ -2,11 +2,12 @@
  * SETTINGS: keyboard-editable settings and the shortcut editor. Changes apply at once, are mirrored to
  * localStorage and stored on the backend (`/api/settings`) by settings/sync.ts.
  */
+import { ACTION_LABELS } from "../keys/actionLabels";
 import { useEffect, useRef, useState } from "react";
 import { info } from "../command/status";
 import { prefillCommand } from "../components/CommandLine";
 import { fmtPrice } from "../format";
-import { ACTION_LABELS, KEYBINDINGS, chord, effectiveBindings, type Action } from "../keys/keys";
+import { KEYBINDINGS, chord, effectiveBindings, type Action } from "../keys/keys";
 import { FIXED_ACTIONS, checkChord, diffBindings } from "../keys/overrides";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { resetSettings, settingsStore, updateSettings } from "../settings/runtime";

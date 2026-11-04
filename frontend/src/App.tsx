@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { saveLayout } from "./command/layouts";
 import { MARKET_SUFFIX } from "./command/markets";
 import { applySectorWord } from "./command/sectorKeys";
 import type { Sector } from "./command/sectors";
 import { info, statusMsg } from "./command/status";
-import { isFunction } from "./functions/registry";
+import { isFunction, loadModule } from "./functions/registry";
 import { IDLE, isLive, keysToRow, numberSelectKey, type NumberSelectState } from "./keys/numberSelect";
 import { commandInputRef, prefillCommand, vimInsertMode } from "./components/CommandLine";
 import { StatusBar } from "./components/StatusBar";
@@ -14,7 +14,7 @@ import { openWindowMenu, windowMenuKey } from "./components/windowMenuRun";
 import { match } from "./keys/keys";
 import { dispatchPanelKey } from "./keys/panelKeys";
 import { exportPanelCsv } from "./functions/tableExport";
-import { PerfTable } from "./perf/PerfTable";
+import { LazyPiece } from "./components/LazyPiece";
 import { GuiHelpDrawer, GuiOverlays, GuiSidebar, GuiTop, toggleHelp } from "./gui";
 import { getSettings, settingsStore, toggleMode } from "./settings/runtime";
 import { loadJSON, saveJSON, useStore } from "./state/store";
@@ -31,7 +31,10 @@ const SECTOR_ACTIONS: Record<string, Sector> = {
   sectorComdty: "COMDTY", sectorGovt: "GOVT", sectorCorp: "CORP",
 };
 
-import Shortcuts from "./functions/Shortcuts";
+// The shortcut sheet and the PERF HUD are rare overlays: each is its own chunk, not part of the startup bundle.
+// (Module-level functions, so LazyPiece sees the same `load` every render.)
+const loadShortcuts = () => loadModule("SHORTCUTS") as Promise<ComponentType>;
+const loadHud = () => import("./perf/PerfTable").then((m) => m.PerfTable as ComponentType);
 
 export function App() {
   const [cheatsheet, setCheatsheet] = useState(false);
@@ -254,7 +257,7 @@ export function App() {
           overlay={
             cheatsheet && (
               <div className="overlay">
-                <Shortcuts />
+                <LazyPiece load={loadShortcuts} />
                 <div className="dim">ESC TO CLOSE</div>
               </div>
             )
@@ -265,7 +268,7 @@ export function App() {
       <StatusBar />
       {hud && (
         <div className="hud">
-          <PerfTable />
+          <LazyPiece load={loadHud} />
         </div>
       )}
     </div>

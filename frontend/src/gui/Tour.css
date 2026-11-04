@@ -1,0 +1,9 @@
+/* Tour: GUI-only rules split out of gui.css so the startup bundle does not carry them. Imported by Tour.tsx,
+   so the stylesheet arrives with the chunk (before the component first renders). */
+/* --- Tour: solid 2px amber ring around the target, a plain caption box. No animation. --- */
+:root[data-mode="gui"] .gt-ring { position: fixed; z-index: 60; border: 2px solid var(--fg); pointer-events: none; box-sizing: border-box; }
+:root[data-mode="gui"] .gt-cap { position: fixed; z-index: 61; padding: 8px 10px; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
+:root[data-mode="gui"] .gt-n { color: var(--fg-dim); font-size: 10px; }
+:root[data-mode="gui"] .gt-t { color: var(--val); font-weight: bold; margin: 2px 0; }
+:root[data-mode="gui"] .gt-btns { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+:root[data-mode="gui"] .gt-next { color: var(--fg); font-weight: bold; }

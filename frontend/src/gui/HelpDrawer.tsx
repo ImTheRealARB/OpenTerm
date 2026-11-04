@@ -1,3 +1,4 @@
+import "./HelpDrawer.css"; // this component's GUI-only rules, loaded with its chunk
 import { useEffect, useRef } from "react";
 import { FN_INFO, runItem } from "../components/windowMenuRun";
 import { menuItems } from "../components/windowMenu";

@@ -24,7 +24,7 @@ unreviewed checkpoints; the reviewed step commit follows each one.
   number-select does not cover DOM lists; the GUI-mode collapsed top command line relies on Ctrl+K (covered by gui-shell e2e).
 - **Decisions left to the user:** the four "confirm or revert" items and the DLVR `DESKTOP` toggle (DECISIONS_FOR_USER.md, untouched); the 9 low audit items;
   startup bundle is 125.8 KB gz (+5.8 KB: GUI +4.2 within its 5 KB cap, Part 4 +1.6 KB); NSE holidays cover fixed dates + Good Friday only (festivals not computable by rule; the UI says so).
-- **Performance pass (after Parts 0-5):** data-oriented rewrite of the tick path, SEAS and BT open (user's method; `docs/PERFORMANCE.md` "Performance pass 2026-11-04"): bench 37/37 then 36/37 (lone Job J frame miss). Gate ALL PASS apart from load-only timing vitests (pass alone).
+- **Performance pass (after Parts 0-5):** data-oriented rewrite of the tick path, SEAS and BT open (user's method; `docs/PERFORMANCE.md` "Performance pass 2026-11-04"): bench 37/37 then 36/37 (lone Job J frame miss). Then bundle 124.8 -> 119.5 KB gz (under main's 120.0) and an allocation-free SEAS core: bench 37/37, then 35/37 (chart-pan lone miss; SEAS swings 10-17 ms run to run). Gate ALL PASS apart from load-only timing vitests (pass alone).
 - **Next:** user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
 
 ## Resume here (updated 2026-11-03)

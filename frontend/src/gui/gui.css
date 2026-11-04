@@ -85,39 +85,6 @@
 /* --- Banner under the menu bar --- */
 :root[data-mode="gui"] .gb { display: flex; align-items: center; gap: 8px; height: 20px; padding: 0 6px; background: var(--sel); color: var(--val); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
 
-/* --- Help drawer: right-hand side of the workspace --- */
-:root[data-mode="gui"] .hd { position: absolute; top: 0; right: 0; bottom: 0; width: 340px; max-width: 90%; z-index: 35; display: flex; flex-direction: column; background: var(--bg); border-left: 2px solid var(--fg); outline: none; }
-:root[data-mode="gui"] .hd-top { display: flex; align-items: center; gap: 6px; flex: none; padding: 2px 6px; background: var(--bar-hi); border-bottom: 1px solid var(--line); }
-:root[data-mode="gui"] .hd-h { color: var(--val); font-weight: bold; }
-:root[data-mode="gui"] .hd-body { flex: 1 1 auto; overflow-y: auto; padding: 4px 8px 8px; }
-:root[data-mode="gui"] .hd-body p { margin: 4px 0; }
-:root[data-mode="gui"] .hd-t { color: var(--val); font-weight: bold; margin-bottom: 2px; }
-:root[data-mode="gui"] .hd-code { color: var(--fg); }
-:root[data-mode="gui"] .hd-s { color: var(--accent); font-weight: bold; margin-top: 8px; text-transform: uppercase; }
-:root[data-mode="gui"] .hd-use { color: var(--warn); }
-:root[data-mode="gui"] .hd-keys td { padding: 0 8px 0 0; vertical-align: top; }
-:root[data-mode="gui"] .hd-k { color: var(--fg); font-weight: bold; white-space: nowrap; }
-:root[data-mode="gui"] .hd-rel { display: flex; flex-wrap: wrap; gap: 3px; }
-
-/* --- Welcome card: centred over the workspace --- */
-:root[data-mode="gui"] .gw { position: fixed; left: 0; right: 0; margin: 0 auto; top: 18%; z-index: 50; width: min(560px, 92vw); padding: 12px 16px; background: var(--bg); border: 2px solid var(--fg); border-radius: 4px; }
-:root[data-mode="gui"] .gw-title { color: var(--fg); font-weight: bold; font-size: 16px; }
-:root[data-mode="gui"] .gw-sub { color: var(--hdr); margin: 6px 0 10px; }
-:root[data-mode="gui"] .gw-choices { display: flex; flex-direction: column; gap: 6px; }
-:root[data-mode="gui"] .gw-big { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 6px 10px; text-align: left; background: var(--bar); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
-:root[data-mode="gui"] .gw-big:hover, :root[data-mode="gui"] .gw-big:focus-visible { background: var(--bar-hi); border-color: var(--fg); }
-:root[data-mode="gui"] .gw-big-l { color: var(--val); font-weight: bold; font-size: 14px; }
-:root[data-mode="gui"] .gw-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-:root[data-mode="gui"] .gw-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
-:root[data-mode="gui"] .gw-link:hover, :root[data-mode="gui"] .gw-link:focus-visible { color: var(--val); }
-
-/* --- Tour: solid 2px amber ring around the target, a plain caption box. No animation. --- */
-:root[data-mode="gui"] .gt-ring { position: fixed; z-index: 60; border: 2px solid var(--fg); pointer-events: none; box-sizing: border-box; }
-:root[data-mode="gui"] .gt-cap { position: fixed; z-index: 61; padding: 8px 10px; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
-:root[data-mode="gui"] .gt-n { color: var(--fg-dim); font-size: 10px; }
-:root[data-mode="gui"] .gt-t { color: var(--val); font-weight: bold; margin: 2px 0; }
-:root[data-mode="gui"] .gt-btns { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-:root[data-mode="gui"] .gt-next { color: var(--fg); font-weight: bold; }
 
 /* --- Sidebar "Start here": plain-word tasks, function code small and grey beside the name --- */
 :root[data-mode="gui"] .gs-start { padding: 2px 0 4px; border-bottom: 1px solid var(--line); }
@@ -128,7 +95,6 @@
 
 /* --- Glossary tooltip (any [data-term] element; shown on hover and keyboard focus) --- */
 :root[data-mode="gui"] [data-term] { cursor: help; text-decoration: underline dotted var(--fg-dim); text-underline-offset: 2px; }
-:root[data-mode="gui"] .gl-tip { position: fixed; z-index: 90; max-width: 280px; padding: 4px 8px; background: var(--bg); color: var(--val); border: 1px solid var(--fg); border-radius: 3px; line-height: 1.4; pointer-events: none; }
 
 /* --- PanelNote plain-language line and next-step buttons (GUI only) --- */
 :root[data-mode="gui"] .pnote-plain { margin-top: 4px; color: var(--hdr); }
@@ -155,8 +121,6 @@
 :root[data-mode="gui"] .import.editor .editor-host { flex: 1 1 auto; min-height: 0; }
 :root[data-mode="gui"] .import.editor .cm-editor { height: 100%; }
 
-/* Help drawer: the one-sentence purpose. */
-:root[data-mode="gui"] .hd-purpose { margin: 2px 0 6px; color: var(--fg); }
 
 /* FA statement table (functions/FA.tsx). The grid is a canvas, so its colours come from CSS variables that Grid re-reads
    whenever the display settings change (displayVersion). These are defined only inside a GUI-mode FA panel:
@@ -182,7 +146,6 @@
 
 /* 20 and 17: secondary text was ~3.5:1 dim amber on black. Lighter dim for the default (amber) theme only; the other themes keep theirs. */
 :root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) { --fg-dim: #d9a066; }
-:root[data-mode="gui"] .gw-big-s, :root[data-mode="gui"] .gw-big span:not(.gw-big-l) { color: var(--hdr); }
 
 /* 15: one clear place to search. The sidebar box is the primary one (brighter border); the terminal command line in the top bar
    collapses to a hair until it has focus (Ctrl+K still focuses it, so the keyboard path is unchanged). */
@@ -225,3 +188,7 @@
 /* 13: FA. The numbered tab strip duplicates the toolbar buttons; the line below names the statement and its unit. */
 :root[data-mode="gui"] .fa .tabs { display: none; }
 :root[data-mode="gui"] .fa-which { padding: 2px 6px; color: var(--val); font-weight: bold; }
+
+/* Link-style button; also used by the HELP panel (functions/Help.tsx), so it stays in the startup sheet. */
+:root[data-mode="gui"] .gw-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
+:root[data-mode="gui"] .gw-link:hover, :root[data-mode="gui"] .gw-link:focus-visible { color: var(--val); }

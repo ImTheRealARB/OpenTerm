@@ -1,7 +1,7 @@
 """Writes docs/FUNCTIONS.md: the user reference for every command and feature.
 
 The function list comes from frontend/src/functions/registry.ts and the shortcut table from
-frontend/src/keys/keybindings.json + keys.ts, so rerun this after adding a function or a binding:
+frontend/src/keys/keybindings.json + actionLabels.ts, so rerun this after adding a function or a binding:
 
     python scripts/gen_functions_doc.py           # rewrite the doc
     python scripts/gen_functions_doc.py --check   # exit 1 if the doc is out of date (pytest runs this)
@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 REGISTRY = ROOT / "frontend/src/functions/registry.ts"
 BINDINGS = ROOT / "frontend/src/keys/keybindings.json"
-KEYS_TS = ROOT / "frontend/src/keys/keys.ts"
+KEYS_TS = ROOT / "frontend/src/keys/actionLabels.ts"
 OUT = ROOT / "docs/FUNCTIONS.md"
 
 # Section per build phase; Phase 19 is split by topic per function.
