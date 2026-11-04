@@ -36,7 +36,7 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   // Backtest: rule backtests and the data you bring to them
   BT: "Backtest", IMPORT: "Backtest",
   // Settings: help, preferences, layouts, keys, data sources and the other utilities
-  HELP: "Settings", FUNC: "Settings", SHORTCUTS: "Settings", SETTINGS: "Settings", THEME: "Settings", APIKEYS: "Settings",
+  HELP: "Settings", TMPL: "Settings", FUNC: "Settings", SHORTCUTS: "Settings", SETTINGS: "Settings", THEME: "Settings", APIKEYS: "Settings",
   SOURCES: "Settings", LOG: "Settings", PERF: "Settings", JOBS: "Settings", LAYOUT: "Settings", MONITOR: "Settings",
   KITE: "Settings", DLVR: "Settings",
 });

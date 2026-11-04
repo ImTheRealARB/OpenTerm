@@ -6,6 +6,7 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api9, type Envelope, type ScreenerPayload } from "../net/api";
 import { navigate } from "../state/workspace";
 import { parseFilter, screen, type UniverseRow } from "./eqsFilter";
+import { interpretNotes, interpretScreener, looksLikeEnglish } from "./eqsNatural";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -34,7 +35,9 @@ export default function EQS({ panelId, args }: FunctionProps) {
     void load(false);
   }, [load]);
 
-  const filter = useMemo(() => parseFilter(args), [args]);
+  // Plain English ("tech stocks with price under 50") is turned into EQS terms; real EQS syntax is used as typed.
+  const english = useMemo(() => (looksLikeEnglish(args.join(" ")) ? interpretScreener(args.join(" ")) : null), [args]);
+  const filter = useMemo(() => parseFilter(english ? english.args : args), [args, english]);
   const result = useMemo(() => (env ? screen(env.data, filter) : null), [env, filter]);
   const rows = useMemo(() => result?.rows ?? [], [result]);
   const latest = useLatest(rows);
@@ -94,6 +97,15 @@ export default function EQS({ panelId, args }: FunctionProps) {
         {loading && <span className="dim"> · LOADING…</span>}
         <span className="dim legend"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
       </div>
+      {english && (
+        <div data-testid="eqs-interp">
+          <span className="acc">SHOWING:</span> {english.summary.length ? english.summary.join(", ") : "ALL SECURITIES"}
+          <span className="dim"> · FROM "{args.join(" ").toUpperCase()}"</span>
+        </div>
+      )}
+      {english && interpretNotes(english).map((n) => (
+        <div key={n} className="warn" data-testid="eqs-interp-note">{n}</div>
+      ))}
       {errors.length > 0 && <div className="err">{errors.join(" · ")} · EXAMPLE: {USAGE}</div>}
       {error && (
         <div className="err">
