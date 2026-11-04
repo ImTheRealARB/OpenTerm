@@ -40,7 +40,7 @@ export function plainLine(kind: NoteKind, text: string): string | null {
   if (kind !== "error" && kind !== "stale") return null;
   const t = text.toUpperCase();
   if (t.includes("KEY REQUIRED")) return "This needs a free API key. Open API keys to add one; everything else works without it.";
-  if (t.includes("NO DATA") || t.includes("NOT FOUND")) return "The data source has nothing for that. Check the spelling or try another name.";
+  if (t.includes("NO DATA") || t.includes("NOT FOUND")) return "The data source returned nothing for that. It may not carry it, or there is a gap right now: press Retry, or try another name or range.";
   const source = /\b(YAHOO|NASDAQ|SEC|FRED|COINGECKO|BINANCE|GDELT|TREASURY|BLS|BEA|STOOQ|OPENROUTER)\w*/i.exec(text)?.[0];
   const who = source ? source[0].toUpperCase() + source.slice(1).toLowerCase() : "The data source";
   const age = /(\d+\s*(?:s|sec|m|min|h|hr|d)\b)\s*OLD/i.exec(text)?.[1];

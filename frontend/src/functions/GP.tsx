@@ -11,7 +11,7 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, worldApi, type ChartEvents, type Envelope } from "../net/api";
 import { subscribe } from "../net/socket";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
-import { replaceView } from "../state/workspace";
+import { navigate, replaceView } from "../state/workspace";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { KEY_RANGES, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
@@ -337,7 +337,18 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       {/* Same look as every other panel (components/PanelNote): the error keeps its text, the hint says what to do next. */}
       {state.keyError && !L && <KeyRequiredLine error={state.keyError} />}
       {state.error && !state.keyError && !L && (
-        <PanelNote kind="error" hint="F5 TO RETRY.">
+        <PanelNote
+          kind="error"
+          hint="F5 TO RETRY."
+          // GUI wording: a symbol the user picked is valid, so never blame the spelling here; say what is actually wrong.
+          plain={
+            /NO DATA|NOT FOUND/i.test(state.error)
+              ? `No chart data came back for ${symbol} over ${p.range}. The name is fine: the data source has nothing for it right now (in sample-data mode that can be a gap in the recordings). Retry, try another range, or chart a different stock.`
+              : undefined
+          }
+          actions={symbol !== "AAPL" ? [{ label: "Try AAPL", onClick: () => navigate(panelId, { fn: "GP", security: { symbol: "AAPL" }, args: [] }) }] : []}
+          onRetry={() => setReload((n) => n + 1)}
+        >
           {state.error} ({symbol} {p.range}).
         </PanelNote>
       )}
