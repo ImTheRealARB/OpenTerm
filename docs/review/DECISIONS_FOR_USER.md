@@ -25,12 +25,12 @@ Backend
 - Swarm retry has no backoff or jitter; the spend cap can overshoot when concurrent chats both pass the pre-check; Kite ticker reconnects every ~1 s with no jitter if the server accepts and drops; an expired Kite instrument dump fails instead of showing STALE; `llm/sse.py` line buffer has no cap (backend-ai).
 Frontend
 - `execute.ts` runs WL, PORT and ALRT edits before validating the target panel or panel limit: `7: WL X ADD AAPL` edits the list, then fails with `NO PANEL 7` (frontend-functions-b).
-- After first paint `main.tsx` starts loading about 88 chunks (about 500 kB) at once; staggering is unverified without the bench (frontend-functions-b).
+- After first paint `main.tsx` starts loading about 88 chunks (about 500 kB) at once; staggering is unverified without the bench (frontend-functions-b). **DONE** (cloud perf pass 2026-11-04)
 - Percent alerts read only the raw tick row, so a price-only tick could miss one (frontend-functions-b).
-- `LivePrice` resubscribes the symbol on every quote refresh (frontend-functions-b).
+- `LivePrice` resubscribes the symbol on every quote refresh (frontend-functions-b). **DONE** (cloud perf pass 2026-11-04)
 - `AI.tsx` does not abort its SSE stream on unmount (frontend-functions-a). **DONE** (cloud 2026-11-04, see commit for Part 2 frontend bugs)
 - Toggling any indicator rebuilds the chart and resets zoom; the readout does not follow live ticks; the indicator worker has no `onerror` (frontend-chart).
-- `functions/quoteRows.ts` `useLiveRows` redraws every 5 s in a hidden tab and rebuilds its symbol index on every `rows` change (frontend-core).
+- `functions/quoteRows.ts` `useLiveRows` redraws every 5 s in a hidden tab and rebuilds its symbol index on every `rows` change (frontend-core). **DONE** (cloud perf pass 2026-11-04)
 Cloud audit 2026-11-04 (low)
 - `userdata.py:157-170`, `portfolio.py:178-200`: watchlist and portfolio edits (and `Alerts.create` count-then-insert) are read-modify-write across awaits; two concurrent edits lose one (needs a per-store lock).
 - `derivs/service.py:~317`: `OSA` `mult = num(...) or 100.0` turns a typed `MULT=0` into 100 instead of `bad_request`.

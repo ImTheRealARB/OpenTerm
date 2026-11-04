@@ -316,15 +316,23 @@ export default function BT({ panelId, args }: FunctionProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valJob]);
 
+  // First paint first, chart second. The labels, headline numbers and view line are cheap DOM and show the result at once.
+  // The chart (two canvas panes over ~2,500 points) costs 50-70 ms of canvas setup and paint, so it is mounted one frame
+  // later: `chartFor` holds the id of the run whose chart may draw. The numbers are exact either way; only the picture lags a frame.
+  const [chartFor, setChartFor] = useState<string | null>(null);
   // Perf: command submit to the painted result (bench "BT result open to first paint").
   useEffect(() => {
-    if (!run || t0.current === null) return;
+    if (!run) return;
     const start = t0.current;
     const rendered = performance.now();
     t0.current = null;
+    const runId = run.id;
     afterPaint(() => {
-      series.btOpen.push(performance.now() - start);
-      gauges.set("bt.renderMs", performance.now() - rendered);
+      if (start !== null) {
+        series.btOpen.push(performance.now() - start);
+        gauges.set("bt.renderMs", performance.now() - rendered);
+      }
+      setChartFor(runId); // now the chart may mount
     });
   }, [run]);
 
@@ -475,7 +483,8 @@ export default function BT({ panelId, args }: FunctionProps) {
             VIEW <span className="bt-view acc">{shown}</span>
             <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
           </div>
-          {shown === "CHART" && chartBits && (
+          {shown === "CHART" && chartBits && chartFor !== run.id && <div className="dim">DRAWING CHART…</div>}
+          {shown === "CHART" && chartBits && chartFor === run.id && (
             <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
           )}
           {shown === "METRICS" && <Grid ref={grid} columns={METRIC_COLS} rows={metricRows} />}
