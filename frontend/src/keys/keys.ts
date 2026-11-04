@@ -18,7 +18,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   resizeUp: "Move divider up",
   resizeDown: "Move divider down",
   maximize: "Maximize / restore panel",
-  historyBack: "Panel history back",
+  historyBack: "Panel history back (Alt+Backspace: the back key)",
   historyForward: "Panel history forward",
   refresh: "Refresh panel data",
   saveWorkspace: "Save layout (re-saves the current named layout)",
@@ -29,6 +29,12 @@ export const ACTION_LABELS: Record<Action, string> = {
   windowMenu: "Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter)",
   toggleMode: "Switch between TERMINAL and GUI mode",
   helpDrawer: "Help drawer for the focused panel (GUI mode)",
+  sectorEquity: "Sector key: EQUITY on the command line",
+  sectorIndex: "Sector key: INDEX on the command line",
+  sectorCurncy: "Sector key: CURNCY on the command line",
+  sectorComdty: "Sector key: COMDTY on the command line",
+  sectorGovt: "Sector key: GOVT on the command line",
+  sectorCorp: "Sector key: CORP on the command line (no free data yet, shows why)",
 };
 
 /** Canonical chord string for an event, e.g. "Ctrl+Shift+ArrowLeft". */

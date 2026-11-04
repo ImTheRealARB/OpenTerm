@@ -255,6 +255,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `DLVR` | Alert delivery |  |  | `DLVR` |
 | `BRIEF` | Daily brief |  |  | `BRIEF` |
+| `FUNC` | Function directory: every function code with its purpose; type to filter, Enter opens |  |  | `FUNC` |
 
 ## Global keyboard shortcuts
 
@@ -275,7 +276,7 @@ Rebind any of these in `SETTINGS KEYS`.
 | `Ctrl+Shift+ArrowUp` | Move divider up |
 | `Ctrl+Shift+ArrowDown` | Move divider down |
 | `Ctrl+Shift+F` | Maximize / restore panel |
-| `Ctrl+[` | Panel history back |
+| `Ctrl+[` · `Alt+Backspace` | Panel history back (Alt+Backspace: the back key) |
 | `Ctrl+]` | Panel history forward |
 | `F5` | Refresh panel data |
 | `Ctrl+S` | Save layout (re-saves the current named layout) |
@@ -286,6 +287,12 @@ Rebind any of these in `SETTINGS KEYS`.
 | `Alt+M` | Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter) |
 | `Alt+G` | Switch between TERMINAL and GUI mode |
 | `Alt+H` | Help drawer for the focused panel (GUI mode) |
+| `F2` | Sector key: EQUITY on the command line |
+| `F3` | Sector key: INDEX on the command line |
+| `F4` | Sector key: CURNCY on the command line |
+| `F8` | Sector key: COMDTY on the command line |
+| `F9` | Sector key: GOVT on the command line |
+| `Shift+F9` | Sector key: CORP on the command line (no free data yet, shows why) |
 
 ## Data, keys and limits
 

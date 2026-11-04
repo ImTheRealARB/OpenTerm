@@ -128,6 +128,7 @@ const defs: FunctionDef[] = [
   { code: "LOG", title: "Backend log", needsSecurity: false, phase: 2, load: () => import("./Log") },
   { code: "DLVR", title: "Alert delivery", needsSecurity: false, phase: 17, load: () => import("./DLVR") },
   { code: "BRIEF", title: "Daily brief", needsSecurity: false, phase: 17, load: () => import("./BRIEF") },
+  { code: "FUNC", title: "Function directory: every function code with its purpose; type to filter, Enter opens", needsSecurity: false, phase: 20, load: () => import("./FUNC") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

@@ -300,7 +300,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   }, [rows, columns]);
 
   return (
-    <div ref={box} className="grid">
+    <div ref={box} className="grid" data-rows={rows.length}>
       <canvas ref={canvas} aria-hidden="true" />
       <div ref={sr} className="sr" role="status" aria-live="polite" />
     </div>

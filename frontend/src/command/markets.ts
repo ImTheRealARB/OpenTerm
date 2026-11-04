@@ -11,9 +11,6 @@ export const MARKET_SUFFIX: Record<string, string> = {
   AU: ".AX",
 };
 
-/** Asset-class words some users type out of habit ("AAPL US EQUITY GP"). Accepted and ignored. */
-export const ASSET_CLASS = new Set(["EQUITY", "EQ", "INDEX", "CURNCY", "COMDTY", "CRYPTO", "CORP", "GOVT"]);
-
 const SYMBOL_RE = /^[A-Z0-9^][A-Z0-9.\-=^&]*$/;
 
 export interface SecurityRef {
