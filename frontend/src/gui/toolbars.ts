@@ -68,6 +68,7 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Log", key: "l", title: "Toggle the logarithmic price scale (L)" },
     { label: "Indicators", key: "i", title: "Pick indicators (I); then press the letter shown next to each one" },
     { label: "Crosshair", key: "x", title: "Toggle the crosshair (X)" },
+    { label: "Alert at price", key: "A", shift: true, title: "Click the chart at the price you want an alert for (Shift+A; A alerts at the crosshair or last price, Alt+click works too)" },
     { label: "Zoom +", key: "+", title: "Zoom in (+)" },
     { label: "Zoom -", key: "-", title: "Zoom out (-)" },
     { label: "<", key: "ArrowLeft", title: "Pan left, or move the crosshair when it is on (Left arrow)" },

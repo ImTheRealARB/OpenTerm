@@ -58,6 +58,10 @@ export interface ChartHandle {
   crosshair(on: boolean): void;
   crosshairStep(delta: number): void;
   live(price: number, timeMs: number, dayVolume: number | null): void;
+  /** Price an alert key should use: the keyboard crosshair bar's close when it is on, else the last price (null before any bar). */
+  alertPrice(): number | null;
+  /** The last price (live ticks included), or null. */
+  lastPrice(): number | null;
   /** PNG data URL of the chart as drawn (for AI CHART), or null. */
   screenshot(): string | null;
 }
@@ -78,6 +82,11 @@ interface Props {
   events?: ChartMarkerEvent[];
   /** Mouse click on the chart: the drawing under the pointer (or null). */
   onPick?: (id: string | null) => void;
+  /** Active price alerts of this symbol, drawn as dashed "ALRT" lines. Their changes never rebuild the chart. */
+  alertLevels?: number[];
+  /** Alt+click on the chart, or any click while `pickArmed`: the price under the pointer. */
+  onPickPrice?: (price: number) => void;
+  pickArmed?: boolean;
 }
 
 export const INTERVAL_S: Record<string, number> = {
@@ -109,7 +118,7 @@ function formatters(tz: string, intraday: boolean, seconds = false) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick, alertLevels, onPickPrice, pickArmed }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -136,6 +145,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   drawRef.current = draw;
   const dataRef = useRef(data);
   dataRef.current = data;
+  const pickRef = useRef({ armed: false, cb: onPickPrice });
+  pickRef.current = { armed: !!pickArmed, cb: onPickPrice };
   const compareOn = useRef(false);
   compareOn.current = !!compare;
   const geoRef = useRef<Geo | null>(null);
@@ -314,6 +325,29 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     gauges.set("chart.rebuilds", (gauges.get("chart.rebuilds") ?? 0) + 1);
     publish();
   }, [data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  // Alert lines: dashed "ALRT" price lines on the price series. Re-created after a rebuild (the series is new); a level change
+  // touches only these lines, never the series, so zoom and the indicator toggles stay untouched.
+  const levelsKey = (alertLevels ?? []).join(",");
+  useEffect(() => {
+    const s = main.current;
+    const levels = levelsKey ? levelsKey.split(",").map(Number) : [];
+    gauges.set("chart.alertLines", 0);
+    if (!s || compareOn.current || !levels.length) return;
+    const c = colors.current;
+    const lines = levels.map((price) => s.createPriceLine({ price, color: c.warn, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "ALRT" }));
+    gauges.set("chart.alertLines", lines.length);
+    return () => {
+      gauges.set("chart.alertLines", 0);
+      for (const l of lines) {
+        try {
+          s.removePriceLine(l);
+        } catch {
+          /* the series was already replaced by a rebuild */
+        }
+      }
+    };
+  }, [levelsKey, data, compare, type, log, lowerPane, comparePanes, ver]);
 
   function publish() {
     let n = extra.current.length;
@@ -642,6 +676,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       chart.setCrosshairPosition(data.c[i], toTime(data.t[i]), main.current);
       writeReadout(i);
     },
+    lastPrice() {
+      return last.current && Number.isFinite(last.current.c) ? last.current.c : null;
+    },
+    alertPrice() {
+      const px = cross.current.on ? data.c[cross.current.idx] : last.current?.c;
+      return px !== undefined && Number.isFinite(px) ? px : null;
+    },
     live(price, timeMs, dayVolume) {
       const s = main.current;
       const b = last.current;
@@ -675,6 +716,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         ref={box}
         className="chart"
         onClick={(e) => {
+          const pk = pickRef.current;
+          if (pk.cb && (pk.armed || e.altKey) && main.current && !compareOn.current) {
+            const r = e.currentTarget.getBoundingClientRect();
+            const px = main.current.coordinateToPrice(e.clientY - r.top);
+            pk.cb(px === null ? NaN : (px as number));
+            return;
+          }
           const g = geoRef.current;
           const d = drawRef.current;
           if (!g || !d || !onPick || compareOn.current) return;

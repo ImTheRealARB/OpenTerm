@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { registerChartShot } from "../chart/shot";
 import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent } from "../chart/ChartView";
+import { alertDirection, fmtAlertPrice, roundAlertPrice } from "../chart/alertPrice";
 import { createDrawSaver } from "../chart/drawSave";
 import { MAX_DRAWINGS, NEEDED, KIND_NAME, cycleSelection, newId, parseDrawings, snapDay, type DPoint, type DrawKind, type Drawing } from "../chart/drawings";
 import { PanelNote } from "../components/PanelNote";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { INDICATORS } from "../chart/indicators";
 import { fmtAge } from "../format";
+import { alerts as alertStore, createPriceAlert } from "../command/alerts";
+import { fail } from "../command/status";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, worldApi, type ChartEvents, type Envelope } from "../net/api";
 import { subscribe } from "../net/socket";
@@ -162,7 +165,27 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   }, [L, p.evt, events]);
 
   const drawState = useMemo(() => ({ drawings, selected, pending: mode }), [drawings, selected, mode]);
-  const live = useLatest({ drawings, selected, mode, bars: L?.bars });
+  // --- alert from the chart: key A (crosshair or last price), Shift+A or the toolbar button arms one click, Alt+click always ---
+  const [armed, setArmed] = useState(false);
+  const allAlerts = useStore(alertStore, (a) => a);
+  const alertKey = (allAlerts ?? [])
+    .filter((a) => a.status === "active" && a.unit === "price" && a.symbol === (L?.bars.symbol ?? symbol))
+    .map((a) => a.value)
+    .sort((a, b) => a - b)
+    .join(",");
+  const alertLevels = useMemo(() => (alertKey ? alertKey.split(",").map(Number) : []), [alertKey]);
+  const placeAlert = (raw: number | null) => {
+    const sym = L?.bars.symbol ?? symbol;
+    const last = chart.current?.lastPrice() ?? null;
+    if (raw === null || last === null || !Number.isFinite(raw)) return fail("NO PRICE YET");
+    const price = roundAlertPrice(raw);
+    if (price === null) return fail("ALERT PRICE MUST BE ABOVE 0");
+    void createPriceAlert(sym, alertDirection(price, last), fmtAlertPrice(price));
+    return true;
+  };
+  const overlayOn = !p.pane && !!L?.compares.length;
+  useEffect(() => setArmed(false), [symbol, panelId]);
+  const live = useLatest({ drawings, selected, mode, bars: L?.bars, armed, placeAlert, overlayOn });
 
   useEffect(
     () =>
@@ -183,6 +206,22 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         }
         const st = live.current;
         const plain = !e.ctrlKey && !e.altKey && !e.metaKey;
+        if (st.armed && k === "Escape") {
+          setArmed(false);
+          return true;
+        }
+        if (plain && !st.mode) {
+          if (k === "a") {
+            st.placeAlert(chart.current?.alertPrice() ?? null);
+            return true;
+          }
+          if (k === "A") {
+            if (!st.bars) return fail("NO PRICE YET");
+            if (st.overlayOn) return fail("ALERT FROM THE CHART NEEDS THE PLAIN PRICE CHART: REMOVE VS FIRST");
+            setArmed(!st.armed);
+            return true;
+          }
+        }
         if (st.mode && plain) {
           if (k === "Escape") {
             setMode(null);
@@ -321,8 +360,9 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         {!mode && sel && (
           <span className="acc"> · {KIND_NAME[sel.kind]} {sel.id} SELECTED · [ ] CYCLE · D REMOVES</span>
         )}
+        {armed && <span className="acc"> · CLICK THE CHART TO SET AN ALERT, ESC TO CANCEL</span>}
         {drawNote && <span className="err"> · {drawNote}</span>}
-        <span className="dim"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · T/H/B DRAW · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
+        <span className="dim"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · T/H/B DRAW · A ALERT (SHIFT+A OR ALT+CLICK: AT A CLICKED PRICE) · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
       </div>
       {p.evt && (
         <div className="line dim">
@@ -367,6 +407,12 @@ export default function GP({ panelId, security, args }: FunctionProps) {
           draw={drawState}
           events={markers}
           onPick={(id) => setSelected(id)}
+          alertLevels={alertLevels}
+          pickArmed={armed}
+          onPickPrice={(px) => {
+            setArmed(false);
+            live.current.placeAlert(px);
+          }}
         />
       )}
       {picker && (
