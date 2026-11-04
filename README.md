@@ -169,7 +169,7 @@ plain-word buttons (Stock chart, My watchlist, Top news, World markets, My portf
 function sits in a collapsed category, with its short code shown small and grey as a learning aid.
 Type a company name ("apple", "tesla") in the symbol box and pick a suggestion. Hover over, or tab to, a term such as
 EPS or P/E for a one-line plain-English explanation. Errors say what to do next (Retry, "Try AAPL", "Open API keys"),
-and empty lists offer the next step ("Add a stock"). Click `?` on any panel (or press `Alt+H`) for its purpose, buttons and keys.
+and empty lists offer the next step ("Add a stock"). Open panels are browser-style tabs along the top ("+" for a new one; the **Tiles** button in the menu bar shows them side by side), the sidebar can be hidden with its **Sidebar** button, and the chart toolbar has dropdowns for chart type (candles, hollow candles, bars, line, area, baseline, Heikin Ashi) and candle length (1 minute to monthly). Click `?` on any panel (or press `Alt+H`) for its purpose, buttons and keys.
 
 | | |
 |---|---|
