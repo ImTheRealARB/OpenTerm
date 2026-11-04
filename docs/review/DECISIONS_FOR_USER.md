@@ -10,14 +10,14 @@ Nothing below was changed in code unless it says so. Full detail is in each area
 
 ## Deferred (risky or user-visible)
 Quant
-- `quantjobs/attr.py` `return_measures`: Modified Dietz can divide by zero or go negative after large withdrawals; `xirr` bisection assumes a flow sign pattern and can return a wrong root; `quantjobs/risk.py` values holdings at each series' own last close, not the last common day; `parse_deribit` forward is the upper median for an even instrument count (backend-quant).
+- `quantjobs/attr.py` `return_measures`: Modified Dietz can divide by zero or go negative after large withdrawals; `xirr` bisection assumes a flow sign pattern and can return a wrong root; `quantjobs/risk.py` values holdings at each series' own last close, not the last common day; `parse_deribit` forward is the upper median for an even instrument count (backend-quant). **DONE** (cloud 2026-11-04, `23fd1a2`).
 AI/SWARM
 - SWARM and AI panels never abort their paid SSE stream when closed (SWARM abort `c820e22` was reverted because maximize remounts the panel and would kill the run). A close-vs-remount distinction is needed.
 Backend
-- `cache` table is never pruned; the DB file grows for ever (backend-core).
-- Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core).
-- If a leader request is cancelled in `service._once`, waiters get `CancelledError` (backend-core).
-- `DayStore.rows` decodes up to 250 days of msgpack on the event loop (backend-core).
+- `cache` table is never pruned; the DB file grows for ever (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
+- Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
+- If a leader request is cancelled in `service._once`, waiters get `CancelledError` (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
+- `DayStore.rows` decodes up to 250 days of msgpack on the event loop (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
 - **DONE in Phase 17 (2026-11-03):** TLS is always verified (`delivery/email.smtp_connect`); a server with no STARTTLS is refused unless it is on loopback. Original note: `keys.py` `_smtp_check`: `starttls()` without a context does not verify the certificate. Fix is `ssl.create_default_context()`, but a self-signed mail server would show ERROR in APIKEYS (backend-api).
 - No global request-size limit in `main.py`; only `api.json_object` routes are capped (backend-api).
 - `jobs` can reach 200 rows x 8 MB; bt.mc/bt.wf store whole equity arrays in `params` (backend-compute).
