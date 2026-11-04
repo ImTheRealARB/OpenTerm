@@ -149,7 +149,7 @@ export function CommandLine() {
     setItems([]);
     setSel(-1);
     nlItems.current = [];
-    updateHint(v);
+    extras((m) => m.updateHint(v, ui));
   };
 
   const finish = () => {
@@ -177,11 +177,13 @@ export function CommandLine() {
     nl: nlItems,
   };
   const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
-  const updateHint = (v: string) => extras((m) => m.updateHint(v, ui));
-  const previewNl = (v: string) => {
-    nlItems.current = [];
-    extras((m) => m.previewNl(v, ui));
-  };
+  // Enter: plain commands run at once; text that may be plain English waits for the interpreter (the chunk loads on the first keystroke).
+  const submit = (text: string, newPanel: boolean) =>
+    extras((m) => {
+      if (input.current?.value !== text) return;
+      if (m.needsNatural(text)) void viaNatural(text, newPanel);
+      else if (execute(text, { newPanel })) finish();
+    });
   const viaNatural = (text: string, newPanel: boolean) =>
     extras((m) =>
       void m.viaNatural(text, ui, (c) => runNl(c, text, newPanel), () => {
@@ -222,8 +224,7 @@ export function CommandLine() {
       e.preventDefault();
       const picked = items[sel];
       if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, el.value, e.shiftKey);
-      else if (extrasMod?.needsNatural(el.value)) void viaNatural(el.value, e.shiftKey);
-      else if (execute(el.value, { newPanel: e.shiftKey })) finish();
+      else submit(el.value, e.shiftKey);
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();
       accept(items[Math.max(0, sel)]);
@@ -272,12 +273,15 @@ export function CommandLine() {
       return;
     }
     const { token, securitySlot } = lastToken(v);
-    previewNl(v);
+    nlItems.current = [];
     startTransition(() => {
       setItems(merge(token, securitySlot));
       setSel(-1);
     });
-    updateHint(v);
+    extras((m) => {
+      m.previewNl(v, ui);
+      m.updateHint(v, ui);
+    });
     if (securitySlot && token) searchSecurities(v, token);
     else searchSeq.current++;
   };
