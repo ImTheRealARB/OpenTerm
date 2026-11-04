@@ -190,7 +190,7 @@ function CodeBox(p: {
       {state === "loading" && <div className="dim">LOADING EDITOR…</div>}
       {state === "failed" && <div className="err">ERR: THE EDITOR FAILED TO LOAD (RELOAD THE PAGE)</div>}
       {/* CodeMirror builds its DOM inside this div. */}
-      <div ref={host} />
+      <div ref={host} className="editor-host" />
     </div>
   );
 }

@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import { chromeKeyDown } from "./chrome";
 import { endTour, onboarding, tourGo } from "./onboarding";
-import { TOUR_STEPS } from "./tourSteps";
+import { effectiveBindings } from "../keys/keys";
+import { TOUR_STEPS, tourText } from "./tourSteps";
 
 interface Box {
   left: number;
@@ -78,7 +79,7 @@ export function Tour() {
           STEP {step + 1} OF {TOUR_STEPS.length}
         </div>
         <div className="gt-t">{s.title}</div>
-        <div>{s.text}</div>
+        <div>{tourText(s, effectiveBindings())}</div>
         <div className="gt-btns">
           <button type="button" className="pt-b" data-testid="tour-back" disabled={step === 0} onClick={() => tourGo(step - 1, TOUR_STEPS.length)}>
             Back

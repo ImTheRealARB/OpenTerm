@@ -29,12 +29,21 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: "Mode switch",
-    text: "TERMINAL | GUI. Terminal mode is the keyboard-first look with no menus: faster once you know the commands. You can switch back any time (Alt+G).",
+    text: "TERMINAL | GUI. Terminal mode is the keyboard-first look with no menus: faster once you know the commands. You can switch back any time ({toggleMode}).",
     selectors: [".mode-toggle"],
   },
   {
     title: "Panel buttons and help",
-    text: "Each panel has its own button row. The ? button explains the panel: what it shows, its keys and related functions (Alt+H).",
+    text: "Each panel has its own button row. The ? button explains the panel: what it shows, its keys and related functions ({helpDrawer}).",
     selectors: [".panel.focus .pt-help", ".pt-help"],
   },
 ];
+
+/**
+ * A step's text with the live key names filled in: `{toggleMode}` and `{helpDrawer}` become the first chord bound to that
+ * action right now (so a SETTINGS KEYS rebinding shows up in the tour), or "no key bound" when the user cleared it.
+ * `bindings` is `effectiveBindings()`; it is passed in so this file stays pure.
+ */
+export function tourText(step: TourStep, bindings: Readonly<Record<string, readonly string[]>>): string {
+  return step.text.replace(/\{(\w+)\}/g, (_, action: string) => bindings[action]?.[0] ?? "no key bound");
+}

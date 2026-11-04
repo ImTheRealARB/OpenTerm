@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { checkNewsItems } from "../command/alerts";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
+import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type NewsItem, type NewsPayload } from "../net/api";
@@ -101,7 +102,8 @@ export default function N({ panelId, args, security }: FunctionProps) {
         <span className="dim"> · J/K MOVE · ENTER OPEN ARTICLE · E CSV · F5 REFRESH</span>
       </div>
       {/* A failed fetch with nothing to show is a full-panel error; with old headlines on screen it stays one line above them. */}
-      {error && !env && (
+      {error && isKeyRequired(error) && <KeyRequiredLine error={error} />}
+      {error && !env && !isKeyRequired(error) && (
         <PanelNote kind="error" hint={query.kind === "keyword" ? "GDELT allows one search per 5 s and often answers 429. Wait a moment, then F5." : "Press F5 to retry. The reason is given above."}>
           {error.message}
           {error.detail && <span className="dim"> ({error.detail})</span>}

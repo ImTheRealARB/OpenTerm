@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LivePrice } from "../components/LivePrice";
 import { fmtAge, fmtBig, fmtNum, fmtPct, fmtPrice } from "../format";
 import { PanelNote, plainLine, type NoteAction } from "../components/PanelNote";
+import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { termProps } from "../gui/term";
 import { runSymbol } from "../gui/run";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -40,7 +41,7 @@ interface Profile {
   source: string;
 }
 
-type Result<T> = { env?: Envelope<T>; error?: string };
+type Result<T> = { env?: Envelope<T>; error?: string; /** the 424 failure, when the cause is a missing API key */ keyError?: ApiError };
 
 function Range52({ lo, hi, px }: { lo: number | null; hi: number | null; px: number | null }) {
   if (lo == null || hi == null || px == null || hi <= lo) return <span>{fmtPrice(lo)} - {fmtPrice(hi)}</span>;
@@ -84,7 +85,7 @@ export default function DES({ panelId, security }: FunctionProps) {
     setQuote({});
     api.profile(symbol).then(
       (env) => alive && setProf({ env: env as Envelope<Profile> }),
-      (e: ApiError) => alive && setProf({ error: e.message }),
+      (e: ApiError) => alive && setProf({ error: e.message, keyError: isKeyRequired(e) ? e : undefined }),
     );
     api.quotes([symbol]).then(
       ({ results }) => {
@@ -92,7 +93,7 @@ export default function DES({ panelId, security }: FunctionProps) {
         const r = Object.values(results)[0];
         setQuote(r && !("error" in r) ? { env: r } : { error: r && "error" in r ? r.error : "NO DATA FOR SYMBOL" });
       },
-      (e: ApiError) => alive && setQuote({ error: e.message }),
+      (e: ApiError) => alive && setQuote({ error: e.message, keyError: isKeyRequired(e) ? e : undefined }),
     );
     return () => {
       alive = false;
@@ -162,7 +163,8 @@ export default function DES({ panelId, security }: FunctionProps) {
         </span>
       </h2>
       {q && quote.env && <LivePrice quote={q} stale={quote.env.stale} ageS={quote.env.age_s} />}
-      {quote.error && <div className="err">QUOTE: {quote.error}</div>}
+      {quote.keyError && <KeyRequiredLine error={quote.keyError} />}
+      {quote.error && !quote.keyError && <div className="err">QUOTE: {quote.error}</div>}
       {gui && quote.error && !unknown && prof.error && (
         <PanelNote kind="error" plain={plainLine("error", `${quote.error} ${prof.error}`)} onRetry={() => setReload((n) => n + 1)}>
           Could not load this stock.
@@ -192,7 +194,8 @@ export default function DES({ panelId, security }: FunctionProps) {
           {p.description && <div className="desc">{p.description}</div>}
         </>
       )}
-      {prof.error && <div className="err">PROFILE: {prof.error}</div>}
+      {prof.keyError && !quote.keyError && <KeyRequiredLine error={prof.keyError} />}
+      {prof.error && !prof.keyError && <div className="err">PROFILE: {prof.error}</div>}
       {unknown && (
         <PanelNote kind="error" plain="" actions={near}>
           {`There is no stock called ${symbol}.`}

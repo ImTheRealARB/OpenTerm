@@ -146,3 +146,27 @@
 :root[data-mode="gui"] .bt-starter-run { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 :root[data-mode="gui"] .bt-starter-run button:disabled { opacity: 0.5; cursor: default; }
 :root[data-mode="gui"] .bt-starter-sym { width: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; font: inherit; padding: 1px 4px; }
+
+/* KEY REQUIRED note: amber message (functions/KeyRequiredLine.tsx). */
+:root[data-mode="gui"] .keyreq .pnote-msg { color: var(--warn); }
+
+/* BT strategy editor: in GUI mode it takes the rest of the panel (Terminal keeps the fixed 22em set in bt/codeEditor.ts). */
+:root[data-mode="gui"] .fn > .import.editor { flex: 1 1 auto; max-height: none; min-height: 12em; display: flex; flex-direction: column; }
+:root[data-mode="gui"] .import.editor .editor-host { flex: 1 1 auto; min-height: 0; }
+:root[data-mode="gui"] .import.editor .cm-editor { height: 100%; }
+
+/* Help drawer: the one-sentence purpose. */
+:root[data-mode="gui"] .hd-purpose { margin: 2px 0 6px; color: var(--fg); }
+
+/* FA statement table (functions/FA.tsx). The grid is a canvas, so its colours come from CSS variables that Grid re-reads
+   whenever the display settings change (displayVersion). These are defined only inside a GUI-mode FA panel:
+   a quiet header band, a faint rule between rows and no vertical rules, so a statement reads like a printed table. */
+:root[data-mode="gui"] .fa {
+  --grid-hdr-bg: var(--bar-hi);
+  --grid-hdr-fg: var(--val);
+  --grid-row-rule: var(--line);
+  --grid-col-rule: transparent;
+  --grid-sel: var(--sel);
+}
+:root[data-mode="gui"] .fa .tabs { gap: 6px; padding: 2px 4px; }
+:root[data-mode="gui"] .fa .tabs span { padding: 0 8px; border-radius: 3px; }

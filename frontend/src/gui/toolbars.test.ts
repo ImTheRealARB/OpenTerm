@@ -57,7 +57,7 @@ describe("GUI panel toolbars", () => {
   });
 
   it("returns nothing for a function without buttons or an empty panel", () => {
-    expect(buttonsFor("DES", [])).toEqual([]);
+    expect(buttonsFor("MOST", [])).toEqual([]);
     expect(buttonsFor(undefined, [])).toEqual([]);
   });
 

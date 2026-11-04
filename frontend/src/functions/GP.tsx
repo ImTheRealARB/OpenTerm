@@ -4,6 +4,7 @@ import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type Chart
 import { createDrawSaver } from "../chart/drawSave";
 import { MAX_DRAWINGS, NEEDED, KIND_NAME, cycleSelection, newId, parseDrawings, snapDay, type DPoint, type DrawKind, type Drawing } from "../chart/drawings";
 import { PanelNote } from "../components/PanelNote";
+import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { INDICATORS } from "../chart/indicators";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
@@ -44,7 +45,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const chartDefaults = useStore(settingsStore, (st) => st.chart);
   const p = useMemo(() => parseGpArgs(args, chartDefaults), [args, chartDefaults]);
   const symbol = security!.symbol;
-  const [state, setState] = useState<{ loaded?: Loaded; error?: string; loading: boolean }>({ loading: true });
+  const [state, setState] = useState<{ loaded?: Loaded; error?: string; keyError?: ApiError; loading: boolean }>({ loading: true });
   const [picker, setPicker] = useState(false);
   const [crossOn, setCrossOn] = useState(false);
   const [reload, setReload] = useState(0);
@@ -76,7 +77,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
           loaded: { bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, compares, compareErrors },
         });
       })
-      .catch((e: ApiError) => alive && setState({ loading: false, error: e.message }));
+      .catch((e: ApiError) => alive && setState({ loading: false, error: e.message, keyError: isKeyRequired(e) ? e : undefined }));
     return () => {
       alive = false;
     };
@@ -334,7 +335,8 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       {overlayCompare && drawings.length > 0 && <div className="warn">DRAWINGS HIDDEN WHILE A % OVERLAY (VS) IS ON: USE PANE TO KEEP THEM</div>}
       {p.compare.length > 1 && !p.pane && <div className="warn">VS OVERLAYS ONLY {p.compare[0]}; ADD PANE TO SHOW ALL {p.compare.length}</div>}
       {/* Same look as every other panel (components/PanelNote): the error keeps its text, the hint says what to do next. */}
-      {state.error && !L && (
+      {state.keyError && !L && <KeyRequiredLine error={state.keyError} />}
+      {state.error && !state.keyError && !L && (
         <PanelNote kind="error" hint="F5 TO RETRY.">
           {state.error} ({symbol} {p.range}).
         </PanelNote>

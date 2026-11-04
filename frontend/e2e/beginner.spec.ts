@@ -341,3 +341,13 @@ test("10. recover from an unknown symbol without help", async ({ page }) => {
   await expect(header(page)).toContainText(/AAPL|MSFT|NVDA|TSLA/);
   expect(c.count).toBeLessThanOrEqual(4);
 });
+
+// A new GUI user (nothing saved) sees a useful first screen: quotes, a chart and top news, not an empty grid.
+test("a new GUI user starts with quotes, a chart and top news", async ({ page }) => {
+  const m = await setupGui(page);
+  await expect(page.locator("[data-panel]")).toHaveCount(3);
+  await expect.poll(() => m.quotes).toContain("AAPL");
+  await expect(page.locator('[data-panel="3"] .ph')).toContainText("N");
+  await expect(page.locator('[data-panel="2"] .ph')).toContainText("SPY");
+  expect(m.errors).toEqual([]);
+});

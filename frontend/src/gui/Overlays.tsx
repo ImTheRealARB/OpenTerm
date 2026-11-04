@@ -9,7 +9,12 @@ import { Welcome } from "./Welcome";
  */
 export function GuiOverlays() {
   useEffect(() => {
-    if (!readFlag(WELCOMED_KEY)) showWelcome();
+    if (!readFlag(WELCOMED_KEY)) {
+      showWelcome();
+      // A new user also gets a starter layout (quotes, a chart, top news) instead of an empty grid. Loaded on demand:
+      // it is only needed once per user.
+      void import("./starterLayout").then((m) => m.applyStarterLayoutIfNew());
+    }
     // Leaving GUI mode unmounts this: close anything still open so it is not waiting when GUI mode returns.
     return () => onboarding.set(() => ({ welcome: false, tour: null }));
   }, []);
