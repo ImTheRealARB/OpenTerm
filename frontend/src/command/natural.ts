@@ -114,7 +114,7 @@ function extractModifiers(text: string): Parts {
   else if ((m = take(st, new RegExp(`\\b${num} ?(?:years?|yrs?|y)\\b`)))) p.range = `${n(m[1])}Y`;
   else if ((m = take(st, new RegExp(`\\b${num} ?(?:months?|mos?|m)\\b`)))) p.range = `${n(m[1])}M`;
   else if ((m = take(st, new RegExp(`\\b${num} ?(?:weeks?|wks?|w)\\b`)))) p.range = n(m[1]) === 1 ? "5D" : n(m[1]) <= 4 ? "1M" : "3M";
-  else if ((m = take(st, new RegExp(`\\b${num} ?(?:days?|d)\\b`)))) p.range = n(m[1]) === 1 ? "1D" : n(m[1]) <= 5 ? "5D" : "1M";
+  else if ((m = take(st, new RegExp(`\\b${num} ?(?:days?|d)\\b(?! ?(?:simple )?(?:moving average|sma|ma)\\b)`)))) p.range = n(m[1]) === 1 ? "1D" : n(m[1]) <= 5 ? "5D" : "1M";
   else if ((m = take(st, /\b(?:today|intraday|todays|this morning)\b/))) p.range = "1D";
   else if ((m = take(st, /\b(?:this|past|last) year\b/))) p.range = "1Y";
   else if ((m = take(st, /\b(?:this|past|last) month\b/))) p.range = "1M";

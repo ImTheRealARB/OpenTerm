@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { execute, statusMsg } from "../command/execute";
+import { needsNatural, resolveNatural } from "../command/nlRun";
+import { info } from "../command/status";
+import type { Hint } from "../command/syntaxHint";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
 import { refreshWatchlists, watchlistList } from "../command/watchlists";
-import { FUNCTION_LIST, loadModule } from "../functions/registry";
+import { FUNCTIONS, FUNCTION_LIST, isFunction, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
 import { VIM_INSERT, vimKey, type VimMode } from "../command/vim";
@@ -14,10 +17,15 @@ import { useStore } from "../state/store";
 interface Suggestion {
   value: string;
   label: string;
-  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT" | "LIST";
+  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT" | "LIST" | "ARG" | "NL" | "MEAN";
 }
 
 const SEARCH_DEBOUNCE_MS = 80;
+const NL_DEBOUNCE_MS = 150;
+
+// The syntax-hint helper is a lazy chunk (it is not needed before the first space is typed).
+type HintModule = typeof import("../command/syntaxHint");
+let hintMod: HintModule | null = null;
 
 export const commandInputRef: { current: HTMLInputElement | null } = { current: null };
 const prefillRef: { current: ((text: string) => void) | null } = { current: null };
@@ -98,6 +106,11 @@ export function CommandLine() {
   const [, startTransition] = useTransition();
   const searchSeq = useRef(0);
   const searchTimer = useRef(0);
+  const nlTimer = useRef(0);
+  const nlSeq = useRef(0);
+  /** The plain-English reading of the typed text ("-> AAPL GP"); always listed first. */
+  const nlItems = useRef<Suggestion[]>([]);
+  const [hint, setHint] = useState<Hint | null>(null);
   // Phase 10: opt-in vim editing (SETTINGS). Off by default; the default path is one boolean check.
   const vimOn = useStore(settingsStore, (st) => st.vim);
   const vim = useRef(VIM_INSERT);
@@ -126,7 +139,7 @@ export function CommandLine() {
         .then((env) => {
           // Drop replies for text the user has already changed.
           if (seq !== searchSeq.current || input.current?.value !== text) return;
-          startTransition(() => setItems(merge(token, true, env.data)));
+          startTransition(() => setItems([...nlItems.current, ...merge(token, true, env.data)]));
         })
         .catch(() => {});
     }, SEARCH_DEBOUNCE_MS);
@@ -140,10 +153,87 @@ export function CommandLine() {
 
   const accept = (s: Suggestion) => {
     const el = input.current!;
-    const v = el.value.replace(/\S*$/, s.value) + " ";
+    // A plain-English reading replaces the whole text with the command it stands for.
+    const v = s.kind === "NL" || s.kind === "MEAN" ? s.value : el.value.replace(/\S*$/, s.value) + " ";
     setValue(v);
     setItems([]);
     setSel(-1);
+    nlItems.current = [];
+    updateHint(v);
+  };
+
+  const finish = () => {
+    setValue("");
+    setItems([]);
+    setSel(-1);
+    setHint(null);
+    nlItems.current = [];
+    if (vimOn) setVim("insert");
+  };
+
+  /** Runs the command a plain-English phrase stands for and tells the user the code, so they learn it. */
+  const runNl = (command: string, typed: string, newPanel: boolean) => {
+    if (!execute(command, { newPanel })) return;
+    finish();
+    info(`${typed.trim().toUpperCase()} -> ${command}`);
+  };
+
+  /** Enter on text that may be plain English: ask the interpreter, then run, offer choices, or fall back to the normal error. */
+  const viaNatural = async (text: string, newPanel: boolean) => {
+    const r = await resolveNatural(text).catch(() => ({ kind: "asis" }) as const);
+    if (input.current?.value !== text) return; // the user kept typing
+    if (r.kind === "command") runNl(r.command, text, newPanel);
+    else if (r.kind === "choices") {
+      setItems(r.choices.map((c) => ({ value: c.command, label: c.label, kind: "MEAN" })));
+      setSel(0);
+      info("DID YOU MEAN: UP/DOWN + ENTER");
+    } else if (execute(text, { newPanel })) finish();
+  };
+
+  /** Plain-English preview while typing: the first suggestion shows what Enter will run. */
+  const previewNl = (v: string) => {
+    clearTimeout(nlTimer.current);
+    const seq = ++nlSeq.current;
+    nlItems.current = [];
+    const t = v.trim();
+    if (!needsNatural(v) || (!/\s/.test(t) && t.length < 4)) return;
+    nlTimer.current = window.setTimeout(() => {
+      resolveNatural(v)
+        .then((r) => {
+          if (seq !== nlSeq.current || input.current?.value !== v) return;
+          if (r.kind === "command") nlItems.current = [{ value: r.command, label: "PRESS ENTER", kind: "NL" }];
+          else if (r.kind === "choices") nlItems.current = r.choices.map((c) => ({ value: c.command, label: c.label, kind: "MEAN" }));
+          else return;
+          setItems(nlItems.current);
+          setSel(-1);
+        })
+        .catch(() => {});
+    }, NL_DEBOUNCE_MS);
+  };
+
+  /** Syntax hint line: the function's argument slots with the one being typed in bold. */
+  const updateHint = (v: string) => {
+    const first = v.trimStart().split(/\s+/)[0] ?? "";
+    if (!hintMod && !/\s/.test(v) && !isFunction(first.toUpperCase())) {
+      setHint(null);
+      return;
+    }
+    const run = (m: HintModule) => {
+      if (input.current?.value !== v) return;
+      const h = m.syntaxHint(v, {
+        isFunction,
+        argsSchema: (c) => FUNCTIONS.get(c)?.argsSchema,
+        symbols: history.recentSecurities(),
+      });
+      setHint(h);
+      // Typing a value of the active slot ("AAPL GP 5"): list the matches so Tab completes them.
+      if (h && h.token && h.values.length && !nlItems.current.length) {
+        setItems(h.values.slice(0, 8).map((value) => ({ value, label: h.wantsSymbol ? "" : "ARGUMENT", kind: "ARG" as const })));
+        setSel(-1);
+      }
+    };
+    if (hintMod) run(hintMod);
+    else void import("../command/syntaxHint").then((m) => run((hintMod = m)));
   };
 
   /** Vim normal-mode keys (and Esc from insert mode). Returns true when the key was consumed. */
@@ -177,12 +267,10 @@ export function CommandLine() {
     const el = e.currentTarget;
     if (e.key === "Enter") {
       e.preventDefault();
-      if (execute(el.value, { newPanel: e.shiftKey })) {
-        setValue("");
-        setItems([]);
-        setSel(-1);
-        if (vimOn) setVim("insert");
-      }
+      const picked = items[sel];
+      if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, el.value, e.shiftKey);
+      else if (needsNatural(el.value)) void viaNatural(el.value, e.shiftKey);
+      else if (execute(el.value, { newPanel: e.shiftKey })) finish();
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();
       accept(items[Math.max(0, sel)]);
@@ -201,6 +289,9 @@ export function CommandLine() {
         e.stopPropagation();
         setItems([]);
         setSel(-1);
+      } else if (hint) {
+        e.stopPropagation();
+        setHint(null);
       }
     }
   };
@@ -214,6 +305,8 @@ export function CommandLine() {
     const wlArg = layoutArg ? null : WL_ARG.exec(v);
     if (layoutArg || wlArg) {
       searchSeq.current++;
+      nlItems.current = [];
+      setHint(null);
       const show = () => {
         if (input.current?.value !== v) return;
         startTransition(() => {
@@ -226,10 +319,12 @@ export function CommandLine() {
       return;
     }
     const { token, securitySlot } = lastToken(v);
+    previewNl(v);
     startTransition(() => {
       setItems(merge(token, securitySlot));
       setSel(-1);
     });
+    updateHint(v);
     if (securitySlot && token) searchSecurities(v, token);
     else searchSeq.current++;
   };
@@ -275,14 +370,33 @@ export function CommandLine() {
         onBlur={() => {
           setFocused(false);
           setItems([]);
+          setHint(null);
         }}
       />
       <span className="cmd-go" aria-hidden="true">GO</span>
       {vimOn && focused && <span className="vim">{vimMode === "normal" ? "-- NORMAL --" : "-- INSERT --"}</span>}
+      {focused && hint && items.length === 0 && (
+        <div className="hint" role="note" data-testid="syntax-hint" aria-label="Command syntax">
+          <span className="hc">{hint.code}</span>
+          {hint.slots.map((sl, i) => (sl.active ? <b key={i}> {sl.text}</b> : <span key={i}> {sl.text}</span>))}
+          {hint.slots.length === 0 && <span className="dim"> (no arguments)</span>}
+          {hint.values.length > 0 && <span className="dim hv" data-testid="syntax-values"> : {hint.values.slice(0, 12).join(" ")}</span>}
+        </div>
+      )}
       {focused && items.length > 0 && (
         <div className="ac" role="listbox">
           {items.map((s, i) => (
-            <div key={s.kind + s.value} className={i === sel ? "on" : ""} role="option" aria-selected={i === sel}>
+            <div
+              key={s.kind + s.value}
+              className={i === sel ? "on" : ""}
+              role="option"
+              aria-selected={i === sel}
+              onMouseDown={(e) => {
+                e.preventDefault(); // keep the focus in the command line
+                if (s.kind === "NL" || s.kind === "MEAN") runNl(s.value, input.current?.value ?? "", false);
+                else accept(s);
+              }}
+            >
               <span>{s.value}</span>
               <span className="dim">{s.label}</span>
               <span className="k">{s.kind}</span>
