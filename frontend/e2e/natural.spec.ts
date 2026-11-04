@@ -105,6 +105,24 @@ for (const mode of ["terminal", "gui"] as const) {
       await expect(page.locator("#cmdline")).toHaveValue("TSLA N");
     });
 
+    test("a comparison sentence opens GP with VS", async ({ page }) => {
+      await type(page, "apple vs microsoft 1 year");
+      await expect(title(page)).toContainText("AAPL | GP");
+      await expect(page.locator(".msg.info")).toHaveText("APPLE VS MICROSOFT 1 YEAR -> AAPL GP 1Y VS MSFT");
+      await expect.poll(() => seen.history.some((u) => u.searchParams.get("symbol") === "MSFT")).toBe(true);
+    });
+
+    test("a comparison with an unknown name says which", async ({ page }) => {
+      await type(page, "apple vs zzzqqq");
+      await expect(page.locator(".msg.err")).toContainText("UNKNOWN COMPANY: ZZZQQQ");
+    });
+
+    test("a screener sentence opens EQS", async ({ page }) => {
+      await type(page, "tech stocks under 50 dollars");
+      await expect(title(page)).toContainText("EQS");
+      await expect(page.getByTestId("eqs-interp")).toContainText("SHOWING:");
+    });
+
     test("nonsense keeps the normal error", async ({ page }) => {
       await type(page, "xyzzy blorp");
       await expect(page.locator(".msg.err")).toContainText("UNKNOWN FUNCTION");
