@@ -584,3 +584,55 @@ Baseline = `20b5bd0` (Phase 17, no editor change) in `C:\otbase`, runs alternate
 | 4 | baseline, same load | 29 / 37 | tick-to-pixel 76.1, frame under load 33.4, keystroke echo 17.5, chart pan 33.4, BT 10-year 695, BT open 117.9, SEAS 29.6, IMAP 24.9 ms |
 
 Result: the baseline misses as much under the same load; none of the missed rows run editor code (the BT open line paints a cached run, not the editor). Machine load, not this change.
+
+## Cloud baseline 2026-11-04 (Linux cloud box, 4 vCPU, untouched `origin/main` 23082cb)
+
+Gate: pytest 1708, e2e 226, vitest 508/509 (the `corrMath` 20x5y timing test read 328 ms vs 100 under the parallel gate; 69 ms alone). ruff, tsc clean.
+Bench run 1: 36/37 (miss: BT result open to first paint). Runs 2 and 3 crashed in the Phase 15 quant section (`quant risk run was served from the cache`), so they printed no table (the bench prints at the end). Investigated in Part 2.
+**On this box the bench gate is "no budget worse than this baseline beyond noise"**; absolute budgets were set on Windows.
+
+| Line | Run 1 | Budget | Status |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 120.0 KB | 400 KB | PASS |
+| Backend p95, cached /api/health | 0.8 ms | 20 ms | PASS |
+| Backend p95, cached /api/quote | 0.7 ms | 20 ms | PASS |
+| Backend p95, cached /api/history | 2.1 ms | 20 ms | PASS |
+| Cold start to usable command line (web) | 129.1 ms | 1500 ms | PASS |
+| Cold start, GUI mode (new-user default) | 120.2 ms | - | INFO |
+| Keystroke to echo p95 (keydown to next frame) | 14.8 ms | 16.7 ms | PASS |
+| Command submit to first paint, cached, p95 | 28.8 ms | 100 ms | PASS |
+| Frame time p95, 8-panel workload | 16.7 ms | 20 ms | PASS |
+| Command submit to first paint, cold network, p95 | 17.1 ms | 400 ms | PASS |
+| Tick received to pixel p95, streaming load | 45.0 ms | 50 ms | PASS |
+| Frame time p95, streaming load | 16.8 ms | 20 ms | PASS |
+| Keystroke echo p95, streaming load | 15.9 ms | 16.7 ms | PASS |
+| Long tasks (>50 ms), streaming load | 0.0 | 0 | PASS |
+| JS heap, 9 panels + 200 streaming symbols | 7.5 MB | 500 MB | PASS |
+| Ticks delivered to the page per second | 3992.5 /s | - | INFO |
+| Layout load to paint p95 (SQLite, 9 / 1 panels) | 70.5 ms | 100 ms | PASS |
+| Frame time p95, 10k-row grid scroll | 16.7 ms | 20 ms | PASS |
+| Frame time p95, 50k-bar chart pan/zoom | 16.8 ms | 20 ms | PASS |
+| Job J frame received to paint p95 | 38.0 ms | 50 ms | PASS |
+| Job submit p95, server-side (new + cached) | 7.0 ms | 20 ms | PASS |
+| Job submit to first J frame painted p95 | 61.1 ms | - | INFO |
+| Cached job (same hash) p95, server-side | 1.7 ms | 20 ms | PASS |
+| JOBS / APIKEYS open to first paint p95 | 29.9 ms | 100 ms | PASS |
+| Worker pool cold start (first job done) | 93.8 ms | - | INFO |
+| BT 10-year daily rule run p95, server-side | 293.9 ms | 300 ms | PASS |
+| BT cached run (same hash) p95, server-side | 19.0 ms | 20 ms | PASS |
+| BT result open to first paint p95 | 133.4 ms | 100 ms | FAIL |
+| BT first run, cold worker (pandas import) | 977.8 ms | - | INFO |
+| BT 100 symbols x 10 years | 1985.3 ms | - | INFO |
+| RISK 20 names x 3 years p95, server-side | 48.2 ms | 400 ms | PASS |
+| PORT OPT HRP 20 names p95, server-side | 12.3 ms | 400 ms | PASS |
+| PORT OPT RP 20 names p95, server-side | 17.1 ms | 400 ms | PASS |
+| CORR REGIME 20 names x 2 years p95, server-side | 67.9 ms | 300 ms | PASS |
+| ALPHA SYN 100 names x 2 years, server-side | 900.6 ms | 8000 ms | PASS |
+| AI request to first SSE event p95, server-side | 3.7 ms | 60 ms | PASS |
+| AI panel open to first paint p95 | 19.9 ms | 100 ms | PASS |
+| Pattern scan (candles + SMC) 5,000 bars p95 | 10.0 ms | 40 ms | PASS |
+| SEAS MONTH+WOY+DOM 10,000 daily bars p95 | 12.2 ms | 15 ms | PASS |
+| Drawing hit test, 200 drawings p95 | 0.3 ms | 1 ms | PASS |
+| IMAP treemap layout, 5,000 tiles p95 | 5.2 ms | 30 ms | PASS |
+| SECF fuzzy rank, 7,000 names, per query p95 | 11.9 ms | 25 ms | PASS |
+| IMAP canvas paint, 5,000 tiles p95 | 9.4 ms | 16 ms | PASS |
