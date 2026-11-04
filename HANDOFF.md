@@ -49,6 +49,9 @@ unreviewed checkpoints; the reviewed step commit follows each one.
 - **Next:** optional real-data (non-fixture) screenshot pass of the GUI; items in DECISIONS_FOR_USER.md (four confirm-or-revert items, DLVR `DESKTOP` toggle, 9 low audit items);
   open: IND opened from the GP toolbar splits the panel and the chart remounts (zoom resets); the `eqsFilter` timing vitest fails under load.
 
+## GUI top-bar command line (2026-11-05, branch `claude/exciting-darwin-847c96`)
+- Removed the `gui.css` rule that collapsed the top-bar command line to a 2px sliver in GUI mode (beginner item 15). It is now always visible beside the sidebar search box. Not run through e2e/bench; CSS-only, uncommitted.
+
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
 Phase 17 MCP server / alert delivery / daily brief (Part 2), strategy editor (Part 3). Phases 1-17 and 19 are built; **Phase 18 (brokers/orders) stays PAUSED.**
