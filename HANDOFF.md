@@ -1,12 +1,12 @@
 # Handoff
 
-_Last updated: 2026-11-05 (local gate + bench of NEXT_FEATURES: ALL PASS, bench 37/37). `main` has Phases 1-17 and 19, GUI mode and the strategy editor; branch `claude/gui-simple-bugs-sp3hq5` (draft PR, not merged) adds GUI_SIMPLE_AND_BUGS and NEXT_FEATURES. Phase 18 stays paused._
+_Last updated: 2026-11-05 (local gate + bench of NEXT_FEATURES: ALL PASS, bench 37/37). `main` has Phases 1-17 and 19, GUI mode, the strategy editor, GUI_SIMPLE_AND_BUGS and NEXT_FEATURES (PR #1 merged 2026-11-05, merge commit `d8ee11f`). Phase 18 stays paused._
 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
-## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`, draft PR https://github.com/ImTheRealARB/OpenTerm/pull/1)
-`docs/specs/GUI_SIMPLE_AND_BUGS.md` Parts 0-5 are DONE on the branch (not merged; the user reviews the draft PR). Last gate: ALL PASS
+## Resume here (cloud session 2026-11-04 + local gate 2026-11-05; MERGED to `main` via https://github.com/ImTheRealARB/OpenTerm/pull/1, `d8ee11f`)
+`docs/specs/GUI_SIMPLE_AND_BUGS.md` Parts 0-5 are DONE and merged to `main` (2026-11-05). Cloud gate: ALL PASS
 (pytest 1726, vitest 586, e2e 245). Bench vs the cloud baseline: `docs/PERFORMANCE.md` "Cloud session end 2026-11-04". Commits labelled WIP are
 unreviewed checkpoints; the reviewed step commit follows each one.
 - **Part 0:** cloud baseline (`docs/PERFORMANCE.md` "Cloud baseline 2026-11-04").
@@ -46,7 +46,8 @@ unreviewed checkpoints; the reviewed step commit follows each one.
   - **Lazy vim risk: checked, no problem** (`e2e/phase10.spec.ts` 6/6 locally). The builders' unidentified vitest flake is the `eqsFilter`
     "10k rows well inside a frame" timing test (fails only under the parallel gate). `playwright.config.ts` now honours `PW_PORT`.
   - WIP-labelled commits on the branch are unreviewed checkpoints; the final state is the branch tip.
-- **Next:** the user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
+- **Next:** optional real-data (non-fixture) screenshot pass of the GUI; items in DECISIONS_FOR_USER.md (four confirm-or-revert items, DLVR `DESKTOP` toggle, 9 low audit items);
+  open: IND opened from the GP toolbar splits the panel and the chart remounts (zoom resets); the `eqsFilter` timing vitest fails under load.
 
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
