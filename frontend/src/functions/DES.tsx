@@ -72,6 +72,33 @@ const TERM_OF: Record<string, string> = {
   "DAY RANGE": "DAY RANGE",
 };
 
+/** GUI-only plain labels for the ratio rows (Terminal keeps the codes). */
+const GUI_LABEL: Record<string, string> = {
+  "P/E (TTM)": "P/E, last 12 months",
+  "P/E (FWD)": "P/E, next 12 months",
+  "EPS (TTM)": "EPS, last 12 months",
+  "EPS (FWD)": "EPS, next 12 months",
+};
+
+/**
+ * The company blurb. In GUI mode a long one is clamped to about four lines (CSS `.desc-clamp`) with a "Read more"
+ * button (a real <button>, so Tab and Enter work). Terminal shows the whole text, as before.
+ */
+function Description({ text, gui }: { text: string; gui: boolean }) {
+  const [open, setOpen] = useState(false);
+  const long = gui && text.length > 280;
+  return (
+    <>
+      <div className={long && !open ? "desc desc-clamp" : "desc"}>{text}</div>
+      {long && (
+        <button type="button" className="desc-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {open ? "Show less" : "Read more"}
+        </button>
+      )}
+    </>
+  );
+}
+
 export default function DES({ panelId, security }: FunctionProps) {
   const symbol = security!.symbol;
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
@@ -171,7 +198,9 @@ export default function DES({ panelId, security }: FunctionProps) {
         </PanelNote>
       )}
       {!q && !quote.error && <div className="dim">LOADING QUOTE…</div>}
-      {p?.delay_min ? <div className="warn">EXCHANGE DATA DELAYED {p.delay_min} MIN (PER SOURCE)</div> : null}
+      {p?.delay_min ? (
+        gui ? <div className="des-delay dim">Prices from the exchange are delayed {p.delay_min} min (per source).</div> : <div className="warn">EXCHANGE DATA DELAYED {p.delay_min} MIN (PER SOURCE)</div>
+      ) : null}
 
       {p && (
         <>
@@ -186,12 +215,12 @@ export default function DES({ panelId, security }: FunctionProps) {
           <div className="kv">
             {kv.map(([k, v]) => (
               <div key={k}>
-                <span {...(TERM_OF[k] ? termProps(TERM_OF[k], gui) : {})}>{k}</span>
+                <span {...(TERM_OF[k] ? termProps(TERM_OF[k], gui) : {})}>{gui ? (GUI_LABEL[k] ?? k) : k}</span>
                 <span>{v}</span>
               </div>
             ))}
           </div>
-          {p.description && <div className="desc">{p.description}</div>}
+          {p.description && <Description text={p.description} gui={gui} />}
         </>
       )}
       {prof.keyError && !quote.keyError && <KeyRequiredLine error={prof.keyError} />}

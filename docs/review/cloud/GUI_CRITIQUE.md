@@ -32,3 +32,22 @@ Also: the backend DB is shared across the fresh browser contexts, so the watchli
 
 ## What works (keep)
 Plain-word "Start here" list with the code small and grey; the company-name search finds AAPL; the glossary tooltip text is plain and correct; the unknown-symbol note ("There is no stock called ZZZZQQ." + `Try PZZA`, shot 10) keeps the exact error and gives a button, though `Try PZZA` is an odd suggestion (prefer a well-known name or a closest match); HISTORICAL SIMULATION and FIXTURE labels are visible; no shadows, gradients or transitions seen; the backtest starter list is clear.
+
+## Fixes (1C follow-up)
+All GUI-only (Terminal output unchanged; new CSS is under `:root[data-mode="gui"]`). Entry JS 122,879 B gz (cap 122,900; margin is thin, includes the concurrent Terminal work).
+1. **Red banners: fixed.** `gui.css`: first panel line is neutral grey in GUI; every key legend carries class `legend` (hidden in GUI, 20+ panels, `secPanel` Header too). Red stays for `.err`.
+2. **Quote grid PROVIDER DOWN: fixed.** `functions/QuoteErrors.tsx` (Q, WL, boards): one PanelNote with the exact text, count, a plain line and Retry; unit-tested wording.
+3. **TSLA chart "check the spelling": fixed.** `PanelNote.plainLine` no longer blames spelling; GP says the name is fine and the source has nothing for that range, with Retry and "Try AAPL".
+4. **WEI clipped %CHG: fixed.** `Board.tsx` GUI order is NAME, LAST, CHG, %CHG, SECURITY, ..., SRC last.
+5. **BT jargon: fixed.** Plain sentence (`bt-sentence`), glossary terms (engine, warm-up bars, bps, slippage, max drawdown, vs benchmark, etc.), plainer labels (WORST DROP, PER YEAR), run settings under a keyboard-reachable "Details of this run"; HISTORICAL SIMULATION line and numbers unchanged.
+6. **ALRT: fixed.** Plain sentences (`alertPlain.ts`, tested), hint block hidden, notification state is one PanelNote with "Allow notifications" when it can be asked.
+7. **Tooltip covers its row: fixed.** `placeTip` puts it beside the panel (fallback below/above); tested.
+8. **DES blurb/delay note: fixed.** 4-line clamp plus "Read more" button; delay note small grey.
+9. **DES term labels: fixed.** "P/E, last 12 months" etc. in GUI.
+10. **Suggestions dropdown: partly.** Wider, taller rows, "No match" row. Skipped: exchange/type (the suggestion data has neither; not faked).
+11. **Portfolio total: fixed.** "Worth X, up Y (Z%) since you bought" on top; summary labels are glossary terms. Column headers are canvas (no `data-term`): skipped.
+12. **WL truncated NAME: fixed (wider NAME in GUI + summary note with Retry).** Per-row Remove button skipped (D key works).
+13. **FA: fixed.** Duplicate tab strip hidden, "Income statement · figures in USD millions" line, subtotal rows brighter (no bold in canvas).
+14. **KITE: fixed.** STATE/USER lines hidden while the KEY REQUIRED note shows.
+15. **Three search boxes: fixed.** Sidebar search is primary; the top command line collapses until focused (Ctrl+K unchanged).
+16. Low, skipped (banner is already dismissible). 17, 18 (key bar hidden, row removed), 19, 20 (lighter `--fg-dim`, amber theme only): done. 18's single status chip: skipped.

@@ -170,3 +170,58 @@
 }
 :root[data-mode="gui"] .fa .tabs { gap: 6px; padding: 2px 4px; }
 :root[data-mode="gui"] .fa .tabs span { padding: 0 8px; border-radius: 3px; }
+
+/* ===== GUI critique fixes (docs/review/cloud/GUI_CRITIQUE.md "Fixes") ===== */
+
+/* 1: red means ERR only. The terminal paints each panel's first line as a solid red band (--menu); in GUI it is a quiet
+   grey caption row, and the key legend (class "legend", one per panel) is hidden because "?" help already lists the keys.
+   (Selector must out-rank `.fn > .line:first-child:not(.err):not(.warn)` in styles.css.) */
+:root[data-mode="gui"] .fn > .line:first-child:not(.err):not(.warn) { background: var(--bar); color: var(--hdr); }
+:root[data-mode="gui"] .fn > .line:first-child .acc { color: var(--fg); }
+:root[data-mode="gui"] .legend { display: none; }
+
+/* 20 and 17: secondary text was ~3.5:1 dim amber on black. Lighter dim for the default (amber) theme only; the other themes keep theirs. */
+:root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) { --fg-dim: #d9a066; }
+:root[data-mode="gui"] .gw-big-s, :root[data-mode="gui"] .gw-big span:not(.gw-big-l) { color: var(--hdr); }
+
+/* 15: one clear place to search. The sidebar box is the primary one (brighter border); the terminal command line in the top bar
+   collapses to a hair until it has focus (Ctrl+K still focuses it, so the keyboard path is unchanged). */
+:root[data-mode="gui"] .gs-search { border-color: var(--fg-dim); height: 22px; }
+:root[data-mode="gui"] .top .cmd:not(:focus-within) { flex: 0 0 2px; min-width: 2px; overflow: hidden; opacity: 0; }
+
+/* 18: the key-hint bar is expert content; GUI drops it (and its grid row). */
+:root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 18px; }
+:root[data-mode="gui"] .app > .keys { display: none; }
+
+/* 19: category counts only on hover/focus; the carets are quiet. */
+:root[data-mode="gui"] .gs-head .dim { visibility: hidden; }
+:root[data-mode="gui"] .gs-head:hover .dim, :root[data-mode="gui"] .gs-head:focus-visible .dim { visibility: visible; }
+:root[data-mode="gui"] .gs-caret { color: var(--fg-dim); }
+
+/* 10: wider suggestions with room for the full name, and a "no match" row. */
+:root[data-mode="gui"] .gm-suggest { min-width: 340px; max-width: 480px; }
+:root[data-mode="gui"] .gm-suggest li { height: 18px; line-height: 18px; }
+:root[data-mode="gui"] .gm-none { padding: 2px 8px; color: var(--hdr); white-space: normal; }
+
+/* 8: DES company blurb clamped to ~4 lines with a Read more button; delayed note is small grey. */
+:root[data-mode="gui"] .desc-clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+:root[data-mode="gui"] .desc-more { margin: 2px 0 4px; padding: 0 8px; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+:root[data-mode="gui"] .desc-more:hover, :root[data-mode="gui"] .desc-more:focus-visible { background: var(--sel); color: var(--val); }
+:root[data-mode="gui"] .des-delay { font-size: 10px; }
+
+/* 11: portfolio total on top, big. The panel is a flex column, so `order` lifts it above the grid without touching the DOM order (Terminal unchanged). */
+:root[data-mode="gui"] .port > .line { order: -3; }
+:root[data-mode="gui"] .port > .port-headline { order: -2; padding: 4px 6px; font-size: 15px; color: var(--val); border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .port > .port-headline b { color: var(--fg); }
+:root[data-mode="gui"] .port > .summary { order: -1; }
+
+/* 5: BT summary. One plain sentence, then the numbers; run settings are tucked under "Details". */
+:root[data-mode="gui"] .bt-sentence { white-space: normal; padding: 3px 6px; font-size: 14px; color: var(--val); }
+:root[data-mode="gui"] .bt-sim-gui { color: var(--warn); font-weight: bold; }
+:root[data-mode="gui"] .bt-details { padding: 0 6px; }
+:root[data-mode="gui"] .bt-details summary { cursor: pointer; color: var(--accent); }
+:root[data-mode="gui"] .bt-details summary:focus-visible { outline: 1px solid var(--fg); }
+
+/* 13: FA. The numbered tab strip duplicates the toolbar buttons; the line below names the statement and its unit. */
+:root[data-mode="gui"] .fa .tabs { display: none; }
+:root[data-mode="gui"] .fa-which { padding: 2px 6px; color: var(--val); font-weight: bold; }

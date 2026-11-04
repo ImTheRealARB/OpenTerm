@@ -17,6 +17,7 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { api8, type ApiError, type Position } from "../net/api";
 import { subscribe } from "../net/socket";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
+import { termProps } from "../gui/term";
 import { useStore } from "../state/store";
 import { getLive, onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
@@ -371,11 +372,17 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
         </PanelNote>
       )}
       <Grid ref={grid} columns={columns} rows={rows} />
+      {/* GUI: the one number a beginner wants, moved to the top by CSS (`.port > .port-headline { order: -1 }`). */}
+      {gui && t.mv != null && t.unrl != null && positions.length > 0 && (
+        <div className="port-headline" data-testid="port-headline">
+          Worth <b>{fmtMoney(t.mv)} {base}</b>, {t.unrl >= 0 ? "up" : "down"} {fmtMoney(Math.abs(t.unrl))} ({fmtPct(t.unrlPct)}) since you bought
+        </div>
+      )}
       {/* ps-l = label (dim), ps-v = value (bold amber, or up/down colour). Spaces stay inside the text so the plain text is unchanged. */}
       <div className="summary" data-testid="port-summary">
-        <span className="ps-l">TOTAL {base} {gui ? "MKT VALUE" : "MKT VAL"} </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l">DAY </span>
-        <span className={`ps-v ${tc(t.day)}`}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · <span className="ps-l">UNRL </span>
-        <span className={`ps-v ${tc(t.unrl)}`}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · <span className="ps-l">COST </span><span className="ps-v">{fmtMoney(t.cost)}</span>
+        <span className="ps-l" {...termProps("MARKET VALUE", gui)}>TOTAL {base} {gui ? "MKT VALUE" : "MKT VAL"} </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l" {...termProps("DAY CHANGE", gui)}>DAY </span>
+        <span className={`ps-v ${tc(t.day)}`}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · <span className="ps-l" {...termProps("UNREALISED GAIN", gui)}>UNRL </span>
+        <span className={`ps-v ${tc(t.unrl)}`}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · <span className="ps-l" {...termProps("COST BASIS", gui)}>COST </span><span className="ps-v">{fmtMoney(t.cost)}</span>
         {t.converted.length > 0 && <span className="acc"> · CONVERTED AT LIVE FX: {t.converted.map((c) => `${c}${base}=X`).join(" ")}</span>}
         {t.unconverted.map((u) => (
           <span key={u.ccy} className="warn">

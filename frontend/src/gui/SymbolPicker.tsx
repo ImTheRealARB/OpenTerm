@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { enterTarget } from "./companySearch";
 import { runSymbol } from "./run";
 import { useCompanies } from "./useCompanies";
@@ -21,6 +21,14 @@ export function SymbolPicker() {
   const [closed, setClosed] = useState(false); // Esc hides the list until the text changes
   const hits = useCompanies(text, focused);
   const showList = focused && !closed && hits.length > 0;
+  // "No match" is only said after the search has had 1.5 s to answer, so a slow answer never flashes it.
+  const [waitedFor, setWaitedFor] = useState("");
+  const q = text.trim();
+  useEffect(() => {
+    const t = setTimeout(() => setWaitedFor(q), 1500);
+    return () => clearTimeout(t);
+  }, [q]);
+  const showNone = focused && !closed && !hits.length && waitedFor === q && q.length > 1;
 
   /** Loads a stock and empties the box (only when the command ran: a failed one keeps the text so it can be fixed). */
   const go = (value: string) => {
@@ -77,6 +85,11 @@ export function SymbolPicker() {
           }}
         />
       </label>
+      {showNone && (
+        <div className="gm-suggest gm-none" role="status">
+          No match. Enter tries it as a ticker.
+        </div>
+      )}
       {showList && (
         <ul className="gm-suggest" role="listbox" id={listId} aria-label="Matching stocks">
           {hits.map((h, i) => (
