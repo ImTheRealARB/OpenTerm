@@ -5,6 +5,16 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
+## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`)
+Job: `docs/specs/GUI_SIMPLE_AND_BUGS.md` (Parts 0-5). Progress (newest last; each step committed + pushed):
+- Part 0 DONE: cloud baseline in `docs/PERFORMANCE.md` "Cloud baseline 2026-11-04" (gate green except a load-sensitive corrMath timing vitest; bench 36/37).
+- Part 1A DONE: `frontend/e2e/beginner.spec.ts` (10 mouse-only tasks, click counts); brief `docs/review/cloud/BEGINNER_CLICKS.md`.
+- Part 1B (a) DONE: tasks 1,2,4,5,9,10 pass (company search, Start here sidebar, glossary tooltip, PanelNote actions). Notes `docs/review/cloud/BUILD_1B_A.md`.
+- Part 1B (b) IN PROGRESS: tasks 3,6,7,8, starter layout, KeyRequiredLine, BT editor fill, live keybindings in tour/help, FA restyle (`docs/review/cloud/BUILD_1B_B.md` when done).
+- Part 2 backend DONE (`23fd1a2`, `docs/review/cloud/BACKEND_BUGS.md`); frontend bugs (AI/SWARM abort on close only, cmdhistory refetch, NSE rule holidays) IN PROGRESS (`docs/review/cloud/FRONTEND_BUGS.md`).
+- Next: 1C fresh-eyes screenshot critique, Part 3 audit, Part 4 terminal conventions, Part 5 wrap-up + draft PR.
+- Cloud box setup: `PLAYWRIGHT_BROWSERS_PATH` must point at a dir with `chromium_headless_shell-1248` symlinked to `/opt/pw-browsers/...-1243` (CLAUDE.md note). Commits labelled WIP are unreviewed checkpoints.
+
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
 Phase 17 MCP server / alert delivery / daily brief (Part 2), strategy editor (Part 3). Phases 1-17 and 19 are built; **Phase 18 (brokers/orders) stays PAUSED.**
