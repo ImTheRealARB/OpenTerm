@@ -199,6 +199,11 @@ Press `/` to focus the command line at the top, then try these, pressing `Enter`
 | `HELP` | Every function. `HELP GP` explains one |
 | `?` | Every keyboard shortcut |
 
+You can also type plain English: `apple stock price chart`, `tesla news`, `microsoft 5 year chart`, `amazon balance sheet`.
+OpenTerm shows the exact command it understood (for example `APPLE STOCK PRICE CHART -> AAPL GP`) so you learn the codes, and
+asks "did you mean" when a name fits several companies. Exact codes like `AAPL GP` always run as typed. While you type a code,
+a hint line shows its options with the one you are on in bold.
+
 Use **Shift+Enter** instead of Enter to open the result in a **new panel** next to the others. `Tab` jumps between panels.
 `LAYOUT SAVE MYDESK` saves your arrangement; `LAYOUT MYDESK` brings it back. [docs/COMMANDS.md](docs/COMMANDS.md) has
 many more commands to try.
