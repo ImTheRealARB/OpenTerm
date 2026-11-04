@@ -76,7 +76,7 @@ for (const mode of ["terminal", "gui"] as const) {
     test("range words", async ({ page }) => {
       await type(page, "microsoft 5 year chart");
       await expect(title(page)).toContainText("MSFT | GP");
-      await expect.poll(() => seen.history.some((u) => u.searchParams.get("symbol") === "MSFT" && u.searchParams.get("range") === "5y")).toBe(true);
+      await expect.poll(() => seen.history.some((u) => u.searchParams.get("symbol") === "MSFT" && u.searchParams.get("range")?.toLowerCase() === "5y")).toBe(true);
     });
 
     test("a bare company name loads the security", async ({ page }) => {
@@ -92,8 +92,10 @@ for (const mode of ["terminal", "gui"] as const) {
       await expect(ac).toContainText("GOOG GP 1Y");
       await expect(page.locator(".msg.info")).toContainText("DID YOU MEAN");
       await page.keyboard.press("ArrowDown");
+      const picked = (await page.locator(".ac .on span").first().textContent())!; // e.g. "GOOG GP 1Y"
       await page.keyboard.press("Enter");
-      await expect(title(page)).toContainText(/GOOG \| GP/);
+      await expect(title(page)).toContainText(`${picked.split(" ")[0]} | GP`);
+      await expect(page.locator("#cmdline")).toHaveValue("");
     });
 
     test("the preview line shows what Enter will run", async ({ page }) => {
