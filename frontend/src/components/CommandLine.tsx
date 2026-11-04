@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { execute, statusMsg } from "../command/execute";
-import { needsNatural } from "../command/nlRun";
 import { info } from "../command/status";
 import type { Suggestion, Ui } from "../command/cmdExtras";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
 import { refreshWatchlists, watchlistList } from "../command/watchlists";
-import { FUNCTION_LIST, isFunction, loadModule } from "../functions/registry";
+import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
 import { VIM_INSERT, vimKey, type VimMode } from "../command/vim";
@@ -178,14 +177,10 @@ export function CommandLine() {
     nl: nlItems,
   };
   const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
-  const updateHint = (v: string) => {
-    // Nothing to show before a space, unless the text is a function code by itself.
-    if (!extrasMod && !/\s/.test(v) && !isFunction(v.trim().toUpperCase())) setHint(null);
-    else extras((m) => m.updateHint(v, ui));
-  };
+  const updateHint = (v: string) => extras((m) => m.updateHint(v, ui));
   const previewNl = (v: string) => {
     nlItems.current = [];
-    if (needsNatural(v)) extras((m) => m.previewNl(v, ui));
+    extras((m) => m.previewNl(v, ui));
   };
   const viaNatural = (text: string, newPanel: boolean) =>
     extras((m) =>
@@ -227,7 +222,7 @@ export function CommandLine() {
       e.preventDefault();
       const picked = items[sel];
       if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, el.value, e.shiftKey);
-      else if (needsNatural(el.value)) void viaNatural(el.value, e.shiftKey);
+      else if (extrasMod?.needsNatural(el.value)) void viaNatural(el.value, e.shiftKey);
       else if (execute(el.value, { newPanel: e.shiftKey })) finish();
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();

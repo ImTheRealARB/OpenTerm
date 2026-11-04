@@ -10,6 +10,8 @@ import { info } from "./status";
 import type { ReactNode } from "react";
 import { syntaxHint, type Hint } from "./syntaxHint";
 
+export { needsNatural };
+
 export interface Suggestion {
   value: string;
   label: string;
@@ -38,6 +40,7 @@ const meaning = (r: Awaited<ReturnType<typeof resolveNatural>>): Suggestion[] =>
 
 /** Plain-English preview while typing: the first suggestion shows what Enter will run. */
 export function previewNl(v: string, ui: Ui): void {
+  if (ui.value() !== v) return; // queued while this chunk was loading and the text has changed since
   clearTimeout(timer);
   const mine = ++seq;
   ui.nl.current = [];
