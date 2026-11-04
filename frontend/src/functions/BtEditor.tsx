@@ -139,6 +139,8 @@ function CodeBox(p: {
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   // The callbacks change every render; the editor is created once, so it calls them through this ref.
   const cb = useLatest(p);
+  // Set when the user presses Esc in the box: the delayed focus retry below must not pull them back in.
+  const leftBox = useRef(false);
 
   useEffect(() => {
     let dead = false; // set by cleanup: a late import must not create an editor for a panel that is gone
@@ -153,7 +155,10 @@ function CodeBox(p: {
           onChange: (t) => cb.current.onChange(t),
           onSave: () => cb.current.onSave(),
           onRun: () => cb.current.onRun(),
-          onEscape: () => undefined, // the editor has already blurred itself; panel keys (T) take over from here
+          // The editor has already blurred itself; panel keys (T) take over from here.
+          onEscape: () => {
+            leftBox.current = true;
+          },
         });
         p.handle.current = ed;
         setState("ready");
@@ -177,11 +182,15 @@ function CodeBox(p: {
     else p.handle.current?.setError(null);
   }, [p.error, state, p.handle]);
 
-  // Focus when the box becomes usable. The command line hands focus back after Esc, so try again a moment later.
+  // Focus when the box becomes usable. The command line hands focus back after Esc, so try again a moment later,
+  // unless the user has pressed Esc in the box since (on a busy machine the retry can land after that Esc).
   useEffect(() => {
     if (state !== "ready" || !p.active) return;
+    leftBox.current = false;
     p.handle.current?.focus();
-    const t = setTimeout(() => p.handle.current?.focus(), 80);
+    const t = setTimeout(() => {
+      if (!leftBox.current) p.handle.current?.focus();
+    }, 80);
     return () => clearTimeout(t);
   }, [state, p.active, p.handle]);
 
@@ -190,7 +199,7 @@ function CodeBox(p: {
       {state === "loading" && <div className="dim">LOADING EDITOR…</div>}
       {state === "failed" && <div className="err">ERR: THE EDITOR FAILED TO LOAD (RELOAD THE PAGE)</div>}
       {/* CodeMirror builds its DOM inside this div. */}
-      <div ref={host} />
+      <div ref={host} className="editor-host" />
     </div>
   );
 }

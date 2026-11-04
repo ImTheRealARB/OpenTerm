@@ -10,7 +10,9 @@ import { fmtPrice } from "../format";
 import { api, api8, newsAlertsApi, type Alert, type ApiError, type NewsAlert, type NewsItem } from "../net/api";
 import { subscribe } from "../net/socket";
 import { createStore } from "../state/store";
-import { onRawTicks } from "../state/ticks";
+import { symName } from "../state/symbols";
+import { onRawTicks, orNull, type RawTicks } from "../state/ticks";
+import { sendWithRetry } from "./triggerRetry";
 import { alertMet, describeRule, newsMatch, parseAlrt } from "./alertArgs";
 import type { SecurityRef } from "./markets";
 import { fail, info, statusMsg } from "./status";
@@ -67,7 +69,7 @@ export async function refreshAlerts(): Promise<Alert[]> {
 }
 
 /** Asks once for desktop notifications. Must run inside the user's keypress (the ALRT command). */
-function askNotifyPermission(): void {
+export function askNotifyPermission(): void {
   if (!notifySupported() || Notification.permission !== "default") return;
   try {
     void Notification.requestPermission().then((p) => notifyState.set(() => p as NotifyState), () => notifyState.set(() => "denied"));
@@ -85,6 +87,8 @@ function desktopNotify(title: string, body: string, tag: string): void {
   }
 }
 
+const srcLabelChar = (code: number): string => String.fromCharCode(code);
+
 function fire(a: Alert, price: number, src: string): void {
   firing.add(a.id);
   const at = Date.now() / 1000;
@@ -94,20 +98,30 @@ function fire(a: Alert, price: number, src: string): void {
   lastFired.set(() => ({ text, at: Date.now() }));
   info(text);
   desktopNotify(`ALERT ${alertText(a)}`, `${a.symbol} ${fmtPrice(price)}${synthetic}`, `openterm-alert-${a.id}`);
-  api8.triggerAlert(a.id, price, at).then(
-    () => firing.delete(a.id),
-    (e) => fail(`ALERT ${a.id} FIRED BUT NOT SAVED: ${errText(e)}`),
-  );
+  // The id stays in `firing` until the backend accepts the report, so the tick check cannot fire it twice; a failed POST
+  // is retried with backoff while the alert is still firing and still exists (re-arm or delete ends the retries).
+  sendWithRetry(() => api8.triggerAlert(a.id, price, at), {
+    stillWanted: () => firing.has(a.id) && (alerts.get() ?? []).some((x) => x.id === a.id),
+    onDone: () => firing.delete(a.id),
+    onFail: (e, n) => {
+      if (n === 1) fail(`ALERT ${a.id} FIRED BUT NOT SAVED, RETRYING: ${errText(e)}`);
+    },
+  });
 }
 
-function onTicksForAlerts(rows: readonly (readonly unknown[])[]): void {
+/**
+ * Raw ticks arrive as parallel typed arrays (`RawTicks`, one slot per tick). A missing pct/change is NaN there; `orNull` turns it
+ * back into the null `alertMet` expects. The symbol is an integer id; `symName(id)` is a flat-array read, compared with the alert's string.
+ */
+function onTicksForAlerts(t: RawTicks): void {
   const list = alerts.get();
   if (!list?.length) return;
-  for (const r of rows) {
-    const sym = r[0] as string;
-    for (const a of list) {
+  for (let i = 0; i < t.n; i++) {
+    const sym = symName(t.id[i]);
+    for (let j = 0; j < list.length; j++) {
+      const a = list[j];
       if (a.status !== "active" || a.symbol !== sym || firing.has(a.id)) continue;
-      if (alertMet(a, r[1] as number, r[3] as number | null, r[2] as number | null)) fire(a, r[1] as number, r[8] as string);
+      if (alertMet(a, t.price[i], orNull(t.pct[i]), orNull(t.change[i]))) fire(a, t.price[i], srcLabelChar(t.src[i]));
     }
   }
 }
@@ -139,10 +153,14 @@ function fireNews(a: NewsAlert, item: NewsItem): void {
   lastFired.set(() => ({ text, at: Date.now() }));
   info(text);
   desktopNotify(`NEWS ${where} ${a.word}`, item.title, `openterm-news-alert-${a.id}`);
-  newsAlertsApi.trigger(a.id, item.title, item.url, at).then(
-    () => newsFiring.delete(a.id),
-    (e) => fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED: ${errText(e)}`),
-  );
+  // Same retry as price alerts: keep the id in `newsFiring` until the backend accepts the report.
+  sendWithRetry(() => newsAlertsApi.trigger(a.id, item.title, item.url, at), {
+    stillWanted: () => newsFiring.has(a.id) && (newsAlerts.get() ?? []).some((x) => x.id === a.id),
+    onDone: () => newsFiring.delete(a.id),
+    onFail: (e, n) => {
+      if (n === 1) fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED, RETRYING: ${errText(e)}`);
+    },
+  });
 }
 
 /** Checks fetched headlines against the active news alerts for `symbol` (null = market top stories). */
@@ -192,7 +210,7 @@ export function startAlerts(): void {
   setInterval(() => void pollNewsAlerts(), NEWS_POLL_MS);
 }
 
-async function act(what: string, call: () => Promise<unknown>, ok: string): Promise<boolean> {
+export async function act(what: string, call: () => Promise<unknown>, ok: string): Promise<boolean> {
   try {
     await call();
   } catch (e) {

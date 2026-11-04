@@ -16,6 +16,7 @@ import { navKey, useLatest } from "./quoteRows";
 import type { RunCtx } from "./quantRun";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
+import { KeyNeeded } from "./KeyRequiredLine";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 export interface ResearchOptions {
@@ -174,9 +175,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
         <ErrorLine error={error} hasData={!!env} />
         {d?.status?.startsWith("NOT RUNNABLE") && <div className="warn">{d.status}</div>}
         {d?.key_required.map((k) => (
-          <div key={k.key} className="warn">
-            KEY REQUIRED: set {k.key} in APIKEYS <span className="dim">· {k.what}</span>
-          </div>
+          <KeyNeeded key={k.key} text={`KEY REQUIRED: set ${k.key} in APIKEYS · ${k.what}`} keyName={k.key} />
         ))}
         {section && rows.length === 0 && !error && <div className="warn">{section.note ?? `NO ROWS IN ${section.title}`}</div>}
         <Grid ref={grid} columns={columns} rows={rows} />

@@ -4,6 +4,10 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
+import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelId } from "../state/panelContext";
+import type { TipCtx } from "../gui/gridTips";
+import { bitClear, bitGrow, bitHas, bitSet } from "../state/bitset";
 import { wheelTop } from "../state/gridScroll";
 import "./dataColors.css";
 
@@ -23,8 +27,11 @@ export interface Column<R> {
 
 export interface GridHandle {
   redraw(): void;
-  /** Repaint just these rows; `frame` enables the one-frame highlight for cells that changed in it. */
-  redrawRows(rows: Iterable<number>, frame: number): void;
+  /**
+   * Repaint the rows whose bit is set in `dirty` (a bitset, one bit per row position) that are on screen, then clear `dirty`.
+   * `frame` enables the one-frame highlight for cells that changed in it.
+   */
+  redrawDirty(dirty: Uint32Array, frame: number): void;
   move(delta: number): void;
   moveTo(index: number): void;
   page(dir: 1 | -1): void;
@@ -78,12 +85,28 @@ function clip(s: string, n: number): string {
 }
 
 function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Props<R>, ref: React.Ref<GridHandle>) {
+  const panelId = usePanelId();
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const sr = useRef<HTMLDivElement>(null);
   const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[] });
   const data = useRef({ columns, rows, band });
   data.current = { columns, rows, band };
+
+  // Rows currently painted with the one-frame highlight, as a bitset (`bits`); `end` = 1 + highest row that may be set.
+  const flash = useRef({ bits: new Uint32Array(0) as Uint32Array, end: 0, scheduled: false });
+  /** Prebuilt once (no closure per frame): repaints every highlighted row plain and clears the bitset. */
+  const unflash = useRef<() => void>(() => undefined);
+  unflash.current = () => {
+    const fl = flash.current;
+    fl.scheduled = false;
+    for (let i = 0; i < fl.end; i++) {
+      if (!bitHas(fl.bits, i)) continue;
+      bitClear(fl.bits, i);
+      drawRow(i, -1);
+    }
+    fl.end = 0;
+  };
 
   const visibleCount = () => Math.max(1, Math.floor((st.current.h - ROW_H) / ROW_H));
 
@@ -212,14 +235,28 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
 
   useImperativeHandle(ref, () => ({
     redraw,
-    redrawRows(list, frame) {
-      const flashed: number[] = [];
-      for (const i of list) {
+    redrawDirty(dirty, frame) {
+      const s = st.current;
+      const end = Math.min(data.current.rows.length, s.top + visibleCount());
+      // Only the visible rows can be painted, so only they are tested. Off-screen dirty bits are simply dropped.
+      const fl = flash.current;
+      fl.bits = bitGrow(fl.bits, end);
+      let any = false;
+      for (let i = s.top; i < end; i++) {
+        if (!bitHas(dirty, i)) continue;
         drawRow(i, frame);
-        flashed.push(i);
+        any = true;
+        if (frame >= 0) {
+          bitSet(fl.bits, i);
+          fl.end = Math.max(fl.end, i + 1);
+        }
       }
-      // One-frame highlight: repaint plain on the next frame.
-      if (flashed.length && frame >= 0) requestAnimationFrame(() => flashed.forEach((i) => drawRow(i, -1)));
+      dirty.fill(0);
+      // One-frame highlight: repaint plain on the next frame. ONE prebuilt callback, scheduled at most once.
+      if (any && frame >= 0 && !fl.scheduled) {
+        fl.scheduled = true;
+        requestAnimationFrame(unflash.current);
+      }
     },
     move: (d) => moveTo(st.current.sel + d),
     moveTo,
@@ -264,14 +301,42 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       const i = s.top + Math.floor((e.clientY - r.top - ROW_H) / ROW_H);
       if (e.clientY - r.top > ROW_H) moveTo(i);
     };
+    // GUI mode only: header hover shows the glossary tip (lazy chunk, which owns the logic). Terminal mode returns on the first line.
+    const tip = { at: -1, i: -1, hasTips: null as boolean | null };
+    const tipCtx = (): TipCtx => ({ tip, cv, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H, cols: data.current.columns, panel: box.current?.closest(".panel") ?? null });
+    const onMove = (e: MouseEvent) => {
+      if (document.documentElement.dataset.mode === "gui") void import("../gui/gridTips").then((m) => m.headerMove(e, tipCtx()));
+    };
+    const onLeave = () => {
+      if (tip.at >= 0) void import("../gui/gridTips").then((m) => m.headerLeave(tipCtx()));
+    };
     cv.addEventListener("wheel", onWheel, { passive: false });
     cv.addEventListener("mousedown", onDown);
+    cv.addEventListener("mousemove", onMove);
+    cv.addEventListener("mouseleave", onLeave);
     return () => {
+      cv.removeEventListener("mousemove", onMove);
+      cv.removeEventListener("mouseleave", onLeave);
       ro.disconnect();
       cv.removeEventListener("wheel", onWheel);
       cv.removeEventListener("mousedown", onDown);
     };
   }, []);
+
+  // GUI mode: Shift+T steps through the columns that have a glossary line and shows each one's tip (Esc hides it).
+  // `hasTips` is unknown until the lazy chunk has run once; after that a grid with no glossary column lets T fall through.
+  const tipKeys = useRef({ at: -1, i: -1, hasTips: null as boolean | null });
+  useEffect(() => {
+    const tip = tipKeys.current;
+    return registerPanelKeys(panelId, (e) => {
+      if (e.key !== "T" || e.ctrlKey || e.altKey || e.metaKey || document.documentElement.dataset.mode !== "gui" || tip.hasTips === false) return false;
+      const s = st.current;
+      void import("../gui/gridTips").then((m) =>
+        m.nextTip({ tip, cv: canvas.current!, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H, cols: data.current.columns, panel: box.current?.closest(".panel") ?? null }),
+      );
+      return true;
+    });
+  }, [panelId]);
 
   // Phase 10: theme or number format changed. Re-read the CSS variables once and repaint (never per frame).
   useEffect(
@@ -300,7 +365,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   }, [rows, columns]);
 
   return (
-    <div ref={box} className="grid">
+    <div ref={box} className="grid" data-rows={rows.length}>
       <canvas ref={canvas} aria-hidden="true" />
       <div ref={sr} className="sr" role="status" aria-live="polite" />
     </div>

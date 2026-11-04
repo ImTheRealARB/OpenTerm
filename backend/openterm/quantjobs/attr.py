@@ -5,6 +5,7 @@ and the SPDR sector ETFs.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from datetime import date
 from itertools import pairwise
@@ -19,42 +20,59 @@ NEEDS_VALS = "NEEDS 2 VALUATIONS: PORT ATTR ADD <date> VALUE= [FLOW=]"
 
 
 def xirr(flows: list[tuple[date, float]]) -> float | None:
-    """Annualised internal rate (act/365) of dated flows by bisection on [-0.9, 10]; None when the flows do not change sign."""
+    """Annualised internal rate (act/365) of dated flows. The rate is searched on [-0.9, 10] by scanning for a sign change, then bisecting
+    inside it. None when there is no sign change (no root) or more than one (ambiguous: two different rates would both fit)."""
     t0 = flows[0][0]
 
     def f(r: float) -> float:
         return sum(a / (1.0 + r) ** ((d - t0).days / 365.0) for d, a in flows)
 
-    lo, hi = -0.9, 10.0
-    if f(lo) * f(hi) > 0:
+    # scan evenly in log(1 + r) space: it is fine near -90% and still cheap near +1000%
+    grid = [math.exp(math.log(0.1) + (math.log(11.0) - math.log(0.1)) * k / 400) - 1.0 for k in range(401)]
+    vals = [f(r) for r in grid]
+    brackets = [(grid[k], grid[k + 1]) for k in range(400) if vals[k] == 0.0 or vals[k] * vals[k + 1] < 0]
+    if len(brackets) != 1:
         return None
+    lo, hi = brackets[0]
+    flo = f(lo)
     for _ in range(200):
         mid = (lo + hi) / 2
-        lo, hi = (mid, hi) if f(mid) > 0 else (lo, mid)
+        fm = f(mid)
+        if (fm > 0) == (flo > 0):
+            lo, flo = mid, fm
+        else:
+            hi = mid
     return (lo + hi) / 2
 
 
 def return_measures(vals: list[dict]) -> list[dict]:
     """Rows [{measure, value, note}] from valuations [{date, value, flow}] sorted by date. Flows are end of day; the first row's flow is part of
-    its opening value."""
+    its opening value. A measure that cannot be computed (zero or negative base after big withdrawals) has value None and a NOT DEFINED note."""
     d = [date.fromisoformat(v["date"]) for v in vals]
     v = [float(x["value"]) for x in vals]
     f = [float(x.get("flow") or 0.0) for x in vals]
-    twr = 1.0
+    twr: float | None = 1.0
     for k in range(1, len(vals)):
+        if v[k - 1] <= 0:  # nothing was invested at the start of this sub-period
+            twr = None
+            break
         twr *= (v[k] - f[k]) / v[k - 1]
     total_days = (d[-1] - d[0]).days
     flows_sum = sum(f[1:])
     weighted = sum(f[k] * (d[-1] - d[k]).days / total_days for k in range(1, len(vals))) if total_days else 0.0
-    dietz = (v[-1] - v[0] - flows_sum) / (v[0] + weighted)
+    base = v[0] + weighted  # Modified Dietz denominator: average capital at work
+    dietz = (v[-1] - v[0] - flows_sum) / base if base > 0 else None
+    simple = (v[-1] - v[0] - flows_sum) / v[0] if v[0] > 0 else None
     cash = [(d[0], -v[0])] + [(d[k], -f[k]) for k in range(1, len(vals))]
     cash[-1] = (d[-1], cash[-1][1] + v[-1])
     irr = xirr(cash)
+    undefined = "NOT DEFINED: START VALUE OR AVERAGE CAPITAL IS ZERO OR NEGATIVE (BIG WITHDRAWALS)"
     return [
-        {"measure": "TWR", "value": twr - 1.0, "note": "TIME-WEIGHTED, SUB-PERIODS END AT EACH VALUATION"},
+        {"measure": "TWR", "value": None if twr is None else twr - 1.0,
+         "note": "TIME-WEIGHTED, SUB-PERIODS END AT EACH VALUATION" if twr is not None else undefined},
         {"measure": "MWR (XIRR)", "value": irr, "note": "MONEY-WEIGHTED, ANNUALISED (ACT/365)" if irr is not None else "NOT DEFINED FOR THESE FLOWS"},
-        {"measure": "MODIFIED DIETZ", "value": dietz, "note": "PERIOD RETURN, FLOWS WEIGHTED BY DAYS HELD"},
-        {"measure": "SIMPLE", "value": (v[-1] - v[0] - flows_sum) / v[0], "note": "(END - START - FLOWS) / START"},
+        {"measure": "MODIFIED DIETZ", "value": dietz, "note": "PERIOD RETURN, FLOWS WEIGHTED BY DAYS HELD" if dietz is not None else undefined},
+        {"measure": "SIMPLE", "value": simple, "note": "(END - START - FLOWS) / START" if simple is not None else undefined},
     ]
 
 

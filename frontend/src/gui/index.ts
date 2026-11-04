@@ -1,5 +1,5 @@
 export { GuiTop } from "./Top";
 export { Sidebar as GuiSidebar } from "./Sidebar";
-export { HelpDrawer as GuiHelpDrawer } from "./HelpDrawer";
+export { LazyHelpDrawer as GuiHelpDrawer } from "./LazyGui";
 export { GuiOverlays } from "./Overlays";
 export { toggleHelp } from "./helpState";

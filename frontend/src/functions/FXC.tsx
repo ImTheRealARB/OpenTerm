@@ -7,6 +7,7 @@ import { Grid, type CellColor, type Column, type GridHandle } from "../component
 import { fmtRate } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { subscribe } from "../net/socket";
+import { symId } from "../state/symbols";
 import { getLive, onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import { crossPair, crossRate, parseCurrencies, usdLeg } from "./boards";
@@ -67,9 +68,15 @@ export default function FXC({ panelId, args }: FunctionProps) {
   const legKey = quotes.filter((q) => !q.error).map((q) => q.symbol).join(",");
   useEffect(() => (legKey ? subscribe(legKey.split(",")) : undefined), [legKey]);
   useEffect(() => {
-    const mine = new Set(legKey.split(","));
-    return onTicks((changed) => {
-      for (const s of changed) if (mine.has(s)) return grid.current?.redraw(); // every cell may use this leg
+    if (!legKey) return;
+    const mine = legKey.split(",").map(symId); // leg symbols as integer ids, interned once
+    return onTicks((batch) => {
+      for (let i = 0; i < mine.length; i++) {
+        if (batch.has(mine[i])) {
+          grid.current?.redraw(); // every cell may use this leg
+          return;
+        }
+      }
     });
   }, [legKey]);
 
@@ -102,7 +109,7 @@ export default function FXC({ panelId, args }: FunctionProps) {
         <span className="acc">CROSS RATES</span> {list.length} CURRENCIES · ROW = 1 UNIT, PRICED IN EACH COLUMN · TRIANGULATED VIA USD
         {loading && <span className="dim"> · LOADING…</span>}
         {missing.length > 0 && <span className="err"> · NO RATE: {missing.join(" ")}</span>}
-        <span className="dim"> · J/K MOVE · ENTER CHART VS USD · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER CHART VS USD · E CSV · F5 REFRESH</span>
       </div>
       <Grid ref={grid} columns={cols} rows={rows} />
     </div>

@@ -409,6 +409,26 @@ test("BT EDIT: T reopens the templates; unsaved changes need a second T", async 
   await expect(box(page)).not.toContainText("# edit");
 });
 
+test("BT EDIT: the editor's delayed focus retry does not pull focus back after Esc", async ({ page }) => {
+  // The box focuses itself when it loads and once more ~80 ms later (the command line takes focus back after
+  // Enter). On a busy machine that retry fired after the user had already pressed Esc, so the next T was
+  // typed into the code instead of opening the templates. A paused clock makes the order certain.
+  await page.clock.install();
+  await setup(page);
+  // Pause a little in the future: a target that has already passed (busy machine) makes pauseAt throw.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 2000));
+  await cmd(page, "BT EDIT mysma");
+  const p = panel(page);
+  await expect(box(page)).toContainText("class SignalEngine");
+  await box(page).click();
+  await page.keyboard.press("Escape");
+  await page.clock.runFor(500); // the retry timer fires now, after Esc
+  await page.keyboard.press("t");
+  await page.clock.runFor(100);
+  await expect(p.locator(".grid .sr")).toContainText("SMA CROSSOVER");
+  await expect(box(page)).not.toContainText("class SignalEnginet");
+});
+
 test("BT EDIT: the server's reason for refusing code is shown on its line and nothing runs", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "BT EDIT bad");

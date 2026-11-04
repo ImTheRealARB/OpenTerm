@@ -168,7 +168,7 @@ export default function COMP({ panelId, security }: FunctionProps) {
         {self?.sector && <span className="dim"> · {self.sector.toUpperCase()}{self.industry ? ` / ${self.industry.toUpperCase()}` : ""}</span>}
         {data && <span className={data.stale ? "warn" : "dim"}> · {data.stale ? "STALE " : "AGE "}{fmtAge(data.age)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
       </div>
       {error && (
         <div className="err">

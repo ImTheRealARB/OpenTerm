@@ -9,6 +9,7 @@ import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, worldApi, type Envelope, type TickBars } from "../net/api";
 import { subscribe } from "../net/socket";
+import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { replaceView } from "../state/workspace";
 import { GIP_SECONDS, gipApiBar, nextGipBar, parseGipArgs } from "./gipArgs";
@@ -70,8 +71,9 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
   useEffect(() => {
     const unsub = subscribe([symbol]);
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const off = onTicks((changed) => {
-      if (!changed.has(symbol)) return;
+    const id = symId(symbol);
+    const off = onTicks((batch) => {
+      if (!batch.has(id)) return;
       const l = getLive(symbol)!;
       if (emptyRef.current) {
         if (!timer) timer = setTimeout(() => setReload((r) => r + 1), 600);

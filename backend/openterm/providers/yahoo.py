@@ -12,7 +12,9 @@ from .base import HISTORY, PROFILE, QUOTES, SEARCH, Provider, ProviderError
 BASE = "https://query1.finance.yahoo.com"
 SEARCH_BASE = "https://query2.finance.yahoo.com"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36"
-SPARK_CHUNK = 20
+SPARK_CHUNK = 20  # symbols per spark request (never above 100: Yahoo refuses long URLs / flags big batches)
+SPARK_PARALLEL = 2  # at most this many spark requests in flight at once
+SPARK_GAP_S = 0.15  # pause after each chunk, so 160+ symbols do not arrive as one burst and trip the rate limit
 
 
 def quote_from_meta(meta: dict[str, Any], source: str, as_of: float, day_open: float | None = None) -> Quote:
@@ -95,6 +97,11 @@ def bars_from_chart(result: dict[str, Any], range_: str, interval: str, source: 
 
     vol = col("volume")
     adj = ((result.get("indicators", {}).get("adjclose") or [{}])[0] or {}).get("adjclose")  # Phase 9
+    # Yahoo may answer with a coarser size than asked (`range=max` with `1d` comes back monthly). Never call such bars
+    # daily: label them with the size Yahoo says it used. "1h" and "60m" are the same size, so keep the asked name then.
+    real = meta.get("dataGranularity")
+    if real and real != interval and {real, interval} != {"1h", "60m"}:
+        interval = real
     return Bars.model_construct(
         symbol=meta["symbol"],
         range=range_,
@@ -205,7 +212,16 @@ class YahooProvider(Provider):
     async def quotes(self, symbols: list[str]) -> list[Quote]:
         chunks = [symbols[i : i + SPARK_CHUNK] for i in range(0, len(symbols), SPARK_CHUNK)]
         try:
-            parts = await asyncio.gather(*(self._spark(c) for c in chunks))
+            gate = asyncio.Semaphore(SPARK_PARALLEL)
+
+            async def paced(chunk: list[str]) -> list[Quote]:
+                async with gate:
+                    try:
+                        return await self._spark(chunk)
+                    finally:
+                        await asyncio.sleep(SPARK_GAP_S)  # hold the slot a moment: this is the pacing
+
+            parts = await asyncio.gather(*(paced(c) for c in chunks))
             return [q for part in parts for q in part]
         except ProviderError as e:
             if e.kind == "rate_limited":

@@ -191,7 +191,7 @@ export default function JOBS({ panelId, args }: FunctionProps) {
         <span className="acc">JOBS</span> {jobs.length} KNOWN · {running} RUNNING
         {!loaded && !err && <span className="dim"> · LOADING…</span>}
         {err && <span className="err"> · STALE: {err}</span>}
-        <span className="dim"> · J/K MOVE · ESC/X CANCEL · ENTER RESULT · R RE-RUN · C CLEAR FINISHED · E EXPORT</span>
+        <span className="dim legend"> · J/K MOVE · ESC/X CANCEL · ENTER RESULT · R RE-RUN · C CLEAR FINISHED · E EXPORT</span>
       </div>
       {msg && <div className={msg.cls}>{msg.text}</div>}
       {view && (

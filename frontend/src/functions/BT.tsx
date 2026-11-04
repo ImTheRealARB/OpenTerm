@@ -15,10 +15,16 @@ import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
+import { termProps } from "../gui/term";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
+import { BtStarter } from "./BtStarter";
+import { BtRuleLazy } from "./BtRuleLazy";
+import { ruleToSentence } from "./ruleSentence";
 import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtMcResult, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
+import { ApiError, btApi, type BtMcResult, type BtRunRequest, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
 import { isActive, progressText } from "../net/jobFrames";
 import { adoptJob, cancelJob, fetchJob, useJob } from "../net/jobs";
 import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
@@ -112,9 +118,17 @@ function chartData(run: BtRunFull) {
   }
   const data: BarData = { symbol: "EQUITY", interval: run.interval === "1W" ? "1wk" : "1d", tz: "UTC", t, o: c, h: c, l: c, c, v: new Float64Array(n) };
   const bn = run.benchmark.length;
-  const compare = bn
-    ? { symbol: "BENCH", t: Float64Array.from(run.benchmark, (p) => p[0]), c: Float64Array.from(run.benchmark, (p) => p[1]) }
-    : null;
+  // Typed arrays filled in one plain loop (no callback or temporary array per point).
+  let compare: { symbol: string; t: Float64Array; c: Float64Array } | null = null;
+  if (bn) {
+    const bt = new Float64Array(bn);
+    const bc = new Float64Array(bn);
+    for (let i = 0; i < bn; i++) {
+      bt[i] = run.benchmark[i][0];
+      bc[i] = run.benchmark[i][1];
+    }
+    compare = { symbol: "BENCH", t: bt, c: bc };
+  }
   return { data, compare, drawdown: { title: "DRAWDOWN", v: dd } };
 }
 
@@ -145,18 +159,13 @@ export default function BT({ panelId, args }: FunctionProps) {
       .catch((e) => setState({ k: "failed", error: errText(e) }));
   };
 
-  const submit = (a: BtRun) => {
-    let structure: Record<string, unknown> | undefined;
-    if (a.mkt === "options") {
-      const os = lastOsa(a.symbols[0]);
-      if (!os) return setState({ k: "failed", error: NO_OSA });
-      structure = btStructure(os, a);
-    }
+  /** Sends one run request and follows the job. `rule` is only used to point at the column of a bad rule. */
+  const post = (req: BtRunRequest, rule?: string) => {
     setState({ k: "submitting" });
     setMsg(null);
     const t = performance.now();
     btApi
-      .run(request(a, structure))
+      .run(req)
       .then((j) => {
         gauges.set("bt.postMs", performance.now() - t);
         const rec = adoptJob(j);
@@ -167,9 +176,27 @@ export default function BT({ panelId, args }: FunctionProps) {
         else setState({ k: "running", jobId: rec.id });
       })
       .catch((e: ApiError) =>
-        setState(e.col != null && e.col >= 0 ? { k: "bad", error: e.message, rule: a.rule, col: e.col } : { k: "failed", error: errText(e) }),
+        setState(e.col != null && e.col >= 0 ? { k: "bad", error: e.message, rule, col: e.col } : { k: "failed", error: errText(e) }),
       );
   };
+
+  const submit = (a: BtRun) => {
+    let structure: Record<string, unknown> | undefined;
+    if (a.mkt === "options") {
+      const os = lastOsa(a.symbols[0]);
+      if (!os) return setState({ k: "failed", error: NO_OSA });
+      structure = btStructure(os, a);
+    }
+    post(request(a, structure), a.rule);
+  };
+
+  /** Starter template (GUI empty state): the template's Python code on one symbol, 1D bars over 5Y, default costs. */
+  const runStarter = (code: string, symbol: string) =>
+    post({ code, symbols: [symbol.toUpperCase()], interval: "1D", range: "5Y", options: {} });
+
+  /** Rule builder (GUI empty state): the generated rule text on one symbol, 1D bars over 5Y, default costs. */
+  const runRuleForm = (rule: string, symbol: string) =>
+    post({ rule, symbols: [symbol.toUpperCase()], interval: "1D", range: "5Y", options: {} }, rule);
 
   /** BT SAVE <NAME> <RULE>: a named rule, run later as `BT <SYMBOLS> @<NAME>`. (Python strategies are saved from BT EDIT.) */
   const saveRule = (name: string | undefined, rule: string) => {
@@ -303,15 +330,23 @@ export default function BT({ panelId, args }: FunctionProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valJob]);
 
+  // First paint first, chart second. The labels, headline numbers and view line are cheap DOM and show the result at once.
+  // The chart (two canvas panes over ~2,500 points) costs 50-70 ms of canvas setup and paint, so it is mounted one frame
+  // later: `chartFor` holds the id of the run whose chart may draw. The numbers are exact either way; only the picture lags a frame.
+  const [chartFor, setChartFor] = useState<string | null>(null);
   // Perf: command submit to the painted result (bench "BT result open to first paint").
   useEffect(() => {
-    if (!run || t0.current === null) return;
+    if (!run) return;
     const start = t0.current;
     const rendered = performance.now();
     t0.current = null;
+    const runId = run.id;
     afterPaint(() => {
-      series.btOpen.push(performance.now() - start);
-      gauges.set("bt.renderMs", performance.now() - rendered);
+      if (start !== null) {
+        series.btOpen.push(performance.now() - start);
+        gauges.set("bt.renderMs", performance.now() - rendered);
+      }
+      setChartFor(runId); // now the chart may mount
     });
   }, [run]);
 
@@ -422,6 +457,8 @@ export default function BT({ panelId, args }: FunctionProps) {
           <PanelNote kind="empty" hint="Run one: BT AAPL SMA20>SMA50 1D 5Y. BT RUNS lists stored runs. In GUI mode the sidebar search box takes the same command.">
             NO BACKTEST OPEN
           </PanelNote>
+          <BtStarter onRun={runStarter} />
+          <BtRuleLazy onRun={runRuleForm} />
           <div className="dim">{BT_USAGE}</div>
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
@@ -459,9 +496,10 @@ export default function BT({ panelId, args }: FunctionProps) {
           <Headline run={run} />
           <div className="line">
             VIEW <span className="bt-view acc">{shown}</span>
-            <span className="dim"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
+            <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
           </div>
-          {shown === "CHART" && chartBits && (
+          {shown === "CHART" && chartBits && chartFor !== run.id && <div className="dim">DRAWING CHART…</div>}
+          {shown === "CHART" && chartBits && chartFor === run.id && (
             <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
           )}
           {shown === "METRICS" && <Grid ref={grid} columns={METRIC_COLS} rows={metricRows} />}
@@ -537,14 +575,21 @@ function WfSummary({ wf }: { wf: BtWfResult }) {
 }
 
 function Head({ parsed, run }: { parsed: BtRun | null; run: BtRunFull | null }) {
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const syms = run?.symbols ?? parsed?.symbols;
   if (!syms) return <div className="line"><span className="acc">BT</span> <span className="dim">BACKTEST</span></div>;
   const rule = run ? (run.rule ?? (run.strategy ? `STRATEGY ${run.strategy}` : "PYTHON STRATEGY")) : parsed?.rule;
+  const sentence = gui && rule ? ruleToSentence(rule) : null;
   return (
-    <div className="line">
-      <span className="acc">BT</span> {syms.join(",")} · {rule} · {run?.interval ?? parsed?.interval} {run?.range ?? parsed?.range}
-      {run?.engine && <span className="dim"> · ENGINE {run.engine.toUpperCase()}</span>}
-    </div>
+    <>
+      <div className="line">
+        <span className="acc">BT</span> {syms.join(",")} · {rule} · {run?.interval ?? parsed?.interval} {run?.range ?? parsed?.range}
+        {run?.engine && (
+          <span className="dim"> · <span {...termProps("ENGINE", gui)}>{gui ? "MARKET" : "ENGINE"}</span> {run.engine.toUpperCase()}</span>
+        )}
+      </div>
+      {sentence && <div className="line dim bt-rule-says" data-testid="bt-rule-says">{sentence}</div>}
+    </>
   );
 }
 
@@ -569,14 +614,32 @@ function BadRule({ error, rule, col }: { error: string; rule?: string; col?: num
 }
 
 function Labels({ run }: { run: BtRunFull }) {
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const l = run.labels;
   const sources = l.sources ?? [];
   return (
     <>
-      <div className="line warn bt-sim">
-        {l.headline} · {l.prices} CLOSES · FEES {fmtNum(l.fees_bps, 0)} BPS · SLIP {fmtNum(l.slip_bps, 0)} BPS · WARM-UP {l.warmup_bars} BARS
-        {l.short ? " · SHORTS ALLOWED" : " · LONG ONLY"}
-      </div>
+      {gui ? (
+        // GUI: the label stays on its own line; the settings behind the run go under "Details" (a native <details>, so
+        // Enter/Space on the summary opens it from the keyboard). Same numbers, plainer words, glossary terms.
+        <>
+          <div className="line bt-sim bt-sim-gui">{l.headline}</div>
+          <details className="bt-details">
+            <summary>Details of this run</summary>
+            <div className="line dim">
+              <span {...termProps("ADJUSTED CLOSE", true)}>{l.prices} closes</span> · fees {fmtNum(l.fees_bps, 0)} <span {...termProps("BPS", true)}>bps</span> ·{" "}
+              <span {...termProps("SLIPPAGE", true)}>slippage</span> {fmtNum(l.slip_bps, 0)} bps ·{" "}
+              <span {...termProps("WARM-UP BARS", true)}>{l.warmup_bars} warm-up bars</span>
+              {l.short ? " · shorts allowed" : " · long only"}
+            </div>
+          </details>
+        </>
+      ) : (
+        <div className="line warn bt-sim">
+          {l.headline} · {l.prices} CLOSES · FEES {fmtNum(l.fees_bps, 0)} BPS · SLIP {fmtNum(l.slip_bps, 0)} BPS · WARM-UP {l.warmup_bars} BARS
+          {l.short ? " · SHORTS ALLOWED" : " · LONG ONLY"}
+        </div>
+      )}
       <div className="line dim bt-data">
         DATA:{" "}
         {sources.length
@@ -599,22 +662,34 @@ function Labels({ run }: { run: BtRunFull }) {
 }
 
 function Headline({ run }: { run: BtRunFull }) {
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const m = run.metrics;
-  const item = (label: string, key: string, signed = true) => (
+  // GUI wording: plain labels, each with a glossary entry (hover or keyboard focus). Terminal keeps its short codes.
+  const L = (term: string, gui_: string, term_: string) => <span className="ps-l" {...termProps(term, gui)}>{(gui ? gui_ : term_) + " "}</span>;
+  const item = (term: string, guiLabel: string, termLabel: string, key: string, signed = true) => (
     <>
       {" · "}
-      <span className="ps-l">{label} </span><span className={`ps-v ${signed ? (m[key] == null || m[key] === 0 ? "" : m[key]! > 0 ? "up" : "down") : ""}`}>{fmtMetric(key, m[key])}</span>
+      {L(term, guiLabel, termLabel)}<span className={`ps-v ${signed ? (m[key] == null || m[key] === 0 ? "" : m[key]! > 0 ? "up" : "down") : ""}`}>{fmtMetric(key, m[key])}</span>
     </>
   );
   return (
-    <div className="line bt-head">
-      <span className="ps-l">FINAL </span><span className="ps-v">{fmtMetric("final_value", m.final_value)}</span>
-      {item("TOTAL", "total_return")}
-      {item("ANNUAL", "annual_return")}
-      {item("MAX DD", "max_drawdown")}
-      {item("SHARPE", "sharpe", false)}
-      {item("TRADES", "trade_count", false)}
-      {item("VS BENCH", "excess_return")}
-    </div>
+    <>
+      {gui && m.final_value != null && m.total_return != null && (
+        // One plain sentence first, built only from the numbers already shown below.
+        <div className="line bt-sentence" data-testid="bt-sentence">
+          The strategy ended at {fmtMetric("final_value", m.final_value)}, {fmtMetric("total_return", m.total_return)} in total
+          {m.excess_return != null ? `; against the benchmark that is ${fmtMetric("excess_return", m.excess_return)}` : ""}.
+        </div>
+      )}
+      <div className="line bt-head">
+        {L("FINAL VALUE", "FINAL VALUE", "FINAL")}<span className="ps-v">{fmtMetric("final_value", m.final_value)}</span>
+        {item("TOTAL RETURN", "TOTAL RETURN", "TOTAL", "total_return")}
+        {item("ANNUAL RETURN", "PER YEAR", "ANNUAL", "annual_return")}
+        {item("MAX DRAWDOWN", "WORST DROP", "MAX DD", "max_drawdown")}
+        {item("SHARPE", "SHARPE", "SHARPE", "sharpe", false)}
+        {item("TRADES", "TRADES", "TRADES", "trade_count", false)}
+        {item("VS BENCHMARK", "VS BENCHMARK", "VS BENCH", "excess_return")}
+      </div>
+    </>
   );
 }

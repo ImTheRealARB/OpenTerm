@@ -134,7 +134,7 @@ export default function PRED({ panelId, args }: FunctionProps) {
         <span className="acc">PRED</span>{p.q ? ` ${p.q.toUpperCase()}` : ""}{p.src !== "all" ? ` · ${p.src.toUpperCase()} ONLY` : ""}
         {d && <span className="acc"> · {rows.length} MARKETS</span>}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · J/K MOVE · ENTER OUTCOMES + HISTORY · ESC CLOSE · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER OUTCOMES + HISTORY · ESC CLOSE · E CSV · F5 REFRESH</span>
       </div>
       <div className="warn" data-testid="pred-label">{PRED_LABEL}. READ ONLY: NO TRADING.</div>
       {d && <div className="dim">{d.unit_note}. PRICE = LAST TRADE (KALSHI: BID/ASK MIDPOINT WHEN IT HAS NOT TRADED). TOP MARKETS BY VOLUME ONLY, NOT EVERY MARKET.</div>}

@@ -12,7 +12,7 @@
   "resizeUp": ["Ctrl+Shift+ArrowUp"],
   "resizeDown": ["Ctrl+Shift+ArrowDown"],
   "maximize": ["Ctrl+Shift+F"],
-  "historyBack": ["Ctrl+["],
+  "historyBack": ["Ctrl+[", "Alt+Backspace"],
   "historyForward": ["Ctrl+]"],
   "refresh": ["F5"],
   "saveWorkspace": ["Ctrl+S"],
@@ -22,5 +22,11 @@
   "exportCsv": ["Alt+X"],
   "windowMenu": ["Alt+M"],
   "toggleMode": ["Alt+G"],
-  "helpDrawer": ["Alt+H"]
+  "helpDrawer": ["Alt+H"],
+  "sectorEquity": ["F2"],
+  "sectorIndex": ["F3"],
+  "sectorCurncy": ["F4"],
+  "sectorComdty": ["F8"],
+  "sectorGovt": ["F9"],
+  "sectorCorp": ["Shift+F9"]
 }

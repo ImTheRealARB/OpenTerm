@@ -29,4 +29,21 @@ describe("GP arguments", () => {
     expect(parseGpArgs(serializeGp(p))).toEqual(p);
     expect(serializeGp(parseGpArgs([]))).toEqual(["1Y"]);
   });
+
+  it("library indicators and formulas are single tokens that survive serialize and parse", () => {
+    const p = parseGpArgs(["ATR(14)", "LIB:CMF", "bb(20,2)", "F:EMA(close,12)-EMA(close,26)", "F:close%20%3E%20open", "ATR(14)", "RSI"]);
+    expect(p.indicators).toEqual(["RSI"]);
+    expect(p.custom.map((c) => c.key)).toEqual(["LIB:ATR:14", "LIB:CMF", "LIB:BB:20:2", "F:EMA(close%2C12)-EMA(close%2C26)", "F:close%20%3E%20open"]);
+    expect(p.custom[3].formula).toBe("EMA(close,12)-EMA(close,26)");
+    expect(p.custom[1]).toMatchObject({ id: "CMF", params: undefined });
+    expect(parseGpArgs(serializeGp(p))).toEqual(p);
+    expect(serializeGp(p).slice(-5)).toEqual(["ATR(14)", "LIB:CMF", "BB(20,2)", "F:EMA(close%2C12)-EMA(close%2C26)", "F:close%20%3E%20open"]);
+  });
+
+  it("junk tokens are ignored and VS stops at a library token", () => {
+    expect(parseGpArgs(["ATR(x)", "F:", "F:%E0%A4%A", "LIB:"]).custom).toEqual([]);
+    const p = parseGpArgs(["VS", "MSFT", "ATR(14)"]);
+    expect(p.compare).toEqual(["MSFT"]);
+    expect(p.custom).toHaveLength(1);
+  });
 });

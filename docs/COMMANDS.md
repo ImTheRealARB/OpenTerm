@@ -15,6 +15,18 @@ HELP GP               help for one function
 SHORTCUTS             all keyboard shortcuts (or ?)
 ```
 
+## Plain English, templates, indicators
+```
+apple stock price chart          -> AAPL GP (the command it understood is shown, so you learn the codes)
+apple vs microsoft 1 year        -> AAPL chart over 1 year compared with MSFT (% change)
+tech stocks under 50 dollars     -> EQS with sector and price filters (words it did not understand are listed)
+TMPL                             ready-made workspaces; TMPL DAY / LONGTERM / MACRO / INDIA apply one (asks before replacing panels)
+IND                              indicator library: search 109 indicators, F = your own formula, S / L = save / load a preset
+AAPL GP ATR(14)                  library indicator on the chart; GP args also take LIB:CMF and F:<formula>
+```
+On a GP chart: `A` sets a price alert at the crosshair (or last price), Shift+A then a click sets one at the clicked price, Alt+click always does.
+In GUI mode, hover a table's column header or press Shift+T for a one-line explanation, and `BT` offers a sentence-style rule builder.
+
 ## One stock (AAPL as the example)
 ```
 AAPL DES              profile, valuation, 52-week range

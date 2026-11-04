@@ -15,8 +15,10 @@ import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { useStore } from "../state/store";
 import type { IndicatorName } from "./indicators";
+import { diffIndicators } from "./indicatorDiff";
 import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
+import type { LibraryRes } from "./libraryWorker";
 
 import { CHART_TYPES, type ChartType } from "./chartTypes";
 
@@ -57,6 +59,10 @@ export interface ChartHandle {
   crosshair(on: boolean): void;
   crosshairStep(delta: number): void;
   live(price: number, timeMs: number, dayVolume: number | null): void;
+  /** Price an alert key should use: the keyboard crosshair bar's close when it is on, else the last price (null before any bar). */
+  alertPrice(): number | null;
+  /** The last price (live ticks included), or null. */
+  lastPrice(): number | null;
   /** PNG data URL of the chart as drawn (for AI CHART), or null. */
   screenshot(): string | null;
 }
@@ -77,6 +83,24 @@ interface Props {
   events?: ChartMarkerEvent[];
   /** Mouse click on the chart: the drawing under the pointer (or null). */
   onPick?: (id: string | null) => void;
+  /** Active price alerts of this symbol, drawn as dashed "ALRT" lines. Their changes never rebuild the chart. */
+  alertLevels?: number[];
+  /** Alt+click on the chart, or any click while `pickArmed`: the price under the pointer. */
+  onPickPrice?: (price: number) => void;
+  pickArmed?: boolean;
+  /** Library indicators and formulas (IND). Diffed by `key` like `indicators`: a change adds or removes only that entry's series. */
+  custom?: CustomItem[];
+  /** Worker errors per custom key ("FORMULA ERROR: ... AT 12"); called when the set of errors changes. */
+  onCustomErrors?: (errors: Record<string, string>) => void;
+}
+
+/** One library indicator (`id` + `params`) or formula on the chart. `key` is stable (`LIB:ATR:14`, `F:<encoded formula>`); `label` titles its series. */
+export interface CustomItem {
+  key: string;
+  label: string;
+  id?: string;
+  params?: number[];
+  formula?: string;
 }
 
 export const INTERVAL_S: Record<string, number> = {
@@ -108,10 +132,16 @@ function formatters(tz: string, intraday: boolean, seconds = false) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lowerPane, comparePanes, draw, events, onPick, alertLevels, onPickPrice, pickArmed, custom, onCustomErrors }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  // lightweight-charts queues scroll and zoom requests and applies them on its next paint, so
+  // getVisibleLogicalRange() keeps returning the old range until then. Keys pressed faster than a
+  // frame (key repeat, a fast machine, Playwright) would each start from that stale range and all
+  // but the last would be lost. pan()/zoom() build on the range they last requested instead; it is
+  // forgotten one frame later, once the chart has applied it.
+  const pendingRange = useRef<{ from: number; to: number } | null>(null);
   const main = useRef<ISeriesApi<SeriesType> | null>(null);
   const vol = useRef<ISeriesApi<"Histogram"> | null>(null);
   const extra = useRef<ISeriesApi<SeriesType>[]>([]);
@@ -123,13 +153,30 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   // Phase 19 refs: the overlay canvas, the marker plugin of the price series, the latest props the overlay paints from.
   const overlay = useRef<HTMLCanvasElement>(null);
   const markersApi = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
-  const patMarks = useRef<SeriesMarker<Time>[]>([]);
+  // Indicators drawn so far, by name: their series and pattern marks. A toggle touches only its own entry.
+  const ind = useRef(new Map<IndicatorName, { series: ISeriesApi<SeriesType>[]; marks: SeriesMarker<Time>[] }>());
+  const indReq = useRef(new Map<number, IndicatorName>());
+  const indWant = useRef(new Set<IndicatorName>());
+  // Library / formula indicators, by key; same lifecycle as `ind` (own requests to the same worker).
+  const lib = useRef(new Map<string, ISeriesApi<SeriesType>[]>());
+  const libReq = useRef(new Map<number, string[]>());
+  const libWant = useRef(new Set<string>());
+  const libErr = useRef(new Map<string, string>());
+  const customRef = useRef<CustomItem[]>(custom ?? []);
+  customRef.current = custom ?? [];
+  const errCb = useRef(onCustomErrors);
+  errCb.current = onCustomErrors;
+  const onLibResult = useRef<(m: LibraryRes) => void>(() => {});
+  const basePanes = useRef(1);
+  const onIndResult = useRef<(id: number, r: Record<string, Float64Array>) => void>(() => {});
   const eventsRef = useRef<ChartMarkerEvent[] | undefined>(events);
   eventsRef.current = events;
   const drawRef = useRef<DrawState | undefined>(draw);
   drawRef.current = draw;
   const dataRef = useRef(data);
   dataRef.current = data;
+  const pickRef = useRef({ armed: false, cb: onPickPrice });
+  pickRef.current = { armed: !!pickArmed, cb: onPickPrice };
   const compareOn = useRef(false);
   compareOn.current = !!compare;
   const geoRef = useRef<Geo | null>(null);
@@ -186,6 +233,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       if (rafRef.current) return;
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = 0;
+        const vr = chart.timeScale().getVisibleLogicalRange();
+        if (vr) {
+          gauges.set("chart.visFrom", vr.from);
+          gauges.set("chart.visTo", vr.to);
+        }
         paintRef.current();
       });
     };
@@ -228,8 +280,18 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     chart.applyOptions({
       timeScale: { timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: (INTERVAL_S[data.interval] ?? 86400) < 60, tickMarkFormatter: fmt.current.tick },
     });
-    for (const s of [main.current, vol.current, ...extra.current]) if (s) chart.removeSeries(s);
+    for (const s of [main.current, vol.current, ...extra.current, ...[...ind.current.values()].flatMap((e) => e.series), ...[...lib.current.values()].flat()]) if (s) chart.removeSeries(s);
     extra.current = [];
+    ind.current.clear();
+    indReq.current.clear();
+    indWant.current.clear();
+    lib.current.clear();
+    libReq.current.clear();
+    libWant.current.clear();
+    if (libErr.current.size) {
+      libErr.current.clear();
+      errCb.current?.({});
+    }
     main.current = null;
     vol.current = null;
 
@@ -252,7 +314,6 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       s.setData(pts);
     }
     main.current = s;
-    patMarks.current = [];
     markersApi.current = createSeriesMarkers(s, []);
     applyMarkers();
     last.current = n ? { t: data.t[n - 1], o: data.o[n - 1], h: data.h[n - 1], l: data.l[n - 1], c: data.c[n - 1], v: data.v[n - 1] } : null;
@@ -291,148 +352,312 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       extra.current.push(ls);
       chart.panes()[pane]?.setHeight(110);
     });
-    gauges.set("chart.extraSeries", extra.current.length);
     chart.priceScale("right").applyOptions({
       mode: compare ? PriceScaleMode.Percentage : log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
     });
     chart.timeScale().fitContent();
     writeReadout(n - 1);
 
-    // Indicators: computed off the main thread, drawn when they arrive (unless superseded).
-    if (indicators.length && n) {
+    basePanes.current = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
+    gauges.set("chart.rebuilds", (gauges.get("chart.rebuilds") ?? 0) + 1);
+    publish();
+  }, [data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  // Alert lines: dashed "ALRT" price lines on the price series. Re-created after a rebuild (the series is new); a level change
+  // touches only these lines, never the series, so zoom and the indicator toggles stay untouched.
+  const levelsKey = (alertLevels ?? []).join(",");
+  useEffect(() => {
+    const s = main.current;
+    const levels = levelsKey ? levelsKey.split(",").map(Number) : [];
+    gauges.set("chart.alertLines", 0);
+    if (!s || compareOn.current || !levels.length) return;
+    const c = colors.current;
+    const lines = levels.map((price) => s.createPriceLine({ price, color: c.warn, lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "ALRT" }));
+    gauges.set("chart.alertLines", lines.length);
+    return () => {
+      gauges.set("chart.alertLines", 0);
+      for (const l of lines) {
+        try {
+          s.removePriceLine(l);
+        } catch {
+          /* the series was already replaced by a rebuild */
+        }
+      }
+    };
+  }, [levelsKey, data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  function publish() {
+    let n = extra.current.length;
+    for (const e of ind.current.values()) n += e.series.length;
+    for (const s of lib.current.values()) n += s.length;
+    gauges.set("chart.extraSeries", n);
+    gauges.set("chart.panes", chartRef.current?.panes().length ?? 0);
+  }
+
+  /** Runs `fn` (series added or removed) and puts the visible range back if lightweight-charts moved it. */
+  function keepRange(fn: () => void) {
+    const ts = chartRef.current?.timeScale();
+    const before = ts?.getVisibleLogicalRange();
+    fn();
+    if (!ts || !before) return;
+    const after = ts.getVisibleLogicalRange();
+    if (!after || Math.abs(after.from - before.from) > 1e-6 || Math.abs(after.to - before.to) > 1e-6) ts.setVisibleLogicalRange(before);
+  }
+
+  function layoutPanes(ch: IChartApi) {
+    const panes = ch.panes();
+    for (let i = panes.length - 1; i >= 1; i--) if (panes[i].getSeries().length === 0) ch.removePane(i);
+    const rest = ch.panes();
+    for (let i = 1; i < rest.length; i++) rest[i].setHeight(i < basePanes.current ? 110 : 90);
+  }
+
+  // Indicators: a toggle adds or removes only that indicator's series (and its pane); zoom and scroll stay.
+  // Runs after the series effect above, which clears `indWant` whenever it rebuilds, so a rebuild re-adds them all.
+  useEffect(() => {
+    const ch = chartRef.current;
+    if (!ch) return;
+    const { add, remove } = diffIndicators(indWant.current, indicators);
+    if (!remove.length && !(add.length && data.c.length)) return;
+    keepRange(() => {
+      for (const name of remove) {
+        for (const s of ind.current.get(name)?.series ?? []) ch.removeSeries(s);
+        ind.current.delete(name);
+        indWant.current.delete(name);
+        for (const [id, nm] of indReq.current) if (nm === name) indReq.current.delete(id);
+      }
+      if (remove.length) {
+        layoutPanes(ch);
+        applyMarkers();
+        publish();
+      }
+    });
+    if (add.length && data.c.length) {
       // Started on the first indicator request: line-only charts (FRED, BT) never pay for the worker.
-      worker.current ??= new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
+      ensureWorker();
+      for (const name of add) {
+        const id = ++reqId.current;
+        indReq.current.set(id, name);
+        indWant.current.add(name);
+        // Copies: the worker gets its own buffers so `data` stays usable here.
+        ensureWorker().postMessage({ id, which: [name], series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
+      }
+    }
+  }, [indicators, data, compare, type, log, lowerPane, comparePanes, ver]);
+
+  function ensureWorker() {
+    if (worker.current) return worker.current;
+    const w = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
+    w.onmessage = (ev: MessageEvent<{ type?: string; id: number; results: Record<string, Float64Array> }>) => {
+      if (ev.data.type === "library") onLibResult.current(ev.data as unknown as LibraryRes);
+      else onIndResult.current(ev.data.id, ev.data.results);
+    };
+    worker.current = w;
+    return w;
+  }
+
+  // Library / formula indicators: the same add/remove-only-this-entry rule, one worker request for a batch of adds.
+  const customKey = (custom ?? []).map((x) => x.key).join("\n");
+  useEffect(() => {
+    const ch = chartRef.current;
+    if (!ch) return;
+    const items = customRef.current;
+    const { add, remove } = diffIndicators(libWant.current, items.map((x) => x.key));
+    if (!remove.length && !(add.length && data.c.length)) return;
+    if (remove.length) {
+      keepRange(() => {
+        for (const key of remove) {
+          for (const s of lib.current.get(key) ?? []) ch.removeSeries(s);
+          lib.current.delete(key);
+          libWant.current.delete(key);
+          libErr.current.delete(key);
+        }
+        for (const [id, keys] of libReq.current) {
+          const rest = keys.filter((k) => !remove.includes(k));
+          if (rest.length) libReq.current.set(id, rest);
+          else libReq.current.delete(id);
+        }
+        layoutPanes(ch);
+        publish();
+      });
+      errCb.current?.(Object.fromEntries(libErr.current));
+    }
+    if (add.length && data.c.length) {
       const id = ++reqId.current;
-      const w = worker.current;
-      w.onmessage = (ev: MessageEvent<{ id: number; results: Record<string, Float64Array> }>) => {
-        if (ev.data.id !== reqId.current || !chartRef.current) return;
-        drawIndicators(chartRef.current, ev.data.results);
-      };
-      // Copies: the worker gets its own buffers so `data` stays usable here.
-      w.postMessage({ id, which: indicators, series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
-    } else {
-      reqId.current++;
+      const send = items.filter((x) => add.includes(x.key)).slice(0, 20);
+      libReq.current.set(id, send.map((x) => x.key));
+      for (const x of send) libWant.current.add(x.key);
+      ensureWorker().postMessage({
+        type: "library",
+        id,
+        series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() },
+        items: send.map((x) => ({ key: x.key, id: x.id, params: x.params, formula: x.formula })),
+      });
     }
+  }, [customKey, data, compare, type, log, lowerPane, comparePanes, ver]);
 
-    function drawIndicators(ch: IChartApi, r: Record<string, Float64Array>) {
-      const line = (vals: Float64Array, color: string, pane = 0, title = "") => {
-        const ls = ch.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title }, pane);
-        const pts = [];
-        for (let i = 0; i < vals.length; i++) pts.push(Number.isFinite(vals[i]) ? { time: toTime(data.t[i]), value: vals[i] } : { time: toTime(data.t[i]) });
-        ls.setData(pts);
-        extra.current.push(ls);
-        return ls;
-      };
-      let pane = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
-      if (r.SMA20) line(r.SMA20, c.acc, 0, "SMA20");
-      if (r.SMA50) line(r.SMA50, c.warn, 0, "SMA50");
-      if (r.EMA20) line(r.EMA20, c.fg, 0, "EMA20");
-      if (r.BB_MID) {
-        line(r.BB_UP, c.dim, 0, "BB");
-        line(r.BB_MID, c.dim, 0);
-        line(r.BB_LO, c.dim, 0);
-      }
-      if (r.VWAP) line(r.VWAP, c.warn, 0, "VWAP");
-      if (r.RSI) {
-        const rs = line(r.RSI, c.acc, pane, "RSI14");
-        rs.createPriceLine({ price: 70, color: c.line, lineWidth: 1, axisLabelVisible: false });
-        rs.createPriceLine({ price: 30, color: c.line, lineWidth: 1, axisLabelVisible: false });
-        pane++;
-      }
-      if (r.MACD) {
-        const hist = ch.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pane);
-        const hp = [];
-        for (let i = 0; i < r.MACD_HIST.length; i++) {
-          const v = r.MACD_HIST[i];
-          hp.push(Number.isFinite(v) ? { time: toTime(data.t[i]), value: v, color: v >= 0 ? c.up : c.down } : { time: toTime(data.t[i]) });
+  onLibResult.current = (m) => {
+    const ch = chartRef.current;
+    const keys = libReq.current.get(m.id);
+    if (!ch || !keys) return;
+    libReq.current.delete(m.id);
+    const c = colors.current;
+    const t = dataRef.current.t;
+    const palette = [c.acc, c.warn, c.fg, c.up, c.down, c.dim];
+    let errChanged = false;
+    keepRange(() => {
+      for (const key of keys) {
+        const r = m.results[key];
+        const item = customRef.current.find((x) => x.key === key);
+        if (!r || !item || !libWant.current.has(key)) continue;
+        if (!r.ok) {
+          libErr.current.set(key, `${item.formula !== undefined ? "FORMULA" : "INDICATOR"} ERROR: ${r.error}`);
+          errChanged = true;
+          continue;
         }
-        hist.setData(hp);
-        extra.current.push(hist);
-        line(r.MACD, c.acc, pane, "MACD");
-        line(r.MACD_SIG, c.warn, pane);
-        pane++;
+        const pane = r.pane === "price" ? 0 : ch.panes().length;
+        const mine: ISeriesApi<SeriesType>[] = [];
+        r.data.forEach((vals, j) => {
+          const ls = ch.addSeries(LineSeries, { color: palette[j % palette.length], lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: j === 0 ? item.label : r.outputs[j] ?? "" }, pane);
+          const pts = [];
+          for (let i = 0; i < vals.length && i < t.length; i++) pts.push(Number.isFinite(vals[i]) ? { time: toTime(t[i]), value: vals[i] } : { time: toTime(t[i]) });
+          ls.setData(pts);
+          mine.push(ls);
+        });
+        lib.current.set(key, mine);
       }
-      // Phase 19 overlays on the price pane.
-      const tri = (k: string, col: string, title: string) => {
-        if (!r[k + "_UP"]) return;
-        line(r[k + "_UP"], col, 0, title);
-        line(r[k + "_MID"], col, 0);
-        line(r[k + "_LO"], col, 0);
-      };
-      tri("KELT", c.dim, "KELT");
-      tri("DONCH", c.dim, "DONCH");
-      if (r.SUPERTREND) {
-        const ls = ch.addSeries(LineSeries, { color: c.up, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "SUPERTREND" }, 0);
-        const pts = [];
-        for (let i = 0; i < r.SUPERTREND.length; i++) {
-          pts.push(Number.isFinite(r.SUPERTREND[i]) ? { time: toTime(data.t[i]), value: r.SUPERTREND[i], color: r.SUPERTREND_DIR[i] > 0 ? c.up : c.down } : { time: toTime(data.t[i]) });
-        }
-        ls.setData(pts);
-        extra.current.push(ls);
-      }
-      if (r.PSAR) {
-        const ls = ch.addSeries(LineSeries, { color: c.warn, lineVisible: false, pointMarkersVisible: true, pointMarkersRadius: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "PSAR" }, 0);
-        const pts = [];
-        for (let i = 0; i < r.PSAR.length; i++) pts.push(Number.isFinite(r.PSAR[i]) ? { time: toTime(data.t[i]), value: r.PSAR[i] } : { time: toTime(data.t[i]) });
-        ls.setData(pts);
-        extra.current.push(ls);
-      }
-      if (r.ICHI_TENKAN) {
-        line(r.ICHI_TENKAN, c.acc, 0, "TENKAN");
-        line(r.ICHI_KIJUN, c.warn, 0, "KIJUN");
-        line(r.ICHI_SPANA, c.up, 0, "SPAN A");
-        line(r.ICHI_SPANB, c.down, 0, "SPAN B");
-        line(r.ICHI_CHIKOU, c.dim, 0, "CHIKOU");
-      }
-      // Oscillators, one pane each.
-      const osc = (vals: Float64Array | undefined, col: string, title: string, levels: number[] = []) => {
-        if (!vals) return null;
-        const ls = line(vals, col, pane, title);
-        for (const price of levels) ls.createPriceLine({ price, color: c.line, lineWidth: 1, axisLabelVisible: false });
-        return ls;
-      };
-      if (r.ATR) { osc(r.ATR, c.acc, "ATR14"); pane++; }
-      if (r.STOCH_K) { osc(r.STOCH_K, c.acc, "STOCH K", [80, 20]); line(r.STOCH_D, c.warn, pane); pane++; }
-      if (r.ADX) { osc(r.ADX, c.fg, "ADX14", [25]); line(r.ADX_PDI, c.up, pane); line(r.ADX_MDI, c.down, pane); pane++; }
-      if (r.OBV) { osc(r.OBV, c.acc, "OBV"); pane++; }
-      if (r.CCI) { osc(r.CCI, c.acc, "CCI20", [100, -100]); pane++; }
-      if (r.WILLR) { osc(r.WILLR, c.acc, "%R14", [-20, -80]); pane++; }
-      if (r.MFI) { osc(r.MFI, c.acc, "MFI14", [80, 20]); pane++; }
+      layoutPanes(ch);
+      publish();
+    });
+    if (errChanged) errCb.current?.(Object.fromEntries(libErr.current));
+  };
 
-      // Pattern marks (rule-based, not signals) on the price series; SMC zones as dashed edges.
-      const marks: SeriesMarker<Time>[] = [];
-      if (r.PAT_CANDLE) {
-        for (let i = 0; i < r.PAT_CANDLE.length; i++) {
-          const info = PATTERN_INFO[r.PAT_CANDLE[i]];
-          if (!info) continue;
-          marks.push({ time: toTime(data.t[i]), position: info.dir < 0 ? "aboveBar" : "belowBar", shape: info.dir < 0 ? "arrowDown" : info.dir > 0 ? "arrowUp" : "circle", color: info.dir < 0 ? c.down : info.dir > 0 ? c.up : c.dim, text: info.short });
-        }
-      }
-      if (r.SMC_SWING && r.SMC_BOS) {
-        for (let i = 0; i < r.SMC_SWING.length; i++) {
-          const sw = r.SMC_SWING[i];
-          const b = r.SMC_BOS[i];
-          if (sw) marks.push({ time: toTime(data.t[i]), position: sw > 0 ? "aboveBar" : "belowBar", shape: "circle", color: c.dim, size: 0.5 });
-          if (b) marks.push({ time: toTime(data.t[i]), position: b > 0 ? "belowBar" : "aboveBar", shape: b > 0 ? "arrowUp" : "arrowDown", color: b > 0 ? c.up : c.down, text: Math.abs(b) === 2 ? "CHOCH" : "BOS" });
-        }
-        const z = r.SMC_ZONES ?? new Float64Array(0);
-        for (let j = 0; j + 5 < z.length; j += 6) {
-          const col = z[j] === 1 ? c.dim : z[j + 1] > 0 ? c.up : c.down;
-          for (const price of [z[j + 4], z[j + 5]]) {
-            const zs = ch.addSeries(LineSeries, { color: col, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: price === z[j + 4] ? (z[j] === 1 ? "FVG" : "OB") : "" }, 0);
-            zs.setData([{ time: toTime(data.t[z[j + 2]]), value: price }, { time: toTime(data.t[z[j + 3]]), value: price }]);
-            extra.current.push(zs);
-          }
-        }
-      }
-      patMarks.current = marks;
+  onIndResult.current = (id, r) => {
+    const name = indReq.current.get(id);
+    const ch = chartRef.current;
+    if (name === undefined || !ch) return;
+    indReq.current.delete(id);
+    keepRange(() => {
+      drawIndicator(ch, name, r);
+      layoutPanes(ch);
       applyMarkers();
-      gauges.set("chart.extraSeries", extra.current.length);
-      gauges.set("chart.markers", marks.length);
-      const panes = ch.panes();
-      for (let i = 1; i < panes.length; i++) panes[i].setHeight(panes[i] === undefined || i <= (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0) ? 110 : 90);
+      publish();
+    });
+  };
+
+  function drawIndicator(ch: IChartApi, name: IndicatorName, r: Record<string, Float64Array>) {
+    const c = colors.current;
+    const t = dataRef.current.t;
+    const mine: ISeriesApi<SeriesType>[] = [];
+    const pane = ch.panes().length; // at most one new pane per indicator
+    const line = (vals: Float64Array, color: string, pn = 0, title = "") => {
+      const ls = ch.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title }, pn);
+      const pts = [];
+      for (let i = 0; i < vals.length; i++) pts.push(Number.isFinite(vals[i]) ? { time: toTime(t[i]), value: vals[i] } : { time: toTime(t[i]) });
+      ls.setData(pts);
+      mine.push(ls);
+      return ls;
+    };
+    if (r.SMA20) line(r.SMA20, c.acc, 0, "SMA20");
+    if (r.SMA50) line(r.SMA50, c.warn, 0, "SMA50");
+    if (r.EMA20) line(r.EMA20, c.fg, 0, "EMA20");
+    if (r.BB_MID) {
+      line(r.BB_UP, c.dim, 0, "BB");
+      line(r.BB_MID, c.dim, 0);
+      line(r.BB_LO, c.dim, 0);
     }
-  }, [data, compare, type, log, indicators, lowerPane, comparePanes, ver]);
+    if (r.VWAP) line(r.VWAP, c.warn, 0, "VWAP");
+    if (r.RSI) {
+      const rs = line(r.RSI, c.acc, pane, "RSI14");
+      rs.createPriceLine({ price: 70, color: c.line, lineWidth: 1, axisLabelVisible: false });
+      rs.createPriceLine({ price: 30, color: c.line, lineWidth: 1, axisLabelVisible: false });
+    }
+    if (r.MACD) {
+      const hist = ch.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, pane);
+      const hp = [];
+      for (let i = 0; i < r.MACD_HIST.length; i++) {
+        const v = r.MACD_HIST[i];
+        hp.push(Number.isFinite(v) ? { time: toTime(t[i]), value: v, color: v >= 0 ? c.up : c.down } : { time: toTime(t[i]) });
+      }
+      hist.setData(hp);
+      mine.push(hist);
+      line(r.MACD, c.acc, pane, "MACD");
+      line(r.MACD_SIG, c.warn, pane);
+    }
+    // Phase 19 overlays on the price pane.
+    const tri = (k: string, col: string, title: string) => {
+      if (!r[k + "_UP"]) return;
+      line(r[k + "_UP"], col, 0, title);
+      line(r[k + "_MID"], col, 0);
+      line(r[k + "_LO"], col, 0);
+    };
+    tri("KELT", c.dim, "KELT");
+    tri("DONCH", c.dim, "DONCH");
+    if (r.SUPERTREND) {
+      const ls = ch.addSeries(LineSeries, { color: c.up, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "SUPERTREND" }, 0);
+      const pts = [];
+      for (let i = 0; i < r.SUPERTREND.length; i++) {
+        pts.push(Number.isFinite(r.SUPERTREND[i]) ? { time: toTime(t[i]), value: r.SUPERTREND[i], color: r.SUPERTREND_DIR[i] > 0 ? c.up : c.down } : { time: toTime(t[i]) });
+      }
+      ls.setData(pts);
+      mine.push(ls);
+    }
+    if (r.PSAR) {
+      const ls = ch.addSeries(LineSeries, { color: c.warn, lineVisible: false, pointMarkersVisible: true, pointMarkersRadius: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "PSAR" }, 0);
+      const pts = [];
+      for (let i = 0; i < r.PSAR.length; i++) pts.push(Number.isFinite(r.PSAR[i]) ? { time: toTime(t[i]), value: r.PSAR[i] } : { time: toTime(t[i]) });
+      ls.setData(pts);
+      mine.push(ls);
+    }
+    if (r.ICHI_TENKAN) {
+      line(r.ICHI_TENKAN, c.acc, 0, "TENKAN");
+      line(r.ICHI_KIJUN, c.warn, 0, "KIJUN");
+      line(r.ICHI_SPANA, c.up, 0, "SPAN A");
+      line(r.ICHI_SPANB, c.down, 0, "SPAN B");
+      line(r.ICHI_CHIKOU, c.dim, 0, "CHIKOU");
+    }
+    // Oscillators, one pane each.
+    const osc = (vals: Float64Array | undefined, col: string, title: string, levels: number[] = []) => {
+      if (!vals) return null;
+      const ls = line(vals, col, pane, title);
+      for (const price of levels) ls.createPriceLine({ price, color: c.line, lineWidth: 1, axisLabelVisible: false });
+      return ls;
+    };
+    if (r.ATR) osc(r.ATR, c.acc, "ATR14");
+    if (r.STOCH_K) { osc(r.STOCH_K, c.acc, "STOCH K", [80, 20]); line(r.STOCH_D, c.warn, pane); }
+    if (r.ADX) { osc(r.ADX, c.fg, "ADX14", [25]); line(r.ADX_PDI, c.up, pane); line(r.ADX_MDI, c.down, pane); }
+    if (r.OBV) osc(r.OBV, c.acc, "OBV");
+    if (r.CCI) osc(r.CCI, c.acc, "CCI20", [100, -100]);
+    if (r.WILLR) osc(r.WILLR, c.acc, "%R14", [-20, -80]);
+    if (r.MFI) osc(r.MFI, c.acc, "MFI14", [80, 20]);
+
+    // Pattern marks (rule-based, not signals) on the price series; SMC zones as dashed edges.
+    const marks: SeriesMarker<Time>[] = [];
+    if (r.PAT_CANDLE) {
+      for (let i = 0; i < r.PAT_CANDLE.length; i++) {
+        const info = PATTERN_INFO[r.PAT_CANDLE[i]];
+        if (!info) continue;
+        marks.push({ time: toTime(t[i]), position: info.dir < 0 ? "aboveBar" : "belowBar", shape: info.dir < 0 ? "arrowDown" : info.dir > 0 ? "arrowUp" : "circle", color: info.dir < 0 ? c.down : info.dir > 0 ? c.up : c.dim, text: info.short });
+      }
+    }
+    if (r.SMC_SWING && r.SMC_BOS) {
+      for (let i = 0; i < r.SMC_SWING.length; i++) {
+        const sw = r.SMC_SWING[i];
+        const b = r.SMC_BOS[i];
+        if (sw) marks.push({ time: toTime(t[i]), position: sw > 0 ? "aboveBar" : "belowBar", shape: "circle", color: c.dim, size: 0.5 });
+        if (b) marks.push({ time: toTime(t[i]), position: b > 0 ? "belowBar" : "aboveBar", shape: b > 0 ? "arrowUp" : "arrowDown", color: b > 0 ? c.up : c.down, text: Math.abs(b) === 2 ? "CHOCH" : "BOS" });
+      }
+      const z = r.SMC_ZONES ?? new Float64Array(0);
+      for (let j = 0; j + 5 < z.length; j += 6) {
+        const col = z[j] === 1 ? c.dim : z[j + 1] > 0 ? c.up : c.down;
+        for (const price of [z[j + 4], z[j + 5]]) {
+          const zs = ch.addSeries(LineSeries, { color: col, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: price === z[j + 4] ? (z[j] === 1 ? "FVG" : "OB") : "" }, 0);
+          zs.setData([{ time: toTime(t[z[j + 2]]), value: price }, { time: toTime(t[z[j + 3]]), value: price }]);
+          mine.push(zs);
+        }
+      }
+    }
+    ind.current.set(name, { series: mine, marks });
+  }
 
   /** Pattern marks and event marks share the price series' marker plugin. */
   function applyMarkers() {
@@ -440,10 +665,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     if (!api) return;
     const c = colors.current;
     const ev: SeriesMarker<Time>[] = (eventsRef.current ?? []).map((e) => ({ time: toTime(e.t), position: "aboveBar", shape: "square", color: c.fg, text: e.kind }));
-    const all = [...patMarks.current, ...ev];
+    const pat = [...ind.current.values()].flatMap((e) => e.marks);
+    const all = [...pat, ...ev];
     all.sort((a, b) => (a.time as number) - (b.time as number));
     api.setMarkers(all);
-    gauges.set("chart.markers", patMarks.current.length);
+    gauges.set("chart.markers", pat.length);
     gauges.set("chart.events", ev.length);
   }
   useEffect(() => {
@@ -530,6 +756,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     });
   }, [draw, data, indicators, comparePanes, compare, ver]);
 
+  // Ask the chart for a new visible range and remember it until the chart has painted it (see pendingRange).
+  const requestRange = (ts: ReturnType<IChartApi["timeScale"]>, r: { from: number; to: number }) => {
+    if (!pendingRange.current) requestAnimationFrame(() => (pendingRange.current = null));
+    pendingRange.current = r;
+    ts.setVisibleLogicalRange(r);
+  };
+
   useImperativeHandle(ref, () => ({
     crosshairIndex() {
       return cross.current.on ? cross.current.idx : data.c.length - 1;
@@ -542,15 +775,19 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       }
     },
     pan(bars) {
+      // Shift the whole range by `bars`: same width, so the bar spacing (zoom) is unchanged.
       const ts = chartRef.current?.timeScale();
-      if (ts) ts.scrollToPosition(ts.scrollPosition() + bars, false);
+      const r = pendingRange.current ?? ts?.getVisibleLogicalRange();
+      if (!ts || !r) return;
+      requestRange(ts, { from: r.from + bars, to: r.to + bars });
     },
     zoom(factor) {
+      // Keep the right edge fixed and scale the width (factor < 1 zooms in).
       const ts = chartRef.current?.timeScale();
-      const r = ts?.getVisibleLogicalRange();
+      const r = pendingRange.current ?? ts?.getVisibleLogicalRange();
       if (!ts || !r) return;
       const width = Math.max(10, (r.to - r.from) * factor);
-      ts.setVisibleLogicalRange({ from: r.to - width, to: r.to });
+      requestRange(ts, { from: r.to - width, to: r.to });
     },
     crosshair(on) {
       cross.current.on = on;
@@ -571,6 +808,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       cross.current.idx = i;
       chart.setCrosshairPosition(data.c[i], toTime(data.t[i]), main.current);
       writeReadout(i);
+    },
+    lastPrice() {
+      return last.current && Number.isFinite(last.current.c) ? last.current.c : null;
+    },
+    alertPrice() {
+      const px = cross.current.on ? data.c[cross.current.idx] : last.current?.c;
+      return px !== undefined && Number.isFinite(px) ? px : null;
     },
     live(price, timeMs, dayVolume) {
       const s = main.current;
@@ -605,6 +849,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         ref={box}
         className="chart"
         onClick={(e) => {
+          const pk = pickRef.current;
+          if (pk.cb && (pk.armed || e.altKey) && main.current && !compareOn.current) {
+            const r = e.currentTarget.getBoundingClientRect();
+            const px = main.current.coordinateToPrice(e.clientY - r.top);
+            pk.cb(px === null ? NaN : (px as number));
+            return;
+          }
           const g = geoRef.current;
           const d = drawRef.current;
           if (!g || !d || !onPick || compareOn.current) return;

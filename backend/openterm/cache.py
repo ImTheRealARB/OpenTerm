@@ -11,6 +11,9 @@ import orjson
 
 log = logging.getLogger("openterm.cache")
 
+CACHE_MAX_AGE_S = 30 * 86400  # rows older than 30 days are never useful: even "stale" answers are shown with their age
+CACHE_MAX_BYTES = 200 * 1024 * 1024  # keep the cache table under ~200 MB; the oldest rows go first
+
 Entry = tuple[Any, float]  # (value, stored_at epoch s)
 
 
@@ -99,6 +102,42 @@ class Cache:
             await self.db.commit()
         except Exception:
             log.exception("cache flush failed; %d entries kept in memory only", len(rows))
+
+    async def prune(self, max_age_s: float = CACHE_MAX_AGE_S, max_bytes: int = CACHE_MAX_BYTES) -> int:
+        """Deletes cache rows older than max_age_s, then the oldest rows until the table is under max_bytes.
+        Returns how many rows were removed. Without this the SQLite file only ever grows."""
+        if self.db is None:
+            return 0
+        await self.flush()  # pending writes are part of the table too
+        removed = 0
+        try:
+            cur = await self.db.execute("DELETE FROM cache WHERE stored_at < ?", (time.time() - max_age_s,))
+            removed += cur.rowcount
+            async with self.db.execute("SELECT COALESCE(SUM(LENGTH(value) + LENGTH(key)), 0) FROM cache") as c2:
+                total = (await c2.fetchone())[0]
+            if total > max_bytes:
+                # walk from the oldest row and delete until enough bytes are freed
+                async with self.db.execute("SELECT key, LENGTH(value) + LENGTH(key) FROM cache ORDER BY stored_at") as c3:
+                    rows = await c3.fetchall()
+                doomed: list[str] = []
+                for key, size in rows:
+                    if total <= max_bytes:
+                        break
+                    doomed.append(key)
+                    total -= size
+                for i in range(0, len(doomed), 500):  # chunks keep us under SQLite's variable limit
+                    chunk = doomed[i : i + 500]
+                    await self.db.execute(f"DELETE FROM cache WHERE key IN ({','.join('?' * len(chunk))})", chunk)
+                removed += len(doomed)
+                for key in doomed:
+                    self.mem.pop(key, None)
+            await self.db.commit()
+        except Exception:
+            log.exception("cache prune failed")
+            return removed
+        for key in [k for k, (_, t) in self.mem.items() if t < time.time() - max_age_s]:
+            del self.mem[key]  # forget aged entries in memory too
+        return removed
 
     @property
     def hit_pct(self) -> float | None:

@@ -2,13 +2,30 @@ import { useMemo, useRef, useState } from "react";
 import { FUNCTION_LIST, isFunction } from "../functions/registry";
 import { CATEGORIES, categoryOf, groupByCategory, type Category } from "../functions/categories";
 import { chromeKeyDown, moveFocus } from "./chrome";
-import { runCommand } from "./run";
+import { runCommand, runSymbol, runTyped } from "./run";
 import { searchFunctions, sidebarEnter } from "./search";
+import { useCompanies } from "./useCompanies";
 
 type Def = (typeof FUNCTION_LIST)[number];
 
 /** Groups open when the sidebar first shows; the rest start collapsed so the list is not 100 rows long. */
-const OPEN_AT_START: readonly Category[] = ["Markets", "Charts"];
+const OPEN_AT_START: readonly Category[] = [];
+
+/**
+ * "Start here": the everyday tasks in plain words, each one click. `text` is ordinary command-line text (run by
+ * `runCommand`, like every GUI control); `code` is shown small and grey as a learning aid, never on its own.
+ *  - "Stock chart" runs GP on the panel's current security (the "sticky" one from your last lookup).
+ *  - "Top news" is `N TOP`, explicit, because a bare `N` after a stock lookup shows THAT stock's news.
+ *  - The watchlist and portfolio get default names so the first click needs no typing.
+ */
+const START_HERE: readonly { label: string; code: string; text: string }[] = [
+  { label: "Stock chart", code: "GP", text: "GP" },
+  { label: "My watchlist", code: "WL", text: "WL MY-STOCKS" },
+  { label: "Top news", code: "N", text: "N TOP" },
+  { label: "World markets", code: "WEI", text: "WEI" },
+  { label: "My portfolio", code: "PORT", text: "PORT MAIN" },
+  { label: "Try a backtest", code: "BT", text: "BT" },
+];
 
 /**
  * GUI sidebar: every registered function grouped by category, with a search box that does the same job as the
@@ -22,6 +39,8 @@ export function Sidebar() {
   const groups = useMemo(() => groupByCategory(FUNCTION_LIST), []);
   const matches = useMemo(() => searchFunctions(query, FUNCTION_LIST), [query]);
   const searching = query.trim() !== "";
+  // Company-name matches ("apple" -> AAPL), fetched only while the sidebar search has text (lazy, see useCompanies).
+  const companies = useCompanies(query, searching);
 
   const toggle = (c: Category) =>
     setCollapsed((prev) => {
@@ -49,7 +68,7 @@ export function Sidebar() {
       // Arrow keys walk the focusable rows (search box, group headers, function rows) in order.
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        moveFocus(root.current!, ".gs-search, .gs-head, .gs-item", e.key === "ArrowDown" ? 1 : -1);
+        moveFocus(root.current!, ".gs-search, .gs-task, .gs-head, .gs-item", e.key === "ArrowDown" ? 1 : -1);
       }
     }
     chromeKeyDown(e);
@@ -72,10 +91,32 @@ export function Sidebar() {
           e.preventDefault();
           const cmd = sidebarEnter(query, matches[0], isFunction);
           // Clear the box only when the command ran (a failed one keeps its text and the error shows in the top bar).
-          if (cmd !== null && runCommand(cmd)) setQuery("");
+          if (cmd !== null) void (/\s/.test(cmd) ? runTyped(cmd) : Promise.resolve(runCommand(cmd))).then((ok) => ok && setQuery(""));
         }}
       />
       <div className="gs-list">
+        {!searching && (
+          // Not a ".gs-head": the category headers are counted by the shell test, and this group is always open.
+          <section className="gs-start" data-testid="start-here" aria-label="Start here">
+            <div className="gs-start-title">Start here</div>
+            {START_HERE.map((t) => (
+              <button key={t.label} type="button" className="gs-task" onClick={() => runCommand(t.text)}>
+                <span>{t.label}</span>
+                <small>{t.code}</small>
+              </button>
+            ))}
+          </section>
+        )}
+        {searching && companies.length > 0 && (
+          <div className="gs-companies" aria-label="Matching stocks">
+            {companies.slice(0, 4).map((h) => (
+              <button key={h.symbol} type="button" className="gs-item gs-company" data-symbol={h.symbol} onClick={() => runSymbol(h.symbol)}>
+                <span className="gs-code">{h.symbol}</span>
+                <span className="gs-title">{h.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {searching ? (
           matches.length ? (
             matches.map((f, i) => (

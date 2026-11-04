@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { statusMsg } from "../command/execute";
 import { APP_NAME } from "../config";
-import { MARKETS, basisOf, lightOf } from "../markets/hours";
+import { MARKETS, basisNote, basisOf, lightOf } from "../markets/hours";
 import { loadHolidays, unavailable } from "../markets/holidays";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
@@ -45,7 +45,7 @@ function Clock() {
         el.className = light === "closed" ? "mk" : `mk ${light}`;
         el.textContent = light === "hol" ? `${m.code} HOL` : light === "early" ? `${m.code} EARLY` : m.code;
         const basis = basisOf(m, now);
-        el.title = `${m.code} ${m.tz} · ` + (basis === "rules" ? "HOLIDAYS BY NYSE RULE" : basis === "public" ? "PUBLIC HOLIDAYS (EXCHANGE MAY DIFFER)" : unavailable.has(m.code) ? "NO HOLIDAY DATA: WEEKDAY SESSIONS ONLY" : "HOLIDAYS LOADING");
+        el.title = `${m.code} ${m.tz} · ` + (basis ? basisNote(basis) : unavailable.has(m.code) ? "NO HOLIDAY DATA: WEEKDAY SESSIONS ONLY" : "HOLIDAYS LOADING");
       });
     };
     tick();

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { execute, statusMsg } from "../command/execute";
+import { needsNatural } from "../command/nlRun";
+import type { Suggestion, Ui } from "../command/cmdExtras";
 import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
@@ -7,17 +9,19 @@ import { refreshWatchlists, watchlistList } from "../command/watchlists";
 import { FUNCTION_LIST, loadModule } from "../functions/registry";
 import { api, prefetch, type SearchHit } from "../net/api";
 import { keyDown, keyEchoed } from "../perf/metrics";
-import { VIM_INSERT, vimKey, type VimMode } from "../command/vim";
+import type { VimMode, VimState } from "../command/vim";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 
-interface Suggestion {
-  value: string;
-  label: string;
-  kind: "FUNC" | "RECENT" | "SEC" | "LAYOUT" | "LIST";
-}
 
 const SEARCH_DEBOUNCE_MS = 80;
+
+// Vim editing is opt-in, so its key logic is a lazy chunk loaded when the setting is turned on.
+const VIM_INSERT: VimState = { mode: "insert", pending: "" };
+let vimMod: typeof import("../command/vim") | null = null;
+
+type Extras = typeof import("../command/cmdExtras");
+let extrasMod: Extras | null = null;
 
 export const commandInputRef: { current: HTMLInputElement | null } = { current: null };
 const prefillRef: { current: ((text: string) => void) | null } = { current: null };
@@ -98,6 +102,15 @@ export function CommandLine() {
   const [, startTransition] = useTransition();
   const searchSeq = useRef(0);
   const searchTimer = useRef(0);
+  /** The plain-English reading of the typed text ("-> AAPL GP"); always listed first. */
+  const nlItems = useRef<Suggestion[]>([]);
+  const [hint, setHintState] = useState<ReactNode>(null);
+  // A ref too: Esc right after Enter must see that the hint is already gone (the render has not happened yet).
+  const hintOn = useRef(false);
+  const setHint = (h: ReactNode) => {
+    hintOn.current = !!h;
+    setHintState(h);
+  };
   // Phase 10: opt-in vim editing (SETTINGS). Off by default; the default path is one boolean check.
   const vimOn = useStore(settingsStore, (st) => st.vim);
   const vim = useRef(VIM_INSERT);
@@ -108,6 +121,7 @@ export function CommandLine() {
   };
   useEffect(() => {
     if (!vimOn) setVim("insert");
+    else if (!vimMod) void import("../command/vim").then((m) => (vimMod = m));
   }, [vimOn]);
 
   // Predictive prefetch: a highlighted security will most likely be charted or quoted next.
@@ -126,7 +140,7 @@ export function CommandLine() {
         .then((env) => {
           // Drop replies for text the user has already changed.
           if (seq !== searchSeq.current || input.current?.value !== text) return;
-          startTransition(() => setItems(merge(token, true, env.data)));
+          startTransition(() => setItems([...nlItems.current, ...merge(token, true, env.data)]));
         })
         .catch(() => {});
     }, SEARCH_DEBOUNCE_MS);
@@ -140,18 +154,43 @@ export function CommandLine() {
 
   const accept = (s: Suggestion) => {
     const el = input.current!;
-    const v = el.value.replace(/\S*$/, s.value) + " ";
+    // A plain-English reading replaces the whole text with the command it stands for.
+    const v = s.kind === "NL" || s.kind === "MEAN" ? s.value : el.value.replace(/\S*$/, s.value) + " ";
     setValue(v);
     setItems([]);
     setSel(-1);
+    nlItems.current = [];
+    extras((m) => m.updateHint(v, ui));
   };
+
+  const finish = () => {
+    setValue("");
+    setItems([]);
+    setSel(-1);
+    setHint(null);
+    nlItems.current = [];
+    if (vimOn) setVim("insert");
+  };
+
+  // The plain-English and syntax-hint logic is a lazy chunk (command/cmdExtras.ts); `ui` hands it this component's state.
+  const ui: Ui = {
+    value: () => input.current?.value ?? "",
+    setItems,
+    setSel,
+    setHint,
+    nl: nlItems,
+  };
+  const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
+  const runNl = (command: string, typed: string, newPanel: boolean) => extras((m) => m.runNl(command, typed, newPanel, finish));
+  const viaNatural = (text: string, newPanel: boolean) => extras((m) => void m.viaNatural(text, newPanel, ui, finish));
 
   /** Vim normal-mode keys (and Esc from insert mode). Returns true when the key was consumed. */
   const vimHandle = (e: React.KeyboardEvent<HTMLInputElement>): boolean => {
     if (e.ctrlKey || e.altKey || e.metaKey) return false;
     if (vim.current.mode === "insert" && (e.key !== "Escape" || items.length)) return false; // Esc closes suggestions first
     const el = e.currentTarget;
-    const r = vimKey(vim.current, e.key, el.value, el.selectionStart ?? el.value.length);
+    if (!vimMod) return false;
+    const r = vimMod.vimKey(vim.current, e.key, el.value, el.selectionStart ?? el.value.length);
     if (!r.handled) return false;
     e.preventDefault();
     e.stopPropagation();
@@ -177,12 +216,10 @@ export function CommandLine() {
     const el = e.currentTarget;
     if (e.key === "Enter") {
       e.preventDefault();
-      if (execute(el.value, { newPanel: e.shiftKey })) {
-        setValue("");
-        setItems([]);
-        setSel(-1);
-        if (vimOn) setVim("insert");
-      }
+      const picked = items[sel];
+      if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, el.value, e.shiftKey);
+      else if (needsNatural(el.value)) viaNatural(el.value, e.shiftKey);
+      else if (execute(el.value, { newPanel: e.shiftKey })) finish();
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();
       accept(items[Math.max(0, sel)]);
@@ -201,6 +238,9 @@ export function CommandLine() {
         e.stopPropagation();
         setItems([]);
         setSel(-1);
+      } else if (hintOn.current) {
+        e.stopPropagation();
+        setHint(null);
       }
     }
   };
@@ -214,6 +254,8 @@ export function CommandLine() {
     const wlArg = layoutArg ? null : WL_ARG.exec(v);
     if (layoutArg || wlArg) {
       searchSeq.current++;
+      nlItems.current = [];
+      setHint(null);
       const show = () => {
         if (input.current?.value !== v) return;
         startTransition(() => {
@@ -226,9 +268,14 @@ export function CommandLine() {
       return;
     }
     const { token, securitySlot } = lastToken(v);
+    nlItems.current = [];
     startTransition(() => {
       setItems(merge(token, securitySlot));
       setSel(-1);
+    });
+    extras((m) => {
+      m.previewNl(v, ui);
+      m.updateHint(v, ui);
     });
     if (securitySlot && token) searchSecurities(v, token);
     else searchSeq.current++;
@@ -275,14 +322,26 @@ export function CommandLine() {
         onBlur={() => {
           setFocused(false);
           setItems([]);
+          setHint(null);
         }}
       />
       <span className="cmd-go" aria-hidden="true">GO</span>
       {vimOn && focused && <span className="vim">{vimMode === "normal" ? "-- NORMAL --" : "-- INSERT --"}</span>}
+      {focused && items.length === 0 && hint}
       {focused && items.length > 0 && (
         <div className="ac" role="listbox">
           {items.map((s, i) => (
-            <div key={s.kind + s.value} className={i === sel ? "on" : ""} role="option" aria-selected={i === sel}>
+            <div
+              key={s.kind + s.value}
+              className={i === sel ? "on" : ""}
+              role="option"
+              aria-selected={i === sel}
+              onMouseDown={(e) => {
+                e.preventDefault(); // keep the focus in the command line
+                if (s.kind === "NL" || s.kind === "MEAN") runNl(s.value, input.current?.value ?? "", false);
+                else accept(s);
+              }}
+            >
               <span>{s.value}</span>
               <span className="dim">{s.label}</span>
               <span className="k">{s.kind}</span>

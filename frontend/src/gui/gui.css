@@ -30,7 +30,13 @@
 :root[data-mode="gui"] .gm-sep { border-top: 1px solid var(--line); margin-top: 2px; }
 
 /* --- Symbol picker (right end of the menu bar) --- */
-:root[data-mode="gui"] .gm-symbol { display: flex; align-items: center; gap: 6px; flex: none; }
+:root[data-mode="gui"] .gm-symbol { position: relative; flex: none; }
+:root[data-mode="gui"] .gm-symbol label { display: flex; align-items: center; gap: 6px; }
+/* Company-name suggestions under the symbol box. */
+:root[data-mode="gui"] .gm-suggest { position: absolute; right: 0; top: 21px; z-index: 50; min-width: 260px; margin: 0; padding: 2px 0; list-style: none; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
+:root[data-mode="gui"] .gm-suggest li { padding: 0 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
+:root[data-mode="gui"] .gm-suggest li b { color: var(--fg); display: inline-block; min-width: 7ch; }
+:root[data-mode="gui"] .gm-suggest li:hover, :root[data-mode="gui"] .gm-suggest li.on { background: var(--sel); color: var(--val); }
 :root[data-mode="gui"] .gm-symbol-label { color: var(--fg-dim); font-size: 10px; letter-spacing: 0.05em; }
 :root[data-mode="gui"] .gm-symbol input { width: 170px; height: 18px; padding: 0 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; color: var(--warn); text-transform: uppercase; }
 :root[data-mode="gui"] .gm-symbol input::placeholder { color: var(--fg-dim); text-transform: none; }
@@ -79,36 +85,110 @@
 /* --- Banner under the menu bar --- */
 :root[data-mode="gui"] .gb { display: flex; align-items: center; gap: 8px; height: 20px; padding: 0 6px; background: var(--sel); color: var(--val); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
 
-/* --- Help drawer: right-hand side of the workspace --- */
-:root[data-mode="gui"] .hd { position: absolute; top: 0; right: 0; bottom: 0; width: 340px; max-width: 90%; z-index: 35; display: flex; flex-direction: column; background: var(--bg); border-left: 2px solid var(--fg); outline: none; }
-:root[data-mode="gui"] .hd-top { display: flex; align-items: center; gap: 6px; flex: none; padding: 2px 6px; background: var(--bar-hi); border-bottom: 1px solid var(--line); }
-:root[data-mode="gui"] .hd-h { color: var(--val); font-weight: bold; }
-:root[data-mode="gui"] .hd-body { flex: 1 1 auto; overflow-y: auto; padding: 4px 8px 8px; }
-:root[data-mode="gui"] .hd-body p { margin: 4px 0; }
-:root[data-mode="gui"] .hd-t { color: var(--val); font-weight: bold; margin-bottom: 2px; }
-:root[data-mode="gui"] .hd-code { color: var(--fg); }
-:root[data-mode="gui"] .hd-s { color: var(--accent); font-weight: bold; margin-top: 8px; text-transform: uppercase; }
-:root[data-mode="gui"] .hd-use { color: var(--warn); }
-:root[data-mode="gui"] .hd-keys td { padding: 0 8px 0 0; vertical-align: top; }
-:root[data-mode="gui"] .hd-k { color: var(--fg); font-weight: bold; white-space: nowrap; }
-:root[data-mode="gui"] .hd-rel { display: flex; flex-wrap: wrap; gap: 3px; }
 
-/* --- Welcome card: centred over the workspace --- */
-:root[data-mode="gui"] .gw { position: fixed; left: 0; right: 0; margin: 0 auto; top: 18%; z-index: 50; width: min(560px, 92vw); padding: 12px 16px; background: var(--bg); border: 2px solid var(--fg); border-radius: 4px; }
-:root[data-mode="gui"] .gw-title { color: var(--fg); font-weight: bold; font-size: 16px; }
-:root[data-mode="gui"] .gw-sub { color: var(--hdr); margin: 6px 0 10px; }
-:root[data-mode="gui"] .gw-choices { display: flex; flex-direction: column; gap: 6px; }
-:root[data-mode="gui"] .gw-big { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 6px 10px; text-align: left; background: var(--bar); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
-:root[data-mode="gui"] .gw-big:hover, :root[data-mode="gui"] .gw-big:focus-visible { background: var(--bar-hi); border-color: var(--fg); }
-:root[data-mode="gui"] .gw-big-l { color: var(--val); font-weight: bold; font-size: 14px; }
-:root[data-mode="gui"] .gw-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+/* --- Sidebar "Start here": plain-word tasks, function code small and grey beside the name --- */
+:root[data-mode="gui"] .gs-start { padding: 2px 0 4px; border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .gs-start-title { padding: 0 6px; color: var(--hdr); font-weight: bold; }
+:root[data-mode="gui"] .gs-task { display: flex; justify-content: space-between; gap: 6px; width: 100%; text-align: left; padding: 1px 6px 1px 14px; cursor: pointer; color: var(--fg); }
+:root[data-mode="gui"] .gs-task:hover, :root[data-mode="gui"] .gs-task:focus-visible { background: var(--sel); color: var(--val); }
+:root[data-mode="gui"] .gs-task small { color: var(--fg-dim); font-size: 10px; }
+
+/* --- Glossary tooltip (any [data-term] element; shown on hover and keyboard focus) --- */
+:root[data-mode="gui"] [data-term] { cursor: help; text-decoration: underline dotted var(--fg-dim); text-underline-offset: 2px; }
+
+/* --- PanelNote plain-language line and next-step buttons (GUI only) --- */
+:root[data-mode="gui"] .pnote-plain { margin-top: 4px; color: var(--hdr); }
+:root[data-mode="gui"] .pnote-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+:root[data-mode="gui"] .pnote-actions button { padding: 1px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--bar); color: var(--fg); cursor: pointer; }
+:root[data-mode="gui"] .pnote-actions button:hover, :root[data-mode="gui"] .pnote-actions button:focus-visible { background: var(--sel); color: var(--val); border-color: var(--warn); }
+
+/* BT empty state: starter strategies (functions/BtStarter.tsx). */
+:root[data-mode="gui"] .bt-starter { margin: 8px 0; }
+:root[data-mode="gui"] .bt-starter-h { margin-bottom: 6px; color: var(--val); }
+:root[data-mode="gui"] .bt-starter-list { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+:root[data-mode="gui"] .bt-template, :root[data-mode="gui"] .bt-starter-run button { padding: 2px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--bar); color: var(--fg); cursor: pointer; font: inherit; text-align: left; }
+:root[data-mode="gui"] .bt-template:hover, :root[data-mode="gui"] .bt-template:focus-visible, :root[data-mode="gui"] .bt-starter-run button:not(:disabled):hover { background: var(--sel); color: var(--val); border-color: var(--warn); }
+:root[data-mode="gui"] .bt-template.on { border-color: var(--warn); color: var(--val); }
+:root[data-mode="gui"] .bt-starter-run { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+:root[data-mode="gui"] .bt-starter-run button:disabled { opacity: 0.5; cursor: default; }
+:root[data-mode="gui"] .bt-starter-sym { width: 8em; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; font: inherit; padding: 1px 4px; }
+
+/* KEY REQUIRED note: amber message (functions/KeyRequiredLine.tsx). */
+:root[data-mode="gui"] .keyreq .pnote-msg { color: var(--warn); }
+
+/* BT strategy editor: in GUI mode it takes the rest of the panel (Terminal keeps the fixed 22em set in bt/codeEditor.ts). */
+:root[data-mode="gui"] .fn > .import.editor { flex: 1 1 auto; max-height: none; min-height: 12em; display: flex; flex-direction: column; }
+:root[data-mode="gui"] .import.editor .editor-host { flex: 1 1 auto; min-height: 0; }
+:root[data-mode="gui"] .import.editor .cm-editor { height: 100%; }
+
+
+/* FA statement table (functions/FA.tsx). The grid is a canvas, so its colours come from CSS variables that Grid re-reads
+   whenever the display settings change (displayVersion). These are defined only inside a GUI-mode FA panel:
+   a quiet header band, a faint rule between rows and no vertical rules, so a statement reads like a printed table. */
+:root[data-mode="gui"] .fa {
+  --grid-hdr-bg: var(--bar-hi);
+  --grid-hdr-fg: var(--val);
+  --grid-row-rule: var(--line);
+  --grid-col-rule: transparent;
+  --grid-sel: var(--sel);
+}
+:root[data-mode="gui"] .fa .tabs { gap: 6px; padding: 2px 4px; }
+:root[data-mode="gui"] .fa .tabs span { padding: 0 8px; border-radius: 3px; }
+
+/* ===== GUI critique fixes (docs/review/cloud/GUI_CRITIQUE.md "Fixes") ===== */
+
+/* 1: red means ERR only. The terminal paints each panel's first line as a solid red band (--menu); in GUI it is a quiet
+   grey caption row, and the key legend (class "legend", one per panel) is hidden because "?" help already lists the keys.
+   (Selector must out-rank `.fn > .line:first-child:not(.err):not(.warn)` in styles.css.) */
+:root[data-mode="gui"] .fn > .line:first-child:not(.err):not(.warn) { background: var(--bar); color: var(--hdr); }
+:root[data-mode="gui"] .fn > .line:first-child .acc { color: var(--fg); }
+:root[data-mode="gui"] .legend { display: none; }
+
+/* 20 and 17: secondary text was ~3.5:1 dim amber on black. Lighter dim for the default (amber) theme only; the other themes keep theirs. */
+:root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) { --fg-dim: #d9a066; }
+
+/* 15: one clear place to search. The sidebar box is the primary one (brighter border); the terminal command line in the top bar
+   collapses to a hair until it has focus (Ctrl+K still focuses it, so the keyboard path is unchanged). */
+:root[data-mode="gui"] .gs-search { border-color: var(--fg-dim); height: 22px; }
+:root[data-mode="gui"] .top .cmd:not(:focus-within) { flex: 0 0 2px; min-width: 2px; overflow: hidden; opacity: 0; }
+
+/* 18: the key-hint bar is expert content; GUI drops it (and its grid row). */
+:root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 18px; }
+:root[data-mode="gui"] .app > .keys { display: none; }
+
+/* 19: category counts only on hover/focus; the carets are quiet. */
+:root[data-mode="gui"] .gs-head .dim { visibility: hidden; }
+:root[data-mode="gui"] .gs-head:hover .dim, :root[data-mode="gui"] .gs-head:focus-visible .dim { visibility: visible; }
+:root[data-mode="gui"] .gs-caret { color: var(--fg-dim); }
+
+/* 10: wider suggestions with room for the full name, and a "no match" row. */
+:root[data-mode="gui"] .gm-suggest { min-width: 340px; max-width: 480px; }
+:root[data-mode="gui"] .gm-suggest li { height: 18px; line-height: 18px; }
+:root[data-mode="gui"] .gm-none { padding: 2px 8px; color: var(--hdr); white-space: normal; }
+
+/* 8: DES company blurb clamped to ~4 lines with a Read more button; delayed note is small grey. */
+:root[data-mode="gui"] .desc-clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+:root[data-mode="gui"] .desc-more { margin: 2px 0 4px; padding: 0 8px; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+:root[data-mode="gui"] .desc-more:hover, :root[data-mode="gui"] .desc-more:focus-visible { background: var(--sel); color: var(--val); }
+:root[data-mode="gui"] .des-delay { font-size: 10px; }
+
+/* 11: portfolio total on top, big. The panel is a flex column, so `order` lifts it above the grid without touching the DOM order (Terminal unchanged). */
+:root[data-mode="gui"] .port > .line { order: -3; }
+:root[data-mode="gui"] .port > .port-headline { order: -2; padding: 4px 6px; font-size: 15px; color: var(--val); border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .port > .port-headline b { color: var(--fg); }
+:root[data-mode="gui"] .port > .summary { order: -1; }
+
+/* 5: BT summary. One plain sentence, then the numbers; run settings are tucked under "Details". */
+:root[data-mode="gui"] .bt-sentence { white-space: normal; padding: 3px 6px; font-size: 14px; color: var(--val); }
+:root[data-mode="gui"] .bt-sim-gui { color: var(--warn); font-weight: bold; }
+:root[data-mode="gui"] .bt-details { padding: 0 6px; }
+:root[data-mode="gui"] .bt-details summary { cursor: pointer; color: var(--accent); }
+:root[data-mode="gui"] .bt-details summary:focus-visible { outline: 1px solid var(--fg); }
+
+/* 13: FA. The numbered tab strip duplicates the toolbar buttons; the line below names the statement and its unit. */
+:root[data-mode="gui"] .fa .tabs { display: none; }
+:root[data-mode="gui"] .fa-which { padding: 2px 6px; color: var(--val); font-weight: bold; }
+
+/* Link-style button; also used by the HELP panel (functions/Help.tsx), so it stays in the startup sheet. */
 :root[data-mode="gui"] .gw-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
 :root[data-mode="gui"] .gw-link:hover, :root[data-mode="gui"] .gw-link:focus-visible { color: var(--val); }
-
-/* --- Tour: solid 2px amber ring around the target, a plain caption box. No animation. --- */
-:root[data-mode="gui"] .gt-ring { position: fixed; z-index: 60; border: 2px solid var(--fg); pointer-events: none; box-sizing: border-box; }
-:root[data-mode="gui"] .gt-cap { position: fixed; z-index: 61; padding: 8px 10px; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
-:root[data-mode="gui"] .gt-n { color: var(--fg-dim); font-size: 10px; }
-:root[data-mode="gui"] .gt-t { color: var(--val); font-weight: bold; margin: 2px 0; }
-:root[data-mode="gui"] .gt-btns { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-:root[data-mode="gui"] .gt-next { color: var(--fg); font-weight: bold; }

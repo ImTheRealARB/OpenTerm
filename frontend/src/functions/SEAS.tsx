@@ -35,7 +35,12 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
     setError(null);
     api9
       .history(symbol, "MAX", "1d", reload > 0)
-      .then((e) => live && setEnv(e))
+      .then((e) => {
+        if (!live) return;
+        // The backend labels bars with the size the source really sent; monthly bars would give fake "daily" returns.
+        if (e.data.interval && e.data.interval !== "1d") setError(`SOURCE SENT ${e.data.interval} BARS, SEAS NEEDS DAILY BARS (${e.source})`);
+        else setEnv(e);
+      })
       .catch((e: ApiError) => live && setError(`${e.message}${e.detail ? ` (${e.detail})` : ""}`));
     return () => {
       live = false;
@@ -48,7 +53,7 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
     const t = Float64Array.from(b.t);
     const use = b.adj && b.adj.length === b.t.length ? b.adj : b.c;
     const c = Float64Array.from(use, (x) => (x == null ? NaN : x));
-    return seasonality(t, c, kind, { excludeOpenPeriodAt: Date.now() / 1000 });
+    return seasonality(t, c, kind, { excludeOpenPeriodAt: Date.now() / 1000, tz: b.tz });
   }, [env, kind]);
 
   const rowsRef = useLatest(result?.rows ?? []);
@@ -105,7 +110,7 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
         {result && ` · ${result.firstYear}..${result.lastYear} · ${result.bars} DAILY BARS · ${result.obs} OBS · ${src}`}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {!env && !error && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · V VIEW · J/K MOVE · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · V VIEW · J/K MOVE · E CSV · F5 REFRESH</span>
       </div>
       {error && <div className="err">{error}</div>}
       {env && <div className="dim">{env.data.adj && env.data.adj.length === env.data.t.length ? "ADJUSTED CLOSES" : "RAW CLOSES (NO ADJUSTED SERIES FROM THIS SOURCE)"} · PAST AVERAGES, NOT A FORECAST</div>}

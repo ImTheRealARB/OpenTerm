@@ -1,0 +1,13 @@
+/* BT rule builder (GUI mode only); imported by BtRuleBuilder so it stays out of the startup CSS. */
+:root[data-mode="gui"] .bt-rule { margin: 12px 0 8px; }
+:root[data-mode="gui"] .bt-rule-group { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; margin-bottom: 6px; }
+:root[data-mode="gui"] .bt-rule-clause { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+:root[data-mode="gui"] .bt-rule-lead { min-width: 6.5em; color: var(--val); }
+:root[data-mode="gui"] .bt-rule-operand { display: inline-flex; gap: 4px; align-items: center; }
+:root[data-mode="gui"] .bt-rule select, :root[data-mode="gui"] .bt-rule-n { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 3px; font: inherit; padding: 1px 4px; }
+:root[data-mode="gui"] .bt-rule-n { width: 5em; }
+:root[data-mode="gui"] .bt-rule > button, :root[data-mode="gui"] .bt-rule-group > button, :root[data-mode="gui"] .bt-rule-x { padding: 1px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--bar); color: var(--fg); cursor: pointer; font: inherit; }
+:root[data-mode="gui"] .bt-rule select:focus-visible, :root[data-mode="gui"] .bt-rule-n:focus-visible, :root[data-mode="gui"] .bt-rule button:focus-visible { outline: 1px solid var(--warn); }
+:root[data-mode="gui"] .bt-rule-sentence { margin-top: 8px; }
+:root[data-mode="gui"] .bt-rule-text { margin: 2px 0 4px; }
+:root[data-mode="gui"] .bt-rule .bt-starter-run button:disabled { opacity: 0.5; cursor: default; }

@@ -8,6 +8,10 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import type { Alert, NewsAlert } from "../net/api";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
+import { plainAlert } from "./alertPlain";
+import { requestAsk } from "../gui/askBus";
+import { PanelNote } from "../components/PanelNote";
+import { settingsStore } from "../settings/runtime";
 import { dirColor, lastColor, lastFlash, navKey, pct, price, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -44,11 +48,25 @@ const COLUMNS: Column<ARow>[] = [
   { title: "HEADLINE THAT FIRED IT", width: 90, text: (r) => r.n?.headline ?? "", color: () => "fg" },
 ];
 
+/** GUI columns: one plain sentence per alert instead of SECURITY + CONDITION codes; no CREATED column. */
+const COLUMNS_GUI: Column<ARow>[] = [
+  COLUMNS[0],
+  { title: "ALERT", width: 52, text: (r) => plainAlert(r.a, r.n), color: () => "fg" },
+  COLUMNS[3],
+  COLUMNS[4],
+  { title: "STATUS", width: 10, text: (r) => (rstatus(r) === "triggered" ? "Triggered" : "Active"), color: (r) => (rstatus(r) === "triggered" ? "warn" : "up") },
+  COLUMNS[6],
+  COLUMNS[7],
+  COLUMNS[9],
+];
+
 export default function ALRT({ panelId }: FunctionProps) {
   const list = useStore(alerts, (l) => l);
   const nlist = useStore(newsAlerts, (l) => l);
   const err = useStore(alertsError, (e) => e);
   const notify = useStore(notifyState, (n) => n);
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
+  const COLS = gui ? COLUMNS_GUI : COLUMNS;
   const [confirm, setConfirm] = useState<string | null>(null);
   const grid = useRef<GridHandle>(null);
 
@@ -70,7 +88,7 @@ export default function ALRT({ panelId }: FunctionProps) {
   }, [list, nlist, quotes]);
   useLiveRows(rows, grid, (r: ARow) => r.a?.symbol);
   const latest = useLatest({ rows, confirm });
-  useCsvExport(panelId, () => gridCsv("ALRT", COLUMNS, rows));
+  useCsvExport(panelId, () => gridCsv("ALRT", COLS, rows));
 
   useEffect(
     () =>
@@ -127,19 +145,31 @@ export default function ALRT({ panelId }: FunctionProps) {
     <div className="fn">
       <div className="line">
         <span className="acc">ALERTS</span> {active} ACTIVE · {all.length - active} TRIGGERED ·{" "}
-        <span className={ncls} data-testid="notify-state">{ntext}</span>
+        <span className={gui ? "legend" : ncls} data-testid="notify-state">{ntext}</span>
         {list === null && !err && <span className="dim"> · LOADING…</span>}
         {err && <span className="err"> · STALE: {err}</span>}
         {confirm === "CLEAR" && <span className="err"> · CLEAR ALL TRIGGERED? PRESS C AGAIN</span>}
         {confirm?.startsWith("D") && <span className="err"> · DELETE ALERT {confirm.slice(1)}? PRESS D AGAIN</span>}
       </div>
-      <div className="dim">
+      {gui && notify !== "granted" && (
+        // GUI: the browser-permission state is one plain note (not a caption in the header). Only "default" can be asked again.
+        <PanelNote
+          kind="stale"
+          plain={notify === "default" ? "Allow notifications to get a pop-up when an alert fires. Without them it still flashes in the status bar." : "Desktop pop-ups are off, so alerts only flash in the status bar. You can allow them in your browser's site settings."}
+          actions={notify === "default" ? [{ label: "Allow notifications", onClick: () => { void Notification.requestPermission().then((p) => notifyState.set(() => p as NotifyState), () => {}); } }] : []}
+        >
+          {notify === "default" ? "Desktop notifications are not switched on yet." : "Desktop notifications are off."}
+        </PanelNote>
+      )}
+      <div className="dim legend">
         J/K MOVE · ENTER GP · N NEW (ALRT SYM &gt; 200 | ALRT SYM +5% | ALRT NEWS WORD [SYM]) · D DELETE · R REARM · C CLEAR TRIGGERED · F5 · PRICES CHECKED ON LIVE TICKS, NEWS WORDS ON EACH NEWS REFRESH (EVERY 2 MIN) WHILE THIS APP IS OPEN
       </div>
       {list?.length === 0 && nlist?.length === 0 && (
-        <div className="dim">NO ALERTS. ALRT AAPL &gt; 200, ALRT AAPL -3% (VS PREVIOUS CLOSE), ALRT NEWS RECALL AAPL (HEADLINE HAS THE WORD).</div>
+        <PanelNote kind="empty" actions={[{ label: "Add an alert", onClick: () => requestAsk(panelId, "Add an alert") }]} hint="ALRT AAPL > 200, ALRT AAPL -3% (VS PREVIOUS CLOSE), ALRT NEWS RECALL AAPL (HEADLINE HAS THE WORD).">
+          NO ALERTS.
+        </PanelNote>
       )}
-      <Grid ref={grid} columns={COLUMNS} rows={rows} />
+      <Grid ref={grid} columns={COLS} rows={rows} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import "./Welcome.css"; // this component's GUI-only rules, loaded with its chunk
 import { useEffect, useRef } from "react";
 import { useStore } from "../state/store";
 import { chromeKeyDown, focusCommandLine } from "./chrome";

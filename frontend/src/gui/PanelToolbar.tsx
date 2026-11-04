@@ -1,4 +1,5 @@
-import { useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { execute } from "../command/execute";
 import { info } from "../command/status";
 import { runItem } from "../components/windowMenuRun";
 import type { OptionAction } from "../components/windowMenu";
@@ -6,10 +7,11 @@ import { effectiveBindings } from "../keys/keys";
 import { dispatchPanelKey } from "../keys/panelKeys";
 import { focusPanel, workspace } from "../state/workspace";
 import { useStore } from "../state/store";
+import { onAskRequest } from "./askBus";
 import { chromeKeyDown, focusCommandLine } from "./chrome";
 import { openHelp } from "./helpState";
 import { runCommand } from "./run";
-import { buttonsFor, expandAsk, keyInit, type ToolbarButton } from "./toolbars";
+import { askButton, askCommands, buttonsFor, keyInit, type ToolbarButton } from "./toolbars";
 
 /**
  * GUI-only button row under a panel's title bar.
@@ -21,13 +23,27 @@ import { buttonsFor, expandAsk, keyInit, type ToolbarButton } from "./toolbars";
  * Keyboard: every button is a real <button>, so Tab reaches it and Enter / Space press it. Plain keys typed while a
  * toolbar button has focus must not ALSO reach the panel's key handler (Enter would fire twice), hence `chromeKeyDown`.
  */
-export function PanelToolbar({ id, fn, args }: { id: number; fn: string | undefined; args: readonly string[] }) {
+export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string | undefined; args: readonly string[]; symbol?: string }) {
   const maximized = useStore(workspace, (s) => s.maximized === id);
   // The button whose inline prompt is open (WL "Add" asks for symbols), or null.
   const [ask, setAsk] = useState<ToolbarButton | null>(null);
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const buttons = buttonsFor(fn, args);
+
+  // A panel's empty state ("Add a stock") can open one of our ask boxes (see askBus.ts).
+  useEffect(
+    () =>
+      onAskRequest((r) => {
+        if (r.panelId !== id) return;
+        const b = askButton(fn, r.label);
+        if (!b) return;
+        setText("");
+        setAsk(b);
+        setTimeout(() => input.current?.focus(), 0);
+      }),
+    [id, fn],
+  );
 
   /** After a MOUSE click let go of the button so the panel's own keys (j/k, Enter...) work right away; keep keyboard focus for Tab users. */
   const afterClick = (e: MouseEvent<HTMLElement>) => {
@@ -40,6 +56,12 @@ export function PanelToolbar({ id, fn, args }: { id: number; fn: string | undefi
       setAsk(b);
       // The input mounts on the next render; focus it then.
       setTimeout(() => input.current?.focus(), 0);
+      return;
+    }
+    if (b.open) {
+      focusPanel(id);
+      execute(b.open, { newPanel: true });
+      afterClick(e);
       return;
     }
     focusPanel(id);
@@ -57,8 +79,10 @@ export function PanelToolbar({ id, fn, args }: { id: number; fn: string | undefi
   const submitAsk = () => {
     if (!ask?.ask || text.trim() === "") return;
     focusPanel(id);
-    // Runs the equivalent command line text, e.g. "WL TECH ADD AAPL MSFT". A failure keeps the prompt open so the text can be fixed.
-    if (runCommand(expandAsk(ask.ask.command, args, text))) setAsk(null);
+    // Runs the equivalent command line text, e.g. "WL TECH ADD AAPL MSFT" (one command per comma-separated entry for
+    // the portfolio box). A failure keeps the prompt open so the text can be fixed.
+    const cmds = askCommands(ask.ask, args, text, symbol);
+    if (cmds.length > 0 && cmds.every((c) => runCommand(c))) setAsk(null);
   };
 
   if (ask?.ask) {

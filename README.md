@@ -13,20 +13,20 @@ appear instantly. Dark, dense, amber on black, in the style of a professional tr
 ## Why it feels different: it is built to be fast
 
 Speed is the main feature, not an afterthought. Every number below is a **budget that the project's own benchmark
-(`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-10-19: 37 of 37 pass):
+(`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-11-05: 37 of 37 pass):
 
 | What you do | Result | Budget |
 |---|---|---|
-| Open the app to a usable command line | **about 80 ms** | 1500 ms |
-| Press a key, see it on screen | **about 14 ms** (less than one 60 Hz frame) | 16.7 ms |
-| Run a cached command, see the panel painted | **about 16 ms** | 100 ms |
-| Live price tick arrives, pixel changes | **about 36 ms** with 4,000 ticks per second flowing into 9 panels | 50 ms |
-| Scroll a 10,000-row table | **16.8 ms per frame** (smooth 60 fps) | 20 ms |
+| Open the app to a usable command line | **about 110 ms** | 1500 ms |
+| Press a key, see it on screen | **about 15 ms** (less than one 60 Hz frame) | 16.7 ms |
+| Run a cached command, see the panel painted | **about 18 ms** | 100 ms |
+| Live price tick arrives, pixel changes | **about 37 ms** with 4,000 ticks per second flowing into 9 panels | 50 ms |
+| Scroll a 10,000-row table | **16.7 ms per frame** (smooth 60 fps) | 20 ms |
 | Pan a chart of 50,000 candles | **16.7 ms per frame** | 20 ms |
 | Backend answering a cached quote | **about 1 ms** | 20 ms |
 | Backtest 10 years of daily bars | **about 0.2 s** | 0.3 s |
-| Download size of the app (JS and CSS, compressed) | **about 84 KB** | 400 KB |
-| Memory used by the page with 9 panels and 200 live symbols | **about 5 MB** | 500 MB |
+| Download size of the app (JS and CSS, compressed) | **about 120 KB** | 400 KB |
+| Memory used by the page with 9 panels and 200 live symbols | **about 8 MB** | 500 MB |
 
 How it stays fast: no animations, shadows or web fonts; tables and charts are drawn on a canvas instead of thousands of page
 elements; live ticks are batched into one repaint per frame; the server keeps one upstream connection per symbol however many
@@ -37,14 +37,14 @@ panels watch it; heavy maths runs in separate worker processes so it never block
 
 | | |
 |---|---|
-| **Charts and quotes** | Candlestick, line and area charts with many indicators, drawing tools, event markers, comparison panes; live quote boards for stocks, indices, FX, commodities and crypto |
+| **Charts and quotes** | Candlestick, line and area charts, drawing tools, event markers, comparison panes; an indicator library (`IND`, 109 indicators, your own formulas like `EMA(close,12) - EMA(close,26)`, saved presets); price alerts set straight from the chart (`A`, or Alt+click a price); live quote boards for stocks, indices, FX, commodities and crypto |
 | **Companies** | Profile, financial statements and filings straight from SEC EDGAR, insider trades, holders, estimates, peers, valuation (DCF) |
 | **Screening** | Screen the whole US stock universe, compare peers, correlation matrices, sector heat map, seasonality |
 | **Macro** | FRED economic series, Treasury yield curve, earnings and economic calendars, world statistics, central banks |
 | **Derivatives and fixed income** | Options chains and pricing, implied volatility, futures, bond maths, credit |
 | **Crypto** | Order book depth, funding rates, basis, stablecoin supply, DeFi yields, prediction-market odds |
 | **Portfolio** | Track positions with live profit and loss, price alerts, CSV import and export |
-| **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks; or write a Python strategy in `BT EDIT` (code editor with starter templates and errors shown on the offending line) |
+| **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks; build the rule as a sentence ("buy when the 20-day average crosses above the 50-day") in GUI mode; or write a Python strategy in `BT EDIT` (code editor with starter templates and errors shown on the offending line) |
 | **Risk and quant** | Value at Risk, portfolio optimisation, factor and attribution analysis |
 | **AI (optional)** | Ask questions answered with the app's own data, every answer showing which tools it used. Needs an OpenRouter key |
 | **Alerts and briefs** | Alerts can reach you by email, Telegram or a webhook (`DLVR`, all off by default), plus a scheduled daily brief (`BRIEF`) |
@@ -163,16 +163,24 @@ The Docker files are written but have not been built by the author yet.
 
 ### Two ways to use it: GUI mode and Terminal mode
 
-The first time you open OpenTerm it starts in **GUI mode**: a menu bar (Markets, Charts, News, Research, Portfolio,
-Backtest, Settings), a sidebar listing every function with a search box, a symbol box, and a row of buttons on each panel.
-A welcome card offers three starting points ("Look up a stock", "See a chart", "Watch my stocks") and a 2-minute tour.
-Click the `?` button on any panel (or press `Alt+H`) for a help drawer that explains it.
+The first time you open OpenTerm it starts in **GUI mode**, made for people who have never used a market terminal.
+You start on a ready-made screen (a few large US stocks, a chart and top news). The sidebar's **Start here** group has
+plain-word buttons (Stock chart, My watchlist, Top news, World markets, My portfolio, Try a backtest); every other
+function sits in a collapsed category, with its short code shown small and grey as a learning aid.
+Type a company name ("apple", "tesla") in the symbol box and pick a suggestion. Hover over, or tab to, a term such as
+EPS or P/E for a one-line plain-English explanation. Errors say what to do next (Retry, "Try AAPL", "Open API keys"),
+and empty lists offer the next step ("Add a stock"). Click `?` on any panel (or press `Alt+H`) for its purpose, buttons and keys.
+
+| | |
+|---|---|
+| ![GUI mode: starter screen with Start here sidebar](docs/screenshots/gui-first-screen.png) | ![Search by company name](docs/screenshots/gui-search.png) |
+| ![Plain-English glossary tooltip](docs/screenshots/gui-glossary.png) | ![An error with a next step](docs/screenshots/gui-error-next-step.png) |
 
 **Terminal mode** is the same app with only the command line, built for keyboard speed. Switch with the
 `TERMINAL | GUI` control at the bottom right, `Alt+G`, or `SETTINGS MODE TERMINAL`. Your choice is saved. Everything
-below works in both modes.
+below works in both modes. Terminal mode also takes a market sector word after the ticker (`SPX INDEX GP`,
+`EURUSD CURNCY`), digits + Enter to open a row in a list, F2/F3/F4/F8/F9 as sector keys, and `FUNC` lists every function.
 
-![GUI mode](docs/screenshots/gui-mode.png)
 
 ### Try these commands
 
@@ -191,9 +199,16 @@ Press `/` to focus the command line at the top, then try these, pressing `Enter`
 | `HELP` | Every function. `HELP GP` explains one |
 | `?` | Every keyboard shortcut |
 
+You can also type plain English: `apple stock price chart`, `tesla news`, `microsoft 5 year chart`, `amazon balance sheet`,
+`apple vs microsoft 1 year` (a comparison chart) or `tech stocks under 50 dollars` (a screen; words it did not understand are listed, never silently dropped).
+OpenTerm shows the exact command it understood (for example `APPLE STOCK PRICE CHART -> AAPL GP`) so you learn the codes, and
+asks "did you mean" when a name fits several companies. Exact codes like `AAPL GP` always run as typed. While you type a code,
+a hint line shows its options with the one you are on in bold.
+
 Use **Shift+Enter** instead of Enter to open the result in a **new panel** next to the others. `Tab` jumps between panels.
 `LAYOUT SAVE MYDESK` saves your arrangement; `LAYOUT MYDESK` brings it back. [docs/COMMANDS.md](docs/COMMANDS.md) has
-many more commands to try.
+many more commands to try. `TMPL` offers ready-made workspaces (`TMPL DAY`, `TMPL LONGTERM`, `TMPL MACRO`, `TMPL INDIA`); it asks before replacing your panels.
+In GUI mode, hover a table's column header (or press Shift+T) for a one-line explanation of it.
 
 If a panel needs a key you have not set, it says `KEY REQUIRED: set X in APIKEYS` instead of failing. Open the `APIKEYS`
 panel to paste keys; they are kept in your computer's secure store, never in the code.

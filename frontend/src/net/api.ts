@@ -119,7 +119,7 @@ async function request<T>(path: string, maxAgeMs: number): Promise<T> {
 }
 
 /** Uncached write (or read that must be fresh). Errors carry the backend's message. */
-async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -200,6 +200,19 @@ export interface KeyRow {
 export interface KeysPayload {
   keys: KeyRow[];
   spend: { today: number; cap: number };
+}
+
+export interface PresetItem {
+  id?: string;
+  formula?: string;
+  params: number[];
+  label: string;
+}
+
+export interface IndicatorPreset {
+  name: string;
+  items: PresetItem[];
+  updated_at: number;
 }
 
 export interface WatchlistInfo {
@@ -1018,11 +1031,11 @@ export interface WetrPayload {
   note: string;
 }
 
-/** Market-light holidays (`basis`: NYSE rules or Nager public holidays). */
+/** Market-light holidays (`basis`: NYSE rules, Nager public holidays, or `fixed` = NSE partial rules without festivals). */
 export interface HolidayCalendar {
   mkt: string;
   year: number;
-  basis: "rules" | "public";
+  basis: "rules" | "public" | "fixed";
   label: string;
   holidays: { date: string; name: string; national: boolean }[];
   early: { date: string; name: string }[];

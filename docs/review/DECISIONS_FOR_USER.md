@@ -10,14 +10,14 @@ Nothing below was changed in code unless it says so. Full detail is in each area
 
 ## Deferred (risky or user-visible)
 Quant
-- `quantjobs/attr.py` `return_measures`: Modified Dietz can divide by zero or go negative after large withdrawals; `xirr` bisection assumes a flow sign pattern and can return a wrong root; `quantjobs/risk.py` values holdings at each series' own last close, not the last common day; `parse_deribit` forward is the upper median for an even instrument count (backend-quant).
+- `quantjobs/attr.py` `return_measures`: Modified Dietz can divide by zero or go negative after large withdrawals; `xirr` bisection assumes a flow sign pattern and can return a wrong root; `quantjobs/risk.py` values holdings at each series' own last close, not the last common day; `parse_deribit` forward is the upper median for an even instrument count (backend-quant). **DONE** (cloud 2026-11-04, `23fd1a2`).
 AI/SWARM
-- SWARM and AI panels never abort their paid SSE stream when closed (SWARM abort `c820e22` was reverted because maximize remounts the panel and would kill the run). A close-vs-remount distinction is needed.
+- SWARM and AI panels never abort their paid SSE stream when closed (SWARM abort `c820e22` was reverted because maximize remounts the panel and would kill the run). A close-vs-remount distinction is needed. **DONE** (cloud 2026-11-04, see commit for Part 2 frontend bugs)
 Backend
-- `cache` table is never pruned; the DB file grows for ever (backend-core).
-- Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core).
-- If a leader request is cancelled in `service._once`, waiters get `CancelledError` (backend-core).
-- `DayStore.rows` decodes up to 250 days of msgpack on the event loop (backend-core).
+- `cache` table is never pruned; the DB file grows for ever (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
+- Yahoo quote batches above about 160 symbols trip the rate limit and put Yahoo in cooldown (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
+- If a leader request is cancelled in `service._once`, waiters get `CancelledError` (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
+- `DayStore.rows` decodes up to 250 days of msgpack on the event loop (backend-core). **DONE** (cloud 2026-11-04, `23fd1a2`).
 - **DONE in Phase 17 (2026-11-03):** TLS is always verified (`delivery/email.smtp_connect`); a server with no STARTTLS is refused unless it is on loopback. Original note: `keys.py` `_smtp_check`: `starttls()` without a context does not verify the certificate. Fix is `ssl.create_default_context()`, but a self-signed mail server would show ERROR in APIKEYS (backend-api).
 - No global request-size limit in `main.py`; only `api.json_object` routes are capped (backend-api).
 - `jobs` can reach 200 rows x 8 MB; bt.mc/bt.wf store whole equity arrays in `params` (backend-compute).
@@ -25,12 +25,22 @@ Backend
 - Swarm retry has no backoff or jitter; the spend cap can overshoot when concurrent chats both pass the pre-check; Kite ticker reconnects every ~1 s with no jitter if the server accepts and drops; an expired Kite instrument dump fails instead of showing STALE; `llm/sse.py` line buffer has no cap (backend-ai).
 Frontend
 - `execute.ts` runs WL, PORT and ALRT edits before validating the target panel or panel limit: `7: WL X ADD AAPL` edits the list, then fails with `NO PANEL 7` (frontend-functions-b).
-- After first paint `main.tsx` starts loading about 88 chunks (about 500 kB) at once; staggering is unverified without the bench (frontend-functions-b).
+- After first paint `main.tsx` starts loading about 88 chunks (about 500 kB) at once; staggering is unverified without the bench (frontend-functions-b). **DONE** (cloud perf pass 2026-11-04)
 - Percent alerts read only the raw tick row, so a price-only tick could miss one (frontend-functions-b).
-- `LivePrice` resubscribes the symbol on every quote refresh (frontend-functions-b).
-- `AI.tsx` does not abort its SSE stream on unmount (frontend-functions-a).
+- `LivePrice` resubscribes the symbol on every quote refresh (frontend-functions-b). **DONE** (cloud perf pass 2026-11-04)
+- `AI.tsx` does not abort its SSE stream on unmount (frontend-functions-a). **DONE** (cloud 2026-11-04, see commit for Part 2 frontend bugs)
 - Toggling any indicator rebuilds the chart and resets zoom; the readout does not follow live ticks; the indicator worker has no `onerror` (frontend-chart).
-- `functions/quoteRows.ts` `useLiveRows` redraws every 5 s in a hidden tab and rebuilds its symbol index on every `rows` change (frontend-core).
+- `functions/quoteRows.ts` `useLiveRows` redraws every 5 s in a hidden tab and rebuilds its symbol index on every `rows` change (frontend-core). **DONE** (cloud perf pass 2026-11-04)
+Cloud audit 2026-11-04 (low)
+- `userdata.py:157-170`, `portfolio.py:178-200`: watchlist and portfolio edits (and `Alerts.create` count-then-insert) are read-modify-write across awaits; two concurrent edits lose one (needs a per-store lock).
+- `derivs/service.py:~317`: `OSA` `mult = num(...) or 100.0` turns a typed `MULT=0` into 100 instead of `bad_request`.
+- `derivs/service.py` `fn_ov` and `options/pricer.py:90-110` `parse_strategy`: barrier level H and strategy strikes are not range-checked (0, negative, nan, inf reach the pricer).
+- `providers/nasdaq.py:165-175`: history fallback truncates `MAX`/`20Y` to 3653 days but keeps the range tag, and uses the local date for `todate`.
+- `llm/spend.py:24-28,51-60`: spend cap check ignores prompt cost and overlapping callers (cap can overshoot).
+- `service.py:227-244` `apply_tick`: a tick without change fields refreshes `price` and the fresh stamp but keeps the old `change` / `change_pct`.
+- `cache.py:108-120` `Cache.flush`: the dirty batch is dropped from the retry queue before the write, so a failed write loses it.
+- `derivs/service.py:~355-365` OVDV smile builder: a strike or forward of 0 raises and turns the whole surface into a 500 instead of skipping the row.
+- `format.ts:30-37,61-65`: `fmtBig(999_950)` prints `1000.0K`, `fmtAge(3599.6)` prints `60M` (rounding across unit boundaries).
 Tests and branches
 - `test_phase12.py::test_migration_9_tables` looks redundant with the every-schema-version migration test; kept (test-pruning).
 - Branches `claude/angry-easley-fc2d86` and `claude/openterm-phase-19-8ad9bb` can probably be deleted; nothing was touched (devloop).

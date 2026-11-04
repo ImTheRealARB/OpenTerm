@@ -205,7 +205,7 @@ export default function SECF({ panelId, args }: FunctionProps) {
         {env && <span className="dim"> · {(env.source ?? "").toUpperCase()}</span>}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
       </div>
       {!query && <div className="warn">TYPE A NAME, A TICKER OR AN IDENTIFIER. EXAMPLES: {USAGE}</div>}
       {errors.map((x) => (

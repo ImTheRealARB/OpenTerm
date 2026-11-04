@@ -1,15 +1,58 @@
 # Handoff
 
-_Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Phases 1-16 and 19 are DONE and on `main` (= `origin/main`); Phases 17-18 stay paused by the user._
+_Last updated: 2026-11-05 (local gate + bench of NEXT_FEATURES: ALL PASS, bench 37/37). `main` has Phases 1-17 and 19, GUI mode and the strategy editor; branch `claude/gui-simple-bugs-sp3hq5` (draft PR, not merged) adds GUI_SIMPLE_AND_BUGS and NEXT_FEATURES. Phase 18 stays paused._
 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
+
+## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`, draft PR https://github.com/ImTheRealARB/OpenTerm/pull/1)
+`docs/specs/GUI_SIMPLE_AND_BUGS.md` Parts 0-5 are DONE on the branch (not merged; the user reviews the draft PR). Last gate: ALL PASS
+(pytest 1726, vitest 586, e2e 245). Bench vs the cloud baseline: `docs/PERFORMANCE.md` "Cloud session end 2026-11-04". Commits labelled WIP are
+unreviewed checkpoints; the reviewed step commit follows each one.
+- **Part 0:** cloud baseline (`docs/PERFORMANCE.md` "Cloud baseline 2026-11-04").
+- **Part 1 (beginner GUI):** `frontend/e2e/beginner.spec.ts` = 10 mouse-only tasks, all pass in <= 4 clicks with no function code typed
+  (before: 4 possible by mouse, 6 impossible; brief `docs/review/cloud/BEGINNER_CLICKS.md`). Built: company-name search (`gui/companySearch.ts`, `useCompanies.ts`;
+  screener universe + `/api/search`), sidebar "Start here", glossary (`gui/glossary.ts`, `glossaryTip.ts`, `data-term`), `PanelNote` `plain`/`actions`/`onRetry`,
+  empty states with "Add a stock"/"Add an alert" (`gui/askBus.ts`), BT starter templates (`functions/BtStarter.tsx`), starter layout for new GUI users
+  (`gui/starterLayout.ts`), `KeyNeeded` with "Open API keys", BT editor fills its panel, live keybindings in tour/help (`gui/purposes.ts`), FA GUI look,
+  fresh-eyes critique fixes (`docs/review/cloud/GUI_CRITIQUE.md`, incl. `functions/QuoteErrors.tsx`, `alertPlain.ts`). Notes: `BUILD_1B_A.md`, `BUILD_1B_B.md`.
+- **Part 2 (known bugs):** all fixed with tests (`docs/review/cloud/BACKEND_BUGS.md`, `FRONTEND_BUGS.md`; DONE marks in `docs/review/DECISIONS_FOR_USER.md`).
+- **Part 3 (audit):** `docs/review/cloud/AUDIT.md`: 0 high, 3 medium (all confirmed and fixed: SEAS exchange-local dates, alert trigger retry, Yahoo real granularity), 9 low deferred in DECISIONS_FOR_USER.md.
+- **Part 4 (Terminal conventions):** sector words after the ticker (`command/sectors.ts`), digits + Enter opens a grid row (`keys/numberSelect.ts`), F2/F3/F4/F8/F9 (+Shift+F9) sector keys,
+  Alt+Backspace back, `FUNC` directory (aliases MENU, DIR), aliases WCRS->FXC, MOST->MOV, PRTU->PORT. `docs/review/cloud/PART4.md`.
+- **Never verified:** the GUI on a real (non-fixture) Yahoo session; Retry is wired on DES, GP and quote grids only; number-select does not cover DOM lists; the GUI-mode collapsed top command line relies on Ctrl+K (covered by gui-shell e2e).
+- **Decisions left to the user:** the four "confirm or revert" items and the DLVR `DESKTOP` toggle (DECISIONS_FOR_USER.md, untouched); the 9 low audit items;
+  startup bundle is 125.8 KB gz (+5.8 KB: GUI +4.2 within its 5 KB cap, Part 4 +1.6 KB); NSE holidays cover fixed dates + Good Friday only (festivals not computable by rule; the UI says so).
+- **Performance pass (after Parts 0-5):** data-oriented rewrite of the tick path, SEAS and BT open (user's method; `docs/PERFORMANCE.md` "Performance pass 2026-11-04"): bench 37/37 then 36/37 (lone Job J frame miss). Then bundle 124.8 -> 119.5 KB gz (under main's 120.0) and an allocation-free SEAS core: bench 37/37, then 35/37 (chart-pan lone miss; SEAS swings 10-17 ms run to run). Gate ALL PASS apart from load-only timing vitests (pass alone).
+- **NEXT_FEATURES job (`docs/specs/NEXT_FEATURES.md`): ALL 6 STEPS BUILT AND LOCALLY GATED (2026-11-05, Windows laptop).** Gate ALL PASS with
+  `--e2e-last`: pytest 1776, vitest 1020, e2e 297. Bench 37/37, 36/37 (chart pan 33.4 ms once), 37/37; bundle 119.9 KB gz. `docs/PERFORMANCE.md`
+  "Local gate after NEXT_FEATURES". Fixed in that session (tests first): GP pan/zoom lost presses inside one frame (`ChartView` `pendingRange`;
+  pre-existing on main, exposed by `gp-toggle` on a fast machine), BT EDIT 80 ms focus retry stole focus after Esc (`BtEditor` `leftBox`; new
+  phase12 test with a paused clock), "under 50 dollars" ignored by the EQS English parser (`eqsNatural.readNumber`). Manual smoke (fixtures, GUI +
+  Terminal) passed for every item in the local prompt; Shift+T and `+` could not be sent by the in-app browser tool (covered by e2e).
+  Fully parallel gates failed 1-2 random e2e tests per run on this laptop (each passes alone), so `gates.mjs` now runs e2e after pytest + vitest by
+  default (`--parallel` = old mode). Open: the `eqsFilter` timing vitest still fails under load (passes alone).
+  - Step 1 NL commands: `command/natural.ts` (pure, 78-row table), `nlRun.ts` (`needsNatural`, sync, in entry), `nlResolve.ts` + `nlRoute.ts` + `cmdExtras.tsx` (lazy),
+    syntax hint `command/syntaxHint.ts` (`data-testid=syntax-hint`). Routing: exact codes > compare (`compareNatural.ts`) > screener (`EQS <text>`, `functions/eqsNatural.ts`)
+    > company + intent > none. GUI sidebar search / SymbolPicker go through `gui/runTyped.ts`. Ambiguity rule: top company group must have >= 10x the next group's market cap, else DID YOU MEAN.
+  - Step 2 grid header glossary: `components/gridHeaderHit.ts`, `gui/gridTips.ts`; hover in GUI mode, **Shift+T** cycles (`?` is the global cheat sheet).
+  - Step 3 indicator toggles keep zoom: `chart/indicatorDiff.ts`; gauges `chart.rebuilds/panes/visFrom/visTo`. A typed Terminal re-run still remounts (Panel keys on `panel.pos`); a split also remounts.
+  - Step 4 library: `chart/library/` (109 indicators, catalog + known-value tests written from formula definitions, no ported code), `chart/formula.ts` (no eval), `chart/libraryWorker.ts`
+    wired in `indicators.worker.ts`; panel `IND`; presets `/api/indicator-presets` (kv `ind_presets`, `indicator_presets.py`, `net/presetsApi.ts`). GP args `ATR(14)`, `LIB:CMF`, `F:<urlencoded formula>`.
+  - Step 5 BT sentence builder: `functions/ruleSentence.ts` (+ shared `ruleSentence.cases.json`, also checked by backend `test_rule_sentence_cases.py`), `BtRuleBuilder.tsx` (lazy, GUI only).
+    The grammar is one boolean (long while true), so "sell when" is derived text, not a second rule.
+  - Step 6: `TMPL` templates (`gui/templates.ts`; Settings menu in GUI), EQS English args (P/E, dividend yield, beta are NOT in the screener payload: shown as ignored),
+    compare, alert from the chart (`A` key, Shift+A / toolbar arms a click, Alt+click; `command/priceAlert.ts`, `chart/alertPrice.ts`, dashed ALRT price lines, gauge `chart.alertLines`).
+  - **Lazy vim risk: checked, no problem** (`e2e/phase10.spec.ts` 6/6 locally). The builders' unidentified vitest flake is the `eqsFilter`
+    "10k rows well inside a frame" timing test (fails only under the parallel gate). `playwright.config.ts` now honours `PW_PORT`.
+  - WIP-labelled commits on the branch are unreviewed checkpoints; the final state is the branch tip.
+- **Next:** the user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
 
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
 Phase 17 MCP server / alert delivery / daily brief (Part 2), strategy editor (Part 3). Phases 1-17 and 19 are built; **Phase 18 (brokers/orders) stays PAUSED.**
 Last full gate: pytest 1708, e2e 226 (ALL PASS). Bench on this busy machine scores 29-36 of 37, the same as the base commits under the same load (`docs/PERFORMANCE.md`).
-- **More AI providers (2026-11-03, uncommitted):** APIKEYS and the AI gateway now also take `opencodego`, `deepseek`, `groq`, `mistral`, `xai`, `together`, `fireworks`, `gemini`
+- **More AI providers (2026-11-03, committed in `34533a1`, on `main`):** APIKEYS and the AI gateway now also take `opencodego`, `deepseek`, `groq`, `mistral`, `xai`, `together`, `fireworks`, `gemini`
   (all OpenAI-compatible; base URLs in `llm/openai_compat.BASES`, key specs and key tests in `keys.py`). Not run against real keys. Models need a price in `config.yaml llm.prices` while a spend cap is set.
 - **Run it:** `openterm` in PowerShell (installed at `C:\Users\Asus\.local\bin\openterm.cmd`; runs `scripts/start.ps1` of the main checkout `C:\Users\Asus\Documents\OpenTerm`).
   That checkout must be on the latest `main` (`git pull`); its uncommitted CLAUDE.md block "Imported from AGENTS.md" is the user's own and was kept.

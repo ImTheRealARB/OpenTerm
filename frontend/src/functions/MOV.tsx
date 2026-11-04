@@ -103,7 +103,7 @@ export default function MOV({ panelId, args }: FunctionProps) {
         {asOf && <span> · {asOf.toUpperCase()}</span>}
         {env?.stale && <span className="warn"> · STALE {fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · 1-5 / TAB SWITCH · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · 1-5 / TAB SWITCH · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
       </div>
       <div className="tabs">
         {TABS.map(([k, label], i) => (

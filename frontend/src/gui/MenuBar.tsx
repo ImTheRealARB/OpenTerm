@@ -6,9 +6,14 @@ import { chromeKeyDown, focusCommandLine, moveFocus } from "./chrome";
 import { runCommand } from "./run";
 import { showWelcome, startTour } from "./onboarding";
 import { SymbolPicker } from "./SymbolPicker";
+import { TEMPLATE_INFO } from "./templateMenu";
 
 /** One row of a dropdown: a function, or one of the extra entries under Settings (switch mode, tour, welcome card). */
-type Entry = { kind: "fn"; code: string; title: string; built: boolean } | { kind: "terminal" } | { kind: "tour" } | { kind: "welcome" };
+type Entry =
+  | { kind: "fn"; code: string; title: string; built: boolean; run?: string }
+  | { kind: "terminal" }
+  | { kind: "tour" }
+  | { kind: "welcome" };
 
 /**
  * GUI menu bar: the seven categories, each opening a dropdown of its functions, plus the symbol box on the right.
@@ -27,7 +32,7 @@ export function MenuBar() {
 
   const entries = (c: Category): Entry[] => {
     const list: Entry[] = (groups.find((g) => g.category === c)?.items ?? []).map((f) => ({ kind: "fn", code: f.code, title: f.title, built: !!f.load }));
-    if (c === "Settings") list.push({ kind: "terminal" }, { kind: "tour" }, { kind: "welcome" });
+    if (c === "Settings") list.push(...TEMPLATE_INFO.map((t) => ({ kind: "fn" as const, code: "TMPL", title: "Template: " + t.label, built: true, run: "TMPL " + t.id })), { kind: "terminal" }, { kind: "tour" }, { kind: "welcome" });
     return list;
   };
 
@@ -54,7 +59,7 @@ export function MenuBar() {
       focusCommandLine();
     } else if (e.kind === "tour") startTour();
     else if (e.kind === "welcome") showWelcome();
-    else runCommand(e.code);
+    else runCommand(e.run ?? e.code);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -120,7 +125,7 @@ export function MenuBar() {
                     <span>{en.kind === "terminal" ? "Switch to Terminal mode" : en.kind === "tour" ? "Take the tour" : "Show welcome card"}</span>
                   </button>
                 ) : (
-                  <button key={en.code} type="button" role="menuitem" className={"gm-item" + (en.built ? "" : " dim")} onClick={() => pick(en)}>
+                  <button key={en.code} type="button" role="menuitem" className={"gm-item" + (en.built ? "" : " dim")} data-template={en.run?.slice(5)} onClick={() => pick(en)}>
                     <span className="gm-code">{en.code}</span>
                     <span>{en.title}</span>
                   </button>

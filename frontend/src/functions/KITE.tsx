@@ -6,9 +6,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { kiteApi, type ApiError, type KiteStatus } from "../net/api";
 import { kite, refreshKite } from "../net/kite";
+import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { replaceView } from "../state/workspace";
 import { kiteArgs } from "./quantArgs";
+import { KeyNeeded } from "./KeyRequiredLine";
 import type { FunctionProps } from "./registry";
 
 const USAGE = "USAGE: KITE [LOGIN|STATUS|LOGOUT]";
@@ -21,6 +23,7 @@ export function openKiteLogin(): boolean {
 
 export default function KITE({ panelId, args }: FunctionProps) {
   const st = useStore(kite, (s) => s);
+  const gui = useStore(settingsStore, (x) => x.mode === "gui");
   const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState<{ text: string; cls: string } | null>(null);
   const { params, bad } = kiteArgs(args);
@@ -93,10 +96,13 @@ export default function KITE({ panelId, args }: FunctionProps) {
       <div className="line">
         <span className="acc">KITE CONNECT</span> READ-ONLY DATA SOURCE
         {!loaded && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · L LOGIN · X LOGOUT · R REFRESH</span>
+        <span className="dim legend"> · L LOGIN · X LOGOUT · R REFRESH</span>
       </div>
       {st ? (
         <>
+          {/* GUI: with no key the KEY REQUIRED note says it all; the raw STATE / USER lines would repeat it. */}
+          {!(gui && st.state === "NO KEY") && (
+            <>
           <div>
             STATE <span className={CLS[st.state] ?? "warn"}>{st.state}</span>
           </div>
@@ -106,7 +112,9 @@ export default function KITE({ panelId, args }: FunctionProps) {
             {st.logged_in_at && <span className="dim"> · LOGGED IN {st.logged_in_at}</span>}
           </div>
           {st.expires_note && <div className="dim">{st.expires_note}</div>}
-          {st.state === "NO KEY" && <div className="dim">KEY REQUIRED: set KITE_API_KEY in APIKEYS</div>}
+            </>
+          )}
+          {st.state === "NO KEY" && <KeyNeeded text="KEY REQUIRED: set KITE_API_KEY in APIKEYS" keyName="KITE_API_KEY" />}
         </>
       ) : (
         loaded && <div className="err">STATE UNKNOWN: KITE STATUS UNAVAILABLE (BACKEND DOWN?)</div>

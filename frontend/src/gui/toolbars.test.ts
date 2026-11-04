@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { FUNCTIONS } from "../functions/registry";
-import { TOOLBARS, buttonsFor, expandAsk, keyInit } from "./toolbars";
+import { TOOLBARS, askButton, askCommands, buttonsFor, expandAsk, keyInit } from "./toolbars";
 
 /** A "single key string" as KeyboardEvent.key reports it: one character, or one of the few named keys panels use. */
 const SINGLE_KEY = /^(.|Enter|Escape|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDown|PageUp|PageDown|Home|End|F\d{1,2})$/;
 
 describe("GUI panel toolbars", () => {
-  it("covers the eight main panels", () => {
-    expect(Object.keys(TOOLBARS).sort()).toEqual(["BT", "FA", "GP", "N", "PORT", "Q", "WEI", "WL"]);
+  it("covers the main panels", () => {
+    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "FA", "GP", "N", "PORT", "Q", "WEI", "WL"]);
   });
 
   it("only names functions that are in the registry (and built)", () => {
@@ -36,10 +36,18 @@ describe("GUI panel toolbars", () => {
   it("every ask button names a command that starts with its own function code", () => {
     for (const [code, list] of Object.entries(TOOLBARS)) {
       for (const b of list.filter((x) => x.ask)) {
-        expect(b.ask!.command.startsWith(code + " "), `${code} ${b.label}`).toBe(true);
+        // DES "Set alert" runs an ALRT command for the panel's stock, so it starts with ALRT.
+        expect(b.ask!.command.startsWith(code + " ") || b.ask!.command.startsWith("ALRT "), `${code} ${b.label}`).toBe(true);
         expect(b.ask!.command).toContain("{input}");
       }
     }
+  });
+
+  it("fills {symbol} and splits comma-separated entries", () => {
+    expect(expandAsk("ALRT {symbol} > {input}", [], "200", "AAPL")).toBe("ALRT AAPL > 200");
+    const port = TOOLBARS.PORT.find((b) => b.label === "Add")!.ask!;
+    expect(askCommands(port, ["MAIN"], "AAPL 10 150, MSFT 5 300")).toEqual(["PORT MAIN ADD AAPL 10 150", "PORT MAIN ADD MSFT 5 300"]);
+    expect(askButton("ALRT", "Add an alert")?.ask?.command).toBe("ALRT {input}");
   });
 
   it("picks the named-list or index buttons of WL by its arguments", () => {
@@ -49,7 +57,7 @@ describe("GUI panel toolbars", () => {
   });
 
   it("returns nothing for a function without buttons or an empty panel", () => {
-    expect(buttonsFor("DES", [])).toEqual([]);
+    expect(buttonsFor("MOST", [])).toEqual([]);
     expect(buttonsFor(undefined, [])).toEqual([]);
   });
 

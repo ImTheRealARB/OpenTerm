@@ -4,6 +4,8 @@ import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { secApi } from "../net/api";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { isKeyRequired } from "./KeyRequiredLine";
@@ -13,6 +15,9 @@ import { useCsvExport } from "./tableExport";
 
 const MAX_COLS = 12;
 
+/** Statement lines that are totals or subtotals. In GUI mode they are drawn brighter ("val") so they stand out from the lines under them. */
+const SUBTOTALS = new Set(["revenue", "gross_profit", "operating_income", "pretax_income", "net_income", "current_assets", "total_assets", "current_liabilities", "total_liabilities", "equity", "operating_cf", "investing_cf", "financing_cf"]);
+
 export default function FA({ panelId, security, args }: FunctionProps) {
   const symbol = security!.symbol;
   const init = useMemo(() => faArgs(args), [args]);
@@ -21,6 +26,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
   const [offset, setOffset] = useState(0);
   const [sel, setSel] = useState(0);
   const grid = useRef<GridHandle>(null);
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
 
   const { env, error, loading, reload } = useEnvelope<FaPayload>(`${symbol}|${period}`, (fresh) => secApi.fa(symbol, period, fresh));
   const shaped = useMemo(() => (env ? faRows(env.data, tab, offset, MAX_COLS) : null), [env, tab, offset]);
@@ -28,7 +34,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
 
   const columns = useMemo<Column<FaGridRow>[]>(() => {
     const cols: Column<FaGridRow>[] = [
-      { title: "LINE", width: 34, text: (r) => r.label, color: (r) => (r.computed ? "dim" : "fg") },
+      { title: "LINE", width: 34, text: (r) => r.label, color: (r) => (r.computed ? "dim" : gui && SUBTOTALS.has(r.key) ? "val" : "fg") },
     ];
     (shaped?.periods ?? []).forEach((p, i) =>
       cols.push({
@@ -36,11 +42,11 @@ export default function FA({ panelId, security, args }: FunctionProps) {
         width: 10,
         align: "right",
         text: (r) => r.cells[i] ?? "",
-        color: (r) => (r.cells[i]?.startsWith("-") ? "down" : r.flags[i] === "d" ? "warn" : "fg"),
+        color: (r) => (r.cells[i]?.startsWith("-") ? "down" : r.flags[i] === "d" ? "warn" : gui && SUBTOTALS.has(r.key) ? "val" : "fg"),
       }),
     );
     return cols;
-  }, [shaped]);
+  }, [shaped, gui]);
 
   const latest = useLatest({ rows, shaped, tab, period, env, offset });
   useCsvExport(panelId, () => shaped && { name: `FA_${symbol}_${tab}_${period}`, header: ["LINE", ...shaped.periods.map((p) => p.label)], rows: rows.map((r) => [r.label, ...r.cells]) });
@@ -103,6 +109,13 @@ export default function FA({ panelId, security, args }: FunctionProps) {
         extra={d && ` · ${d.period === "A" ? "ANNUAL" : "QUARTERLY"} · ${unitNote(cur?.unit ?? "USD")} · ${d.currency}`}
         keys="1-3/TAB STATEMENT · A/Q PERIOD · H/L SCROLL · J/K MOVE · E CSV · F5 REFRESH"
       />
+      {/* GUI: the toolbar buttons already switch statements, so the numbered strip (a duplicate) is hidden by CSS and
+          this line says which statement and which unit the numbers are in. */}
+      {gui && d && (
+        <div className="fa-which" data-testid="fa-which">
+          {STATEMENT_TABS.find(([k]) => k === tab)?.[1]} · figures in {unitNote(cur?.unit ?? "USD").toLowerCase()}
+        </div>
+      )}
       <div className="tabs">
         {STATEMENT_TABS.map(([k, label], i) => (
           <span key={k} className={k === tab ? "on" : "dim"}>

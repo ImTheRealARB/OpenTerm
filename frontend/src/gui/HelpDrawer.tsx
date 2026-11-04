@@ -1,9 +1,11 @@
+import "./HelpDrawer.css"; // this component's GUI-only rules, loaded with its chunk
 import { useEffect, useRef } from "react";
 import { FN_INFO, runItem } from "../components/windowMenuRun";
 import { menuItems } from "../components/windowMenu";
 import { categoryOf } from "../functions/categories";
 import { FUNCTIONS } from "../functions/registry";
-import { effectiveBindings } from "../keys/keys";
+import { effectiveBindings, type Action } from "../keys/keys";
+import { purposeOf } from "./purposes";
 import { currentView, workspace } from "../state/workspace";
 import { useStore } from "../state/store";
 import { chromeKeyDown, focusCommandLine } from "./chrome";
@@ -17,6 +19,14 @@ import { TOOLBARS } from "./toolbars";
  *
  * Esc closes it and gives focus back to whatever had it before (the "?" button, or the command line).
  */
+/** Keys every panel has, with the action name whose live binding is shown. */
+const GLOBAL_KEYS: readonly (readonly [Action, string])[] = [
+  ["refresh", "Refresh"],
+  ["exportCsv", "Export the table as CSV (also E in tables)"],
+  ["windowMenu", "Window menu: recent, related, options"],
+  ["helpDrawer", "This help drawer"],
+];
+
 export function HelpDrawer() {
   const state = useStore(helpDrawer, (s) => s);
   const panel = useStore(workspace, (s) => (state ? s.panels[state.panel] : undefined));
@@ -34,6 +44,7 @@ export function HelpDrawer() {
   const view = currentView(panel);
   const def = view.fn ? FUNCTIONS.get(view.fn) : undefined;
   const buttons = view.fn ? (TOOLBARS[view.fn] ?? []) : [];
+  const keys = effectiveBindings();
   const related = menuItems(1, panel, FN_INFO).flatMap((it) => (it.kind === "fn" ? [it] : []));
 
   return (
@@ -72,38 +83,50 @@ export function HelpDrawer() {
           <div className="hd-t" data-testid="help-title">
             <span className="hd-code">{def.code}</span> {def.title}
           </div>
+          {/* 1. what the panel is for, in one sentence */}
+          <p className="hd-purpose" data-testid="help-purpose">{purposeOf(def.code, def.title)}</p>
           <div className="dim">Category: {categoryOf(def.code)}</div>
           {!def.load && <div className="warn">Not built yet (phase {def.phase})</div>}
-          <div className="hd-s">How to type it</div>
-          <div className="hd-use">
-            {def.needsSecurity ? "<SECURITY> " : ""}
-            {def.code} {def.argsSchema ?? ""}
-          </div>
-          {def.needsSecurity && <div className="dim">A security is a ticker such as AAPL. Load one with the symbol box.</div>}
+          {/* 2. its buttons (the row under the title bar) */}
           {buttons.length > 0 && (
             <>
-              <div className="hd-s">Buttons and keys</div>
+              <div className="hd-s">Buttons</div>
               <table className="hd-keys">
                 <tbody>
                   {buttons.map((b) => (
                     <tr key={b.label}>
-                      <td className="hd-k">{b.shift ? "Shift+" : ""}{b.key}</td>
-                      <td>{b.label}{b.title ? <span className="dim"> · {b.title.replace(/\s*\([^)]*\)\s*$/, "")}</span> : null}</td>
+                      <td className="hd-k">{b.label}</td>
+                      <td>{b.title ? b.title.replace(/\s*\([^)]*\)\s*$/, "") : ""}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </>
           )}
-          <div className="hd-s">On every panel</div>
+          {/* 3. its keys: the key behind each button, then the keys every panel has (read live, so a rebinding shows here) */}
+          <div className="hd-s">Keys</div>
           <table className="hd-keys">
             <tbody>
-              <tr><td className="hd-k">F5</td><td>Refresh</td></tr>
-              <tr><td className="hd-k">Alt+X</td><td>Export the table as CSV (also E in tables)</td></tr>
-              <tr><td className="hd-k">Alt+M</td><td>Window menu: recent, related, options</td></tr>
-              <tr><td className="hd-k">{/* the chord in force, so a SETTINGS rebinding shows here too */}{effectiveBindings().helpDrawer[0] ?? "UNBOUND"}</td><td>This help drawer</td></tr>
+              {buttons.map((b) => (
+                <tr key={b.label}>
+                  <td className="hd-k">{b.shift ? "Shift+" : ""}{b.key}</td>
+                  <td>{b.label}</td>
+                </tr>
+              ))}
+              {GLOBAL_KEYS.map(([action, text]) => (
+                <tr key={action}>
+                  <td className="hd-k">{keys[action][0] ?? "UNBOUND"}</td>
+                  <td>{text}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
+          {/* The typed form is only a learning aid, so it comes last and small. */}
+          <div className="dim">
+            Typed: {def.needsSecurity ? "<SECURITY> " : ""}
+            {def.code} {def.argsSchema ?? ""}
+            {def.needsSecurity ? " (a security is a ticker such as AAPL)" : ""}
+          </div>
           {related.length > 0 && (
             <>
               <div className="hd-s">Related functions</div>

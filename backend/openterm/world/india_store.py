@@ -8,6 +8,7 @@ opposite of a fallback.
 
 from __future__ import annotations
 
+import asyncio
 import time
 import zlib
 from datetime import date
@@ -55,14 +56,15 @@ class DayStore:
         if not days:
             return {}, None
         want = {_key(DATA, d) for d in days}
-        out: dict[date, dict[str, list]] = {}
-        fetched = None
+        blobs: list[tuple[str, bytes]] = []
         async with self.db.execute("SELECT key, value FROM kv WHERE key >= ? AND key <= ? ORDER BY key", (min(want), max(want))) as cur:
             async for key, blob in cur:
                 if key in want:
-                    rec = msgpack.unpackb(zlib.decompress(blob), raw=False)
-                    out[_day(key)] = rec["rows"]
-                    fetched = rec["at"]  # ascending keys: the last one is the newest day
+                    blobs.append((key, blob))
+        # up to 250 zlib+msgpack decodes would block the event loop, so they run in a worker thread
+        recs = await asyncio.to_thread(lambda: [msgpack.unpackb(zlib.decompress(b), raw=False) for _, b in blobs])
+        out = {_day(key): rec["rows"] for (key, _), rec in zip(blobs, recs, strict=True)}
+        fetched = recs[-1]["at"] if recs else None  # ascending keys: the last one is the newest day
         return out, fetched
 
     async def prune(self, before: date) -> None:

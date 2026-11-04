@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { SecurityRef } from "../command/markets";
+import { ALIASES } from "./aliases";
 
 export interface FunctionProps {
   panelId: number;
@@ -128,9 +129,18 @@ const defs: FunctionDef[] = [
   { code: "LOG", title: "Backend log", needsSecurity: false, phase: 2, load: () => import("./Log") },
   { code: "DLVR", title: "Alert delivery", needsSecurity: false, phase: 17, load: () => import("./DLVR") },
   { code: "BRIEF", title: "Daily brief", needsSecurity: false, phase: 17, load: () => import("./BRIEF") },
+  { code: "TMPL", title: "Workspace templates: Long-term, Day trader, Macro, India", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", phase: 20, load: () => import("./TMPL"), idlePreload: false },
+  { code: "IND", title: "Indicator library, formulas and presets for GP", needsSecurity: false, argsSchema: "[search]", phase: 20, load: () => import("./IND"), idlePreload: false },
+  { code: "FUNC", title: "Function directory: type to filter, Enter opens", needsSecurity: false, phase: 20, load: () => import("./FUNC") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));
+// Aliases (functions/aliases.ts) point at the same definition, so isFunction and saved layouts accept both words.
+// def.code is always the canonical code.
+for (const [alias, target] of Object.entries(ALIASES)) {
+  const def = FUNCTIONS.get(target);
+  if (def && !FUNCTIONS.has(alias)) FUNCTIONS.set(alias, def);
+}
 
 const loaded = new Map<string, ComponentType<FunctionProps>>();
 const loading = new Map<string, Promise<ComponentType<FunctionProps>>>();

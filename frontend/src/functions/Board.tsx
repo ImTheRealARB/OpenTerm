@@ -3,10 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtChg, fmtPct, fmtPrice, fmtRate, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { getLive } from "../state/ticks";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import type { BoardDef } from "./boards";
-import { chg, dirColor, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { chg, dirColor, high, low, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -20,7 +22,7 @@ interface BRow extends QRow {
 const isHeader = (r: BRow | undefined) => !!r?.section;
 const liveOf = (r: BRow) => (r.section || r.error ? undefined : r.symbol);
 
-function columns(def: BoardDef): Column<BRow>[] {
+function columns(def: BoardDef, gui = false): Column<BRow>[] {
   const num = def.rates ? fmtRate : fmtPrice;
   const signed = (v: number | null) => (v == null ? fmtChg(v) : (v > 0 ? "+" : "") + num(v));
   const cols: Column<BRow>[] = [
@@ -30,22 +32,32 @@ function columns(def: BoardDef): Column<BRow>[] {
     { title: "LAST", width: 12, align: "right", text: (r) => num(price(r)), color: lastColor, flash: lastFlash },
     { title: "CHG", width: 10, align: "right", text: (r) => signed(chg(r)), color: (r) => dirColor(chg(r)) },
     { title: "%CHG", width: 8, align: "right", text: (r) => fmtPct(pct(r)), color: (r) => dirColor(pct(r)) },
-    { title: "HIGH", width: 11, align: "right", text: (r) => num(getLive(r.symbol)?.high ?? r.q?.high) },
-    { title: "LOW", width: 11, align: "right", text: (r) => num(getLive(r.symbol)?.low ?? r.q?.low) },
+    { title: "HIGH", width: 11, align: "right", text: (r) => num(high(r)) },
+    { title: "LOW", width: 11, align: "right", text: (r) => num(low(r)) },
     { title: "TIME", width: 8, align: "right", text: (r) => fmtTime(quoteTime(r)) },
   ];
   if (def.sections.some((s) => s.items.some((i) => i.unit))) cols.push({ title: "UNIT", width: 9, text: (r) => r.unit ?? "", color: () => "dim" });
+  // GUI mode: the numbers a beginner wants come first (NAME, LAST, CHG, %CHG) so %CHG is never clipped at the panel edge,
+  // and SRC (the data source) moves to the far right. The error text rides in the SECURITY column there.
+  if (gui) {
+    const by = (t: string) => cols.find((c) => c.title === t)!;
+    const order = ["NAME", "LAST", "CHG", "%CHG", "SECURITY", "HIGH", "LOW", "TIME", "SRC"];
+    const rest = cols.filter((c) => !order.includes(c.title));
+    cols.splice(0, cols.length, ...order.map((t) => (t === "SECURITY" ? { ...by(t), width: 16 } : by(t))), ...rest);
+  }
+  const errCol = gui ? "SECURITY" : "SRC";
   // Header rows show only their title; errors replace the numbers on their own row.
   return cols.map((c, i) => ({
     ...c,
-    text: (r) => (r.section ? (i === 0 ? r.section : "") : r.error && i === 2 ? r.error : c.text(r)),
-    color: (r) => (r.error && i === 2 ? "err" : (c.color?.(r) ?? "fg")),
+    text: (r) => (r.section ? (i === 0 ? r.section : "") : r.error && c.title === errCol ? r.error : c.text(r)),
+    color: (r) => (r.error && c.title === errCol ? "err" : (c.color?.(r) ?? "fg")),
   }));
 }
 
 export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
   const inputs = useMemo(() => def.sections.flatMap((s) => s.items.map((i) => i.symbol)), [def]);
-  const cols = useMemo(() => columns(def), [def]);
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
+  const cols = useMemo(() => columns(def, gui), [def, gui]);
   const [reload, setReload] = useState(0);
   const { rows: quotes, loading } = useQuotes(inputs, reload);
   const grid = useRef<GridHandle>(null);
@@ -90,8 +102,9 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
       <div className="line">
         <span className="acc">{def.title}</span> <b className="pv">{inputs.length}</b> {def.noun}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
       </div>
+      <QuoteErrors rows={rows.filter((r) => !r.section)} onRetry={() => setReload((n) => n + 1)} />
       <Grid ref={grid} columns={cols} rows={rows} initialSelected={1} band={isHeader} />
     </div>
   );

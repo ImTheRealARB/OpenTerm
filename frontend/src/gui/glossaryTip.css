@@ -1,0 +1,3 @@
+/* Glossary tooltip box: GUI-only rules split out of gui.css so the startup bundle does not carry them. Imported by glossaryTip.ts,
+   so the stylesheet arrives with the chunk (before the component first renders). */
+:root[data-mode="gui"] .gl-tip { position: fixed; z-index: 90; max-width: 280px; padding: 4px 8px; background: var(--bg); color: var(--val); border: 1px solid var(--fg); border-radius: 3px; line-height: 1.4; pointer-events: none; }

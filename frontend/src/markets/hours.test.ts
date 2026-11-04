@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { MARKETS, basisOf, clearClosures, closed, dayKind, isOpen, lightOf, setClosures } from "./hours";
+import { MARKETS, basisNote, basisOf, clearClosures, closed, dayKind, isOpen, lightOf, setClosures } from "./hours";
 
 const ny = MARKETS.find((m) => m.code === "NY")!;
 const tk = MARKETS.find((m) => m.code === "TK")!;
@@ -57,5 +57,11 @@ describe("exchange holidays", () => {
     setClosures("LN", 2026, ["2026-12-25"], [], "public");
     expect(basisOf(ln, new Date("2026-12-01T12:00:00Z"))).toBe("public");
     expect(basisOf(ln, new Date("2027-01-04T12:00:00Z"))).toBeNull();
+  });
+
+  it("a fixed-rule basis (NSE) says the festival holidays are missing", () => {
+    expect(basisNote("fixed")).toContain("FESTIVAL HOLIDAYS");
+    expect(basisNote("fixed")).toContain("NOT INCLUDED");
+    expect(basisNote("rules")).toBe("HOLIDAYS BY NYSE RULE");
   });
 });

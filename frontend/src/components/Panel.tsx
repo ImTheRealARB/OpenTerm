@@ -132,7 +132,7 @@ export function Panel({ id }: { id: number }) {
         ))}
       </header>
       {menu && <WindowMenu id={id} />}
-      {gui && <PanelToolbar id={id} fn={view.fn} args={view.args} />}
+      {gui && <PanelToolbar id={id} fn={view.fn} args={view.args} symbol={view.security?.symbol} />}
       <div className="pb">
         <PanelBoundary resetKey={resetKey}>
           <Profiler id={String(id)} onRender={(_id, _phase, ms) => recordPanelRender(id, ms)}>

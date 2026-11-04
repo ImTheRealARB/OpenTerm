@@ -3,7 +3,7 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 1-17 and 19, GUI mode and the strategy editor are DONE and on `main` (origin = GitHub repo ImTheRealARB/OpenTerm, now public; last full gate 2026-11-03: pytest 1708, e2e 226; bench misses on this busy machine match the base commit, see `docs/PERFORMANCE.md`). Open items and what is next: HANDOFF.md "Resume here". **Phase 18 (brokers/orders) stays PAUSED.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+Phases 1-17 and 19, GUI mode and the strategy editor are DONE and on `main`; the beginner-GUI / bugs / audit / terminal-conventions job (`docs/specs/GUI_SIMPLE_AND_BUGS.md`) and the NEXT_FEATURES job (`docs/specs/NEXT_FEATURES.md`: plain-English commands, header glossary, indicator library, BT sentence builder, templates, chart alerts) are DONE on branch `claude/gui-simple-bugs-sp3hq5` (draft PR; branch gate 2026-11-05: pytest 1776, vitest 1020, e2e 297, bench 37/37) (origin = GitHub repo ImTheRealARB/OpenTerm, now public; last full gate 2026-11-03: pytest 1708, e2e 226; bench misses on this busy machine match the base commit, see `docs/PERFORMANCE.md`). Open items and what is next: HANDOFF.md "Resume here". **Phase 18 (brokers/orders) stays PAUSED.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Opus may orchestrate (plan, review, run gates) with at most 2 Sonnet subagents building; Opus does not build large
 changes itself (decided 2026-11-02, `docs/specs/NEXT_SESSION.md`; replaces the 2026-10-19 "Sonnet only" rule). Subagents are Sonnet. Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
@@ -51,7 +51,7 @@ and pause.
 cd backend; uv run pytest -q; uv run ruff check .   # pytest: 6 xdist workers, worksteal (addopts); -n 0 to debug
 cd frontend; npx tsc --noEmit; npx vitest run; npx playwright test
 node scripts/bench.mjs          # from repo root; builds, starts servers in fixture+synthetic mode, prints PASS/FAIL
-node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then pytest, vitest, Playwright in parallel; per-gate timing; --skip=e2e,pytest --keep-going --e2e-last --list
+node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then pytest + vitest, then Playwright; per-gate timing; --skip=e2e,pytest --keep-going --parallel (e2e alongside, faster, flaky here) --list
 .\scripts\check.ps1            # dev loop: only tests affected by `git diff main` + tsc + ruff on changed files; -DryRun prints the plan, -All = everything, -NoE2e, -Base REF
 ./scripts/check.sh              # same for bash (--dry-run --all --no-e2e --base REF); both wrap scripts/check.mjs
 python scripts/new_function.py FOO --title "..." [--security] [--args "..."] [--dry-run]   # panel + registry entry + vitest stub + docs/FUNCTIONS.md
@@ -121,6 +121,12 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   and are only fixture-tested; the keyless `fred_csv` / `treasury` / `nasdaq_earnings` / `agency_ics` (BLS + BEA) providers serve Phase 7.
 - **`ChartView` readout:** `writeRef.current` is reassigned every render (the old stale-readout note no longer applies); FRED still remounts the chart with `key={id:range}`.
   A transferred-buffer / effect-key rewrite of ChartView broke 6 GP e2e tests (reverted, `docs/review/REVERTED.md`): retry it with a browser open.
+- **lightweight-charts applies scroll/zoom on its next paint:** `getVisibleLogicalRange()` stays stale until then, so `ChartView.pan/zoom` build on
+  `pendingRange` (cleared one frame later). Without it, keys pressed inside one frame were lost on a fast machine (`gp-toggle` e2e).
+- **The gate runs e2e after pytest + vitest by default** (2026-11-05, user's decision; `--parallel` = old mode): fully parallel, 1-2 random e2e tests failed per run (each passes alone),
+  plus the `eqsFilter` 10k-row timing vitest. A delayed `setTimeout` focus (BT EDIT `CodeBox`) must not refocus after the user pressed Esc.
+- **The in-app browser tool's key events differ from a keyboard:** Shift+T arrives as `key: "t"` with Shift, and `+` / `=` arrive as an empty key.
+  Check those bindings in Playwright, not through the browser pane.
 - **Playwright runs 4 workers** (`playwright.config.ts`): the default 10 flaked 8-9 e2e tests per run on a 20-thread machine, on `main` too. A failing e2e spec is
   worth rerunning alone before suspecting the change.
 - **Panel arg changes go through `replaceView(panelId, v => ({...v, args}))`** so ERN/ECO/FRED state survives layout save/load.
@@ -180,7 +186,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   The mocked Playwright suites cannot see this: run the real-backend smoke (build the frontend, `OPENTERM_FIXTURES=1 OPENTERM_STATIC_DIR=frontend/dist`).
 - **Bench throttling:** the BT 10-year run (budget 300 ms) reads 230 ms rested and 380-490 ms after several back-to-back bench runs. Rest, then rerun once.
 - **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;
-  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs ruff + tsc first, then pytest, vitest, Playwright side by side (ports 4173 and 8000 must be free; it checks).
+  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs ruff + tsc first, then pytest + vitest side by side, then Playwright (ports 4173 and 8000 must be free; it checks).
 - **`POST /api/bt/import` takes the CSV as the raw body;** `/api/history` is columnar (`data.t/o/h/l/c/v`), never `data.bars`. A stored symbol shadows a real ticker.
 - **`quantlib` is worker-only:** scipy, statsmodels and arch are imported only inside job kinds and tests, never by the server process (`test_server_never_imports_scipy` guards it).
   `openterm/quant/` (Phase 14) stays pure Python.
@@ -226,6 +232,15 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `keys._smtp_check`). Brief: `brief.py` + `brief_routes.py`, kv `brief:last`, apscheduler job id `brief` (`scheduler.schedule_brief`, rescheduled on `PUT /api/delivery`). Desktop notifications were
   already in `command/alerts.ts` (`desktopNotify`, gated by browser permission only). Panels `DLVR`, `BRIEF`. In fixture mode the brief's earnings section shows ERR (no recording for today).
 - **Bench baselines on Windows:** a worktree under the scratchpad path breaks Python DLL loads (path too long: `httptools` ImportError). Put a baseline worktree at a short path such as `C:\otbase`.
+
+- **Cloud session facts (2026-11-04):** on a 4-vCPU Linux box run the gate as `node scripts/gates.mjs --e2e-last` (timing tests in vitest/pytest flake
+  when every suite runs at once; they pass alone). `bench.mjs` now spawns servers `detached` and refuses to start if 8000/4173 already answer (a leaked backend
+  made every second run fail with "served from the cache"). Leftover servers: `ps -eo pid,cmd | grep -E "python3 -m openterm|vite preview"`.
+- **Beginner suite:** `frontend/e2e/beginner.spec.ts` asserts <= 4 clicks per task in GUI mode; keep it green when changing the GUI. Glossary terms (`data-term`) must
+  have an entry in `gui/glossary.ts` (vitest scans the source). `PanelNote` takes `plain`, `actions`, `onRetry` (GUI only). New GUI user = starter layout (`gui/starterLayout.ts`).
+- **Intl.DateTimeFormat per bar is slow** (~4 us): SEAS went 12 -> 46 ms on 10k bars. Keep a UTC fast path when there is no exchange zone (`seasMath.localDay`).
+- **Startup bundle is 119.5 KB gz (2026-11-04):** `vite.config.ts` `modulePreload.resolveDependencies` keeps only CSS deps (lazy chunks load their own imports); THEME/SETTINGS parsing (`settings/commands`), the shortcut sheet, PERF HUD, help drawer, welcome card and tour are lazy chunks (`components/LazyPiece.tsx`, `gui/LazyGui.tsx`, `functions/idlePreload.ts`). In e2e, wait for the visible result (`expect.poll`, `toBeVisible`) instead of reading state right after a command or page load.
+- **Terminal grammar:** a sector word after the ticker maps symbols (`command/sectors.ts`); CORP / unmapped GOVT is an error. F5/F11/F12 stay unbound (browser).
 
 ## Conventions
 - **Keep `docs/FUNCTIONS.md` current:** after any change to `functions/registry.ts`, `keys/keybindings.json` or `keys/keys.ts` labels (or the doc template in `scripts/gen_functions_doc.py`), run `python scripts/gen_functions_doc.py` before committing. `test_functions_doc.py` (pytest, so the gates) fails on a stale doc.

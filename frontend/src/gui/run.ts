@@ -15,8 +15,11 @@ export function runCommand(text: string): boolean {
   return ok;
 }
 
+/** Like `runCommand`, but free text ("apple vs microsoft") goes through the command line's plain-English path (lazy chunk). */
+export const runTyped = (text: string): Promise<boolean> => import("./runTyped").then((m) => m.runTyped(text));
+
 /** Symbol picker: loads a security into the focused panel (keeping its function when that function takes a security). */
-export function runSymbol(text: string): boolean {
+export function runSymbol(text: string): boolean | Promise<boolean> {
   const s = workspace.get();
   const panel = s.panels[s.focus];
   const cmd = symbolCommand(text, {
@@ -25,5 +28,5 @@ export function runSymbol(text: string): boolean {
     needsSecurity: (code) => FUNCTIONS.get(code)?.needsSecurity === true,
   });
   if (cmd === null) return false;
-  return runCommand(cmd);
+  return /\s/.test(cmd) ? runTyped(cmd) : runCommand(cmd);
 }
