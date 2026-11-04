@@ -1,9 +1,11 @@
 /**
- * SEAS: seasonality tables from daily closes. Pure (no DOM, no network). Dates are the UTC date of the bar timestamp.
+ * SEAS: seasonality tables from daily closes. Pure (no DOM, no network). Dates are the calendar date in the exchange time zone (`opts.tz`, e.g. Australia/Sydney); UTC when no zone is given.
  * Month and ISO-week figures are period returns (last close of the period over the last close of the previous period);
  * weekday and day-of-month figures are close-to-close daily returns assigned to the date of the later bar.
  * A period needs a previous period in the data, so the first (partial) month or week is never counted.
  */
+
+import { dayKey } from "./corrMath";
 
 export type SeasKind = "MONTH" | "WEEKDAY" | "DOM" | "WOY";
 export const SEAS_KINDS: SeasKind[] = ["MONTH", "WEEKDAY", "DOM", "WOY"];
@@ -98,18 +100,29 @@ function periodReturns(t: Float64Array, c: Float64Array, keyOf: (tSec: number) =
   return out;
 }
 
-export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, opts: { excludeOpenPeriodAt?: number } = {}): SeasResult {
+/**
+ * Calendar date of a bar in the exchange's zone. Yahoo stamps a daily bar at the exchange open, which for Sydney is 23:00 UTC
+ * the day before, so the UTC date would be one day early. Returns a Date at UTC midnight of that local date, so the
+ * getUTC* calls below read the exchange date.
+ */
+function localDay(sec: number, tz?: string | null): Date {
+  const [y, m, d] = dayKey(sec, tz).split("-").map(Number); // "YYYY-MM-DD"
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, opts: { excludeOpenPeriodAt?: number; tz?: string | null } = {}): SeasResult {
+  const tz = opts.tz;
   const n = Math.min(t.length, c.length);
   const tt = t.subarray(0, n);
   const cc = c.subarray(0, n);
   const lastT = n ? tt[n - 1] : NaN;
   const openAt = opts.excludeOpenPeriodAt;
   const monthKey = (s: number) => {
-    const d = new Date(s * 1000);
+    const d = localDay(s, tz);
     return { key: d.getUTCFullYear() * 12 + d.getUTCMonth(), bucket: d.getUTCMonth(), year: d.getUTCFullYear() };
   };
   const weekKey = (s: number) => {
-    const w = isoWeek(s);
+    const w = isoWeek(localDay(s, tz).getTime() / 1000);
     return { key: w.year * 60 + w.week, bucket: w.week - 1, year: w.year };
   };
   let rows: SeasRow[];
@@ -128,7 +141,7 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
     const buckets: number[][] = Array.from({ length: size }, () => []);
     for (let i = 1; i < n; i++) {
       if (!Number.isFinite(cc[i]) || !Number.isFinite(cc[i - 1]) || cc[i - 1] === 0) continue;
-      const d = new Date(tt[i] * 1000);
+      const d = localDay(tt[i], tz);
       const b = kind === "WEEKDAY" ? (d.getUTCDay() + 6) % 7 : d.getUTCDate() - 1;
       if (b < size) {
         buckets[b].push(cc[i] / cc[i - 1] - 1);
@@ -140,8 +153,8 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
   return {
     kind,
     rows,
-    firstYear: n ? new Date(tt[0] * 1000).getUTCFullYear() : NaN,
-    lastYear: n ? new Date(lastT * 1000).getUTCFullYear() : NaN,
+    firstYear: n ? localDay(tt[0], tz).getUTCFullYear() : NaN,
+    lastYear: n ? localDay(lastT, tz).getUTCFullYear() : NaN,
     obs,
     bars: n,
   };

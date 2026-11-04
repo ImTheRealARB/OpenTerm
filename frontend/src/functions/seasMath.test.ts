@@ -97,3 +97,16 @@ describe("seasonality", () => {
     expect(parseSeasArgs(["WOY"])).toEqual({ kind: "WOY" });
   });
 });
+
+describe("seasonality exchange time zone (audit 2026-11-04 #1)", () => {
+  it("files Sydney 23:00 UTC bars under the next local day", () => {
+    // Sydney opens 10:00 AEDT = 23:00 UTC the day before: these 5 bars are really Mon..Fri 15-19 Jan 2024 (UTC says Sun..Thu).
+    const base = Date.UTC(2024, 0, 14, 23) / 1000;
+    const t = Float64Array.from({ length: 5 }, (_, i) => base + i * 86400);
+    const c = Float64Array.from([100, 101, 102, 103, 104]);
+    // the first bar has no previous close, so Tue..Fri each get one return
+    expect(seasonality(t, c, "WEEKDAY", { tz: "Australia/Sydney" }).rows.map((x) => x.n)).toEqual([0, 1, 1, 1, 1]);
+    // without a zone the UTC date is used (documented fallback): everything shifts one day early
+    expect(seasonality(t, c, "WEEKDAY").rows.map((x) => x.n)).toEqual([1, 1, 1, 1, 0]);
+  });
+});

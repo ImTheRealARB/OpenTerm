@@ -48,7 +48,7 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
     const t = Float64Array.from(b.t);
     const use = b.adj && b.adj.length === b.t.length ? b.adj : b.c;
     const c = Float64Array.from(use, (x) => (x == null ? NaN : x));
-    return seasonality(t, c, kind, { excludeOpenPeriodAt: Date.now() / 1000 });
+    return seasonality(t, c, kind, { excludeOpenPeriodAt: Date.now() / 1000, tz: b.tz });
   }, [env, kind]);
 
   const rowsRef = useLatest(result?.rows ?? []);

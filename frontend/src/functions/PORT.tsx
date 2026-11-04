@@ -68,7 +68,7 @@ type ImportState = { stage: "paste" } | { stage: "preview"; source: string; resu
 
 function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
   const version = useStore(portfolioVersion, (v) => v);
-  const gui = useStore(settingsStore, (s) => s.mode === "gui"); // GUI mode says "VALUE" in the summary; Terminal keeps "MKT VAL"
+  const gui = useStore(settingsStore, (s) => s.mode === "gui"); // GUI mode says "MKT VALUE" in the summary; Terminal keeps "MKT VAL"
   const request = useStore(portfolioRequest, (r) => r);
   const [pf, setPf] = useState<{ base: string; positions: Position[] } | null>(null);
   const [missing, setMissing] = useState(false);
@@ -373,7 +373,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
       <Grid ref={grid} columns={columns} rows={rows} />
       {/* ps-l = label (dim), ps-v = value (bold amber, or up/down colour). Spaces stay inside the text so the plain text is unchanged. */}
       <div className="summary" data-testid="port-summary">
-        <span className="ps-l">TOTAL {base} {gui ? "VALUE" : "MKT VAL"} </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l">DAY </span>
+        <span className="ps-l">TOTAL {base} {gui ? "MKT VALUE" : "MKT VAL"} </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l">DAY </span>
         <span className={`ps-v ${tc(t.day)}`}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · <span className="ps-l">UNRL </span>
         <span className={`ps-v ${tc(t.unrl)}`}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · <span className="ps-l">COST </span><span className="ps-v">{fmtMoney(t.cost)}</span>
         {t.converted.length > 0 && <span className="acc"> · CONVERTED AT LIVE FX: {t.converted.map((c) => `${c}${base}=X`).join(" ")}</span>}

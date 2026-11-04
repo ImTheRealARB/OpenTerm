@@ -97,6 +97,11 @@ def bars_from_chart(result: dict[str, Any], range_: str, interval: str, source: 
 
     vol = col("volume")
     adj = ((result.get("indicators", {}).get("adjclose") or [{}])[0] or {}).get("adjclose")  # Phase 9
+    # Yahoo may answer with a coarser size than asked (`range=max` with `1d` comes back monthly). Never call such bars
+    # daily: label them with the size Yahoo says it used. "1h" and "60m" are the same size, so keep the asked name then.
+    real = meta.get("dataGranularity")
+    if real and real != interval and {real, interval} != {"1h", "60m"}:
+        interval = real
     return Bars.model_construct(
         symbol=meta["symbol"],
         range=range_,

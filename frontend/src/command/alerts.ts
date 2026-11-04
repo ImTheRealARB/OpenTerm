@@ -11,6 +11,7 @@ import { api, api8, newsAlertsApi, type Alert, type ApiError, type NewsAlert, ty
 import { subscribe } from "../net/socket";
 import { createStore } from "../state/store";
 import { onRawTicks } from "../state/ticks";
+import { sendWithRetry } from "./triggerRetry";
 import { alertMet, describeRule, newsMatch, parseAlrt } from "./alertArgs";
 import type { SecurityRef } from "./markets";
 import { fail, info, statusMsg } from "./status";
@@ -94,10 +95,15 @@ function fire(a: Alert, price: number, src: string): void {
   lastFired.set(() => ({ text, at: Date.now() }));
   info(text);
   desktopNotify(`ALERT ${alertText(a)}`, `${a.symbol} ${fmtPrice(price)}${synthetic}`, `openterm-alert-${a.id}`);
-  api8.triggerAlert(a.id, price, at).then(
-    () => firing.delete(a.id),
-    (e) => fail(`ALERT ${a.id} FIRED BUT NOT SAVED: ${errText(e)}`),
-  );
+  // The id stays in `firing` until the backend accepts the report, so the tick check cannot fire it twice; a failed POST
+  // is retried with backoff while the alert is still firing and still exists (re-arm or delete ends the retries).
+  sendWithRetry(() => api8.triggerAlert(a.id, price, at), {
+    stillWanted: () => firing.has(a.id) && (alerts.get() ?? []).some((x) => x.id === a.id),
+    onDone: () => firing.delete(a.id),
+    onFail: (e, n) => {
+      if (n === 1) fail(`ALERT ${a.id} FIRED BUT NOT SAVED, RETRYING: ${errText(e)}`);
+    },
+  });
 }
 
 function onTicksForAlerts(rows: readonly (readonly unknown[])[]): void {
@@ -139,10 +145,14 @@ function fireNews(a: NewsAlert, item: NewsItem): void {
   lastFired.set(() => ({ text, at: Date.now() }));
   info(text);
   desktopNotify(`NEWS ${where} ${a.word}`, item.title, `openterm-news-alert-${a.id}`);
-  newsAlertsApi.trigger(a.id, item.title, item.url, at).then(
-    () => newsFiring.delete(a.id),
-    (e) => fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED: ${errText(e)}`),
-  );
+  // Same retry as price alerts: keep the id in `newsFiring` until the backend accepts the report.
+  sendWithRetry(() => newsAlertsApi.trigger(a.id, item.title, item.url, at), {
+    stillWanted: () => newsFiring.has(a.id) && (newsAlerts.get() ?? []).some((x) => x.id === a.id),
+    onDone: () => newsFiring.delete(a.id),
+    onFail: (e, n) => {
+      if (n === 1) fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED, RETRYING: ${errText(e)}`);
+    },
+  });
 }
 
 /** Checks fetched headlines against the active news alerts for `symbol` (null = market top stories). */
