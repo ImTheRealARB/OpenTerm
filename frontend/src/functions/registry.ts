@@ -130,6 +130,7 @@ const defs: FunctionDef[] = [
   { code: "DLVR", title: "Alert delivery", needsSecurity: false, phase: 17, load: () => import("./DLVR") },
   { code: "BRIEF", title: "Daily brief", needsSecurity: false, phase: 17, load: () => import("./BRIEF") },
   { code: "TMPL", title: "Workspace templates: Long-term investor, Day trader, Macro, India (one key applies a ready-made set of panels)", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", phase: 20, load: () => import("./TMPL"), idlePreload: false },
+  { code: "IND", title: "Indicator library: ~110 indicators with plain-English lines, custom formulas and named presets for the GP chart", needsSecurity: false, argsSchema: "[search]", phase: 20, load: () => import("./IND"), idlePreload: false },
   { code: "FUNC", title: "Function directory: every function code with its purpose; type to filter, Enter opens", needsSecurity: false, phase: 20, load: () => import("./FUNC") },
 ];
 

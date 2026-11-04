@@ -164,6 +164,10 @@ export const api = {
   editWatchlist: (name: string, change: { add?: string[]; remove?: string[] }) =>
     send<Watchlist>("PATCH", `/api/watchlists/${encodeURIComponent(name)}`, change),
   deleteWatchlist: (name: string) => send<{ deleted: string }>("DELETE", `/api/watchlists/${encodeURIComponent(name)}`),
+  indicatorPresets: () => send<{ presets: IndicatorPreset[] }>("GET", "/api/indicator-presets"),
+  putIndicatorPreset: (name: string, items: PresetItem[]) =>
+    send<IndicatorPreset>("PUT", `/api/indicator-presets/${encodeURIComponent(name)}`, { items }),
+  deleteIndicatorPreset: (name: string) => send<{ deleted: string }>("DELETE", `/api/indicator-presets/${encodeURIComponent(name)}`),
   cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
   pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
   // Phase 11 API keys: uncached (`send`); the backend never returns a value, only status.
@@ -200,6 +204,19 @@ export interface KeyRow {
 export interface KeysPayload {
   keys: KeyRow[];
   spend: { today: number; cap: number };
+}
+
+export interface PresetItem {
+  id?: string;
+  formula?: string;
+  params: number[];
+  label: string;
+}
+
+export interface IndicatorPreset {
+  name: string;
+  items: PresetItem[];
+  updated_at: number;
 }
 
 export interface WatchlistInfo {

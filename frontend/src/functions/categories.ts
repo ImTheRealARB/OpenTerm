@@ -20,7 +20,7 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", WECO: "Markets",
   CENB: "Markets", PRED: "Markets",
   // Charts: anything that is mainly a picture of a time series or a map
-  GP: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",
+  GP: "Charts", IND: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",
   // News: headlines and company events
   N: "News", CN: "News", EVTS: "News", BRIEF: "News",
   // Research: company fundamentals, ownership, valuation, options analytics, quant tools and the AI layer

@@ -256,6 +256,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `DLVR` | Alert delivery |  |  | `DLVR` |
 | `BRIEF` | Daily brief |  |  | `BRIEF` |
 | `TMPL` | Workspace templates: Long-term investor, Day trader, Macro, India (one key applies a ready-made set of panels) |  | `[LONGTERM\|DAY\|MACRO\|INDIA]` | `TMPL` |
+| `IND` | Indicator library: ~110 indicators with plain-English lines, custom formulas and named presets for the GP chart |  | `[search]` | `IND` |
 | `FUNC` | Function directory: every function code with its purpose; type to filter, Enter opens |  |  | `FUNC` |
 
 ## Global keyboard shortcuts

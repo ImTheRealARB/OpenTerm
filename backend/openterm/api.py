@@ -591,6 +591,47 @@ async def drawings_put(request: Request, symbol: str):
         return error(e)
 
 
+# --- Indicator library presets (kv `ind_presets`) ---
+@router.get("/indicator-presets")
+async def ind_presets_list(request: Request):
+    from .indicator_presets import PresetStore
+
+    return Orjson({"presets": await PresetStore(user(request).db).list()})
+
+
+@router.get("/indicator-presets/{name}")
+async def ind_presets_get(request: Request, name: str):
+    from .indicator_presets import PresetStore
+
+    try:
+        return Orjson(await PresetStore(user(request).db).get(name))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.put("/indicator-presets/{name}")
+async def ind_presets_put(request: Request, name: str):
+    from .indicator_presets import PresetStore
+
+    try:
+        body = await json_object(request)
+        if "items" not in body:
+            raise UserDataError("bad_request", "BODY NEEDS items")
+        return Orjson(await PresetStore(user(request).db).put(name, body["items"]))
+    except UserDataError as e:
+        return error(e)
+
+
+@router.delete("/indicator-presets/{name}")
+async def ind_presets_delete(request: Request, name: str):
+    from .indicator_presets import PresetStore
+
+    try:
+        return Orjson(await PresetStore(user(request).db).delete(name))
+    except UserDataError as e:
+        return error(e)
+
+
 # --- Phase 11: key store (APIKEYS). Values go in, never out. ---
 KEY_STATUS = {"unknown_provider": 404, "bad_request": 400, "env_locked": 409, "forbidden": 403}
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
