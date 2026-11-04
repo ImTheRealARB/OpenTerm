@@ -74,7 +74,6 @@
 :root[data-mode="gui"] .pt-b { height: 16px; padding: 0 7px; color: var(--hdr); background: var(--bar); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; white-space: nowrap; }
 :root[data-mode="gui"] .pt-b:hover:not(:disabled), :root[data-mode="gui"] .pt-b:focus-visible { background: var(--bar-hi); color: var(--val); }
 /* Browser-style tabs: a strip above the one visible panel. */
-:root[data-mode="gui"] .ws-tabs { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; }
 :root[data-mode="gui"] .gt { display: flex; align-items: flex-end; gap: 2px; height: 22px; flex: none; padding: 0 4px; background: var(--bar); border-bottom: 1px solid var(--line); overflow: hidden; }
 :root[data-mode="gui"] .gt-tab { display: flex; align-items: center; height: 20px; max-width: 200px; min-width: 0; background: var(--bg); color: var(--fg-dim); border: 1px solid var(--line); border-bottom: 0; border-radius: 4px 4px 0 0; }
 :root[data-mode="gui"] .gt-tab.on { color: var(--val); border-color: var(--fg); background: var(--bar-hi); font-weight: bold; }
@@ -169,6 +168,8 @@
 
 /* 18: the key-hint bar is expert content; GUI drops it (and its grid row). */
 :root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 18px; }
+/* With tabs, one extra row at the very top (above the command line) holds the tab strip. */
+:root[data-mode="gui"] .app.has-tabs { grid-template-rows: 22px 22px auto 1fr 18px; }
 :root[data-mode="gui"] .app > .keys { display: none; }
 
 /* 19: category counts only on hover/focus; the carets are quiet. */

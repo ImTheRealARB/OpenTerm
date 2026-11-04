@@ -1,4 +1,3 @@
-import { TabStrip } from "../gui/TabStrip";
 import { useTabsOn } from "../gui/tabsState";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
@@ -31,11 +30,9 @@ export function Workspace({ overlay }: { overlay?: React.ReactNode }) {
   return (
     <main className="ws">
       {tabs ? (
-        <div className="ws-tabs">
-          <TabStrip />
-          {/* key={focus}: each tab gets its own clean mount, even when two tabs show the same function and symbol */}
-          <Panel key={focus} id={focus} />
-        </div>
+        // The tab strip itself is in App.tsx, above the command line. key={focus}: each tab gets its own clean mount,
+        // even when two tabs show the same function and symbol.
+        <Panel key={focus} id={focus} />
       ) : maximized ? (
         <Panel id={maximized} />
       ) : (
