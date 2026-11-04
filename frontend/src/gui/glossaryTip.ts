@@ -25,31 +25,38 @@ export function placeTip(anchor: Box, area: Box, w: number, h: number, vw: numbe
   return { left, top: below + h > vh ? Math.max(4, anchor.top - h - 4) : below };
 }
 
+let tip: HTMLDivElement | null = null;
+
+/** Removes the open tooltip, if any. */
+export function hideTip(): void {
+  tip?.remove();
+  tip = null;
+}
+
+/** Shows the glossary line for `term` next to `anchor` (a screen rect), placed beside `area`. GUI mode only. */
+export function showTipAt(term: string, anchor: Box, area: Box): void {
+  if (document.documentElement.dataset.mode !== "gui") return;
+  const line = explain(term);
+  if (!line) return;
+  hideTip();
+  tip = document.createElement("div");
+  tip.className = "gl-tip";
+  tip.setAttribute("role", "tooltip");
+  tip.setAttribute("data-testid", "gl-tip");
+  tip.textContent = `${term.toUpperCase()}: ${line}`;
+  document.body.appendChild(tip);
+  const pos = placeTip(anchor, area, tip.offsetWidth, tip.offsetHeight, window.innerWidth, window.innerHeight);
+  tip.style.left = `${pos.left}px`;
+  tip.style.top = `${pos.top}px`;
+}
+
 /** Starts listening; returns a function that stops and removes any open tooltip. */
 export function installGlossaryTip(): () => void {
-  let tip: HTMLDivElement | null = null;
-
-  const hide = () => {
-    tip?.remove();
-    tip = null;
-  };
-
+  const hide = hideTip;
   const show = (el: Element) => {
-    if (document.documentElement.dataset.mode !== "gui") return;
-    const term = el.getAttribute("data-term") ?? "";
-    const line = explain(term);
-    if (!line) return;
-    hide();
-    tip = document.createElement("div");
-    tip.className = "gl-tip";
-    tip.setAttribute("role", "tooltip");
-    tip.textContent = `${term.toUpperCase()}: ${line}`;
-    document.body.appendChild(tip);
     // Place it beside the panel (see placeTip) so it never hides the values being explained.
     const panel = el.closest(".panel") ?? el;
-    const pos = placeTip(el.getBoundingClientRect(), panel.getBoundingClientRect(), tip.offsetWidth, tip.offsetHeight, window.innerWidth, window.innerHeight);
-    tip.style.left = `${pos.left}px`;
-    tip.style.top = `${pos.top}px`;
+    showTipAt(el.getAttribute("data-term") ?? "", el.getBoundingClientRect(), panel.getBoundingClientRect());
   };
 
   const termOf = (t: EventTarget | null) => (t instanceof Element ? t.closest("[data-term]") : null);

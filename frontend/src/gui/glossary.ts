@@ -57,7 +57,12 @@ export const GLOSSARY: Readonly<Record<string, string>> = {
   "COST BASIS": "The total amount you paid for the shares you still hold.",
   "MARKET VALUE": "What your shares are worth at today's price.",
   "YIELD": "The yearly income an investment pays as a percent of its price (interest on a bond, dividends on a stock).",
-  "DURATION": "How sensitive a bond's price is to interest rates, in years. A duration of 5 means roughly a 5% price drop if rates rise 1 point.",
+  "LAST": "The price of the most recent trade.",
+  "WIN RATE": "The share of trades that made money, as a percent of all trades.",
+  "PEG": "The P/E ratio divided by the expected yearly earnings growth. Around 1 or below is often read as fairly priced for its growth.",
+  "NAV": "Net asset value: what one unit of a fund is worth, from the total value of everything the fund holds divided by its units.",
+  "APY": "Annual percentage yield: the yearly return including interest earned on interest.",
+  "DURATION":"How sensitive a bond's price is to interest rates, in years. A duration of 5 means roughly a 5% price drop if rates rise 1 point.",
 };
 
 /** The line for a term (case-insensitive), or null when we have none. */
