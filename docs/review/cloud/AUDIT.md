@@ -64,3 +64,8 @@ One chain row with `strike == 0` (seen in bad Yahoo rows) or a crypto expiry wit
 ## Not confirmed (looked, left out)
 - Hub `_sync_upstream` interleaving between two clients: ordering is preserved because `Yahoo.set_symbols` updates its state before its first await, so no stale set was found.
 - `brief.py` prints trigger times in the server's local zone without a zone label and uses local `date.today()` for the eco start; harmless on a single-machine app, noted only.
+
+## Fixes (2026-11-04)
+1. SEAS UTC bucketing: confirmed (vitest failed: Sydney 23:00 UTC bars landed one weekday early). Fix: `seasonality(..., { tz })` buckets by the exchange-local date via `dayKey`; `SEAS.tsx` passes `data.tz` (the history payload carries it). No tz means UTC, as before. Test: `seasMath.test.ts` "exchange time zone".
+2. Alert trigger never retried: confirmed by reading (single `.then`, id stuck in `firing`). Fix: `command/triggerRetry.ts` `sendWithRetry` retries 2/5/15/30 s then every 60 s while the id is still `firing` and the alert exists (re-arm or delete stops it); `firing` keeps blocking a second fire; status line shows "RETRYING" once. Same for news alerts. Test: `triggerRetry.test.ts` (the pure helper; `alerts.ts` imports `net/api`, which vitest cannot load).
+3. Yahoo granularity: confirmed (pytest failed: `meta.dataGranularity=1mo` came back as `1d`). Fix: `bars_from_chart` labels bars with Yahoo's real granularity ("1h" vs "60m" treated as equal); SEAS now shows an error for non-daily bars instead of computing fake daily returns. Test: `backend/tests/test_yahoo_granularity.py`.

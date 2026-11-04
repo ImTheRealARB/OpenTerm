@@ -35,7 +35,12 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
     setError(null);
     api9
       .history(symbol, "MAX", "1d", reload > 0)
-      .then((e) => live && setEnv(e))
+      .then((e) => {
+        if (!live) return;
+        // The backend labels bars with the size the source really sent; monthly bars would give fake "daily" returns.
+        if (e.data.interval && e.data.interval !== "1d") setError(`SOURCE SENT ${e.data.interval} BARS, SEAS NEEDS DAILY BARS (${e.source})`);
+        else setEnv(e);
+      })
       .catch((e: ApiError) => live && setError(`${e.message}${e.detail ? ` (${e.detail})` : ""}`));
     return () => {
       live = false;
