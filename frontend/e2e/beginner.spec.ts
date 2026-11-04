@@ -98,6 +98,8 @@ async function setupGui(page: Page): Promise<Mocks> {
     m.history.push(u);
     return r.fulfill({ json: env(bars(u.searchParams.get("symbol")!, u.searchParams.get("range") ?? "", u.searchParams.get("interval") ?? "")) });
   });
+  // Yahoo name search (used only when the screener finds fewer than 3 matches): nothing extra in these tests.
+  await page.route("**/api/search?**", (r) => r.fulfill({ json: env([], { source: "yahoo" }) }));
   await page.route("**/api/screener**", (r) => r.fulfill({ json: env(screener(), { source: "nasdaq_screener:fixture" }) }));
   await page.route("**/api/news?**", (r) =>
     r.fulfill({
@@ -201,8 +203,7 @@ async function dismissWelcome(page: Page) {
 }
 
 // 1. Look up Apple and see its price and P/E.
-// MISSING: the symbol box does not suggest tickers from a company name ("apple" -> AAPL).
-todo("1. look up Apple and see its price and P/E", async ({ page }) => {
+test("1. look up Apple and see its price and P/E", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -217,8 +218,7 @@ todo("1. look up Apple and see its price and P/E", async ({ page }) => {
 });
 
 // 2. Chart Tesla over 1 year.
-// MISSING: company-name search; a "Start here" sidebar group with plain-word buttons ("Stock chart").
-todo("2. chart Tesla over 1 year", async ({ page }) => {
+test("2. chart Tesla over 1 year", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -247,8 +247,7 @@ todo("3. make a watchlist with 3 stocks", async ({ page }) => {
 });
 
 // 4. See today's top market news.
-// MISSING: "Top news" button. Today N after a stock lookup shows THAT stock's news, not the top stories.
-todo("4. see today's top market news", async ({ page }) => {
+test("4. see today's top market news", async ({ page }) => {
   await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -259,8 +258,7 @@ todo("4. see today's top market news", async ({ page }) => {
 });
 
 // 5. See how the major world indices are doing.
-// MISSING: "World markets" button in a Start here group (today: Markets menu > "World equity indices" = 2 clicks, if the mouse finds it).
-todo("5. see how the major world indices are doing", async ({ page }) => {
+test("5. see how the major world indices are doing", async ({ page }) => {
   const m = await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -317,8 +315,7 @@ todo("8. run a sample backtest from a starter template", async ({ page }) => {
 });
 
 // 9. Find out what a number on screen means (EPS).
-// MISSING: gui/glossary.ts and a glossary tooltip (role="tooltip") on hover AND keyboard focus of a term in labels/headers.
-todo("9. find out what EPS means (a plain-English explanation appears)", async ({ page }) => {
+test("9. find out what EPS means (a plain-English explanation appears)", async ({ page }) => {
   await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();
@@ -337,8 +334,7 @@ todo("9. find out what EPS means (a plain-English explanation appears)", async (
 });
 
 // 10. Recover from an error (unknown symbol) without help.
-// MISSING: the error offers a button that works ("Search for a company" / "Try AAPL"), through PanelNote.
-todo("10. recover from an unknown symbol without help", async ({ page }) => {
+test("10. recover from an unknown symbol without help", async ({ page }) => {
   await setupGui(page);
   await dismissWelcome(page);
   const c = clicker();

@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { LivePrice } from "../components/LivePrice";
 import { fmtAge, fmtBig, fmtNum, fmtPct, fmtPrice } from "../format";
+import { PanelNote, plainLine, type NoteAction } from "../components/PanelNote";
+import { termProps } from "../gui/term";
+import { runSymbol } from "../gui/run";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, type Envelope, type Quote } from "../net/api";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import type { FunctionProps } from "./registry";
 
 interface Profile {
@@ -49,8 +54,26 @@ function Range52({ lo, hi, px }: { lo: number | null; hi: number | null; px: num
   );
 }
 
+/** Row label on the screen -> glossary term (see gui/glossary.ts) shown as a tooltip in GUI mode. */
+const TERM_OF: Record<string, string> = {
+  "MKT CAP": "MARKET CAP",
+  "ENTERPRISE VALUE": "ENTERPRISE VALUE",
+  "P/E (TTM)": "P/E",
+  "P/E (FWD)": "FORWARD P/E",
+  "EPS (TTM)": "EPS",
+  "EPS (FWD)": "FORWARD EPS",
+  "DIV YIELD": "DIVIDEND YIELD",
+  "BETA": "BETA",
+  "P/BOOK": "P/B",
+  "SHARES OUT": "SHARES OUTSTANDING",
+  "FLOAT": "FLOAT",
+  "AVG VOLUME": "AVG VOLUME",
+  "DAY RANGE": "DAY RANGE",
+};
+
 export default function DES({ panelId, security }: FunctionProps) {
   const symbol = security!.symbol;
+  const gui = useStore(settingsStore, (s) => s.mode === "gui");
   const [prof, setProf] = useState<Result<Profile>>({});
   const [quote, setQuote] = useState<Result<Quote>>({});
   const [reload, setReload] = useState(0);
@@ -88,6 +111,26 @@ export default function DES({ panelId, security }: FunctionProps) {
     [panelId],
   );
 
+  // Unknown symbol (GUI mode): both requests said "no data". Offer the closest company names as one-click next steps.
+  const noData = (e?: string) => !!e && /NO DATA|NOT FOUND/i.test(e);
+  const unknown = gui && noData(quote.error) && noData(prof.error);
+  const [near, setNear] = useState<NoteAction[]>([]);
+  useEffect(() => {
+    if (!unknown) {
+      setNear([]);
+      return;
+    }
+    let alive = true;
+    // The stock list is loaded only now (import + fetch), never at startup.
+    void import("../gui/suggestData")
+      .then((m) => m.closest(symbol))
+      .then((hits) => alive && setNear(hits.map((h) => ({ label: `Try ${h.symbol}`, onClick: () => void runSymbol(h.symbol) }))))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [unknown, symbol]);
+
   const p = prof.env?.data;
   const q = quote.env?.data;
   const name = p?.name ?? q?.name ?? symbol;
@@ -120,6 +163,11 @@ export default function DES({ panelId, security }: FunctionProps) {
       </h2>
       {q && quote.env && <LivePrice quote={q} stale={quote.env.stale} ageS={quote.env.age_s} />}
       {quote.error && <div className="err">QUOTE: {quote.error}</div>}
+      {gui && quote.error && !unknown && prof.error && (
+        <PanelNote kind="error" plain={plainLine("error", `${quote.error} ${prof.error}`)} onRetry={() => setReload((n) => n + 1)}>
+          Could not load this stock.
+        </PanelNote>
+      )}
       {!q && !quote.error && <div className="dim">LOADING QUOTE…</div>}
       {p?.delay_min ? <div className="warn">EXCHANGE DATA DELAYED {p.delay_min} MIN (PER SOURCE)</div> : null}
 
@@ -130,13 +178,13 @@ export default function DES({ panelId, security }: FunctionProps) {
             {p.website && <span className="acc"> · {p.website}</span>}
           </div>
           <div style={{ margin: "4px 0" }}>
-            <span className="dim">52W RANGE </span>
+            <span className="dim" {...termProps("52-WEEK RANGE", gui)}>52W RANGE </span>
             <Range52 lo={p.low_52w ?? q?.low_52w ?? null} hi={p.high_52w ?? q?.high_52w ?? null} px={q?.price ?? null} />
           </div>
           <div className="kv">
             {kv.map(([k, v]) => (
               <div key={k}>
-                <span>{k}</span>
+                <span {...(TERM_OF[k] ? termProps(TERM_OF[k], gui) : {})}>{k}</span>
                 <span>{v}</span>
               </div>
             ))}
@@ -145,6 +193,11 @@ export default function DES({ panelId, security }: FunctionProps) {
         </>
       )}
       {prof.error && <div className="err">PROFILE: {prof.error}</div>}
+      {unknown && (
+        <PanelNote kind="error" plain="" actions={near}>
+          {`There is no stock called ${symbol}.`}
+        </PanelNote>
+      )}
       {!p && !prof.error && <div className="dim">LOADING PROFILE…</div>}
       <div className="dim" style={{ marginTop: 6 }}>
         {prof.env && `PROFILE: ${prof.env.source?.toUpperCase()} · ${fmtAge(prof.env.age_s)} OLD${prof.env.stale ? " (STALE)" : ""}`}

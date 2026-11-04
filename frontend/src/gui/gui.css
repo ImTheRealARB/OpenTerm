@@ -30,7 +30,13 @@
 :root[data-mode="gui"] .gm-sep { border-top: 1px solid var(--line); margin-top: 2px; }
 
 /* --- Symbol picker (right end of the menu bar) --- */
-:root[data-mode="gui"] .gm-symbol { display: flex; align-items: center; gap: 6px; flex: none; }
+:root[data-mode="gui"] .gm-symbol { position: relative; flex: none; }
+:root[data-mode="gui"] .gm-symbol label { display: flex; align-items: center; gap: 6px; }
+/* Company-name suggestions under the symbol box. */
+:root[data-mode="gui"] .gm-suggest { position: absolute; right: 0; top: 21px; z-index: 50; min-width: 260px; margin: 0; padding: 2px 0; list-style: none; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
+:root[data-mode="gui"] .gm-suggest li { padding: 0 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
+:root[data-mode="gui"] .gm-suggest li b { color: var(--fg); display: inline-block; min-width: 7ch; }
+:root[data-mode="gui"] .gm-suggest li:hover, :root[data-mode="gui"] .gm-suggest li.on { background: var(--sel); color: var(--val); }
 :root[data-mode="gui"] .gm-symbol-label { color: var(--fg-dim); font-size: 10px; letter-spacing: 0.05em; }
 :root[data-mode="gui"] .gm-symbol input { width: 170px; height: 18px; padding: 0 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; color: var(--warn); text-transform: uppercase; }
 :root[data-mode="gui"] .gm-symbol input::placeholder { color: var(--fg-dim); text-transform: none; }
@@ -112,3 +118,20 @@
 :root[data-mode="gui"] .gt-t { color: var(--val); font-weight: bold; margin: 2px 0; }
 :root[data-mode="gui"] .gt-btns { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 :root[data-mode="gui"] .gt-next { color: var(--fg); font-weight: bold; }
+
+/* --- Sidebar "Start here": plain-word tasks, function code small and grey beside the name --- */
+:root[data-mode="gui"] .gs-start { padding: 2px 0 4px; border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .gs-start-title { padding: 0 6px; color: var(--hdr); font-weight: bold; }
+:root[data-mode="gui"] .gs-task { display: flex; justify-content: space-between; gap: 6px; width: 100%; text-align: left; padding: 1px 6px 1px 14px; cursor: pointer; color: var(--fg); }
+:root[data-mode="gui"] .gs-task:hover, :root[data-mode="gui"] .gs-task:focus-visible { background: var(--sel); color: var(--val); }
+:root[data-mode="gui"] .gs-task small { color: var(--fg-dim); font-size: 10px; }
+
+/* --- Glossary tooltip (any [data-term] element; shown on hover and keyboard focus) --- */
+:root[data-mode="gui"] [data-term] { cursor: help; text-decoration: underline dotted var(--fg-dim); text-underline-offset: 2px; }
+:root[data-mode="gui"] .gl-tip { position: fixed; z-index: 90; max-width: 280px; padding: 4px 8px; background: var(--bg); color: var(--val); border: 1px solid var(--fg); border-radius: 3px; line-height: 1.4; pointer-events: none; }
+
+/* --- PanelNote plain-language line and next-step buttons (GUI only) --- */
+:root[data-mode="gui"] .pnote-plain { margin-top: 4px; color: var(--hdr); }
+:root[data-mode="gui"] .pnote-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+:root[data-mode="gui"] .pnote-actions button { padding: 1px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--bar); color: var(--fg); cursor: pointer; }
+:root[data-mode="gui"] .pnote-actions button:hover, :root[data-mode="gui"] .pnote-actions button:focus-visible { background: var(--sel); color: var(--val); border-color: var(--warn); }

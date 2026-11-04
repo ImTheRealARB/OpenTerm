@@ -13,6 +13,19 @@ export function GuiOverlays() {
     // Leaving GUI mode unmounts this: close anything still open so it is not waiting when GUI mode returns.
     return () => onboarding.set(() => ({ welcome: false, tour: null }));
   }, []);
+  // The glossary tooltip (hover/focus on any [data-term]) is loaded after startup with import(), and removed when GUI mode ends.
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let gone = false;
+    void import("./glossaryTip").then((m) => {
+      if (gone) return;
+      stop = m.installGlossaryTip();
+    });
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, []);
   return (
     <>
       <Welcome />
