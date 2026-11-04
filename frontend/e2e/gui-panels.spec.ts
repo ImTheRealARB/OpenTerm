@@ -159,6 +159,8 @@ test("welcome card: shows on a first run, 'See a chart' opens GP for AAPL, and i
 test("welcome card: Tab reaches the buttons, Enter on 'Look up a stock' opens DES, Esc closes", async ({ page }) => {
   await setup(page, { welcome: true });
   const card = page.getByTestId("welcome-card");
+  // The card is a lazy chunk now (loaded right after first paint), so wait until it is on screen before using Tab.
+  await expect(card).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(page.getByTestId("welcome-gp")).toBeFocused();
   await page.keyboard.press("Shift+Tab");
