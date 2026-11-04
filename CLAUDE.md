@@ -51,7 +51,7 @@ and pause.
 cd backend; uv run pytest -q; uv run ruff check .   # pytest: 6 xdist workers, worksteal (addopts); -n 0 to debug
 cd frontend; npx tsc --noEmit; npx vitest run; npx playwright test
 node scripts/bench.mjs          # from repo root; builds, starts servers in fixture+synthetic mode, prints PASS/FAIL
-node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then pytest, vitest, Playwright in parallel; per-gate timing; --skip=e2e,pytest --keep-going --e2e-last --list
+node scripts/gates.mjs          # all gates: ruff + tsc first (fail fast), then pytest + vitest, then Playwright; per-gate timing; --skip=e2e,pytest --keep-going --parallel (e2e alongside, faster, flaky here) --list
 .\scripts\check.ps1            # dev loop: only tests affected by `git diff main` + tsc + ruff on changed files; -DryRun prints the plan, -All = everything, -NoE2e, -Base REF
 ./scripts/check.sh              # same for bash (--dry-run --all --no-e2e --base REF); both wrap scripts/check.mjs
 python scripts/new_function.py FOO --title "..." [--security] [--args "..."] [--dry-run]   # panel + registry entry + vitest stub + docs/FUNCTIONS.md
@@ -123,7 +123,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   A transferred-buffer / effect-key rewrite of ChartView broke 6 GP e2e tests (reverted, `docs/review/REVERTED.md`): retry it with a browser open.
 - **lightweight-charts applies scroll/zoom on its next paint:** `getVisibleLogicalRange()` stays stale until then, so `ChartView.pan/zoom` build on
   `pendingRange` (cleared one frame later). Without it, keys pressed inside one frame were lost on a fast machine (`gp-toggle` e2e).
-- **On the user's laptop run the full gate with `--e2e-last`** (2026-11-05): fully parallel, 1-2 random e2e tests fail per run (each passes alone),
+- **The gate runs e2e after pytest + vitest by default** (2026-11-05, user's decision; `--parallel` = old mode): fully parallel, 1-2 random e2e tests failed per run (each passes alone),
   plus the `eqsFilter` 10k-row timing vitest. A delayed `setTimeout` focus (BT EDIT `CodeBox`) must not refocus after the user pressed Esc.
 - **The in-app browser tool's key events differ from a keyboard:** Shift+T arrives as `key: "t"` with Shift, and `+` / `=` arrive as an empty key.
   Check those bindings in Playwright, not through the browser pane.
@@ -186,7 +186,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   The mocked Playwright suites cannot see this: run the real-backend smoke (build the frontend, `OPENTERM_FIXTURES=1 OPENTERM_STATIC_DIR=frontend/dist`).
 - **Bench throttling:** the BT 10-year run (budget 300 ms) reads 230 ms rested and 380-490 ms after several back-to-back bench runs. Rest, then rerun once.
 - **Harness quirks:** a `python - <<'EOF'` heredoc containing `'''` fails to parse (write a script file, run it with `python -I file args`); `rm -f` is blocked;
-  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs ruff + tsc first, then pytest, vitest, Playwright side by side (ports 4173 and 8000 must be free; it checks).
+  Python that reads downloaded files runs from another directory with `-I`. `node scripts/gates.mjs` runs ruff + tsc first, then pytest + vitest side by side, then Playwright (ports 4173 and 8000 must be free; it checks).
 - **`POST /api/bt/import` takes the CSV as the raw body;** `/api/history` is columnar (`data.t/o/h/l/c/v`), never `data.bars`. A stored symbol shadows a real ticker.
 - **`quantlib` is worker-only:** scipy, statsmodels and arch are imported only inside job kinds and tests, never by the server process (`test_server_never_imports_scipy` guards it).
   `openterm/quant/` (Phase 14) stays pure Python.

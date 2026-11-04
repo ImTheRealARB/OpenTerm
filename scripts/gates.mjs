@@ -1,11 +1,11 @@
 // Runs the five gates (ruff, tsc, pytest, vitest, playwright) and prints one PASS/FAIL line each with its time.
 //   Stage 1, cheap and fail fast: ruff + tsc run side by side (a few seconds). If either fails, the heavy suites are skipped.
-//   Stage 2, heavy: pytest + vitest + Playwright run side by side (they mostly wait on worker spawns and the browser, so this is
-//   about 2x faster than one after another). Playwright needs ports 4173 (preview) and 8000 (unmocked requests) free: that is
+//   Stage 2, heavy: pytest + vitest run side by side, then Playwright once they finish (default since 2026-11-05: run all three at
+//   once and 1-2 random e2e tests flaked per run on the user's laptop; --parallel restores that, about 10 s faster). Playwright needs ports 4173 (preview) and 8000 (unmocked requests) free: that is
 //   checked first, and a busy port fails the e2e gate instead of silently testing another worktree's build.
-// Usage: node scripts/gates.mjs [--skip=e2e,pytest] [--keep-going] [--e2e-last] [--list]
+// Usage: node scripts/gates.mjs [--skip=e2e,pytest] [--keep-going] [--parallel] [--list]
 //   --keep-going  run the heavy suites even when ruff or tsc failed
-//   --e2e-last    start Playwright only after pytest and vitest finished (slower; for a loaded machine, or if e2e flakes in parallel)
+//   --parallel    start Playwright together with pytest and vitest (faster; flaky on a loaded machine). --e2e-last = the default, kept for old commands
 //   --list        print the plan and exit (nothing runs)
 // Exit code: 0 all gates pass, 1 any gate failed. Output: one line per gate (in the order pytest, ruff, tsc, vitest, e2e), the last
 // 40 lines of each failed gate, then `ALL GATES PASS in N s` or `GATES FAILED in N s`, with per-gate wall-clock times.
@@ -14,7 +14,8 @@ import { busyPorts, failureTail, npx, refused, root, run, summaryLine, timings }
 const argv = process.argv.slice(2);
 const skip = new Set((argv.find((a) => a.startsWith("--skip="))?.slice(7) ?? "").split(",").filter(Boolean));
 const keepGoing = argv.includes("--keep-going");
-const e2eLast = argv.includes("--e2e-last");
+// E2e waits for pytest and vitest unless --parallel is given (CPU contention made e2e flaky when all three ran at once).
+const e2eLast = !argv.includes("--parallel");
 
 const ALL = [
   { id: "pytest", stage: 2, cwd: "backend", cmd: "uv", args: ["run", "pytest", "-q"] },

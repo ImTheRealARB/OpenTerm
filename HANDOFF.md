@@ -30,7 +30,8 @@ unreviewed checkpoints; the reviewed step commit follows each one.
   pre-existing on main, exposed by `gp-toggle` on a fast machine), BT EDIT 80 ms focus retry stole focus after Esc (`BtEditor` `leftBox`; new
   phase12 test with a paused clock), "under 50 dollars" ignored by the EQS English parser (`eqsNatural.readNumber`). Manual smoke (fixtures, GUI +
   Terminal) passed for every item in the local prompt; Shift+T and `+` could not be sent by the in-app browser tool (covered by e2e).
-  Open: fully parallel gates (no `--e2e-last`) fail 1-2 random e2e tests per run on this laptop (each passes alone), plus the `eqsFilter` timing vitest.
+  Fully parallel gates failed 1-2 random e2e tests per run on this laptop (each passes alone), so `gates.mjs` now runs e2e after pytest + vitest by
+  default (`--parallel` = old mode). Open: the `eqsFilter` timing vitest still fails under load (passes alone).
   - Step 1 NL commands: `command/natural.ts` (pure, 78-row table), `nlRun.ts` (`needsNatural`, sync, in entry), `nlResolve.ts` + `nlRoute.ts` + `cmdExtras.tsx` (lazy),
     syntax hint `command/syntaxHint.ts` (`data-testid=syntax-hint`). Routing: exact codes > compare (`compareNatural.ts`) > screener (`EQS <text>`, `functions/eqsNatural.ts`)
     > company + intent > none. GUI sidebar search / SymbolPicker go through `gui/runTyped.ts`. Ambiguity rule: top company group must have >= 10x the next group's market cap, else DID YOU MEAN.
