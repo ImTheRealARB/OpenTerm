@@ -110,7 +110,7 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
         {result && ` · ${result.firstYear}..${result.lastYear} · ${result.bars} DAILY BARS · ${result.obs} OBS · ${src}`}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {!env && !error && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · V VIEW · J/K MOVE · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · V VIEW · J/K MOVE · E CSV · F5 REFRESH</span>
       </div>
       {error && <div className="err">{error}</div>}
       {env && <div className="dim">{env.data.adj && env.data.adj.length === env.data.t.length ? "ADJUSTED CLOSES" : "RAW CLOSES (NO ADJUSTED SERIES FROM THIS SOURCE)"} · PAST AVERAGES, NOT A FORECAST</div>}

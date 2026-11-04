@@ -4,7 +4,10 @@ import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { navigate, replaceView } from "../state/workspace";
-import { liveSymbol, navKey, QUOTE_COLUMNS as COLUMNS, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { QuoteErrors } from "./QuoteErrors";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -18,6 +21,8 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   }, [args, security]);
   const usingDefault = !args.length && !security;
 
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
+  const COLUMNS = gui ? QUOTE_COLUMNS_GUI : QUOTE_COLUMNS;
   const [reload, setReload] = useState(0);
   const { rows, setRows, loading } = useQuotes(inputs, reload);
   const [sort, setSort] = useState<Sort>("INPUT");
@@ -74,7 +79,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
       <div className="line">
         <span className="acc">QUOTE MONITOR</span> <b className="pv">{rows.length}</b> SECURITIES{usingDefault && " (DEFAULT LIST)"} · <span className="dim">SORT</span> {sort}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER DES · A ADD · D DEL · S SORT · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D DEL · S SORT · E CSV · F5 REFRESH</span>
       </div>
       {/* Only reachable if there are no inputs at all: say what to do instead of showing a blank grid. */}
       {!loading && rows.length === 0 && (
@@ -82,6 +87,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
           NO SECURITIES
         </PanelNote>
       )}
+      <QuoteErrors rows={rows} onRetry={() => setReload((n) => n + 1)} />
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>
   );

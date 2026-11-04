@@ -118,7 +118,7 @@ function RatesUS({ panelId }: FunctionProps) {
         {curve && ` · ${curve.date}`}
         {daysOld > 4 && <span className="warn"> ({daysOld} DAYS OLD)</span>}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · J/K MOVE · ENTER PLOT HISTORY · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER PLOT HISTORY · E CSV · F5 REFRESH</span>
       </div>
       {curve && (
         <>

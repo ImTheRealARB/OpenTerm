@@ -74,7 +74,7 @@ export default function HIST({ panelId, security, args }: FunctionProps) {
         {env && env.fallback_from.length > 0 && <span className="warn"> · FALLBACK FROM {env.fallback_from.join(",").toUpperCase()}</span>}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
       </div>
       {bad.length > 0 && <div className="err">CANNOT READ {bad.join(" ")} · USAGE: HIST [1M|3M|6M|YTD|1Y|2Y|5Y|10Y|MAX] [D|W|MO]</div>}
       {error && (

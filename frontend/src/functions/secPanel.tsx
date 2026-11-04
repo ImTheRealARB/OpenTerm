@@ -62,7 +62,7 @@ export function Header({ title, env, loading, extra, keys }: { title: ReactNode;
       {env?.stale && <span className="warn"> · STALE {fmtAge(env.age_s)}</span>}
       {extra}
       {loading && <span className="dim"> · LOADING…</span>}
-      <span className="dim"> · {keys}</span>
+      <span className="dim legend"> · {keys}</span>
     </div>
   );
 }

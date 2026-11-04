@@ -18,6 +18,8 @@ export function execute(input: string, opts: { newPanel?: boolean } = {}): boole
   const parsed = parseCommand(input, isFunction);
   if (!parsed.ok) return fail(parsed.error);
   history.push(parsed.raw.toUpperCase());
+  // An alias (WCRS, MOST ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
+  if (parsed.fn) parsed.fn = FUNCTIONS.get(parsed.fn)?.code ?? parsed.fn;
 
   if (parsed.fn === "LAYOUT" || parsed.fn === "MONITOR") {
     statusMsg.set(() => null);

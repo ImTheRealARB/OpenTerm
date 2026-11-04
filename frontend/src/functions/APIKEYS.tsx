@@ -263,7 +263,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
         {data === null && !err && <span className="dim"> · LOADING…</span>}
         {err && <span className="err"> · STALE: {err}</span>}
         {confirm && <span className="err"> · DELETE {confirm.toUpperCase()} KEY? PRESS D AGAIN</span>}
-        <span className="dim"> · J/K MOVE · ENTER EDIT · T TEST · D DELETE · O SIGN UP · C SPEND CAP · E EXPORT · F5</span>
+        <span className="dim legend"> · J/K MOVE · ENTER EDIT · T TEST · D DELETE · O SIGN UP · C SPEND CAP · E EXPORT · F5</span>
       </div>
       {msg && <div className={msg.cls}>{msg.text}</div>}
       {edit && (

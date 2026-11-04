@@ -82,7 +82,7 @@ export default function CENB({ panelId }: FunctionProps) {
         <span className="acc">CENB</span> CENTRAL BANKS · {rows.length}
         {d && <span className="dim"> · TODAY {d.today} · CALENDAR TABLE AS OF {d.calendar_as_of}</span>}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · J/K MOVE · ENTER DATES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DATES · E CSV · F5 REFRESH</span>
       </div>
       {d && <div className="dim">{d.note}. RATES: FED = TARGET UPPER BOUND (FRED), ECB = MAIN REFINANCING RATE, BOE = BANK RATE, BOC = OVERNIGHT TARGET. OTHER BANKS HAVE NO KEYLESS RATE SOURCE.</div>}
       {d?.notes.map((n) => <div key={n} className="warn">{n}</div>)}

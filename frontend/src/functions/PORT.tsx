@@ -356,7 +356,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
         {(loading || pf === null) && <span className="dim"> · LOADING…</span>}
         {err && <span className="err"> · STALE: {err}</span>}
         {confirm && <span className="err"> · REMOVE {confirm}? PRESS D AGAIN</span>}
-        <span className="dim"> · J/K MOVE · ENTER GP · A ADD · D REMOVE · U UNDO · S SORT · E EXPORT · I IMPORT FILE · V PASTE CSV · B BASE · F5</span>
+        <span className="dim legend"> · J/K MOVE · ENTER GP · A ADD · D REMOVE · U UNDO · S SORT · E EXPORT · I IMPORT FILE · V PASTE CSV · B BASE · F5</span>
       </div>
       {/* The three "nothing to show" states use the shared PanelNote; every empty one says what to do next. */}
       {!pf && !missing && !err && <PanelNote kind="loading">LOADING PORTFOLIO {name}…</PanelNote>}

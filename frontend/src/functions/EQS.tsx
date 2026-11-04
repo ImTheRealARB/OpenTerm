@@ -92,7 +92,7 @@ export default function EQS({ panelId, args }: FunctionProps) {
         {env?.data.as_of_text && <span className="dim"> · {env.data.as_of_text.toUpperCase()}</span>}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>
       </div>
       {errors.length > 0 && <div className="err">{errors.join(" · ")} · EXAMPLE: {USAGE}</div>}
       {error && (

@@ -50,3 +50,17 @@ describe("glossary", () => {
     expect(explain("EPS")).toMatch(/per share/i);
   });
 });
+
+import { placeTip } from "./glossaryTip";
+describe("placeTip", () => {
+  const term = { left: 10, top: 100, right: 60, bottom: 112 };
+  it("goes beside the panel, not over the rows below the term", () => {
+    expect(placeTip(term, { left: 0, top: 0, right: 400, bottom: 500 }, 200, 40, 1600, 900)).toEqual({ left: 406, top: 100 });
+  });
+  it("goes left of the panel when there is no room on the right", () => {
+    expect(placeTip(term, { left: 800, top: 0, right: 1600, bottom: 500 }, 200, 40, 1600, 900).left).toBe(594);
+  });
+  it("falls back to below the term when the panel fills the window", () => {
+    expect(placeTip(term, { left: 0, top: 0, right: 800, bottom: 500 }, 700, 40, 800, 900)).toEqual({ left: 10, top: 116 });
+  });
+});

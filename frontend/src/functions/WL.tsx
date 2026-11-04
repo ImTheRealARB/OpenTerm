@@ -8,9 +8,11 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type ApiError } from "../net/api";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
 import { useStore } from "../state/store";
+import { settingsStore } from "../settings/runtime";
 import { navigate } from "../state/workspace";
 import { requestAsk } from "../gui/askBus";
-import { liveSymbol, navKey, QUOTE_COLUMNS as COLUMNS, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { listNav } from "./listNav";
@@ -38,6 +40,8 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   const [symbols, setSymbols] = useState<string[] | null>(null);
   const [missing, setMissing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const guiMode = useStore(settingsStore, (st) => st.mode === "gui");
+  const COLUMNS = guiMode ? QUOTE_COLUMNS_GUI : QUOTE_COLUMNS;
   const [reload, setReload] = useState(0);
   const [sort, setSort] = useState<Sort>("INPUT");
   const undo = useRef<string[] | null>(null);
@@ -125,7 +129,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
         {(loading || (symbols === null && !err)) && <span className="dim"> · LOADING…</span>}
         {/* With a list on screen the error means the data is old; with none, the PanelNote below carries it. */}
         {err && symbols !== null && <span className="err"> · STALE: {err}</span>}
-        <span className="dim"> · J/K MOVE · ENTER DES · A ADD · D REMOVE · U UNDO · S SORT · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D REMOVE · U UNDO · S SORT · E CSV · F5 REFRESH</span>
       </div>
       {err && symbols === null && (
         <PanelNote kind="error" hint="The list could not be read, so nothing is shown. Press F5 to retry.">
@@ -142,6 +146,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
           EMPTY. A ADDS SYMBOLS (WL {name} ADD SYM...).
         </PanelNote>
       )}
+      <QuoteErrors rows={rows} onRetry={() => setReload((n) => n + 1)} />
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>
   );

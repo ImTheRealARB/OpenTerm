@@ -102,7 +102,7 @@ export default function FXC({ panelId, args }: FunctionProps) {
         <span className="acc">CROSS RATES</span> {list.length} CURRENCIES · ROW = 1 UNIT, PRICED IN EACH COLUMN · TRIANGULATED VIA USD
         {loading && <span className="dim"> · LOADING…</span>}
         {missing.length > 0 && <span className="err"> · NO RATE: {missing.join(" ")}</span>}
-        <span className="dim"> · J/K MOVE · ENTER CHART VS USD · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER CHART VS USD · E CSV · F5 REFRESH</span>
       </div>
       <Grid ref={grid} columns={cols} rows={rows} />
     </div>

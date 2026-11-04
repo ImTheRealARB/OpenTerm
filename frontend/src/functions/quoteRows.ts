@@ -64,6 +64,9 @@ export const QUOTE_COLUMNS: Column<QRow>[] = [
   { title: "CCY", width: 4, text: (r) => r.q?.currency ?? "", color: () => "dim" },
 ];
 
+/** GUI mode: a wider NAME column, so a row's error text ("NO DATA FOR SYMBOL") is not cut off. Terminal keeps QUOTE_COLUMNS. */
+export const QUOTE_COLUMNS_GUI: Column<QRow>[] = QUOTE_COLUMNS.map((c) => (c.title === "NAME" ? { ...c, width: 24 } : c));
+
 export const SORTS = ["INPUT", "SYMBOL", "%CHG", "VOLUME"] as const;
 export type Sort = (typeof SORTS)[number];
 

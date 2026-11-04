@@ -71,7 +71,7 @@ export default function MACRO({ panelId, args }: FunctionProps) {
         <span className="acc">MACRO</span> · {d?.mode === "search" ? `FRED SEARCH "${d.query}"` : q ? `BUILT-IN LIST MATCHING "${q.toUpperCase()}"` : "COMMON FRED SERIES"}
         {d && ` · ${rows.length} SERIES`}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · J/K MOVE · ENTER PLOT (FRED) · S SEARCH · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER PLOT (FRED) · S SEARCH · E CSV · F5 REFRESH</span>
       </div>
       {d?.needs_key && (
         <div className="warn">

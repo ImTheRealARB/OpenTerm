@@ -15,6 +15,9 @@ import { fmtP, histogram, MC_NOTE } from "../bt/validationFormat";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
+import { termProps } from "../gui/term";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import { BtStarter } from "./BtStarter";
 import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
@@ -470,7 +473,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <Headline run={run} />
           <div className="line">
             VIEW <span className="bt-view acc">{shown}</span>
-            <span className="dim"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
+            <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
           </div>
           {shown === "CHART" && chartBits && (
             <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
@@ -548,13 +551,16 @@ function WfSummary({ wf }: { wf: BtWfResult }) {
 }
 
 function Head({ parsed, run }: { parsed: BtRun | null; run: BtRunFull | null }) {
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const syms = run?.symbols ?? parsed?.symbols;
   if (!syms) return <div className="line"><span className="acc">BT</span> <span className="dim">BACKTEST</span></div>;
   const rule = run ? (run.rule ?? (run.strategy ? `STRATEGY ${run.strategy}` : "PYTHON STRATEGY")) : parsed?.rule;
   return (
     <div className="line">
       <span className="acc">BT</span> {syms.join(",")} · {rule} · {run?.interval ?? parsed?.interval} {run?.range ?? parsed?.range}
-      {run?.engine && <span className="dim"> · ENGINE {run.engine.toUpperCase()}</span>}
+      {run?.engine && (
+        <span className="dim"> · <span {...termProps("ENGINE", gui)}>{gui ? "MARKET" : "ENGINE"}</span> {run.engine.toUpperCase()}</span>
+      )}
     </div>
   );
 }
@@ -580,14 +586,32 @@ function BadRule({ error, rule, col }: { error: string; rule?: string; col?: num
 }
 
 function Labels({ run }: { run: BtRunFull }) {
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const l = run.labels;
   const sources = l.sources ?? [];
   return (
     <>
-      <div className="line warn bt-sim">
-        {l.headline} · {l.prices} CLOSES · FEES {fmtNum(l.fees_bps, 0)} BPS · SLIP {fmtNum(l.slip_bps, 0)} BPS · WARM-UP {l.warmup_bars} BARS
-        {l.short ? " · SHORTS ALLOWED" : " · LONG ONLY"}
-      </div>
+      {gui ? (
+        // GUI: the label stays on its own line; the settings behind the run go under "Details" (a native <details>, so
+        // Enter/Space on the summary opens it from the keyboard). Same numbers, plainer words, glossary terms.
+        <>
+          <div className="line bt-sim bt-sim-gui">{l.headline}</div>
+          <details className="bt-details">
+            <summary>Details of this run</summary>
+            <div className="line dim">
+              <span {...termProps("ADJUSTED CLOSE", true)}>{l.prices} closes</span> · fees {fmtNum(l.fees_bps, 0)} <span {...termProps("BPS", true)}>bps</span> ·{" "}
+              <span {...termProps("SLIPPAGE", true)}>slippage</span> {fmtNum(l.slip_bps, 0)} bps ·{" "}
+              <span {...termProps("WARM-UP BARS", true)}>{l.warmup_bars} warm-up bars</span>
+              {l.short ? " · shorts allowed" : " · long only"}
+            </div>
+          </details>
+        </>
+      ) : (
+        <div className="line warn bt-sim">
+          {l.headline} · {l.prices} CLOSES · FEES {fmtNum(l.fees_bps, 0)} BPS · SLIP {fmtNum(l.slip_bps, 0)} BPS · WARM-UP {l.warmup_bars} BARS
+          {l.short ? " · SHORTS ALLOWED" : " · LONG ONLY"}
+        </div>
+      )}
       <div className="line dim bt-data">
         DATA:{" "}
         {sources.length
@@ -610,22 +634,34 @@ function Labels({ run }: { run: BtRunFull }) {
 }
 
 function Headline({ run }: { run: BtRunFull }) {
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const m = run.metrics;
-  const item = (label: string, key: string, signed = true) => (
+  // GUI wording: plain labels, each with a glossary entry (hover or keyboard focus). Terminal keeps its short codes.
+  const L = (term: string, gui_: string, term_: string) => <span className="ps-l" {...termProps(term, gui)}>{(gui ? gui_ : term_) + " "}</span>;
+  const item = (term: string, guiLabel: string, termLabel: string, key: string, signed = true) => (
     <>
       {" · "}
-      <span className="ps-l">{label} </span><span className={`ps-v ${signed ? (m[key] == null || m[key] === 0 ? "" : m[key]! > 0 ? "up" : "down") : ""}`}>{fmtMetric(key, m[key])}</span>
+      {L(term, guiLabel, termLabel)}<span className={`ps-v ${signed ? (m[key] == null || m[key] === 0 ? "" : m[key]! > 0 ? "up" : "down") : ""}`}>{fmtMetric(key, m[key])}</span>
     </>
   );
   return (
-    <div className="line bt-head">
-      <span className="ps-l">FINAL </span><span className="ps-v">{fmtMetric("final_value", m.final_value)}</span>
-      {item("TOTAL", "total_return")}
-      {item("ANNUAL", "annual_return")}
-      {item("MAX DD", "max_drawdown")}
-      {item("SHARPE", "sharpe", false)}
-      {item("TRADES", "trade_count", false)}
-      {item("VS BENCH", "excess_return")}
-    </div>
+    <>
+      {gui && m.final_value != null && m.total_return != null && (
+        // One plain sentence first, built only from the numbers already shown below.
+        <div className="line bt-sentence" data-testid="bt-sentence">
+          The strategy ended at {fmtMetric("final_value", m.final_value)}, {fmtMetric("total_return", m.total_return)} in total
+          {m.excess_return != null ? `; against the benchmark that is ${fmtMetric("excess_return", m.excess_return)}` : ""}.
+        </div>
+      )}
+      <div className="line bt-head">
+        {L("FINAL VALUE", "FINAL VALUE", "FINAL")}<span className="ps-v">{fmtMetric("final_value", m.final_value)}</span>
+        {item("TOTAL RETURN", "TOTAL RETURN", "TOTAL", "total_return")}
+        {item("ANNUAL RETURN", "PER YEAR", "ANNUAL", "annual_return")}
+        {item("MAX DRAWDOWN", "WORST DROP", "MAX DD", "max_drawdown")}
+        {item("SHARPE", "SHARPE", "SHARPE", "sharpe", false)}
+        {item("TRADES", "TRADES", "TRADES", "trade_count", false)}
+        {item("VS BENCHMARK", "VS BENCHMARK", "VS BENCH", "excess_return")}
+      </div>
+    </>
   );
 }

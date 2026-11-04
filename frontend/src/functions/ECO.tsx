@@ -94,7 +94,7 @@ export default function ECO({ panelId, args }: FunctionProps) {
         {p.major && <span className="acc"> · MAJOR ONLY</span>}
         {d && ` · ${rows.length} RELEASES`}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · J/K MOVE · 1-4 WINDOW (7/14/30/62D) · ←/→ SHIFT · T TODAY · M MAJOR · E CSV · F5</span>
+        <span className="dim legend"> · J/K MOVE · 1-4 WINDOW (7/14/30/62D) · ←/→ SHIFT · T TODAY · M MAJOR · E CSV · F5</span>
       </div>
       <div className="dim">
         US RELEASES FROM THE BLS AND BEA OFFICIAL SCHEDULES (JOBS, CPI, PPI, JOLTS, GDP, PCE, TRADE), US EASTERN. FOMC, CENSUS AND PRIVATE SURVEYS ARE NOT IN THIS SOURCE. NO FORECASTS OR ACTUALS.

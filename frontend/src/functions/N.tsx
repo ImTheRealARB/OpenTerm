@@ -99,7 +99,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
         {env?.stale && <span className="warn"> · STALE {fmtAge(env.age_s)}</span>}
         {d && d.failed.length > 0 && <span className="warn"> · NOT ANSWERING: {d.failed.join(", ")}</span>}
         {loading && <span className="dim"> · LOADING…{query.kind === "keyword" && " (GDELT CAN TAKE 5-15 S)"}</span>}
-        <span className="dim"> · J/K MOVE · ENTER OPEN ARTICLE · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER OPEN ARTICLE · E CSV · F5 REFRESH</span>
       </div>
       {/* A failed fetch with nothing to show is a full-panel error; with old headlines on screen it stays one line above them. */}
       {error && isKeyRequired(error) && <KeyRequiredLine error={error} />}

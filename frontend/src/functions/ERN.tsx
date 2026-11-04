@@ -109,7 +109,7 @@ export default function ERN({ panelId, args }: FunctionProps) {
         {cur && ` · ${rows.length} REPORTS`}
         {cur && rows.length > 0 && ` · ${reported} REPORTED`}
         <EnvStatus env={cur} loading={loading} />
-        <span className="dim"> · J/K MOVE · ←/→ DAY · T TODAY · ENTER DES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ←/→ DAY · T TODAY · ENTER DES · E CSV · F5 REFRESH</span>
       </div>
       {!parsed.ok && <div className="err">{parsed.error}</div>}
       {cur && rows.length === 0 && (

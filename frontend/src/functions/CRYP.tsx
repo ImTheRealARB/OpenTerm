@@ -73,7 +73,7 @@ export default function CRYP({ panelId, args }: FunctionProps) {
         {env && env.fallback_from.length > 0 && <span className="warn"> · FALLBACK (NO RANK OR MARKET CAP)</span>}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
-        <span className="dim"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
       </div>
       {error && (
         <div className="err">
