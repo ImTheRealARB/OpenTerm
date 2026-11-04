@@ -178,63 +178,32 @@ export function CommandLine() {
     info(`${typed.trim().toUpperCase()} -> ${command}`);
   };
 
-  /** Enter on text that may be plain English: ask the interpreter, then run, offer choices, or fall back to the normal error. */
-  const viaNatural = async (text: string, newPanel: boolean) => {
-    const r = await resolveNatural(text).catch(() => ({ kind: "asis" }) as const);
-    if (input.current?.value !== text) return; // the user kept typing
-    if (r.kind === "command") runNl(r.command, text, newPanel);
-    else if (r.kind === "choices") {
-      setItems(r.choices.map((c) => ({ value: c.command, label: c.label, kind: "MEAN" })));
-      setSel(0);
-      info("DID YOU MEAN: UP/DOWN + ENTER");
-    } else if (execute(text, { newPanel })) finish();
+  // The plain-English and syntax-hint logic is a lazy chunk (command/cmdExtras.ts); `ui` hands it this component's state.
+  const ui: Ui = {
+    value: () => input.current?.value ?? "",
+    setItems,
+    setSel,
+    setHint,
+    nl: nlItems,
   };
-
-  /** Plain-English preview while typing: the first suggestion shows what Enter will run. */
-  const previewNl = (v: string) => {
-    clearTimeout(nlTimer.current);
-    const seq = ++nlSeq.current;
-    nlItems.current = [];
-    const t = v.trim();
-    if (!needsNatural(v) || (!/\s/.test(t) && t.length < 4)) return;
-    nlTimer.current = window.setTimeout(() => {
-      resolveNatural(v)
-        .then((r) => {
-          if (seq !== nlSeq.current || input.current?.value !== v) return;
-          if (r.kind === "command") nlItems.current = [{ value: r.command, label: "PRESS ENTER", kind: "NL" }];
-          else if (r.kind === "choices") nlItems.current = r.choices.map((c) => ({ value: c.command, label: c.label, kind: "MEAN" }));
-          else return;
-          setItems(nlItems.current);
-          setSel(-1);
-        })
-        .catch(() => {});
-    }, NL_DEBOUNCE_MS);
-  };
-
-  /** Syntax hint line: the function's argument slots with the one being typed in bold. */
+  const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
   const updateHint = (v: string) => {
-    const first = v.trimStart().split(/\s+/)[0] ?? "";
-    if (!hintMod && !/\s/.test(v) && !isFunction(first.toUpperCase())) {
-      setHint(null);
-      return;
-    }
-    const run = (m: HintModule) => {
-      if (input.current?.value !== v) return;
-      const h = m.syntaxHint(v, {
-        isFunction,
-        argsSchema: (c) => FUNCTIONS.get(c)?.argsSchema,
-        symbols: history.recentSecurities(),
-      });
-      setHint(h);
-      // Typing a value of the active slot ("AAPL GP 5"): list the matches so Tab completes them.
-      if (h && h.token && h.values.length && !nlItems.current.length) {
-        setItems(h.values.slice(0, 8).map((value) => ({ value, label: h.wantsSymbol ? "" : "ARGUMENT", kind: "ARG" as const })));
-        setSel(-1);
-      }
-    };
-    if (hintMod) run(hintMod);
-    else void import("../command/syntaxHint").then((m) => run((hintMod = m)));
+    // Nothing to show before a space, unless the text is a function code by itself.
+    if (!extrasMod && !/\s/.test(v) && !isFunction(v.trim().toUpperCase())) setHint(null);
+    else extras((m) => m.updateHint(v, ui));
   };
+  const previewNl = (v: string) => {
+    nlItems.current = [];
+    if (needsNatural(v)) extras((m) => m.previewNl(v, ui));
+  };
+  const viaNatural = (text: string, newPanel: boolean) =>
+    extras((m) =>
+      void m.viaNatural(text, ui, (c) => runNl(c, text, newPanel), () => {
+        if (execute(text, { newPanel })) finish();
+      }).then(() => {
+        if (items.length === 0 && nlItems.current.length === 0) return;
+      }),
+    );
 
   /** Vim normal-mode keys (and Esc from insert mode). Returns true when the key was consumed. */
   const vimHandle = (e: React.KeyboardEvent<HTMLInputElement>): boolean => {
