@@ -16,6 +16,8 @@ import { dispatchPanelKey } from "./keys/panelKeys";
 import { exportPanelCsv } from "./functions/tableExport";
 import { LazyPiece } from "./components/LazyPiece";
 import { GuiHelpDrawer, GuiOverlays, GuiSidebar, GuiTop, toggleHelp } from "./gui";
+import { TabStrip } from "./gui/TabStrip";
+import { useTabsOn } from "./gui/tabsState";
 import { getSettings, settingsStore, toggleMode } from "./settings/runtime";
 import { loadJSON, saveJSON, useStore } from "./state/store";
 import {
@@ -41,6 +43,8 @@ export function App() {
   const [hud, setHud] = useState(() => loadJSON("openterm.hud", false));
   // GUI mode: the same panels and command line, wrapped in a menu bar and sidebar. Terminal mode renders none of that.
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
+  const tabsPref = useTabsOn();
+  const tabs = gui && tabsPref; // GUI tabs layout: the tab strip sits above the command line, like a browser
 
   useEffect(() => saveJSON("openterm.hud", hud), [hud]);
 
@@ -245,7 +249,8 @@ export function App() {
   }, [cheatsheet]);
 
   return (
-    <div className="app">
+    <div className={"app" + (tabs ? " has-tabs" : "")}>
+      {tabs && <TabStrip />}
       <TopBar />
       {gui && <GuiTop />}
       {/* Same element tree in both modes so switching never remounts the panels. In terminal mode CSS makes .app-body
