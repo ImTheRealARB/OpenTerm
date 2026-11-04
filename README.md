@@ -163,16 +163,24 @@ The Docker files are written but have not been built by the author yet.
 
 ### Two ways to use it: GUI mode and Terminal mode
 
-The first time you open OpenTerm it starts in **GUI mode**: a menu bar (Markets, Charts, News, Research, Portfolio,
-Backtest, Settings), a sidebar listing every function with a search box, a symbol box, and a row of buttons on each panel.
-A welcome card offers three starting points ("Look up a stock", "See a chart", "Watch my stocks") and a 2-minute tour.
-Click the `?` button on any panel (or press `Alt+H`) for a help drawer that explains it.
+The first time you open OpenTerm it starts in **GUI mode**, made for people who have never used a market terminal.
+You start on a ready-made screen (a few large US stocks, a chart and top news). The sidebar's **Start here** group has
+plain-word buttons (Stock chart, My watchlist, Top news, World markets, My portfolio, Try a backtest); every other
+function sits in a collapsed category, with its short code shown small and grey as a learning aid.
+Type a company name ("apple", "tesla") in the symbol box and pick a suggestion. Hover over, or tab to, a term such as
+EPS or P/E for a one-line plain-English explanation. Errors say what to do next (Retry, "Try AAPL", "Open API keys"),
+and empty lists offer the next step ("Add a stock"). Click `?` on any panel (or press `Alt+H`) for its purpose, buttons and keys.
+
+| | |
+|---|---|
+| ![GUI mode: starter screen with Start here sidebar](docs/screenshots/gui-first-screen.png) | ![Search by company name](docs/screenshots/gui-search.png) |
+| ![Plain-English glossary tooltip](docs/screenshots/gui-glossary.png) | ![An error with a next step](docs/screenshots/gui-error-next-step.png) |
 
 **Terminal mode** is the same app with only the command line, built for keyboard speed. Switch with the
 `TERMINAL | GUI` control at the bottom right, `Alt+G`, or `SETTINGS MODE TERMINAL`. Your choice is saved. Everything
-below works in both modes.
+below works in both modes. Terminal mode also takes a market sector word after the ticker (`SPX INDEX GP`,
+`EURUSD CURNCY`), digits + Enter to open a row in a list, F2/F3/F4/F8/F9 as sector keys, and `FUNC` lists every function.
 
-![GUI mode](docs/screenshots/gui-mode.png)
 
 ### Try these commands
 

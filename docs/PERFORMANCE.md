@@ -636,3 +636,18 @@ Bench run 1: 36/37 (miss: BT result open to first paint). Runs 2 and 3 crashed i
 | IMAP treemap layout, 5,000 tiles p95 | 5.2 ms | 30 ms | PASS |
 | SECF fuzzy rank, 7,000 names, per query p95 | 11.9 ms | 25 ms | PASS |
 | IMAP canvas paint, 5,000 tiles p95 | 9.4 ms | 16 ms | PASS |
+
+## Cloud session end 2026-11-04 (after Parts 1-4, same box as the cloud baseline)
+
+Gate: ALL PASS (pytest 1726, vitest 586, e2e 245; `node scripts/gates.mjs --keep-going --e2e-last`).
+Bench, 6 runs after the work (the second run no longer crashes: the bench killed only the shell, so its backend stayed on port 8000 and the next run reused it).
+
+| Line | Baseline | After (range of runs) | Budget | Note |
+|---|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 120.0 KB | 125.8 KB | 400 KB | +5.8 KB: GUI Part 1 about +4.2 KB (cap 5 KB), Part 4 terminal conventions +1.6 KB |
+| BT result open to first paint p95 | 133.4 ms | 121-151 ms (p50 96-107) | 100 ms | failed on the baseline too |
+| SEAS MONTH+WOY+DOM 10,000 bars p95 | 12.2 ms | 15.5-22 ms (46 ms before the fix) | 15 ms | the time-zone fix used Intl per bar (46 ms); UTC fast path restores it. Side-by-side in vitest old 7.9 ms vs new 7.7 ms median, so what is left is one-shot noise |
+| BT 10-year rule run p95 | 293.9 ms | one run 343.5 ms, others pass | 300 ms | known throttling line (CLAUDE.md) |
+| 50k-bar chart pan/zoom frame p95 | 16.8 ms | one run 33.3 ms, others pass | 20 ms | known lone-miss line (CLAUDE.md) |
+
+Every other line passed in every run, within noise of the baseline.

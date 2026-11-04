@@ -3,7 +3,7 @@
 Keyboard-first, open-source market terminal (amber on black, command line + tiled panels).
 The full spec is the "SUPER PROMPT" the user gave in the first session. Its build plan, budgets and rules
 are summarized in [HANDOFF.md](HANDOFF.md). Read HANDOFF.md first: it says what is done and what is next.
-Phases 1-17 and 19, GUI mode and the strategy editor are DONE and on `main` (origin = GitHub repo ImTheRealARB/OpenTerm, now public; last full gate 2026-11-03: pytest 1708, e2e 226; bench misses on this busy machine match the base commit, see `docs/PERFORMANCE.md`). Open items and what is next: HANDOFF.md "Resume here". **Phase 18 (brokers/orders) stays PAUSED.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
+Phases 1-17 and 19, GUI mode and the strategy editor are DONE and on `main`; the beginner-GUI / bugs / audit / terminal-conventions job (`docs/specs/GUI_SIMPLE_AND_BUGS.md`) is DONE on branch `claude/gui-simple-bugs-sp3hq5` (draft PR) (origin = GitHub repo ImTheRealARB/OpenTerm, now public; last full gate 2026-11-03: pytest 1708, e2e 226; bench misses on this busy machine match the base commit, see `docs/PERFORMANCE.md`). Open items and what is next: HANDOFF.md "Resume here". **Phase 18 (brokers/orders) stays PAUSED.** Phases 6-10 were built in parallel worktrees (since removed): see HANDOFF.md
 "How Phases 6-10 were built" and [docs/PARALLEL_BUILD.md](docs/PARALLEL_BUILD.md) if a parallel build is ever repeated.
 **Usage rule:** Opus may orchestrate (plan, review, run gates) with at most 2 Sonnet subagents building; Opus does not build large
 changes itself (decided 2026-11-02, `docs/specs/NEXT_SESSION.md`; replaces the 2026-10-19 "Sonnet only" rule). Subagents are Sonnet. Agents are allowed (at most 2 at a time) but run targeted tests only; the main session runs the full gates once per step (output tail only).
@@ -226,6 +226,14 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   `keys._smtp_check`). Brief: `brief.py` + `brief_routes.py`, kv `brief:last`, apscheduler job id `brief` (`scheduler.schedule_brief`, rescheduled on `PUT /api/delivery`). Desktop notifications were
   already in `command/alerts.ts` (`desktopNotify`, gated by browser permission only). Panels `DLVR`, `BRIEF`. In fixture mode the brief's earnings section shows ERR (no recording for today).
 - **Bench baselines on Windows:** a worktree under the scratchpad path breaks Python DLL loads (path too long: `httptools` ImportError). Put a baseline worktree at a short path such as `C:\otbase`.
+
+- **Cloud session facts (2026-11-04):** on a 4-vCPU Linux box run the gate as `node scripts/gates.mjs --e2e-last` (timing tests in vitest/pytest flake
+  when every suite runs at once; they pass alone). `bench.mjs` now spawns servers `detached` and refuses to start if 8000/4173 already answer (a leaked backend
+  made every second run fail with "served from the cache"). Leftover servers: `ps -eo pid,cmd | grep -E "python3 -m openterm|vite preview"`.
+- **Beginner suite:** `frontend/e2e/beginner.spec.ts` asserts <= 4 clicks per task in GUI mode; keep it green when changing the GUI. Glossary terms (`data-term`) must
+  have an entry in `gui/glossary.ts` (vitest scans the source). `PanelNote` takes `plain`, `actions`, `onRetry` (GUI only). New GUI user = starter layout (`gui/starterLayout.ts`).
+- **Intl.DateTimeFormat per bar is slow** (~4 us): SEAS went 12 -> 46 ms on 10k bars. Keep a UTC fast path when there is no exchange zone (`seasMath.localDay`).
+- **Terminal grammar:** a sector word after the ticker maps symbols (`command/sectors.ts`); CORP / unmapped GOVT is an error. F5/F11/F12 stay unbound (browser).
 
 ## Conventions
 - **Keep `docs/FUNCTIONS.md` current:** after any change to `functions/registry.ts`, `keys/keybindings.json` or `keys/keys.ts` labels (or the doc template in `scripts/gen_functions_doc.py`), run `python scripts/gen_functions_doc.py` before committing. `test_functions_doc.py` (pytest, so the gates) fails on a stale doc.

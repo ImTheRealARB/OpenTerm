@@ -5,15 +5,26 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
-## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`)
-Job: `docs/specs/GUI_SIMPLE_AND_BUGS.md` (Parts 0-5). Progress (newest last; each step committed + pushed):
-- Part 0 DONE: cloud baseline in `docs/PERFORMANCE.md` "Cloud baseline 2026-11-04" (gate green except a load-sensitive corrMath timing vitest; bench 36/37).
-- Part 1A DONE: `frontend/e2e/beginner.spec.ts` (10 mouse-only tasks, click counts); brief `docs/review/cloud/BEGINNER_CLICKS.md`.
-- Part 1B (a) DONE: tasks 1,2,4,5,9,10 pass (company search, Start here sidebar, glossary tooltip, PanelNote actions). Notes `docs/review/cloud/BUILD_1B_A.md`.
-- Part 1B (b) IN PROGRESS: tasks 3,6,7,8, starter layout, KeyRequiredLine, BT editor fill, live keybindings in tour/help, FA restyle (`docs/review/cloud/BUILD_1B_B.md` when done).
-- Part 2 backend DONE (`23fd1a2`, `docs/review/cloud/BACKEND_BUGS.md`); frontend bugs (AI/SWARM abort on close only, cmdhistory refetch, NSE rule holidays) IN PROGRESS (`docs/review/cloud/FRONTEND_BUGS.md`).
-- Next: 1C fresh-eyes screenshot critique, Part 3 audit, Part 4 terminal conventions, Part 5 wrap-up + draft PR.
-- Cloud box setup: `PLAYWRIGHT_BROWSERS_PATH` must point at a dir with `chromium_headless_shell-1248` symlinked to `/opt/pw-browsers/...-1243` (CLAUDE.md note). Commits labelled WIP are unreviewed checkpoints.
+## Resume here (cloud session 2026-11-04, branch `claude/gui-simple-bugs-sp3hq5`, draft PR to `main`)
+`docs/specs/GUI_SIMPLE_AND_BUGS.md` Parts 0-5 are DONE on the branch (not merged; the user reviews the draft PR). Last gate: ALL PASS
+(pytest 1726, vitest 586, e2e 245). Bench vs the cloud baseline: `docs/PERFORMANCE.md` "Cloud session end 2026-11-04". Commits labelled WIP are
+unreviewed checkpoints; the reviewed step commit follows each one.
+- **Part 0:** cloud baseline (`docs/PERFORMANCE.md` "Cloud baseline 2026-11-04").
+- **Part 1 (beginner GUI):** `frontend/e2e/beginner.spec.ts` = 10 mouse-only tasks, all pass in <= 4 clicks with no function code typed
+  (before: 4 possible by mouse, 6 impossible; brief `docs/review/cloud/BEGINNER_CLICKS.md`). Built: company-name search (`gui/companySearch.ts`, `useCompanies.ts`;
+  screener universe + `/api/search`), sidebar "Start here", glossary (`gui/glossary.ts`, `glossaryTip.ts`, `data-term`), `PanelNote` `plain`/`actions`/`onRetry`,
+  empty states with "Add a stock"/"Add an alert" (`gui/askBus.ts`), BT starter templates (`functions/BtStarter.tsx`), starter layout for new GUI users
+  (`gui/starterLayout.ts`), `KeyNeeded` with "Open API keys", BT editor fills its panel, live keybindings in tour/help (`gui/purposes.ts`), FA GUI look,
+  fresh-eyes critique fixes (`docs/review/cloud/GUI_CRITIQUE.md`, incl. `functions/QuoteErrors.tsx`, `alertPlain.ts`). Notes: `BUILD_1B_A.md`, `BUILD_1B_B.md`.
+- **Part 2 (known bugs):** all fixed with tests (`docs/review/cloud/BACKEND_BUGS.md`, `FRONTEND_BUGS.md`; DONE marks in `docs/review/DECISIONS_FOR_USER.md`).
+- **Part 3 (audit):** `docs/review/cloud/AUDIT.md`: 0 high, 3 medium (all confirmed and fixed: SEAS exchange-local dates, alert trigger retry, Yahoo real granularity), 9 low deferred in DECISIONS_FOR_USER.md.
+- **Part 4 (Terminal conventions):** sector words after the ticker (`command/sectors.ts`), digits + Enter opens a grid row (`keys/numberSelect.ts`), F2/F3/F4/F8/F9 (+Shift+F9) sector keys,
+  Alt+Backspace back, `FUNC` directory (aliases MENU, DIR), aliases WCRS->FXC, MOST->MOV, PRTU->PORT. `docs/review/cloud/PART4.md`.
+- **Never verified:** the GUI on a real (non-fixture) Yahoo session; Retry is wired on DES, GP and quote grids only; canvas grid column headers have no glossary tooltip;
+  number-select does not cover DOM lists; the GUI-mode collapsed top command line relies on Ctrl+K (covered by gui-shell e2e).
+- **Decisions left to the user:** the four "confirm or revert" items and the DLVR `DESKTOP` toggle (DECISIONS_FOR_USER.md, untouched); the 9 low audit items;
+  startup bundle is 125.8 KB gz (+5.8 KB: GUI +4.2 within its 5 KB cap, Part 4 +1.6 KB); NSE holidays cover fixed dates + Good Friday only (festivals not computable by rule; the UI says so).
+- **Next:** user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
 
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
