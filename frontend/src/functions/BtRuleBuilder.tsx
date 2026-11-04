@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
+import "./btRule.css";
 import {
   OPERANDS, OPS, defaultOperand, emptyClause, formError, formToRule, formToSentence, isPeriodKind,
   type Clause, type Form, type Op, type Operand, type OperandKind,

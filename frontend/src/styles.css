@@ -216,18 +216,3 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 
 /* --- Strategy editor (BT EDIT, CodeMirror): the box and the sandbox error marker are styled in bt/codeEditor.ts --- */
 .import.editor { overflow: hidden; }
-
-/* --- Indicator library (IND) --- */
-.ind { min-height: 0; }
-.ind-input { flex: none; background: var(--fg); color: var(--bg); font: inherit; padding: 0 4px; margin: 2px 0; width: 100%; box-sizing: border-box; }
-.ind-input::placeholder { color: var(--bg); opacity: 0.6; }
-.ind-box { flex: none; }
-.ind-caret { white-space: pre; font-family: inherit; }
-.ind-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.ind-row { padding: 0 4px; cursor: default; }
-.ind-row.sel { background: var(--sel); }
-.ind-id { display: inline-block; min-width: 12ch; }
-.ind-plain { padding-left: 13ch; white-space: normal; }
-.ind-foot, .ind-msg { flex: none; }
-.ind-msg.err { color: var(--down); }
-.ind-msg.warn { color: var(--warn); }

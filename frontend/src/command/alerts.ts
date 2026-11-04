@@ -13,7 +13,7 @@ import { createStore } from "../state/store";
 import { symName } from "../state/symbols";
 import { onRawTicks, orNull, type RawTicks } from "../state/ticks";
 import { sendWithRetry } from "./triggerRetry";
-import { alertMet, describeRule, newsMatch, parseAlrt, parseRule } from "./alertArgs";
+import { alertMet, describeRule, newsMatch, parseAlrt } from "./alertArgs";
 import type { SecurityRef } from "./markets";
 import { fail, info, statusMsg } from "./status";
 
@@ -69,7 +69,7 @@ export async function refreshAlerts(): Promise<Alert[]> {
 }
 
 /** Asks once for desktop notifications. Must run inside the user's keypress (the ALRT command). */
-function askNotifyPermission(): void {
+export function askNotifyPermission(): void {
   if (!notifySupported() || Notification.permission !== "default") return;
   try {
     void Notification.requestPermission().then((p) => notifyState.set(() => p as NotifyState), () => notifyState.set(() => "denied"));
@@ -210,7 +210,7 @@ export function startAlerts(): void {
   setInterval(() => void pollNewsAlerts(), NEWS_POLL_MS);
 }
 
-async function act(what: string, call: () => Promise<unknown>, ok: string): Promise<boolean> {
+export async function act(what: string, call: () => Promise<unknown>, ok: string): Promise<boolean> {
   try {
     await call();
   } catch (e) {
@@ -242,18 +242,6 @@ export const rearmNewsAlert = (id: number) => {
   newsFiring.delete(id);
   return act(`NEWS ALERT N${id} NOT REARMED`, () => newsAlertsApi.rearm(id), `NEWS ALERT N${id} REARMED`).then((ok) => (void refreshNewsAlerts().catch(() => {}), ok));
 };
-
-/**
- * Creates a price alert from the chart (GP key A / Alt+click): the same rule validation (`parseRule`) and the same create path
- * as `ALRT SYM > 200`. `priceText` is the rounded price as shown ("231.50"). Resolves true when saved.
- */
-export function createPriceAlert(symbol: string, op: ">" | "<", priceText: string): Promise<boolean> {
-  const rule = parseRule(`${op}${priceText}`);
-  if (typeof rule === "string") return Promise.resolve(fail(rule));
-  askNotifyPermission(); // synchronously, inside the keypress or click that asked
-  const text = `${symbol} ${op} ${priceText}`;
-  return act(`ALERT ${text} NOT SAVED`, () => api8.createAlert({ symbol, ...rule }), `ALERT SET: ${text} (ALRT TO MANAGE)`);
-}
 
 /** Runs an `ALRT ...` command. true/false = finished here; string[] = show `ALRT <args>`. */
 export function alrtCommand(args: string[], security?: SecurityRef): boolean | string[] {

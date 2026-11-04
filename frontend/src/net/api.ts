@@ -119,7 +119,7 @@ async function request<T>(path: string, maxAgeMs: number): Promise<T> {
 }
 
 /** Uncached write (or read that must be fresh). Errors carry the backend's message. */
-async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -164,10 +164,6 @@ export const api = {
   editWatchlist: (name: string, change: { add?: string[]; remove?: string[] }) =>
     send<Watchlist>("PATCH", `/api/watchlists/${encodeURIComponent(name)}`, change),
   deleteWatchlist: (name: string) => send<{ deleted: string }>("DELETE", `/api/watchlists/${encodeURIComponent(name)}`),
-  indicatorPresets: () => send<{ presets: IndicatorPreset[] }>("GET", "/api/indicator-presets"),
-  putIndicatorPreset: (name: string, items: PresetItem[]) =>
-    send<IndicatorPreset>("PUT", `/api/indicator-presets/${encodeURIComponent(name)}`, { items }),
-  deleteIndicatorPreset: (name: string) => send<{ deleted: string }>("DELETE", `/api/indicator-presets/${encodeURIComponent(name)}`),
   cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
   pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
   // Phase 11 API keys: uncached (`send`); the backend never returns a value, only status.

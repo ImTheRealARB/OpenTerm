@@ -3,7 +3,9 @@ import { getChartIndicators, onChartIndicators, requestIndicator, requestKey, ty
 import { CATALOG, resolveParams } from "../chart/library/catalog";
 import { validateFormula, MAX_FORMULA_LENGTH } from "../chart/formula";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api, type IndicatorPreset, type PresetItem } from "../net/api";
+import { type IndicatorPreset, type PresetItem } from "../net/api";
+import { presetsApi } from "../net/presetsApi";
+import "./ind.css";
 import { filterIndicators, parseQuery } from "./indFilter";
 import type { FunctionProps } from "./registry";
 import { useLatest } from "./quoteRows";
@@ -100,7 +102,7 @@ export default function IND({ panelId, args }: FunctionProps) {
     if (!n.trim()) return say("ERR: TYPE A PRESET NAME", "err");
     if (!items.length) return say("ERR: NOTHING PICKED YET: ADD INDICATORS FIRST", "err");
     try {
-      const saved = await api.putIndicatorPreset(n.trim(), items);
+      const saved = await presetsApi.put(n.trim(), items);
       say(`SAVED PRESET ${saved.name} (${saved.items.length})`);
       setMode("browse");
     } catch (e) {
@@ -112,7 +114,7 @@ export default function IND({ panelId, args }: FunctionProps) {
     setMode("load");
     setPsel(0);
     try {
-      const r = await api.indicatorPresets();
+      const r = await presetsApi.list();
       setPresets(r.presets);
       if (!r.presets.length) say("NO PRESETS SAVED YET: ADD INDICATORS THEN PRESS S", "warn");
     } catch (e) {
@@ -140,7 +142,7 @@ export default function IND({ panelId, args }: FunctionProps) {
     const p = ps?.[i];
     if (!p) return;
     try {
-      await api.deleteIndicatorPreset(p.name);
+      await presetsApi.remove(p.name);
       setPresets((cur) => (cur ?? []).filter((x) => x.name !== p.name));
       setPsel(0);
       say(`DELETED PRESET ${p.name}`);

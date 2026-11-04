@@ -6,7 +6,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { displayVersion } from "../settings/runtime";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { usePanelId } from "../state/panelContext";
-import { headerHit } from "./gridHeaderHit";
+import type { TipCtx } from "../gui/gridTips";
 import { bitClear, bitGrow, bitHas, bitSet } from "../state/bitset";
 import { wheelTop } from "../state/gridScroll";
 import "./dataColors.css";
@@ -301,27 +301,14 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       const i = s.top + Math.floor((e.clientY - r.top - ROW_H) / ROW_H);
       if (e.clientY - r.top > ROW_H) moveTo(i);
     };
-    // GUI mode only: header hover shows the glossary tip (lazy chunk). Terminal mode returns on the first line.
-    const tipCol = { at: -1 };
-    const colW = (c: number) => data.current.columns[c].width * s.cw + PAD * 2;
+    // GUI mode only: header hover shows the glossary tip (lazy chunk, which owns the logic). Terminal mode returns on the first line.
+    const tip = { at: -1, i: -1, hasTips: null as boolean | null };
+    const tipCtx = (): TipCtx => ({ tip, cv, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H, cols: data.current.columns, panel: box.current?.closest(".panel") ?? null });
     const onMove = (e: MouseEvent) => {
-      if (document.documentElement.dataset.mode !== "gui") return;
-      const r = cv.getBoundingClientRect();
-      const y = e.clientY - r.top;
-      const n = s.xs.length;
-      const c = y >= 0 && y < ROW_H && n ? headerHit(e.clientX - r.left, s.xs, s.xs[n - 1] + colW(n - 1)) : -1;
-      if (c === tipCol.at) return;
-      tipCol.at = c;
-      void import("../gui/gridTips").then((m) => {
-        if (tipCol.at !== c) return; // the mouse moved on while the chunk loaded
-        if (c < 0 || !data.current.columns[c]) return m.hideTip();
-        m.showColumnTip(data.current.columns[c].title, { left: r.left + s.xs[c], top: r.top, right: r.left + s.xs[c] + colW(c), bottom: r.top + ROW_H }, box.current?.closest(".panel") ?? null);
-      });
+      if (document.documentElement.dataset.mode === "gui") void import("../gui/gridTips").then((m) => m.headerMove(e, tipCtx()));
     };
     const onLeave = () => {
-      if (tipCol.at < 0) return;
-      tipCol.at = -1;
-      void import("../gui/gridTips").then((m) => m.hideTip());
+      if (tip.at >= 0) void import("../gui/gridTips").then((m) => m.headerLeave(tipCtx()));
     };
     cv.addEventListener("wheel", onWheel, { passive: false });
     cv.addEventListener("mousedown", onDown);
@@ -338,21 +325,15 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
 
   // GUI mode: Shift+T steps through the columns that have a glossary line and shows each one's tip (Esc hides it).
   // `hasTips` is unknown until the lazy chunk has run once; after that a grid with no glossary column lets T fall through.
+  const tipKeys = useRef({ at: -1, i: -1, hasTips: null as boolean | null });
   useEffect(() => {
-    const tk = { i: -1, hasTips: null as boolean | null };
+    const tip = tipKeys.current;
     return registerPanelKeys(panelId, (e) => {
-      if (e.key !== "T" || e.ctrlKey || e.altKey || e.metaKey || document.documentElement.dataset.mode !== "gui" || tk.hasTips === false) return false;
-      void import("../gui/gridTips").then((m) => {
-        const cols = m.glossaryColumns(data.current.columns.map((c) => c.title));
-        tk.hasTips = cols.length > 0;
-        if (!cols.length) return;
-        const c = cols.find((x) => x > tk.i) ?? cols[0];
-        tk.i = c;
-        const r = canvas.current!.getBoundingClientRect();
-        const s = st.current;
-        const w = data.current.columns[c].width * s.cw + PAD * 2;
-        m.showColumnTip(data.current.columns[c].title, { left: r.left + s.xs[c], top: r.top, right: r.left + s.xs[c] + w, bottom: r.top + ROW_H }, box.current?.closest(".panel") ?? null);
-      });
+      if (e.key !== "T" || e.ctrlKey || e.altKey || e.metaKey || document.documentElement.dataset.mode !== "gui" || tip.hasTips === false) return false;
+      const s = st.current;
+      void import("../gui/gridTips").then((m) =>
+        m.nextTip({ tip, cv: canvas.current!, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H, cols: data.current.columns, panel: box.current?.closest(".panel") ?? null }),
+      );
       return true;
     });
   }, [panelId]);
