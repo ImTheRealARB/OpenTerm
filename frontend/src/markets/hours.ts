@@ -21,7 +21,15 @@ export const MARKETS: Market[] = [
   { code: "HK", tz: "Asia/Hong_Kong", sessions: [[hm(9, 30), hm(12)], [hm(13), hm(16)]] },
 ];
 
-export type Basis = "rules" | "public";
+/** Where the closure dates came from. "fixed" = a partial rule (NSE: fixed-date holidays + Good Friday, festival holidays NOT included). */
+export type Basis = "rules" | "public" | "fixed";
+
+/** Tooltip text for a basis. "fixed" must say the list is incomplete: on a festival day the light still shows OPEN. */
+export function basisNote(basis: Basis): string {
+  if (basis === "rules") return "HOLIDAYS BY NYSE RULE";
+  if (basis === "fixed") return "FIXED-DATE HOLIDAYS + GOOD FRIDAY ONLY: FESTIVAL HOLIDAYS (DIWALI, HOLI, EID...) NOT INCLUDED";
+  return "PUBLIC HOLIDAYS (EXCHANGE MAY DIFFER)";
+}
 interface Closures {
   holidays: Set<string>;
   early: Set<string>;

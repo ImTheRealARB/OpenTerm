@@ -10,6 +10,8 @@ import {
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
+import { requestAsk } from "../gui/askBus";
+import { settingsStore } from "../settings/runtime";
 import { fmtChg, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api8, type ApiError, type Position } from "../net/api";
@@ -66,6 +68,7 @@ type ImportState = { stage: "paste" } | { stage: "preview"; source: string; resu
 
 function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
   const version = useStore(portfolioVersion, (v) => v);
+  const gui = useStore(settingsStore, (s) => s.mode === "gui"); // GUI mode says "VALUE" in the summary; Terminal keeps "MKT VAL"
   const request = useStore(portfolioRequest, (r) => r);
   const [pf, setPf] = useState<{ base: string; positions: Position[] } | null>(null);
   const [missing, setMissing] = useState(false);
@@ -358,19 +361,19 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
       {/* The three "nothing to show" states use the shared PanelNote; every empty one says what to do next. */}
       {!pf && !missing && !err && <PanelNote kind="loading">LOADING PORTFOLIO {name}…</PanelNote>}
       {missing && (
-        <PanelNote kind="empty" hint={`Create it: PORT ${name} ADD AAPL 10 150, or press I / V to import a CSV. In GUI mode use the Add button.`}>
+        <PanelNote kind="empty" actions={[{ label: "Add a stock", onClick: () => requestAsk(panelId, "Add") }]} hint={`Create it: PORT ${name} ADD AAPL 10 150, or press I / V to import a CSV. In GUI mode use the Add button.`}>
           NO PORTFOLIO {name}
         </PanelNote>
       )}
       {!missing && pf && positions.length === 0 && (
-        <PanelNote kind="empty" hint={`Add one: PORT ${name} ADD AAPL 10 150 (SYM QTY [COST]), or press A. In GUI mode use the Add button.`}>
+        <PanelNote kind="empty" actions={[{ label: "Add a stock", onClick: () => requestAsk(panelId, "Add") }]} hint={`Add one: PORT ${name} ADD AAPL 10 150 (SYM QTY [COST]), or press A. In GUI mode use the Add button.`}>
           NO POSITIONS IN {name}
         </PanelNote>
       )}
       <Grid ref={grid} columns={columns} rows={rows} />
       {/* ps-l = label (dim), ps-v = value (bold amber, or up/down colour). Spaces stay inside the text so the plain text is unchanged. */}
       <div className="summary" data-testid="port-summary">
-        <span className="ps-l">TOTAL {base} MKT VAL </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l">DAY </span>
+        <span className="ps-l">TOTAL {base} {gui ? "VALUE" : "MKT VAL"} </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l">DAY </span>
         <span className={`ps-v ${tc(t.day)}`}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · <span className="ps-l">UNRL </span>
         <span className={`ps-v ${tc(t.unrl)}`}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · <span className="ps-l">COST </span><span className="ps-v">{fmtMoney(t.cost)}</span>
         {t.converted.length > 0 && <span className="acc"> · CONVERTED AT LIVE FX: {t.converted.map((c) => `${c}${base}=X`).join(" ")}</span>}
@@ -520,7 +523,7 @@ function PortfolioIndex({ panelId }: { panelId: number }) {
         PORTFOLIOS {err && <span className="err">STALE: {err}</span>}
       </h2>
       {list.length === 0 ? (
-        <PanelNote kind="empty" hint="Create one: PORT MAIN ADD AAPL 10 150 (any name of A-Z 0-9 _ . -), or press N to start typing the command.">
+        <PanelNote kind="empty" actions={[{ label: "Start my portfolio", onClick: () => navigate(panelId, { fn: "PORT", args: ["MAIN"] }) }]} hint="Create one: PORT MAIN ADD AAPL 10 150 (any name of A-Z 0-9 _ . -), or press N to start typing the command.">
           NO PORTFOLIOS YET
         </PanelNote>
       ) : (

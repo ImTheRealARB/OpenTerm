@@ -1018,11 +1018,11 @@ export interface WetrPayload {
   note: string;
 }
 
-/** Market-light holidays (`basis`: NYSE rules or Nager public holidays). */
+/** Market-light holidays (`basis`: NYSE rules, Nager public holidays, or `fixed` = NSE partial rules without festivals). */
 export interface HolidayCalendar {
   mkt: string;
   year: number;
-  basis: "rules" | "public";
+  basis: "rules" | "public" | "fixed";
   label: string;
   holidays: { date: string; name: string; national: boolean }[];
   early: { date: string; name: string }[];

@@ -1,4 +1,4 @@
-"""Exchange holidays for the market lights: NYSE / Nasdaq by rule, everything else from Nager.Date public holidays (labelled; the exchange may differ)."""
+"""Exchange holidays for the market lights: NYSE / Nasdaq by rule, NSE by a partial rule (fixed dates only), everything else from Nager.Date public holidays (labelled; the exchange may differ)."""
 
 from __future__ import annotations
 
@@ -6,10 +6,11 @@ import time
 from typing import Any
 
 from ..service import DataError
+from . import nse_holidays as nse
 from . import nyse_holidays as nyse
 
-MARKET_COUNTRY = {"LN": "GB", "TK": "JP", "HK": "HK", "IN": "IN"}
-MARKETS = ("NY", *MARKET_COUNTRY)
+MARKET_COUNTRY = {"LN": "GB", "TK": "JP", "HK": "HK"}  # IN has no public-holiday source: it uses NSE rules (nse_holidays.py)
+MARKETS = ("NY", *MARKET_COUNTRY, "IN")
 TTL_S = 7 * 86400.0
 NYSE_LABEL = "NYSE / NASDAQ HOLIDAYS BY RULE (CHECKED AGAINST THE PUBLISHED LIST 2024-2027)"
 NAGER_LABEL = "PUBLIC HOLIDAYS (EXCHANGE MAY DIFFER)"
@@ -51,6 +52,8 @@ async def calendar(svc: Any, mkt: str, year: int) -> dict[str, Any]:
         raise DataError("bad_request", "YEAR: 2000-2040")
     if mkt == "NY":
         return {"data": nyse_payload(year), "source": "nyse_rules", "as_of": time.time(), "age_s": 0.0, "stale": False, "fallback_from": []}
+    if mkt == "IN":
+        return {"data": nse.payload(year), "source": "nse_rules", "as_of": time.time(), "age_s": 0.0, "stale": False, "fallback_from": []}
     cc = MARKET_COUNTRY[mkt]
 
     async def fetch() -> dict:

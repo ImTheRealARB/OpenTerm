@@ -40,7 +40,7 @@ async def figi(request: Request, q: str = Query(..., max_length=600)):
 
 @router.get("/holidays")
 async def holidays(request: Request, mkt: str = Query("NY", max_length=2), year: int | None = Query(None, ge=2000, le=2040)):
-    """Market-light holidays: NY by rule, LN / TK / HK / IN from Nager.Date public holidays (labelled)."""
+    """Market-light holidays: NY by rule, IN by partial rule (fixed dates, no festivals; labelled), LN / TK / HK from Nager.Date public holidays (labelled)."""
     from .world.holidays import calendar
 
     try:

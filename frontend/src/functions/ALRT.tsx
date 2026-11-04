@@ -8,6 +8,8 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import type { Alert, NewsAlert } from "../net/api";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
+import { requestAsk } from "../gui/askBus";
+import { PanelNote } from "../components/PanelNote";
 import { dirColor, lastColor, lastFlash, navKey, pct, price, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -137,7 +139,9 @@ export default function ALRT({ panelId }: FunctionProps) {
         J/K MOVE · ENTER GP · N NEW (ALRT SYM &gt; 200 | ALRT SYM +5% | ALRT NEWS WORD [SYM]) · D DELETE · R REARM · C CLEAR TRIGGERED · F5 · PRICES CHECKED ON LIVE TICKS, NEWS WORDS ON EACH NEWS REFRESH (EVERY 2 MIN) WHILE THIS APP IS OPEN
       </div>
       {list?.length === 0 && nlist?.length === 0 && (
-        <div className="dim">NO ALERTS. ALRT AAPL &gt; 200, ALRT AAPL -3% (VS PREVIOUS CLOSE), ALRT NEWS RECALL AAPL (HEADLINE HAS THE WORD).</div>
+        <PanelNote kind="empty" actions={[{ label: "Add an alert", onClick: () => requestAsk(panelId, "Add an alert") }]} hint="ALRT AAPL > 200, ALRT AAPL -3% (VS PREVIOUS CLOSE), ALRT NEWS RECALL AAPL (HEADLINE HAS THE WORD).">
+          NO ALERTS.
+        </PanelNote>
       )}
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>

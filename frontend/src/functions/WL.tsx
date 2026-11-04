@@ -9,6 +9,7 @@ import { api, type ApiError } from "../net/api";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
+import { requestAsk } from "../gui/askBus";
 import { liveSymbol, navKey, QUOTE_COLUMNS as COLUMNS, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -132,12 +133,12 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
         </PanelNote>
       )}
       {missing && (
-        <PanelNote kind="empty" hint={`Create it: WL ${name} ADD AAPL MSFT, or press A and type the symbols (GUI mode: the Add button).`}>
+        <PanelNote kind="empty" actions={[{ label: "Add a stock", onClick: () => requestAsk(panelId, "Add") }]} hint={`Create it: WL ${name} ADD AAPL MSFT, or press A and type the symbols (GUI mode: the Add button).`}>
           NO WATCHLIST {name}. WL {name} ADD AAPL MSFT CREATES IT.
         </PanelNote>
       )}
       {!missing && symbols?.length === 0 && (
-        <PanelNote kind="empty" hint={`Add one: WL ${name} ADD AAPL, or press A and type the symbols (GUI mode: the Add button).`}>
+        <PanelNote kind="empty" actions={[{ label: "Add a stock", onClick: () => requestAsk(panelId, "Add") }]} hint={`Add one: WL ${name} ADD AAPL, or press A and type the symbols (GUI mode: the Add button).`}>
           EMPTY. A ADDS SYMBOLS (WL {name} ADD SYM...).
         </PanelNote>
       )}
@@ -228,7 +229,7 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
         WATCHLISTS {err && <span className="err">STALE: {err}</span>}
       </h2>
       {list.length === 0 ? (
-        <PanelNote kind="empty" hint="Create one: WL TECH ADD AAPL MSFT NVDA (any name), or press N to start the command.">
+        <PanelNote kind="empty" actions={[{ label: "Start my watchlist", onClick: () => navigate(panelId, { fn: "WL", args: ["MY-STOCKS"] }) }]} hint="Create one: WL TECH ADD AAPL MSFT NVDA (any name), or press N to start the command.">
           NO WATCHLISTS. WL NAME ADD AAPL MSFT CREATES ONE.
         </PanelNote>
       ) : (

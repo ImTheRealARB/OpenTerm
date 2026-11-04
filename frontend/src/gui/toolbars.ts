@@ -35,11 +35,19 @@ export interface ToolbarButton {
    * Needs text first. `command` is the command line text to run once the user typed it: `{arg0}` becomes the view's
    * first argument (the list name), `{input}` the typed text.
    */
-  ask?: { prompt: string; command: string };
+  ask?: { prompt: string; command: string; /** Typed text with commas is several entries: run the command once per entry ("AAPL 10 150, MSFT 5 300"). */ splitCommas?: boolean };
 }
 
 /** Function code -> its buttons, in display order. Only the eight most-used panels have per-function buttons. */
 export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
+  // The company overview: one extra button for a beginner. It sets a price alert for the panel's own stock.
+  DES: [
+    { label: "Set alert", key: "a", title: "Alert me when this stock goes above a price", ask: { prompt: "Alert me when it goes above (price), e.g. 200", command: "ALRT {symbol} > {input}" } },
+  ],
+  // The alert list: the same kind of box, for any stock ("AAPL > 200" or "AAPL -3%").
+  ALRT: [
+    { label: "Add an alert", key: "n", title: "New alert (N)", ask: { prompt: "Stock and level, e.g. AAPL > 200 or AAPL -3%", command: "ALRT {input}" } },
+  ],
   Q: [
     { label: "Open DES", key: "Enter", title: "Open the description of the selected security (Enter)" },
     { label: "Add", key: "a", title: "Add securities: puts the command in the command line (A)" },
@@ -89,7 +97,7 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
   ],
   PORT: [
     // A named portfolio (PORT MAIN):
-    { label: "Add", key: "a", when: "args", title: "Add a position (A)", ask: { prompt: "Position: SYMBOL QTY [COST] [CCY], e.g. AAPL 10 150", command: "PORT {arg0} ADD {input}" } },
+    { label: "Add", key: "a", when: "args", title: "Add a position (A)", ask: { prompt: "Stock, shares, price paid: AAPL 10 150, MSFT 5 300", command: "PORT {arg0} ADD {input}", splitCommas: true } },
     { label: "Remove", key: "d", when: "args", title: "Remove the selected position: press twice to confirm (D); U undoes it" },
     { label: "Undo", key: "u", when: "args", title: "Undo the last removal (U)" },
     { label: "Sort", key: "s", when: "args", title: "Cycle the sort order (S)" },
@@ -134,6 +142,17 @@ export function keyInit(b: ToolbarButton): KeyboardEventInit {
 }
 
 /** Command line text for an `ask` button: `{arg0}` -> the view's first argument, `{input}` -> what the user typed. */
-export function expandAsk(command: string, args: readonly string[], input: string): string {
-  return command.replace("{arg0}", args[0] ?? "").replace("{input}", input.trim());
+export function expandAsk(command: string, args: readonly string[], input: string, symbol = ""): string {
+  return command.replace("{arg0}", args[0] ?? "").replace("{symbol}", symbol).replace("{input}", input.trim());
+}
+
+/** The command lines an `ask` button runs for the typed text (one per comma-separated entry when `splitCommas`). */
+export function askCommands(ask: NonNullable<ToolbarButton["ask"]>, args: readonly string[], input: string, symbol = ""): string[] {
+  const parts = ask.splitCommas ? input.split(",").map((p) => p.trim()).filter(Boolean) : [input];
+  return parts.map((p) => expandAsk(ask.command, args, p, symbol));
+}
+
+/** The `ask` button with this label for a function, ignoring its `when` (a panel's empty state may open it from any view). */
+export function askButton(code: string | undefined, label: string): ToolbarButton | undefined {
+  return code ? (TOOLBARS[code] ?? []).find((b) => b.label === label && b.ask) : undefined;
 }

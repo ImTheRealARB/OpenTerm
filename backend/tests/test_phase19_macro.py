@@ -223,8 +223,3 @@ def test_holidays_route_ny_by_rule_and_nager_labelled(client):
     assert ln["data"]["basis"] == "public" and "EXCHANGE MAY DIFFER" in ln["data"]["label"]
     assert any(h["date"] == "2026-12-25" for h in ln["data"]["holidays"])
     assert client.get("/api/world/holidays", params={"mkt": "ZZ"}).status_code == 400
-
-
-def test_holidays_india_has_no_nager_data_and_says_so(client):
-    r = client.get("/api/world/holidays", params={"mkt": "IN", "year": 2026})
-    assert r.status_code == 404 and "NO HOLIDAY DATA" in (r.json().get("detail", "") + r.json()["error"]).upper()
