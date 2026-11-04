@@ -147,10 +147,9 @@
 /* 20 and 17: secondary text was ~3.5:1 dim amber on black. Lighter dim for the default (amber) theme only; the other themes keep theirs. */
 :root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) { --fg-dim: #d9a066; }
 
-/* 15: one clear place to search. The sidebar box is the primary one (brighter border); the terminal command line in the top bar
-   collapses to a hair until it has focus (Ctrl+K still focuses it, so the keyboard path is unchanged). */
+/* 15: the sidebar box is the beginner search (brighter border). The top-bar command line stays visible in GUI too, so both
+   ways of working are always available (it used to collapse to a hair until focused; changed 2026-11-05 at the user's request). */
 :root[data-mode="gui"] .gs-search { border-color: var(--fg-dim); height: 22px; }
-:root[data-mode="gui"] .top .cmd:not(:focus-within) { flex: 0 0 2px; min-width: 2px; overflow: hidden; opacity: 0; }
 
 /* 18: the key-hint bar is expert content; GUI drops it (and its grid row). */
 :root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 18px; }
