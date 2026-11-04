@@ -203,7 +203,7 @@ async def lifespan(app: FastAPI):
     from .jobs.store import JobStore
 
     app.state.jobs = jobs = JobRunner(JobStore(db), hub.broadcast, settings.openterm_job_workers)
-    sched = scheduler.start(router)
+    sched = scheduler.start(router, cache)
     app.state.scheduler = sched
     from .delivery import settings as delivery_settings
 

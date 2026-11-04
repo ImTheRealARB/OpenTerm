@@ -69,20 +69,26 @@ class DataService:
 
     # --- coalescing -------------------------------------------------------------------------
     async def _once(self, key: str, fetch: Callable[[], Awaitable[dict]]) -> dict:
-        """Concurrent callers for the same key share one upstream request."""
+        """Concurrent callers for the same key share one upstream request.
+        The fetch runs in its own task, so cancelling the first caller (a closed browser tab)
+        cannot hand CancelledError to the callers waiting on the same key."""
         fut = self._inflight.get(key)
         if fut is None:
             fut = asyncio.get_running_loop().create_future()
             self._inflight[key] = fut
-            try:
-                value = await fetch()
-                self.cache.put(key, value)
-                fut.set_result(value)
-            except BaseException as e:  # noqa: BLE001 - forwarded to every waiter
-                fut.set_exception(e)
-                fut.exception()  # mark retrieved so a lone background refresh doesn't warn
-            finally:
-                del self._inflight[key]
+
+            async def work() -> None:
+                try:
+                    value = await fetch()
+                    self.cache.put(key, value)
+                    fut.set_result(value)
+                except BaseException as e:  # noqa: BLE001 - forwarded to every waiter
+                    fut.set_exception(e)
+                    fut.exception()  # mark retrieved so a lone background refresh doesn't warn
+                finally:
+                    del self._inflight[key]
+
+            self._background(work())  # keeps a reference so the task is not garbage collected
         return await asyncio.shield(fut)
 
     def _background(self, coro: Awaitable) -> None:

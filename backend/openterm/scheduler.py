@@ -1,9 +1,11 @@
 """Background jobs so user requests hit warm caches and tripped providers recover on their own."""
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from .cache import Cache
 from .providers.base import Provider, ProviderError
 from .router import Router
 
@@ -25,9 +27,20 @@ async def probe_down_providers(router: Router) -> None:
             pass
 
 
-def start(router: Router) -> AsyncIOScheduler:
+async def prune_cache(cache: Cache) -> None:
+    """Daily housekeeping: drop old and excess rows from the SQLite cache table."""
+    removed = await cache.prune()
+    if removed:
+        log.info("cache pruned: %d rows removed", removed)
+
+
+def start(router: Router, cache: Cache | None = None) -> AsyncIOScheduler:
     sched = AsyncIOScheduler()
     sched.add_job(probe_down_providers, "interval", seconds=30, args=[router], max_instances=1, coalesce=True)
+    if cache is not None:
+        # first run 5 min after start (not at boot, which is busy), then every 6 hours
+        sched.add_job(prune_cache, "interval", hours=6, args=[cache], id="cache_prune", max_instances=1, coalesce=True,
+                      next_run_time=datetime.now(timezone.utc) + timedelta(minutes=5))
     sched.start()
     return sched
 
