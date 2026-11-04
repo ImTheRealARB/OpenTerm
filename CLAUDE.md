@@ -121,6 +121,12 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   and are only fixture-tested; the keyless `fred_csv` / `treasury` / `nasdaq_earnings` / `agency_ics` (BLS + BEA) providers serve Phase 7.
 - **`ChartView` readout:** `writeRef.current` is reassigned every render (the old stale-readout note no longer applies); FRED still remounts the chart with `key={id:range}`.
   A transferred-buffer / effect-key rewrite of ChartView broke 6 GP e2e tests (reverted, `docs/review/REVERTED.md`): retry it with a browser open.
+- **lightweight-charts applies scroll/zoom on its next paint:** `getVisibleLogicalRange()` stays stale until then, so `ChartView.pan/zoom` build on
+  `pendingRange` (cleared one frame later). Without it, keys pressed inside one frame were lost on a fast machine (`gp-toggle` e2e).
+- **On the user's laptop run the full gate with `--e2e-last`** (2026-11-05): fully parallel, 1-2 random e2e tests fail per run (each passes alone),
+  plus the `eqsFilter` 10k-row timing vitest. A delayed `setTimeout` focus (BT EDIT `CodeBox`) must not refocus after the user pressed Esc.
+- **The in-app browser tool's key events differ from a keyboard:** Shift+T arrives as `key: "t"` with Shift, and `+` / `=` arrive as an empty key.
+  Check those bindings in Playwright, not through the browser pane.
 - **Playwright runs 4 workers** (`playwright.config.ts`): the default 10 flaked 8-9 e2e tests per run on a 20-thread machine, on `main` too. A failing e2e spec is
   worth rerunning alone before suspecting the change.
 - **Panel arg changes go through `replaceView(panelId, v => ({...v, args}))`** so ERN/ECO/FRED state survives layout save/load.

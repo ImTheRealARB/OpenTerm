@@ -136,6 +136,12 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  // lightweight-charts queues scroll and zoom requests and applies them on its next paint, so
+  // getVisibleLogicalRange() keeps returning the old range until then. Keys pressed faster than a
+  // frame (key repeat, a fast machine, Playwright) would each start from that stale range and all
+  // but the last would be lost. pan()/zoom() build on the range they last requested instead; it is
+  // forgotten one frame later, once the chart has applied it.
+  const pendingRange = useRef<{ from: number; to: number } | null>(null);
   const main = useRef<ISeriesApi<SeriesType> | null>(null);
   const vol = useRef<ISeriesApi<"Histogram"> | null>(null);
   const extra = useRef<ISeriesApi<SeriesType>[]>([]);
@@ -750,6 +756,13 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     });
   }, [draw, data, indicators, comparePanes, compare, ver]);
 
+  // Ask the chart for a new visible range and remember it until the chart has painted it (see pendingRange).
+  const requestRange = (ts: ReturnType<IChartApi["timeScale"]>, r: { from: number; to: number }) => {
+    if (!pendingRange.current) requestAnimationFrame(() => (pendingRange.current = null));
+    pendingRange.current = r;
+    ts.setVisibleLogicalRange(r);
+  };
+
   useImperativeHandle(ref, () => ({
     crosshairIndex() {
       return cross.current.on ? cross.current.idx : data.c.length - 1;
@@ -762,15 +775,19 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       }
     },
     pan(bars) {
+      // Shift the whole range by `bars`: same width, so the bar spacing (zoom) is unchanged.
       const ts = chartRef.current?.timeScale();
-      if (ts) ts.scrollToPosition(ts.scrollPosition() + bars, false);
+      const r = pendingRange.current ?? ts?.getVisibleLogicalRange();
+      if (!ts || !r) return;
+      requestRange(ts, { from: r.from + bars, to: r.to + bars });
     },
     zoom(factor) {
+      // Keep the right edge fixed and scale the width (factor < 1 zooms in).
       const ts = chartRef.current?.timeScale();
-      const r = ts?.getVisibleLogicalRange();
+      const r = pendingRange.current ?? ts?.getVisibleLogicalRange();
       if (!ts || !r) return;
       const width = Math.max(10, (r.to - r.from) * factor);
-      ts.setVisibleLogicalRange({ from: r.to - width, to: r.to });
+      requestRange(ts, { from: r.to - width, to: r.to });
     },
     crosshair(on) {
       cross.current.on = on;

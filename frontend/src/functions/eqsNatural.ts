@@ -157,7 +157,13 @@ function readNumber(tokens: string[], i: number): Num | null {
     len = 2;
   }
   value *= mult;
-  return { value, pct: m[3] === "%", dollar: tokens[i].startsWith("$"), mult, len };
+  // "50 dollars" / "20 usd" means the same as "$50": the currency word marks a dollar amount and is consumed.
+  let dollar = tokens[i].startsWith("$");
+  if (/^(dollars?|usd|bucks)$/.test(tokens[i + len] ?? "")) {
+    dollar = true;
+    len++;
+  }
+  return { value, pct: m[3] === "%", dollar, mult, len };
 }
 
 const OP_FLIP = { ">": "<", ">=": "<=", "<": ">", "<=": ">=", "=": "=" } as const;

@@ -24,10 +24,13 @@ unreviewed checkpoints; the reviewed step commit follows each one.
 - **Decisions left to the user:** the four "confirm or revert" items and the DLVR `DESKTOP` toggle (DECISIONS_FOR_USER.md, untouched); the 9 low audit items;
   startup bundle is 125.8 KB gz (+5.8 KB: GUI +4.2 within its 5 KB cap, Part 4 +1.6 KB); NSE holidays cover fixed dates + Good Friday only (festivals not computable by rule; the UI says so).
 - **Performance pass (after Parts 0-5):** data-oriented rewrite of the tick path, SEAS and BT open (user's method; `docs/PERFORMANCE.md` "Performance pass 2026-11-04"): bench 37/37 then 36/37 (lone Job J frame miss). Then bundle 124.8 -> 119.5 KB gz (under main's 120.0) and an allocation-free SEAS core: bench 37/37, then 35/37 (chart-pan lone miss; SEAS swings 10-17 ms run to run). Gate ALL PASS apart from load-only timing vitests (pass alone).
-- **NEXT_FEATURES job (`docs/specs/NEXT_FEATURES.md`): ALL 6 STEPS BUILT, NOT YET FULL-GATED.** The user asked for the full gate + bench to run
-  on their laptop (local session), not in the cloud. Cloud checks done: tsc clean, vitest 1016/1016, ruff clean, targeted pytest 51/51, startup bundle
-  119.89 KB gz (< 120). Each builder ran its own targeted Playwright specs green (natural, beginner, terminal-conventions, cmdline, grid-glossary, gp-toggle,
-  all 14 GP specs, gp-alert, ind-library, ind-chart, bt-sentence, phase12, templates, eqs-natural, phase8, gui-shell...). The bench has NOT been run.
+- **NEXT_FEATURES job (`docs/specs/NEXT_FEATURES.md`): ALL 6 STEPS BUILT AND LOCALLY GATED (2026-11-05, Windows laptop).** Gate ALL PASS with
+  `--e2e-last`: pytest 1776, vitest 1020, e2e 297. Bench 37/37, 36/37 (chart pan 33.4 ms once), 37/37; bundle 119.9 KB gz. `docs/PERFORMANCE.md`
+  "Local gate after NEXT_FEATURES". Fixed in that session (tests first): GP pan/zoom lost presses inside one frame (`ChartView` `pendingRange`;
+  pre-existing on main, exposed by `gp-toggle` on a fast machine), BT EDIT 80 ms focus retry stole focus after Esc (`BtEditor` `leftBox`; new
+  phase12 test with a paused clock), "under 50 dollars" ignored by the EQS English parser (`eqsNatural.readNumber`). Manual smoke (fixtures, GUI +
+  Terminal) passed for every item in the local prompt; Shift+T and `+` could not be sent by the in-app browser tool (covered by e2e).
+  Open: fully parallel gates (no `--e2e-last`) fail 1-2 random e2e tests per run on this laptop (each passes alone), plus the `eqsFilter` timing vitest.
   - Step 1 NL commands: `command/natural.ts` (pure, 78-row table), `nlRun.ts` (`needsNatural`, sync, in entry), `nlResolve.ts` + `nlRoute.ts` + `cmdExtras.tsx` (lazy),
     syntax hint `command/syntaxHint.ts` (`data-testid=syntax-hint`). Routing: exact codes > compare (`compareNatural.ts`) > screener (`EQS <text>`, `functions/eqsNatural.ts`)
     > company + intent > none. GUI sidebar search / SymbolPicker go through `gui/runTyped.ts`. Ambiguity rule: top company group must have >= 10x the next group's market cap, else DID YOU MEAN.
@@ -39,10 +42,10 @@ unreviewed checkpoints; the reviewed step commit follows each one.
     The grammar is one boolean (long while true), so "sell when" is derived text, not a second rule.
   - Step 6: `TMPL` templates (`gui/templates.ts`; Settings menu in GUI), EQS English args (P/E, dividend yield, beta are NOT in the screener payload: shown as ignored),
     compare, alert from the chart (`A` key, Shift+A / toolbar arms a click, Alt+click; `command/priceAlert.ts`, `chart/alertPrice.ts`, dashed ALRT price lines, gauge `chart.alertLines`).
-  - **Risk to check first in the local gate:** vim handling (`command/vim.ts`) became a lazy chunk (bundle trim); `e2e/phase10.spec.ts` vim test was NOT in the builders' runs.
-    Also one unidentified vitest flake was seen twice in a full run by a builder (passed on rerun). `playwright.config.ts` now honours `PW_PORT`.
+  - **Lazy vim risk: checked, no problem** (`e2e/phase10.spec.ts` 6/6 locally). The builders' unidentified vitest flake is the `eqsFilter`
+    "10k rows well inside a frame" timing test (fails only under the parallel gate). `playwright.config.ts` now honours `PW_PORT`.
   - WIP-labelled commits on the branch are unreviewed checkpoints; the final state is the branch tip.
-- **Next:** run the local gate + bench (prompt in the PR description); fix what fails; then the user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
+- **Next:** the user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
 
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),

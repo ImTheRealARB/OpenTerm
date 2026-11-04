@@ -13,20 +13,20 @@ appear instantly. Dark, dense, amber on black, in the style of a professional tr
 ## Why it feels different: it is built to be fast
 
 Speed is the main feature, not an afterthought. Every number below is a **budget that the project's own benchmark
-(`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-10-19: 37 of 37 pass):
+(`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-11-05: 37 of 37 pass):
 
 | What you do | Result | Budget |
 |---|---|---|
-| Open the app to a usable command line | **about 80 ms** | 1500 ms |
-| Press a key, see it on screen | **about 14 ms** (less than one 60 Hz frame) | 16.7 ms |
-| Run a cached command, see the panel painted | **about 16 ms** | 100 ms |
-| Live price tick arrives, pixel changes | **about 36 ms** with 4,000 ticks per second flowing into 9 panels | 50 ms |
-| Scroll a 10,000-row table | **16.8 ms per frame** (smooth 60 fps) | 20 ms |
+| Open the app to a usable command line | **about 110 ms** | 1500 ms |
+| Press a key, see it on screen | **about 15 ms** (less than one 60 Hz frame) | 16.7 ms |
+| Run a cached command, see the panel painted | **about 18 ms** | 100 ms |
+| Live price tick arrives, pixel changes | **about 37 ms** with 4,000 ticks per second flowing into 9 panels | 50 ms |
+| Scroll a 10,000-row table | **16.7 ms per frame** (smooth 60 fps) | 20 ms |
 | Pan a chart of 50,000 candles | **16.7 ms per frame** | 20 ms |
 | Backend answering a cached quote | **about 1 ms** | 20 ms |
 | Backtest 10 years of daily bars | **about 0.2 s** | 0.3 s |
-| Download size of the app (JS and CSS, compressed) | **about 84 KB** | 400 KB |
-| Memory used by the page with 9 panels and 200 live symbols | **about 5 MB** | 500 MB |
+| Download size of the app (JS and CSS, compressed) | **about 120 KB** | 400 KB |
+| Memory used by the page with 9 panels and 200 live symbols | **about 8 MB** | 500 MB |
 
 How it stays fast: no animations, shadows or web fonts; tables and charts are drawn on a canvas instead of thousands of page
 elements; live ticks are batched into one repaint per frame; the server keeps one upstream connection per symbol however many
