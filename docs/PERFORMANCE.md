@@ -651,3 +651,55 @@ Bench, 6 runs after the work (the second run no longer crashes: the bench killed
 | 50k-bar chart pan/zoom frame p95 | 16.8 ms | one run 33.3 ms, others pass | 20 ms | known lone-miss line (CLAUDE.md) |
 
 Every other line passed in every run, within noise of the baseline.
+
+## Performance pass 2026-11-04 (data-oriented rewrite, same cloud box)
+
+Method (user's): data-oriented design, struct-of-arrays, flat arrays indexed by interned symbol ids instead of hash tables, no CPU memo caches (redesign instead), no per-frame/per-tick allocation, bitsets instead of bool arrays. Backend provider/SWR/job caches are kept: they protect upstream rate limits and STALE labelling.
+Changes: SEAS integer day math + per-call UTC-offset transition table; BT result labels paint before the chart (chart one frame later); tick path = typed arrays + interned ids + dirty-row bitset, zero steady-state allocation (vitest: 21.7 -> 12.2 us/frame, 24.4 -> ~0 KB/frame); help/welcome/tour out of the entry chunk; post-paint preloads staggered. Notes: `docs/review/cloud/PERF_FIXES.md`, `PERF_HUNT.md`.
+Bench: run 1 **37/37 PASS** (first clean run on this box), run 2 36/37 (Job J frame to paint 93.8 ms once; 31.9 ms in run 1).
+
+| Line | Cloud baseline (main) | After run 1 | After run 2 | Budget |
+|---|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 120.0 KB | 124.8 KB | 124.8 KB | 400 KB |
+| Backend p95, cached /api/health | 0.8 ms | 0.7 ms | 0.7 ms | 20 ms |
+| Backend p95, cached /api/quote | 0.7 ms | 0.6 ms | 0.7 ms | 20 ms |
+| Backend p95, cached /api/history | 2.1 ms | 1.8 ms | 2.1 ms | 20 ms |
+| Cold start to usable command line (web) | 129.1 ms | 120.0 ms | 121.6 ms | 1500 ms |
+| Cold start, GUI mode (new-user default) | 120.2 ms | 118.1 ms | 120.1 ms | - |
+| Keystroke to echo p95 (keydown to next frame) | 14.8 ms | 15.4 ms | 15.7 ms | 16.7 ms |
+| Command submit to first paint, cached, p95 | 28.8 ms | 18.8 ms | 20.4 ms | 100 ms |
+| Frame time p95, 8-panel workload | 16.7 ms | 16.8 ms | 16.8 ms | 20 ms |
+| Command submit to first paint, cold network, p95 | 17.1 ms | 15.9 ms | 12.3 ms | 400 ms |
+| Tick received to pixel p95, streaming load | 45.0 ms | 41.7 ms | 43.2 ms | 50 ms |
+| Frame time p95, streaming load | 16.8 ms | 16.8 ms | 16.7 ms | 20 ms |
+| Keystroke echo p95, streaming load | 15.9 ms | 14.8 ms | 16.0 ms | 16.7 ms |
+| Long tasks (>50 ms), streaming load | 0.0 | 0.0 | 0.0 | 0 |
+| JS heap, 9 panels + 200 streaming symbols | 7.5 MB | 6.1 MB | 8.4 MB | 500 MB |
+| Ticks delivered to the page per second | 3992.5 /s | 4040.6 /s | 4057.8 /s | - |
+| Layout load to paint p95 (SQLite, 9 / 1 panels) | 70.5 ms | 58.8 ms | 71.1 ms | 100 ms |
+| Frame time p95, 10k-row grid scroll | 16.7 ms | 16.7 ms | 16.7 ms | 20 ms |
+| Frame time p95, 50k-bar chart pan/zoom | 16.8 ms | 16.8 ms | 16.8 ms | 20 ms |
+| Job J frame received to paint p95 | 38.0 ms | 31.9 ms | 93.8 ms | 50 ms |
+| Job submit p95, server-side (new + cached) | 7.0 ms | 7.1 ms | 7.1 ms | 20 ms |
+| Job submit to first J frame painted p95 | 61.1 ms | 52.4 ms | 113.3 ms | - |
+| Cached job (same hash) p95, server-side | 1.7 ms | 1.3 ms | 1.3 ms | 20 ms |
+| JOBS / APIKEYS open to first paint p95 | 29.9 ms | 26.0 ms | 26.1 ms | 100 ms |
+| Worker pool cold start (first job done) | 93.8 ms | 66.4 ms | 85.6 ms | - |
+| BT 10-year daily rule run p95, server-side | 293.9 ms | 275.3 ms | 289.2 ms | 300 ms |
+| BT cached run (same hash) p95, server-side | 19.0 ms | 5.0 ms | 5.7 ms | 20 ms |
+| BT result open to first paint p95 | 133.4 ms | 39.6 ms | 35.8 ms | 100 ms |
+| BT first run, cold worker (pandas import) | 977.8 ms | 840.3 ms | 930.9 ms | - |
+| BT 100 symbols x 10 years | 1985.3 ms | 1825.3 ms | 1687.9 ms | - |
+| RISK 20 names x 3 years p95, server-side | 48.2 ms | 50.5 ms | 52.6 ms | 400 ms |
+| PORT OPT HRP 20 names p95, server-side | 12.3 ms | 10.3 ms | 9.1 ms | 400 ms |
+| PORT OPT RP 20 names p95, server-side | 17.1 ms | 20.0 ms | 19.1 ms | 400 ms |
+| CORR REGIME 20 names x 2 years p95, server-side | 67.9 ms | 59.5 ms | 64.0 ms | 300 ms |
+| ALPHA SYN 100 names x 2 years, server-side | 900.6 ms | 899.0 ms | 925.8 ms | 8000 ms |
+| AI request to first SSE event p95, server-side | 3.7 ms | 4.3 ms | 3.1 ms | 60 ms |
+| AI panel open to first paint p95 | 19.9 ms | 18.1 ms | 26.5 ms | 100 ms |
+| Pattern scan (candles + SMC) 5,000 bars p95 | 10.0 ms | 9.7 ms | 10.1 ms | 40 ms |
+| SEAS MONTH+WOY+DOM 10,000 daily bars p95 | 12.2 ms | 13.4 ms | 11.6 ms | 15 ms |
+| Drawing hit test, 200 drawings p95 | 0.3 ms | 0.3 ms | 0.3 ms | 1 ms |
+| IMAP treemap layout, 5,000 tiles p95 | 5.2 ms | 4.2 ms | 4.1 ms | 30 ms |
+| SECF fuzzy rank, 7,000 names, per query p95 | 11.9 ms | 11.9 ms | 15.0 ms | 25 ms |
+| IMAP canvas paint, 5,000 tiles p95 | 9.4 ms | 10.2 ms | 10.1 ms | 16 ms |
