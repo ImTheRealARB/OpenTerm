@@ -43,15 +43,46 @@ export function parseSeasArgs(args: string[]): { kind: SeasKind } {
   return { kind: "MONTH" };
 }
 
+/**
+ * Integer calendar math. A "day number" is the count of days since 1970-01-01 (a whole number, so no Date objects are
+ * needed per bar). These two functions are the standard "civil from days" / "days from civil" algorithms (H. Hinnant).
+ */
+export function civilFromDays(days: number): { y: number; m: number; d: number } {
+  const z = days + 719468;
+  const era = Math.floor(z / 146097);
+  const doe = z - era * 146097; // day of the 400-year era, 0..146096
+  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
+  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)); // day of the year counted from March 1
+  const mp = Math.floor((5 * doy + 2) / 153); // month counted from March (0 = March)
+  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
+  const m = mp < 10 ? mp + 3 : mp - 9;
+  return { y: yoe + era * 400 + (m <= 2 ? 1 : 0), m, d };
+}
+
+function daysFromCivil(y: number, m: number, d: number): number {
+  const yy = m <= 2 ? y - 1 : y;
+  const era = Math.floor(yy / 400);
+  const yoe = yy - era * 400;
+  const doy = Math.floor((153 * (m > 2 ? m - 3 : m + 9) + 2) / 5) + d - 1;
+  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
+  return era * 146097 + doe - 719468;
+}
+
+/** Monday = 0 .. Sunday = 6 (1970-01-01 was a Thursday, which is 3). */
+export function weekdayMon0(days: number): number {
+  return (((days + 3) % 7) + 7) % 7;
+}
+
+/** ISO 8601 week of a day number. The Thursday of the week decides which year the week belongs to. */
+function isoWeekOfDays(days: number): { year: number; week: number } {
+  const thursday = days - weekdayMon0(days) + 3;
+  const year = civilFromDays(thursday).y;
+  return { year, week: Math.floor((thursday - daysFromCivil(year, 1, 1)) / 7) + 1 };
+}
+
 /** ISO 8601 week of the UTC date of an epoch-seconds timestamp. */
 export function isoWeek(tSec: number): { year: number; week: number } {
-  const src = new Date(tSec * 1000);
-  const d = new Date(Date.UTC(src.getUTCFullYear(), src.getUTCMonth(), src.getUTCDate()));
-  const dn = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - dn + 3); // the Thursday of this ISO week decides the year
-  const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-  const week = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7);
-  return { year: d.getUTCFullYear(), week };
+  return isoWeekOfDays(Math.floor(tSec / 86400));
 }
 
 function row(label: string, rets: number[]): SeasRow {
@@ -69,7 +100,7 @@ function row(label: string, rets: number[]): SeasRow {
 }
 
 /** Period returns: groups bars by `keyOf`, takes each group's last close, returns {bucket, ret} for groups with a previous group. */
-function periodReturns(t: Float64Array, c: Float64Array, keyOf: (tSec: number) => { key: number; bucket: number; year: number }, skipLast: boolean) {
+function periodReturns(t: Float64Array, c: Float64Array, keyOf: (i: number) => { key: number; bucket: number; year: number }, skipLast: boolean) {
   const out: { bucket: number; ret: number; year: number }[] = [];
   let prevKey = -1;
   let prevClose = NaN;
@@ -82,7 +113,7 @@ function periodReturns(t: Float64Array, c: Float64Array, keyOf: (tSec: number) =
   };
   for (let i = 0; i < t.length; i++) {
     if (!Number.isFinite(c[i])) continue;
-    const k = keyOf(t[i]);
+    const k = keyOf(i);
     if (k.key !== curKey) {
       flush();
       if (curKey >= 0) {
@@ -101,19 +132,22 @@ function periodReturns(t: Float64Array, c: Float64Array, keyOf: (tSec: number) =
 }
 
 /**
- * Calendar date of a bar in the exchange's zone. Yahoo stamps a daily bar at the exchange open, which for Sydney is 23:00 UTC
- * the day before, so the UTC date would be one day early. Returns a Date at UTC midnight of that local date, so the
- * getUTC* calls below read the exchange date.
+ * Calendar day number (days since 1970-01-01) of every bar in the exchange's zone. Yahoo stamps a daily bar at the exchange
+ * open, which for Sydney is 23:00 UTC the day before, so the UTC date would be one day early.
+ * With no zone (or UTC) this is just floor(seconds / 86400): no Date, no Intl. With a zone only the day number changes
+ * (dayKey caches the formatted date per bar), everything after this step is the same integer math.
  */
-function localDay(sec: number, tz?: string | null): Date {
-  // Fast path: with no exchange zone (or UTC) the UTC date IS the bar's date, so skip the Intl formatter. Intl costs a few
-  // microseconds per call, which made 10,000 bars ~4x slower than the 15 ms PERF CALC budget.
+function localDays(t: ArrayLike<number>, tz?: string | null): Float64Array {
+  const out = new Float64Array(t.length);
   if (!tz || tz === "UTC" || tz === "Etc/UTC" || tz === "GMT") {
-    // Same as before the time-zone fix: callers read only getUTC* date fields, so the time of day does not matter.
-    return new Date(sec * 1000);
+    for (let i = 0; i < t.length; i++) out[i] = Math.floor(t[i] / 86400);
+    return out;
   }
-  const [y, m, d] = dayKey(sec, tz).split("-").map(Number); // "YYYY-MM-DD"
-  return new Date(Date.UTC(y, m - 1, d));
+  for (let i = 0; i < t.length; i++) {
+    const k = dayKey(t[i], tz); // "YYYY-MM-DD"
+    out[i] = daysFromCivil(+k.slice(0, 4), +k.slice(5, 7), +k.slice(8, 10));
+  }
+  return out;
 }
 
 export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, opts: { excludeOpenPeriodAt?: number; tz?: string | null } = {}): SeasResult {
@@ -121,22 +155,24 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
   const n = Math.min(t.length, c.length);
   const tt = t.subarray(0, n);
   const cc = c.subarray(0, n);
-  const lastT = n ? tt[n - 1] : NaN;
   const openAt = opts.excludeOpenPeriodAt;
-  const monthKey = (s: number) => {
-    const d = localDay(s, tz);
-    return { key: d.getUTCFullYear() * 12 + d.getUTCMonth(), bucket: d.getUTCMonth(), year: d.getUTCFullYear() };
+  const days = localDays(tt, tz); // one day number per bar, shared by every kind below
+  const dayOf = (sec: number) => localDays([sec], tz)[0];
+  // Bar index -> group key. Months: year*12+month. ISO weeks: year*60+week.
+  const monthKeyOfDay = (dn: number) => {
+    const { y, m } = civilFromDays(dn);
+    return { key: y * 12 + (m - 1), bucket: m - 1, year: y };
   };
-  const weekKey = (s: number) => {
-    const w = isoWeek(tz ? localDay(s, tz).getTime() / 1000 : s); // no zone: the bar time itself, as before
+  const weekKeyOfDay = (dn: number) => {
+    const w = isoWeekOfDays(dn);
     return { key: w.year * 60 + w.week, bucket: w.week - 1, year: w.year };
   };
   let rows: SeasRow[];
   let obs = 0;
   if (kind === "MONTH" || kind === "WOY") {
-    const keyOf = kind === "MONTH" ? monthKey : weekKey;
-    const skipLast = openAt !== undefined && n > 0 && keyOf(openAt).key === keyOf(lastT).key;
-    const pr = periodReturns(tt, cc, keyOf, skipLast);
+    const ofDay = kind === "MONTH" ? monthKeyOfDay : weekKeyOfDay;
+    const skipLast = openAt !== undefined && n > 0 && ofDay(dayOf(openAt)).key === ofDay(days[n - 1]).key;
+    const pr = periodReturns(tt, cc, (i) => ofDay(days[i]), skipLast);
     const size = kind === "MONTH" ? 12 : 53;
     const buckets: number[][] = Array.from({ length: size }, () => []);
     for (const p of pr) if (p.bucket < size) buckets[p.bucket].push(p.ret);
@@ -147,8 +183,7 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
     const buckets: number[][] = Array.from({ length: size }, () => []);
     for (let i = 1; i < n; i++) {
       if (!Number.isFinite(cc[i]) || !Number.isFinite(cc[i - 1]) || cc[i - 1] === 0) continue;
-      const d = localDay(tt[i], tz);
-      const b = kind === "WEEKDAY" ? (d.getUTCDay() + 6) % 7 : d.getUTCDate() - 1;
+      const b = kind === "WEEKDAY" ? weekdayMon0(days[i]) : civilFromDays(days[i]).d - 1;
       if (b < size) {
         buckets[b].push(cc[i] / cc[i - 1] - 1);
         obs++;
@@ -159,8 +194,8 @@ export function seasonality(t: Float64Array, c: Float64Array, kind: SeasKind, op
   return {
     kind,
     rows,
-    firstYear: n ? localDay(tt[0], tz).getUTCFullYear() : NaN,
-    lastYear: n ? localDay(lastT, tz).getUTCFullYear() : NaN,
+    firstYear: n ? civilFromDays(days[0]).y : NaN,
+    lastYear: n ? civilFromDays(days[n - 1]).y : NaN,
     obs,
     bars: n,
   };

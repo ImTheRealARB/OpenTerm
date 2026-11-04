@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isoWeek, parseSeasArgs, seasonality } from "./seasMath";
+import { civilFromDays, isoWeek, parseSeasArgs, seasonality, weekdayMon0 } from "./seasMath";
 
 /** Business days 2019-01-01 .. 2023-12-31 (UTC noon), with `bump(date)` giving the multiplier applied on that day. */
 function series(bump: (d: Date) => number) {
@@ -108,5 +108,34 @@ describe("seasonality exchange time zone (audit 2026-11-04 #1)", () => {
     expect(seasonality(t, c, "WEEKDAY", { tz: "Australia/Sydney" }).rows.map((x) => x.n)).toEqual([0, 1, 1, 1, 1]);
     // without a zone the UTC date is used (documented fallback): everything shifts one day early
     expect(seasonality(t, c, "WEEKDAY").rows.map((x) => x.n)).toEqual([1, 1, 1, 1, 0]);
+  });
+});
+
+describe("integer date math", () => {
+  // Reference: the Date-based way the code used before (slow, but obviously right).
+  function refIsoWeek(tSec: number) {
+    const src = new Date(tSec * 1000);
+    const d = new Date(Date.UTC(src.getUTCFullYear(), src.getUTCMonth(), src.getUTCDate()));
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3);
+    const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const week = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7);
+    return { year: d.getUTCFullYear(), week };
+  }
+
+  it("matches Date for random timestamps (1900-2100), leap days and year ends", () => {
+    let seed = 12345; // small deterministic random generator so the test never flakes
+    const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+    const stamps: number[] = [];
+    for (let i = 0; i < 5000; i++) stamps.push(Math.floor(-2208988800 + rnd() * 6.3e9));
+    for (const y of [1999, 2000, 2004, 2020, 2021, 2024, 2100]) {
+      for (const [m, d] of [[1, 1], [1, 3], [2, 28], [2, 29], [3, 1], [12, 28], [12, 31]]) stamps.push(Date.UTC(y, m - 1, d, 12) / 1000);
+    }
+    for (const s of stamps) {
+      const ref = new Date(s * 1000);
+      const dn = Math.floor(s / 86400);
+      expect(civilFromDays(dn)).toEqual({ y: ref.getUTCFullYear(), m: ref.getUTCMonth() + 1, d: ref.getUTCDate() });
+      expect(weekdayMon0(dn)).toBe((ref.getUTCDay() + 6) % 7);
+      expect(isoWeek(s)).toEqual(refIsoWeek(s));
+    }
   });
 });
