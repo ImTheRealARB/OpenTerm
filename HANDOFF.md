@@ -16,6 +16,8 @@ Last full gate: pytest 1708, e2e 226 (ALL PASS). Bench on this busy machine scor
   Since 2026-11-03 `start.ps1` / `start` run `npm ci` when `package-lock.json` changed (a pull that added CodeMirror broke `openterm` before; tested on port 8011: install, build, start; second start skips it).
 - **Never verified for real:** SMTP / Telegram / webhook delivery with real credentials; Claude Desktop connecting to the MCP bridge; a 37/37 bench on a quiet machine; Docker and Tauri builds; macOS/Linux scripts.
 - **Decisions left to the user:** whether the DLVR `DESKTOP` toggle should gate desktop notifications (today they fire whenever the browser allows); whether the BT editor should fill the panel (fixed 22em now).
+- **Next job (2026-11-04):** `docs/specs/GUI_SIMPLE_AND_BUGS.md` is the cloud-session super prompt (Opus orchestrating, at most 2 Sonnet subagents): beginner-simple GUI
+  measured by a 10-task click-count e2e suite, every known bug, one audit pass, then Terminal mode closer to classic terminal workflow (conventions only, no trade dress). Not started.
 - **Ideas for next:** plain-English rule builder for GUI mode (deferred in NEXT_SESSION.md); items in `docs/review/DECISIONS_FOR_USER.md`; Phase 18 only if the user unpauses it.
 
 ### Entries per part (newest first)
