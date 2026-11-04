@@ -20,13 +20,29 @@ unreviewed checkpoints; the reviewed step commit follows each one.
 - **Part 3 (audit):** `docs/review/cloud/AUDIT.md`: 0 high, 3 medium (all confirmed and fixed: SEAS exchange-local dates, alert trigger retry, Yahoo real granularity), 9 low deferred in DECISIONS_FOR_USER.md.
 - **Part 4 (Terminal conventions):** sector words after the ticker (`command/sectors.ts`), digits + Enter opens a grid row (`keys/numberSelect.ts`), F2/F3/F4/F8/F9 (+Shift+F9) sector keys,
   Alt+Backspace back, `FUNC` directory (aliases MENU, DIR), aliases WCRS->FXC, MOST->MOV, PRTU->PORT. `docs/review/cloud/PART4.md`.
-- **Never verified:** the GUI on a real (non-fixture) Yahoo session; Retry is wired on DES, GP and quote grids only; canvas grid column headers have no glossary tooltip;
-  number-select does not cover DOM lists; the GUI-mode collapsed top command line relies on Ctrl+K (covered by gui-shell e2e).
+- **Never verified:** the GUI on a real (non-fixture) Yahoo session; Retry is wired on DES, GP and quote grids only; number-select does not cover DOM lists; the GUI-mode collapsed top command line relies on Ctrl+K (covered by gui-shell e2e).
 - **Decisions left to the user:** the four "confirm or revert" items and the DLVR `DESKTOP` toggle (DECISIONS_FOR_USER.md, untouched); the 9 low audit items;
   startup bundle is 125.8 KB gz (+5.8 KB: GUI +4.2 within its 5 KB cap, Part 4 +1.6 KB); NSE holidays cover fixed dates + Good Friday only (festivals not computable by rule; the UI says so).
 - **Performance pass (after Parts 0-5):** data-oriented rewrite of the tick path, SEAS and BT open (user's method; `docs/PERFORMANCE.md` "Performance pass 2026-11-04"): bench 37/37 then 36/37 (lone Job J frame miss). Then bundle 124.8 -> 119.5 KB gz (under main's 120.0) and an allocation-free SEAS core: bench 37/37, then 35/37 (chart-pan lone miss; SEAS swings 10-17 ms run to run). Gate ALL PASS apart from load-only timing vitests (pass alone).
-- **NEXT JOB (agreed 2026-11-04): `docs/specs/NEXT_FEATURES.md`** (natural-language commands + syntax hints, glossary on canvas headers, indicator toggles without rebuild, ~100-indicator library + formula custom indicators + presets, BT rule builder, NL screener, compare, workspace templates, alert from chart). Same branch; decisions settled in the spec. Not started.
-- **Next:** user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
+- **NEXT_FEATURES job (`docs/specs/NEXT_FEATURES.md`): ALL 6 STEPS BUILT, NOT YET FULL-GATED.** The user asked for the full gate + bench to run
+  on their laptop (local session), not in the cloud. Cloud checks done: tsc clean, vitest 1016/1016, ruff clean, targeted pytest 51/51, startup bundle
+  119.89 KB gz (< 120). Each builder ran its own targeted Playwright specs green (natural, beginner, terminal-conventions, cmdline, grid-glossary, gp-toggle,
+  all 14 GP specs, gp-alert, ind-library, ind-chart, bt-sentence, phase12, templates, eqs-natural, phase8, gui-shell...). The bench has NOT been run.
+  - Step 1 NL commands: `command/natural.ts` (pure, 78-row table), `nlRun.ts` (`needsNatural`, sync, in entry), `nlResolve.ts` + `nlRoute.ts` + `cmdExtras.tsx` (lazy),
+    syntax hint `command/syntaxHint.ts` (`data-testid=syntax-hint`). Routing: exact codes > compare (`compareNatural.ts`) > screener (`EQS <text>`, `functions/eqsNatural.ts`)
+    > company + intent > none. GUI sidebar search / SymbolPicker go through `gui/runTyped.ts`. Ambiguity rule: top company group must have >= 10x the next group's market cap, else DID YOU MEAN.
+  - Step 2 grid header glossary: `components/gridHeaderHit.ts`, `gui/gridTips.ts`; hover in GUI mode, **Shift+T** cycles (`?` is the global cheat sheet).
+  - Step 3 indicator toggles keep zoom: `chart/indicatorDiff.ts`; gauges `chart.rebuilds/panes/visFrom/visTo`. A typed Terminal re-run still remounts (Panel keys on `panel.pos`); a split also remounts.
+  - Step 4 library: `chart/library/` (109 indicators, catalog + known-value tests written from formula definitions, no ported code), `chart/formula.ts` (no eval), `chart/libraryWorker.ts`
+    wired in `indicators.worker.ts`; panel `IND`; presets `/api/indicator-presets` (kv `ind_presets`, `indicator_presets.py`, `net/presetsApi.ts`). GP args `ATR(14)`, `LIB:CMF`, `F:<urlencoded formula>`.
+  - Step 5 BT sentence builder: `functions/ruleSentence.ts` (+ shared `ruleSentence.cases.json`, also checked by backend `test_rule_sentence_cases.py`), `BtRuleBuilder.tsx` (lazy, GUI only).
+    The grammar is one boolean (long while true), so "sell when" is derived text, not a second rule.
+  - Step 6: `TMPL` templates (`gui/templates.ts`; Settings menu in GUI), EQS English args (P/E, dividend yield, beta are NOT in the screener payload: shown as ignored),
+    compare, alert from the chart (`A` key, Shift+A / toolbar arms a click, Alt+click; `command/priceAlert.ts`, `chart/alertPrice.ts`, dashed ALRT price lines, gauge `chart.alertLines`).
+  - **Risk to check first in the local gate:** vim handling (`command/vim.ts`) became a lazy chunk (bundle trim); `e2e/phase10.spec.ts` vim test was NOT in the builders' runs.
+    Also one unidentified vitest flake was seen twice in a full run by a builder (passed on rerun). `playwright.config.ts` now honours `PW_PORT`.
+  - WIP-labelled commits on the branch are unreviewed checkpoints; the final state is the branch tip.
+- **Next:** run the local gate + bench (prompt in the PR description); fix what fails; then the user reviews the draft PR; merge; optional real-data screenshot pass; items in DECISIONS_FOR_USER.md.
 
 ## Resume here (updated 2026-11-03)
 **Current state in one place:** `origin/main` = `96ed188` plus this docs commit. Everything in `docs/specs/NEXT_SESSION.md` is done and on `main`: GUI mode (Part 1),
