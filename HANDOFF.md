@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Phases 1-16 and 19 are DONE and on `main` (= `origin/main`); Phases 17-18 stay paused by the user._
+_Last updated: 2026-11-05 (local gate + bench of NEXT_FEATURES: ALL PASS, bench 37/37). `main` has Phases 1-17 and 19, GUI mode and the strategy editor; branch `claude/gui-simple-bugs-sp3hq5` (draft PR, not merged) adds GUI_SIMPLE_AND_BUGS and NEXT_FEATURES. Phase 18 stays paused._
 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.

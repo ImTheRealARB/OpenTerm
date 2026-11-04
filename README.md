@@ -37,14 +37,14 @@ panels watch it; heavy maths runs in separate worker processes so it never block
 
 | | |
 |---|---|
-| **Charts and quotes** | Candlestick, line and area charts with many indicators, drawing tools, event markers, comparison panes; live quote boards for stocks, indices, FX, commodities and crypto |
+| **Charts and quotes** | Candlestick, line and area charts, drawing tools, event markers, comparison panes; an indicator library (`IND`, 109 indicators, your own formulas like `EMA(close,12) - EMA(close,26)`, saved presets); price alerts set straight from the chart (`A`, or Alt+click a price); live quote boards for stocks, indices, FX, commodities and crypto |
 | **Companies** | Profile, financial statements and filings straight from SEC EDGAR, insider trades, holders, estimates, peers, valuation (DCF) |
 | **Screening** | Screen the whole US stock universe, compare peers, correlation matrices, sector heat map, seasonality |
 | **Macro** | FRED economic series, Treasury yield curve, earnings and economic calendars, world statistics, central banks |
 | **Derivatives and fixed income** | Options chains and pricing, implied volatility, futures, bond maths, credit |
 | **Crypto** | Order book depth, funding rates, basis, stablecoin supply, DeFi yields, prediction-market odds |
 | **Portfolio** | Track positions with live profit and loss, price alerts, CSV import and export |
-| **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks; or write a Python strategy in `BT EDIT` (code editor with starter templates and errors shown on the offending line) |
+| **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks; build the rule as a sentence ("buy when the 20-day average crosses above the 50-day") in GUI mode; or write a Python strategy in `BT EDIT` (code editor with starter templates and errors shown on the offending line) |
 | **Risk and quant** | Value at Risk, portfolio optimisation, factor and attribution analysis |
 | **AI (optional)** | Ask questions answered with the app's own data, every answer showing which tools it used. Needs an OpenRouter key |
 | **Alerts and briefs** | Alerts can reach you by email, Telegram or a webhook (`DLVR`, all off by default), plus a scheduled daily brief (`BRIEF`) |
@@ -199,14 +199,16 @@ Press `/` to focus the command line at the top, then try these, pressing `Enter`
 | `HELP` | Every function. `HELP GP` explains one |
 | `?` | Every keyboard shortcut |
 
-You can also type plain English: `apple stock price chart`, `tesla news`, `microsoft 5 year chart`, `amazon balance sheet`.
+You can also type plain English: `apple stock price chart`, `tesla news`, `microsoft 5 year chart`, `amazon balance sheet`,
+`apple vs microsoft 1 year` (a comparison chart) or `tech stocks under 50 dollars` (a screen; words it did not understand are listed, never silently dropped).
 OpenTerm shows the exact command it understood (for example `APPLE STOCK PRICE CHART -> AAPL GP`) so you learn the codes, and
 asks "did you mean" when a name fits several companies. Exact codes like `AAPL GP` always run as typed. While you type a code,
 a hint line shows its options with the one you are on in bold.
 
 Use **Shift+Enter** instead of Enter to open the result in a **new panel** next to the others. `Tab` jumps between panels.
 `LAYOUT SAVE MYDESK` saves your arrangement; `LAYOUT MYDESK` brings it back. [docs/COMMANDS.md](docs/COMMANDS.md) has
-many more commands to try.
+many more commands to try. `TMPL` offers ready-made workspaces (`TMPL DAY`, `TMPL LONGTERM`, `TMPL MACRO`, `TMPL INDIA`); it asks before replacing your panels.
+In GUI mode, hover a table's column header (or press Shift+T) for a one-line explanation of it.
 
 If a panel needs a key you have not set, it says `KEY REQUIRED: set X in APIKEYS` instead of failing. Open the `APIKEYS`
 panel to paste keys; they are kept in your computer's secure store, never in the code.
