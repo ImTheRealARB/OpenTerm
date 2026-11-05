@@ -121,7 +121,7 @@ and slippage. Imported bars are labelled LOCAL DATA. Python strategies run in a 
 LAYOUT SAVE MYDESK    save panels (LAYOUT lists, LAYOUT MYDESK loads, Ctrl+S / Ctrl+O)
 THEME GREEN           AMBER GREEN WHITE LIGHT
 SETTINGS              vim mode, clocks, number format, refresh rates, key rebinding, interface mode
-SETTINGS FONT Fira Code   use any font installed on your computer everywhere (SETTINGS FONT DEFAULT goes back; an unconfirmed name is applied with a warning; monospace fonts keep the columns aligned)
+SETTINGS FONT Fira Code   switch font: presets JetBrains Mono (default), GitHub Mono, Geist Mono, Fira Code, Mononoki, Hack, Monaco, DejaVu Sans Mono, Menlo, Consolas, Bergoom (open-source Bloomberg-style), Comic Sans; NEXT / PREV step through them; any other installed font name works too. GUI mode: the font dropdown in the menu bar
 SETTINGS MODE GUI     GUI mode: menu bar, sidebar, panel buttons (SETTINGS MODE TERMINAL, or Alt+G, switches back)
 Alt+H                 GUI mode: help drawer for the focused panel
 SOURCES               data source health and latency

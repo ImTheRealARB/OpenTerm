@@ -1,0 +1,121 @@
+/*
+ * Bundled fonts for the SETTINGS font presets (settings/fontPresets.ts). Files live in public/fonts, licences in
+ * public/fonts/licenses and THIRD_PARTY.md. Rules that keep the app fast:
+ *   - nothing is downloaded until a page element (or canvas text) actually uses the family, so only the font in use loads;
+ *   - `local()` comes first: a font already installed on the computer is used instead of downloaded;
+ *   - `font-display: swap` shows text at once in the fallback and swaps when the file arrives (never blocks painting).
+ * Latin subsets (full set for Bergoom); characters a font lacks fall through to the next family in the stack.
+ * Generated once from a small script; edit by hand freely.
+ */
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("JetBrains Mono"), local("JetBrainsMono-Regular"), url("/fonts/jetbrains-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("JetBrains Mono Bold"), local("JetBrainsMono-Bold"), url("/fonts/jetbrains-mono-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Geist Mono"), url("/fonts/geist-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("Geist Mono Bold"), url("/fonts/geist-mono-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Fira Code"), local("FiraCode-Regular"), url("/fonts/fira-code-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("Fira Code Bold"), local("FiraCode-Bold"), url("/fonts/fira-code-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Mononoki";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("mononoki"), local("mononoki-Regular"), url("/fonts/mononoki-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Mononoki";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("mononoki Bold"), local("mononoki-Bold"), url("/fonts/mononoki-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Hack";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Hack"), local("Hack-Regular"), url("/fonts/hack-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Hack";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("Hack Bold"), local("Hack-Bold"), url("/fonts/hack-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("DejaVu Sans Mono"), local("DejaVuSansMono"), url("/fonts/dejavu-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("DejaVu Sans Mono Bold"), local("DejaVuSansMono-Bold"), url("/fonts/dejavu-mono-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Bergoom";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Bergoom"), local("Bergoom-Regular"), url("/fonts/bergoom-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Bergoom";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("Bergoom Bold"), local("Bergoom-Bold"), url("/fonts/bergoom-700.woff2") format("woff2");
+}

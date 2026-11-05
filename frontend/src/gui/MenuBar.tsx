@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FUNCTION_LIST } from "../functions/registry";
 import { CATEGORIES, groupByCategory, type Category } from "../functions/categories";
-import { setMode } from "../settings/runtime";
+import { FONT_PRESETS, findPreset } from "../settings/fontPresets";
+import { chooseFont } from "../settings/fontSwitch";
+import { setMode, settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import { chromeKeyDown, focusCommandLine, moveFocus } from "./chrome";
 import { runCommand } from "./run";
 import { showWelcome, startTour } from "./onboarding";
@@ -11,9 +14,11 @@ import { toggleStatusBar, useStatusBarShown } from "./statusBarState";
 import { setTabs, useTabsOn } from "./tabsState";
 import { TEMPLATE_INFO } from "./templateMenu";
 
-/** One row of a dropdown: a function, or one of the extra entries under Settings (switch mode, tour, welcome card). */
+/** One row of a dropdown: a function, or one of the extra entries under Settings (status bar, font, switch mode, tour, welcome card). */
 type Entry =
   | { kind: "fn"; code: string; title: string; built: boolean; run?: string }
+  | { kind: "status" }
+  | { kind: "font" }
   | { kind: "terminal" }
   | { kind: "tour" }
   | { kind: "welcome" };
@@ -34,11 +39,13 @@ export function MenuBar() {
   const groups = useMemo(() => groupByCategory(FUNCTION_LIST), []);
   const sidebarHidden = useSidebarHidden();
   const statusShown = useStatusBarShown();
+  // A stored name that matches a preset ("JetBrains Mono", "geist mono") selects that preset; anything else is a custom font.
+  const font = useStore(settingsStore, (s) => findPreset(s.font)?.name ?? s.font);
   const tabsOn = useTabsOn();
 
   const entries = (c: Category): Entry[] => {
     const list: Entry[] = (groups.find((g) => g.category === c)?.items ?? []).map((f) => ({ kind: "fn", code: f.code, title: f.title, built: !!f.load }));
-    if (c === "Settings") list.push(...TEMPLATE_INFO.map((t) => ({ kind: "fn" as const, code: "TMPL", title: "Template: " + t.label, built: true, run: "TMPL " + t.id })), { kind: "terminal" }, { kind: "tour" }, { kind: "welcome" });
+    if (c === "Settings") list.push(...TEMPLATE_INFO.map((t) => ({ kind: "fn" as const, code: "TMPL", title: "Template: " + t.label, built: true, run: "TMPL " + t.id })), { kind: "status" }, { kind: "font" }, { kind: "terminal" }, { kind: "tour" }, { kind: "welcome" });
     return list;
   };
 
@@ -60,7 +67,9 @@ export function MenuBar() {
 
   const pick = (e: Entry) => {
     setOpen(null);
-    if (e.kind === "terminal") {
+    if (e.kind === "status") toggleStatusBar();
+    else if (e.kind === "font") return; // the font row is a <select>; it changes the font itself
+    else if (e.kind === "terminal") {
       setMode("terminal");
       focusCommandLine();
     } else if (e.kind === "tour") startTour();
@@ -112,10 +121,6 @@ export function MenuBar() {
       <button type="button" className="gm-side" data-testid="layout-toggle" title={tabsOn ? "Show the open panels side by side" : "Show the open panels as tabs"} onClick={() => setTabs(!tabsOn)}>
         {tabsOn ? "Tiles" : "Tabs"}
       </button>
-      {/* The bottom status bar (data source, backend, alert flashes) is off by default in GUI mode. */}
-      <button type="button" className="gm-side" data-testid="statusbar-toggle" aria-pressed={statusShown} title="Show or hide the bottom status bar" onClick={toggleStatusBar}>
-        Status
-      </button>
       {CATEGORIES.map((c) => (
         <div key={c} className="gm-slot">
           <button
@@ -137,7 +142,35 @@ export function MenuBar() {
           {open === c && (
             <div className="gm-drop" role="menu" aria-label={c}>
               {entries(c).map((en) =>
-                en.kind !== "fn" ? (
+                en.kind === "font" ? (
+                  // One-click font switch: bundled presets load on first use; any other installed font via SETTINGS FONT <name>.
+                  <div key="font" className="gm-fontrow" role="none">
+                    <span className="gm-code">FONT</span>
+                    <select
+                      className="gm-item gm-font"
+                      data-testid="font-select"
+                      aria-label="Font"
+                      title="Any installed font: SETTINGS FONT name"
+                      value={font}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setOpen(null);
+                        chooseFont(v);
+                        focusCommandLine();
+                      }}
+                    >
+                      {FONT_PRESETS.map((p) => (
+                        <option key={p.name} value={p.name}>{p.label}</option>
+                      ))}
+                      {!findPreset(font) && <option value={font}>{font}</option>}
+                    </select>
+                  </div>
+                ) : en.kind === "status" ? (
+                  <button key="status" type="button" role="menuitemcheckbox" aria-checked={statusShown} className="gm-item" data-testid="statusbar-toggle" onClick={() => pick(en)}>
+                    <span className="gm-code">VIEW</span>
+                    <span>Bottom status bar: {statusShown ? "shown" : "hidden"}</span>
+                  </button>
+                ) : en.kind !== "fn" ? (
                   <button key={en.kind} type="button" role="menuitem" className={"gm-item" + (en.kind === "terminal" ? " gm-sep" : "")} onClick={() => pick(en)}>
                     <span className="gm-code">{en.kind === "terminal" ? "MODE" : "HELP"}</span>
                     <span>{en.kind === "terminal" ? "Switch to Terminal mode" : en.kind === "tour" ? "Take the tour" : "Show welcome card"}</span>

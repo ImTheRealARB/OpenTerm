@@ -10,6 +10,7 @@ import { afterPaint, installObservers } from "./perf/metrics";
 import { connect, link } from "./net/socket";
 import { pollSources } from "./net/sources";
 import "./styles.css";
+import "./fonts.css"; // bundled font presets (loaded only when used)
 import "./gui/gui.css"; // GUI-mode-only rules, all scoped under :root[data-mode="gui"]
 import "./polish/lists.css"; // panel polish: Q, WL, WEI, N
 import "./polish/analysis.css"; // panel polish: GP, FA, PORT, BT

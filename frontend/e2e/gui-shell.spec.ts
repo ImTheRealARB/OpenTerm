@@ -28,13 +28,23 @@ async function setupGui(page: Page, opts: { statusBar?: boolean } = {}) {
   return { errors };
 }
 
-test("the bottom status bar is hidden by default in GUI mode and the Status button toggles it", async ({ page }) => {
+test("the bottom status bar is hidden by default in GUI mode; Settings > Status toggles it, Settings > Font switches the font", async ({ page }) => {
   await setupGui(page, { statusBar: false });
   await expect(page.getByTestId("mode-gui")).toHaveCount(0); // the mode switch lives in the status bar
+  const settingsMenu = () => page.locator('.gm-cat[data-cat="Settings"]').click();
+  await settingsMenu();
   await page.getByTestId("statusbar-toggle").click();
   await expect(page.getByTestId("mode-gui")).toBeVisible();
+  await settingsMenu();
   await page.getByTestId("statusbar-toggle").click();
   await expect(page.getByTestId("mode-gui")).toHaveCount(0);
+  // Font: the dropdown sits inside the Settings menu; a bundled preset sets the CSS variable at once.
+  await settingsMenu();
+  await page.getByTestId("font-select").selectOption("Geist Mono");
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--font"))).toContain("Geist Mono");
+  await settingsMenu();
+  await page.getByTestId("font-select").selectOption("");
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--font"))).not.toContain("Geist Mono");
 });
 
 const header = (page: Page) => page.locator('[data-panel="1"] .ph');

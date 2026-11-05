@@ -93,3 +93,21 @@ exact Vibe-Trading file they come from, copy whatever notice it carries here, an
 Other runtime dependencies (React, FastAPI, httpx, orjson, aiosqlite, apscheduler, websockets, keyring) are MIT, BSD or
 Apache-2.0 packages used unmodified through their package managers; their licences ship inside `node_modules/` and the
 Python environment.
+
+## Bundled fonts (SETTINGS font presets)
+
+Font files live in `frontend/public/fonts/` and are declared in `frontend/src/fonts.css`; each licence text is kept in
+`frontend/public/fonts/licenses/`. Fonts are downloaded only when selected (`local()` first, so an installed copy is used).
+Latin subsets (Bergoom: full), taken unmodified from the sources below.
+
+| Font | Source | Licence |
+|---|---|---|
+| JetBrains Mono | npm `@fontsource/jetbrains-mono` 5.3.0 (JetBrains/JetBrainsMono) | SIL OFL 1.1 |
+| Geist Mono | npm `@fontsource/geist-mono` 5.3.0 (vercel/geist-font) | SIL OFL 1.1 |
+| Fira Code | npm `@fontsource/fira-code` 5.3.0 (tonsky/FiraCode) | SIL OFL 1.1 |
+| Mononoki | npm `@fontsource/mononoki` 5.3.0 (madmalik/mononoki) | SIL OFL 1.1 |
+| Hack | npm `hack-font` 3.3.0 (source-foundry/Hack) | MIT, with the Bitstream Vera licence for its base glyphs |
+| DejaVu Sans Mono | npm `@fontsource/dejavu-mono` 5.3.0 (dejavu-fonts) | Bitstream Vera licence; DejaVu changes are public domain |
+| Bergoom | github.com/dchest/bergoom (`Bergoom-Regular/Bold.woff2`, master) | SIL OFL 1.1 |
+
+Monaco, Menlo, Consolas and Comic Sans MS are not bundled: they are used only if the computer already has them.

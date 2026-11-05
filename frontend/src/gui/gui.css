@@ -21,6 +21,11 @@
 :root[data-mode="gui"] .gm-cat.on { background: var(--fg); color: var(--bg); font-weight: bold; }
 :root[data-mode="gui"] .gm-side { height: 18px; padding: 0 8px; margin-right: 6px; color: var(--fg-dim); border-radius: 3px; cursor: pointer; }
 :root[data-mode="gui"] .gm-side:hover { background: var(--bar-hi); color: var(--hdr); }
+:root[data-mode="gui"] .gm-fontrow { display: grid; grid-template-columns: 84px 1fr; gap: 8px; align-items: center; padding: 0 8px; }
+:root[data-mode="gui"] .gm-fontrow .gm-code { color: var(--fg); font-weight: bold; }
+:root[data-mode="gui"] select.gm-font { display: block; width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--hdr); font: inherit; cursor: pointer; }
+:root[data-mode="gui"] select.gm-font:hover, :root[data-mode="gui"] select.gm-font:focus-visible { background: var(--sel); color: var(--val); }
+:root[data-mode="gui"] select.gm-font option { background: var(--bg); color: var(--fg); }
 :root[data-mode="gui"] .gm-fill { flex: 1 1 auto; }
 :root[data-mode="gui"] .gm-drop { position: absolute; left: 0; top: 21px; z-index: 40; min-width: 340px; max-width: min(640px, 90vw); max-height: calc(100vh - 90px); overflow-y: auto;
   background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; padding: 2px 0; }

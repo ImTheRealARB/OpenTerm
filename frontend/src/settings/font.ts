@@ -8,17 +8,20 @@
  * is missing on another computer (settings sync between browsers) degrades to the normal look instead of a serif page.
  */
 
+import { findPreset } from "./fontPresets";
+
 /** Letters, digits, space and `. _ + -` only: nothing that could break out of a quoted CSS font name. 1-60 characters. */
 export const FONT_NAME_RE = /^[\p{L}\p{N}_][\p{L}\p{N}_ .+-]{0,59}$/u;
 
 /** "" means "use the built-in font". */
 export const isFontName = (v: unknown): v is string => typeof v === "string" && (v === "" || FONT_NAME_RE.test(v));
 
-/** The CSS `font-family` value for a chosen font: the name first, then the built-in stack. */
+/** The CSS `font-family` value for a custom (non-preset) font: the name first, then the built-in stack. */
 export const fontStack = (name: string): string => `"${name}", var(--font-base)`;
 
-/** Sets or clears the custom font on the document. */
+/** Sets or clears the font on the document. A preset uses its own stack; any other name is treated as an installed font. */
 export function applyFont(name: string, root: { style: { setProperty(k: string, v: string): void; removeProperty(k: string): void } }): void {
-  if (name) root.style.setProperty("--font-user", fontStack(name));
-  else root.style.removeProperty("--font-user");
+  const preset = findPreset(name);
+  if (!name || preset?.name === "") root.style.removeProperty("--font-user");
+  else root.style.setProperty("--font-user", preset ? preset.stack : fontStack(name));
 }

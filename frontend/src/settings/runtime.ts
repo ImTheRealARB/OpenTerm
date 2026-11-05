@@ -62,6 +62,9 @@ function apply(next: Settings): void {
 export function initSettings(): void {
   apply(settingsStore.get());
   settingsStore.subscribe(() => apply(settingsStore.get()));
+  // A bundled font downloads the first time something draws with it. DOM text swaps by itself, but canvas grids and charts
+  // already drew with the fallback, so redraw them when any font finishes loading.
+  if (typeof document !== "undefined" && document.fonts) document.fonts.addEventListener("loadingdone", () => displayVersion.set((v) => v + 1));
 }
 
 export const getSettings = (): Settings => settingsStore.get();
