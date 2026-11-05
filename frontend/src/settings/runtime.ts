@@ -7,6 +7,7 @@ import { setNumberFormat } from "../format";
 import { setKeyOverrides } from "../keys/keys";
 import { createStore, loadJSON, saveJSON } from "../state/store";
 import { DEFAULTS, diffFromDefaults, normalize, type Mode, type PollKey, type Settings } from "./schema";
+import { applyFont } from "./font";
 import { applyTheme } from "./themes";
 
 const MIRROR = "openterm.settings";
@@ -42,6 +43,10 @@ function apply(next: Settings): void {
   if (!prev || prev.theme !== next.theme) {
     if (typeof document !== "undefined") applyTheme(next.theme, document.documentElement);
     display = true;
+  }
+  if (!prev || prev.font !== next.font) {
+    if (typeof document !== "undefined") applyFont(next.font, document.documentElement);
+    display = true; // grids and charts cache the font string
   }
   if (!prev || prev.numberFormat.thousands !== next.numberFormat.thousands || prev.numberFormat.decimal !== next.numberFormat.decimal) {
     setNumberFormat(next.numberFormat.thousands, next.numberFormat.decimal);

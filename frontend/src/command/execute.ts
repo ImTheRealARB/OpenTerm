@@ -55,6 +55,16 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
     }
     const cmd = (parsed.fn === "THEME" ? settingsCommands.themeArgs : settingsCommands.settingsArgs)(args, getSettings());
     if (cmd && !cmd.ok) return fail(cmd.error);
+    if (cmd?.checkFont) {
+      // A custom font is applied only after confirming it is installed here; a missing one is an error, not a silent fallback.
+      const name = cmd.checkFont;
+      void import("../settings/fontCheck").then(({ fontInstalled }) => {
+        if (!fontInstalled(name)) return fail(`FONT "${name}" IS NOT INSTALLED ON THIS COMPUTER. INSTALL IT, THEN TRY AGAIN`);
+        updateSettings(() => cmd.next);
+        info(cmd.message);
+      });
+      return true;
+    }
     if (cmd) {
       updateSettings(() => cmd.next);
       info(cmd.message);

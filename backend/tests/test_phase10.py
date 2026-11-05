@@ -59,6 +59,9 @@ def test_settings_mode_roundtrip(client):
         ({"theme": "neon"}, "theme"),
         ({"mode": "tui"}, "mode"),
         ({"vim": "yes"}, "vim"),
+        ({"font": 'Fira";color:red'}, "font"),
+        ({"font": 5}, "font"),
+        ({"font": "x" * 61}, "font"),
         ({"colour": "red"}, "UNKNOWN FIELD"),
         ({"numberFormat": {"thousands": ",", "decimal": ","}}, "MUST DIFFER"),
         ({"numberFormat": {"thousands": "_"}}, "thousands"),
@@ -87,6 +90,11 @@ def test_settings_validation_rejects(client, bad, needle):
     assert r.json()["kind"] == "bad_request"
     assert needle in r.json()["error"]
     assert client.get("/api/settings").json()["settings"] is None  # nothing stored
+
+
+def test_settings_accept_font_names():
+    for name in ("", "Fira Code", "Comic Sans MS", "MesloLGS NF", "游ゴシック"):
+        assert validate({"font": name}) == {"font": name}
 
 
 def test_settings_body_and_version_errors(client):

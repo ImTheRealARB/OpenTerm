@@ -1,15 +1,17 @@
 /**
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
- *   SETTINGS MODE GUI|TERMINAL | THEME name | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
+ *   SETTINGS MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
  *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
  */
 import {
   AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
 } from "./schema";
+import { FONT_NAME_RE } from "./font";
 import { THEMES, isTheme } from "./themes";
 
-export type SettingsCommand = { ok: true; next: Settings; message: string } | { ok: false; error: string };
+/** `checkFont`: the caller must confirm this font is installed (needs a canvas, so it is not done in this pure file) before applying. */
+export type SettingsCommand = { ok: true; next: Settings; message: string; checkFont?: string } | { ok: false; error: string };
 
 const SEPARATORS: Record<string, string> = { COMMA: ",", DOT: ".", SPACE: " ", APOS: "'", NONE: "" };
 const SEP_NAMES: Record<string, string> = { ",": "COMMA", ".": "DOT", " ": "SPACE", "'": "APOS", "": "NONE" };
@@ -34,6 +36,14 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
     case "MODE":
       if (word !== "GUI" && word !== "TERMINAL") return fail("SETTINGS MODE GUI|TERMINAL");
       return { ok: true, next: { ...cur, mode: word.toLowerCase() as Settings["mode"] }, message: `MODE ${word}` };
+    case "FONT": {
+      const usage = "SETTINGS FONT <NAME OF AN INSTALLED FONT> | DEFAULT   E.G. SETTINGS FONT Fira Code";
+      const name = rest.join(" ").trim();
+      if (!name) return fail(usage);
+      if (name.toUpperCase() === "DEFAULT") return { ok: true, next: { ...cur, font: "" }, message: "FONT DEFAULT" };
+      if (!FONT_NAME_RE.test(name)) return fail(`FONT NAME: LETTERS, DIGITS, SPACES AND . _ + - ONLY (60 MAX). ${usage}`);
+      return { ok: true, next: { ...cur, font: name }, message: `FONT ${name}`, checkFont: name };
+    }
     case "VIM":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS VIM ON|OFF");
       return { ok: true, next: { ...cur, vim: word === "ON" }, message: `VIM MODE ${word}` };
@@ -97,6 +107,6 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       // The shell (mode) is kept: RESET restores preferences, it must not switch between TERMINAL and GUI.
       return { ok: true, next: { ...DEFAULTS, mode: cur.mode, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
     default:
-      return fail("SETTINGS MODE|THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
+      return fail("SETTINGS MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
   }
 }

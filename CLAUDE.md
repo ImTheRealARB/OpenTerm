@@ -111,7 +111,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Don't use a ~50 ms TTL in a timing test:** 4 xdist workers on this machine stall longer (`test_stale_while_revalidate` used to flake).
 - **Settings:** `settings/schema.ts` (pure defaults/validate), `settings/runtime.ts` (store + localStorage mirror; do not import `net/api`), `settings/sync.ts`
   (GET after paint, last write wins by `updated_at`). Stored in `kv` key `settings`, no migration. Themes are `:root[data-theme=...]` blocks; Grid and
-  ChartView re-read CSS vars on `displayVersion`. Keybinding overrides in `keys/overrides.ts`; vim in `command/vim.ts`.
+  ChartView re-read CSS vars on `displayVersion`. Keybinding overrides in `keys/overrides.ts`; vim in `command/vim.ts`. Custom font: `Settings.font` (name of an installed font, `SETTINGS FONT`), CSS `--font` = `var(--font-user, var(--font-base))`; every DOM and canvas font reads `--font`, so never hardcode a family. A new settings field also needs a validator in `backend/openterm/settings_store.py` (unknown fields are rejected).
 - **`useEffect(() => x?.method())` returns the method's result;** React 19 then throws "destroy is not a function". Use a block body.
 - **Panel keys register after the lazy module loads:** a key pressed right after the panel text appears can be lost and type into the command line. In e2e wait until a key visibly works.
 - **Panel key handlers must ignore bare modifier keys** (Playwright `Shift+R` sends a `Shift` keydown first). Maximizing a panel remounts it, so panel-local state is lost.
@@ -217,7 +217,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 ## Public repo (2026-11-02)
 - The repo is public. `scripts/setup(.ps1)` is the LIGHT install (`uv sync --no-dev`, `npm ci`, about 330 MB); `-Dev`/`--dev` adds test tools and Chromium (about 1.5 GB). `start` scripts use `uv run --no-dev`.
 - README is written for beginners (winget/brew install steps, first-five-minutes table, troubleshooting) and leads with the speed table: when `docs/PERFORMANCE.md` numbers change, update the README table.
-- Screenshots live in `docs/screenshots/` (2x, 1600x900 viewport, live Yahoo data, taken with a Playwright script against `OPENTERM_STATIC_DIR=frontend/dist` and a temp `OPENTERM_DB_PATH`; a fresh browser context per shot, or panels pile up from the saved layout).
+- Screenshots live in `docs/screenshots/` (2x, 1440x810 CSS px, live data), retaken with `node scripts/screenshots.mjs [name ...]` against a throwaway server on its own port and temp `OPENTERM_DB_PATH` (setup is in the script's header comment; `SEC_USER_AGENT` must look like `Name noreply@example.com` or SEC answers 403 and FA shows PROVIDER DOWN; fresh browser context per shot, or panels pile up from the saved layout). GUI shots must NOT seed `openterm.welcomed`: the starter layout only applies to a first-run user. The README (rewritten 2026-11-05: centered header, per-OS install blocks, full-width screenshots) references workspace, chart, backtest, fundamentals, macro, bt-editor, gui-search, gui-glossary, gui-error-next-step.
 - Never write real keys, emails or personal paths into docs or fixtures; history was scanned clean on 2026-11-02.
 
 - **GUI mode (2026-11-02):** `settings.mode` is `terminal | gui`; `normalize`: nothing saved = gui, a saved object without `mode` = terminal, so `diffFromDefaults` always writes `mode: "gui"` and never `terminal`.

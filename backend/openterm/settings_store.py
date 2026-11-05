@@ -27,6 +27,7 @@ DECIMALS = (".", ",")
 POLL_BOUNDS = {"news": (30, 600), "movers": (30, 600), "crypto": (15, 600), "sources": (5, 120)}
 MAX_CLOCKS = 3
 ZONE_RE = re.compile(r"^(LOCAL|UTC|[A-Za-z]+(?:/[A-Za-z0-9_+-]+){1,2})\Z")  # \Z, not `$`: no trailing newline
+FONT_RE = re.compile(r"^[\w][\w .+-]{0,59}\Z")  # \w = letters, digits, underscore (any script); \Z: no trailing newline
 ACTION_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,39}\Z")
 CHORD_RE = re.compile(r"^(?:(?:Ctrl|Alt|Shift)\+){0,3}[^\s+]{1,12}\Z|^(?:(?:Ctrl|Alt|Shift)\+){1,3}\+\Z")
 MAX_ACTIONS = 64
@@ -126,6 +127,13 @@ def _ai(raw) -> dict:
     return out
 
 
+def _font(raw) -> str:
+    """Name of an installed font ("" = built-in). Same rule as frontend/src/settings/font.ts."""
+    if not isinstance(raw, str) or (raw and not FONT_RE.match(raw)):
+        raise _bad("font MUST BE AN INSTALLED FONT NAME (LETTERS, DIGITS, SPACES AND . _ + -, 60 MAX)")
+    return raw
+
+
 def _vim(raw) -> bool:
     if not isinstance(raw, bool):
         raise _bad("vim MUST BE true OR false")
@@ -135,6 +143,7 @@ def _vim(raw) -> bool:
 FIELDS = {
     "mode": lambda v: _choice(v, MODES, "mode"),
     "theme": lambda v: _choice(v, THEMES, "theme"),
+    "font": _font,
     "vim": _vim,
     "numberFormat": _number_format,
     "clocks": _clocks,
