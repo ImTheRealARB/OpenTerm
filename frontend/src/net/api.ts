@@ -13,6 +13,8 @@ export interface Envelope<T> {
   age_s: number;
   stale: boolean;
   fallback_from: string[];
+  /** Why a skipped source was skipped, when worth saying (e.g. kite: "KITE LOGIN EXPIRED: run KITE LOGIN"). */
+  fallback_notes?: Record<string, string>;
 }
 
 export interface Quote {
@@ -921,6 +923,33 @@ export interface WorldSeries {
   source: string;
   dataset?: string | null;
 }
+/**
+ * DBSRCH (`/api/world/dbsearch`): DBnomics search. `mode` DATASETS lists datasets for the words; SERIES lists the matching series of one dataset.
+ * `provider_name` names the ORIGINAL data provider (DBnomics only mirrors it). `ref` is the `DBN:` id ECST opens (null = ECST cannot take that id).
+ * A null date or count means the API did not give one; the last period of a series is not in the list at all.
+ */
+export interface DbsDatasetRow {
+  provider: string;
+  provider_name: string;
+  dataset: string;
+  name: string;
+  matching: number | null;
+  series: number | null;
+  updated: string | null;
+  indexed: string | null;
+}
+export interface DbsSeriesRow {
+  provider: string;
+  dataset: string;
+  series: string;
+  name: string;
+  freq: string;
+  indexed: string | null;
+  ref: string | null;
+}
+export interface DbsDatasets { mode: "DATASETS"; total: number; offset: number; items: DbsDatasetRow[]; note: string; source: string }
+export interface DbsSeries { mode: "SERIES"; provider: string; dataset: string; dataset_name: string; total: number; offset: number; items: DbsSeriesRow[]; note: string; source: string }
+export type DbsPayload = DbsDatasets | DbsSeries;
 export interface WecoCell {
   v: number;
   year: number;
@@ -1009,6 +1038,42 @@ export interface ShipRow {
 export interface ShipPayload {
   rows: ShipRow[];
   newest: string;
+  note: string;
+}
+/** PORTS: one port (IMF PortWatch daily port calls). Averages are over the days on record; None = not enough data, never a guess.
+ *  imp7 / exp7 are PortWatch's own modelled daily trade estimates, averaged over the same 7 days. */
+export interface PortRow {
+  id: string;
+  name: string;
+  country: string | null;
+  iso3: string | null;
+  date: string;
+  age_days: number;
+  stale: boolean;
+  last: number | null;
+  avg7: number | null;
+  base: number | null;
+  chg_pct: number | null;
+  tanker: number | null;
+  container: number | null;
+  dry_bulk: number | null;
+  imp7: number | null;
+  exp7: number | null;
+  n_days: number;
+  base_days: number;
+  lat: number | null;
+  lon: number | null;
+  locode: string | null;
+  series: [string, number | null][];
+}
+export interface PortsPayload {
+  rows: PortRow[];
+  newest: string;
+  /** "top" = the 25 busiest ports; "search" = ports matching `query`. */
+  mode: "top" | "search";
+  query: string;
+  /** Matching ports the daily layer has no rows for (listed by PortWatch, nothing to show). */
+  no_daily_rows: number;
   note: string;
 }
 /** WETR: Open-Meteo forecast day (temperatures in C, degree days in F-days). */
@@ -1238,10 +1303,13 @@ export const worldApi = {
   usmac: (src: string, q: string, years: number, fresh = false) =>
     request<Envelope<UsMacroPayload>>(`/api/world/usmac?${qs({ src, q, years: String(years) })}`, fresh ? 0 : 600_000),
   stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
+  dbsearch: (q: string, dataset: string, offset: number, fresh = false) =>
+    request<Envelope<DbsPayload>>(`/api/world/dbsearch?${qs({ q, dataset, offset: String(offset) })}`, fresh ? 0 : 600_000),
   weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
   cenb: (fresh = false) => request<Envelope<CenbPayload>>("/api/world/cenb", fresh ? 0 : 300_000),
   nrg: (fresh = false) => request<Envelope<NrgPayload>>("/api/world/nrg", fresh ? 0 : 300_000),
   ship: (fresh = false) => request<Envelope<ShipPayload>>("/api/world/ship", fresh ? 0 : 300_000),
+  ports: (q: string, fresh = false) => request<Envelope<PortsPayload>>(`/api/world/ports?${qs({ q })}`, fresh ? 0 : 300_000),
   wetr: (place: string, fresh = false) => request<Envelope<WetrPayload>>(`/api/world/wetr?${qs({ place })}`, fresh ? 0 : 300_000),
   holidays: (mkt: string, year: number) => request<Envelope<HolidayCalendar>>(`/api/world/holidays?${qs({ mkt, year: String(year) })}`, 3_600_000),
   pred: (q: string, fresh = false) => request<Envelope<PredPayload>>(`/api/world/pred?${qs({ q })}`, fresh ? 0 : 60_000),

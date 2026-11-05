@@ -4,7 +4,7 @@ The router (router.py) walks a capability's list from the top and takes the firs
 symbol (`supports()`: a key is set, a login is valid, the symbol is one it covers) and (b) is healthy (circuit breaker).
 Anything below is the fallback chain. So this table is the whole answer to "which source do I get?":
 
-  - a source with a key but no coverage of the symbol is skipped (Upstox never sees AAPL),
+  - a source with a key but no coverage of the symbol is skipped (Kite never sees AAPL),
   - a source without a key is skipped (costs nothing),
   - a failing or rate-limited source is skipped for a cool-down, then the next one answers and the panel says
     "fallback from <name>".
@@ -37,10 +37,7 @@ HIERARCHY: dict[str, tuple[Rank, ...]] = {
     "history": (
         Rank("kite", "NSE, BSE, NFO, MCX", "1 minute to daily with open interest", "real time",
              "3 requests/s; your own paid Kite Connect app and a login each trading day",
-             "Deepest Indian data with open interest; only on while a Kite login is valid"),
-        Rank("upstox", "NSE, BSE (shares, Nifty 50, Bank Nifty, Sensex)", "minute and hourly candles from Jan 2022, daily and longer from Jan 2000",
-             "real time", "free Analytics Token (1 year, read only); 50 requests/s, 500/minute",
-             "Free, real time and far deeper intraday than Yahoo for Indian names; one token, no daily login"),
+             "Exchange-direct bars with open interest, far deeper intraday than Yahoo for NSE/BSE/F&O/MCX; on while a Kite login exists, and an expired login falls to Yahoo with the reason shown"),
         Rank("binance_klines", "USDT pairs on Binance (spot and perpetuals)", "minute candles and up", "real time", "keyless public market data",
              "The exchange's own candles for the pairs it lists"),
         Rank("yahoo", "global shares, ETFs, indices, FX, futures", "daily back 20 years; 1 minute only 7 days, other minute candles 60 days, hourly 2 years",
@@ -55,9 +52,9 @@ HIERARCHY: dict[str, tuple[Rank, ...]] = {
              "Last resort: only answers when everything above failed"),
     ),
     "quotes": (
-        Rank("upstox", "NSE, BSE (shares, Nifty 50, Bank Nifty, Sensex)", "last price, day open/high/low, previous close", "real time",
-             "free Analytics Token; 500 requests/minute",
-             "Real-time Indian prices instead of Yahoo's delayed ones"),
+        Rank("kite", "NSE, BSE, NFO, BFO, MCX, CDS (shares, indices, futures, options)", "last price, day open/high/low, previous close, volume",
+             "real time", "10 requests/s, up to 500 instruments per call; your own paid Kite Connect app and a login each trading day",
+             "Real-time exchange prices instead of Yahoo's delayed ones for the symbols Kite covers"),
         Rank("yahoo", "global shares, ETFs, indices, FX, futures", "last price, day range, 52-week range", "up to 15 minutes late on some exchanges",
              "keyless but unofficial", "Widest coverage with no key"),
         Rank("frankfurter", "FX pairs the ECB publishes (EURUSD=X, USDINR=X, cross rates)", "last ECB reference rate and the one before it",

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-INDEX_KEYS = {"^NSEI": "NSE:NIFTY 50", "^NSEBANK": "NSE:NIFTY BANK"}
-SUFFIX_EXCHANGE = {".NS": "NSE", ".BO": "BSE", ".NFO": "NFO", ".MCX": "MCX"}
+INDEX_KEYS = {"^NSEI": "NSE:NIFTY 50", "^NSEBANK": "NSE:NIFTY BANK", "^BSESN": "BSE:SENSEX"}
+SUFFIX_EXCHANGE = {".NS": "NSE", ".BO": "BSE", ".NFO": "NFO", ".BFO": "BFO", ".MCX": "MCX", ".CDS": "CDS"}
 FUTURES_EXCHANGES = ("NFO", "MCX")
 #: the spot instrument an index option or future is quoted against (name in the dump -> Kite key)
 UNDERLYING_KEYS = {"NIFTY": "NSE:NIFTY 50", "BANKNIFTY": "NSE:NIFTY BANK", "FINNIFTY": "NSE:NIFTY FIN SERVICE",

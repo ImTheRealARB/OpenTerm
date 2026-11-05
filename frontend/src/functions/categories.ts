@@ -15,9 +15,9 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   // Markets: quotes, boards, calendars, macro and crypto/commodity data, derivatives and rates screens
   Q: "Markets", QR: "Markets", WL: "Markets", WEI: "Markets", MOV: "Markets", EQS: "Markets", SECF: "Markets",
   FX: "Markets", FXC: "Markets", FXFA: "Markets", CRYP: "Markets", CDEP: "Markets", FUND: "Markets", LIQ: "Markets",
-  STBL: "Markets", DEFI: "Markets", UNLK: "Markets", CMDTY: "Markets", NRG: "Markets", WETR: "Markets", SHIP: "Markets",
+  STBL: "Markets", DEFI: "Markets", UNLK: "Markets", CMDTY: "Markets", NRG: "Markets", WETR: "Markets", SHIP: "Markets", PORTS: "Markets",
   RATES: "Markets", YAS: "Markets", SWPM: "Markets", CDSW: "Markets", CT: "Markets", WIRP: "Markets", COT: "Markets",
-  ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", WECO: "Markets",
+  ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", DBSRCH: "Markets", WECO: "Markets",
   CENB: "Markets", PRED: "Markets", TRADE: "Markets", USMAC: "Markets", ADDR: "Markets",
   // Charts: anything that is mainly a picture of a time series or a map
   GP: "Charts", IND: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",

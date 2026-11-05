@@ -59,6 +59,10 @@ class Provider:
     def supports(self, capability: str, symbol: str | None = None) -> bool:
         return capability in self.capabilities
 
+    def why_down(self) -> str | None:
+        """A human reason shown beside a fallback from this source (e.g. "KITE LOGIN EXPIRED"); None = no special reason."""
+        return None
+
     async def _request(self, url: str, params: dict[str, Any] | None, timeout: float | None, body: Any = None) -> httpx.Response:
         """GET, or POST of a JSON `body` when one is given."""
         try:

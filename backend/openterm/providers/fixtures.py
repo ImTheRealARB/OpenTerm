@@ -527,9 +527,14 @@ def _route(request: httpx.Request) -> httpx.Response:
         return _kite_json("kite_instruments_docshape")
     if p == "/quote":
         data = json.loads((FIXTURES / "kite_quote_nifty_docshape.json").read_text(encoding="utf-8"))["body"]["data"]
+        # REAL recording (2026-11-05) of RELIANCE and SENSEX fills in keys the doc-shaped chain file lacks. NIFTY 50 stays doc-shaped
+        # (25000.0) because the option-chain tests are built on that spot price.
+        data = json.loads((FIXTURES / "kite_quote_reliance_nifty_sensex_real.json").read_text(encoding="utf-8"))["body"]["data"] | data
         return httpx.Response(200, json={"status": "success", "data": {k: data[k] for k in q.get_list("i") if k in data}})
     if p.startswith("/instruments/historical/"):
         token = p.split("/")[3] if len(p.split("/")) > 3 else ""
+        if token == "738561" and p.endswith("/5minute"):
+            return _kite_json("kite_historical_reliance_5m_real")  # REAL recording, 3 days of RELIANCE 5 minute bars
         return _kite_json(KITE_HISTORICAL[token]) if token in KITE_HISTORICAL else _kite_error(400, "InputException", "Invalid instrument token.")
     return httpx.Response(404, text="not recorded")
 
@@ -856,3 +861,70 @@ def _route(request: httpx.Request) -> httpx.Response:
         name = _CH_PATHS.get(p)
         return _load(name) if name else httpx.Response(404, json={"errors": [{"type": "ch:service", "error": "company-profile-not-found"}]})
     return _route_before_freesrc(request)
+
+
+# --- DBSRCH: DBnomics dataset and series search (REAL recordings from scripts/record_dbsearch.py) ---
+# Recorded: datasets for "france inflation" / "OECD unemployment" / a no-match word, and the series of BDF/ICP and OECD/DSD_TAXBEN_NRR@DF_NRR
+# (first page only). Every other search, other page or other dataset answers 404 "not recorded", like the rest of this file.
+_route_before_dbsearch = _route
+_DBS_DATASETS = {"france inflation": "dbnomics_search_france_inflation", "oecd unemployment": "dbnomics_search_oecd_unemployment",
+                 "zzqxjw": "dbnomics_search_nomatch"}
+_DBS_SERIES = {("BDF", "ICP", "france inflation"): "dbnomics_series_bdf_icp_france_inflation",
+               ("OECD", "DSD_TAXBEN_NRR@DF_NRR", "oecd unemployment"): "dbnomics_series_oecd_nrr_oecd_unemployment"}
+
+
+def _route_dbsearch(request: httpx.Request) -> httpx.Response | None:
+    if request.url.host != "api.db.nomics.world":
+        return None
+    p, q = request.url.path, request.url.params
+    if q.get("offset", "0") != "0":
+        return httpx.Response(404, text="not recorded")  # only the first page of each search was recorded
+    words = (q.get("q") or "").lower()
+    if p == "/v22/search":
+        name = _DBS_DATASETS.get(words)
+        return _load(name) if name else httpx.Response(404, text="not recorded")
+    parts = p.split("/")  # ["", "v22", "series", provider, dataset] for a series LIST (a 5th part would be one series: older routes answer)
+    if len(parts) == 5 and parts[1:3] == ["v22", "series"]:
+        name = _DBS_SERIES.get((parts[3], parts[4], words))
+        return _load(name) if name else httpx.Response(404, text="not recorded")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_dbsearch(request) or _route_before_dbsearch(request)
+
+
+# --- PORTS: IMF PortWatch daily port activity (recorded 2026-11-05 from the real ArcGIS layers) ---
+# Daily_Ports_Data: the max(date) answer, the 25-busiest-ports sum, and the daily rows of those 25 ports (the route filters them by the
+# ids and the date in the request, as the real service would). PortWatch_ports_database: only ROTTERDAM and BELGIUM were recorded; any
+# other words answer with no ports, which is what a search that matches nothing gets.
+_route_before_ports = _route
+
+
+def _route_ports(request: httpx.Request) -> httpx.Response | None:
+    if request.url.host != "services9.arcgis.com":
+        return None
+    p, q = request.url.path, request.url.params
+    where = q.get("where", "")
+    if p.endswith("/Daily_Ports_Data/FeatureServer/0/query"):
+        if q.get("outStatistics"):
+            kind = json.loads(q["outStatistics"])[0]["statisticType"]
+            return _load("portwatch_ports_newest" if kind == "max" else "portwatch_ports_top25")
+        if q.get("resultOffset", "0") != "0" or "IN (" not in where:
+            return httpx.Response(200, json={"features": []})
+        ids = set(where.split("IN (")[1].split(")")[0].replace("'", "").split(","))
+        since = where.split("DATE '")[1][:10]  # ISO dates compare correctly as text
+        rec = json.loads((FIXTURES / "portwatch_ports_daily_top25.json").read_text(encoding="utf-8"))
+        rows = [f for f in rec["body"]["features"] if f["attributes"]["portid"] in ids and f["attributes"]["date"] >= since]
+        return httpx.Response(200, json={"features": rows})
+    if p.endswith("/PortWatch_ports_database/FeatureServer/0/query"):
+        if "'%ROTTERDAM%'" in where:
+            return _load("portwatch_ports_db_rotterdam")
+        if "'%BELGIUM%'" in where:
+            return _load("portwatch_ports_db_belgium")
+        return httpx.Response(200, json={"features": []})
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_ports(request) or _route_before_ports(request)

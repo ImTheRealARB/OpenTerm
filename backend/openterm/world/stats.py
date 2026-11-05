@@ -67,7 +67,8 @@ def resolve_country(text: str) -> str:
     raise ValueError(f"UNKNOWN COUNTRY: {text[:24]} (USE THE 3-LETTER ISO CODE)")
 
 
-DBN_REF = re.compile(r"^DBN:([A-Za-z0-9_\-]+)/([A-Za-z0-9_.\-:]+)/([A-Za-z0-9_.\-/]+)$", re.IGNORECASE)
+# The dataset part allows `@` because OECD dataset codes contain it (DSD_TAXBEN_NRR@DF_NRR); DBSRCH lists such datasets and ECST must open them.
+DBN_REF = re.compile(r"^DBN:([A-Za-z0-9_\-]+)/([A-Za-z0-9_.\-:@]+)/([A-Za-z0-9_.\-/]+)$", re.IGNORECASE)
 
 
 def parse_dbn_ref(text: str) -> tuple[str, str, str] | None:

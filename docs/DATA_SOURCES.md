@@ -6,7 +6,7 @@ For each kind of data (quotes, history ...) the sources are ranked in one table,
 [`backend/openterm/providers/hierarchy.py`](../backend/openterm/providers/hierarchy.py). The router walks it top-down and takes the first
 source that is **switched on for that symbol** and **healthy**:
 
-- no key set, or the symbol is not one the source covers (Upstox never sees AAPL): skipped, costs nothing;
+- no key set, or the symbol is not one the source covers (Kite never sees AAPL): skipped, costs nothing;
 - rate limited, down, or too shallow for the request: the next source answers, and the chart says `<name> DOWN, VIA FALLBACK`;
 - a key added in `APIKEYS` takes effect at once (the history cache key changes with the set of keyed sources that are on).
 
@@ -15,8 +15,7 @@ calls a day must not sit above one that can feed a 50-row grid). **Speed** is me
 failing source by itself, so the table does not guess it. Every entry records its reasons, and `SOURCES` shows where each provider sits.
 
 How far back minute candles reach is a property of the source that answers, not a global rule: every provider can declare `intraday_days`, and
-`GET /api/history/limits?symbol=X` reports the deepest source switched on for `X` (Yahoo 60 days; Upstox about 4.8 years for Indian shares once
-a token is set). The chart's candle-length dropdown reads it.
+`GET /api/history/limits?symbol=X` reports the deepest source switched on for `X` (Yahoo 60 days; Kite about 11 years for minute candles of Indian symbols while a login is valid). The chart's candle-length dropdown reads it.
 
 `config.yaml` `providers:` can still pin a capability's order by hand. It wins over the table and the log says so; remove the line to get the
 hierarchy back.
@@ -28,8 +27,7 @@ To add a source: write the adapter ([ADDING_A_PROVIDER.md](ADDING_A_PROVIDER.md)
 
 | Source | Key | Kind | Position |
 |---|---|---|---|
-| **Upstox** (new) | free read-only Analytics Token | NSE/BSE shares + Nifty 50, Bank Nifty, Sensex: real-time quotes, minute candles from 2022, daily from 2000 | `quotes` #1, `history` #2 |
-| Kite Connect | paid app, daily login | NSE, BSE, NFO, MCX with open interest | `history` #1 |
+| **Kite Connect** | paid app, daily login | NSE, BSE, NFO, BFO, MCX, CDS: real-time quotes; minute bars back to 2015 (1 minute verified 10 years), open interest | `quotes` #1, `history` #1 |
 | **Frankfurter** (new) | none | ECB reference rates: one fix per business day for FX pairs (EURUSD=X, USDINR=X, crosses), back to 1999; no high/low | `history` below Yahoo, `quotes` below Yahoo (Yahoo-down fallback for FX) |
 | **Companies House, Marketaux, Etherscan** (new) | free keys | `UKCO` UK register; `N` headlines with sentiment; `ADDR` EVM address and gas | specialists (Marketaux joins the news order) |
 | Yahoo, Nasdaq, SEC EDGAR, FRED (keyless CSV), ECB, BoE, BoC, MoF, Treasury, CFTC, Deribit, OKX, Binance, CoinGecko, DefiLlama, Polymarket, Kalshi, World Bank, DBnomics, Open-Meteo, NWS, NSE archive, AMFI, GDELT, RSS | none | global shares, rates, futures, crypto, macro, weather, prediction markets, funds, news | fallbacks and specialists |
@@ -45,7 +43,6 @@ on the provider's page before building. Most search hits were comparison blogs, 
 
 | Source | Adds | Free limits | Status |
 |---|---|---|---|
-| **Upstox Analytics Token** | Real-time NSE/BSE, minute candles from 2022 | 500 requests/minute | Built (unrun live) |
 | **BLS API v2** | US CPI, jobs, wages, productivity | registered: 500 queries/day, 50 series per query; renew yearly | Checked |
 | **BEA API** | US GDP, trade, income, industry accounts | UserID by sign-up; limits not confirmed | Checked (key only) |
 | **Census API** | US trade, retail sales, housing, demographics | key now required for all queries (2026 Census video) | Checked |
@@ -57,7 +54,7 @@ on the provider's page before building. Most search hits were comparison blogs, 
 | **CoinMarketCap Basic** | Crypto ranks and prices beyond the top 50 | 15,000 credits/month, 50 requests/minute | Checked (CMC's own article) |
 | **AISstream** | Live ship positions, destinations, ETAs, ship details (WebSocket) | free, **beta, no uptime promise**; no published quotas found | Checked |
 | **Twelve Data, Tiingo, Alpha Vantage** | Fallback prices, daily history | see above | Checked |
-| **Angel One SmartAPI, Fyers** | Indian broker data, backup to Upstox | free with account; TOTP login | Checked (forums) |
+| **Angel One SmartAPI, Fyers** | Indian broker data, backup to Kite | free with account; TOTP login | Checked (forums) |
 | **USDA NASS QuickStats** | US crop, livestock and food statistics | free key | Memory |
 | **FEC, USASpending, Federal Register, Congress.gov** | Political money, federal contracts, rules, bills | free keys, generous | Memory |
 | **OpenSky Network** | Live and historical flights | free account, daily credit limits | Memory |
@@ -97,18 +94,25 @@ Built in this branch (none committed yet):
 2. **UN Comtrade, BLS, BEA, Census** (free keys) as `TRADE` and `USMAC`. Doc-shaped fixtures, never run with a key.
 3. **Frankfurter** (FX history and quotes behind Yahoo), **Companies House** (`UKCO`), **Marketaux** (news sentiment), **Etherscan** (`ADDR`).
 
+Built after that (branch `claude/ports-and-official-stats`): `PORTS` (PortWatch ports) and `DBSRCH` (DBnomics series search). OECD, Eurostat, BIS and IMF series are
+reached through DBnomics (`DBSRCH`, then `ECST DBN:...`), so no separate adapters were written.
+
 Left, in order:
 1. **AISstream** (free key, beta): live vessel positions and ETAs. A WebSocket, so it fits the streaming hub; the biggest piece, no uptime promise.
-2. **PortWatch ports** (`Daily_Ports_Data` layer exists on the same service): port calls and trade by port.
-3. **OECD, Eurostat, BIS, IMF** (keyless) behind MACRO and ECO. **EDINET** (Japan filings). **Angel One, Tiingo, Twelve Data, Kraken, MFapi** as extras.
+2. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, Kraken, Coinbase, MFapi**, CoinMarketCap, USDA NASS, FEC, OpenSky.
+3. Live-test every keyed source that has only doc-shaped fixtures.
 
 None of the global free tiers beats Yahoo for charts, so none should be ranked above it.
 
 ## Honest limits of what is built
 
-The Upstox adapter was written from the official docs. No Upstox token was available, so its fixtures and tests are **doc-shaped, not recordings**
-(same status as Finnhub and Kite). Offline checks passed (unit tests, a fake server, the fallback path in a real running app). **The first live
-call with your token is the real test**: a wrong shape shows as an `ERR` line and Yahoo answers, never as wrong prices. If it fails, `SOURCES` shows
-the exact error. Things the docs did not state, and how the code handles them: the maximum number of instruments per quote call (batches of 100),
-how quote answer keys relate to the requested instrument key (matched on `instrument_token`), and whether the instruments files need a token
-(the code sends none).
+Upstox was built and then removed (2026-11-05): the owner could not get a token and will use paid Kite instead. Kite is the Indian source.
+
+**Kite measured live (2026-11-05, RELIANCE.NS, logged in as the paying user):**
+- Depth: 5, 15, 30 and 60 minute bars start on 2015-02-02; 1 minute was verified back 10 years (2016-11-04). Per call Kite caps the window (1 minute 60 days, 3/5/10 minute 100, 15/30 minute 200, 60 minute 400, daily 2000); `kite/client.py` chunks longer asks.
+- Speed (server side, median of 10 different large caps, same symbols; Kite includes ~15 ms loopback because it was timed over HTTP, Yahoo was called in-process): quote Kite 52 ms vs Yahoo 341 ms; 5 min x 1 month history Kite 125 ms vs Yahoo 216 ms. Long asks are slower because they are many calls at 3 requests/s: 5 min x 1 year about 1.5 s, 1 min x 5 years 18 s.
+- Prices: Kite last 1310.1 vs Yahoo 1308.5 (Yahoo is delayed). 1,581 common 5 min bars over a month: mean close difference 0.005%, max 0.1%, 328 identical.
+- Rate limits used: 3 requests/s historical, 10 requests/s everything else, `/quote` up to 500 instruments per call (`kite/client.py`).
+- Login expired: Kite is still tried, fails without a network call, Yahoo answers, and the response carries `fallback_from: ["kite"]` plus `fallback_notes: {"kite": "KITE LOGIN EXPIRED: run KITE LOGIN"}`; GP shows that text. A missing key or no login at all stays silent (zero keys still works).
+- Fixtures: `kite_quote_reliance_nifty_sensex_real.json` and `kite_historical_reliance_5m_real.json` are real recordings (depth removed); the instruments dump, daily bars, the session answer and the option chain stay doc-shaped. In fixture mode the source label still says doc-shaped because of those.
+- Not done: the live WebSocket ticker for quotes (`kite/ws.py` exists and feeds the hub; not re-verified against ranking); F&O, MCX and currency symbols were mapped (`.NFO .BFO .MCX .CDS`) but only equities and the NIFTY/SENSEX indices were tried live.

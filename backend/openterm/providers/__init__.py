@@ -176,11 +176,6 @@ from .kite import KiteProvider
 
 ADAPTERS["kite"] = KiteProvider
 
-# --- Source hierarchy step 1: Upstox (free read-only Analytics Token; inert without one) ---
-from .upstox import UpstoxProvider
-
-ADAPTERS["upstox"] = UpstoxProvider
-
 # --- Phase 19 (keyless): SECF identifier mapping ---
 from .openfigi import OpenFigiProvider
 

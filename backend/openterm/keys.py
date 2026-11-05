@@ -80,9 +80,6 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://support.google.com/accounts/answer/185833", secret_fields=("SMTP_PASSWORD",)),
     KeySpec("webhook", ("ALERT_WEBHOOK_URL",), 17, "Slack/Discord-style webhook for alerts and briefs (the URL is a secret)",
             "https://api.slack.com/messaging/webhooks"),
-    KeySpec("upstox", ("UPSTOX_ANALYTICS_TOKEN",), 15,
-            "Upstox (read-only, free): real-time NSE/BSE quotes and minute candles from 2022. Needs an Upstox account; the token lasts 1 year",
-            "https://upstox.com/developer/api-documentation/analytics-token/"),
     # Free read-only sources: UKCO (Companies House), N headlines with sentiment (Marketaux), ADDR (Etherscan).
     KeySpec("companies_house", ("COMPANIES_HOUSE_KEY",), 20, "UK Companies House (free): company profile, officers, filing history (UKCO). 600 requests per 5 minutes",
             "https://developer.company-information.service.gov.uk/get-started"),
@@ -420,9 +417,6 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
     "tradier": lambda k: ("GET", "https://sandbox.tradier.com/v1/markets/clock", None,
                           {**_bearer(k["TRADIER_TOKEN"]), "Accept": "application/json"}, None),
     "telegram": lambda k: ("GET", f"https://api.telegram.org/bot{k['TELEGRAM_BOT_TOKEN']}/getMe", None, None, None),
-    # Documented V3 last-traded-price call; Nifty 50 needs no instruments lookup. 401 = expired or revoked token.
-    "upstox": lambda k: ("GET", "https://api.upstox.com/v3/market-quote/ltp", {"instrument_key": "NSE_INDEX|Nifty 50"},
-                         {**_bearer(k["UPSTOX_ANALYTICS_TOKEN"]), "Accept": "application/json"}, None),
     # Companies House: HTTP basic auth, the key is the user name and the password is empty. A search for one company is the cheapest call.
     "companies_house": lambda k: ("GET", "https://api.company-information.service.gov.uk/search/companies", {"q": "tesco", "items_per_page": "1"},
                                  {"Authorization": "Basic " + base64.b64encode(f"{k['COMPANIES_HOUSE_KEY']}:".encode()).decode("ascii")}, None),

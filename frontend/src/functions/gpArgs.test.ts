@@ -3,7 +3,7 @@ import { depthLimitFromError, intervalFits, limitText, longestRangeWithin, parse
 
 describe("candle-length limits (reported by the backend per symbol)", () => {
   const yahoo = { "1m": 7, "5m": 60, "15m": 60, "60m": 730 };
-  const upstox = { "1m": 1400, "5m": 1400, "15m": 1400, "60m": 1400 };
+  const deep = { "1m": 1400, "5m": 1400, "15m": 1400, "60m": 1400 };
   it("minute candles only fit ranges inside the reported depth; daily and longer always fit", () => {
     expect(intervalFits("5D", "5m", yahoo)).toBe(true);
     expect(intervalFits("1M", "15m", yahoo)).toBe(true);
@@ -12,9 +12,9 @@ describe("candle-length limits (reported by the backend per symbol)", () => {
     expect(intervalFits("1Y", "60m", yahoo)).toBe(true);
     expect(intervalFits("2Y", "60m", yahoo)).toBe(false);
   });
-  it("a deeper source (Upstox for Indian shares) allows what Yahoo would not", () => {
-    expect(intervalFits("1Y", "5m", upstox)).toBe(true);
-    expect(intervalFits("5Y", "5m", upstox)).toBe(false);
+  it("a deeper source (for example Kite for Indian shares) allows what Yahoo would not", () => {
+    expect(intervalFits("1Y", "5m", deep)).toBe(true);
+    expect(intervalFits("5Y", "5m", deep)).toBe(false);
   });
   it("offers everything while the limits are not known yet", () => {
     expect(intervalFits("MAX", "1m", undefined)).toBe(true);

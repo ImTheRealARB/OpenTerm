@@ -139,8 +139,8 @@ export const INTERVAL_CHOICES: readonly (readonly [string, string])[] = [
 
 /**
  * How many days back each minute candle length reaches for one symbol, as the BACKEND reports it (GET /api/history/limits):
- * the deepest source that is switched on for that symbol decides (Yahoo 60 days; Upstox about 4 years for Indian shares once a
- * token is set). Lengths the backend does not list (daily, weekly, monthly) are unlimited. `undefined` = not known yet: show
+ * the deepest source that is switched on for that symbol decides (Yahoo 60 days; a deeper source such as Kite once a
+ * login is valid). Lengths the backend does not list (daily, weekly, monthly) are unlimited. `undefined` = not known yet: show
  * everything and let the server's own error be the authority.
  */
 export type IntradayLimits = Readonly<Record<string, number>>;

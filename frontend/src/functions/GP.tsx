@@ -21,6 +21,7 @@ import { currentView, navigate, replaceView, workspace } from "../state/workspac
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { KEY_RANGES, MAX_CUSTOM, depthLimitFromError, formulaInd, libraryInd, limitText, longestRangeWithin, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
+import { fallbackText } from "./fallbackText";
 import { useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 
@@ -37,6 +38,7 @@ interface Loaded {
   asOf: number;
   stale: boolean;
   fallback: string[];
+  fallbackNotes?: Record<string, string>;
   compares: { symbol: string; t: Float64Array; c: Float64Array }[];
   compareErrors: string[];
 }
@@ -138,7 +140,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         });
         setState({
           loading: false,
-          loaded: { bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, compares, compareErrors },
+          loaded: { bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, fallbackNotes: env.fallback_notes, compares, compareErrors },
         });
       })
       .catch((e: ApiError) => alive && setState({ loading: false, error: e.message, keyError: isKeyRequired(e) ? e : undefined }));
@@ -407,7 +409,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
           </span>
         )}
         {L?.stale && <span className="warn"> · STALE</span>}
-        {L?.fallback.length ? <span className="warn"> · {L.fallback.join(",").toUpperCase()} DOWN, VIA FALLBACK</span> : null}
+        {L?.fallback.length ? <span className="warn"> · {fallbackText(L.fallback, L.fallbackNotes)}</span> : null}
         {L?.compareErrors.map((m) => (
           <span className="err" key={m}> · {m}</span>
         ))}

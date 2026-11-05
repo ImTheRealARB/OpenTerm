@@ -137,6 +137,8 @@ const defs: FunctionDef[] = [
   { code: "SHIP", title: "Ship traffic at sea chokepoints (IMF PortWatch)", needsSecurity: false, phase: 20, load: () => import("./SHIP") },
   { code: "TRADE", title: "Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY)", needsSecurity: false, argsSchema: "<REPORTER> [<PARTNER>|WORLD] [TOTAL|<HS 2/4/6 digits>] [<N>Y]", phase: 20, load: () => import("./TRADE") },
   { code: "USMAC", title: "US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys)", needsSecurity: false, argsSchema: "BLS [CPI|CORECPI|PPI|UNEMP|LFPR|PAYROLL|AHE|JOLTS|<series id>] | BEA [GDPG|PCEG|GDP|TRADEBAL|SERVBAL|CURACCT|INDUSTRY] | CENSUS [RETAIL [TOTAL|AUTO|FOOD|GEN|REST] | TRADE <COUNTRY> <HS2>]", phase: 20, load: () => import("./USMAC") },
+  { code: "DBSRCH", title: "Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST", needsSecurity: false, argsSchema: "<WORDS> | DS:<PROVIDER>/<DATASET> [WORDS]", phase: 19, load: () => import("./DBSRCH") },
+  { code: "PORTS", title: "Port activity: daily port calls and trade estimates (IMF PortWatch)", needsSecurity: false, argsSchema: "[PORT|COUNTRY]", phase: 20, load: () => import("./PORTS") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

@@ -7,13 +7,16 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from ..world import stats
+from ..world import dbsearch, stats
 from .base import Provider, ProviderError
 
 WORLDSTATS = "worldstats"
 WORLDSTATS_LATEST = "worldstats_latest"
 WORLDSTATS_COUNTRIES = "worldstats_countries"
 WORLDSTATS_DBN = "worldstats_dbn"
+WORLDSTATS_SEARCH = "worldstats_search"  # DBSRCH: find DBnomics datasets and series by words
+DBN_DATASET_PAGE = 20  # rows per page; scripts/record_dbsearch.py records fixtures with the same sizes
+DBN_SERIES_PAGE = 30
 WB = "https://api.worldbank.org/v2"
 DBN = "https://api.db.nomics.world/v22"
 
@@ -48,7 +51,7 @@ class WorldBankProvider(Provider):
 class DbnomicsProvider(Provider):
     name = "dbnomics"
     label = "DBnomics (IMF, OECD, ECB, Eurostat mirror)"
-    capabilities = frozenset({WORLDSTATS, WORLDSTATS_DBN})
+    capabilities = frozenset({WORLDSTATS, WORLDSTATS_DBN, WORLDSTATS_SEARCH})
     markets = "IMF World Economic Outlook headline indicators for any country; any DBnomics series by DBN:<provider>/<dataset>/<series>"
     terms = "Free API, no key. Data stays under each provider's own licence (DBnomics aggregates; cite the original provider). IMF WEO includes projections."
     rate = (3.0, 6)
@@ -68,6 +71,19 @@ class DbnomicsProvider(Provider):
         out = stats.parse_dbn_series(body, None, "", 1.0, series, "DBN")
         out["source"] = f"{self.source} · {provider}/{dataset}"
         return out
+
+    async def search_datasets(self, q: str, offset: int = 0) -> dict[str, Any]:
+        """DBSRCH step 1: datasets whose text matches every word of `q` (the API's own relevance order)."""
+        body = await self.get_json(f"{DBN}/search", {"q": q, "limit": DBN_DATASET_PAGE, "offset": offset})
+        return dbsearch.parse_datasets(body)
+
+    async def search_series(self, provider: str, dataset: str, q: str = "", offset: int = 0) -> dict[str, Any]:
+        """DBSRCH step 2: series of one dataset that match `q`. `observations=0&metadata=0` keeps the answer small (about 1 KB per series)."""
+        params: dict[str, Any] = {"limit": DBN_SERIES_PAGE, "offset": offset, "observations": 0, "metadata": 0}
+        if q:
+            params["q"] = q
+        body = await self.get_json(f"{DBN}/series/{provider}/{dataset}", params)
+        return dbsearch.parse_series(body, provider, dataset)
 
     async def probe(self) -> None:
         await self.worldstats("USA", stats.INDICATORS["GDPG"])

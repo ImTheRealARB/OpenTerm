@@ -46,8 +46,10 @@ DEFAULT_ORDER["figi"] = ["openfigi"]
 DEFAULT_ORDER |= {"comtrade": ["comtrade"], "bls": ["bls"], "bea": ["bea"], "census": ["census"]}  # trade + US macro family (keyed)
 DEFAULT_ORDER |= {"holidays": ["nager"], "worldstats": ["worldbank", "dbnomics"], "worldstats_latest": ["worldbank"],
                   "worldstats_countries": ["worldbank"], "worldstats_dbn": ["dbnomics"], "policy_rates": ["policy_rates"]}
+DEFAULT_ORDER["worldstats_search"] = ["dbnomics"]  # DBSRCH: find DBnomics datasets and series by words
 DEFAULT_ORDER |= {"weather_geocode": ["openmeteo"], "weather_forecast": ["openmeteo"], "nws_alerts": ["nws"]}
 DEFAULT_ORDER["shipping_chokepoints"] = ["portwatch"]
+DEFAULT_ORDER["ports_activity"] = ["portwatch"]  # PORTS: same keyless IMF PortWatch provider, daily port calls
 # Step 9: the NSE archive is the LAST history source (Yahoo answers first; it only serves `.NS` at `1d`); AMFI NAV for the SECF fund rows
 DEFAULT_ORDER["history"] = [*DEFAULT_ORDER["history"], "nse_archive"]
 DEFAULT_ORDER["mfnav"] = ["amfi"]
@@ -168,7 +170,6 @@ async def lifespan(app: FastAPI):
     kite = router.providers["kite"]
     kite.attach(KiteSession(store), db)
     router.providers["nse_archive"].attach(db)  # Phase 19 step 9: day files are kept in the kv table
-    router.providers["upstox"].attach(db)  # the instruments table is kept in the kv table for 24 h
     ticker = KiteTicker(emit, kite.session, kite.instruments, prev_close) if not settings.openterm_fixtures else None
     hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick, iex=iex, kite=ticker)
     hub_ref.append(hub)
@@ -194,7 +195,7 @@ async def lifespan(app: FastAPI):
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
         if name == "fred" and "fred" in router.providers:
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
-        if name in ("finnhub", "alpaca", "tradier", "upstox", "companies_house", "marketaux", "etherscan") and name in router.providers:  # keyed sources
+        if name in ("finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan") and name in router.providers:  # keyed sources
             router.providers[name].set_keys(store.get(name))
         if name == "kite":  # Phase 15: a new key or secret drops the login; the session re-reads the store
             kite.session.reload()
@@ -204,7 +205,7 @@ async def lifespan(app: FastAPI):
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        for name in ("fred", "finnhub", "alpaca", "tradier", "upstox", "companies_house", "marketaux", "etherscan"):
+        for name in ("fred", "finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan"):
             await asyncio.to_thread(on_key_change, name)
 
     key_loader = asyncio.create_task(apply_stored_keys())

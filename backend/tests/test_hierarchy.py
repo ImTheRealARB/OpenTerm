@@ -41,40 +41,39 @@ def test_every_entry_names_a_real_adapter_and_gives_its_reasons():
 
 
 def test_the_ranking_puts_deeper_real_time_sources_above_yahoo():
-    hist, quotes = order_for("history"), order_for("quotes")
-    assert hist.index("kite") < hist.index("upstox") < hist.index("yahoo") < hist.index("nse_archive")
-    assert quotes.index("upstox") < quotes.index("yahoo")
+    hist = order_for("history")
+    assert hist.index("kite") < hist.index("yahoo") < hist.index("nse_archive")
     assert hist.index("binance_klines") < hist.index("yahoo")
 
 
 def test_rank_of_reports_position_and_reasons():
-    r = rank_of("upstox")
-    assert r["history"]["rank"] == 2 and r["history"]["of"] == len(HIERARCHY["history"]) and r["quotes"]["rank"] == 1
-    assert "Jan 2022" in r["history"]["depth"]
+    r = rank_of("yahoo")
+    assert r["history"]["rank"] == 3 and r["history"]["of"] == len(HIERARCHY["history"]) and r["quotes"]["rank"] == 2
+    assert "20 years" in r["history"]["depth"]
     assert rank_of("gdelt") == {}
 
 
 async def test_first_source_that_covers_the_symbol_answers_and_the_rest_are_the_fallbacks():
-    india = Fake("upstox", covers=lambda s: s.endswith(".NS"))
+    india = Fake("regional", covers=lambda s: s.endswith(".NS"))
     world = Fake("yahoo")
-    router = Router({"upstox": india, "yahoo": world}, {"history": ["upstox", "yahoo"]})
-    assert (await router.call("history", lambda p: p.history("X", "1Y", "1d"), "RELIANCE.NS"))[0] == "upstox"
-    assert (await router.call("history", lambda p: p.history("X", "1Y", "1d"), "AAPL"))[0] == "yahoo"  # upstox never sees AAPL
+    router = Router({"regional": india, "yahoo": world}, {"history": ["regional", "yahoo"]})
+    assert (await router.call("history", lambda p: p.history("X", "1Y", "1d"), "RELIANCE.NS"))[0] == "regional"
+    assert (await router.call("history", lambda p: p.history("X", "1Y", "1d"), "AAPL"))[0] == "yahoo"  # regional never sees AAPL
 
 
 async def test_a_rate_limited_source_hands_over_and_the_panel_can_say_who_failed():
-    router = Router({"upstox": Fake("upstox", error=ProviderError("rate_limited")), "yahoo": Fake("yahoo")},
-                    {"history": ["upstox", "yahoo"]})
+    router = Router({"regional": Fake("regional", error=ProviderError("rate_limited")), "yahoo": Fake("yahoo")},
+                    {"history": ["regional", "yahoo"]})
     result, failed = await router.call("history", lambda p: p.history("X", "1Y", "1d"), "RELIANCE.NS")
-    assert result == "yahoo" and failed == ["upstox"]
+    assert result == "yahoo" and failed == ["regional"]
 
 
 async def test_too_shallow_hands_over_without_a_circuit_breaker_strike():
-    shallow = Fake("upstox", error=ProviderError("depth", "UDAPI1148 Invalid date range"))
-    router = Router({"upstox": shallow, "yahoo": Fake("yahoo")}, {"history": ["upstox", "yahoo"]})
+    shallow = Fake("regional", error=ProviderError("depth", "UDAPI1148 Invalid date range"))
+    router = Router({"regional": shallow, "yahoo": Fake("yahoo")}, {"history": ["regional", "yahoo"]})
     for _ in range(5):  # five requests that are too deep must not take the source out for a cool-down
         await router.call("history", lambda p: p.history("X", "5Y", "5m"), "RELIANCE.NS")
-    assert not router.health["upstox"].down and router.health["upstox"].errors == 0
+    assert not router.health["regional"].down and router.health["regional"].errors == 0
 
 
 async def test_when_every_source_is_too_shallow_the_user_gets_the_depth_message_as_a_bad_request():
@@ -98,18 +97,18 @@ async def test_other_failures_are_still_provider_down_or_no_data():
 
 def test_history_limits_take_the_deepest_source_that_is_on_for_the_symbol():
     yahoo = Fake("yahoo", intraday={"5m": 60, "1m": 7})
-    upstox = Fake("upstox", covers=lambda s: s.endswith(".NS"), intraday={"5m": 1400})
+    regional = Fake("regional", covers=lambda s: s.endswith(".NS"), intraday={"5m": 1400})
     undeclared = Fake("nasdaq")  # declares nothing: ignored
-    router = Router({"yahoo": yahoo, "upstox": upstox, "nasdaq": undeclared}, {"history": ["upstox", "yahoo", "nasdaq"]})
+    router = Router({"yahoo": yahoo, "regional": regional, "nasdaq": undeclared}, {"history": ["regional", "yahoo", "nasdaq"]})
     india = router.history_limits("RELIANCE.NS")
-    assert india["intraday_days"] == {"5m": 1400, "1m": 7} and india["source"] == ["upstox", "yahoo"]
+    assert india["intraday_days"] == {"5m": 1400, "1m": 7} and india["source"] == ["regional", "yahoo"]
     us = router.history_limits("AAPL")
     assert us["intraday_days"] == {"5m": 60, "1m": 7} and us["source"] == ["yahoo"]
 
 
 def test_a_source_that_is_off_does_not_count_towards_the_limits():
-    off = Fake("upstox", covers=lambda s: False, intraday={"5m": 1400})
-    router = Router({"yahoo": Fake("yahoo", intraday={"5m": 60}), "upstox": off}, {"history": ["upstox", "yahoo"]})
+    off = Fake("regional", covers=lambda s: False, intraday={"5m": 1400})
+    router = Router({"yahoo": Fake("yahoo", intraday={"5m": 60}), "regional": off}, {"history": ["regional", "yahoo"]})
     assert router.history_limits("RELIANCE.NS")["intraday_days"] == {"5m": 60}
 
 
@@ -135,10 +134,10 @@ def test_http_history_limits_report_what_the_best_source_can_do(client):
     us = client.get("/api/history/limits", params={"symbol": "AAPL"}).json()
     assert us["intraday_days"]["5m"] == 60 and us["intraday_days"]["1m"] == 7 and us["source"] == ["yahoo"]
     india = client.get("/api/history/limits", params={"symbol": "RELIANCE.NS"}).json()
-    assert india["intraday_days"]["5m"] == 60  # no Upstox token in the test app: Yahoo is still the deepest source switched on
+    assert india["intraday_days"]["5m"] == 60  # no Kite login in the test app: Yahoo is still the deepest source switched on
 
 
 def test_http_sources_lists_where_each_provider_sits_in_the_hierarchy(client):
     rows = {p["name"]: p for p in client.get("/api/sources").json()["providers"]}
-    assert rows["upstox"]["hierarchy"]["history"]["rank"] == 2 and rows["yahoo"]["hierarchy"]["quotes"]["rank"] == 2
+    assert rows["kite"]["hierarchy"]["history"]["rank"] == 1 and rows["yahoo"]["hierarchy"]["quotes"]["rank"] == 2
     assert rows["gdelt"]["hierarchy"] == {}

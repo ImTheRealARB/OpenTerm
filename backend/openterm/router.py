@@ -42,7 +42,7 @@ class Health:
 
     def fail(self, err: ProviderError) -> None:
         self.calls += 1
-        if err.kind in ("not_found", "unsupported", "depth"):
+        if err.kind in ("not_found", "unsupported", "depth", "login_expired"):
             return  # the provider is fine; it just lacks this symbol, or does not reach back that far
         self.errors += 1
         self.consecutive += 1
@@ -95,7 +95,7 @@ class Router:
         try:
             result = await fn(p)
         except ProviderError as e:
-            if e.kind == "key_required":  # not an outage: no circuit-breaker strike
+            if e.kind in ("key_required", "login_expired"):  # not an outage: no circuit-breaker strike
                 log.debug("provider %s needs a key", p.name)
                 raise
             self.health[p.name].fail(e)
@@ -148,7 +148,7 @@ class Router:
     def history_limits(self, symbol: str) -> dict:
         """How far back each intraday candle length reaches for this symbol, from the best source that can serve it.
 
-        {"intraday_days": {"5m": 1400, ...}, "source": "upstox"}. Each length takes the deepest limit among the sources that are
+        {"intraday_days": {"5m": 1400, ...}, "source": "kite"}. Each length takes the deepest limit among the sources that are
         switched on for the symbol and have declared one (Provider.intraday_days); a length no source declares is absent.
         Daily and longer candles are not limited here. Used by the chart so it only offers what will work.
         """

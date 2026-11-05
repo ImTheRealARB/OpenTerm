@@ -15,7 +15,9 @@ from typing import Any
 # The ArcGIS layer answers with HTTP 200 and an {"error": ...} body when it fails. The service sits behind
 # several nodes and some of them answer a perfectly valid request with these two messages (seen 2026-11-05,
 # about two calls in three). They are worth a retry; any other error is real and is raised at once.
-FLAKY_MESSAGES = ("Invalid URL", "Object reference not set")
+# "Invalid query parameters" is a third face of the same glitch, seen 2026-11-05 on the Daily_Ports_Data layer: identical, valid
+# requests failed with it in 2 of 5 live runs and succeeded on the next try (PORTS).
+FLAKY_MESSAGES = ("Invalid URL", "Object reference not set", "Invalid query parameters")
 
 # Fields we ask for. n_* are ship counts per day by type, `capacity` is PortWatch's own ship-capacity figure.
 FIELDS = "date,portid,portname,n_total,n_tanker,n_container,n_dry_bulk,n_general_cargo,n_roro,capacity"

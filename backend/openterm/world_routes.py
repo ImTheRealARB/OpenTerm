@@ -60,6 +60,17 @@ async def world_stats(request: Request, country: str = Query("", max_length=40),
         return error(e)
 
 
+@router.get("/dbsearch")
+async def dbnomics_search(request: Request, q: str = Query("", max_length=160), dataset: str = Query("", max_length=120), offset: int = Query(0, ge=0, le=100000)):
+    """DBSRCH: DBnomics datasets matching the words in `q`; with `dataset=<provider>/<code>`, the matching series of that dataset (open one with ECST DBN:...)."""
+    from .world.macro import dbsearch_svc
+
+    try:
+        return await dbsearch_svc(svc(request), q, dataset, offset)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/weco")
 async def world_weco(request: Request):
     """WECO: G20 headline indicators, each cell with its own data year."""
@@ -100,6 +111,17 @@ async def ship_board(request: Request):
 
     try:
         return await ship(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/ports")
+async def ports_board(request: Request, q: str = Query("", max_length=120)):
+    """PORTS: daily port calls and trade estimates (IMF PortWatch, satellite AIS, weekly). Bare = the 25 busiest ports; `q` = ports matching its words."""
+    from .world.portssvc import ports_board as board
+
+    try:
+        return await board(svc(request), q)
     except DataError as e:
         return error(e)
 

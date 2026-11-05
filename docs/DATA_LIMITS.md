@@ -175,11 +175,6 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - **Finnhub and Alpaca** (keys in `APIKEYS`) are written from the documented response shapes; no key was available to record them, so their fixtures
   are labelled doc-shaped and the live shapes are unverified. Finnhub backs `ANR` with the recommendation trend only (no targets) and `EEO` with EPS
   surprises only (no revisions), and says so. **FMP is not wired** (its useful endpoints are paid). `TRAN` and `SEG` are not built (paid data).
-- **Upstox** (`UPSTOX_ANALYTICS_TOKEN`, free, read-only, valid one year) is written from the official docs; no token was available, so its tests and
-  fixtures are doc-shaped and the live shapes are unverified. It sits above Yahoo for NSE and BSE shares and Nifty 50 / Bank Nifty / Sensex.
-  Minute and hourly candles start in January 2022 (daily and longer in 2000); long minute ranges are fetched in windows (about 66 requests for
-  5-minute candles over 5 years, capped at 70). A wrong shape or an expired token shows as an `ERR` line and Yahoo answers (`UPSTOX DOWN, VIA FALLBACK`).
-  The docs do not state the per-call quote limit (batches of 100 are used) nor how answer keys map to the requested key (matched on `instrument_token`).
 - **Intraday depth is per source, not global** (changed 2026-11-05): Yahoo keeps 1 minute for 7 days, 2/5/15/30/90 minutes for 60 days, 60 minutes for
   730 days, and says so itself (`ProviderError("depth")`); `GET /api/history/limits?symbol=X` reports the deepest source that is switched on for `X`.
 - **Real-time quotes (`RT IEX`)** are the last trade on IEX only (one exchange, about 2-3% of volume): the price can differ from the consolidated last
