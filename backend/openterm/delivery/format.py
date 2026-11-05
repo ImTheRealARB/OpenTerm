@@ -20,8 +20,11 @@ def _num(v) -> str:
     return f"{v:g}" if isinstance(v, (int, float)) else str(v)
 
 
-def alert_message(alert: dict) -> tuple[str, str]:
-    """Price alert row (symbol, op, unit, value, trigger_price, triggered_at) -> subject and body."""
+def alert_message(alert: dict, checked: str = "in the browser") -> tuple[str, str]:
+    """Price alert row (symbol, op, unit, value, trigger_price, triggered_at) -> subject and body.
+
+    `checked` says who evaluated the rule: the browser (the default, for a tab that fired it) or the server engine.
+    """
     sym = alert.get("symbol", "?")
     word = "above" if alert.get("op") == ">" else "below"
     unit = "%" if alert.get("unit") == "pct" else ""
@@ -30,7 +33,7 @@ def alert_message(alert: dict) -> tuple[str, str]:
     at_price = f"at {_num(price)}" if price is not None else "(price not reported)"
     subject = f"OpenTerm alert: {sym} {rule}"
     text = (f"{sym} crossed {rule}, {at_price}.\n"
-            f"Fired {_when(alert.get('triggered_at'))}. Source: your OpenTerm alert rule, checked in the browser.")
+            f"Fired {_when(alert.get('triggered_at'))}. Source: your OpenTerm alert rule, checked {checked}.")
     return subject, text
 
 

@@ -1,7 +1,7 @@
 /**
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
- *   SETTINGS MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
+ *   SETTINGS STARTUP HOME|LAYOUT | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
  *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
  */
 import {
@@ -36,6 +36,12 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
     case "MODE":
       if (word !== "GUI" && word !== "TERMINAL") return fail("SETTINGS MODE GUI|TERMINAL");
       return { ok: true, next: { ...cur, mode: word.toLowerCase() as Settings["mode"] }, message: `MODE ${word}` };
+    case "STARTUP":
+      if (word !== "HOME" && word !== "LAYOUT") return fail("SETTINGS STARTUP HOME|LAYOUT (HOME = NEW SESSIONS OPEN THE HOME PAGE, LAYOUT = THEY RESTORE YOUR PANELS)");
+      return { ok: true, next: { ...cur, startup: word.toLowerCase() as Settings["startup"] }, message: `STARTUP ${word}` };
+    case "TAPE":
+      if (word !== "ON" && word !== "OFF") return fail("SETTINGS TAPE ON|OFF (SHOW THE TICKER TAPE IN THE TOP BAR; TAPE ADD|DEL|RESET EDITS IT)");
+      return { ok: true, next: { ...cur, tape: word === "ON" }, message: `TICKER TAPE IN THE TOP BAR ${word}` };
     case "FONT": {
       const usage = `SETTINGS FONT NEXT | PREV | <PRESET> | <ANY INSTALLED FONT>. PRESETS: ${FONT_PRESETS.map((p) => (p.name || "DEFAULT").toUpperCase()).join(", ")}`;
       const name = rest.join(" ").trim();
@@ -113,6 +119,6 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       // The shell (mode) is kept: RESET restores preferences, it must not switch between TERMINAL and GUI.
       return { ok: true, next: { ...DEFAULTS, mode: cur.mode, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
     default:
-      return fail("SETTINGS MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
+      return fail("SETTINGS STARTUP|TAPE|MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
   }
 }

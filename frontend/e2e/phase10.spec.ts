@@ -8,6 +8,9 @@ interface Doc {
   updated_at: number | null;
 }
 
+// openApp seeds startup "layout" (so tests start on their own panel); it differs from the default "home", so it is saved with every edit.
+const SEED = { startup: "layout" };
+
 async function setup(page: Page, initial: Doc = { settings: null, updated_at: null }) {
   const server: Doc = { ...initial };
   const puts: Record<string, any>[] = [];
@@ -79,8 +82,8 @@ test("SETTINGS: edit a value with the keyboard, it applies at once, is saved on 
   await expect(p.locator("tr.on")).toContainText("ON");
 
   await expect.poll(() => puts.length).toBeGreaterThan(0); // debounced
-  await expect.poll(() => JSON.stringify(puts.at(-1))).toBe('{"theme":"green","vim":true}');
-  expect(server.settings).toEqual({ theme: "green", vim: true });
+  await expect.poll(() => puts.at(-1)).toEqual({ theme: "green", vim: true, ...SEED });
+  expect(server.settings).toEqual({ theme: "green", vim: true, ...SEED });
 
   await page.reload(); // same browser: the localStorage mirror paints the theme
   await page.waitForFunction(() => window.__openterm_perf?.ready);
@@ -109,7 +112,7 @@ test("SETTINGS: Shift+R twice resets everything", async ({ page }) => {
   await page.keyboard.press("Shift+R");
   await expect(panel(page)).toContainText("SETTINGS RESET TO DEFAULTS");
   expect(await theme(page)).toBeNull();
-  await expect.poll(() => JSON.stringify(puts.at(-1))).toBe("{}");
+  await expect.poll(() => puts.at(-1)).toEqual({}); // a reset restores the default startup too
 });
 
 test("THEME: switches at once, canvas and page colours follow, bad names are refused", async ({ page }) => {
@@ -198,7 +201,7 @@ test("keybinding override: rebind maximize in SETTINGS, the old chord stops work
   await page.keyboard.press("Control+m");
   await expect(p.locator("tr.on")).toContainText("Ctrl+M");
   await expect(p.locator("tr.on")).toContainText("CHANGED");
-  await expect.poll(() => JSON.stringify(puts.at(-1))).toBe('{"keys":{"maximize":["Ctrl+M"]}}');
+  await expect.poll(() => puts.at(-1)).toEqual({ keys: { maximize: ["Ctrl+M"] }, ...SEED });
 
   await page.keyboard.press("Control+Shift+F"); // old chord: nothing
   await expect(status).not.toContainText("MAX");
@@ -211,7 +214,7 @@ test("keybinding override: rebind maximize in SETTINGS, the old chord stops work
   await gotoRow("maximize");
   await page.keyboard.press("x");
   await expect(p.locator("tr.on")).toContainText("Ctrl+Shift+F");
-  await expect.poll(() => JSON.stringify(puts.at(-1))).toBe("{}");
+  await expect.poll(() => puts.at(-1)).toEqual({ ...SEED }); // only the binding is reset, startup stays
   await page.keyboard.press("Control+Shift+F");
   await expect(status).toContainText("MAX");
 });

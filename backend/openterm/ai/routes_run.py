@@ -16,7 +16,7 @@ from . import agent, tools
 from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, audit, router
 
 log = logging.getLogger("openterm.ai")
-AUTO_TOOLS = ["history", "quote", "profile", "skill", "strategy_check", "backtest_run", "backtest_get"]
+AUTO_TOOLS = ["history", "quote", "profile", "skill", "skills", "strategy_check", "backtest_run", "backtest_get"]
 RUN_ID_IN_TEXT = re.compile(r'"run_id"\s*:\s*"([0-9a-f]{8,32})"')  # BT run ids are 16 hex characters
 SUBJECT_SYMBOL = re.compile(r"^[A-Za-z][A-Za-z0-9.\-^=]{0,11}$")
 SYMBOL_ARG = re.compile(r"^[A-Za-z0-9.^=\-]{1,12}$")
@@ -56,11 +56,45 @@ def subject_symbol(subject: str) -> str | None:
     return first.upper() if SUBJECT_SYMBOL.match(first) and first.isupper() else None
 
 
+def user_presets_dir(request: Request):
+    """`<data dir>/presets`: next to the database, so it is wherever the user keeps their OpenTerm data."""
+    from pathlib import Path
+
+    return Path(request.app.state.settings.openterm_db_path).parent / "presets"
+
+
 @router.get("/swarm/presets")
-async def swarm_presets():
+async def swarm_presets(request: Request):
     from . import swarm
 
-    return {"presets": swarm.listing()}
+    presets, errors = swarm.all_presets(user_presets_dir(request))
+    names = _models({}, await ai_settings(request)) or (agent.DEFAULT_MODEL, "openrouter")
+    price = await api_mod.llm_of(request).price(names[1], names[0])
+    rows = swarm.listing(presets)
+    for r in rows:
+        r["estimate"]["usd"] = swarm.usd(r["estimate"], price)
+    spend = await api_mod.llm_of(request).spend_status()
+    return {"presets": rows, "errors": errors, "model": names[0], "spend": spend}
+
+
+class _Stop(Exception):
+    """Raised inside the route to refuse a run with a message (cost cap)."""
+
+
+async def check_cost(request: Request, preset, subject: str, names: tuple[str, str], force: bool) -> dict | Response:
+    """Rule: cost is shown before it is spent. Returns the estimate (with dollars when the model's price is known) or a refusal."""
+    from . import swarm
+
+    gateway = api_mod.llm_of(request)
+    est = swarm.estimate(preset, subject)
+    est["usd"] = swarm.usd(est, await gateway.price(names[1], names[0]))
+    spend = await gateway.spend_status()
+    left = spend["cap"] - spend["today"]
+    est["cap_left"] = round(left, 4)
+    if est["usd"] is not None and est["usd"] > left and not force:
+        return _err(402, "spend_cap", f"{preset.code} WORST CASE US${est['usd']:.2f} IS OVER THE US${left:.2f} LEFT OF TODAY'S CAP. "
+                                      "RAISE THE CAP IN SETTINGS, OR SEND force:true TO RUN ANYWAY (THE CAP STILL STOPS A RUN THAT REACHES IT)")
+    return est
 
 
 @router.post("/swarm")
@@ -71,25 +105,47 @@ async def swarm_run(request: Request):
     body = await _body(request)
     if isinstance(body, Response):
         return body
-    preset = swarm.PRESETS.get(str(body.get("preset") or "").upper())
+    presets, _errors = swarm.all_presets(user_presets_dir(request))
+    preset = presets.get(str(body.get("preset") or "").upper())
     subject = body.get("subject") if isinstance(body.get("subject"), str) else ""
     if preset is None:
-        return _err(400, "bad_request", f"PRESET MUST BE ONE OF {', '.join(swarm.PRESETS)}")
-    if len(subject) > 300 or (preset.needs_subject and not subject.strip()):
-        return _err(400, "bad_request", "SUBJECT IS REQUIRED (UP TO 300 CHARACTERS) FOR THIS PRESET. " + preset.note)
+        return _err(400, "bad_request", f"PRESET MUST BE ONE OF {', '.join(presets)}")
+    if preset.coverage == "UNAVAILABLE":
+        return _err(400, "unavailable", f"{preset.code} IS UNAVAILABLE: {'; '.join(preset.limits)}")
+    given = body.get("variables")
+    if given is not None and not (isinstance(given, dict) and all(isinstance(k, str) and isinstance(v, str) and len(v) <= 300 for k, v in given.items())):
+        return _err(400, "bad_request", "variables MUST BE AN OBJECT OF SHORT STRINGS")
+    if len(subject) > 300 or (preset.needs_subject and not subject.strip() and not given):
+        return _err(400, "bad_request", "SUBJECT IS REQUIRED (UP TO 300 CHARACTERS) FOR THIS PRESET. " + (preset.note or "SEND variables, E.G. {\"target\": \"AAPL\"}"))
     names = _models(body, await ai_settings(request))
     if names is None:
         return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+    est = await check_cost(request, preset, subject, names, bool(body.get("force")))
+    if isinstance(est, Response):
+        return est
     client = (request.client.host, request.client.port)
 
     def runner_for(role) -> tools.ToolRunner:
         return tools.ToolRunner(request.app, client=client, tools=list(role.tools))
 
     subject = subject.strip()
-    inner = swarm.run(api_mod.llm_of(request), runner_for, preset, subject, model=names[0], provider=names[1])
+    run_events = swarm.run(api_mod.llm_of(request), runner_for, preset, subject, model=names[0], provider=names[1], variables=given)
+
+    async def with_estimate() -> AsyncIterator[dict]:
+        # The estimate follows swarm_start, so the panel (and a replay of the stored run) shows what the run could have cost.
+        async with aclosing(run_events) as stream:
+            async for ev in stream:
+                yield ev
+                if ev["type"] == "swarm_start":
+                    yield {"type": "estimate", **est}
+
+    inner = with_estimate()
     events = save_events(request, inner, "swarm", f"{preset.code} {subject}"[:120], subject_symbol(subject), "swarm_done")
     role_tools = sorted({t for r in preset.roles for t in r.tools})
-    events = audit(request, events, "swarm", swarm.prompt_text(preset), f"{preset.code} {subject}", role_tools, names[0], names[1])
+    # The ledger keeps a hash of the question. `SWARM MYDESK TARGET=AAPL` sends the ticker only as a variable (no subject), so the variables
+    # must be part of the question or two different runs of one desk would look identical in the audit log.
+    asked = f"{preset.code} {subject}" + "".join(f" {k}={v}" for k, v in sorted((given or {}).items()))
+    events = audit(request, events, "swarm", swarm.prompt_text(preset), asked, role_tools, names[0], names[1])
     return _stream(request, t0, events)
 
 

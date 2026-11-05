@@ -13,7 +13,7 @@ export const DAYS = ["mon-fri", "daily"] as const;
 /** The editable fields of the settings document. */
 export type FieldId = "email_to" | "telegram_chat_id" | "brief.time" | "brief.days" | "brief.tz";
 
-/** Returns an error text, or null when `value` is acceptable for the field. An empty email / chat id clears it. */
+/** Returns an error text, or null when `value` is acceptable for the field. An empty email / chat id means "keep the stored one". */
 export function fieldError(field: FieldId, value: string): string | null {
   const v = value.trim();
   switch (field) {
@@ -38,10 +38,22 @@ export function fieldPatch(field: FieldId, value: string): Record<string, unknow
   return { brief: { [field.slice("brief.".length)]: v } };
 }
 
-/** Reads a field's current value out of the settings. */
+/**
+ * What the table shows for a field. The recipient address and chat id never reach the browser, so for those two this is
+ * the masked hint ("a•••@gmail.com", "chat linked") or "" when nothing is set. Use `editStart` for the editor's text.
+ */
 export function fieldValue(s: DeliverySettings, field: FieldId): string {
-  if (field === "email_to" || field === "telegram_chat_id") return s[field];
+  if (field === "email_to") return s.recipients.email.hint;
+  if (field === "telegram_chat_id") return s.recipients.telegram.hint;
   return s.brief[field.slice("brief.".length) as "time" | "days" | "tz"];
+}
+
+/** True for the two write-only fields (stored value never readable here). */
+export const isRecipientField = (field: FieldId): boolean => field === "email_to" || field === "telegram_chat_id";
+
+/** The text the inline editor opens with: empty for a recipient (it cannot be read back), the current value otherwise. */
+export function editStart(s: DeliverySettings, field: FieldId): string {
+  return isRecipientField(field) ? "" : fieldValue(s, field);
 }
 
 /** The line under a BRIEF section title: `source · age`, or STALE, or the error text. */

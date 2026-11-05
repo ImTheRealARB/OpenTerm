@@ -76,7 +76,7 @@ def test_manifest_hashes_prompt_tools_and_skills_without_storing_text():
 
     m = audit.manifest("secret prompt text", ["quote", "history"], "deepseek/x", "openrouter")
     assert m["tools"] == ["history", "quote"] and len(m["prompt_sha"]) == 64 and len(m["tools_sha"]) == 64
-    assert set(m["skills"]) == {"valuation", "earnings", "options", "risk", "macro"} and m["model"] == "deepseek/x" and m["app"]
+    assert {"valuation", "earnings", "options", "risk", "macro"} <= set(m["skills"]) and m["model"] == "deepseek/x" and m["app"]
     assert "secret prompt text" not in json.dumps(m)
     assert audit.manifest("secret prompt text", ["quote"], "deepseek/x", "openrouter")["tools_sha"] != m["tools_sha"]
     assert set(audit.manifest("p", None, "m", "o")["tools"]) == {t.name for t in tools.REGISTRY.values() if not t.doc_only}

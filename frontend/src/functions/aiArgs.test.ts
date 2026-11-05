@@ -33,3 +33,23 @@ describe("aiArgs AUTO", () => {
     expect(aiArgs(["auto"]).mode).toBe("bad");
   });
 });
+
+describe("aiArgs FILING", () => {
+  it("asks a question about the newest 10-K or 10-Q, or names the form", () => {
+    expect(aiArgs(["FILING", "aapl", "what", "are", "the", "supply", "risks?"])).toEqual({ mode: "filing", text: "what are the supply risks?", symbol: "AAPL", form: null, drivers: false });
+    expect(aiArgs(["filing", "msft", "10-q", "capex", "plans"])).toEqual({ mode: "filing", text: "capex plans", symbol: "MSFT", form: "10-Q", drivers: false });
+  });
+  it("DRIVERS is its own request, only when it is the whole question", () => {
+    expect(aiArgs(["FILING", "AAPL", "DRIVERS"])).toEqual({ mode: "filing", text: "DRIVERS", symbol: "AAPL", form: null, drivers: true });
+    expect(aiArgs(["FILING", "AAPL", "10-K", "drivers"])).toMatchObject({ mode: "filing", form: "10-K", drivers: true });
+    expect(aiArgs(["FILING", "AAPL", "what", "drivers", "margins"])).toMatchObject({ mode: "filing", drivers: false, text: "what drivers margins" });
+  });
+  it("a missing symbol or question is a usage error, and AI DOC FILING is untouched", () => {
+    expect(aiArgs(["FILING"]).mode).toBe("bad");
+    expect(aiArgs(["FILING", "AAPL"]).mode).toBe("bad");
+    expect(aiArgs(["FILING", "AAPL", "10-K"]).mode).toBe("bad");
+    expect(aiArgs(["FILING", "bad symbol!", "x"]).mode).toBe("bad");
+    expect(aiArgs(["DOC", "FILING", "aapl"])).toMatchObject({ mode: "docfiling", symbol: "AAPL" });
+    expect(aiArgs(["what", "FILING", "says"])).toEqual({ mode: "ask", text: "what FILING says" });
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { briefStamp, fieldError, fieldPatch, fieldValue, sectionMeta } from "./dlvrFields";
+import { briefStamp, editStart, fieldError, fieldPatch, fieldValue, isRecipientField, sectionMeta } from "./dlvrFields";
 import { FUNCTIONS } from "./registry";
 
 describe("DLVR / BRIEF registry entries", () => {
@@ -35,10 +35,21 @@ describe("fieldPatch / fieldValue", () => {
     expect(fieldPatch("email_to", " a@b.co ")).toEqual({ email_to: "a@b.co" });
     expect(fieldPatch("brief.time", "09:00")).toEqual({ brief: { time: "09:00" } });
   });
-  it("reads values back", () => {
-    const s = { channels: { email: false, telegram: false, webhook: false, desktop: false }, email_to: "x@y.zz", telegram_chat_id: "", brief: { enabled: false, time: "08:30", days: "mon-fri", tz: "" } };
-    expect(fieldValue(s, "email_to")).toBe("x@y.zz");
+  it("shows masked hints for recipients and plain values for the rest (the real address never reaches the browser)", () => {
+    const s = {
+      channels: { email: false, telegram: false, webhook: false, desktop: false },
+      recipients: { email: { configured: true, hint: "x•••@y.zz" }, telegram: { configured: false, hint: "" } },
+      daily_cap: 50,
+      brief: { enabled: false, time: "08:30", days: "mon-fri", tz: "" },
+    };
+    expect(fieldValue(s, "email_to")).toBe("x•••@y.zz");
+    expect(fieldValue(s, "telegram_chat_id")).toBe("");
     expect(fieldValue(s, "brief.days")).toBe("mon-fri");
+    // the editor opens empty for a recipient (it cannot be read back) and with the current value otherwise
+    expect(editStart(s, "email_to")).toBe("");
+    expect(editStart(s, "brief.time")).toBe("08:30");
+    expect(isRecipientField("email_to")).toBe(true);
+    expect(isRecipientField("brief.tz")).toBe(false);
   });
 });
 

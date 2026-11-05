@@ -42,7 +42,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Ships, flights and maps", codes: ["MAP", "SHIP", "PORTS", "AIS", "FLT"] },
   ],
   Charts: [{ name: "Charts", codes: ["GP", "IND", "GIP", "HIST", "SEAS", "IMAP", "FRED"] }],
-  News: [{ name: "News", codes: ["N", "CN", "EVTS", "BRIEF"] }],
+  News: [{ name: "News", codes: ["HOME", "N", "CN", "EVTS", "BRIEF"] }],
   Research: [
     { name: "Company", codes: ["DES", "FA", "COMP", "MGMT", "DVD", "SPLT", "CACS"] },
     { name: "Analysts and valuation", codes: ["ANR", "EE", "EEO", "DCF", "WACC", "RV"] },
@@ -56,7 +56,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
   Backtest: [{ name: "Backtest", codes: ["BT", "IMPORT"] }],
   Settings: [
     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
-    { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "LAYOUT", "TMPL"] },
+    { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL"] },
     { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
     { name: "System", codes: ["JOBS", "PERF", "LOG"] },
   ],

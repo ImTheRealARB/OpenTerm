@@ -90,6 +90,26 @@ describe("citeSegments", () => {
   it("splits text around [T1] markers", () => {
     expect(citeSegments("a 1 [T1] b [T12].")).toEqual([{ text: "a 1 " }, { cite: "T1" }, { text: " b " }, { cite: "T12" }, { text: "." }]);
     expect(citeSegments("plain")).toEqual([{ text: "plain" }]);
+    expect(citeSegments("1. claim [Q2]")).toEqual([{ text: "1. claim " }, { cite: "Q2" }]); // AI FILING quote markers
     expect(citeSegments("")).toEqual([]);
+  });
+});
+
+describe("AI FILING events", () => {
+  it("keeps the filing, the passages and each quote's verdict on the turn", () => {
+    let t = newTurn("AI FILING AAPL supplier risk");
+    t = reduceTurn(t, { type: "filing", symbol: "AAPL", form: "10-K", filed: "2024-11-01", accession: "0000320193-24-000123", url: "u", source: "SEC EDGAR", sections: 4, passages: 9, mode: "ask" });
+    t = reduceTurn(t, { type: "passages", items: [{ id: "P1", section: "Item 1A. Risk Factors", chars: 1200, preview: "..." }] });
+    t = reduceTurn(t, {
+      type: "quotes",
+      items: [
+        { n: 1, claim: "c1", quote: "q1", claimed_section: "Item 1A", section: "Item 1A. Risk Factors", verified: true, reason: "EXACT MATCH" },
+        { n: 2, claim: "c2", quote: "q2", claimed_section: null, section: null, verified: false, reason: "NOT FOUND IN THE FILING (PARAPHRASED OR INVENTED)" },
+      ],
+    });
+    expect(t.filing).toMatchObject({ symbol: "AAPL", form: "10-K", accession: "0000320193-24-000123" });
+    expect("type" in (t.filing as object)).toBe(false); // the event tag is not kept
+    expect(t.passages?.[0].id).toBe("P1");
+    expect(t.quotes?.map((q) => q.verified)).toEqual([true, false]);
   });
 });

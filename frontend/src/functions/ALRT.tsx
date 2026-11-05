@@ -1,6 +1,7 @@
-/** Alerts: every saved price / percent alert with its live price and state (Phase 8). Evaluation runs app-wide in command/alerts.ts. */
+/** Alerts: every saved price / percent alert with its live price and state (Phase 8). The backend engine fires them (Phase 20); command/alerts.ts shows the result app-wide. */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { alerts, alertsError, alertText, clearAlerts, deleteAlert, deleteNewsAlert, newsAlerts, notifyState, rearmAlert, rearmNewsAlert, refreshAlerts, refreshNewsAlerts, refreshNotifyState, type NotifyState } from "../command/alerts";
+import { alerts, alertsError, alertText, clearAlerts, deleteAlert, deleteNewsAlert, engineState, newsAlerts, notifyState, rearmAlert, rearmNewsAlert, refreshAlerts, refreshEngine, refreshNewsAlerts, refreshNotifyState, type NotifyState } from "../command/alerts";
+import { viaText } from "../command/alertArgs";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtPct, fmtPrice, fmtTime } from "../format";
@@ -9,6 +10,7 @@ import type { Alert, NewsAlert } from "../net/api";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import { plainAlert } from "./alertPlain";
+import { engineView } from "./alertEngineText";
 import { requestAsk } from "../gui/askBus";
 import { PanelNote } from "../components/PanelNote";
 import { settingsStore } from "../settings/runtime";
@@ -42,6 +44,8 @@ const COLUMNS: Column<ARow>[] = [
   { title: "LAST", width: 11, align: "right", text: (r) => fmtPrice(r.q ? price(r.q) : null), color: (r) => (r.q ? lastColor(r.q) : "fg"), flash: (r, f) => (r.q ? lastFlash(r.q, f) : null) },
   { title: "%CHG", width: 8, align: "right", text: (r) => fmtPct(r.q ? pct(r.q) : null), color: (r) => dirColor(r.q ? pct(r.q) : null) },
   { title: "STATUS", width: 10, text: (r) => rstatus(r).toUpperCase(), color: (r) => (rstatus(r) === "triggered" ? "warn" : "up") },
+  // the alert's own `VIA` channels; blank = it uses every channel switched on in DELIVERY
+  { title: "DELIVERY", width: 16, text: (r) => viaText((r.a ?? r.n!).channels), color: () => "dim" },
   { title: "HIT AT", width: 11, align: "right", text: (r) => (r.a?.trigger_price == null ? "" : fmtPrice(r.a.trigger_price)) },
   { title: "HIT TIME", width: 9, align: "right", text: (r) => (rtriggered(r) ? fmtTime(rtriggered(r)! * 1000) : "") },
   { title: "CREATED", width: 9, align: "right", text: (r) => fmtTime(rcreated(r) * 1000), color: () => "dim" },
@@ -55,9 +59,10 @@ const COLUMNS_GUI: Column<ARow>[] = [
   COLUMNS[3],
   COLUMNS[4],
   { title: "STATUS", width: 10, text: (r) => (rstatus(r) === "triggered" ? "Triggered" : "Active"), color: (r) => (rstatus(r) === "triggered" ? "warn" : "up") },
-  COLUMNS[6],
+  COLUMNS[6], // DELIVERY (the VIA channels)
   COLUMNS[7],
-  COLUMNS[9],
+  COLUMNS[8],
+  COLUMNS[10],
 ];
 
 export default function ALRT({ panelId }: FunctionProps) {
@@ -65,6 +70,7 @@ export default function ALRT({ panelId }: FunctionProps) {
   const nlist = useStore(newsAlerts, (l) => l);
   const err = useStore(alertsError, (e) => e);
   const notify = useStore(notifyState, (n) => n);
+  const engine = useStore(engineState, (s) => s);
   const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const COLS = gui ? COLUMNS_GUI : COLUMNS;
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -74,6 +80,9 @@ export default function ALRT({ panelId }: FunctionProps) {
     refreshNotifyState();
     void refreshAlerts().catch(() => {});
     void refreshNewsAlerts().catch(() => {});
+    // "last tick N s ago" and the refused-match list change while the panel is open: look every 5 s (one small GET)
+    const t = setInterval(() => void refreshEngine(), 5000);
+    return () => clearInterval(t);
   }, []);
 
   const symKey = [...new Set((list ?? []).map((a) => a.symbol))].join(",");
@@ -141,6 +150,7 @@ export default function ALRT({ panelId }: FunctionProps) {
   const all = [...(list ?? []), ...(nlist ?? [])];
   const active = all.filter((a) => a.status === "active").length;
   const [ntext, ncls] = NOTIFY_TEXT[notify];
+  const ev = engineView(engine);
   return (
     <div className="fn">
       <div className="line">
@@ -151,6 +161,15 @@ export default function ALRT({ panelId }: FunctionProps) {
         {confirm === "CLEAR" && <span className="err"> · CLEAR ALL TRIGGERED? PRESS C AGAIN</span>}
         {confirm?.startsWith("D") && <span className="err"> · DELETE ALERT {confirm.slice(1)}? PRESS D AGAIN</span>}
       </div>
+      <div className="line" data-testid="alrt-engine">
+        <span className={ev.cls}>{ev.head}</span>
+        {ev.detail && <span className="dim"> · {ev.detail}</span>}
+      </div>
+      {ev.skipped.map((s) => (
+        <div key={s} className="line warn" data-testid="alrt-skipped">
+          NOT FIRED: {s}
+        </div>
+      ))}
       {gui && notify !== "granted" && (
         // GUI: the browser-permission state is one plain note (not a caption in the header). Only "default" can be asked again.
         <PanelNote
@@ -162,7 +181,7 @@ export default function ALRT({ panelId }: FunctionProps) {
         </PanelNote>
       )}
       <div className="dim legend">
-        J/K MOVE · ENTER GP · N NEW (ALRT SYM &gt; 200 | ALRT SYM +5% | ALRT NEWS WORD [SYM]) · D DELETE · R REARM · C CLEAR TRIGGERED · F5 · PRICES CHECKED ON LIVE TICKS, NEWS WORDS ON EACH NEWS REFRESH (EVERY 2 MIN) WHILE THIS APP IS OPEN
+        J/K MOVE · ENTER GP · N NEW (ALRT SYM &gt; 200 [VIA TG,EMAIL] | ALRT SYM +5% | ALRT NEWS WORD [SYM]) · D DELETE · R REARM · C CLEAR TRIGGERED · F5 · PRICES CHECKED ON LIVE TICKS AND NEWS WORDS EVERY 2 MIN BY THE OPENTERM SERVER, WITH THIS TAB CLOSED TOO, WHILE OPENTERM RUNS
       </div>
       {list?.length === 0 && nlist?.length === 0 && (
         <PanelNote kind="empty" actions={[{ label: "Add an alert", onClick: () => requestAsk(panelId, "Add an alert") }]} hint="ALRT AAPL > 200, ALRT AAPL -3% (VS PREVIOUS CLOSE), ALRT NEWS RECALL AAPL (HEADLINE HAS THE WORD).">

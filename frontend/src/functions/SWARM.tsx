@@ -12,16 +12,10 @@ import { replaceView } from "../state/workspace";
 import { Answer, ToolLines } from "./AI";
 import { citeSegments, parseSse } from "./aiStream";
 import type { FunctionProps } from "./registry";
-import { subjectSymbol, swarmArgs } from "./swarmArgs";
-import { newSwarm, reduceSwarm, type RoleState, type SwarmEvent, type SwarmState } from "./swarmStream";
+import { commandFor, coverageLabel, subjectSymbol, swarmArgs, type PresetInfo, type PresetsResponse } from "./swarmArgs";
+import { estimateLine, newSwarm, reduceSwarm, type RoleState, type SwarmEvent, type SwarmState } from "./swarmStream";
 import { watchPanelGone } from "./panelGoneWatch";
 
-interface Preset {
-  code: string;
-  title: string;
-  roles: { id: string; title: string; tools: string[] }[];
-  note: string;
-}
 interface StoredRun {
   id: string;
   kind: string;
@@ -31,6 +25,11 @@ interface StoredRun {
 }
 
 const STATE_LABEL: Record<RoleState["state"], string> = { waiting: "WAITING", running: "RUNNING", done: "DONE", failed: "FAILED" };
+/** FULL is plain, PARTIAL is a warning, UNAVAILABLE is an error: colour only carries that meaning. */
+const COVERAGE_CLASS = { FULL: "dim", PARTIAL: "warn", UNAVAILABLE: "err" } as const;
+
+/** What a desk needs typed after its name, e.g. `TARGET=<value>` (required) or `[HORIZON=<value>]` (optional). */
+const variableUsage = (p: PresetInfo) => p.variables.map((v) => (v.required ? `${v.name.toUpperCase()}=<value>` : `[${v.name.toUpperCase()}=<value>]`)).join(" ");
 
 function RoleView({ r }: { r: RoleState }) {
   const t = r.turn;
@@ -65,21 +64,30 @@ function RoleView({ r }: { r: RoleState }) {
 export default function SWARM({ panelId, args }: FunctionProps) {
   const ai = useStore(settingsStore, (s) => s.ai);
   const [run, setRun] = useState<SwarmState | null>(null);
-  const [presets, setPresets] = useState<Preset[] | null>(null);
+  const [desks, setDesks] = useState<PresetsResponse | null>(null);
   const [stored, setStored] = useState<StoredRun[]>([]);
   const [note, setNote] = useState<{ text: string; cls: string } | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const lastRun = useRef<{ preset: string; subject: string; variables: Record<string, string> } | null>(null); // for the "run anyway" command
   const state = useRef({ run, ai });
   state.current = { run, ai };
   const log = useRef<HTMLDivElement>(null);
 
-  const loadLists = useCallback(async () => {
+  /** Loads the desks (every one the backend knows, including the user's own files) and the stored runs. Returns the desks for argument parsing. */
+  const loadLists = useCallback(async (): Promise<PresetInfo[]> => {
     try {
       const [p, r] = await Promise.all([fetch("/api/ai/swarm/presets"), fetch("/api/ai/runs?kind=swarm")]);
-      if (p.ok) setPresets(((await p.json()) as { presets: Preset[] }).presets);
+      let list: PresetInfo[] = [];
+      if (p.ok) {
+        const body = (await p.json()) as PresetsResponse;
+        setDesks(body);
+        list = body.presets;
+      }
       if (r.ok) setStored(((await r.json()) as { runs: StoredRun[] }).runs);
+      return list;
     } catch {
       setNote({ text: "BACKEND DOWN", cls: "err" });
+      return [];
     }
   }, []);
 
@@ -125,18 +133,25 @@ export default function SWARM({ panelId, args }: FunctionProps) {
 
   const asked = useRef(false);
   useEffect(() => {
-    void loadLists();
+    const loaded = loadLists();
     if (asked.current || !args.length) return;
-    const a = swarmArgs(args);
-    if (a.mode === "bad") {
-      setNote({ text: a.error, cls: "err" });
-    } else if (a.mode === "run") {
-      asked.current = true;
-      void stream("/api/ai/swarm", { preset: a.preset, subject: a.subject, model: state.current.ai.model, provider: state.current.ai.provider });
-    } else if (a.mode === "replay") {
-      asked.current = true;
-      void stream(`/api/ai/runs/${a.runId}/replay`, undefined);
-    }
+    asked.current = true;
+    // The desks must be known before the arguments are read: `SWARM MYDESK TARGET=AAPL` only means something once we know MYDESK has a TARGET.
+    void loaded.then((list) => {
+      const a = swarmArgs(args, list);
+      if (a.mode === "bad") {
+        asked.current = false;
+        setNote({ text: a.error, cls: "err" });
+      } else if (a.mode === "run") {
+        lastRun.current = { preset: a.preset, subject: a.subject, variables: a.variables };
+        const body: Record<string, unknown> = { preset: a.preset, subject: a.subject, model: state.current.ai.model, provider: state.current.ai.provider };
+        if (Object.keys(a.variables).length) body.variables = a.variables;
+        if (a.force) body.force = true; // past the daily spend-cap check (the cap itself still stops a run that reaches it)
+        void stream("/api/ai/swarm", body);
+      } else if (a.mode === "replay") {
+        void stream(`/api/ai/runs/${a.runId}/replay`, undefined);
+      } else asked.current = false;
+    });
     replaceView(panelId, (v) => ({ ...v, args: [] }));
   }, [args, panelId, stream, loadLists]);
 
@@ -197,11 +212,41 @@ export default function SWARM({ panelId, args }: FunctionProps) {
       <div className="ai-log" ref={log}>
         {!run && (
           <div data-testid="swarm-list">
-            {(presets ?? []).map((p) => (
-              <div key={p.code} data-testid="swarm-preset">
-                <span className="acc">SWARM {p.code}</span> <span className="dim">{p.note} · ROLES {p.roles.map((r) => r.id).join(" > ")}</span>
+            {(desks?.presets ?? []).map((p) => (
+              <div key={p.code} data-testid="swarm-preset" data-coverage={p.coverage}>
+                <span className="acc">
+                  SWARM {p.code} {variableUsage(p)}
+                </span>{" "}
+                <span className={COVERAGE_CLASS[p.coverage]} data-testid="swarm-coverage">
+                  {coverageLabel(p)}
+                </span>{" "}
+                <span className="dim">
+                  · {p.title}. {p.note} · ROLES {p.roles.map((r) => r.id).join(" > ")}
+                  {p.source.startsWith("user:") ? " · YOUR FILE" : ""}
+                </span>
+                {p.variables.map((v) => (
+                  <div key={v.name} className="dim" data-testid="swarm-variable">
+                    {"  "}
+                    {v.name.toUpperCase()} {v.required ? "(REQUIRED)" : "(OPTIONAL)"} {v.description}
+                  </div>
+                ))}
+                <div className="dim" data-testid="swarm-list-estimate">
+                  {"  "}
+                  {estimateLine(p.estimate)}
+                </div>
               </div>
             ))}
+            {desks && Object.keys(desks.errors).length > 0 && <div className="warn">DESK FILES THAT FAILED TO LOAD (NOT RUN):</div>}
+            {Object.entries(desks?.errors ?? {}).map(([file, why]) => (
+              <div key={file} className="warn" data-testid="swarm-load-error">
+                {file}: {why}
+              </div>
+            ))}
+            {desks && (
+              <div className="dim" data-testid="swarm-spend">
+                TODAY'S AI SPEND US${desks.spend.today.toFixed(2)} OF US${desks.spend.cap.toFixed(2)} CAP · A RUN WHOSE WORST CASE IS OVER WHAT IS LEFT NEEDS --force
+              </div>
+            )}
             {stored.length > 0 && <div className="dim">STORED RUNS (SWARM REPLAY &lt;id&gt; SHOWS ONE AGAIN, NO MODEL CALL):</div>}
             {stored.map((s) => (
               <div key={s.id} data-testid="swarm-stored">
@@ -216,6 +261,25 @@ export default function SWARM({ panelId, args }: FunctionProps) {
           </div>
         )}
         {run?.fixtures && <div className="warn">RECORDED MODEL REPLIES, NOT LIVE</div>}
+        {run && run.preset && (
+          <div data-testid="swarm-run-info">
+            <div className={COVERAGE_CLASS[run.coverage]} data-testid="swarm-run-coverage">
+              COVERAGE {coverageLabel(run)}
+            </div>
+            {Object.keys(run.variables).length > 0 && (
+              <div className="dim" data-testid="swarm-run-variables">
+                {Object.entries(run.variables)
+                  .map(([k, v]) => `${k.toUpperCase()}=${v}`)
+                  .join(" · ")}
+              </div>
+            )}
+            {run.estimate && (
+              <div className="dim" data-testid="swarm-estimate">
+                {estimateLine(run.estimate)}
+              </div>
+            )}
+          </div>
+        )}
         {run?.roles.map((r) => (
           <RoleView key={r.id} r={r} />
         ))}
@@ -225,6 +289,11 @@ export default function SWARM({ panelId, args }: FunctionProps) {
             <div className="ai-answer" data-testid="swarm-answer">
               {citeSegments(run.final.answer.replace(/\*\*/g, "")).map((s, i) => ("cite" in s ? <span key={i} className="acc">[{s.cite}]</span> : <span key={i}>{s.text}</span>))}
             </div>
+            {run.capped && (
+              <div className="warn" data-testid="swarm-capped">
+                THE RUN HIT ITS OUTPUT CAP AND STOPPED: THE ANSWER ABOVE MAY BE INCOMPLETE
+              </div>
+            )}
             {run.final.failed.length > 0 && <div className="warn">ROLES THAT FAILED: {run.final.failed.join(", ")}</div>}
             {run.final.label && <div className="warn">{run.final.label}: NO ANALYST USED TOOL DATA</div>}
             {run.final.unsourced.length > 0 && (
@@ -242,6 +311,11 @@ export default function SWARM({ panelId, args }: FunctionProps) {
         {run?.error && (
           <div className={run.error.kind === "key_required" ? "warn" : "err"} data-testid="swarm-error">
             {run.error.text}
+          </div>
+        )}
+        {run?.error?.kind === "spend_cap" && lastRun.current && (
+          <div className="acc" data-testid="swarm-force">
+            TO RUN ANYWAY: {commandFor(lastRun.current, "--force")}
           </div>
         )}
         {running && <div className="dim">RUNNING...</div>}

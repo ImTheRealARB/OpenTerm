@@ -1,7 +1,8 @@
 """Delivery settings: one JSON document in kv key `delivery` (Phase 17 B/C). Everything is off by default.
 
-Secrets are NOT here: the SMTP password, bot token and webhook URL are keys (APIKEYS). Only the
-recipient address and chat id are settings, because they are not secret.
+Secrets are NOT here: the SMTP password, bot token and webhook URL are keys (APIKEYS). The recipient address and
+chat id ARE stored here (the senders need them) but they are private: the browser never receives them. Every
+route answers with `public(cfg)`, which swaps them for `recipients: {channel: {configured, hint}}` (Phase 20 rule 5).
 """
 
 from __future__ import annotations
@@ -18,6 +19,8 @@ PUSH = ("email", "telegram", "webhook")  # channels the backend sends on; deskto
 DAYS = ("mon-fri", "daily")
 EMAIL_RE = re.compile(r"^[^@\s,;<>]{1,64}@[^@\s,;<>]{1,255}$")
 CHAT_RE = re.compile(r"^(-?\d{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})$")
+DEFAULT_DAILY_CAP = 50  # sends per push channel per local day (Phase 20)
+MAX_DAILY_CAP = 1000
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
@@ -26,6 +29,8 @@ def defaults() -> dict:
         "channels": dict.fromkeys(CHANNELS, False),
         "email_to": "",
         "telegram_chat_id": "",
+        # most sends per channel per local day; the over-cap send is logged as skipped, never dropped silently
+        "daily_cap": DEFAULT_DAILY_CAP,
         # tz "" = the machine's own time zone (the brief scheduler resolves it)
         "brief": {"enabled": False, "time": "08:30", "days": "mon-fri", "tz": ""},
     }
@@ -58,6 +63,12 @@ def validate(raw, current: dict | None = None) -> dict:
         if not isinstance(v, str) or (v.strip() and not CHAT_RE.match(v.strip())):
             raise _bad("telegram_chat_id MUST BE A NUMBER OR @channelname")
         out["telegram_chat_id"] = v.strip()
+    if "daily_cap" in raw:
+        v = raw["daily_cap"]
+        # bool is an int subclass in Python: reject it explicitly
+        if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= MAX_DAILY_CAP:
+            raise _bad(f"daily_cap MUST BE A WHOLE NUMBER FROM 1 TO {MAX_DAILY_CAP}")
+        out["daily_cap"] = v
     if "brief" in raw:
         b = raw["brief"]
         if not isinstance(b, dict) or set(b) - set(out["brief"]):
@@ -95,3 +106,29 @@ async def put(db, raw) -> dict:
                      (KEY, json.dumps(merged)))
     await db.commit()
     return merged
+
+
+# --- what the browser may see (Phase 20, rule 5) ----------------------------------------------------------------
+
+
+def mask_email(addr: str) -> str:
+    """`alice@gmail.com` -> `a•••@gmail.com`. Enough to recognise your own address, not enough to harvest it."""
+    local, _, domain = addr.partition("@")
+    return f"{local[:1]}•••@{domain}" if local and domain else "•••"
+
+
+def public(cfg: dict) -> dict:
+    """A copy of the settings that is safe to send to the browser.
+
+    `email_to` and `telegram_chat_id` are removed and replaced by `recipients`, one entry per channel:
+    `configured` (is there a value) and `hint` (a masked email, or a plain word for Telegram; the chat id itself,
+    even partly, is never shown). To change a recipient the panel PUTs a new value; the stored one is never read back.
+    """
+    out = json.loads(json.dumps(cfg))  # deep copy: never mutate the stored document
+    email = out.pop("email_to", "") or ""
+    chat = out.pop("telegram_chat_id", "") or ""
+    out["recipients"] = {
+        "email": {"configured": bool(email), "hint": mask_email(email) if email else ""},
+        "telegram": {"configured": bool(chat), "hint": "chat linked" if chat else ""},
+    }
+    return out

@@ -9,8 +9,9 @@ import { openApp } from "./app";
 const now = () => Date.now() / 1000;
 const SETTINGS = {
   channels: { email: false, telegram: false, webhook: false, desktop: false },
-  email_to: "me@example.com",
-  telegram_chat_id: "",
+  // Phase 20 rule 5: the browser only gets masked hints, never the address or chat id
+  recipients: { email: { configured: true, hint: "m•••@example.com" }, telegram: { configured: false, hint: "" } },
+  daily_cap: 50,
   brief: { enabled: false, time: "08:30", days: "mon-fri", tz: "" },
 };
 
@@ -40,6 +41,15 @@ async function setup(page: Page) {
       return r.fulfill({ json: { settings, status: status() } });
     }
     return r.fulfill({ json: { settings, status: status() } });
+  });
+  // Phase 20: Telegram pairing. First check says "not yet", the second says paired.
+  let checks = 0;
+  await page.route("**/api/delivery/telegram/pair/start", (r) =>
+    r.fulfill({ json: { bot: "OpenTermBot", link: "https://t.me/OpenTermBot", code: "OT-123456", expires_in: 600 } }));
+  await page.route("**/api/delivery/telegram/pair/check", (r) => {
+    checks += 1;
+    if (checks >= 2) settings.recipients.telegram = { configured: true, hint: "chat linked" };
+    return r.fulfill({ json: { paired: checks >= 2 } });
   });
   await page.route("**/api/brief/run**", (r) => {
     runs.push(new URL(r.request().url()).search);
@@ -105,6 +115,25 @@ test("DLVR: Enter edits the email, a bad address is refused inline and Esc cance
   await expect(p.locator('[data-testid="dlvr-msg"]')).toContainText("EMAIL MUST BE ONE ADDRESS");
   await page.keyboard.press("Escape");
   await expect(p.locator(".dlvr-in")).toHaveCount(0);
+});
+
+test("DLVR: P shows the bot link and code, C checks, then the row shows only a hint", async ({ page }) => {
+  await setup(page);
+  await run(page, "DLVR");
+  const p = panel(page);
+  await expect(p.locator('[data-testid="dlvr-row-telegram"]')).toBeVisible();
+  await expect(async () => {
+    await page.keyboard.press("p");
+    await expect(p.locator('[data-testid="dlvr-pair"]')).toBeVisible({ timeout: 300 });
+  }).toPass({ timeout: 5000 });
+  await expect(p.locator('[data-testid="dlvr-pair-code"]')).toHaveText("OT-123456");
+  await expect(p.locator('[data-testid="dlvr-pair"] a')).toHaveAttribute("href", "https://t.me/OpenTermBot");
+  await page.keyboard.press("c");
+  await expect(p.locator('[data-testid="dlvr-msg"]')).toContainText("CODE NOT SEEN YET");
+  await page.keyboard.press("c");
+  await expect(p.locator('[data-testid="dlvr-msg"]')).toContainText("TELEGRAM PAIRED");
+  await expect(p.locator('[data-testid="dlvr-pair"]')).toHaveCount(0);
+  await expect(p.locator('[data-testid="dlvr-row-telegram"]')).toContainText("chat linked");
 });
 
 test("BRIEF: shows sections with source, age, STALE and errors; R builds now", async ({ page }) => {

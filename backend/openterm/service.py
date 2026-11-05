@@ -12,6 +12,7 @@ from typing import Any, ClassVar
 
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
+from .news_tags import Filters, item_matches, validate
 from .providers.base import ProviderError
 from .providers.crypto import VS
 from .providers.news import merge
@@ -155,8 +156,41 @@ class DataService:
 
         return await self._swr(f"p:{symbol}", self.ttl["profile"], fetch)
 
-    async def news(self, symbol: str | None = None, query: str | None = None) -> dict:
-        """Symbol headlines, a keyword search, or (neither) the market top stories."""
+    async def news(self, symbol: str | None = None, query: str | None = None, filters: Filters | None = None, limit: int | None = None) -> dict:
+        """Symbol headlines, a keyword search, or (neither) the market top stories.
+
+        With `filters` (region / sector / commodity / section, optionally text) it is instead the pooled headlines of the
+        curated feed table, filtered. `limit` trims the answer after caching, so every caller shares one cache entry.
+        """
+        if filters and filters.active:
+            env = await self._news_pool(filters)
+        else:
+            env = await self._news_single(symbol, query)
+        if limit and limit > 0:
+            env = {**env, "data": {**env["data"], "items": env["data"]["items"][:limit]}}
+        return env
+
+    async def _news_pool(self, f: Filters) -> dict:
+        """Pooled headlines from the feed table: fetch (per-feed cache inside the provider), filter, de-duplicate."""
+        if problem := validate(f):
+            raise DataError("bad_request", problem)
+
+        async def fetch() -> dict:
+            out, failed_sources = await self.router.call("news_pool", lambda p: p.news_pool(f.section), None)
+            items = merge([i for feed, found in out["pool"] for i in found if item_matches(i.title, i.summary, feed, f)])
+            return {
+                "data": {
+                    "kind": "pool", "query": f.q, "items": [i.model_dump() for i in items], "failed": out["failed"],
+                    "feeds_ok": out["total"] - len(out["failed"]), "feeds_total": out["total"], "filters": f._asdict(),
+                },
+                "source": "rss", "fallback_from": failed_sources,
+            }
+
+        # Tech and crypto feeds move fastest, so their answers are kept 30 s; the rest 60 s.
+        ttl = 30.0 if f.section in ("tech", "crypto") else 60.0
+        return await self._swr("n:pool:" + "|".join(str(v) for v in f), ttl, fetch)
+
+    async def _news_single(self, symbol: str | None, query: str | None) -> dict:
         if symbol and symbol.strip():
             kind, arg = "symbol", resolve(symbol)
             cap, call = "news_symbol", lambda p: p.news_symbol(arg)

@@ -11,7 +11,7 @@ import { KEYBINDINGS, chord, effectiveBindings, type Action } from "../keys/keys
 import { FIXED_ACTIONS, checkChord, diffBindings } from "../keys/overrides";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { resetSettings, settingsStore, updateSettings } from "../settings/runtime";
-import { AI_MODEL_CHOICES, AI_PROVIDERS, AI_VISION_CHOICES, CHART_RANGES, CHART_TYPES, DECIMALS, MODES, POLL_BOUNDS, THOUSANDS, cycle, stepPoll, type PollKey, type Settings } from "../settings/schema";
+import { AI_MODEL_CHOICES, AI_PROVIDERS, AI_VISION_CHOICES, CHART_RANGES, CHART_TYPES, DECIMALS, MODES, POLL_BOUNDS, STARTUPS, THOUSANDS, cycle, stepPoll, type PollKey, type Settings } from "../settings/schema";
 import { cyclePreset, fontLabel } from "../settings/fontPresets";
 import { THEMES, THEME_LABELS } from "../settings/themes";
 import { useStore } from "../state/store";
@@ -88,6 +88,8 @@ const SETTING_ROWS: SettingRow[] = [
   },
   // H / L cycle the presets. Any other installed font: SETTINGS FONT <name>.
   { kind: "setting", id: "font", label: "FONT (ANY INSTALLED: SETTINGS FONT NAME)", value: (s) => fontLabel(s.font), change: (s, d) => ({ ...s, font: cyclePreset(s.font, d).name }) },
+  { kind: "setting", id: "startup", label: "ON START-UP OPEN (HOME PAGE OR YOUR LAST LAYOUT)", value: (s) => (s.startup === "home" ? "HOME PAGE" : "LAST LAYOUT"), change: (s, d) => ({ ...s, startup: cycle(STARTUPS, s.startup, d) }) },
+  { kind: "setting", id: "tape", label: "TICKER TAPE IN THE TOP BAR (TAPE ADD / DEL / RESET EDITS IT)", value: (s) => (s.tape ? "ON" : "OFF"), change: (s) => ({ ...s, tape: !s.tape }) },
   // Last on purpose: the rows above keep their positions (THEME is first). Same switch as the status bar toggle and Alt+G.
   { kind: "setting", id: "mode", label: "INTERFACE MODE (TERMINAL OR GUI, ALT+G)", value: (s) => s.mode.toUpperCase(), change: (s, d) => ({ ...s, mode: cycle(MODES, s.mode, d) }) },
 ];

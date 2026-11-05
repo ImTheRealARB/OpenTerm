@@ -1,0 +1,40 @@
+/* HOME page and ticker tape. Terminal look: flat, colour only for meaning (up / down / warn / err), no shadows or radii.
+   ONE documented exception to "no animations": the tape is motion by definition. It is a single CSS transform animation on
+   one element (the track), paused on hover and when the tab is hidden, and switched off for prefers-reduced-motion. */
+
+/* --- ticker tape --- */
+.tape { overflow: hidden; white-space: nowrap; height: var(--row); line-height: var(--row); flex: none; border-bottom: 1px solid var(--line); background: var(--bar); }
+.tape-track { display: flex; width: max-content; animation: tape-scroll var(--tape-dur, 60s) linear infinite; }
+/* Each half is at least one screen wide, so a short tape still loops without a gap. */
+.tape-half { display: flex; flex: none; min-width: 100vw; }
+.tp { padding: 0 14px; flex: none; }
+.tp-l { color: var(--fg); }
+.tp-v { color: var(--val); }
+@keyframes tape-scroll { to { transform: translateX(-50%); } }
+.tape:hover .tape-track, .tape[data-paused] .tape-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .tape { overflow-x: auto; }
+  .tape-track { animation: none; }
+  .tape-half[aria-hidden] { display: none; }
+}
+
+/* --- HOME blocks --- */
+.home-date { color: var(--accent); }
+.home-grid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-content: start; }
+.hb { min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.hb-h { display: flex; gap: 8px; padding: 0 6px; background: var(--bar); color: var(--hdr); font-weight: bold; white-space: nowrap; overflow: hidden; }
+.hb-h .hb-meta { margin-left: auto; font-weight: normal; }
+.hb.on .hb-h { background: var(--bar-hi); color: var(--val); }
+.hb-sub { padding: 0 6px; color: var(--fg-dim); }
+.hb-note { padding: 0 6px; }
+.hr { display: flex; gap: 8px; padding: 0 6px; white-space: nowrap; overflow: hidden; cursor: pointer; }
+.hr.on { background: var(--sel); }
+/* quote row: label, last, change % (right aligned so the digits line up) */
+.hq .hq-l { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hq .hq-v { flex: none; min-width: 11ch; text-align: right; color: var(--val); }
+.hq .hq-p { flex: none; min-width: 9ch; text-align: right; }
+/* news row: source, age, headline */
+.hn { color: inherit; text-decoration: none; }
+.hn .hn-s { flex: none; width: 12ch; overflow: hidden; text-overflow: ellipsis; color: var(--fg-dim); }
+.hn .hn-a { flex: none; width: 4ch; text-align: right; color: var(--fg-dim); }
+.hn .hn-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--val); }

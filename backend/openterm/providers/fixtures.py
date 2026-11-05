@@ -57,7 +57,26 @@ async def _handler(request: httpx.Request) -> httpx.Response:
     return _route(request)
 
 
+def _news_table_feed(request: httpx.Request) -> httpx.Response | None:
+    """Feeds of the curated table (providers/news_feeds.py) that have no recording: a tiny HAND-MADE RSS, every headline
+    labelled FIXTURE so it can never be mistaken for real news. The five original feeds keep their real recordings (PATHS)."""
+    from .news_feeds import FEEDS
+
+    feed = next((f for f in FEEDS if not f.core and f.url == str(request.url)), None)
+    if feed is None:
+        return None
+    items = "".join(
+        f"<item><title>FIXTURE {feed.name} headline {n}</title><link>https://fixture.invalid/{feed.name.replace(' ', '-').lower()}/{n}</link>"
+        f"<pubDate>Thu, 05 Nov 2026 1{n}:00:00 GMT</pubDate><description>Hand-made test item, not real news.</description></item>"
+        for n in (1, 2)
+    )
+    return httpx.Response(200, text=f'<?xml version="1.0"?><rss version="2.0"><channel>{items}</channel></rss>',
+                          headers={"content-type": "application/rss+xml"})
+
+
 def _route(request: httpx.Request) -> httpx.Response:
+    if (news := _news_table_feed(request)) is not None:
+        return news
     if (r6 := _route_phase6(request)) is not None:  # Phase 6
         return r6
     p = request.url.path

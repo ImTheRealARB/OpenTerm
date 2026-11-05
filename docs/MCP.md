@@ -20,8 +20,9 @@ claude mcp add --transport http openterm http://127.0.0.1:8000/mcp
 
 ## Claude Desktop (stdio)
 
-Claude Desktop starts a program and talks to it over stdin/stdout. `python -m openterm.mcp` is a small bridge that
-forwards to the running OpenTerm. Add this to `claude_desktop_config.json` (replace `<repo>` with your OpenTerm folder;
+Claude Desktop starts a program and talks to it over stdin/stdout. `openterm-mcp` is a small bridge (a console command
+installed with the backend; `python -m openterm.mcp` is the same program) that forwards to the running OpenTerm.
+With `openterm-mcp`, add this to `claude_desktop_config.json` (replace `<repo>` with your OpenTerm folder;
 in JSON a backslash is written twice):
 
 ```json
@@ -29,11 +30,13 @@ in JSON a backslash is written twice):
   "mcpServers": {
     "openterm": {
       "command": "uv",
-      "args": ["--directory", "<repo>\\backend", "run", "python", "-m", "openterm.mcp"]
+      "args": ["--directory", "<repo>\\backend", "run", "openterm-mcp"]
     }
   }
 }
 ```
+
+The older form still works: `"args": ["--directory", "<repo>\\backend", "run", "python", "-m", "openterm.mcp"]`.
 
 If OpenTerm is not running, every call answers `OPENTERM IS NOT RUNNING AT <url>: start it with openterm`.
 Set `OPENTERM_URL` (default `http://127.0.0.1:8000`) if you run the backend elsewhere.
@@ -42,8 +45,11 @@ Set `OPENTERM_URL` (default `http://127.0.0.1:8000`) if you run the backend else
 
 The same tools the built-in AI agent uses (`backend/openterm/ai/tools.py`):
 
-`skill`, `strategy_check`, `quote`, `history`, `profile`, `fa`, `filings`, `news`, `screener`, `research`,
-`options_chain`, `rates`, `macro`, `portfolio`, `backtest_run`, `backtest_get`, `quant`.
+`skill`, `skills`, `strategy_check`, `quote`, `history`, `profile`, `fa`, `filings`, `news`, `screener`, `research`,
+`options_chain`, `rates`, `macro`, `portfolio`, `backtest_run`, `backtest_get`, `quant`, and (Phase 20) twelve more
+read-only desk tools: `indicators`, `option_price`, `option_payoff`, `etf`, `holders`, `insiders`, `calendar`, `pred`,
+`energy`, `crypto_funding`, `crypto_depth`, `rigor`. That is 30 tools in all. The route behind each one is listed in
+[API.md](API.md). `skills` searches the playbook library; `skill` reads one playbook, or one part of it with `section`.
 
 - Every result starts with `[source=... age_s=... stale=... empty=...]` and also comes back as `structuredContent`, so
   you can see where the data came from and how old it is.

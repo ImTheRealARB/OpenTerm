@@ -28,6 +28,10 @@ dependencies = [
   "pypdf>=6.21.1",
 ]
 
+# `uv run openterm-mcp` = the stdio bridge for MCP clients (Claude Desktop, Claude Code). Same program as `python -m openterm.mcp`.
+[project.scripts]
+openterm-mcp = "openterm.mcp.__main__:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8",

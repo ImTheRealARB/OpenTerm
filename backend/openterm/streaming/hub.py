@@ -66,6 +66,7 @@ class Hub:
         self.iex = iex  # Phase 13: real-time IEX trades (Alpaca keys); None or keyless = Yahoo only
         self.kite = kite  # Phase 15: Kite ticker (login); None, logged out or fixture mode = Yahoo only
         self.on_tick = on_tick
+        self.tick_listeners: list = []  # Phase 20: extra synchronous per-tick hooks (the server-side alert engine); they must not raise
         self.tickbuf = TickBuffers()  # Phase 19: GIP reads the ticks seen since the session began
         self.clients: set[Client] = set()
         self.refs: dict[str, int] = {}
@@ -99,6 +100,8 @@ class Hub:
         self._pending[tick.symbol] = tick
         if self.on_tick:
             self.on_tick(tick)
+        for listener in self.tick_listeners:
+            listener(tick)
 
     async def _sync_upstream(self) -> None:
         symbols = set(self.refs)

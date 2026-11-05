@@ -38,6 +38,8 @@ const SECTOR_ACTIONS: Record<string, Sector> = {
 // (Module-level functions, so LazyPiece sees the same `load` every render.)
 const loadShortcuts = () => loadModule("SHORTCUTS") as Promise<ComponentType>;
 const loadHud = () => import("./perf/PerfTable").then((m) => m.PerfTable as ComponentType);
+// The ticker tape bar (setting `tape`) is its own chunk too: nothing of it loads while the setting is off.
+const loadTape = () => import("./home/TapeBar").then((m) => m.TapeBar as ComponentType);
 
 export function App() {
   const [cheatsheet, setCheatsheet] = useState(false);
@@ -47,6 +49,7 @@ export function App() {
   // GUI mode hides the status bar until the user turns it on (menu bar button); Terminal mode always shows it.
   const statusShown = useStatusBarShown();
   const tabsPref = useTabsOn();
+  const tapeOn = useStore(settingsStore, (s) => s.tape);
   const tabs = gui && tabsPref; // GUI tabs layout: the tab strip sits above the command line, like a browser
 
   useEffect(() => saveJSON("openterm.hud", hud), [hud]);
@@ -252,9 +255,14 @@ export function App() {
   }, [cheatsheet]);
 
   return (
-    <div className={"app" + (tabs ? " has-tabs" : "")}>
+    <div className={"app" + (tabs ? " has-tabs" : "") + (tapeOn ? " has-tape" : "")}>
       {tabs && <TabStrip />}
       <TopBar />
+      {tapeOn && (
+        <div className="tape-slot">
+          <LazyPiece load={loadTape} />
+        </div>
+      )}
       {gui && <GuiTop />}
       {/* Same element tree in both modes so switching never remounts the panels. In terminal mode CSS makes .app-body
           `display: contents`, i.e. the wrapper disappears from the layout and the grid looks exactly as before. */}

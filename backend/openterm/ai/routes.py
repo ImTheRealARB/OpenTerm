@@ -30,7 +30,7 @@ MAX_IMAGE = 4_000_000  # characters of data URL (about 3 MB of PNG)
 IMAGE_RE = re.compile(r"^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$")
 VISION_MODEL = "deepseek/deepseek-v4.1-flash"
 DRAFT_RE = re.compile(r"^BT_DRAFT\s+(\{.*\})\s*$", re.MULTILINE)
-BT_TOOLS = ["history", "quote", "profile", "skill", "strategy_check"]
+BT_TOOLS = ["history", "quote", "profile", "skill", "skills", "strategy_check"]
 
 BT_SYSTEM = """You turn a trading idea into one backtest rule for OpenTerm's BT engine. Today is {today}.
 Method: look at the symbol with the history tool if the idea depends on price behaviour; write the rule; ALWAYS check it with strategy_check and fix it until it is valid.

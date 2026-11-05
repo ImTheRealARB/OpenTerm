@@ -1,19 +1,24 @@
 /**
- * Alerts (`ALRT`): stored in SQLite by the backend, evaluated here on every live tick.
+ * Alerts (`ALRT`): stored in SQLite by the backend.
  *
- * The monitor starts at boot and subscribes (through the shared refcounted socket) to the symbols of active
- * alerts, whether or not an ALRT panel is open. Ticks are checked as they arrive (`onRawTicks`), not in the
- * animation-frame flush, so a hidden tab (rAF paused) still fires. An alert fires once: it is marked triggered
- * locally at once, then on the backend with the trigger price and time. A closed tab evaluates nothing.
+ * Phase 20: the BACKEND fires real alerts (alerts_engine.py), so they also fire with every tab closed and can go to Telegram or
+ * email; this file then only SHOWS state: it refreshes the lists when the server pushes an "A" frame. The one exception is
+ * labelled test data: the server refuses SYNTHETIC ticks and everything in fixture mode, so for those (and only those) this tab
+ * still evaluates ticks and headlines and fires in-app, which keeps the SYN instruments and recorded-data runs usable. Real data
+ * never fires here, so nothing notifies twice (`browserFires` in alertArgs.ts is the rule).
+ *
+ * That tab-side path, when it runs: the monitor subscribes (through the shared refcounted socket) to the symbols of active alerts,
+ * ticks are checked as they arrive (`onRawTicks`, not the animation-frame flush, so a hidden tab still fires), and an alert fires
+ * once: marked triggered locally at once, then on the backend with the trigger price and time.
  */
 import { fmtPrice } from "../format";
-import { api, api8, newsAlertsApi, type Alert, type ApiError, type NewsAlert, type NewsItem } from "../net/api";
-import { subscribe } from "../net/socket";
+import { api, api8, newsAlertsApi, type Alert, type AlertEngineState, type ApiError, type NewsAlert, type NewsItem } from "../net/api";
+import { onAlertFrame, subscribe } from "../net/socket";
 import { createStore } from "../state/store";
 import { symName } from "../state/symbols";
 import { onRawTicks, orNull, type RawTicks } from "../state/ticks";
 import { sendWithRetry } from "./triggerRetry";
-import { alertMet, describeRule, newsMatch, parseAlrt } from "./alertArgs";
+import { alertMet, browserFires, describeRule, newsMatch, parseAlrt, viaText } from "./alertArgs";
 import type { SecurityRef } from "./markets";
 import { fail, info, statusMsg } from "./status";
 
@@ -21,6 +26,14 @@ export const alerts = createStore<Alert[] | null>(null);
 export const alertsError = createStore<string | null>(null);
 /** The last alert that fired, for the status bar flash. */
 export const lastFired = createStore<{ text: string; at: number } | null>(null);
+
+/** The backend alert engine's state (running, watched symbols, last tick age, refused matches with reasons). null = not known. */
+export const engineState = createStore<AlertEngineState | null>(null);
+export const refreshEngine = (): Promise<void> =>
+  api8.alertEngine().then(
+    (s) => engineState.set(() => s),
+    () => engineState.set(() => null), // an unreachable backend shows as "ENGINE STATE UNKNOWN" in ALRT; it is not guessed
+  );
 
 export type NotifyState = "granted" | "denied" | "default" | "unsupported";
 const notifySupported = () => typeof Notification !== "undefined";
@@ -54,6 +67,7 @@ function setAlerts(list: Alert[]): void {
 }
 
 export async function refreshAlerts(): Promise<Alert[]> {
+  void refreshEngine(); // independent of the list: ALRT shows the engine even when the list call fails
   try {
     const { alerts: list } = await api8.alerts();
     // An alert this tab already fired stays triggered even if the backend has not stored it yet.
@@ -89,18 +103,31 @@ function desktopNotify(title: string, body: string, tag: string): void {
 
 const srcLabelChar = (code: number): string => String.fromCharCode(code);
 
+/** Status-bar flash, message line and desktop notification for a price alert that just fired (here or on the server). */
+function announcePrice(a: Alert, price: number, synthetic: boolean): void {
+  const tag = synthetic ? " (SYNTHETIC)" : "";
+  const text = `ALERT ${a.id} ${alertText(a)} HIT ${fmtPrice(price)}${tag}`;
+  lastFired.set(() => ({ text, at: Date.now() }));
+  info(text);
+  desktopNotify(`ALERT ${alertText(a)}`, `${a.symbol} ${fmtPrice(price)}${tag}`, `openterm-alert-${a.id}`);
+}
+
+function announceNews(a: NewsAlert, headline: string): void {
+  const where = a.symbol ?? "MARKET";
+  const text = `NEWS ALERT N${a.id} ${where} "${a.word}": ${headline}`;
+  lastFired.set(() => ({ text, at: Date.now() }));
+  info(text);
+  desktopNotify(`NEWS ${where} ${a.word}`, headline, `openterm-news-alert-${a.id}`);
+}
+
 function fire(a: Alert, price: number, src: string): void {
   firing.add(a.id);
   const at = Date.now() / 1000;
   setAlerts((alerts.get() ?? []).map((x) => (x.id === a.id ? { ...x, status: "triggered", trigger_price: price, triggered_at: at } : x)));
-  const synthetic = src === "s" ? " (SYNTHETIC)" : "";
-  const text = `ALERT ${a.id} ${alertText(a)} HIT ${fmtPrice(price)}${synthetic}`;
-  lastFired.set(() => ({ text, at: Date.now() }));
-  info(text);
-  desktopNotify(`ALERT ${alertText(a)}`, `${a.symbol} ${fmtPrice(price)}${synthetic}`, `openterm-alert-${a.id}`);
+  announcePrice(a, price, src === "s");
   // The id stays in `firing` until the backend accepts the report, so the tick check cannot fire it twice; a failed POST
   // is retried with backoff while the alert is still firing and still exists (re-arm or delete ends the retries).
-  sendWithRetry(() => api8.triggerAlert(a.id, price, at), {
+  sendWithRetry(() => api8.triggerAlert(a.id, price, at, src === "s"), {
     stillWanted: () => firing.has(a.id) && (alerts.get() ?? []).some((x) => x.id === a.id),
     onDone: () => firing.delete(a.id),
     onFail: (e, n) => {
@@ -116,7 +143,10 @@ function fire(a: Alert, price: number, src: string): void {
 function onTicksForAlerts(t: RawTicks): void {
   const list = alerts.get();
   if (!list?.length) return;
+  const fixtures = engineState.get()?.fixtures;
   for (let i = 0; i < t.n; i++) {
+    // real data is the backend engine's job (see the header); only labelled test data is checked here
+    if (!browserFires(t.src[i], fixtures)) continue;
     const sym = symName(t.id[i]);
     for (let j = 0; j < list.length; j++) {
       const a = list[j];
@@ -148,11 +178,7 @@ function fireNews(a: NewsAlert, item: NewsItem): void {
   newsAlerts.set((cur) =>
     (cur ?? []).map((x) => (x.id === a.id ? { ...x, status: "triggered", triggered_at: at, headline: item.title, url: item.url } : x)),
   );
-  const where = a.symbol ?? "MARKET";
-  const text = `NEWS ALERT N${a.id} ${where} "${a.word}": ${item.title}`;
-  lastFired.set(() => ({ text, at: Date.now() }));
-  info(text);
-  desktopNotify(`NEWS ${where} ${a.word}`, item.title, `openterm-news-alert-${a.id}`);
+  announceNews(a, item.title);
   // Same retry as price alerts: keep the id in `newsFiring` until the backend accepts the report.
   sendWithRetry(() => newsAlertsApi.trigger(a.id, item.title, item.url, at), {
     stillWanted: () => newsFiring.has(a.id) && (newsAlerts.get() ?? []).some((x) => x.id === a.id),
@@ -167,6 +193,7 @@ function fireNews(a: NewsAlert, item: NewsItem): void {
 export function checkNewsItems(symbol: string | null, items: readonly NewsItem[]): void {
   const list = newsAlerts.get();
   if (!list?.length) return;
+  if (engineState.get()?.fixtures !== true) return; // live news is checked by the backend; only fixture-mode (recorded) news fires here
   for (const a of list) {
     if (a.status !== "active" || newsFiring.has(a.id) || (a.symbol ?? null) !== symbol) continue;
     const hit = items.find((i) => i.published != null && i.published > a.created_at && newsMatch(a.word, i.title));
@@ -203,6 +230,21 @@ export function startAlerts(): void {
   if (started) return;
   started = true;
   onRawTicks(onTicksForAlerts);
+  onAlertFrame((kind, id) => {
+    // The server fired an alert: show the new state here, and flash / notify as the browser did when it fired alerts itself.
+    // (Desktop notifications carry a tag per alert, so several open tabs show one pop-up, not one each.)
+    if (kind === "news") {
+      void refreshNewsAlerts().then((list) => {
+        const n = list.find((x) => x.id === id);
+        if (n?.status === "triggered") announceNews(n, n.headline ?? "");
+      }, () => {});
+    } else {
+      void refreshAlerts().then((list) => {
+        const a = list.find((x) => x.id === id);
+        if (a?.status === "triggered") announcePrice(a, a.trigger_price ?? NaN, false);
+      }, () => {});
+    }
+  });
   void refreshAlerts().catch(() => {});
   void refreshNewsAlerts().then(() => pollNewsAlerts()).catch(() => {});
   setInterval(() => void refreshAlerts().catch(() => {}), 60_000);
@@ -263,8 +305,8 @@ export function alrtCommand(args: string[], security?: SecurityRef): boolean | s
       const where = a.symbol ?? "MARKET";
       void act(
         `NEWS ALERT ${where} "${a.word}" NOT SAVED`,
-        () => newsAlertsApi.create({ word: a.word, symbol: a.symbol }),
-        `NEWS ALERT SET: ${where} HEADLINE CONTAINS "${a.word}" (CHECKED ON EACH NEWS REFRESH, EVERY 2 MIN)`,
+        () => newsAlertsApi.create({ word: a.word, symbol: a.symbol, ...(a.channels ? { channels: a.channels } : {}) }),
+        `NEWS ALERT SET: ${where} HEADLINE CONTAINS "${a.word}"${a.channels ? ` ${viaText(a.channels)}` : ""} (CHECKED EVERY 2 MIN BY THE OPENTERM SERVER)`,
       ).then(() => refreshNewsAlerts().catch(() => {}));
       return [];
     }
@@ -274,7 +316,7 @@ export function alrtCommand(args: string[], security?: SecurityRef): boolean | s
     case "create": {
       askNotifyPermission(); // synchronously, inside the keypress that ran the command
       const text = alertText({ symbol: a.symbol, ...a.rule });
-      void act(`ALERT ${text} NOT SAVED`, () => api8.createAlert({ symbol: a.symbol, ...a.rule }), `ALERT SET: ${text}`);
+      void act(`ALERT ${text} NOT SAVED`, () => api8.createAlert({ symbol: a.symbol, ...a.rule, ...(a.channels ? { channels: a.channels } : {}) }), `ALERT SET: ${text}${a.channels ? ` ${viaText(a.channels)}` : ""}`);
       return [];
     }
   }

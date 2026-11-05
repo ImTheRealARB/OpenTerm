@@ -26,6 +26,18 @@ export const AI_MODEL_RE = /^[A-Za-z0-9._:/-]{1,80}$/;
 export const MODES = ["terminal", "gui"] as const;
 export type Mode = (typeof MODES)[number];
 
+/** What a fresh session opens: the HOME page, or the layout that was open last time (see home/startup.ts). */
+export const STARTUPS = ["home", "layout"] as const;
+export type Startup = (typeof STARTUPS)[number];
+/** The ticker tape (HOME and the optional global bar). At most this many symbols; each must look like a Yahoo-style symbol. */
+export const TAPE_MAX = 30;
+export const TAPE_SYMBOL_RE = /^[A-Z0-9^][A-Z0-9.\-=^&]{0,19}$/;
+/** Default tape: global indices, Indian indices, commodities + FX, crypto, rates + volatility (spellings as in boards.ts). */
+export const TAPE_DEFAULT: readonly string[] = [
+  "^GSPC", "^IXIC", "^DJI", "^FTSE", "^GDAXI", "^N225", "^HSI", "^NSEI", "^NSEBANK", "^BSESN",
+  "GC=F", "BZ=F", "CL=F", "NG=F", "HG=F", "USDINR=X", "EURUSD=X", "DX-Y.NYB", "BTC-USD", "ETH-USD", "^TNX", "^VIX",
+];
+
 export interface Settings {
   /**
    * Which shell is shown. Defaults to "gui" for a brand-new user (nothing saved anywhere), but a SAVED settings
@@ -46,6 +58,12 @@ export interface Settings {
   keys: Record<string, string[]>;
   /** Phase 16: which model the AI panels call (OpenRouter by default; the key lives in APIKEYS, never here). */
   ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number] };
+  /** "home" = a new session opens the HOME page; "layout" = it restores the saved workspace as before. */
+  startup: Startup;
+  /** Also show the ticker tape in the global top bar on every screen (HOME always has its own). */
+  tape: boolean;
+  /** Symbols on the tape, in order (TAPE ADD / TAPE DEL / TAPE RESET). */
+  tapeSymbols: string[];
 }
 
 export const DEFAULTS: Settings = Object.freeze({
@@ -59,6 +77,9 @@ export const DEFAULTS: Settings = Object.freeze({
   poll: { news: 60, movers: 60, crypto: 30, sources: 10 },
   keys: {},
   ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter" },
+  startup: "home",
+  tape: false,
+  tapeSymbols: [...TAPE_DEFAULT],
 }) as Settings;
 
 const ZONE_RE = /^(LOCAL|UTC|[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){1,2})$/;
@@ -147,6 +168,11 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
   }
   if (r.ai !== undefined && !isObj(r.ai)) errors.push("ai");
 
+  // tapeSymbols: a list of at most TAPE_MAX distinct, well-formed symbols (empty is allowed: an empty tape).
+  const tapeOk =
+    Array.isArray(r.tapeSymbols) && r.tapeSymbols.length <= TAPE_MAX && new Set(r.tapeSymbols).size === r.tapeSymbols.length &&
+    r.tapeSymbols.every((x) => typeof x === "string" && TAPE_SYMBOL_RE.test(x));
+
   return {
     settings: {
       mode,
@@ -159,6 +185,9 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
       poll,
       keys,
       ai: aiOut,
+      startup: pick("startup", oneOf(STARTUPS, r.startup), r.startup as Startup, d.startup),
+      tape: pick("tape", typeof r.tape === "boolean", r.tape as boolean, d.tape),
+      tapeSymbols: pick("tapeSymbols", tapeOk, (r.tapeSymbols as string[])?.slice(), [...d.tapeSymbols]),
     },
     errors,
   };

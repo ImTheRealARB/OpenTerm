@@ -812,3 +812,13 @@ Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs neede
 | Playwright | 6 workers | 56 s | 57 s | 1, then 1 |
 
 Decision: pytest moves to `-n 10` (faster, green). Playwright stays at 4 workers: 6 is about 10 s faster but failed a test in both runs.
+
+## Phase 20 swarm engine, 30 presets, skills (2026-11-05, Windows 11, 20 threads, branch `claude/openterm-phase-20-cont-5dddee`)
+Nothing in Phase 20 touches a hot path (presets, skills and the swarm engine load on first use). Full gate: ALL PASS in 147 s (pytest 2638, ruff, tsc, vitest, e2e 342).
+Bench: **37 pass, 0 fail** (AI request to first SSE event p95 28.4 ms of 60; AI panel open 19.2 ms of 100). No budget regressed.
+Update after the server-side alert engine and delivery retry were added (hub tick-listener hook): full gate ALL PASS in 131 s (pytest 2696, ruff, tsc, vitest, e2e 344). Bench: first run 35/37 (50k-bar pan 33.4 ms and BT run 311 ms, both throttling noise after back-to-back runs), rerun **37/37** (tick to pixel 42.5 ms of 50, pan 16.7 ms of 20, BT 246 ms of 300).
+
+## Phase 20 finish: HOME page, ticker tape, VIA, pairing, filings, news (2026-11-05, Windows 11, 20 threads, branch `claude/openterm-phase-20-cont-5dddee`)
+Full gate: ALL PASS in 138 s (pytest 2803, ruff, tsc, vitest, e2e 350). The first run had 6 e2e failures: 2 were real (`phase10` compares the saved settings exactly and the e2e seed now saves `startup: "layout"`; fixed in the spec) and 4 passed alone (known e2e flake).
+Bench: **37 pass, 0 fail** on the first run (cold start 96.9 ms of 1500, layout load 49.1 ms of 100, 50k-bar pan 16.7 ms of 20, tick to pixel 36.6 ms of 50, BT 10-year 190 ms of 300).
+Initial JS+CSS bundle: **123.3 KB gz** (121.7 KB after GUI pass 2): +1.6 KB for the `startup` setting, the tape hook in `App.tsx` / `main.tsx` and the Phase 20 settings. HOME, the tape bar and the ticker tape are lazy chunks. Under the 400 KB budget, above the informal 120 KB goal.

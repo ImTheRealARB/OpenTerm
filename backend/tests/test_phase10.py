@@ -53,6 +53,32 @@ def test_settings_mode_roundtrip(client):
         assert client.get("/api/settings").json()["settings"] == {"mode": mode}
 
 
+def test_settings_startup_and_tape_roundtrip(client):
+    """HOME page: `startup` (home | layout), `tape` (bool) and `tapeSymbols` (at most 30 Yahoo-style symbols) are stored settings."""
+    doc = {"startup": "layout", "tape": True, "tapeSymbols": ["^GSPC", "BTC-USD", "RELIANCE.NS", "DX-Y.NYB", "GC=F"]}
+    assert client.put("/api/settings", json={"settings": doc}).status_code == 200
+    assert client.get("/api/settings").json()["settings"] == doc
+    # an empty tape is allowed (the user removed every symbol)
+    assert client.put("/api/settings", json={"settings": {"tapeSymbols": []}}).status_code == 200
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"startup": "welcome"},
+        {"tape": "yes"},
+        {"tapeSymbols": "AAPL"},
+        {"tapeSymbols": ["aapl"]},
+        {"tapeSymbols": ["A B"]},
+        {"tapeSymbols": ["AAPL", "AAPL"]},
+        {"tapeSymbols": [f"S{i}" for i in range(31)]},
+    ],
+)
+def test_settings_startup_and_tape_rejects(client, bad):
+    r = client.put("/api/settings", json={"settings": bad})
+    assert r.status_code == 400, r.text
+
+
 @pytest.mark.parametrize(
     "bad, needle",
     [

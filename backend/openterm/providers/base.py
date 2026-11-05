@@ -14,6 +14,7 @@ PROFILE = "profile"
 NEWS_TOP = "news_top"
 NEWS_SYMBOL = "news_symbol"
 NEWS_KEYWORD = "news_keyword"
+NEWS_POOL = "news_pool"
 MOVERS = "movers"
 CRYPTO = "crypto"
 
@@ -123,6 +124,10 @@ class Provider:
 
     async def news_top(self) -> dict:
         """{"items": [NewsItem], "failed": [feed names that did not answer]}"""
+        raise ProviderError("unsupported")
+
+    async def news_pool(self, section: str | None) -> dict:
+        """Headlines from the curated feed table: {"pool": [(Feed, [NewsItem])], "failed": [names], "total": n}"""
         raise ProviderError("unsupported")
 
     async def news_symbol(self, symbol: str) -> dict:

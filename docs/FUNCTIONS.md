@@ -230,7 +230,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
 | `AI` | AI research assistant over OpenTerm data: tool calls with sources, [T1] citations, UNGROUNDED / UNSOURCED flags (model output, not data; needs OPENROUTER key) |  | `[question... \| BT <strategy idea> \| AUTO <hypothesis> \| CHART \| DOC FILING <SYM> [FORM] \| DOC OFF]` | `AI` |
-| `SWARM` | Multi-agent desks (committee, risk, earnings, macro, quant): analyst roles with their own tools, then a chair; stored runs replay without a model (model output, not data; needs OPENROUTER key) |  | `[COMMITTEE\|RISK\|EARNINGS\|MACRO\|QUANT <subject> \| REPLAY <id> \| LIST]` | `SWARM` |
+| `SWARM` | Multi-agent desks (built-in, packaged and your own YAML files): analyst roles with their own tools, then a chair; shows coverage, variables and a worst-case cost before a run; stored runs replay without a model (model output, not data; needs OPENROUTER key) |  | `[<DESK> <subject> \| <DESK> NAME=value ... [--force] \| REPLAY <id> \| LIST]` | `SWARM` |
 | `THESIS` | Investment thesis notes per ticker: status, invalidation rule, linked SWARM runs (stored locally) |  | `[SYMBOL \| ADD <SYMBOL> <text> \| INVALID <id> <rule>]` | `THESIS` |
 | `AUDIT` | Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes only) |  |  | `AUDIT` |
 
@@ -254,6 +254,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
+| `HOME` | Home page: market numbers and headlines, with a scrolling ticker tape |  |  | `HOME` |
+| `TAPE` | Ticker tape settings |  | `[ADD SYM \| DEL SYM \| RESET \| ON \| OFF]` | `TAPE` |
 | `DLVR` | Alert delivery |  |  | `DLVR` |
 | `BRIEF` | Daily brief |  |  | `BRIEF` |
 | `TMPL` | Workspace templates: Long-term, Day trader, Macro, India |  | `[LONGTERM\|DAY\|MACRO\|INDIA]` | `TMPL` |

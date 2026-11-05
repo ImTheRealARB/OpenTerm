@@ -106,10 +106,23 @@ async def search(request: Request, q: str = Query(..., max_length=64)):
 
 @router.get("/news")
 async def news(
-    request: Request, symbol: str | None = Query(None, max_length=24), q: str | None = Query(None, max_length=100)
+    request: Request,
+    symbol: str | None = Query(None, max_length=24),
+    q: str | None = Query(None, max_length=100),
+    # Feed-table filters (news_tags.py). Any of the four switches NEWS to the pooled curated feeds; `q` then filters them by keywords.
+    region: str | None = Query(None, max_length=8),
+    sector: str | None = Query(None, max_length=16),
+    commodity: str | None = Query(None, max_length=16),
+    section: str | None = Query(None, max_length=16),
+    limit: int | None = Query(None, ge=1, le=500),
 ):
+    from .news_tags import clean_filters
+
     try:
-        return await svc(request).news(symbol, q)
+        f = clean_filters(region, sector, commodity, section, q)
+        if f.active and not (f.region or f.sector or f.commodity or f.section):
+            f = None  # `q` alone keeps meaning "GDELT keyword search" (the old behaviour)
+        return await svc(request).news(symbol, q, f, limit)
     except DataError as e:
         return error(e)
 
@@ -434,6 +447,17 @@ async def delete_portfolio(request: Request, name: str):
         return error(e)
 
 
+def engine_of(request: Request):
+    """Phase 20: the server-side alert engine (alerts_engine.py). It owns firing; the routes below keep it in step."""
+    return request.app.state.alerts_engine
+
+
+@router.get("/alerts/engine")
+async def alerts_engine_state(request: Request):
+    """Engine state for the ALRT panel: running, watched symbols, last tick age, matches it refused to act on (and why)."""
+    return engine_of(request).state()
+
+
 @router.get("/alerts")
 async def list_alerts(request: Request):
     return {"alerts": await alerts_store(request).all()}
@@ -442,7 +466,9 @@ async def list_alerts(request: Request):
 @router.post("/alerts")
 async def create_alert(request: Request):
     try:
-        return await alerts_store(request).create(await json_object(request))
+        alert = await alerts_store(request).create(await json_object(request))
+        await engine_of(request).sync()  # start watching the new alert's symbol
+        return alert
     except UserDataError as e:
         return error(e)
 
@@ -457,7 +483,9 @@ async def clear_alerts(request: Request, status: str = Query(...)):
 @router.delete("/alerts/{alert_id}")
 async def delete_alert(request: Request, alert_id: int):
     try:
-        return {"deleted": await alerts_store(request).delete(alert_id)}
+        deleted = await alerts_store(request).delete(alert_id)
+        await engine_of(request).sync()  # stop watching a symbol nobody needs any more
+        return {"deleted": deleted}
     except UserDataError as e:
         return error(e)
 
@@ -467,12 +495,17 @@ async def trigger_alert(request: Request, alert_id: int):
     try:
         body = await json_object(request)
         result = await alerts_store(request).trigger(alert_id, body.get("price"), body.get("at"))
-        if result["changed"]:  # exactly once per firing: push it to email/Telegram/webhook in the background
+        await engine_of(request).sync()
+        # Phase 20: the server engine fires real data itself. This route is used by a browser only for labelled test data
+        # (SYNTHETIC ticks, fixture mode), which must never be pushed to a phone: the browser says so with `synthetic`.
+        if result["changed"] and not body.get("synthetic"):  # exactly once per firing: push it to email/Telegram/webhook in the background
+            from .alert_channels import spawn
             from .delivery import format as dfmt
-            from .delivery import spawn
 
             subject, text = dfmt.alert_message(result["alert"])
-            spawn(request.app, "alert", alert_id, subject, text, {"kind": "alert", "symbol": result["alert"]["symbol"]})
+            # `channels` = the alert's VIA list (None = every enabled channel, the old behaviour)
+            spawn(request.app, "alert", alert_id, subject, text, {"kind": "alert", "symbol": result["alert"]["symbol"]},
+                  channels=result["alert"]["channels"])
         return result
     except UserDataError as e:
         return error(e)
@@ -481,7 +514,9 @@ async def trigger_alert(request: Request, alert_id: int):
 @router.post("/alerts/{alert_id}/rearm")
 async def rearm_alert(request: Request, alert_id: int):
     try:
-        return await alerts_store(request).rearm(alert_id)
+        alert = await alerts_store(request).rearm(alert_id)
+        await engine_of(request).sync()  # a rearmed alert is active again: watch its symbol
+        return alert
     except UserDataError as e:
         return error(e)
 
@@ -527,11 +562,12 @@ async def trigger_news_alert(request: Request, alert_id: int):
         body = await json_object(request)
         result = await news_alerts_store(request).trigger(alert_id, body.get("headline"), body.get("url"), body.get("at"))
         if result["changed"]:
+            from .alert_channels import spawn
             from .delivery import format as dfmt
-            from .delivery import spawn
 
             subject, text = dfmt.news_alert_message(result["alert"])
-            spawn(request.app, "news", alert_id, subject, text, {"kind": "news", "word": result["alert"]["word"]})
+            spawn(request.app, "news", alert_id, subject, text, {"kind": "news", "word": result["alert"]["word"]},
+                  channels=result["alert"]["channels"])
         return result
     except UserDataError as e:
         return error(e)

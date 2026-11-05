@@ -137,6 +137,28 @@ Left, in order:
 
 None of the global free tiers beats Yahoo for charts, so none should be ranked above it.
 
+## News feeds (2026-11-05)
+
+`NEWS` pools 45 keyless RSS / Atom feeds listed in one table, `backend/openterm/providers/news_feeds.py` (name, url, sections, region, sectors, fast). Each was checked once on 2026-11-05 with a polite request (a user-agent naming the app, no personal address) and kept only if it answered 200 with items. Tech, crypto and a few breaking-news feeds are marked fast (30 s cache); the rest cache 60 s. Feed addresses change: a feed that starts showing under NOT ANSWERING needs its URL re-checked.
+
+Dropped, with the reason:
+
+| Feed | Reason |
+|---|---|
+| Reuters (business) | `feeds.reuters.com` no longer resolves; Reuters has no open RSS now |
+| VentureBeat | HTTP 429 on the first request |
+| Yahoo Finance `news/rssindex` | 404 (per-symbol Yahoo headlines still work through `yahoo_rss`) |
+| Mining.com | 403 (blocks non-browser clients) |
+| Kitco | 404 on the feed address tried |
+| IMF news | 403 (the older `external/rss` address returns an HTML page) |
+| World Bank | feed addresses tried return HTML or 404 |
+| US Treasury press releases | both addresses tried 404 |
+| Moneycontrol | answers, but the newest item is from April 2024 (stale) |
+| MarketWatch real-time and market pulse | answer, but the newest items are from mid 2025 (stale); the top-stories feed is kept |
+| hnrss.org front page | duplicate of the Hacker News feed that is kept |
+
+Details that matter: RBI sends dates without a zone (local time), so a date later than now is capped to now; SEBI dates have no weekday and need a second date format. The Fed press feed is slow-moving (days between items) by nature. Only titles, teasers and links are used; articles open on the publisher's site.
+
 ## Honest limits of what is built
 
 Upstox was built and then removed (2026-11-05): the owner could not get a token and will use paid Kite instead. Kite is the Indian source.

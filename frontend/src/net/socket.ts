@@ -26,6 +26,12 @@ function send(msg: unknown): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
 }
 
+/** Callbacks run when the backend pushes an "A" frame: its alert engine fired an alert (Phase 20), so lists should refresh. */
+const alertFrameListeners = new Set<(kind: "price" | "news", id: number) => void>();
+export function onAlertFrame(cb: (kind: "price" | "news", id: number) => void): void {
+  alertFrameListeners.add(cb);
+}
+
 /** Subscribe to live ticks. Returns the matching unsubscribe. Safe to call before the socket opens. */
 export function subscribe(symbols: string[]): () => void {
   // Subscribing is a cold path (when a panel's symbols change), so the small arrays here are fine.
@@ -121,6 +127,8 @@ export function connect(): void {
       const msg = JSON.parse(ev.data as string) as unknown[];
       if (msg[0] === "T") {
         ingest(msg[1] as Parameters<typeof ingest>[0], recv);
+      } else if (msg[0] === "A") {
+        for (const cb of alertFrameListeners) cb(msg[1] as "price" | "news", msg[2] as number); // Phase 20: the server fired an alert; this tab only shows the new state
       } else if (msg[0] === "J") {
         ingestJobFrame(msg); // Phase 11 job progress
       } else if (msg[0] === "pong") {
