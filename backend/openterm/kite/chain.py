@@ -16,13 +16,13 @@ from ..options import tables as ot
 from ..research.table import col, head, payload, section
 from . import FIXTURE_LABEL
 from .session import EXPIRED_MESSAGE, IST, KEY_REQUIRED_MESSAGE, LOGGED_OUT_MESSAGE
-from .symbols import UNDERLYING_KEYS, derivative_root
+from .symbols import FUTURE_SPOT_EXCHANGES, derivative_root, spot_key
 
 COMPUTED = "COMPUTED HERE (BLACK-SCHOLES), NOT VENDOR"
 NEEDS_R = "NEEDS R=<PERCENT> (AND Q=<PERCENT>)"
 CLOSE_IST = (15, 30)
 NO_GREEKS = {"iv": None, "iv_src": None, "delta": None, "gamma": None, "theta": None, "vega": None, "rho": None}
-WHAT = {"omon": "NSE / MCX OPTION CHAINS WITH OPEN INTEREST", "ct": "NSE / MCX FUTURES WITH OPEN INTEREST"}
+WHAT = {"omon": "INDIAN OPTION CHAINS WITH OPEN INTEREST", "ct": "INDIAN FUTURES WITH OPEN INTEREST"}
 
 
 def _error(kind: str, message: str):
@@ -79,16 +79,16 @@ def plain_rows(contracts: list[dict], kind: str, spot: float | None, moneyness: 
 
 
 async def spot_of(client, dump, exchange: str, name: str, expiry: str, quotes: dict[str, dict]) -> tuple[float | None, str | None]:
-    """(spot, basis text). Index and stock options: the underlying's own quote. MCX: the nearest future at or after the option's expiry."""
-    if exchange == "MCX":
-        futs = sorted((r for r in dump.chain_rows("MCX", name, ("FUT",)) if (r["expiry"] or "") >= expiry), key=lambda r: r["expiry"] or "")
+    """(spot, basis text). Index and stock options (NFO, BFO): the underlying's own quote. MCX and CDS: the nearest future at or after the option's expiry."""
+    if exchange in FUTURE_SPOT_EXCHANGES:
+        futs = sorted((r for r in dump.chain_rows(exchange, name, ("FUT",)) if (r["expiry"] or "") >= expiry), key=lambda r: r["expiry"] or "")
         if not futs:
             return None, None
-        key = f"MCX:{futs[0]['tradingsymbol']}"
+        key = f"{exchange}:{futs[0]['tradingsymbol']}"
         q = quotes.get(key) or (await client.quote([key])).get(key)
         return ((q or {}).get("last_price"), f"UNDERLYING = {futs[0]['tradingsymbol']} FUTURE") if q else (None, None)
-    key = UNDERLYING_KEYS.get(name, f"NSE:{name}")
-    q = quotes.get(key)
+    key = spot_key(exchange, name)
+    q = quotes.get(key) if key else None
     return ((q or {}).get("last_price"), f"UNDERLYING = {key}") if q else (None, None)
 
 
@@ -99,7 +99,7 @@ async def omon(session, client, instruments, symbol: str, now_epoch: float, fixt
         return stop
     exchange, name = derivative_root(symbol) or (None, None)
     if exchange is None:
-        raise _error("bad_request", "OMON ON KITE NEEDS <UNDERLYING>.NFO OR <UNDERLYING>.MCX")
+        raise _error("bad_request", "OMON ON KITE NEEDS <UNDERLYING>.NFO, .BFO, .MCX OR .CDS")
     dump = await instruments.get()
     options = dump.chain_rows(exchange, name, ("CE", "PE"))
     if not options:
@@ -120,8 +120,8 @@ async def omon(session, client, instruments, symbol: str, now_epoch: float, fixt
         expiry = expiries[0]
     pick = [o for o in options if o["expiry"] == expiry]
     keys = [f"{exchange}:{o['tradingsymbol']}" for o in pick]
-    spot_key = UNDERLYING_KEYS.get(name, f"NSE:{name}") if exchange == "NFO" else None
-    quotes = await client.quote(keys + ([spot_key] if spot_key else []))
+    spot_quote_key = spot_key(exchange, name)
+    quotes = await client.quote(keys + ([spot_quote_key] if spot_quote_key else []))
     spot, spot_basis = await spot_of(client, dump, exchange, name, expiry, quotes)
     contracts = {"CE": [], "PE": []}
     for o in pick:
@@ -149,7 +149,7 @@ async def omon(session, client, instruments, symbol: str, now_epoch: float, fixt
     notes = [f"KITE SENDS NO IV OR GREEKS: THEY ARE {COMPUTED}, ONLY WHEN R= (AND Q=) ARE TYPED, E.G. OMON {symbol} R=6.5 Q=1.2"
              if r is None else f"IV AND GREEKS ARE {COMPUTED}, FROM THE BID/ASK MID, R AND Q AS TYPED, EUROPEAN-STYLE EXERCISE",
              "BID AND ASK ARE THE BEST DEPTH LEVEL; OPEN INT IS KITE'S QUOTE OI; A CONTRACT KITE DID NOT QUOTE SHOWS DASHES",
-             f"TIME TO EXPIRY = {expiry} 15:30 IST MINUS THE CLOCK, ACT/365" + ("; MCX EXPIRY TIME IS TAKEN AS 15:30 IST" if exchange == "MCX" else "")]
+             f"TIME TO EXPIRY = {expiry} 15:30 IST MINUS THE CLOCK, ACT/365" + ("; MCX / CDS EXPIRY TIME IS TAKEN AS 15:30 IST" if exchange in FUTURE_SPOT_EXCHANGES else "")]
     if spot_basis:
         notes.append(spot_basis)
     else:
@@ -172,7 +172,7 @@ async def futures(session, client, instruments, symbol: str, now_epoch: float, f
         return stop
     exchange, name = derivative_root(symbol) or (None, None)
     if exchange is None:
-        raise _error("bad_request", "CT ON KITE NEEDS <UNDERLYING>.NFO OR <UNDERLYING>.MCX")
+        raise _error("bad_request", "CT ON KITE NEEDS <UNDERLYING>.NFO, .BFO, .MCX OR .CDS")
     dump = await instruments.get()
     today = today_ist(now_epoch)
     futs = sorted((f for f in dump.chain_rows(exchange, name, ("FUT",)) if (f["expiry"] or "") >= today), key=lambda f: f["expiry"] or "")

@@ -24,6 +24,7 @@ from .base import HISTORY, QUOTES, Provider, ProviderError
 #: Measured live on 2026-11-05 with RELIANCE.NS: 5 / 15 / 60 minute bars start on 2015-02-02 (about 11.7 years back, so 4200 days is safe);
 #: 1 minute was verified back 10 years (3650). Longer asks are chunked into Kite's per-call windows (kite/client.py HISTORY_WINDOW_DAYS).
 INTRADAY_DAYS: dict[str, int] = {"1m": 3650, "5m": 4200, "15m": 4200, "30m": 4200, "60m": 4200}
+SESSION_LOOKBACK_DAYS = 7  # how far back a `1D` request looks for the last session (covers long weekends and holidays)
 MAX_DAYS = 7305  # about 20 years; `max` is left to Yahoo
 OPEN_INTEREST_TYPES = ("FUT", "CE", "PE")  # Kite sends an `oi` column for every bar, but it is 0 throughout for shares and indices
 DERIVATIVE_EXCHANGES = (*FUTURES_EXCHANGES, "BFO", "CDS")
@@ -145,12 +146,17 @@ class KiteProvider(Provider):
             if inst is None:
                 raise ProviderError("not_found", await self._missing(key))
             end = datetime.now(IST)
-            start = end - timedelta(days=max(days, 2))
+            # 1D means "the last session", as on Yahoo. Ask for a week so a weekend or a holiday before it still finds one, then keep
+            # only the newest IST date that came back (below). Longer ranges ask for exactly their length.
+            start = end - timedelta(days=SESSION_LOOKBACK_DAYS if range_ == "1d" else max(days, 2))
             candles = await self.client.candles(inst["instrument_token"], kite_interval, start, end)
         except DataError as e:
             raise ProviderError(_kind(e), str(e)) from e
         if not candles:
             raise ProviderError("not_found", "no bars")
+        if range_ == "1d":
+            last_day = candles[-1][0][:10]  # Kite stamps are local exchange time: "2026-11-05T09:15:00+0530"
+            candles = [c for c in candles if c[0][:10] == last_day]
         stamp = lambda c: int(datetime.strptime(c[0], "%Y-%m-%dT%H:%M:%S%z").timestamp())
         has_oi = inst["instrument_type"] in OPEN_INTEREST_TYPES and all(len(c) >= 7 for c in candles)
         return Bars.model_construct(
