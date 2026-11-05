@@ -14,3 +14,14 @@ export function fallbackText(names: readonly string[], notes?: Readonly<Record<s
   if (plain.length) parts.push(`${plain.join(",")} DOWN, VIA FALLBACK`);
   return parts.join(" · ");
 }
+
+/** One warning for a table of quotes (Q): the sources every row fell back from, each with its reason when the backend gave one. */
+export function rowsFallbackText(rows: readonly { fallbackFrom?: readonly string[]; fallbackNotes?: Readonly<Record<string, string>> }[]): string {
+  const names = new Set<string>();
+  const notes: Record<string, string> = {};
+  for (const r of rows) {
+    for (const n of r.fallbackFrom ?? []) names.add(n);
+    Object.assign(notes, r.fallbackNotes);
+  }
+  return fallbackText([...names], notes);
+}

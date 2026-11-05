@@ -25,7 +25,6 @@ log = logging.getLogger("openterm.kite")
 SEGMENT_DIVISOR = {"cds": 1e7, "bcd": 1e4}
 TOKEN_SEGMENTS = {3: "cds", 6: "bcd"}  # instrument_token & 0xff
 INDEX_SEGMENT = 9  # the index segment's token byte
-COVER_S = 8.0
 MAX_TOKENS = 3000  # Kite's limit per connection
 
 
@@ -97,11 +96,10 @@ class KiteTicker:
         self.symbols: set[str] = set()
         self.status = "OFF"
         self.ticks = 0
-        self._wanted: dict[int, str] = {}  # token -> Yahoo-style symbol
+        self._wanted = {}  # token -> Yahoo-style symbol (the setter below also refreshes the set `covers` reads on every tick)
         self._ws = None
         self._task: asyncio.Task | None = None
         self._wake = asyncio.Event()
-        self._seen: dict[str, float] = {}
         self._segments: dict[int, str | None] = {}
 
     def start(self) -> None:
@@ -115,13 +113,24 @@ class KiteTicker:
 
     async def set_symbols(self, symbols: set[str]) -> None:
         self.symbols = {s for s in symbols if to_kite(s) is not None}
-        self._seen = {s: t for s, t in self._seen.items() if s in self.symbols}
         self._wake.set()
 
     def covers(self, symbol: str) -> bool:
-        """True while real-time Kite ticks are arriving for `symbol` (Yahoo's delayed ticks are dropped meanwhile)."""
-        t = self._seen.get(symbol)
-        return t is not None and time.monotonic() - t < COVER_S and self.session.logged_in
+        """True while the Kite socket is up and `symbol` is subscribed on it (Yahoo's delayed ticks are dropped meanwhile).
+
+        Not "a tick arrived in the last few seconds": an illiquid option can stay silent for minutes, and a Yahoo tick (15 minutes late)
+        sneaking in then would drag the price back in time. The moment the socket drops (`status` leaves OK) or the login ends, Yahoo and the
+        poller serve the symbol again, and their ticks carry the labels STREAM / POLL instead of RT KITE."""
+        return self.status == "OK" and symbol in self._subscribed and self.session.logged_in
+
+    @property
+    def _wanted(self) -> dict[int, str]:
+        return self._by_token
+
+    @_wanted.setter
+    def _wanted(self, tokens: dict[int, str]) -> None:
+        self._by_token = tokens
+        self._subscribed = frozenset(tokens.values())
 
     async def _tokens(self) -> dict[int, str]:
         dump = await self.instruments.get()
@@ -203,7 +212,6 @@ class KiteTicker:
             sym = self._wanted.get(d["token"])
             if sym is None or d.get("ltp") is None:
                 continue
-            self._seen[sym] = time.monotonic()
             price = d["ltp"]
             close = d.get("close") or self.prev_close(sym)
             change = price - close if close else None

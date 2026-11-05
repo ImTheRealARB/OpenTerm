@@ -306,7 +306,7 @@ function flush(): void {
 // ---------------------------------------------------------------------------------------------------------------
 
 /** Display labels by source letter; use `srcLabel(code)` on hot paths (no object lookup by string). */
-export const SRC_LABEL: Record<string, string> = { y: "STREAM", p: "POLL", s: "SYNTHETIC", a: "RT IEX" };
+export const SRC_LABEL: Record<string, string> = { y: "STREAM", p: "POLL", s: "SYNTHETIC", a: "RT IEX", k: "RT KITE" };
 /** Char code of "s" (SYNTHETIC). */
 export const SRC_SYNTHETIC = 115;
 /** Label for a source char code. */
@@ -320,6 +320,8 @@ export function srcLabel(code: number): string {
       return "SYNTHETIC"; // s
     case 97:
       return "RT IEX"; // a
+    case 107:
+      return "RT KITE"; // k
     default:
       return String.fromCharCode(code);
   }

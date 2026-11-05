@@ -520,7 +520,7 @@ def _route(request: httpx.Request) -> httpx.Response:
             return _kite_json("kite_session_token_docshape")
         return _kite_error(403, "InputException", "Invalid `checksum` or `request_token`.")
     if os.environ.get("OPENTERM_KITE_EXPIRED") == "1" or not request.headers.get("authorization", "").startswith("token "):
-        return _kite_json("kite_error_token_docshape", 403)
+        return _kite_json("kite_error_token_real", 403)  # REAL TokenException answer (recorded 2026-11-05), same body the docs show
     if request.method != "GET":
         return httpx.Response(405, text="not recorded")
     if p == "/instruments":
