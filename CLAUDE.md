@@ -193,8 +193,11 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Phase 15 job pattern:** `POST /api/quant/{fn}` (`quant_routes.py`; fn = risk opt attr fact ql alpha regime) parses args, fetches bars (`_bars`), writes a content-addressed data file and submits an internal
   job (`quantjobs/`: `risk.run opt.run attr.run fact.run ql.run alpha.scan corr.regime`); the job never touches the network and returns the Phase 13/14 table payload for `ResearchPanel`.
   A repeat is a cache hit, so benches and tests vary a parameter. Kite lives in `kite/` + `kite_routes.py`.
-- **Kite is read-only with no order surface** (a test scans route paths, tools and module names for `order`, `gtt`, `margins`, holdings). Its `kite_*` fixtures are doc-shaped, NOT recordings;
-  the WebSocket ticker and the login flow have never run against a real key. Tokens last one trading day (`KITE LOGIN EXPIRED`).
+- **Kite is read-only with no order surface** (a test scans route paths, tools and module names for `order`, `gtt`, `margins`, holdings). Fixtures: `kite_*_real*.json` are real recordings
+  (`scripts/record_kite_live.py`, needs the OS-keyring key and a login made today; rerun it to refresh), `kite_*_docshape.json` are doc-shaped and labelled NOT A RECORDING (the instruments dump the chain tests use, the session answer).
+  The REST routes, the ticker and the login callback have run against a real paid key (2026-11-05; the stored login came from the app's own `/api/kite/callback`). Tokens last one trading day (`KITE LOGIN EXPIRED`).
+  Derivatives are typed as the exact Kite trading symbol + suffix (`NIFTY26NOVFUT.NFO`, `GOLD26DECFUT.MCX`, `USDINR26NOVFUT.CDS`); BSE scrip codes (`500325.BO`) resolve through the dump's `exchange_token`; `oi` exists only for FUT / CE / PE.
+  Tick source `k` = `RT KITE`; `KiteTicker.covers` owns a symbol while the socket is up, so Yahoo's delayed ticks never overwrite it. Live test recipe: start your own backend (`OPENTERM_DB_PATH` in a scratch dir; the key and token come from the keyring), then `/api/quote`, `/api/history`, and a `/ws` `["sub", [...]]`.
 - **Yahoo `range=max` is monthly:** history needing daily bars back to 2006 uses `20Y` (`range=20y&interval=1d`). Yahoo's burst limit paces many-symbol fetches inside `_bars`.
 - **Bench Phase 15 budgets (5, server-side like BT):** RISK 20 names x 3Y <= 400 ms, PORT OPT HRP and RP 20 names <= 400 ms each, CORR REGIME 20 names <= 300 ms, ALPHA SYN 100 names x 2Y <= 8 s; total 29 with the older 24.
 - **Swarm, runs, theses, audit (Phase 16 steps 5-6):** `ai/swarm.py` (presets, roles run one after another, one retry, chair numbers checked against the analysts' notes), `ai/routes_run.py` (swarm, auto, stored runs and replay, `/api/theses`),

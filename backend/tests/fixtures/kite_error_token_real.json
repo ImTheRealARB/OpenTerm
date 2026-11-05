@@ -1,0 +1,10 @@
+{
+ "status": 403,
+ "_label": "REAL Kite Connect TokenException answer to a wrong token recorded 2026-11-05. No token, key or user id inside.",
+ "body": {
+  "status": "error",
+  "message": "Incorrect `api_key` or `access_token`.",
+  "data": null,
+  "error_type": "TokenException"
+ }
+}

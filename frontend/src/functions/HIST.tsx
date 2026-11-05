@@ -6,6 +6,7 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { api9, type BarsAdj } from "../net/api";
 import { navigate } from "../state/workspace";
 import { dayKey } from "./corrMath";
+import { fallbackText } from "./fallbackText";
 import { dirColor, navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { histArgs, histRows, type HistRow } from "./returns";
@@ -71,7 +72,7 @@ export default function HIST({ panelId, security, args }: FunctionProps) {
         <span className="acc">{symbol}</span> · HISTORY {range} {INTERVAL_LABEL[interval]}
         {env && ` · ${rows.length} BARS${env.data.currency ? ` · ${env.data.currency}` : ""} · ${(env.source ?? "").toUpperCase()}`}
         {env && !hasAdj && rows.length > 0 && <span className="dim"> · NO ADJ CLOSE FROM THIS SOURCE</span>}
-        {env && env.fallback_from.length > 0 && <span className="warn"> · FALLBACK FROM {env.fallback_from.join(",").toUpperCase()}</span>}
+        {env && env.fallback_from.length > 0 && <span className="warn"> · {fallbackText(env.fallback_from, env.fallback_notes)}</span>}
         {env && <span className={env.stale ? "warn" : "dim"}> · {env.stale ? "STALE " : "AGE "}{fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
         <span className="dim legend"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>

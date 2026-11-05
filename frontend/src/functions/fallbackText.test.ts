@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallbackText } from "./fallbackText";
+import { fallbackText, rowsFallbackText } from "./fallbackText";
 
 describe("fallbackText", () => {
   it("says the reason when the backend gave one", () => {
@@ -13,5 +13,14 @@ describe("fallbackText", () => {
   });
   it("is empty for no fallback", () => {
     expect(fallbackText([])).toBe("");
+  });
+  it("merges the rows of a quote table into one line", () => {
+    const rows = [
+      { fallbackFrom: ["kite"], fallbackNotes: { kite: "KITE LOGIN EXPIRED: run KITE LOGIN" } },
+      { fallbackFrom: ["kite"], fallbackNotes: { kite: "KITE LOGIN EXPIRED: run KITE LOGIN" } },
+      {},
+    ];
+    expect(rowsFallbackText(rows)).toBe("KITE LOGIN EXPIRED: RUN KITE LOGIN, VIA FALLBACK");
+    expect(rowsFallbackText([{}, {}])).toBe("");
   });
 });
