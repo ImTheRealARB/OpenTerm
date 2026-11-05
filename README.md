@@ -39,6 +39,7 @@ Free data. No account. Charts, quotes, filings, macro, backtests and more, one c
 | **Free, with no sign-up** | Runs on public data sources (Yahoo Finance, SEC EDGAR, FRED, Treasury, Binance and others). Every function works with zero API keys. A free key, when you add one, unlocks more. |
 | **Keyboard first** | Type `AAPL GP` for a chart, `Q` for live quotes, `FA` for financial statements. Tiled panels appear instantly. The mouse is optional. |
 | **Easy to start, deep when you want it** | **GUI mode** has a menu bar, plain-English buttons and tooltips for people who have never used a market terminal. **Terminal mode** is the same app, command line only, for speed. |
+| **A world map** | `MAP` draws ships (AISstream, free key), ports, shipping chokepoints, earthquakes and natural events as layers on one map. The coastline ships inside the app: no map tiles, no web fonts, nothing to download. |
 | **Honest about its data** | Every number shows its source and age. A failure shows `STALE`, `ERR` or `PROVIDER DOWN`, never an invented value. Test data is always labelled on screen. |
 | **Fast on purpose** | Speed is a feature with budgets that the benchmark must meet before any change is accepted. See [Built to be fast](#built-to-be-fast). |
 | **Yours** | Runs locally. Your layouts, watchlists, portfolios and API keys stay on your computer. MIT licensed. |

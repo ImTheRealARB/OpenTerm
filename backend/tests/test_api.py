@@ -29,6 +29,7 @@ def test_search_and_sources(client):
         "nasdaq_screener", "yahoo_peers",  # Phase 9
         "openfigi", "nager", "worldbank", "dbnomics", "policy_rates", "openmeteo", "nws", "polymarket", "kalshi", "nse_archive", "amfi", "mfapi", "binance_deriv", "okx", "defillama",  # Phase 19
         "frankfurter", "companies_house", "marketaux", "etherscan", "aisstream",  # free read-only sources
+        "usgs", "eonet",  # MAP layers (keyless)
         "kraken", "coinbase",  # second crypto exchanges
         "opensky",  # FLT
         "usaspending", "federalregister", "openfec", "congressgov",  # USASP, FEDREG, FEC, CONGRESS

@@ -933,6 +933,27 @@ def _route(request: httpx.Request) -> httpx.Response:
     return _route_ports(request) or _route_before_ports(request)
 
 
+# --- MAP: ports list by ids (the 25 ports of the PORTS fixture), USGS M4.5+ week feed, NASA EONET open events without wildfires (all real recordings, 2026-11-05) ---
+_route_before_map = _route
+
+
+def _route_map(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "earthquake.usgs.gov" and p.endswith("/4.5_week.geojson"):
+        return _load("usgs_quakes_4_5_week")
+    if host == "eonet.gsfc.nasa.gov" and p == "/api/v3/events":
+        return _load("eonet_open_no_wildfires")
+    if host == "services9.arcgis.com" and p.endswith("/PortWatch_ports_database/FeatureServer/0/query") and "portid IN (" in q.get("where", ""):
+        ids = set(q["where"].split("IN (")[1].split(")")[0].replace("'", "").split(","))
+        rec = json.loads((FIXTURES / "portwatch_ports_db_top25.json").read_text(encoding="utf-8"))
+        return httpx.Response(200, json={"features": [f for f in rec["body"]["features"] if f["attributes"]["portid"] in ids]})
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_map(request) or _route_before_map(request)
+
+
 # --- MF: MFapi.in Indian mutual funds (recorded 2026-11-05 from the real service; see world/mfund.py for the shapes) ---
 # /mf/search: the recorded "parag parikh" answer (15 real schemes) filtered by every word of the request, as the real service matches (all words, any
 # order, case-insensitive); other words match nothing. /mf/<code>: only scheme 122639 was recorded (its history trimmed to the newest 30 points);

@@ -238,6 +238,11 @@ from .aisstream import AisStreamProvider
 
 ADAPTERS["aisstream"] = AisStreamProvider
 
+# --- MAP: keyless geo feeds (USGS earthquakes, NASA EONET events) ---
+from .geo import EonetProvider, UsgsProvider
+
+ADAPTERS.update({"usgs": UsgsProvider, "eonet": EonetProvider})
+
 # --- Second crypto exchanges, keyless: Kraken and Coinbase Exchange (board, candles, order book) for when Binance is blocked or down ---
 from .coinbase import CoinbaseProvider
 from .kraken import KrakenProvider

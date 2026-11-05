@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { mapArgsFor, openMap } from "../map/jump";
 import { ApiError, worldApi, type Envelope, type ShipPayload, type ShipRow } from "../net/api";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
@@ -62,6 +63,10 @@ export default function SHIP({ panelId }: FunctionProps) {
           void load(true);
           return true;
         }
+        if (e.key === "m") {
+          openMap(panelId, mapArgsFor("SHIP")!); // M = the chokepoint boxes on the map
+          return true;
+        }
         return false;
       }),
     [panelId, latest, load],
@@ -73,7 +78,7 @@ export default function SHIP({ panelId }: FunctionProps) {
       <div className="line">
         <span className="acc">SHIP</span> CHOKEPOINT TRAFFIC · {rows.length} STRAITS AND CANALS
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · E CSV · F5 REFRESH</span>
+        <span className="dim"> · M MAP · E CSV · F5 REFRESH</span>
       </div>
       {d && <div className="dim">NEWEST DAY ON RECORD {d.newest}. {d.note}</div>}
       <ErrorLine error={error} hasData={!!d} usage="SHIP" />

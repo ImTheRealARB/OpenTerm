@@ -28,6 +28,7 @@ To add a source: write the adapter ([ADDING_A_PROVIDER.md](ADDING_A_PROVIDER.md)
 | Source | Key | Kind | Position |
 |---|---|---|---|
 | **Kite Connect** | paid app, daily login | NSE, BSE, NFO, BFO, MCX, CDS: real-time quotes; minute bars back to 2015 (1 minute verified 10 years), open interest | `quotes` #1, `history` #1 |
+| **USGS earthquakes, NASA EONET** (new, `MAP`) | none | M4.5+ quakes of the past 7 days; open natural events (storms, volcanoes, floods, sea ice) without wildfires | `MAP` layers `QUAKES`, `EVENTS` |
 | **Frankfurter** (new) | none | ECB reference rates: one fix per business day for FX pairs (EURUSD=X, USDINR=X, crosses), back to 1999; no high/low | `history` below Yahoo, `quotes` below Yahoo (Yahoo-down fallback for FX) |
 | **Companies House, Marketaux, Etherscan** (new) | free keys | `UKCO` UK register; `N` headlines with sentiment; `ADDR` EVM address and gas | specialists (Marketaux joins the news order) |
 | Yahoo, Nasdaq, SEC EDGAR, FRED (keyless CSV), ECB, BoE, BoC, MoF, Treasury, CFTC, Deribit, OKX, Binance, Kraken, Coinbase, CoinGecko, DefiLlama, Polymarket, Kalshi, World Bank, DBnomics, Open-Meteo, NWS, NSE archive, AMFI, GDELT, RSS | none | global shares, rates, futures, crypto, macro, weather, prediction markets, funds, news | fallbacks and specialists |
@@ -123,6 +124,12 @@ Order: `history` `... binance_klines, yahoo, coinbase, kraken ...` (Coinbase abo
 
 Built after that (branch `claude/ports-and-official-stats`): `PORTS` (PortWatch ports) and `DBSRCH` (DBnomics series search). OECD, Eurostat, BIS and IMF series are
 reached through DBnomics (`DBSRCH`, then `ECST DBN:...`), so no separate adapters were written.
+
+Built for `MAP` (2026-11-05, branch `claude/map-function-5ea8a7`): `USGS` (`providers/geo.py`, the `4.5_week.geojson` summary feed, refreshes every minute) and `NASA EONET`
+(`providers/geo.py`, `api/v3/events?status=open&category=<all but wildfires>`; 69 events in 175 KB in 0.9 s, whereas the unfiltered open list is 7,235 events / 5 MB / 7.5 s, 99% of them wildfires, so wildfires
+are left out and the panel says so). Both measured live on 2026-11-05 and recorded (`usgs_quakes_4_5_week`, `eonet_open_no_wildfires`). `PortWatchProvider.ports_geo` adds the busiest 100 ports with coordinates
+(3 small calls: newest date, server-side sum of calls, port-list rows by id; recorded: `portwatch_ports_db_top25`). **OpenSky** (aircraft) was tried: `opensky-network.org` refused the connection from this machine
+(`ECONNREFUSED`), so no layer was built; try again from another network before writing one. Recorder: `node scripts/record_map_fixtures.mjs`.
 
 Left, in order:
 1. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, MFapi**, CoinMarketCap, USDA NASS, FEC. (OpenSky is built as FLT but still needs a live check from a network that can reach it.)

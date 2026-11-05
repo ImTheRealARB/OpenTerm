@@ -84,6 +84,15 @@ The roadmap expected Apache-2.0 for these parts. Qlib's own `LICENSE` (checked 2
 **MIT, "Copyright (c) Microsoft Corporation."** When the Alpha158 parts are ported (Phase 12), check the header of the
 exact Vibe-Trading file they come from, copy whatever notice it carries here, and fill in the table row.
 
+## Map outline data (MAP panel)
+
+| Data | Source | Licence | Notice |
+|---|---|---|---|
+| Coastlines and country borders drawn by `MAP` (`frontend/src/map/worldData.json`) | [Natural Earth](https://www.naturalearthdata.com/) 1:50m "Admin 0 - Countries", read through the npm package `world-atlas` 2.0.2 (<https://github.com/topojson/world-atlas>, a pre-built TopoJSON of the Natural Earth files) | Natural Earth: public domain ("no permission needed", their terms of use). `world-atlas`: ISC. | Natural Earth asks for no credit; credit is given here anyway. The file is OUR OWN reduced copy, made by `scripts/build_world_map.mjs`: Antarctica dropped, each line simplified to about 2 km (Douglas-Peucker) and stored as delta-coded integers. Rebuild with `node scripts/build_world_map.mjs`. |
+
+Live data layers on the map (USGS earthquakes, NASA EONET, IMF PortWatch, AISstream) are fetched at run time, never bundled; see
+`docs/DATA_SOURCES.md` for their terms. No map tiles are used or downloaded.
+
 ## Runtime libraries with notice requirements
 
 | Library | Version | Licence | Notice |

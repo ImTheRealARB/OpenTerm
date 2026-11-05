@@ -1337,6 +1337,25 @@ export interface AisPayload {
   remembered: number; memory_s: number;
 }
 
+/** MAP layers (`/api/world/geo/...`): positions as lat/lon degrees and times as epoch seconds. */
+export interface GeoQuake {
+  id: string; lat: number; lon: number; depth_km: number | null; mag: number | null; mag_type: string | null;
+  place: string; time: number; url: string | null; tsunami: boolean; alert: string | null; status: string | null;
+}
+export interface GeoQuakes { rows: GeoQuake[]; skipped: number; title: string; generated: number | null; note: string }
+export interface GeoEvent {
+  id: string; title: string; category: string; category_title: string; lat: number; lon: number; time: number;
+  mag: number | null; mag_unit: string | null; source: string | null; url: string | null; track: [number, number][];
+}
+export interface GeoEvents { rows: GeoEvent[]; skipped: number; title: string; note: string }
+export interface GeoPort {
+  id: string; name: string; country: string | null; locode: string | null; lat: number; lon: number; rank: number;
+  calls_per_day: number; newest: string;
+}
+export interface GeoPorts { rows: GeoPort[]; skipped: number; newest: string; note: string }
+export interface GeoChokepoint { id: string; name: string; box: [number, number, number, number]; lat: number; lon: number }
+export interface GeoChokepoints { rows: GeoChokepoint[]; note: string }
+
 /**
  * MF (`/api/world/mf`): Indian mutual funds from MFapi.in (community service, data from AMFI, not an official AMFI API). `mode` SEARCH lists scheme names;
  * FUND is one scheme: its latest NAV, the returns table and the whole NAV series (`t` epoch seconds, `v` NAV, oldest first).
@@ -1419,6 +1438,11 @@ export const worldApi = {
   /** One listen takes about 8 s on the server (cached 20 s there); the client cache is short so F5 really listens again. */
   flt: (q: string, fresh = false) => request<Envelope<FltPayload>>(`/api/world/flt?${qs({ q })}`, fresh ? 0 : 30_000),
   ais: (q: string, fresh = false) => request<Envelope<AisPayload>>(`/api/world/ais?${qs({ q })}`, fresh ? 0 : 15_000),
+  /** MAP layers. Each has its own server cache (USGS 2 min, EONET 10 min, PortWatch 6 h), so the client cache stays short. */
+  geoQuakes: (fresh = false) => request<Envelope<GeoQuakes>>("/api/world/geo/quakes", fresh ? 0 : 30_000),
+  geoEvents: (fresh = false) => request<Envelope<GeoEvents>>("/api/world/geo/events", fresh ? 0 : 30_000),
+  geoPorts: (fresh = false) => request<Envelope<GeoPorts>>("/api/world/geo/ports", fresh ? 0 : 60_000),
+  geoChokepoints: (fresh = false) => request<Envelope<GeoChokepoints>>("/api/world/geo/chokepoints", fresh ? 0 : 600_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
   events: (symbol: string, fresh = false) =>

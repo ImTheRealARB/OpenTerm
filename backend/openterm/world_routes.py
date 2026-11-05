@@ -333,6 +333,18 @@ async def ais_ships(request: Request, q: str = Query(..., max_length=80)):
         return error(e)
 
 
+# --- MAP layers: each is one small route; the vessels layer reuses /ais above ------------------------------------------------
+@router.get("/geo/quakes")
+async def geo_quakes(request: Request):
+    """MAP earthquakes layer: USGS M4.5+ quakes of the past 7 days (keyless)."""
+    from .world.geosvc import quakes
+
+    try:
+        return await quakes(svc(request))
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/usasp")
 async def us_spending(request: Request, q: str = Query("", max_length=120)):
     """USASP: US federal spending (USASpending.gov, keyless). Empty / AGENCY = top awarding agencies; `AGENCY:<name>` = that agency's top contract recipients; words = top recipients and awards."""
@@ -340,6 +352,17 @@ async def us_spending(request: Request, q: str = Query("", max_length=120)):
 
     try:
         return await usasp(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/geo/events")
+async def geo_events(request: Request):
+    """MAP natural-events layer: NASA EONET open events without wildfires (keyless)."""
+    from .world.geosvc import events
+
+    try:
+        return await events(svc(request))
     except DataError as e:
         return error(e)
 
@@ -355,6 +378,17 @@ async def federal_register(request: Request, q: str = Query("", max_length=120))
         return error(e)
 
 
+@router.get("/geo/ports")
+async def geo_ports(request: Request):
+    """MAP ports layer: the busiest 100 ports with coordinates and average daily port calls (IMF PortWatch, keyless)."""
+    from .world.geosvc import ports_map
+
+    try:
+        return await ports_map(svc(request))
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/fec")
 async def campaign_finance(request: Request, q: str = Query(..., max_length=120)):
     """FEC: OpenFEC. A name searches candidates and committees; an FEC id (H8CA12345 / C00123456) gives its totals by cycle. 424 KEY REQUIRED without FEC_API_KEY."""
@@ -362,6 +396,17 @@ async def campaign_finance(request: Request, q: str = Query(..., max_length=120)
 
     try:
         return await fec_view(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/geo/chokepoints")
+async def geo_chokepoints(request: Request):
+    """MAP chokepoints layer: the AIS preset boxes as rectangles (static, no network)."""
+    from .world.geosvc import chokepoints
+
+    try:
+        return await chokepoints(svc(request))
     except DataError as e:
         return error(e)
 

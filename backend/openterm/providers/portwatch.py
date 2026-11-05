@@ -100,6 +100,20 @@ class PortWatchProvider(Provider):
             ids = ports.top_ids(top)
         return {"daily": await self._daily(ids, today), "meta": meta}
 
+    async def ports_geo(self, today: date) -> dict[str, Any]:
+        """MAP's ports layer: the busiest `ports.GEO_N` ports of the newest 7 days with their coordinates. Three small calls and no daily
+        rows: the newest day on record, a server-side sum of port calls per port, then the port list rows for those ids (lat / lon)."""
+        newest = ports.newest_day(await self._page({"f": "json", "where": "1=1", "outStatistics": ports.NEWEST_STATS},
+                                                    PORTS_DAILY_URL, PORTS_TIMEOUT))
+        since = ports.top_window_start(newest)
+        top = await self._page({"f": "json", "where": f"date > DATE '{since.isoformat()}'", "groupByFieldsForStatistics": "portid",
+                                "outStatistics": ports.TOP_STATS, "orderByFields": "calls7 DESC", "resultRecordCount": ports.GEO_N},
+                               PORTS_DAILY_URL, PORTS_TIMEOUT)
+        ids = ports.top_ids(top, ports.GEO_N)
+        meta = await self._page({"f": "json", "returnGeometry": "false", "where": ports.ids_where(ids), "outFields": ports.PORT_FIELDS,
+                                 "resultRecordCount": ports.GEO_N}, PORTS_LIST_URL, PORTS_TIMEOUT)
+        return {"newest": newest.isoformat(), "top": top, "meta": meta}
+
     async def probe(self) -> None:
         await self._page({"f": "json", "returnGeometry": "false", "where": "portid='chokepoint1'", "outFields": "date",
                           "resultRecordCount": 1})

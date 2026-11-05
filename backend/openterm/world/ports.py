@@ -31,6 +31,7 @@ STALE_DAYS = 21  # PortWatch lags about 6 to 12 days; past 21 something is wrong
 HISTORY_DAYS = 40  # how far back the daily rows are asked for (covers 7 + 21 days plus the publishing lag)
 TOP_N = 25  # bare PORTS: the busiest 25 ports (25 ports x 40 days stays under the 1000-row page)
 MATCH_N = 20  # PORTS <words>: at most the 20 biggest matching ports (20 x 40 days = 800 rows)
+GEO_N = 100  # MAP ports layer: the busiest 100 ports (no daily rows are fetched, so the 1000-row page limit does not bite)
 MAX_WORDS = 4
 MAX_WORD_LEN = 30
 
@@ -94,12 +95,20 @@ def top_window_start(newest: date) -> date:
     return newest - timedelta(days=WINDOW)
 
 
-def top_ids(attrs: list[dict[str, Any]]) -> list[str]:
+def top_ids(attrs: list[dict[str, Any]], limit: int = TOP_N) -> list[str]:
     """Port ids of the busiest ports, in the order the server sent them (already sorted by calls, biggest first)."""
     ids = [a["portid"] for a in attrs if isinstance(a.get("portid"), str)]
     if not ids:
         raise ValueError("PORTWATCH ANSWER HAD NO PORTS")
-    return ids[:TOP_N]
+    return ids[:limit]
+
+
+def ids_where(ids: list[str]) -> str:
+    """Port-list rows for these ids (the ids come from the service itself but are still checked before going into SQL)."""
+    bad = [i for i in ids if not _ID_RE.match(i)]
+    if bad or not ids:
+        raise ValueError("UNEXPECTED PORT ID FROM PORTWATCH")
+    return f"portid IN ({','.join(repr(i) for i in ids)})"
 
 
 def match_ids(meta: list[dict[str, Any]]) -> list[str]:

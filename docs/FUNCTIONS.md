@@ -267,6 +267,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
 | `FLT` | Live aircraft over a city or box from the OpenSky Network (free; optional account for more credits; positions as reported by transponders) |  | `<LONDON\|NYC\|DUBAI\|SINGAPORE\|MUMBAI\|BENGALURU\|FRANKFURT\|BOX S W N E\|CALLSIGN PREFIX>` | `FLT` |
 | `AIS` | Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships) |  | `<SUEZ\|PANAMA\|HORMUZ\|MALACCA\|BABEL\|BOSPHORUS\|GIBRALTAR\|DOVER\|BOX S W N E>` | `AIS` |
+| `MAP` | World map: ships, ports, chokepoints, earthquakes, natural events and aircraft as layers |  | `[VESSELS\|PORTS\|CHOKEPOINTS\|QUAKES\|EVENTS\|FLIGHTS] [AREA]` | `MAP` |
 | `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
 | `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
 | `FEDREG` | US Federal Register: rules, proposed rules, notices and presidential documents, newest first (no key) |  | `[RULE\|PROPOSED\|NOTICE\|PRESDOC] [<WORDS>]` | `FEDREG` |

@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { mapArgsFor, openMap } from "../map/jump";
 import { worldApi, type AisRow } from "../net/api";
 import { replaceView } from "../state/workspace";
 import { fmtAge, fmtDegrees, fmtEta, fmtFrom, fmtKnots, fmtLatLon, aisQuery, listeningText, memoryNote, quietText, stepArea } from "./aisArgs";
@@ -86,6 +87,13 @@ export default function AIS({ panelId, args }: FunctionProps) {
           return true;
         }
         const k = e.key.toLowerCase();
+        if (k === "m") {
+          // M = show this area on the map (a custom BOX has no map area, so M does nothing there)
+          const words = mapArgsFor("AIS", latest.current.query);
+          if (!words) return false;
+          openMap(panelId, words);
+          return true;
+        }
         if (k === "n" || k === "p") {
           // A new area is a new view argument, so the layout saves it and the load effect refetches.
           const next = stepArea(latest.current.query, k === "n" ? 1 : -1);
@@ -108,7 +116,7 @@ export default function AIS({ panelId, args }: FunctionProps) {
           </span>
         )}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · N/P AREA · E CSV · F5 LISTEN AGAIN</span>
+        <span className="dim"> · N/P AREA · M MAP · E CSV · F5 LISTEN AGAIN</span>
       </div>
       {d?.fixture && <div className="warn">REPLAY OF A REAL AISSTREAM RECORDING FROM 2026-11-05 (OLD POSITIONS, ONLY SHIPS INSIDE THIS BOX): NOT LIVE TRAFFIC</div>}
       {d && <div className="dim">{d.note}</div>}
