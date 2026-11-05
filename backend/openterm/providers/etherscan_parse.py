@@ -11,8 +11,9 @@ Shapes come from the official endpoint pages (docs.etherscan.io, read 2026-11-05
 Error texts the docs list ("Common Error Messages"): "Invalid API Key", "Max rate limit reached, please use API Key for higher rate limit",
 "Too many invalid api key attempts, please try again later", "Free API access is not supported for this chain. Please upgrade your api plan",
 "Community Free API limit reached. Resets <time>", "Error! Invalid address format", "Missing or unsupported chainid parameter".
-One text is NOT in the docs and comes from memory of the older API: txlist answers status "0" with message "No transactions found" for an
-address with no transactions. It is treated as an empty list; if Etherscan words it differently, the user sees that text as an error.
+One text is not in the docs: txlist answers status "0" with message "No transactions found" for an address with no transactions
+(confirmed live 2026-11-05). It is treated as an empty list. The same day a free key was seen getting "Free API access is not supported
+for this chain" for Optimism, Base and BNB Chain (but not Ethereum, Arbitrum, Polygon): see `result_of`.
 """
 
 from __future__ import annotations
@@ -44,6 +45,11 @@ def result_of(body: Any) -> Any:
         raise ProviderError("rate_limited", detail[:160] or "Etherscan rate limit")
     if "invalid api key" in low or "missing/invalid api key" in low:
         raise ProviderError("key_required", "Etherscan refused the key (Invalid API Key)")
+    if "not supported for this chain" in low:
+        # Seen live (2026-11-05): a free key answers this for OP, BASE and BSC (it works for ETH, ARB, POLY). It is a plan limit,
+        # not an outage, so it must be `unsupported`: the router gives no circuit-breaker strike for that kind, and a few
+        # BASE lookups can no longer take ETH down with them.
+        raise ProviderError("unsupported", "THIS CHAIN IS NOT INCLUDED IN THE FREE ETHERSCAN PLAN (A PAID ETHERSCAN KEY ADDS IT)")
     raise ProviderError("unavailable", ("Etherscan: " + (detail or message))[:200])
 
 

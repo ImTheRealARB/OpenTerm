@@ -6,10 +6,11 @@ import { env, panel, run, setup } from "./p19util";
 const seen = Math.floor(Date.now() / 1000) - 20;
 const ship = (mmsi: number, name: string, over = {}) => ({
   mmsi, name, imo: null, type: "CARGO", type_code: 70, sog: 8.5, cog: 355, heading: 356, nav: 0, nav_name: "UNDERWAY (ENGINE)",
-  dest: null, eta: null, length: null, draught: null, lat: 30.2, lon: 32.55, seen, static_age_s: null, ...over,
+  dest: null, eta: null, length: null, draught: null, lat: 30.2, lon: 32.55, seen, static_age_s: null, remembered: false, age_s: 20, ...over,
 });
 const AIS = (rows: unknown[], over = {}) => ({
   area: "SUEZ", box: [29.8, 32.2, 31.4, 32.7], rows, truncated: 0, received: 40, capped: false, listened_s: 8, fixture: false,
+  remembered: (rows as { remembered?: boolean }[]).filter((r) => r.remembered).length, memory_s: 300,
   note: "AISSTREAM: POSITIONS ARE AS REPORTED BY SHIPS AND ARE NOT VERIFIED. THEY CAN BE DELAYED, SWITCHED OFF OR SPOOFED, AND COVERAGE IS PARTIAL.", ...over,
 });
 
@@ -36,13 +37,33 @@ test("AIS: ships listed, detail line follows the cursor, the as-reported warning
   expect(errors).toEqual([]);
 });
 
-test("AIS: doc-shaped test data is labelled on screen", async ({ page }) => {
+test("AIS: ships remembered from an earlier listen are counted, labelled and explained", async ({ page }) => {
   const { errors } = await setup(page);
   await page.route("**/api/world/ais?**", (r) =>
-    r.fulfill({ json: env(AIS([ship(900000001, "DOC SHAPE ONE")], { fixture: true }), { source: "aisstream (DOC-SHAPED fixture, NOT A RECORDING)" }) }),
+    r.fulfill({
+      json: env(AIS([
+        ship(900000001, "HEARD NOW"),
+        ship(900000002, "HEARD EARLIER", { remembered: true, seen: seen - 180, age_s: 200 }),
+      ]), { source: "aisstream" }),
+    }),
+  );
+  await run(page, "AIS SUEZ");
+  const p = panel(page);
+  await expect(p).toContainText("2 SHIPS IN 8 S (1 FROM MEMORY)");
+  await expect(p.getByTestId("ais-memory")).toContainText("POSITIONS UP TO 5 MIN OLD FROM EARLIER LISTENS");
+  await page.keyboard.press("j");
+  await expect(p.locator(".sr")).toContainText("HEARD EARLIER");
+  await expect(p.getByTestId("ais-detail")).toContainText("REMEMBERED FROM AN EARLIER LISTEN");
+  expect(errors).toEqual([]);
+});
+
+test("AIS: a replayed recording is labelled on screen", async ({ page }) => {
+  const { errors } = await setup(page);
+  await page.route("**/api/world/ais?**", (r) =>
+    r.fulfill({ json: env(AIS([ship(900000001, "MOCK SHIP ONE")], { fixture: true }), { source: "aisstream (REPLAY of a real recording from 2026-11-05, NOT LIVE)" }) }),
   );
   await run(page, "AIS");
-  await expect(panel(page)).toContainText("DOC-SHAPED TEST DATA: INVENTED SHIPS");
+  await expect(panel(page)).toContainText("REPLAY OF A REAL AISSTREAM RECORDING FROM 2026-11-05");
   expect(errors).toEqual([]);
 });
 
@@ -54,8 +75,7 @@ test("AIS: without a key the panel says KEY REQUIRED and Enter opens APIKEYS; no
   await run(page, "AIS HORMUZ");
   const p = panel(page);
   await expect(p).toContainText("KEY REQUIRED: set AISSTREAM_API_KEY in APIKEYS");
-  // the empty grid still mounts its (empty) live region, so "nothing is faked" is asserted on ship content: no detail line, no ship rows
-  await expect(p.getByTestId("ais-detail")).toHaveCount(0);
+  // The grid is always mounted, so its screen-reader mirror (.sr) always exists; "nothing is faked" means it names no ship.
   await expect(p.locator(".sr")).toHaveText("");
   expect(errors).toEqual([]);
 });

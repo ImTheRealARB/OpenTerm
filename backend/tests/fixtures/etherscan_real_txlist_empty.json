@@ -1,0 +1,9 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://api.etherscan.io/v2/api (chainid=1 account/txlist for an address with no transactions): HTTP 200, status 0, message 'No transactions found', result []. The apikey parameter is not stored. Unedited.",
+ "status": 200,
+ "body": {
+  "status": "0",
+  "message": "No transactions found",
+  "result": []
+ }
+}

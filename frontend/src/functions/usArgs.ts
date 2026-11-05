@@ -67,6 +67,25 @@ export function fmtSigned(v: number | null, digits = 2): string {
   return v == null ? "" : (v > 0 ? "+" : "") + fmtNum(v, digits);
 }
 
+/** The kind of a USMAC series (mirrors `UsSeries["kind"]` in net/api.ts; redeclared here because this file must stay free of
+ *  `net/api`, which vitest cannot import). */
+export type SeriesKind = "level" | "rate" | "unknown";
+
+/**
+ * How a change between two periods is written, per kind of series:
+ *   level   -> "+3.00" and "+1.00%"      (an amount or index: a percent change makes sense)
+ *   rate    -> "+1.20 pp" and ""         (the value is itself a percentage: a change is a difference in percentage POINTS;
+ *                                         "3.4 vs 2.2 = +54.55%" would mislead)
+ *   unknown -> "+1.20" and ""            (we do not know what the numbers are, so no percent and no "pp" claim)
+ * `pct` is the backend's `chg_pct`, or computed from the two points on a history row; it is ignored unless the kind is "level".
+ */
+export function fmtChange(kind: SeriesKind, chg: number | null, pct: number | null): { chg: string; pct: string } {
+  return {
+    chg: chg == null ? "" : fmtSigned(chg) + (kind === "rate" ? " pp" : ""),
+    pct: kind === "level" && pct != null ? fmtSigned(pct) + "%" : "",
+  };
+}
+
 /** US dollars as billions (or millions below one billion) so the columns stay narrow: 1.2e11 -> "120.00B". */
 export function fmtUsd(v: number | null): string {
   if (v == null) return "";

@@ -1,0 +1,9 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET /company/99999999 (no such company) (basic auth with the key as user name; not stored). Unedited.",
+ "status": 404,
+ "body": {
+  "timestamp": "2026-11-05T06:18:59.242267176",
+  "message": "404 NOT_FOUND \"Resource not found for company profile 99999999\"",
+  "request_id": "f8oFcCt7mhXUnsYLlQhILX_SCaG9"
+ }
+}

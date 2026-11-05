@@ -3,6 +3,26 @@
 /** The chokepoint presets the backend knows (`world/ais.py` PRESETS); a vitest keeps the two lists equal. */
 export const AIS_AREAS = ["SUEZ", "PANAMA", "HORMUZ", "MALACCA", "BABEL", "BOSPHORUS", "GIBRALTAR", "DOVER"] as const;
 
+/** How long one listen takes, in seconds: equals the backend's `world/ais.py` LISTEN_S (a pytest reads this file to keep them equal). */
+export const AIS_LISTEN_S = 15;
+/** How long the server remembers a ship's last position, in seconds: equals `providers/aisstream.py` POSITION_TTL_S (same pytest). */
+export const AIS_MEMORY_S = 300;
+
+/** The loading line, so the promised wait is the real one. */
+export function listeningText(): string {
+  return `LISTENING FOR ABOUT ${AIS_LISTEN_S} SECONDS…`;
+}
+
+/** The honest label for rows that did not come from this listen. Minutes come from the server's own limit when it sent one. */
+export function memoryNote(memorySeconds: number = AIS_MEMORY_S): string {
+  return `POSITIONS UP TO ${Math.round(memorySeconds / 60)} MIN OLD FROM EARLIER LISTENS ARE SHOWN DIMMED AND MARKED MEMORY (SEE THE AGE COLUMN); THE REST WERE HEARD IN THIS LISTEN`;
+}
+
+/** FROM column: LIVE = heard during this listen, MEMORY = remembered from an earlier one. */
+export function fmtFrom(remembered: boolean): string {
+  return remembered ? "MEMORY" : "LIVE";
+}
+
 /** `AIS SUEZ`, `AIS BOX 25.6 -80.2 25.8 -79.9`; with no words the first preset is shown. */
 export function aisQuery(args: string[]): string {
   const q = args.filter(Boolean).join(" ").trim().toUpperCase();
@@ -48,5 +68,5 @@ export function fmtAge(seconds: number | null | undefined): string {
 
 /** What to say when a listen found no ships. It is NOT "there are no ships here": a few seconds on a beta feed proves little. */
 export function quietText(listenedS: number, received: number): string {
-  return `NO POSITION REPORTS IN ${listenedS.toFixed(0)} S (${received} MESSAGES): A QUIET AREA OR A SLOW FEED. THIS DOES NOT SHOW THE AREA IS EMPTY. F5 LISTENS AGAIN`;
+  return `NO POSITION REPORTS IN ${listenedS.toFixed(0)} S (${received} MESSAGES): A QUIET AREA OR A SLOW FEED (THE FREE FEED HAS NO RECEIVERS IN SOME STRAITS, SUCH AS SUEZ OR HORMUZ). THIS DOES NOT SHOW THE AREA IS EMPTY. F5 LISTENS AGAIN`;
 }

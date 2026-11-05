@@ -15,8 +15,12 @@ LLAMA_TTL_S = 600.0
 
 
 def _src(venue: str) -> str:
-    """Envelope source = the provider name (`binance_deriv` / `okx`), so panels label it like every other answer."""
-    return "binance_deriv" if venue.lower().startswith("binance") else "okx"
+    """Envelope source = the provider name (`binance_deriv` / `okx` / `kraken` / `coinbase`), so panels label it like every other answer."""
+    v = venue.lower()
+    for prefix, name in (("binance", "binance_deriv"), ("kraken", "kraken"), ("coinbase", "coinbase")):
+        if v.startswith(prefix):
+            return name
+    return "okx"
 
 
 def _bad(e: ValueError) -> DataError:

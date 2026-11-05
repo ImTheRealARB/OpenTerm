@@ -1,0 +1,1474 @@
+{
+"_note": "REAL RECORDING from wss://stream.aisstream.io/v0/stream on 2026-11-05 ~06:13-06:20 UTC (free key, no key stored in this file). One message per (type, ship) kept from ~3 minutes of listening, only ships inside the MALACCA, GIBRALTAR or DOVER preset boxes. Not complete traffic: the free feed is a sparse sample. The fixture provider replays the messages that fall inside the box asked for.",
+"messages": [
+{
+"Message": {
+"CompressionEnabled": true
+},
+"MessageType": "SubscriptionConfirmation"
+},
+{
+"MetaData": {
+"MMSI": 563009210,
+"MMSI_String": 563009210,
+"ShipName": "NOBLE ORION TG46    ",
+"latitude": 1.26082,
+"longitude": 103.82537,
+"time_utc": "2026-11-05 06:13:54.598188257 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 563009210,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -128,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": 103.82537333333333,
+"Latitude": 1.260815,
+"Cog": 322.4,
+"TrueHeading": 511,
+"Timestamp": 55,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 83151
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563341900,
+"MMSI_String": 563341900,
+"ShipName": "MAJESTIC ENCORE     ",
+"latitude": 1.24349,
+"longitude": 103.85324,
+"time_utc": "2026-11-05 06:13:59.784426395 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 563341900,
+"Valid": true,
+"NavigationalStatus": 8,
+"RateOfTurn": 127,
+"Sog": 15.2,
+"PositionAccuracy": false,
+"Longitude": 103.85324166666666,
+"Latitude": 1.2434933333333333,
+"Cog": 120.6,
+"TrueHeading": 125,
+"Timestamp": 57,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 83122
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563172300,
+"MMSI_String": 563172300,
+"ShipName": "KOTA LEKAS          ",
+"latitude": 1.26225,
+"longitude": 103.83828,
+"time_utc": "2026-11-05 06:14:01.073187965 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 563172300,
+"Valid": true,
+"NavigationalStatus": 5,
+"RateOfTurn": 0,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": 103.83828333333332,
+"Latitude": 1.26225,
+"Cog": 247.4,
+"TrueHeading": 312,
+"Timestamp": 1,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 84986
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 244850097,
+"MMSI_String": 244850097,
+"ShipName": "BIGROLL BEAUFORT",
+"latitude": 1.24673,
+"longitude": 103.87335,
+"time_utc": "2026-11-05 06:16:10.877416409 +0000 UTC"
+},
+"MessageType": "ShipStaticData",
+"Message": {
+"ShipStaticData": {
+"AisVersion": 2,
+"CallSign": "PCZS",
+"Destination": "SGSIN",
+"Dimension": {
+"A": 25,
+"B": 148,
+"C": 21,
+"D": 21
+},
+"Dte": false,
+"Eta": {
+"Day": 16,
+"Hour": 4,
+"Minute": 0,
+"Month": 10
+},
+"FixType": 1,
+"ImoNumber": 9766841,
+"MaximumStaticDraught": 5.4,
+"MessageID": 5,
+"Name": "BIGROLL BEAUFORT",
+"RepeatIndicator": 0,
+"Spare": false,
+"Type": 70,
+"UserID": 244850097,
+"Valid": true
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563869000,
+"MMSI_String": 563869000,
+"ShipName": "SINDO PRINCESS      ",
+"latitude": 1.26202,
+"longitude": 103.81007,
+"time_utc": "2026-11-05 06:16:13.501299737 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 563869000,
+"Valid": true,
+"NavigationalStatus": 8,
+"RateOfTurn": -128,
+"Sog": 4.9,
+"PositionAccuracy": false,
+"Longitude": 103.81006666666667,
+"Latitude": 1.26202,
+"Cog": 273.1,
+"TrueHeading": 511,
+"Timestamp": 60,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 33270
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 371324000,
+"MMSI_String": 371324000,
+"ShipName": "SAO QUIXOTE         ",
+"latitude": 1.2152,
+"longitude": 103.88579,
+"time_utc": "2026-11-05 06:16:17.269113581 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 371324000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -6,
+"Sog": 6.9,
+"PositionAccuracy": true,
+"Longitude": 103.88578833333332,
+"Latitude": 1.2151966666666667,
+"Cog": 241.5,
+"TrueHeading": 245,
+"Timestamp": 8,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 2287
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 5631101,
+"MMSI_String": 5631101,
+"ShipName": "PSAB ",
+"latitude": 1.27354,
+"longitude": 103.80138,
+"time_utc": "2026-11-05 06:17:25.095185811 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 5631101,
+"Valid": true,
+"NavigationalStatus": 15,
+"RateOfTurn": -128,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": 103.80137500000001,
+"Latitude": 1.2735416666666666,
+"Cog": 0,
+"TrueHeading": 511,
+"Timestamp": 24,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 19524
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563034500,
+"MMSI_String": 563034500,
+"ShipName": "QUEEN STAR 8        ",
+"latitude": 1.26093,
+"longitude": 103.81768,
+"time_utc": "2026-11-05 06:17:26.800928194 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 563034500,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -128,
+"Sog": 5.7,
+"PositionAccuracy": true,
+"Longitude": 103.81768333333333,
+"Latitude": 1.260935,
+"Cog": 109.9,
+"TrueHeading": 102,
+"Timestamp": 25,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 4000
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 339301880,
+"MMSI_String": 339301880,
+"ShipName": "UNION GLORY         ",
+"latitude": 1.26571,
+"longitude": 103.87963,
+"time_utc": "2026-11-05 06:17:26.831712816 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 339301880,
+"Valid": true,
+"NavigationalStatus": 1,
+"RateOfTurn": 0,
+"Sog": 0.1,
+"PositionAccuracy": false,
+"Longitude": 103.87962833333333,
+"Latitude": 1.265715,
+"Cog": 317.8,
+"TrueHeading": 44,
+"Timestamp": 26,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 0
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 538007240,
+"MMSI_String": 538007240,
+"ShipName": "CHIOS SUNRISE       ",
+"latitude": 1.25009,
+"longitude": 103.87703,
+"time_utc": "2026-11-05 06:17:26.937413333 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 538007240,
+"Valid": true,
+"NavigationalStatus": 1,
+"RateOfTurn": -128,
+"Sog": 0.1,
+"PositionAccuracy": false,
+"Longitude": 103.87703333333334,
+"Latitude": 1.2500883333333335,
+"Cog": 195.3,
+"TrueHeading": 511,
+"Timestamp": 27,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 86042
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563073090,
+"MMSI_String": 563073090,
+"ShipName": "",
+"latitude": 1.27305,
+"longitude": 103.89674,
+"time_utc": "2026-11-05 06:17:29.952619549 +0000 UTC"
+},
+"MessageType": "StandardClassBPositionReport",
+"Message": {
+"StandardClassBPositionReport": {
+"AssignedMode": false,
+"ClassBBand": false,
+"ClassBDisplay": false,
+"ClassBDsc": false,
+"ClassBMsg22": false,
+"ClassBUnit": false,
+"Cog": 110.3,
+"CommunicationState": 196614,
+"CommunicationStateIsItdma": true,
+"Latitude": 1.2730516666666667,
+"Longitude": 103.89673833333333,
+"MessageID": 18,
+"PositionAccuracy": false,
+"Raim": false,
+"RepeatIndicator": 0,
+"Sog": 8.4,
+"Spare1": 0,
+"Spare2": 0,
+"Timestamp": 29,
+"TrueHeading": 110,
+"UserID": 563073090,
+"Valid": true
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 538013104,
+"MMSI_String": 538013104,
+"ShipName": "",
+"latitude": 1.17127,
+"longitude": 103.79278,
+"time_utc": "2026-11-05 06:17:31.410390777 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 538013104,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 6,
+"Sog": 8.8,
+"PositionAccuracy": true,
+"Longitude": 103.79277833333335,
+"Latitude": 1.1712716666666667,
+"Cog": 240.9,
+"TrueHeading": 241,
+"Timestamp": 25,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 99476
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563077500,
+"MMSI_String": 563077500,
+"ShipName": "AOM SVEVA           ",
+"latitude": 1.25944,
+"longitude": 103.95366,
+"time_utc": "2026-11-05 06:17:56.000756296 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 563077500,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 6.3,
+"PositionAccuracy": false,
+"Longitude": 103.95366166666666,
+"Latitude": 1.2594383333333332,
+"Cog": 23.8,
+"TrueHeading": 25,
+"Timestamp": 54,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 12113
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563132700,
+"MMSI_String": 563132700,
+"ShipName": "CSM TAURUS          ",
+"latitude": 1.24696,
+"longitude": 103.88847,
+"time_utc": "2026-11-05 06:17:57.303258227 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 563132700,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 8.8,
+"PositionAccuracy": false,
+"Longitude": 103.88847333333334,
+"Latitude": 1.246955,
+"Cog": 213.4,
+"TrueHeading": 215,
+"Timestamp": 57,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 22675
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 668116289,
+"MMSI_String": 668116289,
+"ShipName": "SOON LI 28          ",
+"latitude": 1.28142,
+"longitude": 103.89211,
+"time_utc": "2026-11-05 06:17:57.729891111 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 668116289,
+"Valid": true,
+"NavigationalStatus": 8,
+"RateOfTurn": -128,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": 103.89211,
+"Latitude": 1.2814183333333333,
+"Cog": 360,
+"TrueHeading": 511,
+"Timestamp": 47,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 150596
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 305240000,
+"MMSI_String": 305240000,
+"ShipName": "ASC LOTTI",
+"latitude": 1.2254,
+"longitude": 103.88995,
+"time_utc": "2026-11-05 06:18:06.350946138 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 305240000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 2.1,
+"PositionAccuracy": false,
+"Longitude": 103.889945,
+"Latitude": 1.2253983333333334,
+"Cog": 256.2,
+"TrueHeading": 266,
+"Timestamp": 5,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 19528
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 636012629,
+"MMSI_String": 636012629,
+"ShipName": "VICTORY             ",
+"latitude": 36.16797,
+"longitude": -5.40235,
+"time_utc": "2026-11-05 06:21:17.794748076 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 636012629,
+"Valid": true,
+"NavigationalStatus": 1,
+"RateOfTurn": 0,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": -5.40235,
+"Latitude": 36.167966666666665,
+"Cog": 76,
+"TrueHeading": 324,
+"Timestamp": 16,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 84938
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 636019342,
+"MMSI_String": 636019342,
+"ShipName": "GSL ELENI",
+"latitude": 35.89365,
+"longitude": -5.56954,
+"time_utc": "2026-11-05 06:21:21.160326876 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 636019342,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 4.4,
+"PositionAccuracy": true,
+"Longitude": -5.569538333333333,
+"Latitude": 35.89364833333333,
+"Cog": 266.8,
+"TrueHeading": 272,
+"Timestamp": 18,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 19540
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 224473460,
+"MMSI_String": 224473460,
+"ShipName": "SPABUNKER CUARENTA",
+"latitude": 35.89491,
+"longitude": -5.31368,
+"time_utc": "2026-11-05 06:21:30.499224009 +0000 UTC"
+},
+"MessageType": "ShipStaticData",
+"Message": {
+"ShipStaticData": {
+"AisVersion": 2,
+"CallSign": "EAEN",
+"Destination": "CEUTA BUNKER",
+"Dimension": {
+"A": 60,
+"B": 15,
+"C": 8,
+"D": 8
+},
+"Dte": false,
+"Eta": {
+"Day": 1,
+"Hour": 19,
+"Minute": 0,
+"Month": 10
+},
+"FixType": 1,
+"ImoNumber": 9416886,
+"MaximumStaticDraught": 6,
+"MessageID": 5,
+"Name": "SPABUNKER CUARENTA",
+"RepeatIndicator": 0,
+"Spare": false,
+"Type": 89,
+"UserID": 224473460,
+"Valid": true
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 271054019,
+"MMSI_String": 271054019,
+"ShipName": "DENIS ATK           ",
+"latitude": 35.93604,
+"longitude": -5.29738,
+"time_utc": "2026-11-05 06:16:09.745911215 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 271054019,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -127,
+"Sog": 9.3,
+"PositionAccuracy": false,
+"Longitude": -5.297383333333333,
+"Latitude": 35.93604166666667,
+"Cog": 209.7,
+"TrueHeading": 217,
+"Timestamp": 7,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 82209
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 636026315,
+"MMSI_String": 636026315,
+"ShipName": "GAIA                ",
+"latitude": 36.11786,
+"longitude": -5.36468,
+"time_utc": "2026-11-05 06:16:11.536201992 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 636026315,
+"Valid": true,
+"NavigationalStatus": 5,
+"RateOfTurn": 0,
+"Sog": 0.1,
+"PositionAccuracy": true,
+"Longitude": -5.364676666666667,
+"Latitude": 36.11786333333334,
+"Cog": 14.4,
+"TrueHeading": 263,
+"Timestamp": 10,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 84938
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 212948000,
+"MMSI_String": 212948000,
+"ShipName": "ITHAKI II           ",
+"latitude": 36.13572,
+"longitude": -5.42618,
+"time_utc": "2026-11-05 06:16:13.758185423 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 212948000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 4.4,
+"PositionAccuracy": false,
+"Longitude": -5.4261783333333335,
+"Latitude": 36.13572333333333,
+"Cog": 76.6,
+"TrueHeading": 70,
+"Timestamp": 14,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 19520
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 636019579,
+"MMSI_String": 636019579,
+"ShipName": "CPT DIMITRIOS S     ",
+"latitude": 36.10394,
+"longitude": -5.40021,
+"time_utc": "2026-11-05 06:17:19.229272155 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 636019579,
+"Valid": true,
+"NavigationalStatus": 1,
+"RateOfTurn": 0,
+"Sog": 0.2,
+"PositionAccuracy": false,
+"Longitude": -5.4002083333333335,
+"Latitude": 36.10394333333333,
+"Cog": 313.2,
+"TrueHeading": 237,
+"Timestamp": 19,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 84938
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 209405000,
+"MMSI_String": 209405000,
+"ShipName": "KATTEGAT            ",
+"latitude": 36.05823,
+"longitude": -5.40597,
+"time_utc": "2026-11-05 06:17:22.793475034 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 209405000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -128,
+"Sog": 14.9,
+"PositionAccuracy": false,
+"Longitude": -5.405968333333333,
+"Latitude": 36.058233333333334,
+"Cog": 203.8,
+"TrueHeading": 511,
+"Timestamp": 21,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 2280
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 636023412,
+"MMSI_String": 636023412,
+"ShipName": "SEATRADE CHILE      ",
+"latitude": 35.89789,
+"longitude": -5.48827,
+"time_utc": "2026-11-05 06:17:22.808069355 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 636023412,
+"Valid": true,
+"NavigationalStatus": 5,
+"RateOfTurn": 0,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": -5.488271666666666,
+"Latitude": 35.897888333333334,
+"Cog": 43,
+"TrueHeading": 222,
+"Timestamp": 22,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 84938
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 242905000,
+"MMSI_String": 242905000,
+"ShipName": "VB MALABATA         ",
+"latitude": 35.8944,
+"longitude": -5.49853,
+"time_utc": "2026-11-05 06:17:23.712440996 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 242905000,
+"Valid": true,
+"NavigationalStatus": 15,
+"RateOfTurn": -127,
+"Sog": 10.2,
+"PositionAccuracy": true,
+"Longitude": -5.498531666666667,
+"Latitude": 35.89440166666667,
+"Cog": 61.4,
+"TrueHeading": 52,
+"Timestamp": 23,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 133306
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 224473460,
+"MMSI_String": 224473460,
+"ShipName": "SPABUNKER CUARENTA",
+"latitude": 35.89668,
+"longitude": -5.31952,
+"time_utc": "2026-11-05 06:17:24.529845438 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 224473460,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -9,
+"Sog": 5.1,
+"PositionAccuracy": false,
+"Longitude": -5.319516666666667,
+"Latitude": 35.896683333333335,
+"Cog": 114.4,
+"TrueHeading": 112,
+"Timestamp": 23,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 114869
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 224121250,
+"MMSI_String": 224121250,
+"ShipName": "V.B ALGECIRAS       ",
+"latitude": 36.15728,
+"longitude": -5.42153,
+"time_utc": "2026-11-05 06:17:24.854392449 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 224121250,
+"Valid": true,
+"NavigationalStatus": 15,
+"RateOfTurn": 0,
+"Sog": 9.3,
+"PositionAccuracy": true,
+"Longitude": -5.421526666666667,
+"Latitude": 36.15727666666667,
+"Cog": 210,
+"TrueHeading": 31,
+"Timestamp": 20,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 66462
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 563141600,
+"MMSI_String": 563141600,
+"ShipName": "X-PRESS KAVERI      ",
+"latitude": 36.1369,
+"longitude": -5.43582,
+"time_utc": "2026-11-05 06:17:25.174461028 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 563141600,
+"Valid": true,
+"NavigationalStatus": 5,
+"RateOfTurn": 0,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": -5.435816666666667,
+"Latitude": 36.1369,
+"Cog": 79,
+"TrueHeading": 183,
+"Timestamp": 24,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 0
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 242127100,
+"MMSI_String": 242127100,
+"ShipName": "TANGER EXPRESS      ",
+"latitude": 35.97478,
+"longitude": -5.43179,
+"time_utc": "2026-11-05 06:17:26.16717201 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 242127100,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 17.3,
+"PositionAccuracy": true,
+"Longitude": -5.4317850000000005,
+"Latitude": 35.97478,
+"Cog": 43.4,
+"TrueHeading": 40,
+"Timestamp": 25,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 115013
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 352004977,
+"MMSI_String": 352004977,
+"ShipName": "GENOA               ",
+"latitude": 35.91669,
+"longitude": -5.61134,
+"time_utc": "2026-11-05 06:17:26.659841227 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 352004977,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 11.4,
+"PositionAccuracy": false,
+"Longitude": -5.611336666666667,
+"Latitude": 35.916695,
+"Cog": 83.9,
+"TrueHeading": 82,
+"Timestamp": 25,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 164835
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 225987304,
+"MMSI_String": 225987304,
+"ShipName": "AS ONE",
+"latitude": 36.15183,
+"longitude": -5.43524,
+"time_utc": "2026-11-05 06:17:27.994506412 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 225987304,
+"Valid": true,
+"NavigationalStatus": 2,
+"RateOfTurn": -128,
+"Sog": 8.7,
+"PositionAccuracy": true,
+"Longitude": -5.435239999999999,
+"Latitude": 36.151826666666665,
+"Cog": 96.8,
+"TrueHeading": 511,
+"Timestamp": 27,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 49328
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 242354400,
+"MMSI_String": 242354400,
+"ShipName": "",
+"latitude": 35.8988,
+"longitude": -5.48862,
+"time_utc": "2026-11-05 06:17:33.622210709 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 242354400,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 68,
+"Sog": 0.3,
+"PositionAccuracy": true,
+"Longitude": -5.48862,
+"Latitude": 35.89880166666667,
+"Cog": 217.6,
+"TrueHeading": 43,
+"Timestamp": 33,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 2448
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 256917000,
+"MMSI_String": 256917000,
+"ShipName": "VEJER               ",
+"latitude": 36.10337,
+"longitude": -5.40035,
+"time_utc": "2026-11-05 06:17:36.01380964 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 256917000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 0.9,
+"PositionAccuracy": true,
+"Longitude": -5.400345,
+"Latitude": 36.103370000000005,
+"Cog": 281.4,
+"TrueHeading": 244,
+"Timestamp": 35,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 19524
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 242418400,
+"MMSI_String": 242418400,
+"ShipName": "SVITZER OUED LAOU",
+"latitude": 35.87927,
+"longitude": -5.52342,
+"time_utc": "2026-11-05 06:17:46.234369579 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 242418400,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": -10,
+"Sog": 0.1,
+"PositionAccuracy": true,
+"Longitude": -5.523418333333334,
+"Latitude": 35.87927333333334,
+"Cog": 360,
+"TrueHeading": 242,
+"Timestamp": 46,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": true,
+"CommunicationState": 49258
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 477552200,
+"MMSI_String": 477552200,
+"ShipName": "MAERSK NOKWANDA",
+"latitude": 36.11746,
+"longitude": -5.41776,
+"time_utc": "2026-11-05 06:17:53.42491176 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 477552200,
+"Valid": true,
+"NavigationalStatus": 5,
+"RateOfTurn": 0,
+"Sog": 0,
+"PositionAccuracy": false,
+"Longitude": -5.417755,
+"Latitude": 36.11745666666666,
+"Cog": 350.9,
+"TrueHeading": 359,
+"Timestamp": 52,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 83994
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 538006774,
+"MMSI_String": 538006774,
+"ShipName": "LORENZO             ",
+"latitude": 35.95438,
+"longitude": -5.49909,
+"time_utc": "2026-11-05 06:17:57.214151951 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 538006774,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 14.3,
+"PositionAccuracy": false,
+"Longitude": -5.49909,
+"Latitude": 35.95438333333333,
+"Cog": 72.7,
+"TrueHeading": 72,
+"Timestamp": 57,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 49477
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 212633000,
+"MMSI_String": 212633000,
+"ShipName": "KEFALONIA           ",
+"latitude": 35.90219,
+"longitude": -5.54018,
+"time_utc": "2026-11-05 06:18:00.323976753 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 212633000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 9.7,
+"PositionAccuracy": false,
+"Longitude": -5.540184999999999,
+"Latitude": 35.902190000000004,
+"Cog": 209.4,
+"TrueHeading": 215,
+"Timestamp": 0,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 49445
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 369390000,
+"MMSI_String": 369390000,
+"ShipName": "MAERSK TENNESSEE",
+"latitude": 51.10172,
+"longitude": 1.77258,
+"time_utc": "2026-11-05 06:15:05.437312112 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 369390000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 11,
+"Sog": 12.5,
+"PositionAccuracy": true,
+"Longitude": 1.7725783333333331,
+"Latitude": 51.101715,
+"Cog": 46.7,
+"TrueHeading": 49,
+"Timestamp": 0,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 19516
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 538006288,
+"MMSI_String": 538006288,
+"ShipName": "AVENIR GAS          ",
+"latitude": 50.77759,
+"longitude": 0.88031,
+"time_utc": "2026-11-05 06:15:15.251668588 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 538006288,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 11.7,
+"PositionAccuracy": false,
+"Longitude": 0.8803133333333334,
+"Latitude": 50.777593333333336,
+"Cog": 237.5,
+"TrueHeading": 237,
+"Timestamp": 42,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 49185
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 231917000,
+"MMSI_String": 231917000,
+"ShipName": "KOBE PIONIER        ",
+"latitude": 50.79354,
+"longitude": 0.96262,
+"time_utc": "2026-11-05 06:16:10.611447633 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 231917000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 12.5,
+"PositionAccuracy": false,
+"Longitude": 0.9626166666666667,
+"Latitude": 50.79354333333333,
+"Cog": 229.2,
+"TrueHeading": 230,
+"Timestamp": 11,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 114808
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 210385000,
+"MMSI_String": 210385000,
+"ShipName": "P&O PIONEER",
+"latitude": 51.10851,
+"longitude": 1.41346,
+"time_utc": "2026-11-05 06:17:24.159005307 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 210385000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 9.5,
+"PositionAccuracy": false,
+"Longitude": 1.4134633333333333,
+"Latitude": 51.108513333333335,
+"Cog": 293.4,
+"TrueHeading": 295,
+"Timestamp": 21,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 7696
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 230700000,
+"MMSI_String": 230700000,
+"ShipName": "FINNECO III",
+"latitude": 50.87614,
+"longitude": 1.0875,
+"time_utc": "2026-11-05 06:17:32.452338245 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 230700000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 13.4,
+"PositionAccuracy": true,
+"Longitude": 1.087495,
+"Latitude": 50.876144999999994,
+"Cog": 230,
+"TrueHeading": 228,
+"Timestamp": 32,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 66751
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 314654000,
+"MMSI_String": 314654000,
+"ShipName": "FLUVIUS AXE         ",
+"latitude": 50.9707,
+"longitude": 1.26904,
+"time_utc": "2026-11-05 06:17:47.519175003 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 1,
+"RepeatIndicator": 0,
+"UserID": 314654000,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 0,
+"Sog": 10.5,
+"PositionAccuracy": false,
+"Longitude": 1.2690383333333335,
+"Latitude": 50.97069666666666,
+"Cog": 226.5,
+"TrueHeading": 223,
+"Timestamp": 47,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 100084
+}
+}
+},
+{
+"MetaData": {
+"MMSI": 538004739,
+"MMSI_String": 538004739,
+"ShipName": "GREENER             ",
+"latitude": 51.09782,
+"longitude": 1.50425,
+"time_utc": "2026-11-05 06:17:59.793214668 +0000 UTC"
+},
+"MessageType": "PositionReport",
+"Message": {
+"PositionReport": {
+"MessageID": 3,
+"RepeatIndicator": 0,
+"UserID": 538004739,
+"Valid": true,
+"NavigationalStatus": 0,
+"RateOfTurn": 3,
+"Sog": 12,
+"PositionAccuracy": false,
+"Longitude": 1.5042533333333334,
+"Latitude": 51.097815,
+"Cog": 229.3,
+"TrueHeading": 228,
+"Timestamp": 59,
+"SpecialManoeuvreIndicator": 0,
+"Spare": 0,
+"Raim": false,
+"CommunicationState": 24195
+}
+}
+}
+]
+}

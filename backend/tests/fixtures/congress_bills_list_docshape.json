@@ -1,0 +1,54 @@
+{
+ "status": 200,
+ "doc_shaped": "NOT A RECORDING. Congress.gov API docs https://api.congress.gov (LibraryOfCongress/api.congress.gov on GitHub). Invented numbers in the shape the documentation promises; no API key was available to record the real answer.",
+ "body": {
+  "bills": [
+   {
+    "congress": 119,
+    "type": "HR",
+    "number": "9001",
+    "originChamber": "House",
+    "originChamberCode": "H",
+    "title": "Example Test Act of 2026",
+    "latestAction": {
+     "actionDate": "2026-11-03",
+     "text": "Referred to the Committee on Example."
+    },
+    "updateDate": "2026-11-04",
+    "updateDateIncludingText": "2026-11-04T12:00:00Z",
+    "url": "https://api.congress.gov/v3/bill/119/hr/9001?format=json"
+   },
+   {
+    "congress": 119,
+    "type": "S",
+    "number": "4242",
+    "originChamber": "Senate",
+    "originChamberCode": "S",
+    "title": "A bill to study example semiconductor supply chains",
+    "latestAction": {
+     "actionDate": "2026-11-02",
+     "text": "Read twice and referred to the Committee on Example."
+    },
+    "updateDate": "2026-11-03",
+    "url": "https://api.congress.gov/v3/bill/119/s/4242?format=json"
+   },
+   {
+    "congress": 119,
+    "type": "HJRES",
+    "number": "77",
+    "originChamber": "House",
+    "originChamberCode": "H",
+    "title": "Providing for example disapproval of a rule",
+    "latestAction": {
+     "actionDate": "2026-10-30",
+     "text": "Passed House."
+    },
+    "updateDate": "2026-10-31",
+    "url": "https://api.congress.gov/v3/bill/119/hjres/77?format=json"
+   }
+  ],
+  "pagination": {
+   "count": 3
+  }
+ }
+}

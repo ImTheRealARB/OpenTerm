@@ -1,0 +1,16 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://api.etherscan.io/v2/api (chainid=1 gastracker/gasoracle); the apikey parameter is not stored. Unedited.",
+ "status": 200,
+ "body": {
+  "status": "1",
+  "message": "OK",
+  "result": {
+   "LastBlock": "26346799",
+   "SafeGasPrice": "0.047496591",
+   "ProposeGasPrice": "0.048496591",
+   "FastGasPrice": "0.05224625",
+   "suggestBaseFee": "0.047496591",
+   "gasUsedRatio": "0.5775293,0.3724155,0.85032665,0.435482033333333,0.377120216666667"
+  }
+ }
+}

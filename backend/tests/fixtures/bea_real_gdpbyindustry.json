@@ -1,0 +1,203 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://apps.bea.gov/api/data (UserID not stored). Rows are filtered to a few lines/industries to keep the file small; no value is edited. UNIT_MULT is a power of ten: 6 = millions of dollars.",
+ "status": 200,
+ "body": {
+  "BEAAPI": {
+   "Request": {
+    "RequestParam": []
+   },
+   "Results": [
+    {
+     "Statistic": "GDP by Industry Table",
+     "UTCProductionTime": "2026-11-05T06:16:19.830",
+     "Dimensions": [
+      {
+       "Ordinal": "1",
+       "Name": "TableID",
+       "DataType": "numeric",
+       "IsValue": "0"
+      },
+      {
+       "Ordinal": "2",
+       "Name": "Frequency",
+       "DataType": "string",
+       "IsValue": "0"
+      },
+      {
+       "Ordinal": "3",
+       "Name": "Year",
+       "DataType": "string",
+       "IsValue": "0"
+      },
+      {
+       "Ordinal": "4",
+       "Name": "Quarter",
+       "DataType": "string",
+       "IsValue": "0"
+      },
+      {
+       "Ordinal": "5",
+       "Name": "Industry",
+       "DataType": "string",
+       "IsValue": "0"
+      },
+      {
+       "Ordinal": "6",
+       "Name": "IndustryDescription",
+       "DataType": "string",
+       "IsValue": "0"
+      },
+      {
+       "Ordinal": "7",
+       "Name": "DataValue",
+       "DataType": "numeric",
+       "IsValue": "1"
+      }
+     ],
+     "Data": [
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "31G",
+       "IndustrYDescription": "Manufacturing",
+       "DataValue": "2797.6",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "52",
+       "IndustrYDescription": "Finance and insurance",
+       "DataValue": "2264.7",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "54",
+       "IndustrYDescription": "Professional, scientific, and technical services",
+       "DataValue": "2200.5",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "G",
+       "IndustrYDescription": "Government",
+       "DataValue": "3106.4",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "GDP",
+       "IndustrYDescription": "Gross domestic product",
+       "DataValue": "27825.9",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "PGOOD",
+       "IndustrYDescription": "Private goods-producing industries<sup>1</sup>",
+       "DataValue": "4705.3",
+       "NoteRef": "1;1.1.A"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2023",
+       "Quarter": "2023",
+       "Industry": "PVT",
+       "IndustrYDescription": "Private industries",
+       "DataValue": "24719.4",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "31G",
+       "IndustrYDescription": "Manufacturing",
+       "DataValue": "2882.5",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "52",
+       "IndustrYDescription": "Finance and insurance",
+       "DataValue": "2433.8",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "54",
+       "IndustrYDescription": "Professional, scientific, and technical services",
+       "DataValue": "2336.8",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "G",
+       "IndustrYDescription": "Government",
+       "DataValue": "3316.1",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "GDP",
+       "IndustrYDescription": "Gross domestic product",
+       "DataValue": "29381.0",
+       "NoteRef": "1"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "PGOOD",
+       "IndustrYDescription": "Private goods-producing industries<sup>1</sup>",
+       "DataValue": "4852.7",
+       "NoteRef": "1;1.1.A"
+      },
+      {
+       "TableID": "1",
+       "Frequency": "A",
+       "Year": "2024",
+       "Quarter": "2024",
+       "Industry": "PVT",
+       "IndustrYDescription": "Private industries",
+       "DataValue": "26064.9",
+       "NoteRef": "1"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

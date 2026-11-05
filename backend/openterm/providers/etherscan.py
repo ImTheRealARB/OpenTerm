@@ -8,7 +8,9 @@ and no error text here contains a URL.
 With no key `supports()` stays true and every call raises `key_required` BEFORE any network call: ADDR answers
 `KEY REQUIRED: set ETHERSCAN_KEY in APIKEYS`. Nothing here sends a transaction or signs anything: read-only GET calls.
 
-Built from the official endpoint pages, NOT from recordings (doc-shaped fixtures; see etherscan_parse.py).
+Checked live on 2026-11-05 with a real key (fixtures `etherscan_real_*`). A free key worked for Ethereum, Arbitrum and Polygon but got
+"Free API access is not supported for this chain" for Optimism, Base and BNB Chain: that is `unsupported` (a plan limit), never `unavailable`.
+Fixture-mode routes for Ethereum still use the doc-shaped answers.
 """
 
 from __future__ import annotations

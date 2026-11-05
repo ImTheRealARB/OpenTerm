@@ -1,0 +1,182 @@
+{
+ "status": 200,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "description": "All Documents",
+  "count": 10000,
+  "total_pages": 50,
+  "next_page_url": "https://www.federalregister.gov/api/v1/documents?fields%5B%5D=title&fields%5B%5D=type&fields%5B%5D=agency_names&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=document_number&fields%5B%5D=html_url&format=json&order=newest&page=2&per_page=15&search_after_cursor=WzE3OTM4MzY4MDAwMDAsIjIwMjYtMjI2MzciXQ",
+  "results": [
+   {
+    "title": "Continuation of the National Emergency With Respect to the Threat From Securities Investments That Finance Certain Companies of the People's Republic of China",
+    "type": "Presidential Document",
+    "agency_names": [
+     "Executive Office of the President"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": null,
+    "document_number": "2026-22688",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22688/continuation-of-the-national-emergency-with-respect-to-the-threat-from-securities-investments-that"
+   },
+   {
+    "title": "Continuation of the National Emergency With Respect to the Situation in Nicaragua",
+    "type": "Presidential Document",
+    "agency_names": [
+     "Executive Office of the President"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": null,
+    "document_number": "2026-22687",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22687/continuation-of-the-national-emergency-with-respect-to-the-situation-in-nicaragua"
+   },
+   {
+    "title": "Continuation of the National Emergency With Respect to the Proliferation of Weapons of Mass Destruction",
+    "type": "Presidential Document",
+    "agency_names": [
+     "Executive Office of the President"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": null,
+    "document_number": "2026-22686",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22686/continuation-of-the-national-emergency-with-respect-to-the-proliferation-of-weapons-of-mass"
+   },
+   {
+    "title": "Continuation of the National Emergency With Respect to Iran",
+    "type": "Presidential Document",
+    "agency_names": [
+     "Executive Office of the President"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": null,
+    "document_number": "2026-22685",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22685/continuation-of-the-national-emergency-with-respect-to-iran"
+   },
+   {
+    "title": "Purchasing and Property Management",
+    "type": "Proposed Rule",
+    "agency_names": [
+     "Legal Services Corporation"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "This proposed rule revises the Legal Services Corporation's (LSC) definition of \"capital improvement\" by removing the threshold amount of LSC funds that must be expended on an improvement to real estate for the expenditure to qualify as a capital improvement. The proposed amendment would distinguish the definition of a capital improvement from the monetary thresholds required for prior approval; promote consistent tracking and oversight of LSC funds used for capital improvements; and strengthen accountability for LSC funds invested in recipients' real property.",
+    "document_number": "2026-22650",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22650/purchasing-and-property-management"
+   },
+   {
+    "title": "Cost Standards and Procedures; Purchasing and Property Management",
+    "type": "Rule",
+    "agency_names": [
+     "Legal Services Corporation"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "This final rule revises the Legal Services Corporation's (LSC or Corporation) regulations governing cost allowability, prior approval requirements, and property and procurement standards applicable to LSC recipients. The final rule clarifies when recipients must obtain prior approval for expenditures of LSC funds; increases the monetary threshold for prior approval; clarifies the treatment of proceeds from fundraising activities supported with LSC funds; provides additional flexibility in LSC's review of prior approval requests; clarifies documentation requirements for prior approval requests; and revises the deadline and requirements for accounting for LSC funds invested in real estate. These amendments are intended to clarify existing requirements, reduce administrative burden, promote consistent oversight and enforcement, and strengthen accountability in the use of Federal funds.",
+    "document_number": "2026-22649",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22649/cost-standards-and-procedures-purchasing-and-property-management"
+   },
+   {
+    "title": "Air Plan Revisions; Arizona; Maricopa County Air Quality Department; New Source Review; Emission Reduction Credits",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "The U.S. Environmental Protection Agency (EPA) is taking final action to approve a revision to the Maricopa County Air Quality Department (MCAQD or \"Department\") portion of the Arizona State Implementation Plan (SIP). This revision establishes a federally enforceable program allowing for the generation of emission reduction credits (ERCs) by retrofitting or replacing existing on-road vehicles with lower emitting vehicles while meeting other Clean Air Act (CAA or \"Act\") requirements. These ERCs are intended to be used as offsets for major stationary sources under the Department's Nonattainment New Source Review (NNSR) program. The EPA is approving this SIP revision because we find that it meets the applicable CAA requirements.",
+    "document_number": "2026-22647",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22647/air-plan-revisions-arizona-maricopa-county-air-quality-department-new-source-review-emission"
+   },
+   {
+    "title": "Accrediting Agencies Currently Undergoing Review for the Purpose of Recognition by the U.S. Secretary of Education",
+    "type": "Notice",
+    "agency_names": [
+     "Education Department"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "This notice provides information to members of the public on submitting written comments for accrediting agencies currently undergoing review for the purpose of recognition by the Secretary of Education.",
+    "document_number": "2026-22644",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22644/accrediting-agencies-currently-undergoing-review-for-the-purpose-of-recognition-by-the-us-secretary"
+   },
+   {
+    "title": "Agency Information Collection Activities; Submission to the Office of Management and Budget (OMB) for Review and Approval; Comment Request; Cook Inlet EEZ Commercial Salmon Fishery",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "National Oceanic and Atmospheric Administration"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "The Department of Commerce, in accordance with the Paperwork Reduction Act of 1995 (PRA), invites the general public and other Federal agencies to comment on proposed, and continuing information collections, which helps us assess the impact of our information collection requirements and minimize the public's reporting burden. The purpose of this notice is to allow for 60 days of public comment preceding submission of the collection to OMB.",
+    "document_number": "2026-22643",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22643/agency-information-collection-activities-submission-to-the-office-of-management-and-budget-omb-for"
+   },
+   {
+    "title": "Modification of Class D and Class E Airspace Areas; Roberts Field/Redmond Municipal Airport, Redmond, OR",
+    "type": "Rule",
+    "agency_names": [
+     "Transportation Department",
+     "Federal Aviation Administration"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "This action modifies the Class D and Class E airspace areas designated as a surface area, the Class E airspace area designated as an extension to a Class D or Class E surface area, and the Class E airspace area extending upward from 700 feet above the surface at Roberts Field/Redmond Municipal Airport, Redmond, OR. This action supports the safety and management of visual flight rules (VFR) and instrument flight rules (IFR) operations at the airport.",
+    "document_number": "2026-22642",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22642/modification-of-class-d-and-class-e-airspace-areas-roberts-fieldredmond-municipal-airport-redmond-or"
+   },
+   {
+    "title": "Caribbean Fishery Management Council's Scientific and Statistical Committee; Public Virtual Meeting",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "National Oceanic and Atmospheric Administration"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "The Caribbean Fishery Management Council's (Council) Scientific and Statistical Committee (SSC) will hold a 1-day public virtual meeting to address the items contained in the tentative agenda included in the SUPPLEMENTARY INFORMATION.",
+    "document_number": "2026-22641",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22641/caribbean-fishery-management-councils-scientific-and-statistical-committee-public-virtual-meeting"
+   },
+   {
+    "title": "Pacific Fishery Management Council; Public Meeting",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "National Oceanic and Atmospheric Administration"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "The Groundfish Subcommittee of the Pacific Fishery Management Council's (Pacific Council's) Scientific and Statistical Committee (SSC) will hold a virtual meeting to update the Accepted Practices Guidelines for Groundfish Stock Assessments document. The SSC Groundfish Subcommittee meeting is open to the public.",
+    "document_number": "2026-22640",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22640/pacific-fishery-management-council-public-meeting"
+   },
+   {
+    "title": "60-Day Notice of Proposed Information Collection: Cyber Incident Reporting Requirements",
+    "type": "Notice",
+    "agency_names": [
+     "Housing and Urban Development Department"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "HUD is seeking approval from the Office of Management and Budget (OMB) for the information collection described below. In accordance with the Paperwork Reduction Act, HUD is requesting comments from all interested parties on the proposed collection of information. The purpose of this notice is to allow for 60 days of public comment.",
+    "document_number": "2026-22639",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22639/60-day-notice-of-proposed-information-collection-cyber-incident-reporting-requirements"
+   },
+   {
+    "title": "60-Day Notice of Proposed Information Collection: Family Report, MTW Family Report, MTW Expansion Family Report AGENCY: Office of the Assistant Secretary for Public and Indian Housing (PIH), HUD.",
+    "type": "Notice",
+    "agency_names": [
+     "Housing and Urban Development Department"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "HUD is seeking approval from the Office of Management and Budget (OMB) for the information collection described below. In accordance with the Paperwork Reduction Act, HUD is requesting comment from all interested parties on the proposed collection of information. The purpose of this notice is to allow for 60 days of public comment.",
+    "document_number": "2026-22638",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22638/60-day-notice-of-proposed-information-collection-family-report-mtw-family-report-mtw-expansion"
+   },
+   {
+    "title": "New England Fishery Management Council; Public Meeting",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "National Oceanic and Atmospheric Administration"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "The New England Fishery Management Council (Council) is holding a public meeting of a Scientific and Statistical Committee (SSC) Subpanel via webinar to consider actions affecting New England fisheries in the exclusive economic zone (EEZ). Recommendations from this group will be brought to the full Council for formal consideration and action, if appropriate.",
+    "document_number": "2026-22637",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22637/new-england-fishery-management-council-public-meeting"
+   }
+  ]
+ }
+}

@@ -89,6 +89,9 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://etherscan.io/apidashboard"),
     KeySpec("aisstream", ("AISSTREAM_API_KEY",), 20, "AISstream (free, beta): live ship positions in a box (AIS). WebSocket, 3 connections per account",
             "https://aisstream.io/authenticate"),
+    # FLT (OpenSky): OPTIONAL. The panel works with no login (400 credits a day); a free account's API client raises that to 4000.
+    KeySpec("opensky", ("OPENSKY_CLIENT_ID", "OPENSKY_CLIENT_SECRET"), 20, "OpenSky (optional, free account): more daily credits for live aircraft (FLT). Works without it, limited to 400 credits a day",
+            "https://opensky-network.org/my-opensky/account", secret_fields=("OPENSKY_CLIENT_SECRET",)),
     # Trade + US macro family (free, read-only). Panels TRADE (Comtrade) and USMAC (BLS, BEA, Census).
     KeySpec("comtrade", ("UN_COMTRADE_KEY",), 19, "UN Comtrade (free): trade flows between two countries by HS product (TRADE)",
             "https://comtradedeveloper.un.org/"),
@@ -96,6 +99,11 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://data.bls.gov/registrationEngine/"),
     KeySpec("bea", ("BEA_API_KEY",), 19, "BEA (free): US GDP, trade balance, value added by industry (USMAC BEA)",
             "https://apps.bea.gov/API/signup/"),
+    # US government data on api.data.gov (one free signup gives a key valid for both): FEC (OpenFEC) and CONGRESS (Congress.gov API v3).
+    KeySpec("openfec", ("FEC_API_KEY",), 20, "OpenFEC (free, api.data.gov key): US campaign finance, candidate and committee totals by cycle (FEC). 1,000 calls an hour",
+            "https://api.data.gov/signup/"),
+    KeySpec("congressgov", ("CONGRESS_API_KEY",), 20, "Congress.gov API (free, api.data.gov key): US bills, sponsors and latest actions (CONGRESS). 5,000 calls an hour",
+            "https://api.data.gov/signup/"),
     KeySpec("census", ("CENSUS_API_KEY",), 19, "US Census (free): monthly retail sales, US goods trade by country and HS chapter (USMAC CENSUS)",
             "https://api.census.gov/data/key_signup.html"),
     KeySpec("kite",("KITE_API_KEY", "KITE_API_SECRET"), 15,
@@ -428,6 +436,9 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
     "etherscan": lambda k: ("GET", "https://api.etherscan.io/v2/api", {"chainid": "1", "module": "gastracker", "action": "gasoracle",
                                                                        "apikey": k["ETHERSCAN_KEY"]}, None, None),
     # Trade + US macro family: each uses the source's cheapest documented call (doc-shaped, never run against a live key).
+    # api.data.gov keys travel in the X-Api-Key header (never the URL). A bad key is HTTP 403 API_KEY_INVALID (recorded 2026-11-05), which classify() calls INVALID.
+    "openfec": lambda k: ("GET", "https://api.open.fec.gov/v1/candidates/search/", {"per_page": "1"}, {"X-Api-Key": k["FEC_API_KEY"]}, None),
+    "congressgov": lambda k: ("GET", "https://api.congress.gov/v3/bill", {"format": "json", "limit": "1"}, {"X-Api-Key": k["CONGRESS_API_KEY"]}, None),
     "comtrade": lambda k: ("GET", "https://comtradeapi.un.org/data/v1/get/C/A/HS",
                            {"reporterCode": "842", "partnerCode": "0", "period": "2022", "cmdCode": "TOTAL", "flowCode": "X", "maxrecords": "1"},
                            {"Ocp-Apim-Subscription-Key": k["UN_COMTRADE_KEY"]}, None),
@@ -436,7 +447,8 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
     "bea": lambda k: ("GET", "https://apps.bea.gov/api/data", {"UserID": k["BEA_API_KEY"], "method": "GETDATASETLIST", "ResultFormat": "JSON"},
                       None, None),
     "census": lambda k: ("GET", "https://api.census.gov/data/timeseries/eits/marts",
-                         {"get": "cell_value", "time": "2024-01", "category_code": "44X72", "data_type_code": "SM", "key": k["CENSUS_API_KEY"]},
+                         {"get": "cell_value", "time": "2024-01", "category_code": "44X72", "data_type_code": "SM", "seasonally_adj": "no",  # seasonally_adj is a REQUIRED variable here: without it Census answers 400 and TEST showed ERROR for a good key (checked live 2026-11-05)
+                          "key": k["CENSUS_API_KEY"]},
                          None, None),
 }
 
@@ -488,6 +500,10 @@ async def run_test(store: KeyStore, name: str, http: httpx.AsyncClient, fixtures
             from .providers.aisstream import check_key
 
             state, detail = await check_key(values)
+    elif name == "opensky":  # an OAuth2 token request, not a plain GET: see providers/opensky.check_key (spends no flight credits)
+        from .providers.opensky import check_key as opensky_check
+
+        state, detail = await opensky_check(values, http)
     else:
         method, url, params, headers, body = TESTS[name](values)
         try:

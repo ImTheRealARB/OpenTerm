@@ -1,0 +1,48 @@
+{
+ "status": 200,
+ "doc_shaped": "NOT A RECORDING. OpenFEC docs https://api.open.fec.gov/developers/. Invented numbers in the shape the documentation promises; no API key was available to record the real answer.",
+ "body": {
+  "api_version": "1.0",
+  "pagination": {
+   "count": 3,
+   "page": 1,
+   "pages": 1,
+   "per_page": 6
+  },
+  "results": [
+   {
+    "candidate_id": "H0ZZ00001",
+    "cycle": 2026,
+    "receipts": 1250000.5,
+    "disbursements": 980000.25,
+    "cash_on_hand_end_period": 270000.25,
+    "debts_owed_by_committee": 0.0,
+    "individual_itemized_contributions": 800000.0,
+    "individual_unitemized_contributions": 150000.5,
+    "coverage_end_date": "2026-12-31T00:00:00"
+   },
+   {
+    "candidate_id": "H0ZZ00001",
+    "cycle": 2024,
+    "receipts": 2100000.0,
+    "disbursements": 2050000.0,
+    "cash_on_hand_end_period": 5000.0,
+    "debts_owed_by_committee": 10000.0,
+    "individual_itemized_contributions": 1500000.0,
+    "individual_unitemized_contributions": 300000.0,
+    "coverage_end_date": "2024-12-31T00:00:00"
+   },
+   {
+    "candidate_id": "H0ZZ00001",
+    "cycle": 2022,
+    "receipts": 640000.0,
+    "disbursements": 600000.0,
+    "cash_on_hand_end_period": 40000.0,
+    "debts_owed_by_committee": 0.0,
+    "individual_itemized_contributions": 400000.0,
+    "individual_unitemized_contributions": 100000.0,
+    "coverage_end_date": "2022-12-31T00:00:00"
+   }
+  ]
+ }
+}
