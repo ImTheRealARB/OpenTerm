@@ -33,6 +33,13 @@ class FakeGateway:
         for e in events:
             yield e
 
+    # Phase 20: SWARM shows and checks a worst-case cost before a run, so the gateway must answer these two like the real one does.
+    async def price(self, provider, model):
+        return {"input": 0.2, "output": 0.4}
+
+    async def spend_status(self):
+        return {"today": 0.0, "cap": 5.0}
+
 
 def text(*parts, cost=0.001):
     return [*(Event("token", text=p) for p in parts), Event("usage", prompt_tokens=100, completion_tokens=20, cost=cost), Event("done")]

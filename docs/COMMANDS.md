@@ -82,7 +82,12 @@ ERN TODAY             earnings calendar (TOMORROW, +7, -3, YYYY-MM-DD)
 ## News and scans
 ```
 N                     top market news (N TOP forces top stories)
-N oil prices          news search
+N oil prices          news search (GDELT, slow: 5-15 s)
+N TECH                feeds by section: TECH INDIA MARKETS ECONOMY COMPANIES COMMODITIES CRYPTO WORLD ALL
+N COUNTRY IN          feeds by country / area (IN US CN UK EU JP WORLD)
+N SECTOR BANKS        feeds by sector (tech banks energy pharma autos retail realestate telecom metals)
+N COMMODITY GOLD      feeds by commodity (oil gold silver copper gas wheat corn coffee lithium)
+N SEARCH rate cut     quick search over every feed (all words must appear); filters combine: N TECH COUNTRY IN SEARCH chip
 MOV GAINERS           LOSERS ACTIVE DOLLAR NDX100
 EQS SECTOR=TECH MCAP>100B SORT=PCT     screener (PRICE<50 VOL>1M PCT>2 COUNTRY=US ...)
 ```
@@ -94,6 +99,8 @@ PORT MAIN ADD AAPL 50 180      portfolio lot: symbol, quantity, cost [, currency
 PORT MAIN                      live P&L; PORT MAIN EXPORT / IMPORT; PORT MAIN BASE INR
 ALRT AAPL > 250                price alert (ALRT MSFT -5% = percent move)
 ALRT                           list; ALRT DEL id, ALRT REARM id, ALRT CLEAR (triggered ones)
+ALRT AAPL > 250 VIA TG,EMAIL   send this alert only to Telegram and email (TG = Telegram; also EMAIL, WEBHOOK; ALRT NEWS RECALL VIA WEBHOOK works too). No VIA = every channel switched on in DELIVERY. A chosen channel that is switched off is logged as skipped: CHANNEL OFF
+ALRT alerts are checked by the OpenTerm server, so they fire with the browser closed (only while OpenTerm runs); the panel shows the engine state and why an alert was skipped (stale, synthetic or fixture data)
 ```
 Clean up: `PORT DEL MAIN`, `WL DEL TECH`, `ALRT DEL <id>`, `LAYOUT DEL <name>`.
 
@@ -126,7 +133,7 @@ SETTINGS MODE GUI     GUI mode: menu bar, sidebar, panel buttons (SETTINGS MODE 
 Alt+H                 GUI mode: help drawer for the focused panel
 SOURCES               data source health and latency
 APIKEYS               optional API keys: Enter edit (masked), T test, D twice delete, O sign-up page, C AI spend cap
-DLVR                  alert delivery: Up/Down move, Space on/off, Enter edit (Esc cancels), T test, L log. Email, Telegram, webhook, desktop, brief schedule
+DLVR                  alert delivery: Up/Down move, Space on/off, Enter type a NEW recipient (the address and chat id are never shown, only a masked hint; empty keeps the stored one; Esc cancels), T test, L log, P pair Telegram (shows the bot link and a one-time code OT-123456 valid 10 min; send it to the bot, then C checks). Email, Telegram, webhook, desktop, brief schedule
 BRIEF                 last daily brief: R build now, S build and send
 JOBS                  background jobs: Esc/X cancel, R re-run, C clear finished (JOBS TEST 20 100 runs a test job)
 LOG                   backend log
@@ -157,10 +164,64 @@ cites them as [T1], and says UNGROUNDED when no tool returned data or UNSOURCED 
 While a document is loaded, questions use ONLY its text (chunks C1, C2... cited); `AI DOC OFF` goes back to market data. Scanned PDFs need OCR, which is not built.
 
 `AI AUTO <hypothesis>` turns a hypothesis into one rule, backtests it (`backtest_run`, a stored BT run) and writes an evidence report; the EVIDENCE line names the BT run ids, or says NO BACKTEST WAS RUN. The run is stored.
-`SWARM [COMMITTEE|RISK|EARNINGS|MACRO|QUANT] <subject>` runs a preset desk: analyst roles with their own tool lists, then a chair. A failed role is retried once and shown if it still fails; the chair's figures are checked against the analysts' notes. `SWARM` lists presets and stored runs; `SWARM REPLAY <id>` shows a stored run again with no model call. `T` saves the desk answer as a THESIS note, `Esc` cancels.
+`SWARM [COMMITTEE|RISK|EARNINGS|MACRO|QUANT] <subject>` runs a preset desk (the 5 original desks are the "lite" desks; Phase 20 adds 30 more, see the SWARM desks section below): analyst roles with their own tool lists, then a chair. A failed role is retried once and shown if it still fails; the chair's figures are checked against the analysts' notes. `SWARM` lists presets and stored runs; `SWARM REPLAY <id>` shows a stored run again with no model call. `T` saves the desk answer as a THESIS note, `Esc` cancels.
 `THESIS [SYMBOL]` lists thesis notes (status, invalidation rule, linked runs); `THESIS ADD <SYMBOL> <text>`, `THESIS INVALID <id> <rule>`; `S` cycles the status, `D` `D` deletes, Up/Down select.
 `AUDIT` shows the hash-chained ledger of AI, SWARM, AI AUTO and BT runs (manifest hashes, question/answer hashes, tool calls; no text), verifies the chain on open and says where it breaks; `R` verifies again. Note the HEAD hash to detect removal of the newest entries.
 `SETTINGS AI MODEL <id>` / `VISION <id>` / `PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA` / `RESET` (default `deepseek/deepseek-v4-pro`; the AI rows in `SETTINGS` cycle common models).
+
+### AI FILING (Phase 20): answers from a 10-K / 10-Q with machine-checked quotes
+`AI FILING <SYMBOL> <question>` answers from the newest 10-K or 10-Q of a US filer; `AI FILING <SYMBOL> [10-K|10-Q] DRIVERS` asks what drives revenue, margins and risk. Name `10-K` or `10-Q` after the symbol to pick the form.
+How it works: OpenTerm downloads the filing from SEC EDGAR (needs `SEC_USER_AGENT` in `.env`, else `KEY REQUIRED`), splits it at its "Item" headings, and searches the passages with SQLite's built-in full-text search (FTS5, ranked by BM25; no embeddings, nothing written to disk). The best passages go to the model, which must answer only from them and give an exact quote for each claim.
+Every quote is then checked by plain text search against the whole filing (case, spacing, curly quotes and dashes are ignored; wording is not). A matching quote shows `VERIFIED` with its Item. A quote that is paraphrased, shortened with "...", invented, or under 5 words shows `UNVERIFIED`, and its claim is left out of the summary the panel shows. The panel also shows the filing (form, filed date, accession number, `SEC EDGAR`), the passages sent to the model, `AI · <model> · <time>`, and `UNGROUNDED` if no passage matched (the model is then not called and nothing is spent). The run is written to `AUDIT` as hashes only. Limits: US filers only, 10-K and 10-Q only, no earnings-call transcripts; a verified quote proves the words are in the filing, not that the model's claim about them is right.
+
+### SWARM desks (Phase 20)
+`SWARM <CODE> <subject> [NAME=value ...] [--force]` runs a desk. A desk is a small team of AI roles (analysts, then a chair who writes the answer). `SWARM` or `SWARM LIST` shows every desk with its coverage label and a cost estimate; `SWARM REPLAY <run id>` shows a stored run again with no model call.
+- A desk may ask for variables (for example `target` and `market`). Type them as `NAME=value`, or type only the subject and it fills the first variable. A word like `GC=F` stays a ticker unless the desk declares a variable with that name.
+- Before a run starts, the panel shows the worst-case tokens and US dollars. If that is more than what is left of today's AI spend cap, the server refuses with `spend_cap` (HTTP 402). `--force` runs it anyway, and the cap still stops a run that actually reaches it.
+- Coverage is `FULL` (every tool the desk needs exists), `PARTIAL` (something was cut, and the panel says what) or `UNAVAILABLE` (it refuses and says why). All 30 ported desks are `PARTIAL`: no web search, no code execution, no China A-share data (see `docs/DATA_LIMITS.md`).
+- Your own desks: put a YAML file in `<data dir>/presets/` (same shape as the packaged ones in `backend/openterm/ai/presets/`). It is checked on load and never executed; a bad file is listed as an error in `SWARM`. Codes are upper case, 2 to 14 characters, and cannot reuse `COMMITTEE RISK EARNINGS MACRO QUANT`.
+
+```
+SWARM EQRESEARCH market=US goal=AI-chip-demand
+SWARM INVCOMM AAPL market=US
+SWARM CRYPTODESK BTC-USDT timeframe=4h --force
+SWARM REPLAY 3fa9c2d17b40
+```
+
+Code to Vibe-Trading name (source: HKUDS/Vibe-Trading at commit 8172827, MIT; `docs/PHASE_20_PRESETS.md` lists what each desk cannot do):
+
+| Code | Vibe-Trading preset | Title | Roles | Coverage |
+|---|---|---|---|---|
+| COMMODITY | commodity_research_team | Commodity Research Team | 3 | PARTIAL |
+| CONVERT | convertible_bond_team | Convertible Bond Research Team | 4 | PARTIAL |
+| CREDIT | credit_research_team | Fixed Income Credit Research Team | 4 | PARTIAL |
+| CRYPTODESK | crypto_trading_desk | Crypto Trading & Risk Desk | 4 | PARTIAL |
+| CRYPTOLAB | crypto_research_lab | Crypto Asset Research Lab | 4 | PARTIAL |
+| DERIVS | derivatives_strategy_desk | Derivatives Strategy Desk | 3 | PARTIAL |
+| EARNDESK | earnings_research_desk | Earnings Research Desk | 4 | PARTIAL |
+| EQRESEARCH | equity_research_team | Equity Research Team | 4 | PARTIAL |
+| ETFALLOC | etf_allocation_desk | ETF Allocation Desk | 4 | PARTIAL |
+| EVENTDRIVEN | event_driven_task_force | Event-Driven Task Force | 3 | PARTIAL |
+| FACTORS | factor_research_committee | Factor Research Committee | 4 | PARTIAL |
+| FUNDAMENTAL | fundamental_research_team | Fundamental Deep Research Team | 4 | PARTIAL |
+| FUNDSEL | fund_selection_panel | Fund Selection Panel | 3 | PARTIAL |
+| GEOPOL | geopolitical_war_room | Geopolitical Risk War Room | 4 | PARTIAL |
+| GLOBALEQ | global_equities_desk | Global Equities Research Desk | 4 | PARTIAL |
+| GLOBALLOC | global_allocation_committee | Global Allocation Committee | 4 | PARTIAL |
+| INVCOMM | investment_committee | Investment Committee | 4 | PARTIAL |
+| MACROFORUM | macro_strategy_forum | Macro Strategy Forum | 4 | PARTIAL |
+| MLQUANT | ml_quant_lab | Machine Learning Quant Lab | 3 | PARTIAL |
+| PAIRS | pairs_research_lab | Pairs Trading Research Lab | 4 | PARTIAL |
+| PORTREVIEW | portfolio_review_board | Portfolio Review Board | 4 | PARTIAL |
+| QUANTDESK | quant_strategy_desk | Quant Strategy Desk | 5 | PARTIAL |
+| RATESFX | macro_rates_fx_desk | Macro / Rates / FX Desk | 4 | PARTIAL |
+| RISKCOMM | risk_committee | Risk Committee | 4 | PARTIAL |
+| SECTORROT | sector_rotation_team | Sector Rotation Research Team | 4 | PARTIAL |
+| SENTIMENT | sentiment_intelligence_team | Market Sentiment Intelligence Unit | 4 | PARTIAL |
+| SOCIAL | social_alpha_team | Social-Media Alternative Data Team | 4 | PARTIAL |
+| STATARB | statistical_arbitrage_desk | Statistical Arbitrage Desk | 4 | PARTIAL |
+| TECHPANEL | technical_analysis_panel | Technical Analysis Panel | 6 | PARTIAL |
+| VALUEINV | value_investing_committee | Value Investing Committee (Buffett / Munger / Duan / Li Lu) | 5 | PARTIAL |
 
 ## Phase 15: risk, quant library, alphas, Kite
 `RISK [PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` VaR / ES (historical, normal, EVT), beta, drawdown, contributions, stress replays (2008, 2020, 2022), VaR backtest ·

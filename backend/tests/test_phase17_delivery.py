@@ -19,7 +19,7 @@ from openterm.delivery import email as dmail
 from openterm.delivery import format as dfmt
 from openterm.delivery import log as dlog
 from openterm.delivery import telegram, webhook
-from openterm.delivery.settings import defaults, validate
+from openterm.delivery.settings import defaults, public, validate
 from openterm.userdata import UserDataError
 
 SMTP_KEYS = {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "587", "SMTP_USER": "me@example.com",
@@ -28,7 +28,11 @@ SMTP_KEYS = {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "587", "SMTP_USER": "
 
 @pytest.fixture(autouse=True)
 def no_retry_wait(monkeypatch):
-    monkeypatch.setattr(delivery, "RETRY_DELAY_S", 0)
+    # Phase 20: retries run in the background after 30 s / 2 min / 10 min; tests skip the waiting.
+    async def instant(_seconds):
+        return None
+
+    monkeypatch.setattr(delivery, "sleep", instant)
 
 
 # --- helpers ---
@@ -84,7 +88,7 @@ def wait_rows(client, n, timeout=5.0):
 # --- settings ---
 def test_settings_default_off(client):
     d = client.get("/api/delivery").json()
-    assert d["settings"] == defaults()
+    assert d["settings"] == public(defaults())
     assert not any(d["settings"]["channels"].values())
     assert d["settings"]["brief"] == {"enabled": False, "time": "08:30", "days": "mon-fri", "tz": ""}
     assert set(d["status"].values()) == {"off"}
@@ -98,7 +102,7 @@ def test_settings_default_off(client):
 def test_settings_validation_errors(client, body):
     r = client.put("/api/delivery", json=body)
     assert r.status_code == 400, r.text
-    assert client.get("/api/delivery").json()["settings"] == defaults()  # nothing was stored
+    assert client.get("/api/delivery").json()["settings"] == public(defaults())  # nothing was stored
 
 
 def test_settings_roundtrip_and_partial_merge(client):
@@ -106,7 +110,8 @@ def test_settings_roundtrip_and_partial_merge(client):
     client.put("/api/delivery", json={"channels": {"telegram": True}})  # merges, does not wipe email
     s = client.get("/api/delivery").json()["settings"]
     assert s["channels"]["email"] and s["channels"]["telegram"] and not s["channels"]["webhook"]
-    assert s["brief"]["time"] == "07:15" and s["email_to"] == "me@example.com"
+    assert s["brief"]["time"] == "07:15" and s["recipients"]["email"] == {"configured": True, "hint": "m•••@example.com"}
+    assert "email_to" not in s and "telegram_chat_id" not in s  # Phase 20: never sent to the browser
 
 
 def test_validate_is_pure():
@@ -271,7 +276,7 @@ def test_webhook_key_test_checks_shape_only(client):
 
 
 # --- retry, timeout, redaction ---
-def test_network_error_retries_once_then_sends(client):
+def test_network_error_is_retried_in_the_background_then_sent(client):
     client.app.state.keys.set("smtp", SMTP_KEYS)
     calls = []
 
@@ -283,7 +288,11 @@ def test_network_error_retries_once_then_sends(client):
     client.app.state.delivery_senders = {"email": flaky}
     configure(client)
     r = client.post("/api/delivery/test", json={"channel": "email"}).json()["results"][0]
-    assert r["status"] == "sent" and len(calls) == 2
+    assert r["status"] == "retrying"  # the caller is answered after the first attempt, not after the retries
+    end = time.time() + 5
+    while time.time() < end and client.get("/api/delivery/log").json()["deliveries"][0]["status"] != "sent":
+        time.sleep(0.05)
+    assert client.get("/api/delivery/log").json()["deliveries"][0]["status"] == "sent" and len(calls) == 2
 
 
 def test_non_network_error_is_not_retried(client):

@@ -16,8 +16,12 @@ STATE = {
 
 # Tables each migration creates, by schema version (independent of db.py's SQL, so a renamed table fails here).
 TABLES_BY_VERSION = {1: {"cache"}, 2: {"kv"}, 3: {"layouts"}, 4: {"history"}, 5: {"watchlists"}, 6: {"portfolios"},
-                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}, 10: {"local_bars"}, 11: {"news_alerts"}, 12: {"iv_snapshots"}, 13: {"ai_runs", "theses"}, 14: {"ai_ledger"}, 15: {"deliveries"}}
-ALERT_COLUMNS = ["id", "symbol", "op", "unit", "value", "status", "created_at", "triggered_at", "trigger_price"]
+                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}, 10: {"local_bars"}, 11: {"news_alerts"}, 12: {"iv_snapshots"}, 13: {"ai_runs", "theses"}, 14: {"ai_ledger"}, 15: {"deliveries"}, 16: set()}
+# Migrations that add a COLUMN to an existing table (not a new table): version -> [(table, column)]. The upgrade test below
+# removes these columns again so that the migration has something to add (otherwise ALTER TABLE ADD COLUMN would fail
+# with "duplicate column name" on a database stamped with the older version).
+COLUMNS_BY_VERSION = {16: [("alerts", "channels"), ("news_alerts", "channels")]}
+ALERT_COLUMNS = ["id", "symbol", "op", "unit", "value", "status", "created_at", "triggered_at", "trigger_price", "channels"]
 
 
 def test_tables_by_version_lists_every_migration():
@@ -30,6 +34,12 @@ async def test_migrations_upgrade_a_db_from_every_version(tmp_path, version):
     path = tmp_path / "old.db"
     db = await open_db(path)
     await db.execute(f"PRAGMA user_version={version}")
+    # Undo column migrations first, while their tables still exist (a table whose own migration is also undone below is
+    # dropped whole, so it needs no column drop).
+    for v in range(version + 1, len(MIGRATIONS) + 1):
+        for table, column in COLUMNS_BY_VERSION.get(v, ()):
+            if not any(table in TABLES_BY_VERSION.get(u, ()) for u in range(version + 1, len(MIGRATIONS) + 1)):
+                await db.execute(f"ALTER TABLE {table} DROP COLUMN {column}")
     for v in range(version + 1, len(MIGRATIONS) + 1):
         for table in TABLES_BY_VERSION.get(v, ()):
             await db.execute(f"DROP TABLE {table}")

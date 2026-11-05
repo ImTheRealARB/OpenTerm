@@ -8,16 +8,19 @@ import time
 
 import aiosqlite
 
+from . import alert_channels
 from .symbols import resolve
 from .userdata import SYMBOL_RE, UserDataError
 
 MAX_NEWS_ALERTS = 50
 WORD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&'/-]{0,38}[A-Za-z0-9.]\Z|^[A-Za-z0-9]{2}\Z")
-COLS = "id, word, symbol, status, created_at, triggered_at, headline, url"
+COLS = "id, word, symbol, status, created_at, triggered_at, headline, url, channels"
 
 
 def _row(r) -> dict:
-    return dict(zip(COLS.split(", "), r, strict=True))
+    d = dict(zip(COLS.split(", "), r, strict=True))
+    d["channels"] = alert_channels.load(d["channels"])  # stored as JSON text; None = all enabled channels
+    return d
 
 
 def check(body: dict) -> tuple[str, str | None]:
@@ -52,13 +55,14 @@ class NewsAlerts:
 
     async def create(self, body: dict) -> dict:
         word, symbol = check(body)
+        channels = alert_channels.parse(body.get("channels"))  # 400 on an unknown channel name
         async with self.db.execute("SELECT COUNT(*) FROM news_alerts") as cur:
             (n,) = await cur.fetchone()
         if n >= MAX_NEWS_ALERTS:
             raise UserDataError("too_large", f"OVER {MAX_NEWS_ALERTS} NEWS ALERTS. ALRT CLEAR REMOVES TRIGGERED ONES")
         cur = await self.db.execute(
-            "INSERT INTO news_alerts (word, symbol, status, created_at) VALUES (?, ?, 'active', ?)",
-            (word, symbol, time.time()),
+            "INSERT INTO news_alerts (word, symbol, status, created_at, channels) VALUES (?, ?, 'active', ?, ?)",
+            (word, symbol, time.time(), alert_channels.dump(channels)),
         )
         await self.db.commit()
         return await self._one(cur.lastrowid)

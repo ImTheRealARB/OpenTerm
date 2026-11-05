@@ -4,6 +4,8 @@
  * data, UNSOURCED NUMBERS for figures no tool returned. AI output is model output, not data. Keys never reach this code: the backend holds them.
  * `AI BT <idea>` drafts a backtest rule (validated by the BT parser, shown, never run by the AI: B puts the BT command on the command line).
  * `AI CHART` sends the chart of the newest GP panel to a vision model. Both answers are labelled model output.
+ * `AI FILING <SYM> <question>` / `AI FILING <SYM> DRIVERS` (US filers): the backend searches the newest 10-K / 10-Q, the model answers from the passages
+ * and quotes them, and every quote is checked word for word against the filing: VERIFIED with its section, or UNVERIFIED and left out of the summary.
  * `AI DOC FILING <SYM> [FORM]` or U (upload a TXT, CSV, HTML, DOCX, XLSX or PDF) loads one document; questions then use only its text, with chunk
  * citations (`AI DOC OFF` goes back to market data). Keys: I / Enter type a question, Enter sends, Esc cancels a running answer (or leaves the input), X clears the chat.
  */
@@ -59,12 +61,32 @@ function TurnView({ t }: { t: Turn }) {
     <div className="ai-turn" data-testid="ai-turn">
       <div className="acc">&gt; {t.question}</div>
       <ToolLines tools={t.tools} />
+      {t.filing && (
+        <div className="dim" data-testid="ai-filing">
+          {t.filing.source} · {t.filing.symbol} {t.filing.form} · FILED {t.filing.filed} · ACCESSION {t.filing.accession} · {t.filing.sections} SECTIONS · {t.filing.passages} PASSAGES
+        </div>
+      )}
+      {t.passages && t.passages.length > 0 && (
+        <div className="dim" data-testid="ai-passages">
+          SENT TO THE MODEL: {t.passages.map((p) => `${p.id} ${p.section}`).join(" · ")}
+        </div>
+      )}
       {t.notices.map((n, i) => (
         <div key={i} className="warn">
           {n}
         </div>
       ))}
       {(t.answer || t.status === "running") && <Answer text={t.answer} running={t.status === "running"} />}
+      {t.quotes && t.quotes.length > 0 && (
+        <div data-testid="ai-quotes">
+          {t.quotes.map((q) => (
+            <div key={q.n} className={q.verified ? "dim" : "warn"} data-testid="ai-quote">
+              <span className={q.verified ? "up" : "err"}>[Q{q.n}] {q.verified ? `VERIFIED${q.section ? ` · ${q.section}` : ""}` : `UNVERIFIED · ${q.reason}`}</span> &ldquo;{q.quote || "(no quote)"}&rdquo;
+              {!q.verified && <span> · CLAIM LEFT OUT OF THE SUMMARY: {q.claim}</span>}
+            </div>
+          ))}
+        </div>
+      )}
       {t.status === "done" && (
         <div className="dim" data-testid="ai-footer">
           {turnLine(t)}
@@ -144,10 +166,10 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, []);
 
   const send = useCallback(
-    async (question: string, mode: "ask" | "bt" | "chart" | "auto" = "ask") => {
+    async (question: string, mode: "ask" | "bt" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean }) => {
       const { turns: cur, ai: cfg, doc: curDoc } = state.current;
       if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
-      const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : "";
+      const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : mode === "filing" ? `AI FILING ${filing?.symbol ?? ""}` : "";
       const shown = label ? `${label} ${question}`.trim() : question;
       const shot = mode === "chart" ? latestChartShot() : null;
       const image = shot?.shot() ?? null;
@@ -169,11 +191,14 @@ export default function AI({ panelId, args }: FunctionProps) {
       let sawToken = false;
       try {
         const asking = mode === "ask" && curDoc;
-        const url = mode === "bt" ? "/api/ai/bt" : mode === "auto" ? "/api/ai/auto" : mode === "chart" ? "/api/ai/chart" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
+        const url =
+          mode === "bt" ? "/api/ai/bt" : mode === "auto" ? "/api/ai/auto" : mode === "chart" ? "/api/ai/chart" : mode === "filing" ? "/api/ai/filing" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
         const payload =
           mode === "bt"
             ? { idea: question, model: cfg.model, provider: cfg.provider }
-            : mode === "auto"
+            : mode === "filing" && filing
+              ? { symbol: filing.symbol, ...(filing.form ? { form: filing.form } : {}), ...(filing.drivers ? { mode: "drivers" } : { question }), model: cfg.model, provider: cfg.provider }
+              : mode === "auto"
               ? { hypothesis: question, model: cfg.model, provider: cfg.provider }
               : mode === "chart"
               ? { image, symbol: shot!.symbol, range: shot!.range, model: cfg.visionModel, provider: cfg.provider }
@@ -272,6 +297,9 @@ export default function AI({ panelId, args }: FunctionProps) {
       setNote({ text: "DOCUMENT UNLOADED: QUESTIONS USE MARKET DATA TOOLS AGAIN", cls: "dim" });
     } else if (a.mode === "docfiling") {
       void loadFiling(a.symbol, a.form);
+    } else if (a.mode === "filing") {
+      asked.current = true;
+      void send(a.text, "filing", { symbol: a.symbol, form: a.form, drivers: a.drivers });
     } else if (a.mode === "bad") {
       setTurns([reduceTurn(newTurn("AI " + args.join(" ")), { type: "error", kind: "usage", text: a.error })]);
     } else if (a.mode !== "ask" || a.text) {
@@ -325,7 +353,7 @@ export default function AI({ panelId, args }: FunctionProps) {
         <span className="dim">
           {" "}
           · {ai.provider.toUpperCase()}
-          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI AUTO HYPOTHESIS · AI CHART
+          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI AUTO HYPOTHESIS · AI CHART · AI FILING SYMBOL QUESTION
         </span>
       </div>
       {doc && (

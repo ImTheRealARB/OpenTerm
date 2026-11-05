@@ -14,11 +14,15 @@ import "./fonts.css"; // bundled font presets (loaded only when used)
 import "./gui/gui.css"; // GUI-mode-only rules, all scoped under :root[data-mode="gui"]
 import "./polish/lists.css"; // panel polish: Q, WL, WEI, N
 import "./polish/analysis.css"; // panel polish: GP, FA, PORT, BT
-import { initSettings, pollMs } from "./settings/runtime";
+import { openHomeOnStart } from "./home/startup";
+import { getSettings, initSettings, pollMs } from "./settings/runtime";
+import { workspace } from "./state/workspace";
 import { startSettingsSync } from "./settings/sync";
 
 installObservers();
 initSettings(); // Phase 10: theme, number format, keybinding overrides from the localStorage mirror (sync, no fetch)
+// Setting `startup` = "home": a new session opens the HOME page instead of the saved workspace (see home/startup.ts).
+openHomeOnStart(getSettings().startup, (w) => workspace.set(() => w));
 createRoot(document.getElementById("root")!).render(<App />);
 
 afterPaint(() => {

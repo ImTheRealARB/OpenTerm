@@ -42,6 +42,20 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
     if (done !== null) return done;
   }
 
+  // TAPE edits a setting and answers on the status line; it never opens a panel (bare TAPE just lists the symbols).
+  // Its parser is its own small chunk (kept out of the startup bundle), so the answer arrives a moment after Enter.
+  if (parsed.fn === "TAPE") {
+    statusMsg.set(() => null);
+    const targs = parsed.args;
+    void import("../home/tapeArgs").then(({ tapeCommand }) => {
+      const t = tapeCommand(targs, getSettings());
+      if (!t.ok) return void fail(t.error);
+      if (t.next !== getSettings()) updateSettings(() => t.next);
+      info(t.message);
+    });
+    return true;
+  }
+
   let args = parsed.args;
   // Phase 10: THEME name / SETTINGS key value apply at once and stay on the current panel;
   // bare THEME or SETTINGS opens the SETTINGS panel.

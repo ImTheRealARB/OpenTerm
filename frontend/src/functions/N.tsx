@@ -1,4 +1,4 @@
-/** News: market top stories (RSS), a security's headlines (Yahoo RSS, GDELT) or a GDELT keyword search. */
+/** News: market top stories (RSS), a security's headlines (Yahoo RSS, GDELT), a GDELT keyword search, or the curated feeds filtered by section / country / sector / commodity / text. */
 import { pollMs } from "../settings/runtime";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { checkNewsItems } from "../command/alerts";
@@ -8,7 +8,7 @@ import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type NewsItem, type NewsPayload } from "../net/api";
-import { newsEmptyHint, newsQuery } from "./newsArgs";
+import { newsEmptyHint, newsFilterLine, newsParams, newsQuery, newsTitle } from "./newsArgs";
 import { sentimentClass, sentimentText } from "./newsSentiment";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
@@ -22,6 +22,7 @@ interface Row extends NewsItem {
 
 const COLUMNS: Column<Row>[] = [
   { title: "TIME", width: 8, text: (r) => fmtTime(r.published ? r.published * 1000 : null), color: (r) => (r.fresh ? "acc" : "dim") },
+  { title: "AGE", width: 5, text: (r) => (r.published ? fmtAge(Math.max(0, Date.now() / 1000 - r.published)) : ""), color: (r) => (r.fresh ? "acc" : "dim") },
   { title: "SOURCE", width: 16, text: (r) => (r.publisher ?? "").toUpperCase(), color: () => "dim" },
   { title: "HEADLINE", width: 160, text: (r) => r.title, color: (r) => (r.fresh ? "acc" : "fg") },
 ];
@@ -38,9 +39,10 @@ export default function N({ panelId, args, security }: FunctionProps) {
   const grid = useRef<GridHandle>(null);
 
   const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify(query), (fresh) => {
-    const params = query.kind === "symbol" ? { symbol: query.symbol } : query.kind === "keyword" ? { q: query.q } : {};
-    return api.news(params, fresh).then((e) => {
-      if (query.kind !== "keyword") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
+    // A mistyped filter never reaches the network: the panel says what was wrong (below).
+    if (query.kind === "error") return Promise.reject(new Error(query.message));
+    return api.news(newsParams(query), fresh).then((e) => {
+      if (query.kind === "top" || query.kind === "symbol") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
       return e;
     });
   });
@@ -84,7 +86,8 @@ export default function N({ panelId, args, security }: FunctionProps) {
     [panelId, latest, load],
   );
 
-  const title = query.kind === "top" ? "TOP NEWS" : query.kind === "symbol" ? `NEWS: ${query.symbol}` : `NEWS SEARCH: ${query.q}`;
+  const title = newsTitle(query);
+  const filterLine = newsFilterLine(query);
   const d = env?.data;
   const pick = rows[Math.min(sel, rows.length - 1)];
   return (
@@ -98,10 +101,20 @@ export default function N({ panelId, args, security }: FunctionProps) {
           </>
         )}
         {env?.stale && <span className="warn"> · STALE {fmtAge(env.age_s)}</span>}
+        {d && d.feeds_total != null && (
+          <span className="dim"> · {d.feeds_ok}/{d.feeds_total} FEEDS OK</span>
+        )}
         {d && d.failed.length > 0 && <span className="warn"> · NOT ANSWERING: {d.failed.join(", ")}</span>}
         {loading && <span className="dim"> · LOADING…{query.kind === "keyword" && " (GDELT CAN TAKE 5-15 S)"}</span>}
         <span className="dim legend"> · J/K MOVE · ENTER OPEN ARTICLE · E CSV · F5 REFRESH</span>
       </div>
+      {/* The active filters, always visible, so a short list is never a mystery. */}
+      {filterLine && (
+        <div className="line" data-testid="news-filter">
+          <span className="dim">FILTER </span>
+          {filterLine}
+        </div>
+      )}
       {/* A failed fetch with nothing to show is a full-panel error; with old headlines on screen it stays one line above them. */}
       {error && isKeyRequired(error) && <KeyRequiredLine error={error} />}
       {error && !env && !isKeyRequired(error) && (

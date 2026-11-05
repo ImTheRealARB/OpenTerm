@@ -29,9 +29,11 @@ const SWARM_RUN: Ev[] = [
   { type: "saved", run_id: RUN_ID },
   { type: "swarm_done", answer: "The desk sees 343.46 and a target of 999.9.", roles: [], cost: 0.002, unsourced: ["999.9"], grounded: true, label: null, failed: ["technical"] },
 ];
+// Same fields as GET /api/ai/swarm/presets (backend swarm.listing + the USD figure the route adds).
+const DESK = { coverage: "FULL", limits: [], kind: "lite", variables: [], source: "built-in", estimate: { roles: 3, in_tokens: 200_000, out_tokens: 20_000, usd: 0.05 } };
 const PRESETS = [
-  { code: "COMMITTEE", title: "Investment committee", roles: ROLES, note: "Subject: one ticker, e.g. AAPL.", needs_subject: true },
-  { code: "MACRO", title: "Macro desk", roles: ROLES.slice(0, 2), note: "Subject: a theme.", needs_subject: false },
+  { ...DESK, code: "COMMITTEE", title: "Investment committee", roles: ROLES, note: "Subject: one ticker, e.g. AAPL.", needs_subject: true },
+  { ...DESK, code: "MACRO", title: "Macro desk", roles: ROLES.slice(0, 2), note: "Subject: a theme.", needs_subject: false },
 ];
 interface Th { id: number; symbol: string; status: string; text: string; invalidation: string; run_ids: string[]; created_at: number; updated_at: number }
 
@@ -59,7 +61,7 @@ async function setup(page: Page, swarm: Ev[] = SWARM_RUN) {
     }),
   );
   await page.route("**/api/llm/health", (r) => r.fulfill({ json: { providers: [], spend: { today: 0.12, cap: 1 } } }));
-  await page.route("**/api/ai/swarm/presets", (r) => r.fulfill({ json: { presets: PRESETS } }));
+  await page.route("**/api/ai/swarm/presets", (r) => r.fulfill({ json: { presets: PRESETS, errors: {}, model: "deepseek/deepseek-v4-pro", spend: { today: 0, cap: 5 } } }));
   await page.route("**/api/ai/runs?**", (r) => r.fulfill({ json: { runs: [{ id: RUN_ID, kind: "swarm", title: "COMMITTEE AAPL", symbol: "AAPL", created_at: 1_790_000_000 }] } }));
   await page.route("**/api/ai/swarm", (r) => {
     log("swarm", r.request().postDataJSON());

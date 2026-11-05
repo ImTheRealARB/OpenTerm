@@ -11,6 +11,7 @@ import time
 import aiosqlite
 import orjson
 
+from . import alert_channels
 from .symbols import resolve
 from .userdata import SYMBOL_RE, UserDataError, layout_name
 
@@ -132,11 +133,13 @@ def check_alert(body: dict) -> tuple[str, str, str, float]:
     return symbol, op, unit, value
 
 
-ALERT_COLS = "id, symbol, op, unit, value, status, created_at, triggered_at, trigger_price"
+ALERT_COLS = "id, symbol, op, unit, value, status, created_at, triggered_at, trigger_price, channels"
 
 
 def _alert(row) -> dict:
-    return dict(zip(ALERT_COLS.split(", "), row, strict=True))
+    d = dict(zip(ALERT_COLS.split(", "), row, strict=True))
+    d["channels"] = alert_channels.load(d["channels"])  # stored as JSON text; None = all enabled channels
+    return d
 
 
 class Portfolios:
@@ -235,13 +238,14 @@ class Alerts:
 
     async def create(self, body: dict) -> dict:
         symbol, op, unit, value = check_alert(body)
+        channels = alert_channels.parse(body.get("channels"))  # 400 on an unknown channel name
         async with self.db.execute("SELECT COUNT(*) FROM alerts") as cur:
             (n,) = await cur.fetchone()
         if n >= MAX_ALERTS:
             raise UserDataError("too_large", f"OVER {MAX_ALERTS} ALERTS. ALRT CLEAR REMOVES TRIGGERED ONES")
         cur = await self.db.execute(
-            "INSERT INTO alerts (symbol, op, unit, value, status, created_at) VALUES (?, ?, ?, ?, 'active', ?)",
-            (symbol, op, unit, value, time.time()),
+            "INSERT INTO alerts (symbol, op, unit, value, status, created_at, channels) VALUES (?, ?, ?, ?, 'active', ?, ?)",
+            (symbol, op, unit, value, time.time(), alert_channels.dump(channels)),
         )
         await self.db.commit()
         return await self._one(cur.lastrowid)

@@ -19,7 +19,7 @@ def draft_text(d=None, lead="Here is a trend rule."):
 def test_five_playbooks_exist_and_only_name_real_tools():
     from openterm.ai import skills, tools
 
-    assert set(skills.names()) == NAMES
+    assert NAMES <= set(skills.names())  # Phase 20 ported more playbooks next to these five (test_phase20_skills.py)
     for n in NAMES:
         body = skills.get(n)
         assert body and 300 < len(body) < 5000, n

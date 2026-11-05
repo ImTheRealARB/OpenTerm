@@ -13,10 +13,15 @@ import type { Page } from "@playwright/test";
  * yet, so a mode switched during a test survives a reload, and a test that clears localStorage on purpose gets a
  * fresh seed on its next load.
  *
+ * `startup`: seeded as "layout" so a new session restores the workspace like before; `home: true` leaves the default (the HOME page).
+ * `settings` merges extra saved settings into the seed (e.g. `{ tape: true }`).
+ *
  * `welcome: true` leaves the first-run welcome card unseeded, so a GUI-mode test sees it once (default: already seen).
  */
-export async function openApp(page: Page, opts: { mode?: "terminal" | "gui"; welcome?: boolean; tabs?: boolean; statusBar?: boolean } = {}) {
-  const settings = opts.mode === "gui" ? { mode: "gui" } : {};
+export async function openApp(page: Page, opts: { mode?: "terminal" | "gui"; welcome?: boolean; tabs?: boolean; statusBar?: boolean; home?: boolean; settings?: Record<string, unknown> } = {}) {
+  // `startup: "layout"` keeps the old behaviour (restore the saved workspace) so every existing test still starts on its own panel;
+  // the default startup is the HOME page, which only the HOME spec wants (`home: true`, or `settings` for extra saved settings).
+  const settings = { ...(opts.mode === "gui" ? { mode: "gui" } : {}), ...(opts.home ? {} : { startup: "layout" }), ...(opts.settings ?? {}) };
   const seedWelcomed = !opts.welcome;
   // GUI mode shows panels as tabs by default; older tests expect tiles, so they start with tabs off unless `tabs: true`.
   const seedTabs = opts.tabs ? "1" : "0";

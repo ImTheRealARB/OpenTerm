@@ -158,7 +158,7 @@ export const api = {
     send<{ name: string; updated_at: number }>("PUT", `/api/layouts/${encodeURIComponent(name)}`, { state }),
   deleteLayout: (name: string) => send<{ deleted: string }>("DELETE", `/api/layouts/${encodeURIComponent(name)}`),
   // `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope.
-  news: (q: { symbol?: string; q?: string }, fresh = false) =>
+  news: (q: { symbol?: string; q?: string; section?: string; limit?: string; region?: string; sector?: string; commodity?: string }, fresh = false) =>
     request<Envelope<NewsPayload>>(`/api/news?${qs(q)}`, fresh ? 0 : 30_000),
   movers: (fresh = false) => request<Envelope<MoversPayload>>("/api/movers", fresh ? 0 : 30_000),
   crypto: (vs: string, fresh = false) =>
@@ -246,11 +246,14 @@ export interface NewsItem {
 }
 
 export interface NewsPayload {
-  kind: "top" | "symbol" | "keyword";
+  kind: "top" | "symbol" | "keyword" | "pool";
   query: string | null;
   items: NewsItem[];
-  /** Feeds that did not answer this time (top stories only). */
+  /** Feeds that did not answer this time (top stories and feed filters). */
   failed: string[];
+  /** Feed filters only: how many of the asked-for feeds answered, and how many were asked. */
+  feeds_ok?: number;
+  feeds_total?: number;
 }
 
 export interface Mover {
@@ -513,6 +516,22 @@ export interface Alert {
   created_at: number;
   triggered_at: number | null;
   trigger_price: number | null;
+  /** The `VIA` channels this alert asked for ("telegram" | "email" | "webhook"); null = every channel switched on in DELIVERY. */
+  channels: string[] | null;
+}
+
+/** What the backend alert engine reports (Phase 20). It owns firing, so this is where limits and refused matches show. */
+export interface AlertEngineState {
+  running: boolean;
+  /** Fixed text: "ACTIVE WHILE OPENTERM RUNNING". */
+  note: string;
+  watching: string[];
+  last_tick_age_s: number | null;
+  last_news_poll_age_s: number | null;
+  /** Fixture mode: the engine refuses every tick and headline, so this browser fires on the recorded data instead. */
+  fixtures: boolean;
+  /** Matches the engine refused to act on (SYNTHETIC / STALE / FIXTURE MODE / news outage), with the reason. */
+  skipped: { key: string; label: string; reason: string; age_s: number }[];
 }
 
 const pf = (name: string) => `/api/portfolios/${encodeURIComponent(name)}`;
@@ -526,10 +545,12 @@ export const api8 = {
     send<Portfolio>("PATCH", pf(name), change),
   deletePortfolio: (name: string) => send<{ deleted: string }>("DELETE", pf(name)),
   alerts: () => send<{ alerts: Alert[] }>("GET", "/api/alerts"),
-  createAlert: (a: { symbol: string; op: ">" | "<"; unit: "price" | "pct"; value: number }) => send<Alert>("POST", "/api/alerts", a),
+  createAlert: (a: { symbol: string; op: ">" | "<"; unit: "price" | "pct"; value: number; channels?: string[] }) => send<Alert>("POST", "/api/alerts", a),
   deleteAlert: (id: number) => send<{ deleted: number }>("DELETE", `/api/alerts/${id}`),
-  triggerAlert: (id: number, price: number, at: number) =>
-    send<{ alert: Alert; changed: boolean }>("POST", `/api/alerts/${id}/trigger`, { price, at }),
+  alertEngine: () => send<AlertEngineState>("GET", "/api/alerts/engine"),
+  /** `synthetic` tells the server this firing came from labelled test data, so it is never pushed to Telegram or email. */
+  triggerAlert: (id: number, price: number, at: number, synthetic = false) =>
+    send<{ alert: Alert; changed: boolean }>("POST", `/api/alerts/${id}/trigger`, synthetic ? { price, at, synthetic: true } : { price, at }),
   rearmAlert: (id: number) => send<Alert>("POST", `/api/alerts/${id}/rearm`),
   clearAlerts: () => send<{ deleted: number }>("DELETE", "/api/alerts?status=triggered"),
 };
@@ -838,11 +859,13 @@ export interface NewsAlert {
   triggered_at: number | null;
   headline: string | null;
   url: string | null;
+  /** The `VIA` channels this alert asked for; null = every channel switched on in DELIVERY. */
+  channels: string[] | null;
 }
 
 export const newsAlertsApi = {
   list: () => send<{ alerts: NewsAlert[] }>("GET", "/api/newsalerts"),
-  create: (a: { word: string; symbol: string | null }) => send<NewsAlert>("POST", "/api/newsalerts", a),
+  create: (a: { word: string; symbol: string | null; channels?: string[] }) => send<NewsAlert>("POST", "/api/newsalerts", a),
   delete: (id: number) => send<{ deleted: number }>("DELETE", `/api/newsalerts/${id}`),
   trigger: (id: number, headline: string, url: string, at: number) =>
     send<{ alert: NewsAlert; changed: boolean }>("POST", `/api/newsalerts/${id}/trigger`, { headline, url, at }),
@@ -1455,11 +1478,19 @@ export const worldApi = {
 // --- Phase 17: alert delivery (DLVR) and the daily brief (BRIEF) ---
 export type DeliveryChannel = "email" | "telegram" | "webhook" | "desktop";
 
-/** The delivery settings document (backend/openterm/delivery/settings.py). Secrets are never here: they live in APIKEYS. */
+/** Who a channel writes to, as the browser may know it: whether it is set, and a masked hint. Never the value itself. */
+export interface DeliveryRecipient {
+  configured: boolean;
+  hint: string;
+}
+/**
+ * The delivery settings the browser receives (backend/openterm/delivery/settings.py `public`). Secrets are never here
+ * (they live in APIKEYS) and neither are the recipient address or Telegram chat id: only `recipients` hints.
+ */
 export interface DeliverySettings {
   channels: Record<DeliveryChannel, boolean>;
-  email_to: string;
-  telegram_chat_id: string;
+  recipients: { email: DeliveryRecipient; telegram: DeliveryRecipient };
+  daily_cap: number;
   brief: { enabled: boolean; time: string; days: string; tz: string };
 }
 /** GET / PUT /api/delivery. `status` is per push channel: "off" | "ready" | "KEY REQUIRED: ..." (desktop has none). */
@@ -1477,17 +1508,37 @@ export interface DeliveryRow {
   status: string;
   detail: string | null;
 }
-/** A partial settings change; the backend merges it over the saved document. */
-export type DeliveryPatch = Partial<Omit<DeliverySettings, "channels" | "brief">> & {
+/**
+ * A partial settings change; the backend merges it over the saved document. `email_to` / `telegram_chat_id` are
+ * write-only: a non-empty value replaces the stored one, an empty one keeps it (the browser never reads them back).
+ */
+export type DeliveryPatch = {
+  email_to?: string;
+  telegram_chat_id?: string;
+  daily_cap?: number;
   channels?: Partial<Record<DeliveryChannel, boolean>>;
   brief?: Partial<DeliverySettings["brief"]>;
 };
+/** `POST /api/delivery/telegram/pair/start`: the bot's link and the one-time code to send it. */
+export interface TelegramPairStart {
+  bot: string;
+  link: string;
+  code: string;
+  expires_in: number;
+}
+/** `POST .../pair/check`: `paired: true` once the code arrived (the chat id stays on the server). */
+export interface TelegramPairCheck {
+  paired: boolean;
+  expires_in?: number;
+}
 
 export const deliveryApi = {
   get: () => send<DeliveryPayload>("GET", "/api/delivery"),
   put: (patch: DeliveryPatch) => send<DeliveryPayload>("PUT", "/api/delivery", patch),
   log: (limit = 100) => send<{ deliveries: DeliveryRow[] }>("GET", `/api/delivery/log?limit=${limit}`),
   test: (channel: Exclude<DeliveryChannel, "desktop">) => send<{ results: DeliveryRow[] }>("POST", "/api/delivery/test", { channel }),
+  pairStart: () => send<TelegramPairStart>("POST", "/api/delivery/telegram/pair/start", {}),
+  pairCheck: () => send<TelegramPairCheck>("POST", "/api/delivery/telegram/pair/check", {}),
 };
 
 export interface BriefSection {

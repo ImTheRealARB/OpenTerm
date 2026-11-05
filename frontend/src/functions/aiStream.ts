@@ -13,8 +13,41 @@ export type AiEvent =
   | { type: "draft_error"; text: string }
   | { type: "evidence"; runs: string[]; tested: boolean; note: string }
   | { type: "saved"; run_id: string }
+  | { type: "filing"; symbol: string; form: string; filed: string; accession: string; url: string; source: string; sections: number; passages: number; mode: string }
+  | { type: "passages"; items: FilingPassage[] }
+  | { type: "quotes"; items: FilingQuote[] }
   | { type: "error"; kind: string; text: string }
-  | { type: "done"; answer: string; grounded: boolean; label: string | null; unsourced: string[]; tool_calls: number; cost: number; stopped: string | null };
+  | { type: "done"; answer: string; grounded: boolean; label: string | null; unsourced: string[]; tool_calls: number; cost: number; stopped: string | null; verified?: number; unverified?: number };
+
+/** `AI FILING`: the filing the answer came from (form, dates, accession, source). */
+export interface FilingInfo {
+  symbol: string;
+  form: string;
+  filed: string;
+  accession: string;
+  url: string;
+  source: string;
+  sections: number;
+  passages: number;
+  mode: string;
+}
+/** A passage sent to the model (P1, P2...), with the section it came from. */
+export interface FilingPassage {
+  id: string;
+  section: string;
+  chars: number;
+  preview: string;
+}
+/** One quote the model gave, after the exact-match check. `verified` false = UNVERIFIED and its claim is not in the summary. */
+export interface FilingQuote {
+  n: number;
+  claim: string;
+  quote: string;
+  claimed_section: string | null;
+  section: string | null;
+  verified: boolean;
+  reason: string;
+}
 
 /** A backtest drafted by `AI BT`: validated by the BT parser, never run by the AI. */
 export interface BtDraft {
@@ -57,6 +90,10 @@ export interface Turn {
   /** `AI AUTO`: the backtest runs behind the report (none = the report has no backtest evidence). */
   evidence?: { runs: string[]; tested: boolean; note: string };
   runId?: string;
+  /** `AI FILING`: the filing, the passages sent to the model, and each quote with its verification. */
+  filing?: FilingInfo;
+  passages?: FilingPassage[];
+  quotes?: FilingQuote[];
 }
 
 export function newTurn(question: string): Turn {
@@ -108,6 +145,14 @@ export function reduceTurn(t: Turn, e: AiEvent): Turn {
       return { ...t, evidence: { runs: e.runs, tested: e.tested, note: e.note } };
     case "saved":
       return { ...t, runId: e.run_id };
+    case "filing": {
+      const { type: _type, ...info } = e;
+      return { ...t, filing: info };
+    }
+    case "passages":
+      return { ...t, passages: e.items };
+    case "quotes":
+      return { ...t, quotes: e.items };
     case "error":
       return { ...t, status: "error", error: { kind: e.kind, text: e.text } };
     case "done":
@@ -126,7 +171,7 @@ export type Segment = { text: string } | { cite: string };
 export function citeSegments(text: string): Segment[] {
   const out: Segment[] = [];
   let last = 0;
-  for (const m of text.matchAll(/\[(T\d+)\]/g)) {
+  for (const m of text.matchAll(/\[([TQ]\d+)\]/g)) {
     if (m.index! > last) out.push({ text: text.slice(last, m.index) });
     out.push({ cite: m[1] });
     last = m.index! + m[0].length;

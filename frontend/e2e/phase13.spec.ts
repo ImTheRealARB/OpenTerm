@@ -204,6 +204,10 @@ test("ALRT NEWS: a keyword alert fires on a newer headline that contains it, onc
     r.fulfill({ json: env({ kind: "symbol", query: "AAPL", items: feed, failed: [] }, { source: "yahoo_rss" }) }),
   );
   await setup(page);
+  // Phase 20: the server engine fires real headlines; in fixture mode it fires nothing and this tab checks the recorded ones
+  await page.route("**/api/alerts/engine", (r) =>
+    r.fulfill({ json: { running: true, note: "ACTIVE WHILE OPENTERM RUNNING", watching: [], last_tick_age_s: null, last_news_poll_age_s: null, fixtures: true, skipped: [] } }),
+  );
   await run(page, "ALRT NEWS recall AAPL");
   await expect(page.locator(".msg")).toContainText('NEWS ALERT SET: AAPL HEADLINE CONTAINS "RECALL"');
   const alrt = panel(page);

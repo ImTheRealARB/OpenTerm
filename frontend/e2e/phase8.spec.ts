@@ -18,6 +18,9 @@ interface Al { id: number; symbol: string; op: string; unit: string; value: numb
 let ws: WebSocketRoute | null = null;
 const subs: string[][] = [];
 
+/** What GET /api/alerts/engine answers: the server engine is running and this is NOT fixture mode, so it owns real data. */
+const ENGINE = { running: true, note: "ACTIVE WHILE OPENTERM RUNNING", watching: [], last_tick_age_s: null, last_news_poll_age_s: null, fixtures: false, skipped: [] };
+
 /** Mocked quote feed, WebSocket, and stateful in-memory /api/portfolios and /api/alerts (average-cost lots like the backend). */
 async function setup(page: Page) {
   ws = null;
@@ -84,6 +87,7 @@ async function setup(page: Page) {
     const req = r.request();
     const u = new URL(req.url());
     const rest = u.pathname.split("/api/alerts")[1].replace(/^\//, "").split("/");
+    if (rest[0] === "engine") return r.fulfill({ json: ENGINE }); // Phase 20: the server engine's state (not fixture mode)
     const id = Number(rest[0]);
     const body = req.postDataJSON?.() ?? null;
     const find = () => alerts.find((a) => a.id === id);
@@ -129,7 +133,7 @@ const panel = (page: Page, id = 1) => page.locator(`[data-panel="${id}"]`);
 /** The canvas grid mirrors its selected row into a visually hidden live region. */
 const selected = (page: Page, id = 1) => panel(page, id).locator(".grid .sr");
 const tick = (symbol: string, price: number, change: number | null = null, pct: number | null = null) =>
-  ws!.send(JSON.stringify(["T", [[symbol, price, change, pct, null, null, null, Date.now(), "y"]]]));
+  ws!.send(JSON.stringify(["T", [[symbol, price, change, pct, null, null, null, Date.now(), "s"]]])); // "s" = SYNTHETIC: the browser fires only on labelled test data (Phase 20)
 
 test("PORT: ADD lots (average cost), P&L and totals, RM, index", async ({ page }) => {
   await setup(page);
@@ -323,4 +327,32 @@ test("ALRT: DEL by key (confirm) and by command; ALRT CLEAR command; bad input n
   await run(page, "ALRT CLEAR");
   await expect(page.locator(".msg")).toContainText("TRIGGERED ALERTS CLEARED");
   expect(alerts).toHaveLength(1); // nothing was triggered: the active alert stays
+});
+
+// Phase 20: real data is fired by the backend engine only, so the browser must not also fire (no double notification).
+test("ALRT: a real (non-synthetic) tick does not fire in the browser; the server's A frame updates the list instead", async ({ page }) => {
+  const { triggers, alerts } = await setup(page);
+  await run(page, "ALRT AAPL > 210");
+  await expect(page.locator(".msg")).toContainText("ALERT SET: AAPL > 210");
+  await expect.poll(() => subs.flat()).toContain("AAPL");
+  ws!.send(JSON.stringify(["T", [["AAPL", 215, null, null, null, null, null, Date.now(), "y"]]]));
+  await page.waitForTimeout(400);
+  await expect(page.locator(".alrt-flash")).toHaveCount(0);
+  expect(triggers).toHaveLength(0); // the browser never called the trigger route
+  // The server fires it (here: the mocked backend flips the row), then pushes an "A" frame. This tab only shows it.
+  Object.assign(alerts[0], { status: "triggered", trigger_price: 215.5, triggered_at: now() });
+  ws!.send(JSON.stringify(["A", "price", alerts[0].id]));
+  await expect(page.locator(".alrt-flash")).toContainText("ALERT 1 AAPL > 210 HIT 215.50");
+  expect(triggers).toHaveLength(0); // still no browser trigger call: nothing was reported twice
+});
+
+test("ALRT panel shows the server engine: its honest limit and every refused match", async ({ page }) => {
+  await setup(page);
+  await page.route("**/api/alerts/engine", (r) =>
+    r.fulfill({ json: { ...ENGINE, watching: ["AAPL"], last_tick_age_s: 2.5, skipped: [{ key: "price:1", label: "AAPL > 210", reason: "STALE TICK 300s OLD", age_s: 12 }] } }),
+  );
+  await run(page, "ALRT");
+  await expect(page.getByTestId("alrt-engine")).toContainText("ACTIVE WHILE OPENTERM RUNNING");
+  await expect(page.getByTestId("alrt-engine")).toContainText("WATCHING AAPL");
+  await expect(page.getByTestId("alrt-skipped")).toContainText("NOT FIRED: AAPL > 210: STALE TICK 300s OLD");
 });

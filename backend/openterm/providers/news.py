@@ -10,6 +10,7 @@ import hashlib
 import html
 import logging
 import re
+import time
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -20,20 +21,19 @@ import orjson
 
 from ..config import load_yaml
 from ..models import NewsItem
-from .base import NEWS_KEYWORD, NEWS_SYMBOL, NEWS_TOP, Provider, ProviderError
+from ..news_tags import feed_selected, normalize_title
+from .base import NEWS_KEYWORD, NEWS_POOL, NEWS_SYMBOL, NEWS_TOP, Provider, ProviderError
+from .news_feeds import FEEDS as FEED_TABLE
+from .news_feeds import Feed
 from .yahoo import UA
 
 log = logging.getLogger("openterm.news")
 
-# Default market feeds (verified 2026-10-17). Override with `news: feeds:` in config.yaml.
-FEEDS: list[dict[str, str]] = [
-    {"name": "CNBC", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"},
-    {"name": "MARKETWATCH", "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories"},
-    {"name": "BBC BUSINESS", "url": "https://feeds.bbci.co.uk/news/business/rss.xml"},
-    {"name": "ECONOMIC TIMES", "url": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"},
-    {"name": "MINT", "url": "https://www.livemint.com/rss/markets"},
-]
+# The built-in top-stories feeds as {name, url} dicts (the full curated table is news_feeds.FEEDS).
+FEEDS: list[dict[str, str]] = [{"name": f.name, "url": f.url} for f in FEED_TABLE if f.core]
 MAX_ITEMS = 200
+FEED_TIMEOUT = 6.0  # seconds per feed: a slow feed is reported as not answering, it never holds the others up
+CACHE_S, FAST_CACHE_S = 60.0, 30.0  # per-feed cache; tech / breaking feeds (Feed.fast) refresh sooner
 MAX_PER_FEED = 50
 SUMMARY_LEN = 300
 RSS_ACCEPT = "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.5"
@@ -61,8 +61,12 @@ def rfc822(s: str | None) -> float | None:
     try:
         d = parsedate_to_datetime(s.strip())
     except (TypeError, ValueError):
-        return None
-    return (d if d.tzinfo else d.replace(tzinfo=UTC)).timestamp()
+        try:  # SEBI sends "05 Nov 2026 18:00:02 +0530" (no weekday), which the email parser refuses
+            d = datetime.strptime(s.strip(), "%d %b %Y %H:%M:%S %z")
+        except ValueError:
+            return None
+    # A date with no zone is read as UTC; a feed that meant local time (RBI, IST) would land in the future, so cap at "now".
+    return min((d if d.tzinfo else d.replace(tzinfo=UTC)).timestamp(), time.time())
 
 
 def domain(url: str) -> str | None:
@@ -70,8 +74,34 @@ def domain(url: str) -> str | None:
     return host.removeprefix("www.") or None
 
 
+ATOM = "{http://www.w3.org/2005/Atom}"
+DC_DATE = "{http://purl.org/dc/elements/1.1/}date"
+
+
+def iso8601(s: str | None) -> float | None:
+    """Atom / Dublin Core dates ("2026-11-05T11:39:42+00:00", also with a trailing Z)."""
+    if not s:
+        return None
+    try:
+        d = datetime.fromisoformat(s.strip())
+    except ValueError:
+        return None
+    return (d if d.tzinfo else d.replace(tzinfo=UTC)).timestamp()
+
+
+def _entries(root: ET.Element):
+    """(title, url, date text, summary) for each RSS <item> or Atom <entry>."""
+    for it in root.iter("item"):
+        yield it.findtext("title"), (it.findtext("link") or "").strip(), (it.findtext("pubDate") or it.findtext(DC_DATE)), it.findtext("description")
+    for en in root.iter(ATOM + "entry"):
+        # Atom puts the URL in an attribute; prefer the rel="alternate" (or unlabelled) link.
+        link = next((lk.get("href", "") for lk in en.findall(ATOM + "link") if lk.get("rel", "alternate") == "alternate"), "")
+        yield (en.findtext(ATOM + "title"), link.strip(), en.findtext(ATOM + "published") or en.findtext(ATOM + "updated"),
+               en.findtext(ATOM + "summary"))
+
+
 def parse_rss(content: bytes, publisher: str | None, source: str) -> list[NewsItem]:
-    """RSS 2.0 items. `publisher` None means "use each link's domain" (aggregated feeds)."""
+    """RSS 2.0 items or Atom entries. `publisher` None means "use each link's domain" (aggregated feeds)."""
     try:
         root = ET.fromstring(content)
     except ET.ParseError:
@@ -81,14 +111,13 @@ def parse_rss(content: bytes, publisher: str | None, source: str) -> list[NewsIt
         except ET.ParseError as e:
             raise ProviderError("unavailable", "feed is not XML (bot check or outage?)") from e
     out: list[NewsItem] = []
-    for it in root.iter("item"):
-        title = clean(it.findtext("title"))
-        url = (it.findtext("link") or "").strip()
+    for raw_title, url, date, summary in _entries(root):
+        title = clean(raw_title)
         if not title or not url.startswith(("https://", "http://")):
             continue
         out.append(NewsItem(
             id=item_id(url), title=title, url=url, publisher=publisher or domain(url),
-            published=rfc822(it.findtext("pubDate")), summary=clean(it.findtext("description")) or None,
+            published=rfc822(date) or iso8601(date), summary=clean(summary) or None,
             source=source,
         ))
         if len(out) >= MAX_PER_FEED:
@@ -101,7 +130,7 @@ def merge(items: list[NewsItem]) -> list[NewsItem]:
     seen: set[str] = set()
     out = []
     for i in sorted(items, key=lambda x: x.published or 0, reverse=True):
-        title_key = i.title.lower()
+        title_key = normalize_title(i.title)  # case / punctuation differences do not make a new story
         if i.url in seen or title_key in seen:
             continue
         seen.update((i.url, title_key))
@@ -109,43 +138,70 @@ def merge(items: list[NewsItem]) -> list[NewsItem]:
     return out[:MAX_ITEMS]
 
 
-def configured_feeds() -> list[dict[str, str]]:
-    feeds = ((load_yaml().get("news") or {}).get("feeds")) or FEEDS
-    return [{"name": str(f["name"]).upper(), "url": str(f["url"])} for f in feeds if f.get("name") and f.get("url")]
+def configured_feeds() -> list[Feed]:
+    """The feed table, or the user's own list when config.yaml has `news: feeds:` (those all count as top stories)."""
+    custom = (load_yaml().get("news") or {}).get("feeds")
+    if not custom:
+        return list(FEED_TABLE)
+    return [Feed(str(f["name"]).upper(), str(f["url"]), ("markets",), "WORLD", (), False) for f in custom if f.get("name") and f.get("url")]
 
 
 class RssProvider(Provider):
     name = "rss"
     label = "Publisher RSS feeds"
-    capabilities = frozenset({NEWS_TOP})
+    capabilities = frozenset({NEWS_TOP, NEWS_POOL})
     terms = "Headlines, teasers and links from each publisher's public RSS feed. Articles open on the publisher's site."
-    rate = (5.0, 10)
+    rate = (100.0, 100)  # dozens of feeds fetched at once, each on its own host: a shared 5/s bucket would starve them
     headers: ClassVar[dict[str, str]] = {"User-Agent": UA, "Accept": RSS_ACCEPT}
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.feeds = configured_feeds()
-        self.markets = "Market top stories: " + ", ".join(f["name"] for f in self.feeds)
+        # config.yaml feeds are all "top"; with the built-in table only the five original (core) feeds are.
+        custom = bool((load_yaml().get("news") or {}).get("feeds"))
+        self.top = self.feeds if custom else [f for f in self.feeds if f.core]
+        self.markets = f"{len(self.feeds)} curated feeds (tech, markets, India, official, commodities, crypto); top stories: " + ", ".join(f.name for f in self.top)
+        self._cache: dict[str, tuple[float, list[NewsItem]]] = {}  # url -> (fetched at, items)
 
-    async def _feed(self, feed: dict[str, str]) -> list[NewsItem]:
-        return parse_rss(await self.get_bytes(feed["url"]), feed["name"], self.source)
+    async def _feed(self, feed: Feed) -> list[NewsItem]:
+        """One feed's items, through a short per-feed cache (30 s for fast feeds, 60 s otherwise)."""
+        hit = self._cache.get(feed.url)
+        if hit and time.time() - hit[0] < (FAST_CACHE_S if feed.fast else CACHE_S):
+            return hit[1]
+        items = parse_rss(await self.get_bytes(feed.url, timeout=FEED_TIMEOUT), feed.name, self.source)
+        self._cache[feed.url] = (time.time(), items)
+        return items
+
+    async def _fetch_all(self, feeds: list[Feed]) -> tuple[list[tuple[Feed, list[NewsItem]]], list[str]]:
+        """All feeds at once. A dead feed is recorded by name and never stops the others."""
+        results = await asyncio.gather(*(self._feed(f) for f in feeds), return_exceptions=True)
+        ok: list[tuple[Feed, list[NewsItem]]] = []
+        failed: list[str] = []
+        for feed, r in zip(feeds, results):
+            if isinstance(r, BaseException):
+                failed.append(feed.name)
+                log.warning("feed %s failed: %s", feed.name, r)
+            else:
+                ok.append((feed, r))
+        return ok, failed
 
     async def news_top(self) -> dict:
-        results = await asyncio.gather(*(self._feed(f) for f in self.feeds), return_exceptions=True)
-        items: list[NewsItem] = []
-        failed: list[str] = []
-        for feed, r in zip(self.feeds, results):
-            if isinstance(r, BaseException):
-                failed.append(feed["name"])
-                log.warning("feed %s failed: %s", feed["name"], r)
-            else:
-                items.extend(r)
+        ok, failed = await self._fetch_all(self.top)
+        items = [i for _, found in ok for i in found]
         if not items:
             raise ProviderError("unavailable", f"no feed answered ({', '.join(failed) or 'none configured'})")
         return {"items": merge(items), "failed": failed}
 
+    async def news_pool(self, section: str | None) -> dict:
+        """Every feed of the section (all feeds when None), kept with its feed so the caller can filter on feed tags."""
+        feeds = [f for f in self.feeds if feed_selected(f, section)]
+        ok, failed = await self._fetch_all(feeds)
+        if not any(found for _, found in ok):
+            raise ProviderError("unavailable", f"no feed answered ({', '.join(failed) or 'none matched'})")
+        return {"pool": ok, "failed": failed, "total": len(feeds)}
+
     async def probe(self) -> None:
-        await self._feed(self.feeds[0])
+        await self._feed(self.top[0])
 
 
 class YahooRssProvider(Provider):

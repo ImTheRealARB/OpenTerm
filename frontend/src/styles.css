@@ -53,6 +53,9 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 :focus-visible { outline: 1px solid var(--fg); outline-offset: -1px; }
 
 .app { display: grid; grid-template-rows: 22px 1fr 16px 18px; height: 100%; }
+/* Ticker tape in the global top bar (setting `tape`): one extra row under the top bar. The tape itself is home/home.css (lazy). */
+.app.has-tape { grid-template-rows: 22px var(--row) 1fr 16px 18px; }
+.tape-slot { overflow: hidden; min-width: 0; }
 
 /* The wrapper around [sidebar] + workspace exists in both modes (so switching never remounts panels). In terminal mode it
    vanishes from the layout; gui.css makes it a flex row. */

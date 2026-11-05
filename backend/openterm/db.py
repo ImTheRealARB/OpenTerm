@@ -66,6 +66,11 @@ MIGRATIONS: list[str | list[str]] = [
         "CREATE TABLE deliveries (id INTEGER PRIMARY KEY, at REAL, kind TEXT, ref TEXT, channel TEXT, status TEXT, detail TEXT)",
         "CREATE INDEX deliveries_at ON deliveries (at)",
     ],
+    # 16: per-alert delivery channels (Phase 20, `ALRT ... VIA TG,EMAIL`). JSON list of channel names; NULL = every enabled channel
+    [
+        "ALTER TABLE alerts ADD COLUMN channels TEXT",
+        "ALTER TABLE news_alerts ADD COLUMN channels TEXT",
+    ],
 ]
 
 

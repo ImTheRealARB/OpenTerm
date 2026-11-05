@@ -10,7 +10,7 @@ import orjson
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, scheduler
-from .ai import routes_run
+from .ai import routes_filing, routes_run  # noqa: F401 - importing routes_filing registers POST /api/ai/filing on the shared AI router
 from .ai.routes import router as ai_router
 from .api import router as api_router
 from .brief_routes import router as brief_router
@@ -67,6 +67,7 @@ DEFAULT_ORDER |= {
 DEFAULT_ORDER["ratings"] = ["yahoo_research", "finnhub"]
 DEFAULT_ORDER["surprises"] = ["yahoo_research", "finnhub"]
 DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca", "marketaux"]
+DEFAULT_ORDER["news_pool"] = ["rss"]  # the curated feed table (providers/news_feeds.py)
 DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "marketaux", "gdelt"]
 # UKCO (Companies House) and ADDR (Etherscan): one keyed source each; no key = KEY REQUIRED, never fake data
 DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"], "ais": ["aisstream"], "flights": ["opensky"]}
@@ -224,11 +225,24 @@ async def lifespan(app: FastAPI):
     from .delivery import settings as delivery_settings
 
     scheduler.schedule_brief(sched, app, (await delivery_settings.get(db))["brief"])  # Phase 17 C
+    # --- Phase 20: server-side alerts. The engine watches active alerts through the hub and fires them with no browser open.
+    # `deliver` is the Phase 17 background sender; `news_for_alerts` reads the same cached news the N panel shows.
+    # `deliver_spawn` = delivery.spawn plus the per-alert VIA channels (alert_channels.py)
+    from .alert_channels import spawn as deliver_spawn
+    from .alerts_engine import AlertsEngine
+
+    async def news_for_alerts(symbol: str | None) -> dict:
+        return await service.news(symbol)
+
+    app.state.alerts_engine = engine = AlertsEngine(
+        db, hub, lambda *a, **kw: deliver_spawn(app, *a, **kw), news_for_alerts, fixtures=settings.openterm_fixtures)
+    await engine.start()
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
     finally:
         sched.shutdown(wait=False)
+        await engine.stop()
         key_loader.cancel()
         await asyncio.to_thread(jobs.close)
         if keys_http is not http:
@@ -273,6 +287,7 @@ async def ws(socket: WebSocket) -> None:
     server -> ["T", [[symbol, price, change, change_pct, volume, high, low, time_ms, src], ...]]
               ["pong", client_ts, server_ts_ms]
               ["J", {id, kind, state, progress, msg, cached}]  (Phase 11 job progress, to every client, <= 10/s/job)
+              ["A", "price" | "news", alert_id]  (Phase 20: the server fired an alert; tabs refresh their alert lists)
     src: y = Yahoo stream, p = REST poll fallback, a = Alpaca IEX (RT IEX), k = Zerodha Kite ticker (RT KITE), s = SYNTHETIC test data.
     """
     await socket.accept()

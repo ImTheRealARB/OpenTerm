@@ -4,14 +4,17 @@
  *
  * Keys: Up/Down move, Space toggles the selected channel (or the brief), Enter edits the selected field,
  * T sends a test through the selected channel, L flips between settings and the delivery log, F5 reloads.
- * Secrets (SMTP password, bot token, webhook URL) are NOT here: they live in APIKEYS.
+ * P pairs Telegram: it shows the bot's link and a one-time code; send the code to the bot, then C checks for it.
+ * Secrets (SMTP password, bot token, webhook URL) are NOT here: they live in APIKEYS. The recipient address and
+ * Telegram chat id are not readable here either: the table shows a masked hint, and Enter on those rows types a
+ * NEW value (empty keeps the stored one).
  */
 import { useCallback, useEffect, useState } from "react";
 import { fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { deliveryApi, type DeliveryChannel, type DeliveryPatch, type DeliveryPayload, type DeliveryRow } from "../net/api";
+import { deliveryApi, type DeliveryChannel, type DeliveryPatch, type DeliveryPayload, type DeliveryRow, type TelegramPairStart } from "../net/api";
 import { PanelNote } from "../components/PanelNote";
-import { fieldError, fieldPatch, fieldValue, type FieldId } from "./dlvrFields";
+import { editStart, fieldError, fieldPatch, fieldValue, isRecipientField, type FieldId } from "./dlvrFields";
 import { useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 
@@ -47,6 +50,8 @@ export default function DLVR({ panelId }: FunctionProps) {
   const [msg, setMsg] = useState<{ text: string; cls: "err" | "dim" | "up" | "warn" } | null>(null);
   const [view, setView] = useState<"settings" | "log">("settings");
   const [log, setLog] = useState<DeliveryRow[] | null>(null);
+  // A pairing in progress: the bot link and code to show. The chat id never comes here, only `paired: true`.
+  const [pair, setPair] = useState<TelegramPairStart | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -81,12 +86,12 @@ export default function DLVR({ panelId }: FunctionProps) {
   }, []);
 
   // The key handler is registered once, so it reads the latest state through a ref (see CLAUDE.md: useLatest).
-  const latest = useLatest({ data, cur, edit, view });
+  const latest = useLatest({ data, cur, edit, view, pair });
 
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        const { data: d, cur: c, edit: ed, view: v } = latest.current;
+        const { data: d, cur: c, edit: ed, view: v, pair: pr } = latest.current;
         // While the inline editor is open it has focus and handles its own keys; chords and bare modifiers pass.
         if (ed || e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         const row = ROWS[c];
@@ -138,7 +143,7 @@ export default function DLVR({ panelId }: FunctionProps) {
           case "Enter":
             if (d && v === "settings" && row.field) {
               setMsg(null);
-              setEdit({ row: c, value: fieldValue(d.settings, row.field) });
+              setEdit({ row: c, value: editStart(d.settings, row.field) });
             }
             return true;
           case "t":
@@ -159,9 +164,44 @@ export default function DLVR({ panelId }: FunctionProps) {
             );
             return true;
           }
+          case "p":
+          case "P":
+            if (v !== "settings") return true;
+            setMsg({ text: "ASKING TELEGRAM FOR THE BOT…", cls: "dim" });
+            deliveryApi.pairStart().then(
+              (r) => {
+                setPair(r);
+                setMsg(null);
+              },
+              (err) => setMsg({ text: err instanceof Error ? err.message : String(err), cls: "err" }),
+            );
+            return true;
+          case "c":
+          case "C":
+            if (v !== "settings" || !pr) return true;
+            deliveryApi.pairCheck().then(
+              (r) => {
+                if (r.paired) {
+                  setPair(null);
+                  setMsg({ text: "TELEGRAM PAIRED. PRESS SPACE ON THE TELEGRAM ROW TO TURN IT ON, T TO TEST", cls: "up" });
+                  void load(); // the row now shows the "chat linked" hint
+                } else {
+                  setMsg({ text: "CODE NOT SEEN YET: SEND IT TO THE BOT, THEN PRESS C AGAIN", cls: "warn" });
+                }
+              },
+              (err) => {
+                setMsg({ text: err instanceof Error ? err.message : String(err), cls: "err" });
+                setPair(null); // expired or never started: the shown code is dead
+              },
+            );
+            return true;
           case "Escape":
             if (v === "log") {
               setView("settings");
+              return true;
+            }
+            if (pr) {
+              setPair(null); // the code simply expires on the server
               return true;
             }
             return false;
@@ -175,6 +215,11 @@ export default function DLVR({ panelId }: FunctionProps) {
   const commitEdit = async () => {
     if (!edit) return;
     const field = ROWS[edit.row].field!;
+    // Empty on a recipient row means "keep the stored one" (it cannot be read back): nothing to save.
+    if (isRecipientField(field) && !edit.value.trim()) {
+      setEdit(null);
+      return;
+    }
     const bad = fieldError(field, edit.value);
     if (bad) {
       setMsg({ text: bad, cls: "err" });
@@ -205,9 +250,16 @@ export default function DLVR({ panelId }: FunctionProps) {
     <div className="fn">
       <div className="line">
         <span className="acc">DELIVERY</span> · {view === "log" ? "LOG (NEWEST FIRST)" : "WHERE ALERTS AND THE DAILY BRIEF GO"}
-        <span className="dim"> · {view === "log" ? "L/ESC BACK · F5 RELOAD" : "UP/DOWN MOVE · SPACE ON/OFF · ENTER EDIT · T TEST · L LOG · F5 RELOAD"}</span>
+        <span className="dim"> · {view === "log" ? "L/ESC BACK · F5 RELOAD" : "UP/DOWN MOVE · SPACE ON/OFF · ENTER NEW VALUE · T TEST · P PAIR TELEGRAM · L LOG · F5 RELOAD"}</span>
       </div>
       {msg && <div className={msg.cls} data-testid="dlvr-msg">{msg.text}</div>}
+      {pair && view === "settings" && (
+        <div data-testid="dlvr-pair">
+          <span className="acc">PAIR TELEGRAM</span> · OPEN <a href={pair.link} target="_blank" rel="noreferrer">{pair.link}</a> AND SEND{" "}
+          <span className="acc" data-testid="dlvr-pair-code">{pair.code}</span>
+          <span className="dim"> · VALID {Math.round(pair.expires_in / 60)} MIN · C CHECK · ESC CANCEL</span>
+        </div>
+      )}
       {view === "settings" ? (
         <table className="t dlvr-t">
           <thead>
@@ -234,6 +286,7 @@ export default function DLVR({ panelId }: FunctionProps) {
                         autoFocus
                         value={edit.value}
                         aria-label={`${r.label} value`}
+                        placeholder={isRecipientField(r.field!) ? "NEW VALUE (EMPTY KEEPS THE CURRENT ONE)" : undefined}
                         onChange={(ev) => setEdit({ row: i, value: ev.target.value })}
                         onKeyDown={(ev) => {
                           // Let Ctrl/Alt/Meta chords bubble (Ctrl+K opens the command line); keep plain keys local.

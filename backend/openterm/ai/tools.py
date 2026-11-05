@@ -13,6 +13,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import pairwise
 from typing import Any
 
 import httpx
@@ -143,6 +144,97 @@ def shape_slim(env: dict, args: dict) -> dict:
     return slim(env.get("data", env))
 
 
+def shape_auto(env: dict, args: dict) -> dict:
+    """A Phase 13/14 table payload (has `sections`) keeps its tables; anything else is slimmed."""
+    d = env.get("data", env)
+    return table_shape(d) if isinstance(d, dict) and d.get("sections") else slim(d)
+
+
+# --- Phase 20: technical indicators, computed here in plain Python from the same bars `history` returns (the server never imports pandas) ---
+def _sma(x: list[float], n: int) -> float | None:
+    return sum(x[-n:]) / n if len(x) >= n else None
+
+
+def _ema_series(x: list[float], n: int) -> list[float]:
+    k, e, out = 2 / (n + 1), None, []
+    for v in x:
+        e = v if e is None else v * k + e * (1 - k)
+        out.append(e)
+    return out
+
+
+def _rsi(c: list[float], n: int = 14) -> float | None:
+    """Wilder's RSI: average gain over average loss, smoothed. Needs n + 1 closes; a series that only rises gives 100."""
+    if len(c) < n + 1:
+        return None
+    ch = [b - a for a, b in pairwise(c)]
+    gain, loss = sum(max(v, 0) for v in ch[:n]) / n, sum(max(-v, 0) for v in ch[:n]) / n
+    for v in ch[n:]:
+        gain, loss = (gain * (n - 1) + max(v, 0)) / n, (loss * (n - 1) + max(-v, 0)) / n
+    return 100.0 if loss == 0 else 100 - 100 / (1 + gain / loss)
+
+
+def _atr(h: list[float], lo: list[float], c: list[float], n: int = 14) -> float | None:
+    if len(c) < n + 1:
+        return None
+    tr = [max(h[i] - lo[i], abs(h[i] - c[i - 1]), abs(lo[i] - c[i - 1])) for i in range(1, len(c))]
+    atr = sum(tr[:n]) / n
+    for v in tr[n:]:
+        atr = (atr * (n - 1) + v) / n
+    return atr
+
+
+def _round(v: float | None, k: int = 4) -> float | None:
+    return None if v is None else round(v, k)
+
+
+def shape_indicators(env: dict, args: dict) -> dict:
+    """Last values of SMA 20/50/200, EMA 12/26, RSI 14, MACD 12/26/9, Bollinger 20/2 and ATR 14. A value needing more bars than exist is null."""
+    d = env["data"]
+    closes = d.get("c") or []
+    rows = [(t, cl, h, lo) for t, cl, h, lo in zip(d.get("t") or [], closes, d.get("h") or closes, d.get("l") or closes, strict=False)
+            if cl is not None and h is not None and lo is not None]
+    if not rows:
+        return {"symbol": d.get("symbol"), "n_bars": 0}
+    c, h, lo = [r[1] for r in rows], [r[2] for r in rows], [r[3] for r in rows]
+    macd = [a - b for a, b in zip(_ema_series(c, 12), _ema_series(c, 26), strict=True)] if len(c) >= 26 else []
+    sig = _ema_series(macd, 9) if len(macd) >= 9 else []
+    mid = _sma(c, 20)
+    sd = (sum((v - mid) ** 2 for v in c[-20:]) / 20) ** 0.5 if mid is not None else None
+    return {"symbol": d.get("symbol"), "interval": d.get("interval"), "n_bars": len(c), "as_of": _iso(rows[-1][0]), "close": _round(c[-1]),
+            "sma": {"20": _round(_sma(c, 20)), "50": _round(_sma(c, 50)), "200": _round(_sma(c, 200))},
+            "ema": {"12": _round(_ema_series(c, 12)[-1]) if len(c) >= 12 else None, "26": _round(_ema_series(c, 26)[-1]) if len(c) >= 26 else None},
+            "rsi14": _round(_rsi(c), 2), "atr14": _round(_atr(h, lo, c)),
+            "macd": {"line": _round(macd[-1]), "signal": _round(sig[-1]), "hist": _round(macd[-1] - sig[-1])} if sig else None,
+            "bollinger20": {"mid": _round(mid), "upper": _round(mid + 2 * sd), "lower": _round(mid - 2 * sd)} if mid is not None and sd is not None else None}
+
+
+def _rigor(a: dict, ctx: dict) -> dict:
+    """Pure arithmetic checks on numbers the model is about to quote: do the parts add up to the total, and do they look like one unit?"""
+    parts = [float(x) for x in a["parts"]]
+    total = float(a["total"])
+    tol = float(a["tolerance_pct"]) if a.get("tolerance_pct") is not None else 0.5
+    s = sum(parts)
+    diff = s - total
+    rel = abs(diff) / abs(total) * 100 if total else (0.0 if diff == 0 else float("inf"))
+    mags = sorted(abs(p) for p in parts if p)
+    unit_mix = bool(mags) and mags[-1] / mags[0] >= 1000  # a thousand-fold spread inside one statement often means thousands mixed with millions
+    return {"sum": round(s, 6), "total": total, "difference": round(diff, 6), "difference_pct": None if rel == float("inf") else round(rel, 4),
+            "reconciles": rel <= tol, "tolerance_pct": tol, "possible_unit_mix": unit_mix, "negative_parts": sum(p < 0 for p in parts),
+            "source": "local:rigor"}
+
+
+def _calendar(a: dict) -> dict:
+    if a.get("kind") == "eco":
+        return {"path": "/api/eco", "params": {k: v for k, v in (("start", a.get("date")), ("days", a.get("days"))) if v is not None}}
+    return {"path": "/api/earnings", "params": {"date": a.get("date") or datetime.now(UTC).strftime("%Y-%m-%d")}}
+
+
+def _deriv(fn: str, keys: tuple[str, ...]):
+    """Builds a /api/deriv/<fn> call from the tool's arguments (OV pricing, OSA payoff)."""
+    return lambda a: {"path": f"/api/deriv/{fn}", "params": {k: a[k] for k in keys if a.get(k) is not None}}
+
+
 # --- the registry -----------------------------------------------------------------------------------------------------------------------
 def obj(properties: dict, required: list[str] | None = None) -> dict:
     return {"type": "object", "properties": properties, "required": required or [], "additionalProperties": False}
@@ -163,6 +255,7 @@ class Tool:
     job: bool = False  # POST returns a job: wait for it and shape its result
     local: Callable[[dict, dict], dict] | None = None  # answered in this process, no route (skill, strategy_check, doc_search); gets the runner's context
     doc_only: bool = False  # offered only to an AI DOC run, never in plain chat
+    desk_only: bool = False  # Phase 20: offered only when a swarm role or MCP asks for it by name (keeps plain chat's prompt small)
 
 
 def _bt_body(a: dict) -> dict:
@@ -181,9 +274,18 @@ def _portfolio(a: dict) -> dict:
 
 
 def _skill(a: dict, ctx: dict) -> dict:
+    """One playbook, or one heading of it (`section`). A long playbook comes back cut with its list of headings."""
     from . import skills
 
-    return {"name": a["name"], "playbook": skills.get(a["name"])}
+    return skills.read(a["name"], a.get("section"))
+
+
+def _skills(a: dict, ctx: dict) -> dict:
+    """Search the playbook library by topic: names and a short description, so the prompt does not carry an index of every playbook."""
+    from . import skills
+
+    found = skills.search(str(a["query"]), int(a.get("limit") or 8))
+    return {"query": a["query"], "total": len(skills.names()), "matches": found}
 
 
 def _strategy_check(a: dict, ctx: dict) -> dict:
@@ -213,8 +315,11 @@ def _skill_names() -> list[str]:
 
 
 REGISTRY: dict[str, Tool] = {t.name: t for t in [
-    Tool("skill", "Load a finance playbook (steps and limits) before answering a valuation, earnings, options, risk or macro question.",
-         obj({"name": {"type": "string", "enum": ["valuation", "earnings", "options", "risk", "macro"]}}, ["name"]), "local:skill", local=_skill),
+    Tool("skill", "Load a finance playbook (steps and limits) by name before a valuation, earnings, options, risk, macro, factor, crypto or strategy question. "
+         "Core: valuation earnings options risk macro. Find others with the skills tool. A long playbook is read by section.",
+         obj({"name": S, "section": {"type": "string", "description": "one heading of a long playbook"}}, ["name"]), "local:skill", local=_skill),
+    Tool("skills", "Search the playbook library by topic (for example 'pairs trading', 'dividend', 'funding rate'). Returns playbook names with a short description.",
+         obj({"query": S, "limit": {"type": "integer"}}, ["query"]), "local:skills", local=_skills),
     Tool("strategy_check", "Check a backtest rule with the engine's own parser, for example 'SMA20 CROSS> SMA50' or 'RSI14 < 30'. Returns valid or the error and its column.",
          obj({"rule": S}, ["rule"]), "local:strategy_check", local=_strategy_check),
     Tool("doc_search", "Search the loaded document for passages about a topic; returns the best chunks labelled C1, C2... Cite them.",
@@ -247,6 +352,29 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
          "/api/bt/run", method="POST", build=_bt_body, shape=shape_slim, job=True),
     Tool("backtest_get", "Metrics of a stored backtest run by run id.", obj({"run_id": S}, ["run_id"]), "/api/bt/runs/{run_id}",
          build=lambda a: {"path": f"/api/bt/runs/{a['run_id']}"}, shape=shape_slim),
+    # --- Phase 20: read-only tools for the desk presets. Each wraps a route the panels already use; none writes anything. ---
+    Tool("indicators", "Technical indicators for a ticker from daily bars: SMA 20/50/200, EMA 12/26, RSI 14, MACD, Bollinger, ATR. Null = not enough bars.",
+         obj({"symbol": S, "range": {"type": "string", "description": "3M 6M 1Y 2Y 5Y"}}, ["symbol"]), "/api/history", shape=shape_indicators, desk_only=True),
+    Tool("option_price", "Price one option (Black-Scholes, binomial) with Greeks: symbol, strike k, type C or P, expiry exp YYYY-MM-DD, optional iv percent.",
+         obj({"symbol": S, "k": {"type": "number"}, "type": {"type": "string", "enum": ["C", "P"]}, "exp": S, "iv": {"type": "number"}}, ["symbol", "k", "type"]),
+         "/api/deriv/ov", build=_deriv("ov", ("symbol", "k", "type", "exp", "iv")), shape=shape_auto, desk_only=True),
+    Tool("option_payoff", "Payoff of an option strategy: legs like '+1C270@5,-1C290' or strat like 'BULLCALL,270,290', plus symbol, exp and optional iv percent.",
+         obj({"symbol": S, "legs": S, "strat": S, "exp": S, "iv": {"type": "number"}}, ["symbol"]),
+         "/api/deriv/osa", build=_deriv("osa", ("symbol", "legs", "strat", "exp", "iv")), shape=shape_auto, desk_only=True),
+    Tool("etf", "ETF constituents and weights for a ticker.", obj({"symbol": S}, ["symbol"]), "/api/research/etf",
+         build=lambda a: {"path": "/api/research/etf", "params": {"symbol": a["symbol"]}}, shape=shape_auto, desk_only=True),
+    Tool("holders", "Institutional holders of a ticker (13F based).", obj({"symbol": S}, ["symbol"]), "/api/holders", shape=shape_auto, desk_only=True),
+    Tool("insiders", "Insider transactions for a ticker.", obj({"symbol": S}, ["symbol"]), "/api/insiders", shape=shape_auto, desk_only=True),
+    Tool("calendar", "Earnings for a date (kind earnings, date YYYY-MM-DD) or economic events (kind eco, optional date and days).",
+         obj({"kind": {"type": "string", "enum": ["earnings", "eco"]}, "date": S, "days": {"type": "integer"}}), "/api/earnings", build=_calendar, shape=shape_auto, desk_only=True),
+    Tool("pred", "Prediction-market odds matching a text query (Polymarket, Kalshi). Market odds, not forecasts by OpenTerm.",
+         obj({"q": S}, ["q"]), "/api/world/pred", shape=shape_auto, desk_only=True),
+    Tool("energy", "Energy snapshot: oil, gas, power and inventories.", obj({}), "/api/world/nrg", shape=shape_auto, desk_only=True),
+    Tool("crypto_funding", "Perpetual funding and open interest for a crypto symbol such as BTC.", obj({"sym": S}, ["sym"]), "/api/world/fund", shape=shape_auto, desk_only=True),
+    Tool("crypto_depth", "Bid and ask depth (the public book) for a crypto pair such as BTCUSDT.", obj({"pair": S}, ["pair"]), "/api/world/cdep", shape=shape_auto, desk_only=True),
+    Tool("rigor", "Check numbers before quoting them: do parts add up to the total (parts, total, tolerance_pct) and do they share one unit?",
+         obj({"parts": {"type": "array", "items": {"type": "number"}}, "total": {"type": "number"}, "tolerance_pct": {"type": "number"}}, ["parts", "total"]),
+         "local:rigor", local=_rigor, desk_only=True),
     Tool("quant", "Quant analytics job: risk (portfolio VaR and drawdown, args {portfolio}), fact (factor regression, args {symbol}), ql (calculators, args {calc, symbol}), "
          "alpha (alpha zoo scan, args {universe}), regime (correlation regime, args {list}).",
          obj({"fn": {"type": "string", "enum": list(QUANT_FNS)}, "args": {"type": "object"}}, ["fn"]), "/api/quant/{fn}", method="POST",
@@ -256,7 +384,7 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
 
 def openai_tools(names: list[str] | None = None) -> list[dict]:
     return [{"type": "function", "function": {"name": t.name, "description": t.description, "parameters": t.parameters}}
-            for t in REGISTRY.values() if (t.name in names if names is not None else not t.doc_only)]
+            for t in REGISTRY.values() if (t.name in names if names is not None else not (t.doc_only or t.desk_only))]
 
 
 # Arguments that are put into a route path: nothing may leave the route (httpx resolves `..`, so "../../keys" would reach /api/keys).
@@ -304,6 +432,8 @@ def validate(name: str, args: Any) -> str | None:
             return f"ARGUMENT {k} MUST BE ONE OF {', '.join(map(str, enum))}"
         if k in PATH_ARGS and name in ("backtest_get", "portfolio") and not PATH_ARGS[k].match(v):
             return f"ARGUMENT {k} IS NOT A VALID {k.upper()}"
+    if name == "skill" and args["name"] not in _skill_names():  # the name is no longer an enum (too many playbooks for the prompt)
+        return "ARGUMENT name MUST BE A PLAYBOOK NAME: find one with the skills tool, for example valuation or risk"
     return None
 
 

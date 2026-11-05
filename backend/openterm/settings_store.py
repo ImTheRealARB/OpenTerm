@@ -18,6 +18,9 @@ VERSION = 1
 MAX_BYTES = 16_000
 
 MODES = ("terminal", "gui")  # which shell the frontend shows; a saved object with no `mode` means "terminal"
+STARTUPS = ("home", "layout")  # what a new session opens: the HOME page, or the saved workspace
+TAPE_MAX = 30  # ticker tape symbols
+TAPE_SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9.\-=^&]{0,19}\Z")  # same rule as frontend settings/schema.ts
 THEMES = ("amber", "green", "white", "light")
 CHART_RANGES = ("1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX")
 CHART_TYPES = ("CANDLE", "OHLC", "LINE", "AREA")
@@ -134,6 +137,23 @@ def _font(raw) -> str:
     return raw
 
 
+def _tape(raw) -> bool:
+    if not isinstance(raw, bool):
+        raise _bad("tape MUST BE true OR false")
+    return raw
+
+
+def _tape_symbols(raw) -> list[str]:
+    if not isinstance(raw, list) or len(raw) > TAPE_MAX:
+        raise _bad(f"tapeSymbols MUST BE A LIST OF AT MOST {TAPE_MAX} SYMBOLS")
+    for sym in raw:
+        if not isinstance(sym, str) or not TAPE_SYMBOL_RE.match(sym):
+            raise _bad(f"BAD TAPE SYMBOL {str(sym)[:40]!r}")
+    if len(set(raw)) != len(raw):
+        raise _bad("tapeSymbols HAS A DUPLICATE")
+    return list(raw)
+
+
 def _vim(raw) -> bool:
     if not isinstance(raw, bool):
         raise _bad("vim MUST BE true OR false")
@@ -151,6 +171,9 @@ FIELDS = {
     "poll": _poll,
     "keys": _keys,
     "ai": _ai,
+    "startup": lambda v: _choice(v, STARTUPS, "startup"),
+    "tape": _tape,
+    "tapeSymbols": _tape_symbols,
 }
 
 
