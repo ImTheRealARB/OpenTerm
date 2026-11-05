@@ -13,7 +13,7 @@ exact next action to HANDOFF.md, commit, and tell the user (they may switch to O
 and pause.
 
 ## Non-negotiables (from the spec)
-- Speed over looks. No shadows, gradients, radii, transitions or web fonts. Color only carries meaning.
+- Speed over looks. No shadows, gradients, radii, transitions or web fonts (exception: the SETTINGS font presets, bundled in `public/fonts`, declared in `src/fonts.css`, loaded only when selected, `local()` first, `font-display: swap`). Color only carries meaning.
 - Never fake data. A failure shows STALE / ERR / PROVIDER DOWN with source and age. Test data
   (fixtures, SYNTHETIC) is always labelled on screen.
 - Every action works from the keyboard. Mouse is optional.
@@ -111,7 +111,7 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **Don't use a ~50 ms TTL in a timing test:** 4 xdist workers on this machine stall longer (`test_stale_while_revalidate` used to flake).
 - **Settings:** `settings/schema.ts` (pure defaults/validate), `settings/runtime.ts` (store + localStorage mirror; do not import `net/api`), `settings/sync.ts`
   (GET after paint, last write wins by `updated_at`). Stored in `kv` key `settings`, no migration. Themes are `:root[data-theme=...]` blocks; Grid and
-  ChartView re-read CSS vars on `displayVersion`. Keybinding overrides in `keys/overrides.ts`; vim in `command/vim.ts`. Custom font: `Settings.font` (name of an installed font, `SETTINGS FONT`), CSS `--font` = `var(--font-user, var(--font-base))`; every DOM and canvas font reads `--font`, so never hardcode a family. A new settings field also needs a validator in `backend/openterm/settings_store.py` (unknown fields are rejected).
+  ChartView re-read CSS vars on `displayVersion`. Keybinding overrides in `keys/overrides.ts`; vim in `command/vim.ts`. Font: `Settings.font` = a preset name from `settings/fontPresets.ts` (bundled files or a system font) or any installed font's name (`SETTINGS FONT NEXT|<name>`, menu-bar dropdown `font-select`, SETTINGS row), CSS `--font` = `var(--font-user, var(--font-base))`; every DOM and canvas font reads `--font`, so never hardcode a family. A new settings field also needs a validator in `backend/openterm/settings_store.py` (unknown fields are rejected).
 - **`useEffect(() => x?.method())` returns the method's result;** React 19 then throws "destroy is not a function". Use a block body.
 - **Panel keys register after the lazy module loads:** a key pressed right after the panel text appears can be lost and type into the command line. In e2e wait until a key visibly works.
 - **Panel key handlers must ignore bare modifier keys** (Playwright `Shift+R` sends a `Shift` keydown first). Maximizing a panel remounts it, so panel-local state is lost.

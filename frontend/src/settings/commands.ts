@@ -8,6 +8,7 @@ import {
   AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
 } from "./schema";
 import { FONT_NAME_RE } from "./font";
+import { FONT_PRESETS, cyclePreset, findPreset, type FontPreset } from "./fontPresets";
 import { THEMES, isTheme } from "./themes";
 
 /** `checkFont`: the caller must confirm this font is installed (needs a canvas, so it is not done in this pure file) before applying. */
@@ -37,12 +38,19 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       if (word !== "GUI" && word !== "TERMINAL") return fail("SETTINGS MODE GUI|TERMINAL");
       return { ok: true, next: { ...cur, mode: word.toLowerCase() as Settings["mode"] }, message: `MODE ${word}` };
     case "FONT": {
-      const usage = "SETTINGS FONT <NAME OF AN INSTALLED FONT> | DEFAULT   E.G. SETTINGS FONT Fira Code";
+      const usage = `SETTINGS FONT NEXT | PREV | <PRESET> | <ANY INSTALLED FONT>. PRESETS: ${FONT_PRESETS.map((p) => (p.name || "DEFAULT").toUpperCase()).join(", ")}`;
       const name = rest.join(" ").trim();
       if (!name) return fail(usage);
-      if (name.toUpperCase() === "DEFAULT") return { ok: true, next: { ...cur, font: "" }, message: "FONT DEFAULT" };
+      const pick = (p: FontPreset): SettingsCommand => ({
+        ok: true, next: { ...cur, font: p.name }, message: `FONT ${p.label.toUpperCase()}`,
+        checkFont: p.system ? p.name : undefined, // a system preset can be missing on this computer
+      });
+      const up = name.toUpperCase();
+      if (up === "NEXT" || up === "PREV") return pick(cyclePreset(cur.font, up === "NEXT" ? 1 : -1));
+      const preset = findPreset(name);
+      if (preset) return pick(preset);
       if (!FONT_NAME_RE.test(name)) return fail(`FONT NAME: LETTERS, DIGITS, SPACES AND . _ + - ONLY (60 MAX). ${usage}`);
-      return { ok: true, next: { ...cur, font: name }, message: `FONT ${name}`, checkFont: name };
+      return { ok: true, next: { ...cur, font: name }, message: `FONT ${name}`, checkFont: name }; // any other installed font
     }
     case "VIM":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS VIM ON|OFF");
