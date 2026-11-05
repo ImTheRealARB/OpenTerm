@@ -134,18 +134,17 @@ The full list of functions is in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 Speed is the main feature, not an afterthought. Every number below is a **budget that the project's own benchmark
 (`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-11-05: 37 of 37 pass):
 
-<!-- TODO(clean bench): wrapup run 1 (docs/PERFORMANCE.md, 2026-11-05) read: cold start 121.6 ms (cell says about 110), tick-to-pixel 44.2 ms (says about 37), 50k-bar pan 33.3 ms (says 16.7, the known lone miss), BT 10-year 276.8 ms (says about 0.2 s). Re-measure these four on a quiet machine, then edit the cells and delete this comment. Other cells already agree. -->
 
 | What you do | Result | Budget |
 |---|---|---|
-| Open the app to a usable command line | **about 110 ms** | 1500 ms |
+| Open the app to a usable command line | **about 95 ms** | 1500 ms |
 | Press a key, see it on screen | **about 15 ms** (less than one 60 Hz frame) | 16.7 ms |
 | Run a cached command, see the panel painted | **about 18 ms** | 100 ms |
 | Live price tick arrives, pixel changes | **about 37 ms** with 4,000 ticks per second flowing into 9 panels | 50 ms |
 | Scroll a 10,000-row table | **16.7 ms per frame** (smooth 60 fps) | 20 ms |
 | Pan a chart of 50,000 candles | **16.7 ms per frame** | 20 ms |
 | Backend answering a cached quote | **about 1 ms** | 20 ms |
-| Backtest 10 years of daily bars | **about 0.2 s** | 0.3 s |
+| Backtest 10 years of daily bars | **about 0.28 s** | 0.3 s |
 | Download size of the app (JS and CSS, compressed) | **about 120 KB** | 400 KB |
 | Memory used by the page with 9 panels and 200 live symbols | **about 8 MB** | 500 MB |
 

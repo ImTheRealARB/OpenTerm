@@ -58,6 +58,7 @@ Two pieces of work are NOT on `main`; both live in worktrees under `.claude/work
 
 
 ## Wrap-up job (paused 2026-11-05, branch `claude/wrapup-f02dcc`, worktree `.claude/worktrees/wrapup-f02dcc`, on top of main `8601be9`, committed as a WIP checkpoint, NOT pushed)
+**UPDATE 2026-11-05 night: DONE.** Branch `claude/wrapup-final` = this work + main `49c0fd6`. Gate: ruff, tsc, vitest pass; pytest 2220 pass (fixed `test_phase11` SPEC_NAMES: main lacked `openfec`/`congressgov`); e2e 326 pass, `ind-chart` flaked (known, 3 of 4 solo runs pass). Clean bench 37/37 (cold start 94.5 ms, tick-to-pixel 36.8, pan 16.7, BT 10-year 283.2); README and PERFORMANCE.md cells filled.
 Paused on the user's request so it can resume in a new session/account. Three parts:
 1. **Kite loose ends: DONE (tests first, all pass).**
    - (a) `derivative_root` now knows `.BFO` and `.CDS` (`kite/symbols.py` `CHAIN_EXCHANGES`; `spot_key()` maps NFO to the NSE index, BFO to `BSE:SENSEX` / `BSE:BANKEX` / `BSE:<name>`; MCX and CDS use the nearest future that expires with the option as spot, `FUTURE_SPOT_EXCHANGES`). `OMON SENSEX.BFO`, `OMON USDINR.CDS`, `CT SENSEX.BFO`, `CT USDINR.CDS` work on a fake client. **Not run live**: the user's backend (port 8000, live login) was not touched and the login is stored per DB, so a 8001 backend could not use it. The BFO / CDS option rows in the test are written in the test (labelled), the real dump subset has no BFO/CDS option; `BSE:BANKEX` as a spot key is a guess from Kite's naming.
