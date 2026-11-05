@@ -1,0 +1,42 @@
+{
+ "status": 200,
+ "doc_shaped": "NOT A RECORDING. Congress.gov API docs https://api.congress.gov (LibraryOfCongress/api.congress.gov on GitHub). Invented numbers in the shape the documentation promises; no API key was available to record the real answer.",
+ "body": {
+  "bill": {
+   "congress": 119,
+   "type": "HR",
+   "number": "9001",
+   "originChamber": "House",
+   "title": "Example Test Act of 2026",
+   "introducedDate": "2026-10-28",
+   "policyArea": {
+    "name": "Government Operations and Politics"
+   },
+   "sponsors": [
+    {
+     "bioguideId": "Z000001",
+     "fullName": "Rep. Example, Test A [I-ZZ-1]",
+     "party": "I",
+     "state": "ZZ",
+     "district": 1
+    }
+   ],
+   "cosponsors": {
+    "count": 4
+   },
+   "latestAction": {
+    "actionDate": "2026-11-03",
+    "text": "Referred to the Committee on Example."
+   },
+   "updateDate": "2026-11-04T08:00:00Z"
+  },
+  "request": {
+   "billNumber": "9001",
+   "billType": "hr",
+   "billUrl": "https://api.congress.gov/v3/bill/119/hr/9001?format=json",
+   "congress": "119",
+   "contentType": "application/json",
+   "format": "json"
+  }
+ }
+}

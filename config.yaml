@@ -36,7 +36,7 @@ providers:
   news_symbol: [yahoo_rss, finnhub, alpaca, marketaux, gdelt]
   news_keyword: [gdelt]
   movers: [nasdaq]
-  crypto: [coingecko, binance]
+  crypto: [coingecko, binance, kraken, coinbase]  # kraken and coinbase: keyless second exchanges for when Binance is blocked or down
   # Phase 6
   fundamentals: [sec]
   filings: [sec]

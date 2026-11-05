@@ -30,9 +30,13 @@ async def get_key(keys: Any, name: str, field: str) -> str:
     return values[field]
 
 
-def _label(base: str, adapter_source: str) -> str:
-    """Fixture mode answers with doc-shaped test data: say so on the source line, like every other test data."""
-    return f"{base} · FIXTURE (DOC-SHAPED TEST DATA, NOT REAL)" if ":fixture" in adapter_source else base
+def _label(base: str, adapter_source: str, recorded: bool = False) -> str:
+    """Fixture mode answers with test data: say so on the source line, like every other test data.
+
+    `recorded` = the fixture is a real answer recorded earlier (BEA data tables, Comtrade India-USA), so it is not "invented"."""
+    if ":fixture" not in adapter_source:
+        return base
+    return f"{base} · FIXTURE (RECORDED 2026-11-05, NOT LIVE)" if recorded else f"{base} · FIXTURE (DOC-SHAPED TEST DATA, NOT REAL)"
 
 
 def _guard(field: str, fn: Callable[[], Any]) -> Any:
@@ -63,6 +67,8 @@ async def trade(svc: Any, keys: Any, reporter: str, partner: str, hs: str, n_yea
             raise ValueError(f"ASK FOR 1 TO {comtrade.MAX_YEARS} YEARS")
         if rep[0] == par[0]:
             raise ValueError("REPORTER AND PARTNER ARE THE SAME COUNTRY")
+        if rep[0] == "WLD":  # Comtrade answers an empty 200 for reporterCode 0; refuse here instead of spending a call of the 500/day quota
+            raise ValueError("REPORTER MUST BE ONE COUNTRY. WLD (THE WORLD) CAN ONLY BE THE PARTNER")
     except ValueError as e:
         raise DataError("bad_request", str(e)) from e
     key = await get_key(keys, "comtrade", "UN_COMTRADE_KEY")
@@ -139,7 +145,7 @@ async def _bea(svc: Any, keys: Any, q: str) -> dict[str, Any]:
             src = out["source"]
             for e in entries:
                 series += _guard("BEA_API_KEY", lambda e=e, out=out: bea.parse(out["body"], e))
-        return _tag({"series": series, "missing": [], "messages": [], "source": _label(bea.SOURCE, src),
+        return _tag({"series": series, "missing": [], "messages": [], "source": _label(bea.SOURCE, src, recorded=True),
                      "note": "BEA TABLES AS PUBLISHED (NIPA T10101, T10105; ITA; GDP BY INDUSTRY). LAST = NEWEST PERIOD WITH A VALUE."}, "BEA"), failed
 
     return await _cached(svc, f"w:bea:{','.join(aliases)}", USMAC_TTL_S, fetch)

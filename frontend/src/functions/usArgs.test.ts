@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtNum, fmtSigned, fmtUsd, parseTradeArgs, parseUsmacArgs, signColor } from "./usArgs";
+import { fmtChange, fmtNum, fmtSigned, fmtUsd, parseTradeArgs, parseUsmacArgs, signColor } from "./usArgs";
 
 describe("TRADE arguments", () => {
   it("needs a reporter", () => {
@@ -43,6 +43,14 @@ describe("number formats", () => {
     expect(fmtUsd(1.2e11)).toBe("120.00B");
     expect(fmtUsd(5.5e8)).toBe("550.0M");
     expect(fmtUsd(null)).toBe("");
+  });
+  it("writes a change per kind: percent for amounts, percentage points for rates, nothing guessed when unknown", () => {
+    expect(fmtChange("level", 3, 1)).toEqual({ chg: "+3.00", pct: "+1.00%" });
+    // 2.2 -> 3.4 is +1.2 percentage points, never "+54.55%": a percent of a percentage misleads
+    expect(fmtChange("rate", 1.2, 54.545)).toEqual({ chg: "+1.20 pp", pct: "" });
+    expect(fmtChange("rate", -0.3, null)).toEqual({ chg: "-0.30 pp", pct: "" });
+    expect(fmtChange("unknown", 1.2, 54.545)).toEqual({ chg: "+1.20", pct: "" });
+    expect(fmtChange("level", null, null)).toEqual({ chg: "", pct: "" });
   });
   it("colours by sign", () => {
     expect([signColor(1), signColor(-1), signColor(0), signColor(null)]).toEqual(["up", "down", "dim", "dim"]);

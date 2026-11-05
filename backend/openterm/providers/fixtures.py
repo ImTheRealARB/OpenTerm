@@ -750,7 +750,8 @@ def _route(request: httpx.Request) -> httpx.Response:
     return _route_portwatch(request) or _route_before_portwatch(request)
 
 
-# --- Trade + US macro family (UN Comtrade, BLS, BEA, Census): ALL DOC-SHAPED, no key was available to record real answers ---
+# --- Trade + US macro family (UN Comtrade, BLS, BEA, Census): doc-shaped, EXCEPT the BEA data tables and the Comtrade India-USA answer, which are
+# real recordings made with the owner's keys on 2026-11-05 (`bea_real_*`, `comtrade_real_*`). ---
 # Every file is marked `doc_shaped` and its numbers are invented. A request without a key gets the 401 (or in-body error) the real
 # service gives; the key value "invalid-fixture-key" gets the "wrong key" answer. Unrecorded combinations are 404 / 204 / empty.
 _BAD_KEY = "invalid-fixture-key"
@@ -786,11 +787,11 @@ def _route_tradeus(request: httpx.Request) -> httpx.Response | None:
             return _load("bea_docshape_datasetlist")
         ds, table, ind = q.get("datasetname"), q.get("TableName"), q.get("Indicator")
         if ds == "NIPA" and table in ("T10101", "T10105"):
-            return _load(f"bea_docshape_nipa_{table}")
+            return _load(f"bea_real_nipa_{table}")  # REAL recordings (2026-11-05), filtered rows
         if ds == "ITA" and ind in ("BalGds", "BalServ", "BalCurrAcct"):
-            return _load(f"bea_docshape_ita_{ind}")
+            return _load(f"bea_real_ita_{ind}")
         if ds == "GDPbyIndustry":
-            return _load("bea_docshape_gdpbyindustry")
+            return _load("bea_real_gdpbyindustry")
         return httpx.Response(200, json={"BEAAPI": {"Results": {"Data": []}}})
     if host == "api.census.gov" and p.startswith("/data/timeseries/"):
         if not q.get("key") or q.get("key") == _BAD_KEY:
@@ -848,6 +849,8 @@ def _route(request: httpx.Request) -> httpx.Response:
     if host == "api.etherscan.io":
         if not q.get("apikey", "").startswith(_DOCSHAPE_KEY):
             return _load("keytest_etherscan_invalid")
+        if q.get("chainid") == "8453":  # Base: a REAL recording of what a free key gets for a chain outside its plan (also OP and BSC live)
+            return _load("etherscan_real_chain_not_on_free_plan")
         name = _ETHERSCAN.get((q.get("module"), q.get("action")))
         return _load(name) if name else httpx.Response(404, text="not recorded")
     if host == "api.marketaux.com":
@@ -928,3 +931,159 @@ def _route_ports(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_ports(request) or _route_before_ports(request)
+
+
+# --- MF: MFapi.in Indian mutual funds (recorded 2026-11-05 from the real service; see world/mfund.py for the shapes) ---
+# /mf/search: the recorded "parag parikh" answer (15 real schemes) filtered by every word of the request, as the real service matches (all words, any
+# order, case-insensitive); other words match nothing. /mf/<code>: only scheme 122639 was recorded (its history trimmed to the newest 30 points);
+# every other code answers the recorded "unknown scheme" shape (HTTP 200, empty meta, no rows). An empty q is the real service's HTTP 400.
+_route_before_mf = _route
+
+
+def _route_mf(request: httpx.Request) -> httpx.Response | None:
+    if request.url.host != "api.mfapi.in":
+        return None
+    p = request.url.path
+    if p == "/mf/search":
+        words = request.url.params.get("q", "").lower().split()
+        if not words:
+            return httpx.Response(400, json={"status": "ERROR", "message": "q is required"})
+        rows = json.loads((FIXTURES / "mfapi_real_search_parag.json").read_text(encoding="utf-8"))["body"]
+        return httpx.Response(200, json=[r for r in rows if all(w in r["schemeName"].lower() for w in words)])
+    if p == "/mf/122639/latest":  # the liveness probe: the newest row of the recorded fund (the real /latest answers exactly that one row)
+        rec = json.loads((FIXTURES / "mfapi_real_fund_122639.json").read_text(encoding="utf-8"))["body"]
+        return httpx.Response(200, json={**rec, "data": rec["data"][:1]})
+    if p.startswith("/mf/") and p[4:].isdigit():
+        return _load("mfapi_real_fund_122639" if p == "/mf/122639" else "mfapi_real_fund_unknown")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_mf(request) or _route_before_mf(request)
+
+
+# --- Kraken + Coinbase Exchange (keyless second crypto exchanges; recorded 2026-11-05 from the real public APIs) ---
+# Kraken: the USD board Ticker (22 coins), BTC-USD daily (last 400 of 721 rows) and hourly (last 200), BTC-USDT daily (last 200), the BTC-USD and
+# BTC-USDT order books (100 levels). Coinbase: BTC-USD daily (298 rows) and hourly (265), BTC-USDT daily, both books cut to 100 levels, and the 24h
+# stats of the 21 board products (one file, keyed by product id, each entry a real answer). Any pair or length that was not recorded answers the
+# way the real API answers an unknown pair (Kraken: HTTP 200 with an error list; Coinbase: 404), so a test sees "not listed", never fake data.
+_KRAKEN_OHLC = {("XBTUSD", "1440"): "kraken_ohlc_xbtusd_1440", ("XBTUSD", "60"): "kraken_ohlc_xbtusd_60", ("XBTUSDT", "1440"): "kraken_ohlc_xbtusdt_1440"}
+_KRAKEN_DEPTH = {"XBTUSD": "kraken_depth_xbtusd", "XBTUSDT": "kraken_depth_xbtusdt"}
+_COINBASE_CANDLES = {("BTC-USD", "86400"): "coinbase_candles_btcusd_86400", ("BTC-USD", "3600"): "coinbase_candles_btcusd_3600",
+                     ("BTC-USDT", "86400"): "coinbase_candles_btcusdt_86400"}
+_COINBASE_BOOK = {"BTC-USD": "coinbase_book_btcusd", "BTC-USDT": "coinbase_book_btcusdt"}
+_route_before_cryptoex = _route
+
+
+def _route_cryptoex(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "api.kraken.com":
+        pair = q.get("pair", "")
+        if p == "/0/public/Ticker":
+            # the recorded board is the USD one; every pair of it must end in USD or Kraken would not know it
+            return _load("kraken_ticker_usd") if pair and all(x.endswith("USD") for x in pair.split(",")) else _load("kraken_error_unknown_pair")
+        if p == "/0/public/OHLC":
+            return _load(_KRAKEN_OHLC[(pair, q.get("interval", ""))]) if (pair, q.get("interval", "")) in _KRAKEN_OHLC else _load("kraken_error_unknown_pair")
+        if p == "/0/public/Depth":
+            return _load(_KRAKEN_DEPTH[pair]) if pair in _KRAKEN_DEPTH else _load("kraken_error_unknown_pair")
+        return httpx.Response(404, text="not recorded")
+    if host == "api.exchange.coinbase.com":
+        parts = p.strip("/").split("/")  # products / <id> / <stats|candles|book>
+        if len(parts) != 3 or parts[0] != "products":
+            return httpx.Response(404, text="not recorded")
+        product, what = parts[1], parts[2]
+        if what == "stats":
+            stats = json.loads((FIXTURES / "coinbase_stats_usd.json").read_text(encoding="utf-8"))["body"]
+            return httpx.Response(200, json=stats[product]) if product in stats else _load("coinbase_error_notfound")
+        if what == "candles":
+            key = (product, q.get("granularity", ""))
+            return _load(_COINBASE_CANDLES[key]) if key in _COINBASE_CANDLES else _load("coinbase_error_notfound")
+        if what == "book":
+            return _load(_COINBASE_BOOK[product]) if product in _COINBASE_BOOK else _load("coinbase_error_notfound")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_cryptoex(request) or _route_before_cryptoex(request)
+
+
+# --- FLT: OpenSky aircraft. DOC-SHAPED, NOT A RECORDING (OpenSky refused every connection from the build machine on 2026-11-05) ---
+# `states/all` returns the invented aircraft of opensky_docshape_states.json that lie inside the requested lamin/lomin/lamax/lomax box (all of them with no box,
+# as the real service does), `states: null` when none do, and the remaining-credits header the docs describe. The token endpoint accepts any client except one whose
+# secret is "wrong-secret-value" (HTTP 401, the OAuth2 answer for a bad client). A bearer token other than the fixture's is a 401.
+_route_before_opensky = _route
+_OPENSKY_TOKEN = "fixture-token-0123456789abcdef"
+
+
+def _route_opensky(request: httpx.Request) -> httpx.Response | None:
+    host, p = request.url.host, request.url.path
+    if host == "auth.opensky-network.org" and p.endswith("/protocol/openid-connect/token") and request.method == "POST":
+        form = dict(x.split("=", 1) for x in request.content.decode().split("&") if "=" in x)
+        if form.get("grant_type") != "client_credentials" or form.get("client_secret") == "wrong-secret-value":
+            return httpx.Response(401, json={"error": "unauthorized_client", "error_description": "Invalid client or Invalid client credentials"})
+        return _load("opensky_docshape_token")
+    if host == "opensky-network.org" and p == "/api/states/all":
+        auth = request.headers.get("authorization")
+        if auth is not None and auth != f"Bearer {_OPENSKY_TOKEN}":
+            return httpx.Response(401, json={"error": "invalid_token"})
+        body = json.loads((FIXTURES / "opensky_docshape_states.json").read_text(encoding="utf-8"))["body"]
+        q = request.url.params
+        if "lamin" in q:
+            s, w, n, e = (float(q[k]) for k in ("lamin", "lomin", "lamax", "lomax"))
+            kept = [v for v in body["states"] if v[5] is not None and s <= v[6] <= n and w <= v[5] <= e]
+            body = {**body, "states": kept or None}  # the real service answers null, not [], for an empty box
+        return httpx.Response(200, json=body, headers={"X-Rate-Limit-Remaining": "3996" if auth else "397"})
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_opensky(request) or _route_before_opensky(request)
+
+
+# --- US government data: USASP, FEDREG (REAL recordings, scripts/record_usgov.py) and FEC, CONGRESS (DOC-SHAPED, invented numbers, NOT A RECORDING) ---
+# USASpending: the recorded "lockheed martin" answers for any keyword containing "lockheed", the recorded empty answer for every other keyword. Federal Register: the
+# recorded "semiconductor" answers (all types, or rules only), the recorded newest-of-all answer for an empty search, the recorded empty answer for other words.
+# api.data.gov hosts: only keys starting with "docshape" get data; no key and any other key get the REAL gateway answers (HTTP 403 API_KEY_MISSING / API_KEY_INVALID).
+_route_before_usgov = _route
+_FEC_DOC = {"/v1/candidates/search/": "fec_candidates_search_docshape", "/v1/committees/": "fec_committees_docshape",
+            "/v1/candidate/H0ZZ00001/": "fec_candidate_entity_docshape", "/v1/candidate/H0ZZ00001/totals/": "fec_candidate_totals_docshape",
+            "/v1/committee/C00000001/": "fec_committee_entity_docshape", "/v1/committee/C00000001/totals/": "fec_committee_totals_docshape"}
+
+
+def _route_usgov(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "api.usaspending.gov":
+        filters = (json.loads(request.content or b"{}").get("filters")) or {}
+        words = " ".join(filters.get("keywords") or []).lower()
+        tag = "lockheed" if "lockheed" in words else "none"
+        if p.endswith("/spending_by_category/recipient/"):
+            return _load("usasp_real_agency_recipients" if filters.get("agencies") else f"usasp_real_recipient_{tag}")
+        if p.endswith("/spending_by_award/"):
+            return _load(f"usasp_real_awards_{tag}")
+        if p.endswith("/spending_by_category/awarding_agency/"):
+            return _load("usasp_real_agency")
+        return httpx.Response(404, text="not recorded")
+    if host == "www.federalregister.gov":
+        term, kind = q.get("conditions[term]", ""), q.get("conditions[type][]", "")
+        if not term:
+            return _load("fedreg_real_latest")
+        if "semiconductor" in term.lower():
+            return _load("fedreg_real_rules_only" if kind == "RULE" else "fedreg_real_semiconductor")
+        return _load("fedreg_real_none")
+    if host in ("api.open.fec.gov", "api.congress.gov"):
+        tag = "fec" if host == "api.open.fec.gov" else "congress"
+        key = request.headers.get("x-api-key", "")
+        if not key.startswith(_DOCSHAPE_KEY):
+            return _load(f"keytest_datagov_{tag}_{'invalid' if key else 'missing'}")
+        if tag == "fec":
+            return _load(_FEC_DOC[p]) if p in _FEC_DOC else httpx.Response(200, json={"api_version": "1.0", "pagination": {"count": 0, "page": 1, "pages": 0, "per_page": 20}, "results": []})
+        if p == "/v3/bill":
+            return _load("congress_bills_list_docshape")
+        if p == "/v3/bill/119/hr/9001":
+            return _load("congress_bill_detail_docshape")
+        return httpx.Response(404, json={"error": "not found (doc-shaped fixture)"})
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_usgov(request) or _route_before_usgov(request)

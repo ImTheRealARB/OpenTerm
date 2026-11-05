@@ -14,13 +14,19 @@ Facts that shape the code (all from aisstream.io/documentation, read 2026-11-05)
     and never put in an error text (a failed connect reports only the exception class name).
   - ShipStaticData (destination, ETA, size) is sent per ship only every few minutes, so one short listen sees it for few ships. A small
     memory of the last static record per MMSI lets repeated listens fill destinations in (each record keeps its own time).
+  - The feed is sparse, so the LAST POSITION per MMSI is remembered for 5 minutes (`PositionMemory`). Each listen answers with its own ships
+    plus remembered ones still inside the box; every ship says whether it is remembered, and none older than 5 minutes is ever returned.
 
 With no key `supports()` stays true and the call raises `key_required` BEFORE any connection: AIS shows
-`KEY REQUIRED: set AISSTREAM_API_KEY in APIKEYS`. In fixture mode a key (any text) replays tests/fixtures/ais_stream_docshape.json,
-which is DOC-SHAPED (invented ships), and the source label says so.
+`KEY REQUIRED: set AISSTREAM_API_KEY in APIKEYS`. In fixture mode a key (any text) replays tests/fixtures/ais_stream_recording.json, a REAL
+recording made on 2026-11-05 (only the messages inside the box asked for, like the live service), and the source label says it is a replay.
 
-NOT verified against the live service (no key existed): how a bad key is answered, what the real MetaData looks like beyond the docs,
-and how much static data arrives in a few seconds. The wire code is tested against a local WebSocket server in the documented shape.
+Checked live on 2026-11-05 with a real key (see aisstream_parse.py for the message shapes):
+  - The subscription, the [lat, lon] corner order and the message shapes are right. The FEED IS SPARSE: about 80 messages a second for the whole
+    world. A 15-30 s listen saw 2-3 ships in the Singapore Strait, 2 at Dover, 2 at Gibraltar and NOTHING at Suez, Hormuz, Bab el-Mandeb,
+    Bosphorus or Panama. That is receiver coverage (the free feed comes from volunteer land stations), not a bug, so an empty answer is normal.
+  - A wrong key is not answered with JSON: the connection is dropped with no close frame (code 1006) right after the subscription.
+  - About one message in three is static data (ShipStaticData from class A ships, StaticDataReport from class B boats).
 """
 
 from __future__ import annotations
@@ -38,9 +44,11 @@ from . import aisstream_parse as ap
 from .base import Provider, ProviderError
 
 CAPABILITY = "ais"
-FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "ais_stream_docshape.json"
+FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "ais_stream_recording.json"
 STATIC_KEEP = 4000  # remembered static records (about 1 MB)
 STATIC_TTL_S = 6 * 3600.0
+POSITION_KEEP = 4000  # remembered last positions (one small dict per ship)
+POSITION_TTL_S = 300.0  # a position older than 5 minutes is never shown again: a ship moves, so an old fix is a wrong fix
 MAX_SECONDS = 15.0
 MAX_MESSAGES = 5000
 CONNECT_TIMEOUT_S = 8.0
@@ -51,7 +59,11 @@ def _closed(e: Exception) -> str:
     rcvd = getattr(e, "rcvd", None)
     code = getattr(rcvd, "code", None)
     reason = (getattr(rcvd, "reason", "") or "")[:60]
-    return f"AISSTREAM CLOSED THE CONNECTION{f' ({code} {reason})'.rstrip() if code else ''}: A REFUSED KEY, THE 3-CONNECTION LIMIT OR THE BETA SERVICE IS DOWN"
+    if code is None:
+        # No close frame at all: this is exactly what the live service did with a wrong key (checked 2026-11-05). It is also what a dropped
+        # network or an overloaded beta service looks like, so it is worded as the most likely cause, not as a fact.
+        return "AISSTREAM DROPPED THE CONNECTION WITH NO REASON: MOST OFTEN A WRONG KEY (CHECK IT IN APIKEYS), ELSE THE 3-CONNECTION LIMIT OR THE BETA SERVICE IS DOWN"
+    return f"AISSTREAM CLOSED THE CONNECTION ({f'{code} {reason}'.strip()}): A REFUSED KEY, THE 3-CONNECTION LIMIT OR THE BETA SERVICE IS DOWN"
 
 
 async def _open(url: str, key: str, box: tuple[float, float, float, float], types: tuple[str, ...]):
@@ -73,6 +85,55 @@ async def _open(url: str, key: str, box: tuple[float, float, float, float], type
     return ws
 
 
+class PositionMemory:
+    """The last position seen per ship (MMSI), kept for a few minutes so a sparse feed still fills a box over repeated listens.
+
+    Why: the free feed carries ~80 messages a second for the WHOLE world, so one 15 s listen in a strait often sees 0-3 ships although
+    more passed through. A ship that reported 2 minutes ago is still almost where it was, so showing it (clearly marked as remembered,
+    with its age) is more honest than a blank panel, as long as it is never shown past `ttl_s`.
+
+    Design choices (all deliberate):
+      - Keyed by MMSI and independent of any box: one ship, one latest position. The box is applied only when we ANSWER (`recall`), so a ship
+        that has left the box asked about is not returned, and a listen of one area never hides a ship remembered from another.
+      - Pure and clock-free: every method takes `now` (epoch seconds), so tests run time forward without sleeping.
+      - Bounded two ways: entries older than `ttl_s` are dropped, and if more than `keep` ships remain the least recently UPDATED ones go first
+        (an OrderedDict, with `move_to_end` on every update, is the oldest-first queue).
+    """
+
+    def __init__(self, keep: int = POSITION_KEEP, ttl_s: float = POSITION_TTL_S):
+        self.keep, self.ttl_s = keep, ttl_s
+        self._by_mmsi: OrderedDict[int, dict[str, Any]] = OrderedDict()
+
+    def __len__(self) -> int:
+        return len(self._by_mmsi)
+
+    def age(self, p: dict[str, Any], now: float) -> float:
+        """Seconds since the ship's last report. Uses the OLDER of the message's own clock (`seen`) and when we received it (`rx`), so a
+        late-delivered or clock-skewed message can never make an old fix look young."""
+        return now - min(p["seen"], p["rx"])
+
+    def update(self, fresh: dict[int, dict[str, Any]], now: float) -> None:
+        """Stores this listen's newest position per ship (a fresh one always replaces the remembered one), then drops expired and surplus entries."""
+        for mmsi, p in fresh.items():
+            self._by_mmsi[mmsi] = {**p, "rx": now}  # a copy: the caller's dict keeps its own flags
+            self._by_mmsi.move_to_end(mmsi)  # most recently updated = last = evicted last
+        for mmsi in [m for m, p in self._by_mmsi.items() if self.age(p, now) > self.ttl_s]:
+            del self._by_mmsi[mmsi]
+        while len(self._by_mmsi) > self.keep:
+            self._by_mmsi.popitem(last=False)  # the least recently updated ship
+
+    def recall(self, box: tuple[float, float, float, float], skip: set[int], now: float) -> dict[int, dict[str, Any]]:
+        """Remembered ships inside `box` (south, west, north, east), not in `skip` (the ships this listen just saw) and no older than `ttl_s`."""
+        south, west, north, east = box
+        out = {}
+        for mmsi, p in self._by_mmsi.items():
+            if mmsi in skip or self.age(p, now) > self.ttl_s:
+                continue
+            if south <= p["lat"] <= north and west <= p["lon"] <= east:  # check_box guarantees west < east: boxes never cross the date line
+                out[mmsi] = {k: v for k, v in p.items() if k != "rx"}
+        return out
+
+
 class AisStreamProvider(Provider):
     name = "aisstream"
     label = "AISstream (free key, beta WebSocket)"
@@ -85,10 +146,14 @@ class AisStreamProvider(Provider):
     def __init__(self, http: Any, source: str | None = None):
         super().__init__(http, source)
         self.fixtures = (source or "").endswith(":fixture")
-        self.source = "aisstream (DOC-SHAPED fixture, NOT A RECORDING)" if self.fixtures else "aisstream"
+        self.source = "aisstream (REPLAY of a real recording from 2026-11-05, NOT LIVE)" if self.fixtures else "aisstream"
         self._key = ""
         self._lock = asyncio.Lock()  # one listen at a time: the account allows only 3 connections
         self._statics: OrderedDict[int, dict[str, Any]] = OrderedDict()
+        # Last position per ship for 5 minutes. It lives on this provider object, and the provider is built with the app, so a new app
+        # (every test builds its own) starts with an empty memory. Fixture mode never touches it (see `_assemble`).
+        self.positions = PositionMemory()
+        self.clock = time.time  # tests replace this with a fake clock to age the memory without sleeping
 
     @property
     def has_key(self) -> bool:
@@ -101,7 +166,9 @@ class AisStreamProvider(Provider):
         """Listens inside `box` for at most `seconds` or `max_messages` data messages, whichever comes first.
 
         Returns {"positions": {mmsi: newest position}, "statics": {mmsi: static record}, "received": n data messages, "capped": hit the message cap,
-        "listened_s": how long we actually listened, "source"}. An empty `positions` is a real answer (quiet area or slow feed), not an error.
+        "listened_s": how long we actually listened, "source", "remembered": n ships that came from memory, "memory_s": the memory's limit}.
+        `positions` holds this listen's ships (`remembered: False`) PLUS ships remembered from earlier listens that are still inside `box` and
+        at most `POSITION_TTL_S` old (`remembered: True`). An empty `positions` is a real answer (quiet area or slow feed), not an error.
         """
         if not self._key:
             raise ProviderError("key_required", "AISSTREAM_API_KEY is not set")
@@ -109,14 +176,22 @@ class AisStreamProvider(Provider):
         seconds, max_messages = min(max(seconds, 0.2), MAX_SECONDS), min(max(max_messages, 1), MAX_MESSAGES)
         async with self._lock:
             if self.fixtures:
-                msgs, listened = self._fixture_messages(), 0.1
+                msgs, listened = self._fixture_messages(box), 0.1
             else:
                 msgs, listened = await self._read(box, seconds, max_messages)
-            return self._assemble(msgs, listened, max_messages)
+            return self._assemble(msgs, listened, max_messages, box)
 
     # --- reading -----------------------------------------------------------------------------------------------------------
-    def _fixture_messages(self) -> list[dict[str, Any]]:
-        return json.loads(FIXTURE.read_text(encoding="utf-8"))["messages"]
+    def _fixture_messages(self, box: tuple[float, float, float, float]) -> list[dict[str, Any]]:
+        """The recorded data messages that lie inside `box` (the live service filters by box too), so `AIS SUEZ` replays nothing and
+        `AIS MALACCA` replays the Singapore Strait ships. The recorded confirmation is dropped, as `_read` does not count it either."""
+        south, west, north, east = box
+        out = []
+        for msg in json.loads(FIXTURE.read_text(encoding="utf-8"))["messages"]:
+            meta = msg.get("MetaData")
+            if meta and south <= meta["latitude"] <= north and west <= meta["longitude"] <= east:
+                out.append(msg)
+        return out
 
     async def _read(self, box: tuple[float, float, float, float], seconds: float, cap: int) -> tuple[list[dict[str, Any]], float]:
         import websockets
@@ -158,8 +233,8 @@ class AisStreamProvider(Provider):
         return msgs, time.monotonic() - started
 
     # --- turning messages into the answer -----------------------------------------------------------------------------------
-    def _assemble(self, msgs: list[dict[str, Any]], listened: float, cap: int) -> dict[str, Any]:
-        now = time.time()
+    def _assemble(self, msgs: list[dict[str, Any]], listened: float, cap: int, box: tuple[float, float, float, float]) -> dict[str, Any]:
+        now = self.clock()
         positions: dict[int, dict[str, Any]] = {}
         for msg in msgs:
             kind = ap.kind_of(msg)
@@ -169,19 +244,35 @@ class AisStreamProvider(Provider):
                     positions[p["mmsi"]] = p
             elif kind == "static" and (s := ap.static(msg, now)) is not None:
                 s["rx"] = now  # when WE got it: the memory's age is measured from here, whatever the message's own clock says
+                old = self._statics.get(s["mmsi"])
+                if s.pop("partial") and old is not None:
+                    # A class B boat sends its name and its type/size in separate messages: keep what the earlier part told us.
+                    s = {**old, **{k: v for k, v in s.items() if v is not None}}
                 self._statics[s["mmsi"]] = s
                 self._statics.move_to_end(s["mmsi"])
         while len(self._statics) > STATIC_KEEP:
             self._statics.popitem(last=False)
         for mmsi in [m for m, s in self._statics.items() if now - s["rx"] > STATIC_TTL_S]:
             del self._statics[mmsi]
+        # Position memory. Order matters: first remember what this listen saw (fresh always replaces older), then answer with this listen's
+        # ships plus the remembered ones that are in THIS box, not already fresh, and young enough. Fixture mode is a replay of a recording:
+        # it neither stores nor recalls, so a replay stays deterministic and nothing can leak from one test or panel to the next.
+        positions = {m: {**p, "remembered": False} for m, p in positions.items()}
+        remembered: dict[int, dict[str, Any]] = {}
+        if not self.fixtures:
+            self.positions.update(positions, now)
+            remembered = {m: {**p, "remembered": True} for m, p in self.positions.recall(box, set(positions), now).items()}
+        positions |= remembered
         return {
             "positions": positions,
             "statics": {m: self._statics[m] for m in positions if m in self._statics},
+            "remembered": len(remembered),
+            "memory_s": self.positions.ttl_s,
             "received": len(msgs),
             "capped": len(msgs) >= cap,
             "listened_s": round(listened, 2),
             "source": self.source,
+            "replay": self.fixtures,  # True = a recording replayed in fixture mode, not the live feed
         }
 
 

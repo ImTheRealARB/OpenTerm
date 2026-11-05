@@ -1,0 +1,38 @@
+{
+ "status": 200,
+ "doc_shaped": "NOT A RECORDING. OpenFEC docs https://api.open.fec.gov/developers/. Invented numbers in the shape the documentation promises; no API key was available to record the real answer.",
+ "body": {
+  "api_version": "1.0",
+  "pagination": {
+   "count": 1,
+   "page": 1,
+   "pages": 1,
+   "per_page": 10
+  },
+  "results": [
+   {
+    "candidate_id": "H0ZZ00001",
+    "name": "EXAMPLE, TEST A",
+    "party": "IND",
+    "party_full": "INDEPENDENT",
+    "office": "H",
+    "office_full": "House",
+    "state": "ZZ",
+    "district": "01",
+    "election_years": [
+     2022,
+     2024,
+     2026
+    ],
+    "cycles": [
+     2022,
+     2024,
+     2026
+    ],
+    "candidate_status": "C",
+    "incumbent_challenge": "I",
+    "has_raised_funds": true
+   }
+  ]
+ }
+}

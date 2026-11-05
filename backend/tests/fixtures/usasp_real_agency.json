@@ -1,0 +1,142 @@
+{
+ "status": 200,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "category": "awarding_agency",
+  "spending_level": "transactions",
+  "limit": 15,
+  "page_metadata": {
+   "page": 1,
+   "next": 2,
+   "previous": null,
+   "hasNext": true,
+   "hasPrevious": false
+  },
+  "results": [
+   {
+    "id": 806,
+    "code": "HHS",
+    "name": "Department of Health and Human Services",
+    "agency_slug": "department-of-health-and-human-services",
+    "amount": 6302213701887.85,
+    "total_outlays": null
+   },
+   {
+    "id": 539,
+    "code": "SSA",
+    "name": "Social Security Administration",
+    "agency_slug": "social-security-administration",
+    "amount": 4864395047483.25,
+    "total_outlays": null
+   },
+   {
+    "id": 1173,
+    "code": "DOD",
+    "name": "Department of Defense",
+    "agency_slug": "department-of-defense",
+    "amount": 1477551296283.69,
+    "total_outlays": null
+   },
+   {
+    "id": 561,
+    "code": "VA",
+    "name": "Department of Veterans Affairs",
+    "agency_slug": "department-of-veterans-affairs",
+    "amount": 850441781224.25,
+    "total_outlays": null
+   },
+   {
+    "id": 95,
+    "code": "USDA",
+    "name": "Department of Agriculture",
+    "agency_slug": "department-of-agriculture",
+    "amount": 533562704421.38,
+    "total_outlays": null
+   },
+   {
+    "id": 731,
+    "code": "DOT",
+    "name": "Department of Transportation",
+    "agency_slug": "department-of-transportation",
+    "amount": 394012372239.42,
+    "total_outlays": null
+   },
+   {
+    "id": 1068,
+    "code": "ED",
+    "name": "Department of Education",
+    "agency_slug": "department-of-education",
+    "amount": 283724379088.5,
+    "total_outlays": null
+   },
+   {
+    "id": 766,
+    "code": "DHS",
+    "name": "Department of Homeland Security",
+    "agency_slug": "department-of-homeland-security",
+    "amount": 243794477950.36,
+    "total_outlays": null
+   },
+   {
+    "id": 882,
+    "code": "HUD",
+    "name": "Department of Housing and Urban Development",
+    "agency_slug": "department-of-housing-and-urban-development",
+    "amount": 223206997954.56,
+    "total_outlays": null
+   },
+   {
+    "id": 930,
+    "code": "DOE",
+    "name": "Department of Energy",
+    "agency_slug": "department-of-energy",
+    "amount": 213500373443.03,
+    "total_outlays": null
+   },
+   {
+    "id": 700,
+    "code": "EPA",
+    "name": "Environmental Protection Agency",
+    "agency_slug": "environmental-protection-agency",
+    "amount": 93076872953.68,
+    "total_outlays": null
+   },
+   {
+    "id": 614,
+    "code": "GSA",
+    "name": "General Services Administration",
+    "agency_slug": "general-services-administration",
+    "amount": 80958464545.26,
+    "total_outlays": null
+   },
+   {
+    "id": 862,
+    "code": "NASA",
+    "name": "National Aeronautics and Space Administration",
+    "agency_slug": "national-aeronautics-and-space-administration",
+    "amount": 68184091760.33,
+    "total_outlays": null
+   },
+   {
+    "id": 183,
+    "code": "DOC",
+    "name": "Department of Commerce",
+    "agency_slug": "department-of-commerce",
+    "amount": 66919821560.09,
+    "total_outlays": null
+   },
+   {
+    "id": 315,
+    "code": "DOS",
+    "name": "Department of State",
+    "agency_slug": "department-of-state",
+    "amount": 63793059120.23,
+    "total_outlays": null
+   }
+  ],
+  "messages": [
+   "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+   "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+  ]
+ }
+}

@@ -17,8 +17,8 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   FX: "Markets", FXC: "Markets", FXFA: "Markets", CRYP: "Markets", CDEP: "Markets", FUND: "Markets", LIQ: "Markets",
   STBL: "Markets", DEFI: "Markets", UNLK: "Markets", CMDTY: "Markets", NRG: "Markets", WETR: "Markets", SHIP: "Markets", PORTS: "Markets",
   RATES: "Markets", YAS: "Markets", SWPM: "Markets", CDSW: "Markets", CT: "Markets", WIRP: "Markets", COT: "Markets",
-  ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", DBSRCH: "Markets", WECO: "Markets",
-  CENB: "Markets", PRED: "Markets", TRADE: "Markets", USMAC: "Markets", ADDR: "Markets", AIS: "Markets",
+  ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", DBSRCH: "Markets", WECO: "Markets", MF: "Markets",
+  CENB: "Markets", PRED: "Markets", TRADE: "Markets", USMAC: "Markets", ADDR: "Markets", AIS: "Markets", FLT: "Markets",
   // Charts: anything that is mainly a picture of a time series or a map
   GP: "Charts", IND: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",
   // News: headlines and company events
@@ -27,7 +27,7 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   DES: "Research", FA: "Research", FIL: "Research", SEC: "Research", EE: "Research", EEO: "Research", ANR: "Research",
   MGMT: "Research", DVD: "Research", SPLT: "Research", CACS: "Research", SI: "Research", HDS: "Research",
   OWN: "Research", MGR: "Research", ETF: "Research", MEMB: "Research", COMP: "Research", CORR: "Research",
-  REGIME: "Research", DCF: "Research", WACC: "Research", RV: "Research", UKCO: "Research",
+  REGIME: "Research", DCF: "Research", WACC: "Research", RV: "Research", UKCO: "Research", USASP: "Research", FEDREG: "Research", FEC: "Research", CONGRESS: "Research",
   OMON: "Research", PCR: "Research", OV: "Research", OSA: "Research", OVDV: "Research", SKEW: "Research", HIVG: "Research",
   FACT: "Research", QL: "Research", ALPHA: "Research",
   AI: "Research", SWARM: "Research", THESIS: "Research", AUDIT: "Research",

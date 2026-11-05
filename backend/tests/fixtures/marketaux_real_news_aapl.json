@@ -1,0 +1,98 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://api.marketaux.com/v1/news/all?symbols=AAPL&language=en&filter_entities=true&limit=3 (api_token not stored). Article text fields (description, snippet, keywords, image_url, similar, highlights) are emptied to keep the file small; titles, links, dates, sources and sentiment scores are unedited. Free plan: 100 requests a day (x-usagelimit-limit: 100), 30 requests per minute (x-ratelimit-limit: 30).",
+ "status": 200,
+ "body": {
+  "meta": {
+   "found": 100933,
+   "returned": 3,
+   "limit": 3,
+   "page": 1
+  },
+  "data": [
+   {
+    "uuid": "71a37329-c72e-46b2-bce3-07c9bfae8850",
+    "title": "Crude crash, US midterm wave send Nifty surging past 24,300",
+    "description": "",
+    "keywords": [],
+    "snippet": "",
+    "url": "https://www.thehindubusinessline.com/markets/crude-crash-us-midterm-wave-send-nifty-surging-past-24300/article71668574.ece",
+    "image_url": "",
+    "language": "en",
+    "published_at": "2026-11-05T04:19:08.000000Z",
+    "source": "thehindubusinessline.com",
+    "relevance_score": null,
+    "entities": [
+     {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "exchange": null,
+      "exchange_long": null,
+      "country": "us",
+      "type": "equity",
+      "industry": "Technology",
+      "match_score": 8.049131,
+      "sentiment_score": 0.2732,
+      "highlights": []
+     }
+    ],
+    "similar": []
+   },
+   {
+    "uuid": "fce63048-176d-4a95-bb58-44d36efdfda8",
+    "title": "Apple lowers internal AI usage budgets in move to reduce spending",
+    "description": "",
+    "keywords": [],
+    "snippet": "",
+    "url": "https://www.business-standard.com/technology/tech-news/apple-lowers-internal-ai-usage-budgets-in-move-to-reduce-spending-126110500120_1.html",
+    "image_url": "",
+    "language": "en",
+    "published_at": "2026-11-05T03:18:50.000000Z",
+    "source": "business-standard.com",
+    "relevance_score": null,
+    "entities": [
+     {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "exchange": null,
+      "exchange_long": null,
+      "country": "us",
+      "type": "equity",
+      "industry": "Technology",
+      "match_score": 25.573318,
+      "sentiment_score": 0.1071,
+      "highlights": []
+     }
+    ],
+    "similar": []
+   },
+   {
+    "uuid": "a6d437df-4271-4ff8-a2f0-fdf7f8115175",
+    "title": "Market Open: ASX set for sharp rebound as Wall Street rallies and oil tumbles",
+    "description": "",
+    "keywords": [],
+    "snippet": "",
+    "url": "https://themarketonline.com.au/market-open-asx-set-for-sharp-rebound-as-wall-street-rallies-and-oil-tumbles-2026-11-05/",
+    "image_url": "",
+    "language": "en",
+    "published_at": "2026-11-04T22:11:33.000000Z",
+    "source": "themarketherald.com.au",
+    "relevance_score": null,
+    "entities": [
+     {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "exchange": null,
+      "exchange_long": null,
+      "country": "us",
+      "type": "equity",
+      "industry": "Technology",
+      "match_score": 7.165408,
+      "sentiment_score": -0.2023,
+      "highlights": []
+     }
+    ],
+    "similar": []
+   }
+  ]
+ }
+}

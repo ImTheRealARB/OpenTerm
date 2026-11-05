@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AIS_AREAS, aisQuery, fmtAge, fmtDegrees, fmtKnots, fmtLatLon, quietText, stepArea } from "./aisArgs";
+import { AIS_AREAS, aisQuery, fmtAge, fmtDegrees, fmtFrom, fmtKnots, fmtLatLon, listeningText, memoryNote, quietText, stepArea } from "./aisArgs";
 import { FUNCTIONS } from "./registry";
 
 describe("AIS registry entry", () => {
@@ -43,6 +43,13 @@ describe("AIS formatting", () => {
   });
   it("formats ages", () => {
     expect([fmtAge(null), fmtAge(12), fmtAge(300), fmtAge(7200), fmtAge(400000)]).toEqual(["", "12S", "5M", "2H", "5D"]);
+  });
+  it("labels remembered rows honestly and promises the real listen time", () => {
+    expect(fmtFrom(true)).toBe("MEMORY");
+    expect(fmtFrom(false)).toBe("LIVE");
+    expect(memoryNote()).toContain("POSITIONS UP TO 5 MIN OLD FROM EARLIER LISTENS");
+    expect(memoryNote(120)).toContain("UP TO 2 MIN OLD");
+    expect(listeningText()).toBe("LISTENING FOR ABOUT 15 SECONDS…");
   });
   it("says a quiet listen does not prove the area is empty", () => {
     expect(quietText(8, 0)).toContain("DOES NOT SHOW THE AREA IS EMPTY");

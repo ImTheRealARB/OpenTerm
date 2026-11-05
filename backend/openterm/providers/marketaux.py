@@ -12,7 +12,10 @@ marketaux.com/pricing). N refreshes every two minutes, so this adapter protects 
 Marketaux's own HTTP 402 `usage_limit_reached` is mapped the same way.
 
 The key travels as the `api_token` query parameter: that is the only method the docs describe. It is registered with
-redact.py, and no error text here ever includes a URL. Built from the docs, not from a recording (doc-shaped fixtures).
+redact.py, and no error text here ever includes a URL. Checked live on 2026-11-05 with a real key (fixture `marketaux_real_news_aapl`): field names match, `published_at` is UTC text ending in Z,
+`source` is a domain, entities carry `sentiment_score`. The free plan returns at most 3 articles per request, 100 requests a day
+(`x-usagelimit-limit`) and 30 a minute (`x-ratelimit-limit`). Keyword search (`news_keyword`, the N panel's `q=`) does NOT use this
+source: only GDELT serves it, so a GDELT 429 shows as 503 PROVIDER DOWN there even though Marketaux is fine.
 """
 
 from __future__ import annotations
