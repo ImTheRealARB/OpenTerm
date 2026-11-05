@@ -85,6 +85,10 @@ const SETTING_ROWS: SettingRow[] = [
     kind: "setting", id: "ai.provider", label: "AI PROVIDER (KEY IN APIKEYS)", value: (s) => s.ai.provider.toUpperCase(),
     change: (s, d) => ({ ...s, ai: { ...s.ai, provider: cycle(AI_PROVIDERS, s.ai.provider, d) } }),
   },
+  {
+    kind: "setting", id: "font", label: "FONT (ANY INSTALLED FONT)", value: (s) => (s.font ? s.font : "DEFAULT") + "   (ENTER TO CHANGE)",
+    enter: (s) => prefillCommand(`SETTINGS FONT ${s.font || "Fira Code"}`),
+  },
   // Last on purpose: the rows above keep their positions (THEME is first). Same switch as the status bar toggle and Alt+G.
   { kind: "setting", id: "mode", label: "INTERFACE MODE (TERMINAL OR GUI, ALT+G)", value: (s) => s.mode.toUpperCase(), change: (s, d) => ({ ...s, mode: cycle(MODES, s.mode, d) }) },
 ];

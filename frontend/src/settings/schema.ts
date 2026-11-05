@@ -3,6 +3,7 @@
  * the wire, defaults filled in here. Invalid fields from storage fall back to their default (with a note in
  * `errors`) so a bad value never blocks cold start.
  */
+import { isFontName } from "./font";
 import { isTheme, type ThemeName } from "./themes";
 
 export const SETTINGS_VERSION = 1;
@@ -33,6 +34,8 @@ export interface Settings {
    */
   mode: Mode;
   theme: ThemeName;
+  /** Name of an installed font for the whole app ("" = the built-in font). See settings/font.ts. */
+  font: string;
   vim: boolean;
   numberFormat: { thousands: (typeof THOUSANDS)[number]; decimal: (typeof DECIMALS)[number] };
   /** "LOCAL", "UTC" or an IANA zone such as "America/New_York". */
@@ -48,6 +51,7 @@ export interface Settings {
 export const DEFAULTS: Settings = Object.freeze({
   mode: "gui",
   theme: "amber",
+  font: "",
   vim: false,
   numberFormat: { thousands: ",", decimal: "." },
   clocks: ["LOCAL", "UTC"],
@@ -147,6 +151,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
     settings: {
       mode,
       theme: pick("theme", isTheme(r.theme), r.theme as ThemeName, d.theme),
+      font: pick("font", isFontName(r.font), r.font as string, d.font),
       vim: pick("vim", typeof r.vim === "boolean", r.vim as boolean, d.vim),
       numberFormat,
       clocks: pick("clocks", clocksOk, (r.clocks as string[])?.slice(), [...d.clocks]),

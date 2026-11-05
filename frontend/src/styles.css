@@ -17,7 +17,9 @@
   --hdr: #d9d9d9;
   --menu: #a00000;
   --menu-fg: #ffffff;
-  --font: "JetBrains Mono", "IBM Plex Mono", Consolas, "Cascadia Mono", Menlo, monospace;
+  --font-base: "JetBrains Mono", "IBM Plex Mono", Consolas, "Cascadia Mono", Menlo, monospace;
+  /* --font-user is set by the SETTINGS font option (settings/font.ts); when unset the built-in stack applies. */
+  --font: var(--font-user, var(--font-base));
   --fs: 12px;
   --row: 16px;
 }
