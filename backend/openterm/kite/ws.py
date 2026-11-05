@@ -101,6 +101,7 @@ class KiteTicker:
         self._task: asyncio.Task | None = None
         self._wake = asyncio.Event()
         self._segments: dict[int, str | None] = {}
+        self._sleep = asyncio.sleep  # the backoff wait; a test swaps it for a recording stand-in
 
     def start(self) -> None:
         self._task = asyncio.create_task(self._run())
@@ -173,12 +174,15 @@ class KiteTicker:
                     backoff = 1.0
                     log.info("kite ticker connected (%d instruments)", len(subscribed))
                     reader = asyncio.create_task(self._read(ws))
+                    # a dropped socket must wake the loop below at once: otherwise `status` stays OK (and `covers` true, Yahoo's ticks
+                    # dropped) for up to the 5 s poll while nothing arrives
+                    reader.add_done_callback(lambda _t: self._wake.set())
                     try:
                         while not reader.done():
                             self._wake.clear()
                             with contextlib.suppress(TimeoutError):
                                 await asyncio.wait_for(self._wake.wait(), 5.0)
-                            if not self.symbols or not self.session.logged_in:
+                            if reader.done() or not self.symbols or not self.session.logged_in:
                                 break
                             self._wanted = await self._tokens()
                             add, drop = set(self._wanted) - subscribed, subscribed - set(self._wanted)
@@ -199,7 +203,7 @@ class KiteTicker:
             finally:
                 self._ws = None
             self.status = "DOWN"
-            await asyncio.sleep(backoff)
+            await self._sleep(backoff)
             backoff = min(backoff * 2, 60.0)
 
     async def _read(self, ws) -> None:

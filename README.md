@@ -96,6 +96,8 @@ Your browser opens at **http://localhost:8000**. Leave the terminal window open 
 | **Macro** | FRED economic series, the Treasury yield curve, earnings and economic calendars, world statistics and central banks. |
 | **Derivatives and fixed income** | Options chains and pricing, implied volatility, futures, bond maths and credit. |
 | **Crypto** | Order book depth, funding rates, basis, stablecoin supply, DeFi yields and prediction-market odds. |
+| **India** | NSE and BSE shares, indices, futures and options (NFO, BFO), MCX commodities and currency futures (CDS). Works on free Yahoo data; with a paid [Zerodha Kite Connect](https://kite.trade/) app it becomes the first source: real-time quotes, minute bars back to 2015, open interest, and option chains (`OMON NIFTY.NFO`, `CT USDINR.CDS`). Read-only. |
+| **Trade, shipping and official data** | Ship traffic through sea chokepoints (`SHIP`), port activity (`PORTS`), live ship positions (`AIS`), trade flows between countries by product (`TRADE`), US jobs, prices, GDP and retail sales (`USMAC`), UK company register (`UKCO`), Ethereum addresses (`ADDR`), and a search across OECD, Eurostat, BIS, IMF and ECB series (`DBSRCH`). |
 | **Portfolio** | Track positions with live profit and loss, price alerts, CSV import and export. |
 | **Backtesting** | Test a rule like `SMA20>SMA50` on years of data with realistic fees, Monte Carlo and walk-forward checks. Build the rule as a sentence in GUI mode, or write a Python strategy in `BT EDIT`. |
 | **Risk and quant** | Value at Risk, portfolio optimisation, factor and attribution analysis. |
@@ -132,16 +134,17 @@ The full list of functions is in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 Speed is the main feature, not an afterthought. Every number below is a **budget that the project's own benchmark
 (`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-11-05: 37 of 37 pass):
 
+
 | What you do | Result | Budget |
 |---|---|---|
-| Open the app to a usable command line | **about 110 ms** | 1500 ms |
+| Open the app to a usable command line | **about 95 ms** | 1500 ms |
 | Press a key, see it on screen | **about 15 ms** (less than one 60 Hz frame) | 16.7 ms |
 | Run a cached command, see the panel painted | **about 18 ms** | 100 ms |
 | Live price tick arrives, pixel changes | **about 37 ms** with 4,000 ticks per second flowing into 9 panels | 50 ms |
 | Scroll a 10,000-row table | **16.7 ms per frame** (smooth 60 fps) | 20 ms |
 | Pan a chart of 50,000 candles | **16.7 ms per frame** | 20 ms |
 | Backend answering a cached quote | **about 1 ms** | 20 ms |
-| Backtest 10 years of daily bars | **about 0.2 s** | 0.3 s |
+| Backtest 10 years of daily bars | **about 0.28 s** | 0.3 s |
 | Download size of the app (JS and CSS, compressed) | **about 120 KB** | 400 KB |
 | Memory used by the page with 9 panels and 200 live symbols | **about 8 MB** | 500 MB |
 
@@ -444,8 +447,9 @@ link for each one is shown there). Keys are never typed on the command line and 
 | `FMP_API_KEY`, `TRADIER_TOKEN` | Estimates, index members; an options-chain fallback |
 | An AI key: OpenRouter, Anthropic, OpenAI, Gemini, DeepSeek, Groq, Mistral, xAI, Together, Fireworks or OpenCode | The optional AI panels. Pay per use, billed by that provider |
 | Telegram, SMTP email or a webhook URL | Alert and daily brief delivery |
-| `KITE_API_KEY` and `KITE_API_SECRET` | Zerodha Kite Connect for NSE and BSE data (read-only, needs a paid Kite developer app) |
+| `KITE_API_KEY` and `KITE_API_SECRET` | Zerodha Kite Connect: the first source for Indian shares, futures, options, commodities and currencies (read-only). Needs a **paid** Kite Connect app; set its redirect URL to `http://127.0.0.1:8000/api/kite/callback`, then run `KITE LOGIN`. The login lasts **one trading day**; after it ends OpenTerm falls back to Yahoo and says `KITE LOGIN EXPIRED` |
 | `UN_COMTRADE_KEY` | Free: trade flows between countries by product (`TRADE`) |
+| `AISSTREAM_API_KEY` | Free (beta service, no uptime promise): live ship positions in a chokepoint (`AIS`). Written from the documentation and not yet run against the real service |
 | `BLS_API_KEY`, `BEA_API_KEY`, `CENSUS_API_KEY` | Free: US inflation, jobs, GDP, trade, retail (`USMAC`) |
 | `COMPANIES_HOUSE_KEY` | Free: UK company profile, officers, filings (`UKCO`) |
 | `MARKETAUX_KEY` | Free: news with sentiment scores in `N` |
@@ -480,6 +484,8 @@ These are unofficial or free-tier endpoints meant for personal use, and they cha
 
 - Every value carries its **source and age**. When a source fails you see `STALE`, `ERR` or `PROVIDER DOWN`, never invented numbers.
 - When one source fails, OpenTerm tries the next one in a fixed order and shows which one answered. A source that keeps failing is paused and retried, so the app does not hammer it.
+- That order is one **source hierarchy** (a ranked table, best first, for quotes and for price history). A source with no key, or one that does not cover the symbol, is skipped at no cost. Each one also declares how far back its minute bars reach, so the chart's candle-length menu greys out lengths the answering source cannot serve. For Indian symbols Kite ranks first while its login is valid. `SOURCES` shows where each provider sits; [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md) gives the reasons.
+- Several newer sources (`AIS`, `TRADE`, `USMAC`, `UKCO`, `ADDR`) were written from the providers' documentation and have not yet been run with a real key. A wrong guess shows as an `ERR` line, never as made-up numbers.
 - Test data (recorded fixtures, synthetic symbols) is always **labelled on screen**.
 - AI answers say `AI · model · time`, list the data they used, and say `UNGROUNDED` when they used none.
 - Read [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) before relying on anything. Please respect each source's terms of use.
