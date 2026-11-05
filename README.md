@@ -119,8 +119,10 @@ that starts the app from any terminal.
 
 ## Your first five minutes
 
-The first time you open OpenTerm it starts in **GUI mode**, on a ready-made screen with a list of large US stocks, a
-chart and the top news.
+The first time you open OpenTerm it starts in **GUI mode** with a short welcome card. Every new browser tab opens on the
+**home page** (`HOME`): market numbers for the US, India, Europe, Asia, FX, commodities, crypto and rates, headlines by
+section, and a scrolling ticker tape. `TAPE ADD SYM` edits the tape, and `SETTINGS STARTUP LAYOUT` makes new tabs
+restore your saved workspace instead (a page reload always keeps your panels).
 
 <img src="docs/screenshots/gui-search.png" alt="GUI mode: the command line understands company names and plain English" width="100%">
 
@@ -138,6 +140,7 @@ Some things to type:
 |---|---|
 | `apple stock price past 5 years` | Apple's price chart over five years (`AAPL GP 5Y`) |
 | `tesla news` | Tesla headlines (`TSLA N`) |
+| `N TECH`, `N INDIA`, `N COMMODITY GOLD` | News from 45 feeds, filtered by section, country, sector or commodity |
 | `apple vs microsoft since 2021` | Both on one chart |
 | `nifty 50`, `reliance share price`, `bitcoin 1 year`, `gold price` | Indian indices and NSE shares, crypto, commodities |
 | `amazon balance sheet` | The balance sheet from SEC filings (`AMZN FA BS`) |
