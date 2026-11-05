@@ -451,7 +451,7 @@ link for each one is shown there). Keys are never typed on the command line and 
 | `KITE_API_KEY` and `KITE_API_SECRET` | Zerodha Kite Connect: the first source for Indian shares, futures, options, commodities and currencies (read-only). Needs a **paid** Kite Connect app; set its redirect URL to `http://127.0.0.1:8000/api/kite/callback`, then run `KITE LOGIN`. The login lasts **one trading day**; after it ends OpenTerm falls back to Yahoo and says `KITE LOGIN EXPIRED` |
 | `UN_COMTRADE_KEY` | Free: trade flows between countries by product (`TRADE`) |
 | `AISSTREAM_API_KEY` | Free (beta service, no uptime promise): live ship positions in a chokepoint (`AIS`). Written from the documentation and not yet run against the real service |
-| `BLS_API_KEY`, `BEA_API_KEY`, `CENSUS_API_KEY` | Free: US inflation, jobs, GDP, trade, retail (`USMAC`) |
+| `BLS_API_KEY`, `BEA_API_KEY`, `CENSUS_API_KEY` | Free: US inflation, jobs, GDP, trade, retail (`USMAC`). BLS also works without a key (25 queries a day) |
 | `COMPANIES_HOUSE_KEY` | Free: UK company profile, officers, filings (`UKCO`) |
 | `MARKETAUX_KEY` | Free: news with sentiment scores in `N` |
 | `ETHERSCAN_KEY` | Free: Ethereum balances, transactions, gas (`ADDR`) |
