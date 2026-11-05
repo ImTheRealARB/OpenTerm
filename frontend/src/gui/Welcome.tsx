@@ -1,5 +1,5 @@
 import "./Welcome.css"; // this component's GUI-only rules, loaded with its chunk
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useStore } from "../state/store";
 import { chromeKeyDown, focusCommandLine } from "./chrome";
 import { closeWelcome, onboarding, startTour } from "./onboarding";
@@ -17,7 +17,7 @@ const CHOICES = [
 
 /**
  * First-run welcome card, shown once over the workspace (localStorage `openterm.welcomed`, set by `showWelcome`).
- * Tab moves between the buttons, Enter presses one, Esc closes. It can be shown again from Settings > Show welcome card.
+ * Tab moves between the buttons, Enter presses one, Esc closes (from anywhere, see the window listener below). It can be shown again from Settings > Show welcome card.
  */
 export function Welcome() {
   const open = useStore(onboarding, (s) => s.welcome);
@@ -26,6 +26,23 @@ export function Welcome() {
   // Focus the first button on open so Enter / Tab / Esc work immediately.
   useEffect(() => {
     if (open) first.current?.focus();
+  }, [open]);
+
+  // Esc closes the card wherever the focus is. The card's own onKeyDown only sees keys while a button inside it has focus,
+  // and a click anywhere else (the command line, a panel, the page) moves focus out, so Esc used to do nothing.
+  // A listener on window in the CAPTURE phase sees the key first; it is only attached while the card is open.
+  // useLayoutEffect (not useEffect): it runs inside the commit, before the card is painted, so Esc works the moment the card is visible.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.ctrlKey || e.altKey || e.metaKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      closeWelcome();
+      focusCommandLine();
+    };
+    window.addEventListener("keydown", onEsc, true);
+    return () => window.removeEventListener("keydown", onEsc, true);
   }, [open]);
 
   if (!open) return null;
@@ -41,12 +58,6 @@ export function Welcome() {
       aria-label="Welcome to OpenTerm"
       onKeyDown={(e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return; // chords bubble
-        if (e.key === "Escape") {
-          e.stopPropagation();
-          e.preventDefault();
-          close();
-          return;
-        }
         chromeKeyDown(e);
       }}
     >

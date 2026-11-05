@@ -6,28 +6,46 @@
  * Exact function codes never get here (nlRun.needsNatural).
  */
 import { interpretScreener, looksLikeEnglish } from "../functions/eqsNatural";
-import { compareCommand, parseCompare } from "./compareNatural";
+import { compareCommand, parseCompare, type CompareParse } from "./compareNatural";
+import { fxPair } from "./nlAliases";
+import { extractRange } from "./nlRange";
 import { interpretNatural, type NlContext } from "./natural";
 
 export type RouteResult =
   | { kind: "command"; command: string; why: string }
   | { kind: "choices"; choices: { command: string; label: string }[] }
   | { kind: "error"; message: string }
-  | { kind: "none" };
+  /** `lookup`: see natural.ts NlResult; nlResolve.ts may answer it with Yahoo's name search. */
+  | { kind: "none"; lookup?: { phrase: string; template: string } };
 
 const STOCK_WORDS = /\b(?:stocks|shares|companies|equities)\b/;
 
 const symbolOf = (command: string): string => command.split(" ")[0];
 
 function route(body: string, ctx: NlContext): RouteResult {
-  if (parseCompare(body)) return routeCompare(body, ctx);
+  const cmp = parseCompare(body);
+  if (cmp && !isCurrencyPair(cmp)) return routeCompare(body, ctx);
   if (STOCK_WORDS.test(body.toLowerCase()) && looksLikeEnglish(body) && interpretScreener(body).args.length) {
     return { kind: "command", command: `EQS ${body.trim()}`, why: "EQS" };
   }
   return interpretNatural(body, ctx);
 }
 
-function routeCompare(body: string, ctx: NlContext): RouteResult {
+/** "dollar vs rupee", "usd vs inr": two currencies are one exchange rate, not a comparison of two securities. */
+const isCurrencyPair = (c: CompareParse): boolean => c.more.length === 0 && fxPair(`${c.a} ${c.b}`) !== null;
+
+function routeCompare(original: string, ctx: NlContext): RouteResult {
+  // The range is read by the shared reader (nlRange: word numbers, "18 months", "since 2021" -> the closest GP range) and cut out
+  // of the sentence first; compareNatural then only has to split the names. If cutting it leaves no two names ("apple vs 3m"),
+  // the original sentence is used and compareNatural's own range reading applies.
+  const st = { s: original.toLowerCase() };
+  const found = extractRange(st, ctx.now ?? new Date());
+  const cut = found && parseCompare(st.s) ? st.s : null;
+  const body = cut ?? original;
+  const range = cut ? found!.range : undefined;
+  const note = cut ? found!.note : undefined;
+  /** Puts the range into `AAPL GP VS MSFT` -> `AAPL GP 5Y VS MSFT`. */
+  const withRange = (command: string): string => (range ? command.replace(/^(\S+) GP/, `$1 GP ${range}`) : command);
   const parse = parseCompare(body)!;
   const picked = new Map<string, string>();
   let ambiguous: { phrase: string; hits: { symbol: string; label: string }[] } | null = null;
@@ -43,11 +61,11 @@ function routeCompare(body: string, ctx: NlContext): RouteResult {
     compareCommand(body, (p) => (swap && p === swap.phrase ? swap.symbol : (picked.get(p) ?? null)));
   const base = build();
   if (base.error) return { kind: "error", message: base.error };
-  if (!ambiguous) return { kind: "command", command: base.command!, why: "GP VS" };
+  if (!ambiguous) return { kind: "command", command: withRange(base.command!), why: ["GP VS", note].filter(Boolean).join(" · ") };
   const { phrase, hits } = ambiguous;
   const choices = hits.flatMap((h) => {
     const c = build({ phrase, symbol: h.symbol }).command;
-    return c ? [{ command: c, label: h.label }] : [];
+    return c ? [{ command: withRange(c), label: h.label }] : [];
   });
   return choices.length ? { kind: "choices", choices } : { kind: "error", message: base.error ?? "COMPARE NEEDS TWO DIFFERENT NAMES" };
 }

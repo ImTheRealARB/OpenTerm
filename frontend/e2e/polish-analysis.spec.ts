@@ -31,11 +31,11 @@ async function setup(page: Page, mode: Mode) {
 
 const panel = (page: Page, id = 1) => page.locator(`[data-panel="${id}"]`);
 
-/** Runs a command the way the user would in each shell: the sidebar search box in GUI mode, Ctrl+K in the terminal shell. */
+/** Runs a command the way the user would in each shell: the command line in GUI mode, Ctrl+K in the terminal shell. */
 async function run(page: Page, mode: Mode, text: string) {
   if (mode === "gui") {
-    await page.getByTestId("gui-search").fill(text);
-    await page.getByTestId("gui-search").press("Enter");
+    await page.locator("#cmdline").fill(text);
+    await page.locator("#cmdline").press("Enter");
     return;
   }
   await page.keyboard.press("Control+k");
@@ -86,6 +86,11 @@ for (const mode of MODES) {
     // The error keeps its source and reason: never a silent blank.
     await expect(note).toContainText("PROVIDER DOWN");
     await expect(note).toContainText("sec: unavailable (timeout)");
-    await expect(note.locator(".pnote-hint")).toContainText("F5 TO RETRY");
+    // Terminal shows the key; GUI drops "F5" key legends because every panel's toolbar has a Refresh button.
+    if (mode === "gui") {
+      await expect(note).not.toContainText("F5");
+      await expect(panel(page).locator(".pt .pt-b", { hasText: "Refresh" })).toBeVisible();
+    }
+    else await expect(note.locator(".pnote-hint")).toContainText("F5 TO RETRY");
   });
 }

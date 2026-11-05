@@ -47,7 +47,8 @@ interface Props<R> {
   band?: (row: R) => boolean;
 }
 
-const ROW_H = 16;
+/** Terminal row height; GUI mode raises it through the CSS variable `--row` (read into the theme, see `rowH`). */
+const DEFAULT_ROW_H = 16;
 const PAD = 6;
 
 interface Theme {
@@ -60,6 +61,8 @@ interface Theme {
   rowRule: string;
   colRule: string;
   font: string;
+  /** Row height in CSS px, from `--row` (Terminal 16, GUI 20). */
+  rowH: number;
   colors: Record<CellColor, string>;
 }
 
@@ -76,6 +79,7 @@ function readTheme(el: Element): Theme {
     rowRule: v("--grid-row-rule") || v("--line"),
     colRule: v("--grid-col-rule") || v("--line"),
     font: `${v("--fs") || "12px"} ${v("--font")}`,
+    rowH: parseFloat(v("--row")) || DEFAULT_ROW_H,
     colors: { fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), warn: v("--warn"), err: v("--err"), acc: v("--accent"), val: v("--val") || v("--fg") },
   };
 }
@@ -90,6 +94,8 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   const canvas = useRef<HTMLCanvasElement>(null);
   const sr = useRef<HTMLDivElement>(null);
   const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[] });
+  // Current row height. A function, not a constant: the theme (and so the height) is re-read when the display settings change.
+  const ROW_H_NOW = () => st.current.theme?.rowH ?? DEFAULT_ROW_H;
   const data = useRef({ columns, rows, band });
   data.current = { columns, rows, band };
 
@@ -108,7 +114,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     fl.end = 0;
   };
 
-  const visibleCount = () => Math.max(1, Math.floor((st.current.h - ROW_H) / ROW_H));
+  const visibleCount = () => Math.max(1, Math.floor((st.current.h - ROW_H_NOW()) / ROW_H_NOW()));
 
   const layout = () => {
     const s = st.current;
@@ -127,19 +133,26 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     if (!ctx || !th) return;
     const vis = i - s.top;
     if (vis < 0 || vis >= visibleCount()) return;
-    const y = ROW_H + vis * ROW_H;
+    const y = ROW_H_NOW() + vis * ROW_H_NOW();
     const { columns: cols, rows: rs, band: isBand } = data.current;
     const row = rs[i];
     const banded = row !== undefined && !!isBand?.(row);
     ctx.fillStyle = i === s.sel ? th.sel : banded ? th.hdrBg : th.bg;
-    ctx.fillRect(0, y, s.w, ROW_H);
+    ctx.fillRect(0, y, s.w, ROW_H_NOW());
     if (row === undefined) return;
     if (i !== s.sel && !banded) {
       // Thin gray rules: under the row and between columns (no per-cell allocation, plain rects).
       ctx.fillStyle = th.rowRule;
-      ctx.fillRect(0, y + ROW_H - 1, s.w, 1);
+      ctx.fillRect(0, y + ROW_H_NOW() - 1, s.w, 1);
       ctx.fillStyle = th.colRule;
-      for (let c = 1; c < cols.length; c++) ctx.fillRect(s.xs[c] - 1, y, 1, ROW_H - 1);
+      for (let c = 1; c < cols.length; c++) ctx.fillRect(s.xs[c] - 1, y, 1, ROW_H_NOW() - 1);
+    }
+    if (banded) {
+      // A section band ("Economic and official data") is one title across the whole row: draw the first column's text
+      // clipped to the row width, not to the first column (which cut it to "Economic a…"). Band users put text in column 0 only.
+      ctx.fillStyle = i === s.sel ? th.colors.val : th.colors.fg;
+      ctx.fillText(clip(cols[0]?.text(row) ?? "", Math.max(1, Math.floor((s.w - PAD * 2) / s.cw))), (s.xs[0] ?? 0) + PAD, y + ROW_H_NOW() / 2 + 1);
+      return;
     }
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
@@ -148,12 +161,12 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       const hl = frame >= 0 && col.flash ? col.flash(row, frame) : null;
       if (hl) {
         ctx.fillStyle = th.colors[hl];
-        ctx.fillRect(x + 1, y + 1, cwPx - 2, ROW_H - 2);
+        ctx.fillRect(x + 1, y + 1, cwPx - 2, ROW_H_NOW() - 2);
       }
       const text = clip(col.text(row), col.width);
       ctx.fillStyle = hl ? th.bg : banded ? (c === 0 ? th.colors.fg : th.colors.val) : th.colors[col.color?.(row) ?? (col.align === "right" ? "val" : "fg")];
       const tx = col.align === "right" ? x + PAD + (col.width - text.length) * s.cw : x + PAD;
-      ctx.fillText(text, tx, y + ROW_H / 2 + 1);
+      ctx.fillText(text, tx, y + ROW_H_NOW() / 2 + 1);
     }
   };
 
@@ -172,11 +185,11 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     const n = data.current.rows.length;
     const vc = visibleCount();
     if (!ctx || !s.theme || n <= vc) return;
-    const trackH = s.h - ROW_H;
+    const trackH = s.h - ROW_H_NOW();
     const thumbH = Math.max(8, (vc / n) * trackH);
-    const y = ROW_H + (s.top / (n - vc)) * (trackH - thumbH);
+    const y = ROW_H_NOW() + (s.top / (n - vc)) * (trackH - thumbH);
     ctx.fillStyle = s.theme.bg;
-    ctx.fillRect(s.w - 3, ROW_H, 3, trackH);
+    ctx.fillRect(s.w - 3, ROW_H_NOW(), 3, trackH);
     ctx.fillStyle = s.theme.colors.dim;
     ctx.fillRect(s.w - 3, y, 3, thumbH);
   };
@@ -190,16 +203,16 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     ctx.fillRect(0, 0, s.w, s.h);
     const cols = data.current.columns;
     ctx.fillStyle = th.hdrBg;
-    ctx.fillRect(0, 0, s.w, ROW_H - 1);
+    ctx.fillRect(0, 0, s.w, ROW_H_NOW() - 1);
     ctx.fillStyle = th.hdr;
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const t = clip(col.title, col.width);
       const tx = col.align === "right" ? s.xs[c] + PAD + (col.width - t.length) * s.cw : s.xs[c] + PAD;
-      ctx.fillText(t, tx, ROW_H / 2 + 1);
+      ctx.fillText(t, tx, ROW_H_NOW() / 2 + 1);
     }
     ctx.fillStyle = th.line;
-    ctx.fillRect(0, ROW_H - 1, s.w, 1);
+    ctx.fillRect(0, ROW_H_NOW() - 1, s.w, 1);
     const end = Math.min(data.current.rows.length, s.top + visibleCount());
     for (let i = s.top; i < end; i++) drawRow(i, -1);
     drawScrollbar();
@@ -284,6 +297,10 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       ctx.textBaseline = "middle";
       s.cw = ctx.measureText("0").width; // once per resize, never per cell
       layout();
+      // A panel can mount tiny (one row tall) and grow a frame later. clampTop() then scrolled down to keep the
+      // selection visible and nothing scrolled back, so a board starting on row 1 hid its first section band
+      // (WEI "Americas"). When the selection fits on screen from the very top, show the top.
+      if (s.sel < visibleCount()) s.top = 0;
       clampTop();
       redraw();
     };
@@ -298,12 +315,12 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     };
     const onDown = (e: MouseEvent) => {
       const r = cv.getBoundingClientRect();
-      const i = s.top + Math.floor((e.clientY - r.top - ROW_H) / ROW_H);
-      if (e.clientY - r.top > ROW_H) moveTo(i);
+      const i = s.top + Math.floor((e.clientY - r.top - ROW_H_NOW()) / ROW_H_NOW());
+      if (e.clientY - r.top > ROW_H_NOW()) moveTo(i);
     };
     // GUI mode only: header hover shows the glossary tip (lazy chunk, which owns the logic). Terminal mode returns on the first line.
     const tip = { at: -1, i: -1, hasTips: null as boolean | null };
-    const tipCtx = (): TipCtx => ({ tip, cv, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H, cols: data.current.columns, panel: box.current?.closest(".panel") ?? null });
+    const tipCtx = (): TipCtx => ({ tip, cv, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H_NOW(), cols: data.current.columns, panel: box.current?.closest(".panel") ?? null });
     const onMove = (e: MouseEvent) => {
       if (document.documentElement.dataset.mode === "gui") void import("../gui/gridTips").then((m) => m.headerMove(e, tipCtx()));
     };
@@ -332,7 +349,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       if (e.key !== "T" || e.ctrlKey || e.altKey || e.metaKey || document.documentElement.dataset.mode !== "gui" || tip.hasTips === false) return false;
       const s = st.current;
       void import("../gui/gridTips").then((m) =>
-        m.nextTip({ tip, cv: canvas.current!, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H, cols: data.current.columns, panel: box.current?.closest(".panel") ?? null }),
+        m.nextTip({ tip, cv: canvas.current!, xs: s.xs, cw: s.cw, pad: PAD, rowH: ROW_H_NOW(), cols: data.current.columns, panel: box.current?.closest(".panel") ?? null }),
       );
       return true;
     });

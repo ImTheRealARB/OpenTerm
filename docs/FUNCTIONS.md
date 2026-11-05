@@ -83,7 +83,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC]` | `AAPL GP` |
+| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
 | `DES` | Security description | yes |  | `AAPL DES` |
 | `Q` | Quote monitor (live) |  | `[SYM...]` | `Q` |
 | `QR` | Quote recap (live) | yes |  | `AAPL QR` |

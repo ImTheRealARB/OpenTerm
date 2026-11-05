@@ -13,6 +13,8 @@ const UNIVERSE: [string, string, number][] = [
   ["MSFT", "Microsoft Corporation Common Stock", 3.1e12],
   ["GOOGL", "Alphabet Inc. Class A Common Stock", 2e12],
   ["GOOG", "Alphabet Inc. Class C Capital Stock", 2e12],
+  ["ZAC", "Zeta Alpha Corp Common Stock", 5e9],
+  ["ZBC", "Zeta Beta Corp Common Stock", 4e9],
   ["TSLA", "Tesla, Inc. Common Stock", 8e11],
 ];
 const screener = () => ({
@@ -85,17 +87,24 @@ for (const mode of ["terminal", "gui"] as const) {
       await expect(page.locator(".msg.info")).toHaveText("APPLE -> AAPL");
     });
 
+    // CHANGED ON PURPOSE (NL_V2): "alphabet" is one company now (GOOGL, the most traded class), so the ambiguous name is two
+    // similar-size companies ("zeta"). The share-class case is the next test.
     test("an ambiguous name asks, then runs the pick", async ({ page }) => {
-      await type(page, "alphabet 1 year chart");
+      await type(page, "zeta 1 year chart");
       const ac = page.locator(".ac");
-      await expect(ac).toContainText("GOOGL GP 1Y");
-      await expect(ac).toContainText("GOOG GP 1Y");
+      await expect(ac).toContainText("ZAC GP 1Y");
+      await expect(ac).toContainText("ZBC GP 1Y");
       await expect(page.locator(".msg.info")).toContainText("DID YOU MEAN");
       await page.keyboard.press("ArrowDown");
-      const picked = (await page.locator(".ac .on span").first().textContent())!; // e.g. "GOOG GP 1Y"
+      const picked = (await page.locator(".ac .on span").first().textContent())!; // e.g. "ZBC GP 1Y"
       await page.keyboard.press("Enter");
       await expect(title(page)).toContainText(`${picked.split(" ")[0]} | GP`);
       await expect(page.locator("#cmdline")).toHaveValue("");
+    });
+
+    test("share classes of one company are not a question: alphabet is GOOGL", async ({ page }) => {
+      await type(page, "alphabet stock 5 years");
+      await expect(title(page)).toContainText("GOOGL | GP");
     });
 
     test("the preview line shows what Enter will run", async ({ page }) => {

@@ -4,13 +4,16 @@
  * (last 4 characters) is shown while typing, and everything is cleared the moment you save or cancel. Typing in the
  * field stops at the field: it reaches neither the command line nor the command history.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type ApiError, type KeyRow, type KeysPayload } from "../net/api";
 import { apiKeysSignup } from "./apikeysSignup";
 import { maskKey } from "./apikeysMask";
+import { groupRows, isHeaderRow, type HeaderRow } from "./apikeysSections";
+import { settingsStore } from "../settings/runtime";
+import { useStore } from "../state/store";
 import { navKey, useLatest } from "./quoteRows";
 import { parseCap, spendLine } from "./spendCap";
 import type { FunctionProps } from "./registry";
@@ -23,6 +26,10 @@ const STATE_COLOR: Record<string, CellColor> = { OK: "up", MISSING: "dim", UNTES
 const SOURCE_TEXT = (r: KeyRow) => (r.source === "env" ? "SET IN ENV" : r.source === "keyring" ? "KEYRING" : r.source === "dotenv" ? ".ENV FILE" : "");
 const checked = (r: KeyRow) => (r.checked_at == null ? "" : `${fmtAge(Math.max(0, Date.now() / 1000 - r.checked_at))} AGO`);
 
+/** A grid row: a provider, or a section header ("AI models") drawn as a full-width band that the cursor skips. */
+type Row = KeyRow | HeaderRow;
+
+// Terminal columns (unchanged). The CSV export uses these on the provider rows only, so the file never changes with the mode.
 const COLUMNS: Column<KeyRow>[] = [
   { title: "PROVIDER", width: 11, text: (r) => r.name.toUpperCase(), color: () => "acc" },
   { title: "STATE", width: 9, text: (r) => r.state, color: (r) => STATE_COLOR[r.state] ?? "fg" },
@@ -31,6 +38,24 @@ const COLUMNS: Column<KeyRow>[] = [
   { title: "PH", width: 3, align: "right", text: (r) => String(r.phase), color: () => "dim" },
   { title: "LAST CHECK", width: 10, align: "right", text: checked, color: () => "dim" },
 ];
+
+/** GUI: plain headers, and no PH column (a build-phase number: developer detail). */
+const GUI_TITLES: Record<string, string> = { PROVIDER: "Provider", STATE: "Status", SOURCE: "Stored in", PURPOSE: "What it unlocks", "LAST CHECK": "Last check" };
+const GUI_COLUMNS: Column<KeyRow>[] = COLUMNS.filter((c) => c.title !== "PH").map((c) => ({ ...c, title: GUI_TITLES[c.title] ?? c.title, width: Math.max(c.width, (GUI_TITLES[c.title] ?? c.title).length + 1) }));
+
+/** Lets a column that only knows provider rows draw header rows too: the header text goes in the first column, nothing in the rest. */
+function withHeaders(cols: Column<KeyRow>[]): Column<Row>[] {
+  return cols.map((c, i) => ({
+    title: c.title,
+    width: c.width,
+    align: c.align,
+    // (no `flash`: none of these columns uses one)
+    text: (r: Row) => (isHeaderRow(r) ? (i === 0 ? r.header : "") : c.text(r)),
+    color: (r: Row) => (isHeaderRow(r) ? "acc" : (c.color?.(r) ?? "fg")),
+  }));
+}
+const COLUMNS_ROWS = withHeaders(COLUMNS);
+const GUI_COLUMNS_ROWS = withHeaders(GUI_COLUMNS);
 
 interface Edit {
   name: string;
@@ -54,9 +79,12 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
   const capInput = useRef<HTMLInputElement | null>(null);
   const grid = useRef<GridHandle>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
-  const rows = data?.keys ?? [];
+  const gui = useStore(settingsStore, (s) => s.mode === "gui");
+  const keyRows = data?.keys ?? [];
+  // Display rows: section headers between the providers. Everything below that indexes the grid uses these.
+  const rows = useMemo(() => groupRows(keyRows), [data]); // eslint-disable-line react-hooks/exhaustive-deps -- keyRows is derived from data
   const latest = useLatest({ rows, edit, confirm, capEdit });
-  useCsvExport(panelId, () => gridCsv("APIKEYS", COLUMNS, rows)); // status only, never a value
+  useCsvExport(panelId, () => gridCsv("APIKEYS", COLUMNS, keyRows)); // status only, never a value
 
   const refresh = useCallback(
     () =>
@@ -81,9 +109,11 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
   useEffect(() => {
     if (!data || placedFor.current === want) return;
     placedFor.current = want;
-    const i = want ? data.keys.findIndex((k) => k.name === want || k.fields.some((f) => f.toLowerCase() === want)) : -1;
-    if (i >= 0) grid.current?.moveTo(i);
-  }, [data, want]);
+    const i = want ? rows.findIndex((k) => !isHeaderRow(k) && (k.name === want || k.fields.some((f) => f.toLowerCase() === want))) : -1;
+    // No (known) argument: the first provider. The grid's `initialSelected={1}` is clamped to 0 while the rows are still
+    // empty, which left the cursor on the "AI models" header band.
+    grid.current?.moveTo(i >= 0 ? i : rows.findIndex((k) => !isHeaderRow(k)));
+  }, [data, want, rows]);
 
   const closeEdit = () => {
     for (const el of inputs.current) if (el) el.value = ""; // nothing typed survives
@@ -174,9 +204,10 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
           }
           return false;
         }
-        const r = cur[g?.selected() ?? -1];
+        const sel = cur[g?.selected() ?? -1];
+        const r = sel && !isHeaderRow(sel) ? sel : undefined; // a header row is never acted on
         if (c && !(c === r?.name && (e.key === "d" || e.key === "Delete"))) setConfirm(null);
-        if (navKey(e, g, cur.length)) return true;
+        if (navKey(e, g, cur.length, (i) => isHeaderRow(cur[i]))) return true;
         switch (e.key) {
           case "Enter":
             if (!r) return true;
@@ -254,12 +285,12 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
     }
   };
 
-  const set = rows.filter((r) => r.present).length;
+  const set = keyRows.filter((r) => r.present).length;
   const spend = data?.spend;
   return (
     <div className="fn">
       <div className="line">
-        <span className="acc">API KEYS</span> {set} SET · {rows.length - set} MISSING
+        <span className="acc">API KEYS</span> {set} SET · {keyRows.length - set} MISSING
         {data === null && !err && <span className="dim"> · LOADING…</span>}
         {err && <span className="err"> · STALE: {err}</span>}
         {confirm && <span className="err"> · DELETE {confirm.toUpperCase()} KEY? PRESS D AGAIN</span>}
@@ -291,7 +322,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
         </div>
       )}
       {data?.keys.length === 0 && <div className="dim">NO KEYED PROVIDERS REPORTED BY THE BACKEND.</div>}
-      <Grid ref={grid} columns={COLUMNS} rows={rows} />
+      <Grid ref={grid} columns={gui ? GUI_COLUMNS_ROWS : COLUMNS_ROWS} rows={rows} initialSelected={1} band={isHeaderRow} />
       <div className="summary" data-testid="apikeys-spend">
         {spendLine(spend)}
         {capEdit && (

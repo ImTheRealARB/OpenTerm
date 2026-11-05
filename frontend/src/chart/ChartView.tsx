@@ -112,7 +112,7 @@ export const INTERVAL_S: Record<string, number> = {
 function themeColors() {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string) => cs.getPropertyValue(n).trim();
-  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), line: v("--line"), acc: v("--accent"), warn: v("--warn"), sel: v("--sel"), val: v("--val") || v("--fg"), bar: v("--bar") || v("--sel"), grid: v("--chart-grid") || v("--bar") || v("--line"), cup: v("--chart-up") || v("--up"), cdown: v("--chart-down") || v("--down"), cline: v("--chart-line") || v("--val") || v("--fg"), font: v("--font") };
+  return { bg: v("--bg"), fg: v("--fg"), dim: v("--fg-dim"), up: v("--up"), down: v("--down"), line: v("--line"), acc: v("--accent"), warn: v("--warn"), sel: v("--sel"), val: v("--val") || v("--fg"), bar: v("--bar") || v("--sel"), grid: v("--chart-grid") || v("--bar") || v("--line"), cup: v("--chart-up") || v("--up"), cdown: v("--chart-down") || v("--down"), cline: v("--chart-line") || v("--val") || v("--fg"), font: v("--font"), fs: Math.round(parseFloat(v("--fs")) - 1) || 11 };
 }
 
 const toTime = (s: number) => s as UTCTimestamp;
@@ -218,7 +218,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     const c = colors.current;
     const chart = createChart(box.current!, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, fontFamily: c.font, fontSize: 11, attributionLogo: false, panes: { separatorColor: c.line, enableResize: false } },
+      layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, fontFamily: c.font, fontSize: c.fs, attributionLogo: false, panes: { separatorColor: c.line, enableResize: false } },
       grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       rightPriceScale: { borderColor: c.line },
       timeScale: { borderColor: c.line, timeVisible: (INTERVAL_S[data.interval] ?? 86400) < 86400, secondsVisible: false, rightOffset: 3, lockVisibleTimeRangeOnResize: true },
@@ -264,7 +264,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     seenVer.current = ver;
     const c = (colors.current = themeColors());
     chart.applyOptions({
-      layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, panes: { separatorColor: c.line } },
+      layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.dim, fontSize: c.fs, panes: { separatorColor: c.line } },
       grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
       rightPriceScale: { borderColor: c.line },
       timeScale: { borderColor: c.line },
@@ -570,6 +570,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     if (r.SMA20) line(r.SMA20, c.acc, 0, "SMA20");
     if (r.SMA50) line(r.SMA50, c.warn, 0, "SMA50");
     if (r.EMA20) line(r.EMA20, c.fg, 0, "EMA20");
+    // Longer averages. No up / down colours (those mean price direction); the series title tells SMA from EMA.
+    if (r.SMA100) line(r.SMA100, c.val, 0, "SMA100");
+    if (r.SMA200) line(r.SMA200, c.dim, 0, "SMA200");
+    if (r.EMA50) line(r.EMA50, c.warn, 0, "EMA50");
+    if (r.EMA200) line(r.EMA200, c.dim, 0, "EMA200");
     if (r.BB_MID) {
       line(r.BB_UP, c.dim, 0, "BB");
       line(r.BB_MID, c.dim, 0);
@@ -724,7 +729,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     ctx.beginPath();
     ctx.rect(0, 0, plotW, chart.panes()[0]?.getHeight() ?? h);
     ctx.clip();
-    ctx.font = `11px ${c.font}`;
+    ctx.font = `${c.fs}px ${c.font}`;
     ctx.lineWidth = 1;
     let nSegs = 0;
     const stroke = (list: Drawing[], color: (id: string) => string, dash: number[]) => {

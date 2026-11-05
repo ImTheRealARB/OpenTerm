@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FUNCTIONS } from "../functions/registry";
-import { TOOLBARS, askButton, askCommands, buttonsFor, expandAsk, keyInit } from "./toolbars";
+import { TOOLBARS, askButton, askCommands, buttonsFor, expandAsk, keyHint, keyInit } from "./toolbars";
 
 /** A "single key string" as KeyboardEvent.key reports it: one character, or one of the few named keys panels use. */
 const SINGLE_KEY = /^(.|Enter|Escape|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDown|PageUp|PageDown|Home|End|F\d{1,2})$/;
@@ -74,5 +74,18 @@ describe("firstArg buttons", () => {
     expect(labels(["edit", "mysma"])).toContain("Templates");
     expect(labels(["AAPL", "@mysma"])).not.toContain("Templates");
     expect(labels([])).not.toContain("Templates");
+  });
+});
+
+describe("keyHint (the letter before a label in the function band)", () => {
+  it("shows plain letters only", () => {
+    const find = (code: string, label: string) => TOOLBARS[code].find((b) => b.label === label)!;
+    expect(keyHint(find("Q", "Add"))).toBe("A");
+    expect(keyHint(find("Q", "Sort"))).toBe("S");
+    expect(keyHint(find("GP", "Log"))).toBe("L");
+    expect(keyHint(find("GP", "1Y"))).toBe(""); // a digit: the label is the meaning
+    expect(keyHint(find("GP", "Price alert"))).toBe(""); // Shift chord
+    expect(keyHint(find("GP", "Indicators…"))).toBe(""); // opens another panel
+    expect(keyHint(find("Q", "Details"))).toBe(""); // Enter
   });
 });

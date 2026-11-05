@@ -31,6 +31,11 @@ function clicker() {
       n++;
       await loc.click();
     },
+    /** Picking from a dropdown is one action too (a narrow GP band shows its ranges as one, see PanelToolbar). */
+    select: async (loc: Locator, value: string) => {
+      n++;
+      await loc.selectOption(value);
+    },
     get count() {
       return n;
     },
@@ -184,11 +189,13 @@ async function setupGui(page: Page): Promise<Mocks> {
 const panel = (page: Page) => page.locator('[data-panel="1"]');
 const header = (page: Page) => page.locator('[data-panel="1"] .ph');
 const startHere = (page: Page, name: string | RegExp) => page.getByTestId("start-here").getByRole("button", { name });
-const suggestion = (page: Page, symbol: string) => page.getByRole("option", { name: new RegExp(`\\b${symbol}\\b`) });
+// A suggestion row of the command line (role="option"). `.first()`: the same symbol can be listed twice (the plain-English
+// reading "AAPL  PRESS ENTER" and a company search hit); either one runs it.
+const suggestion = (page: Page, symbol: string) => page.getByRole("option", { name: new RegExp(`\\b${symbol}\\b`) }).first();
 
-/** The beginner's search box. Typing a company name is allowed. Today `gui-symbol` takes a ticker only. */
+/** The beginner's search box is the command line. Typing a company name is allowed ("apple" is read as plain English). */
 async function search(page: Page, text: string) {
-  const box = page.getByTestId("gui-symbol");
+  const box = page.locator("#cmdline");
   await box.click(); // focusing the box is not counted: the beginner's first click is on the suggestion
   await box.fill(text);
 }
@@ -223,7 +230,8 @@ test("2. chart Tesla over 1 year", async ({ page }) => {
   await search(page, "tesla");
   await c.click(suggestion(page, "TSLA"));
   await c.click(startHere(page, "Stock chart"));
-  await c.click(panel(page).getByRole("button", { name: "1Y", exact: true }));
+  // The starter layout is two panels side by side, so the chart band is compact: its ranges are one dropdown.
+  await c.select(panel(page).getByTestId("gp-range"), "1Y");
   await expect(header(page)).toContainText("TSLA");
   await expect.poll(() => m.history.some((u) => u.searchParams.get("symbol") === "TSLA" && /^1y$/i.test(u.searchParams.get("range") ?? ""))).toBe(true);
   expect(c.count).toBeLessThanOrEqual(4);
@@ -333,7 +341,7 @@ test("10. recover from an unknown symbol without help", async ({ page }) => {
   await dismissWelcome(page);
   const c = clicker();
   await search(page, "zzzzqq");
-  await page.getByTestId("gui-symbol").press("Enter"); // Enter is the keyboard equivalent of the Go button; not a click
+  await page.locator("#cmdline").press("Enter"); // Enter is the keyboard equivalent of the GO button; not a click
   const note = panel(page).getByTestId("note-action");
   await expect(note.first()).toBeVisible();
   await expect(panel(page)).toContainText(/NO DATA/i); // exact error text stays

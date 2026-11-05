@@ -48,6 +48,15 @@ export function plainLine(kind: NoteKind, text: string): string | null {
   return `${who} isn't answering right now. ${age ? `Data shown is ${age} old. ` : ""}It retries on its own.`;
 }
 
+/**
+ * GUI, "empty" note with a hint: the message keeps only its first sentence ("NO WATCHLISTS."), because the rest repeats the
+ * hint below it ("WL NAME ADD AAPL MSFT CREATES ONE." next to "Create one: WL TECH ADD ..."). Null = show the message as is.
+ */
+export function emptyHeadline(text: string): string | null {
+  const first = /^[^.]+\./.exec(text.trim())?.[0];
+  return first && first.length < text.trim().length ? first : null;
+}
+
 export function PanelNote({
   kind,
   children,
@@ -65,13 +74,16 @@ export function PanelNote({
 }) {
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
   const line = gui ? (plain ?? plainLine(kind, textOf(children))) : null;
+  // GUI: every panel has a Refresh button, so a hint that only says "press F5" is a key legend, not help. Terminal keeps it.
+  const shownHint = gui && typeof hint === "string" ? hint.split(/(?<=\.)\s+/).filter((sentence) => !/\bF5\b/i.test(sentence)).join(" ") : hint;
   const buttons: NoteAction[] = gui ? [...(actions ?? []), ...(onRetry && (kind === "error" || kind === "stale") ? [{ label: "Retry", onClick: onRetry }] : [])] : [];
+  const headline = gui && kind === "empty" && shownHint ? emptyHeadline(textOf(children)) : null;
   return (
     // role=status lets screen readers announce the change; data-kind lets e2e tests assert the state without
     // depending on the wording.
     <div className={`pnote pnote-${kind}`} role="status" data-kind={kind}>
-      <div className="pnote-msg">{children}</div>
-      {hint != null && <div className="pnote-hint">{hint}</div>}
+      <div className="pnote-msg">{headline ?? children}</div>
+      {shownHint != null && shownHint !== "" && <div className="pnote-hint">{shownHint}</div>}
       {line && <div className="pnote-plain">{line}</div>}
       {buttons.length > 0 && (
         <div className="pnote-actions">

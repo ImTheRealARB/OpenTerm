@@ -1,5 +1,5 @@
 /**
- * First-run state for GUI mode: the welcome card, the tour and the banner. One small store plus three localStorage flags.
+ * First-run state for GUI mode: the welcome card and the tour. One small store plus a localStorage flag.
  * localStorage can be missing or throw (private window, blocked site data), so every access is wrapped in try/catch and
  * the app simply behaves as "not seen yet" / "not dismissed" without it.
  */
@@ -8,8 +8,6 @@ import { focusCommandLine } from "./chrome";
 
 /** Set once the welcome card has been shown, so it appears a single time. */
 export const WELCOMED_KEY = "openterm.welcomed";
-/** Set when the user dismisses the "Switch to Terminal mode" banner. */
-export const BANNER_KEY = "openterm.guiBanner";
 
 export function readFlag(key: string): boolean {
   try {

@@ -18,6 +18,16 @@ SPARK_PARALLEL = 2  # at most this many spark requests in flight at once
 SPARK_GAP_S = 0.15  # pause after each chunk, so 160+ symbols do not arrive as one burst and trip the rate limit
 
 
+def day_range(v: float | None) -> float | None:
+    """A day high or low from Yahoo, or None when Yahoo has no real one.
+
+    Yahoo sends 0 when an instrument has no day range: in the chart meta (^BVSP, ^MXX, ^MERV, checked live 2026-11-05)
+    and in the price stream (FX crosses, some indexes). A day high or low of 0 next to a positive price is impossible,
+    so 0 means "not sent". Passing it on put 0.000000 on the WEI board as if it were data.
+    """
+    return v if v is not None and v > 0 else None
+
+
 def quote_from_meta(meta: dict[str, Any], source: str, as_of: float, day_open: float | None = None) -> Quote:
     price = meta.get("regularMarketPrice")
     prev = meta.get("previousClose", meta.get("chartPreviousClose"))
@@ -35,8 +45,8 @@ def quote_from_meta(meta: dict[str, Any], source: str, as_of: float, day_open: f
         change=change,
         change_pct=pct,
         open=day_open,
-        high=meta.get("regularMarketDayHigh"),
-        low=meta.get("regularMarketDayLow"),
+        high=day_range(meta.get("regularMarketDayHigh")),
+        low=day_range(meta.get("regularMarketDayLow")),
         volume=int(vol) if vol is not None else None,
         high_52w=meta.get("fiftyTwoWeekHigh"),
         low_52w=meta.get("fiftyTwoWeekLow"),

@@ -7,7 +7,7 @@ import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import type { BoardDef } from "./boards";
-import { chg, dirColor, high, low, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { chg, dirColor, guiTitle, high, low, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -49,6 +49,9 @@ function columns(def: BoardDef, gui = false): Column<BRow>[] {
   // Header rows show only their title; errors replace the numbers on their own row.
   return cols.map((c, i) => ({
     ...c,
+    // GUI: plain-word header (Ticker, Price, Change ...) and a column at least as wide as it. `c.title` stays the code for the checks below.
+    title: gui ? guiTitle(c.title) : c.title,
+    width: gui ? Math.max(c.width, guiTitle(c.title).length + 1) : c.width,
     text: (r) => (r.section ? (i === 0 ? r.section : "") : r.error && c.title === errCol ? r.error : c.text(r)),
     color: (r) => (r.error && c.title === errCol ? "err" : (c.color?.(r) ?? "fg")),
   }));

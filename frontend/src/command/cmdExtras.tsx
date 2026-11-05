@@ -58,24 +58,27 @@ export function previewNl(v: string, ui: Ui): void {
   }, NL_DEBOUNCE_MS);
 }
 
-/** Runs the command a plain-English phrase stands for and tells the user the code, so they learn it. */
-export function runNl(command: string, typed: string, newPanel: boolean, finish: () => void): void {
-  if (!execute(command, { newPanel })) return;
+/**
+ * Runs the command a plain-English phrase stands for and tells the user the code, so they learn it.
+ * `keepFn` is true in GUI mode: "apple" resolves to the bare ticker AAPL, which then keeps the panel's chart (see `execute`).
+ */
+export function runNl(command: string, typed: string, newPanel: boolean, keepFn: boolean, finish: () => void): void {
+  if (!execute(command, { newPanel, keepFn })) return;
   finish();
   info(`${typed.trim().toUpperCase()} -> ${command}`);
 }
 
 /** Enter on text that may be plain English; falls back to running it as typed (normal error path). */
-export async function viaNatural(text: string, newPanel: boolean, ui: Ui, finish: () => void): Promise<void> {
+export async function viaNatural(text: string, newPanel: boolean, keepFn: boolean, ui: Ui, finish: () => void): Promise<void> {
   const r = await resolveNatural(text).catch(() => ({ kind: "asis" }) as const);
   if (ui.value() !== text) return; // the user kept typing
-  if (r.kind === "command") runNl(r.command, text, newPanel, finish);
+  if (r.kind === "command") runNl(r.command, text, newPanel, keepFn, finish);
   else if (r.kind === "choices") {
     ui.setItems(meaning(r));
     ui.setSel(0);
     info("DID YOU MEAN: UP/DOWN + ENTER");
   } else if (r.kind === "error") fail(r.message);
-  else if (execute(text, { newPanel })) finish();
+  else if (execute(text, { newPanel, keepFn })) finish();
 }
 
 function hintLine(h: Hint): ReactNode {

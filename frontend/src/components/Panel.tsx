@@ -2,6 +2,8 @@ import { Component, Profiler, useEffect, useReducer, type ReactNode } from "reac
 import { FUNCTIONS, loadModule, loadedModule } from "../functions/registry";
 import { panelPainted, recordPanelRender } from "../perf/metrics";
 import { LazyPanelToolbar } from "../gui/LazyPanelToolbar";
+import { LazyQuoteStrip } from "../gui/LazyQuoteStrip";
+import { shortTitle } from "../gui/titleText";
 import { settingsStore } from "../settings/runtime";
 import { PanelIdContext } from "../state/panelContext";
 import { useStore } from "../state/store";
@@ -101,6 +103,10 @@ export function Panel({ id }: { id: number }) {
   const usesSecurity = (view.fn && FUNCTIONS.get(view.fn)?.needsSecurity) || (view.fn === "N" && view.args.length === 0);
   const tickerPart = usesSecurity ? view.security?.symbol : undefined;
   const fnPart = view.fn;
+  // GUI only: the function's plain title ("Price chart") follows the code, so a beginner sees what the panel is.
+  const plainTitle = gui && view.fn ? shortTitle(FUNCTIONS.get(view.fn)?.title ?? "") : "";
+  // GUI only: a one-line quote strip under the button row. DES and QR already lead with the live price, so they skip it.
+  const showStrip = gui && !!tickerPart && view.fn !== "DES" && view.fn !== "QR";
   // New command = new history entry = remount. In-place edits (timeframe, list) keep the instance.
   const mountKey = `${panel.pos}:${view.fn}:${view.security?.symbol}`;
   const resetKey = `${mountKey}:${view.args.join(" ")}`;
@@ -115,9 +121,10 @@ export function Panel({ id }: { id: number }) {
           {fnPart && <span className="fnm">{fnPart}</span>}
           {!tickerPart && !fnPart && "—"}
         </span>
-        {panel.views.length > 1 && <span className="dim">{panel.pos + 1}/{panel.views.length}</span>}
+        {plainTitle && <span className="ph-plain">{"· " + plainTitle}</span>}
+        {panel.views.length > 1 && <span className="dim ph-pos">{panel.pos + 1}/{panel.views.length}</span>}
         <span className="wm-sp" />
-        {MENUS.map((m, i) => (
+        {MENUS.map((m, i) => (gui && m === "RECENT" ? null : (
           <span
             key={m}
             className={"wm-t" + (menu?.menu === i ? " on" : "")}
@@ -129,10 +136,11 @@ export function Panel({ id }: { id: number }) {
           >
             {m} ▾
           </span>
-        ))}
+        )))}
       </header>
       {menu && <WindowMenu id={id} />}
       {gui && <LazyPanelToolbar id={id} fn={view.fn} args={view.args} symbol={view.security?.symbol} />}
+      {showStrip && <LazyQuoteStrip key={tickerPart} symbol={tickerPart!} />}
       <div className="pb">
         <PanelBoundary resetKey={resetKey}>
           <Profiler id={String(id)} onRender={(_id, _phase, ms) => recordPanelRender(id, ms)}>

@@ -12,9 +12,9 @@ describe("GUI tour steps", () => {
     }
   });
 
-  it("covers the menu bar, sidebar, symbol box, mode switch and the panel help button", () => {
+  it("covers the menu bar, sidebar, command line, mode switch and the panel help button", () => {
     const all = TOUR_STEPS.flatMap((s) => s.selectors).join(" ");
-    for (const part of ["gui-menubar", "gui-sidebar", "gui-symbol", "mode-toggle", "pt-help"]) expect(all).toContain(part);
+    for (const part of ["gui-menubar", "gui-sidebar", "#cmdline", "mode-toggle", "pt-help"]) expect(all).toContain(part);
   });
 
   it("reads the live key names: a rebinding shows in the text, no chord left behind", () => {

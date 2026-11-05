@@ -16,7 +16,7 @@ async function setup(page: Page, mode: "terminal" | "gui") {
     return r.fulfill({ json: { results: Object.fromEntries(syms.map((s, i) => [s, env(quote(s, 100 + i))])) } });
   });
   await openApp(page, { mode, welcome: mode === "gui" ? false : undefined });
-  await page.locator(mode === "gui" ? "[data-testid=gui-search]" : "#cmdline").fill("Q AAPL MSFT");
+  await page.locator("#cmdline").fill("Q AAPL MSFT");
   await page.keyboard.press("Enter");
   await expect(page.locator(".grid .sr")).toContainText("AAPL");
 }

@@ -3,7 +3,7 @@ import { openApp } from "./app";
 import { bars, env, quote } from "./p19util";
 
 /**
- * GUI mode, step A: menu bar, sidebar, symbol box, status-bar mode switch. Mocked routes only (no network).
+ * GUI mode, step A: menu bar, sidebar, command line, status-bar mode switch. Mocked routes only (no network).
  * Every other spec runs in terminal mode (openApp's default); these tests ask for the GUI shell with { mode: "gui" }.
  */
 
@@ -31,7 +31,11 @@ async function setupGui(page: Page, opts: { statusBar?: boolean } = {}) {
 test("the bottom status bar is hidden by default in GUI mode; Settings > Status toggles it, Settings > Font switches the font", async ({ page }) => {
   await setupGui(page, { statusBar: false });
   await expect(page.getByTestId("mode-gui")).toHaveCount(0); // the mode switch lives in the status bar
-  const settingsMenu = () => page.locator('.gm-cat[data-cat="Settings"]').click();
+  // The status bar and font rows live in Settings > Look and layout (the group's flyout opens on hover).
+  const settingsMenu = async () => {
+    await page.locator('.gm-cat[data-cat="Settings"]').click();
+    await page.locator('.gm-sub[data-group="Look and layout"]').hover();
+  };
   await settingsMenu();
   await page.getByTestId("statusbar-toggle").click();
   await expect(page.getByTestId("mode-gui")).toBeVisible();
@@ -64,29 +68,37 @@ test("a fresh GUI shows the menu bar and the sidebar, and no page errors", async
   expect(errors).toEqual([]);
 });
 
-test("sidebar search: GP + Enter opens the chart in the focused panel", async ({ page }) => {
+test("command line: GP + Enter opens the chart in the focused panel", async ({ page }) => {
   await setupGui(page);
-  // GP needs a security: the symbol box loads one first (same as typing AAPL on the command line).
-  await page.getByTestId("gui-symbol").fill("AAPL");
-  await page.getByTestId("gui-symbol").press("Enter");
+  // GP needs a security: a bare ticker on the command line loads one first.
+  await page.locator("#cmdline").fill("AAPL");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("AAPL");
-  await page.getByTestId("gui-search").fill("GP");
-  await expect(page.getByTestId("gui-sidebar").locator(".gs-item").first()).toContainText("GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("GP");
   await expect(header(page)).toContainText("AAPL");
-  await expect(page.getByTestId("gui-search")).toHaveValue(""); // cleared after a successful run
 });
 
-test("symbol box keeps the panel's function: GP of AAPL becomes GP of MSFT", async ({ page }) => {
+test("a bare ticker on the command line keeps the panel's function in GUI: GP of AAPL becomes GP of MSFT", async ({ page }) => {
   await setupGui(page);
-  await page.getByTestId("gui-search").fill("AAPL GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("AAPL GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("GP");
-  await page.getByTestId("gui-symbol").fill("MSFT");
-  await page.getByTestId("gui-symbol").press("Enter");
+  await page.locator("#cmdline").fill("MSFT");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("MSFT");
   await expect(header(page)).toContainText("GP");
+});
+
+test("the GO button runs the typed text like Enter does (GUI only) and keeps the focus in the command line", async ({ page }) => {
+  await setupGui(page);
+  await page.locator("#cmdline").fill("AAPL GP");
+  await page.locator("button.cmd-go").click();
+  await expect(header(page)).toContainText("GP");
+  await expect(header(page)).toContainText("AAPL");
+  await expect(page.locator("#cmdline")).toHaveValue(""); // the line clears after a run, as with Enter
+  await expect(page.locator("#cmdline")).toBeFocused();
 });
 
 test("sidebar: clicking a row runs it, groups collapse, a bad command shows the command line's error", async ({ page }) => {
@@ -102,41 +114,72 @@ test("sidebar: clicking a row runs it, groups collapse, a bad command shows the 
   await expect(header(page)).not.toContainText("NO FUNCTION");
   await news.click();
   await expect(news).toHaveAttribute("aria-expanded", "false");
+  // A long category (Markets) shows plain-word groups; a group opens a flyout beside the sidebar with its functions.
+  await side.locator(".gs-head", { hasText: "Markets" }).click();
+  const crypto = side.locator('.gs-sub[data-group="Crypto"]');
+  await crypto.click();
+  const fly = page.getByTestId("gs-flyout");
+  await expect(fly.locator('.gs-item[data-code="CRYP"]')).toBeVisible();
+  // Keyboard: ArrowLeft goes back to the group row, ArrowRight opens the flyout again with its first row focused.
+  await fly.locator(".gs-item").first().focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(fly).toHaveCount(0);
+  await expect(crypto).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(fly.locator(".gs-item").first()).toBeFocused();
+  await fly.locator('.gs-item[data-code="CRYP"]').click();
+  await expect(fly).toHaveCount(0);
+  await expect(header(page)).toContainText("CRYP");
   // GP without any security: the same error the command line gives.
-  await page.getByTestId("gui-search").fill("GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(page.locator(".msg")).toContainText("GP NEEDS A SECURITY");
 });
 
-test("menu bar: a category opens its functions and picking one runs it; Esc closes and returns to the command line", async ({ page }) => {
+test("menu bar: a long category opens plain-word groups, a group opens a flyout, picking a function runs it; keys step in and out", async ({ page }) => {
   await setupGui(page);
   const bar = page.getByTestId("gui-menubar");
+  const fly = page.getByTestId("gm-flyout");
   await bar.locator(".gm-cat", { hasText: "Settings" }).click();
   const drop = bar.locator(".gm-drop");
   await expect(drop).toBeVisible();
-  await expect(drop.locator(".gm-item", { hasText: "Switch to Terminal mode" })).toBeVisible();
-  await drop.locator('.gm-item:has-text("Keyboard shortcuts")').click();
+  await drop.locator('.gm-sub[data-group="Look and layout"]').hover();
+  await expect(fly.locator(".gm-item", { hasText: "Switch to Terminal mode" })).toBeVisible();
+  await drop.locator('.gm-sub[data-group="Help"]').hover(); // hovering another group switches the flyout
+  await fly.locator('.gm-item:has-text("Keyboard shortcuts")').click();
   await expect(drop).toHaveCount(0);
   await expect(header(page)).toContainText("SHORTCUTS");
-  // Keyboard: Tab-reachable category, Enter opens and focuses the first item, Esc closes and focuses the command line.
+  // A short category lists its functions directly: no second level.
+  await bar.locator(".gm-cat", { hasText: "News" }).click();
+  await expect(drop.locator(".gm-sub")).toHaveCount(0);
+  await expect(drop.locator('.gm-item:has-text("Daily brief")')).toBeVisible();
+  await bar.locator(".gm-cat", { hasText: "News" }).click();
+  // Keyboard: Enter opens Markets on its first group; ArrowRight opens that group's flyout on its first function;
+  // ArrowLeft goes back to the group; Esc closes the menu and returns to the command line.
   await bar.locator(".gm-cat", { hasText: "Markets" }).focus();
   await page.keyboard.press("Enter");
-  await expect(bar.locator(".gm-drop")).toBeVisible();
-  await expect(bar.locator(".gm-item").first()).toBeFocused();
+  const first = drop.locator(".gm-sub").first();
+  await expect(first).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(fly.locator(".gm-item").first()).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(fly).toHaveCount(0);
+  await expect(first).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(bar.locator(".gm-drop")).toHaveCount(0);
+  await expect(drop).toHaveCount(0);
   await expect(page.locator(".cmd input")).toBeFocused();
 });
 
-test("Esc in the sidebar search returns to the command line; Ctrl+K still works from it", async ({ page }) => {
+test("a flyout near the right edge opens to the left so it stays on screen", async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 700 });
   await setupGui(page);
-  await page.getByTestId("gui-search").focus();
-  await page.keyboard.type("chart");
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".cmd input")).toBeFocused();
-  await page.getByTestId("gui-search").focus();
-  await page.keyboard.press("Control+k"); // chords bubble past the search box to the global handler
-  await expect(page.locator(".cmd input")).toBeFocused();
+  const bar = page.getByTestId("gui-menubar");
+  await bar.locator(".gm-cat", { hasText: "Settings" }).click();
+  await bar.locator('.gm-sub[data-group="Look and layout"]').hover();
+  const box = await page.getByTestId("gm-flyout").boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(1000);
 });
 
 test("the status-bar switch goes to terminal (the GUI shell disappears) and the mode survives a reload", async ({ page }) => {
@@ -172,8 +215,8 @@ test("Alt+G toggles the mode, and SETTINGS MODE sets it from the command line", 
 
 test("a panel keeps its content when the mode is switched (no remount)", async ({ page }) => {
   await setupGui(page);
-  await page.getByTestId("gui-search").fill("AAPL GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("AAPL GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("GP");
   await page.getByTestId("mode-terminal").click();
   await expect(page.getByTestId("gui-menubar")).toHaveCount(0);

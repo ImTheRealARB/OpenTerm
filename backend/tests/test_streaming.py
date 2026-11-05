@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from openterm.providers.yahoo import day_range, quote_from_meta
 from openterm.streaming.hub import Hub
 from openterm.streaming.pricing import decode_b64
 from openterm.streaming.tick import Tick
@@ -93,3 +94,20 @@ def test_profile_api_and_fallback(client):
     a = client.get("/api/profile", params={"symbol": "AAPL"}).json()["data"]
     assert a["description"] and a["pe"] and a["source"] == "yahoo:fixture"
     assert client.get("/api/profile", params={"symbol": "NOPE"}).status_code == 404
+
+
+def test_stream_day_range_zero_means_not_sent():
+    # Yahoo's stream sends day_high/day_low 0 for FX and some indexes: that must never reach a board as data.
+    assert day_range(0.0) is None
+    assert day_range(None) is None
+    assert day_range(-1.0) is None
+    assert day_range(1.0842) == 1.0842
+
+
+def test_quote_meta_zero_day_range_is_missing():
+    # Recorded shape of Yahoo's chart meta for ^BVSP on 2026-11-05: high/low 0.0 next to a real price.
+    meta = {"symbol": "^BVSP", "regularMarketPrice": 167563.47, "chartPreviousClose": 165528.92,
+            "regularMarketDayHigh": 0.0, "regularMarketDayLow": 0.0}
+    q = quote_from_meta(meta, "yahoo", 0.0)
+    assert q.high is None and q.low is None
+    assert q.price == 167563.47

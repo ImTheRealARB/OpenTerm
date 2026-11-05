@@ -119,7 +119,7 @@ test("GP: GUI toolbar button arms a click that sets an alert; deleting the alert
   await run(page, "AAA GP 1Y");
   await expect.poll(() => gauge(page, "chart.rebuilds")).toBeGreaterThan(0);
   const box = (await panel(page).locator(".chart").boundingBox())!;
-  await panel(page).getByRole("button", { name: "Alert at price" }).click();
+  await panel(page).getByRole("button", { name: "Price alert" }).click();
   await expect(panel(page)).toContainText("CLICK THE CHART TO SET AN ALERT, ESC TO CANCEL");
   await page.mouse.click(box.x + box.width / 2, box.y + 30);
   await expect.poll(() => created.length).toBe(1);

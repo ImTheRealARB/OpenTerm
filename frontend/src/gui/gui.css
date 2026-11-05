@@ -6,20 +6,20 @@
  */
 
 /* One more grid row for the menu bar (terminal: top bar, workspace, key hints, status bar). */
-:root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 16px 18px; }
-/* Wrapper of the menu bar and the banner under it: one grid row whose height is the sum. */
+:root[data-mode="gui"] .app { grid-template-rows: 28px auto 1fr 16px 18px; }
+/* Wrapper of the menu bar: one grid row whose height is the menu bar's. */
 :root[data-mode="gui"] .gm-top { min-width: 0; }
 /* The wrapper becomes a real flex row: sidebar on the left, workspace taking the rest. */
 :root[data-mode="gui"] .app-body { display: flex; min-height: 0; min-width: 0; position: relative; }
 :root[data-mode="gui"] .app-body > .ws { flex: 1 1 0; }
 
 /* --- Menu bar --- */
-:root[data-mode="gui"] .gm-bar { display: flex; align-items: center; height: 22px; background: var(--bar); border-bottom: 1px solid var(--line); padding: 0 4px; gap: 2px; min-width: 0; }
+:root[data-mode="gui"] .gm-bar { display: flex; align-items: center; height: 24px; background: var(--bar); border-bottom: 1px solid var(--line); padding: 0 4px; gap: 2px; min-width: 0; }
 :root[data-mode="gui"] .gm-slot { position: relative; height: 100%; display: flex; align-items: center; }
-:root[data-mode="gui"] .gm-cat { height: 18px; padding: 0 10px; color: var(--hdr); border-radius: 3px; cursor: pointer; }
+:root[data-mode="gui"] .gm-cat { height: 20px; padding: 0 10px; color: var(--hdr); border-radius: 3px; cursor: pointer; }
 :root[data-mode="gui"] .gm-cat:hover { background: var(--bar-hi); }
 :root[data-mode="gui"] .gm-cat.on { background: var(--fg); color: var(--bg); font-weight: bold; }
-:root[data-mode="gui"] .gm-side { height: 18px; padding: 0 8px; margin-right: 6px; color: var(--fg-dim); border-radius: 3px; cursor: pointer; }
+:root[data-mode="gui"] .gm-side { height: 20px; padding: 0 8px; margin-right: 6px; color: var(--fg-dim); border-radius: 3px; cursor: pointer; }
 :root[data-mode="gui"] .gm-side:hover { background: var(--bar-hi); color: var(--hdr); }
 :root[data-mode="gui"] .gm-fontrow { display: grid; grid-template-columns: 84px 1fr; gap: 8px; align-items: center; padding: 0 8px; }
 :root[data-mode="gui"] .gm-fontrow .gm-code { color: var(--fg); font-weight: bold; }
@@ -27,7 +27,7 @@
 :root[data-mode="gui"] select.gm-font:hover, :root[data-mode="gui"] select.gm-font:focus-visible { background: var(--sel); color: var(--val); }
 :root[data-mode="gui"] select.gm-font option { background: var(--bg); color: var(--fg); }
 :root[data-mode="gui"] .gm-fill { flex: 1 1 auto; }
-:root[data-mode="gui"] .gm-drop { position: absolute; left: 0; top: 21px; z-index: 40; min-width: 340px; max-width: min(640px, 90vw); max-height: calc(100vh - 90px); overflow-y: auto;
+:root[data-mode="gui"] .gm-drop { position: absolute; left: 0; top: 23px; z-index: 40; min-width: 340px; max-width: min(640px, 90vw); max-height: calc(100vh - 90px); overflow-y: auto;
   background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; padding: 2px 0; }
 :root[data-mode="gui"] .gm-item { display: grid; grid-template-columns: 84px 1fr; gap: 8px; width: 100%; text-align: left; padding: 0 8px; cursor: pointer; white-space: nowrap; overflow: hidden; }
 :root[data-mode="gui"] .gm-item > span:last-child { overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
@@ -35,41 +35,31 @@
 :root[data-mode="gui"] .gm-item:hover, :root[data-mode="gui"] .gm-item:focus-visible { background: var(--sel); }
 :root[data-mode="gui"] .gm-item:hover > span:last-child, :root[data-mode="gui"] .gm-item:focus-visible > span:last-child { color: var(--val); }
 :root[data-mode="gui"] .gm-sep { border-top: 1px solid var(--line); margin-top: 2px; }
-
-/* --- Symbol picker (right end of the menu bar) --- */
-:root[data-mode="gui"] .gm-symbol { position: relative; flex: none; }
-:root[data-mode="gui"] .gm-symbol label { display: flex; align-items: center; gap: 6px; }
-/* Company-name suggestions under the symbol box. */
-:root[data-mode="gui"] .gm-suggest { position: absolute; right: 0; top: 21px; z-index: 50; min-width: 260px; margin: 0; padding: 2px 0; list-style: none; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
-:root[data-mode="gui"] .gm-suggest li { padding: 0 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
-:root[data-mode="gui"] .gm-suggest li b { color: var(--fg); display: inline-block; min-width: 7ch; }
-:root[data-mode="gui"] .gm-suggest li:hover, :root[data-mode="gui"] .gm-suggest li.on { background: var(--sel); color: var(--val); }
-:root[data-mode="gui"] .gm-symbol-label { color: var(--fg-dim); font-size: 10px; letter-spacing: 0.05em; }
-:root[data-mode="gui"] .gm-symbol input { width: 170px; height: 18px; padding: 0 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; color: var(--warn); text-transform: uppercase; }
-:root[data-mode="gui"] .gm-symbol input::placeholder { color: var(--fg-dim); text-transform: none; }
-:root[data-mode="gui"] .gm-symbol input:hover { background: var(--bar-hi); }
-:root[data-mode="gui"] .gm-symbol input:focus { border-color: var(--warn); }
+/* Two-level menus: a long category's dropdown lists plain-word groups; each opens a flyout (gui/Flyout.tsx) beside it.
+   The flyout is position: fixed so the scrolling dropdown or sidebar list cannot clip it; Flyout.tsx sets top/left. */
+:root[data-mode="gui"] .gm-drop.gm-groups { min-width: 230px; overflow: visible; }
+:root[data-mode="gui"] .gm-sub, :root[data-mode="gui"] .gs-sub { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left; cursor: pointer; white-space: nowrap; }
+:root[data-mode="gui"] .gm-sub > span:first-child, :root[data-mode="gui"] .gs-sub > span:first-child { color: var(--hdr); }
+:root[data-mode="gui"] .gm-arrow { color: var(--fg-dim); }
+:root[data-mode="gui"] .gm-sub.on, :root[data-mode="gui"] .gs-sub.on, :root[data-mode="gui"] .gs-sub:hover, :root[data-mode="gui"] .gs-sub:focus-visible { background: var(--sel); }
+:root[data-mode="gui"] .gm-sub.on > span, :root[data-mode="gui"] .gs-sub.on > span, :root[data-mode="gui"] .gs-sub:hover > span, :root[data-mode="gui"] .gs-sub:focus-visible > span { color: var(--val); }
+:root[data-mode="gui"] .gs-sub { height: 22px; padding: 0 8px 0 14px; }
+:root[data-mode="gui"] .gm-fly { position: fixed; top: 0; left: 0; z-index: 45; min-width: 340px; max-width: min(560px, 90vw); max-height: calc(100vh - 8px); overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; padding: 2px 0; }
+:root[data-mode="gui"] .gm-fly.gs-fly { min-width: 320px; }
 
 /* --- Sidebar --- */
-:root[data-mode="gui"] .gs { flex: none; width: 232px; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--bg); }
-:root[data-mode="gui"] .gs-search { flex: none; margin: 4px; height: 20px; padding: 0 6px; background: var(--bar); border: 1px solid var(--line); border-radius: 3px; color: var(--warn); }
-:root[data-mode="gui"] .gs-search::placeholder { color: var(--fg-dim); }
-:root[data-mode="gui"] .gs-search:hover { background: var(--bar-hi); }
-:root[data-mode="gui"] .gs-search:focus { border-color: var(--warn); }
+:root[data-mode="gui"] .gs { flex: none; width: 248px; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--bg); }
 :root[data-mode="gui"] .gs-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 4px; }
-:root[data-mode="gui"] .gs-head { display: flex; gap: 6px; width: 100%; text-align: left; padding: 0 6px; margin-top: 2px; color: var(--hdr); background: var(--bar); text-transform: uppercase; font-weight: bold; cursor: pointer; }
+:root[data-mode="gui"] .gs-head { display: flex; align-items: center; height: 22px; gap: 6px; width: 100%; text-align: left; padding: 0 6px; margin-top: 2px; color: var(--hdr); background: var(--bar); text-transform: uppercase; font-weight: bold; cursor: pointer; }
 :root[data-mode="gui"] .gs-head:hover { background: var(--bar-hi); }
 :root[data-mode="gui"] .gs-caret { width: 1ch; color: var(--accent); }
-:root[data-mode="gui"] .gs-item { display: grid; grid-template-columns: 7ch 1fr; gap: 6px; width: 100%; text-align: left; padding: 0 6px 0 14px; cursor: pointer; white-space: nowrap; overflow: hidden; }
-:root[data-mode="gui"] .gs-hit { position: relative; }
-:root[data-mode="gui"] .gs-hit .gs-item { padding-left: 6px; padding-right: 74px; }
-:root[data-mode="gui"] .gs-hit .gs-cat { position: absolute; right: 6px; top: 0; font-size: 10px; pointer-events: none; }
+:root[data-mode="gui"] .gs-item { display: grid; grid-template-columns: 8ch 1fr; align-items: center; height: 22px; gap: 6px; width: 100%; text-align: left; padding: 0 6px 0 14px; cursor: pointer; white-space: nowrap; overflow: hidden; }
 :root[data-mode="gui"] .gs-code { color: var(--fg); font-weight: bold; }
-:root[data-mode="gui"] .gs-title { overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
+:root[data-mode="gui"] .gs-title { overflow: hidden; text-overflow: ellipsis; color: var(--val); }
 :root[data-mode="gui"] .gs-item.dim .gs-code, :root[data-mode="gui"] .gs-item.dim .gs-title { color: var(--fg-dim); }
-:root[data-mode="gui"] .gs-item:hover, :root[data-mode="gui"] .gs-item.top { background: var(--sel); }
-:root[data-mode="gui"] .gs-item:hover .gs-title, :root[data-mode="gui"] .gs-item.top .gs-title { color: var(--val); }
-:root[data-mode="gui"] .gs-empty { padding: 4px 8px; }
+:root[data-mode="gui"] .gs-item:hover { background: var(--sel); }
+:root[data-mode="gui"] .gs-item:hover .gs-title { color: var(--val); }
 
 /* --- Status-bar mode switch: hover highlight and rounding are GUI-only --- */
 :root[data-mode="gui"] .mode-toggle .mt-btn { border-radius: 3px; }
@@ -102,16 +92,12 @@
 :root[data-mode="gui"] .pt-ask-l { color: var(--warn); font-weight: bold; }
 :root[data-mode="gui"] .pt-ask { flex: 1 1 160px; min-width: 100px; height: 16px; padding: 0 6px; background: var(--bg); border: 1px solid var(--warn); border-radius: 3px; color: var(--warn); }
 
-/* --- Banner under the menu bar --- */
-:root[data-mode="gui"] .gb { display: flex; align-items: center; gap: 8px; height: 20px; padding: 0 6px; background: var(--sel); color: var(--val); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
-
-
 /* --- Sidebar "Start here": plain-word tasks, function code small and grey beside the name --- */
 :root[data-mode="gui"] .gs-start { padding: 2px 0 4px; border-bottom: 1px solid var(--line); }
 :root[data-mode="gui"] .gs-start-title { padding: 0 6px; color: var(--hdr); font-weight: bold; }
-:root[data-mode="gui"] .gs-task { display: flex; justify-content: space-between; gap: 6px; width: 100%; text-align: left; padding: 1px 6px 1px 14px; cursor: pointer; color: var(--fg); }
+:root[data-mode="gui"] .gs-task { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; height: 22px; text-align: left; padding: 0 6px 0 14px; cursor: pointer; color: var(--val); }
 :root[data-mode="gui"] .gs-task:hover, :root[data-mode="gui"] .gs-task:focus-visible { background: var(--sel); color: var(--val); }
-:root[data-mode="gui"] .gs-task small { color: var(--fg-dim); font-size: 10px; }
+:root[data-mode="gui"] .gs-task small { color: var(--fg); font-size: 11px; font-weight: bold; }
 
 /* --- Glossary tooltip (any [data-term] element; shown on hover and keyboard focus) --- */
 :root[data-mode="gui"] [data-term] { cursor: help; text-decoration: underline dotted var(--fg-dim); text-underline-offset: 2px; }
@@ -164,28 +150,31 @@
 :root[data-mode="gui"] .fn > .line:first-child .acc { color: var(--fg); }
 :root[data-mode="gui"] .legend { display: none; }
 
-/* 20 and 17: secondary text was ~3.5:1 dim amber on black. Lighter dim for the default (amber) theme only; the other themes keep theirs. */
-:root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) { --fg-dim: #d9a066; }
+/* ===== Pro-terminal look (local design spec in docs/specs, GUI mode only) =====
+   Colour roles: black ground; amber = labels, codes and things you can type into; white = data values; green / red = up / down
+   ONLY; blue = the selected / active choice; dark red = the function band (menu chrome, not an error).
+   Bigger type and taller rows than Terminal (13 px / 20 px): the canvas grid and the chart read --fs / --row, so they follow. */
+:root[data-mode="gui"] { --fs: 13px; --row: 20px; }
+/* The default (amber) theme gets the full palette. The green / white / light themes keep their own colours; for them the new
+   tokens (--field, --go ...) derive from the theme in styles.css, so nothing is unreadable after THEME GREEN. */
+:root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) {
+  --fg: #ffa028; --fg-dim: #a8a8a8; --val: #ffffff; --hdr: #e0e0e0;
+  --bar: #1a1a1a; --bar-hi: #2b2b2b; --line: #333333; --sel: #1f5fa9;
+  --menu: #8b1a12; --menu-fg: #ffffff;
+  --field: #ffa028; --field-fg: #000000; --go: #2fb344; --go-fg: #000000;
+}
 
-/* 15: the sidebar box is the beginner search (brighter border). The top-bar command line stays visible in GUI too, so both
+/* 15: The top-bar command line stays visible in GUI too, so both
    ways of working are always available (it used to collapse to a hair until focused; changed 2026-11-05 at the user's request). */
-:root[data-mode="gui"] .gs-search { border-color: var(--fg-dim); height: 22px; }
 
 /* 18: the key-hint bar is expert content; GUI drops it (and its grid row). */
-:root[data-mode="gui"] .app { grid-template-rows: 22px auto 1fr 18px; }
+:root[data-mode="gui"] .app { grid-template-rows: 28px auto 1fr 18px; }
 /* With tabs, one extra row at the very top (above the command line) holds the tab strip. */
-:root[data-mode="gui"] .app.has-tabs { grid-template-rows: 22px 22px auto 1fr 18px; }
+:root[data-mode="gui"] .app.has-tabs { grid-template-rows: 22px 28px auto 1fr 18px; }
 :root[data-mode="gui"] .app > .keys { display: none; }
 
-/* 19: category counts only on hover/focus; the carets are quiet. */
-:root[data-mode="gui"] .gs-head .dim { visibility: hidden; }
-:root[data-mode="gui"] .gs-head:hover .dim, :root[data-mode="gui"] .gs-head:focus-visible .dim { visibility: visible; }
+/* 19: the carets are quiet. */
 :root[data-mode="gui"] .gs-caret { color: var(--fg-dim); }
-
-/* 10: wider suggestions with room for the full name, and a "no match" row. */
-:root[data-mode="gui"] .gm-suggest { min-width: 340px; max-width: 480px; }
-:root[data-mode="gui"] .gm-suggest li { height: 18px; line-height: 18px; }
-:root[data-mode="gui"] .gm-none { padding: 2px 8px; color: var(--hdr); white-space: normal; }
 
 /* 8: DES company blurb clamped to ~4 lines with a Read more button; delayed note is small grey. */
 :root[data-mode="gui"] .desc-clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
@@ -213,3 +202,66 @@
 /* Link-style button; also used by the HELP panel (functions/Help.tsx), so it stays in the startup sheet. */
 :root[data-mode="gui"] .gw-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
 :root[data-mode="gui"] .gw-link:hover, :root[data-mode="gui"] .gw-link:focus-visible { color: var(--val); }
+
+/* ===== Pro-terminal look: command bar, panel title bar, function band, quote strip ===== */
+
+/* --- Command bar (28 px): brand chip, prompt, input, GO, HELP, clocks. The chip is amber fill / black text (.brand in styles.css). --- */
+:root[data-mode="gui"] .top { height: 28px; background: var(--bar); }
+:root[data-mode="gui"] .brand { line-height: 28px; padding: 0 12px; }
+:root[data-mode="gui"] .cmd { height: 22px; margin: 0 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; }
+:root[data-mode="gui"] .cmd.focus { outline: 0; border-color: var(--fg); }
+/* The typed text is white and plain case: it may be a sentence ("apple 5 years"), not only a code. */
+:root[data-mode="gui"] .cmd input { text-transform: none; color: var(--val); caret-color: var(--fg); }
+:root[data-mode="gui"] .cmd-pr { color: var(--fg); padding-right: 6px; }
+/* GO is a <button> in GUI mode: strip the browser's button chrome so it looks like the old label (bold, flat). `font` first: it also resets line-height. */
+:root[data-mode="gui"] .cmd-go { margin: 0; padding: 0 12px; border: 0; font: inherit; font-weight: bold; line-height: 20px; cursor: pointer; background: var(--go); color: var(--go-fg); border-radius: 0 2px 2px 0; }
+:root[data-mode="gui"] .ac { top: 25px; }
+:root[data-mode="gui"] .top-help { flex: none; height: 22px; padding: 0 10px; margin-right: 6px; background: var(--bar-hi); color: var(--hdr); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; font-weight: bold; }
+:root[data-mode="gui"] .top-help:hover, :root[data-mode="gui"] .top-help:focus-visible { background: var(--sel); color: var(--val); }
+/* (The HELP key is only rendered in GUI mode: Terminal has the same thing by typing HELP.) */
+:root[data-mode="gui"] .clock { border-left: 0; }
+
+/* --- Panel title bar: "1  AAPL | GP · Price chart". The plain title (registry title, first clause) follows the code. --- */
+:root[data-mode="gui"] .ph { height: 22px; line-height: 22px; padding-right: 8px; }
+:root[data-mode="gui"] .ph .id { min-width: 22px; text-align: center; }
+:root[data-mode="gui"] .ph-plain { color: var(--hdr); text-transform: none; font-weight: normal; overflow: hidden; text-overflow: ellipsis; }
+:root[data-mode="gui"] .wm { top: 22px; max-height: calc(100% - 22px); }
+:root[data-mode="gui"] .panel.focus .ph { border-bottom-color: var(--fg); }
+
+/* --- Function band: the panel's buttons on the dark red menu colour, white labels. The letter before a label is the key it presses. --- */
+:root[data-mode="gui"] .pt { gap: 2px; min-height: 26px; padding: 3px 6px; background: var(--menu); border-bottom: 1px solid var(--line); }
+/* 5 px sides (not 7): the GP band (8 ranges, Log, Indicators, Price alert, two dropdowns, help, CSV, Refresh, Max, Close) fits one row at 1280 px. */
+:root[data-mode="gui"] .pt .pt-b { height: 20px; padding: 0 5px; background: transparent; color: var(--menu-fg); border-color: transparent; }
+:root[data-mode="gui"] .pt .pt-b:hover:not(:disabled), :root[data-mode="gui"] .pt .pt-b:focus-visible { background: #00000055; color: var(--menu-fg); border-color: var(--menu-fg); }
+:root[data-mode="gui"] .pt .pt-b:disabled { color: var(--menu-fg); opacity: 0.55; }
+:root[data-mode="gui"] .pt-fn { color: var(--menu-fg); }
+/* A fixed pale yellow, not --warn: the band is dark red in every theme, and the light theme's --warn is a dark amber that vanishes on it. */
+:root[data-mode="gui"] .pt-k { color: #ffe14d; font-weight: bold; }
+:root[data-mode="gui"] .pt-help { color: var(--menu-fg); }
+:root[data-mode="gui"] .pt-close:hover { color: var(--menu-fg); }
+/* The active choice (GP range): blue fill, white bold text. */
+:root[data-mode="gui"] .pt .pt-b.on, :root[data-mode="gui"] .pt .pt-b.on:hover { background: var(--sel); color: var(--val); font-weight: bold; border-color: var(--sel); }
+/* Dropdowns and the inline "type here" box are fields: amber fill, black text. */
+:root[data-mode="gui"] .pt select.pt-b { background: var(--field); color: var(--field-fg); border-color: var(--field); font-weight: bold; }
+:root[data-mode="gui"] .pt select.pt-b:hover:not(:disabled) { background: var(--field); color: var(--field-fg); border-color: var(--val); }
+:root[data-mode="gui"] .pt select.pt-b option { background: var(--bg); color: var(--fg); }
+:root[data-mode="gui"] .pt-ask-l { color: var(--warn); }
+:root[data-mode="gui"] .pt-ask { height: 20px; background: var(--field); border-color: var(--field); color: var(--field-fg); font-weight: bold; }
+:root[data-mode="gui"] .pt-ask::placeholder { color: var(--field-fg); opacity: 0.65; font-weight: normal; }
+
+/* --- Quote strip: one line under the function band (gui/QuoteStrip.tsx). Price large, change green / red, the rest white / grey. --- */
+:root[data-mode="gui"] .qs { display: flex; align-items: center; gap: 14px; flex: none; height: 28px; padding: 0 8px; overflow: hidden; white-space: nowrap; color: var(--val); background: var(--bg); border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .qs-sym { font-weight: bold; color: var(--fg); }
+:root[data-mode="gui"] .qs-name { color: var(--hdr); overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+:root[data-mode="gui"] .qs-px { font-size: 17px; font-weight: bold; }
+:root[data-mode="gui"] .qs-ohlv { color: var(--hdr); }
+:root[data-mode="gui"] .qs-fill { flex: 1 1 auto; }
+
+
+/* --- Panel bodies: text is white (data values) unless a class says otherwise (.acc / .dim / .warn / .up ...); amber is for labels. --- */
+:root[data-mode="gui"] .pb, :root[data-mode="gui"] .pb .desc { color: var(--val); }
+/* Buttons inside the welcome card are 16 px tall by default: give the 13 px text room. */
+:root[data-mode="gui"] .gw .pt-b { height: 22px; }
+
+/* Title bar: the "2/2" history counter is key-navigation detail; GUI keeps Back / forward on the keys only. */
+:root[data-mode="gui"] .ph-pos { display: none; }

@@ -118,15 +118,14 @@ describe("natural language phrase table", () => {
 });
 
 describe("ambiguity", () => {
-  it("asks between share classes of one company", () => {
-    const r = run("alphabet");
-    expect(r.kind).toBe("choices");
-    if (r.kind === "choices") expect(r.choices.map((c) => c.command).sort()).toEqual(["GOOG", "GOOGL"]);
+  // CHANGED ON PURPOSE (NL_V2): share classes of one company are no longer a question; "alphabet" is GOOGL (nickname table and
+  // most traded class). Different companies are still asked about: see the "bank" and "zeta" tests below.
+  it("does not ask between share classes of one company", () => {
+    expect(cmd("alphabet")).toBe("GOOGL");
   });
 
-  it("keeps the intent in every choice", () => {
-    const r = run("alphabet 5 year chart");
-    expect(r.kind === "choices" && r.choices.map((c) => c.command).sort()).toEqual(["GOOG GP 5Y", "GOOGL GP 5Y"]);
+  it("keeps the intent", () => {
+    expect(cmd("alphabet 5 year chart")).toBe("GOOGL GP 5Y");
   });
 
   it("asks when several similar-size companies match", () => {

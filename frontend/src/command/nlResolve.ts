@@ -29,6 +29,13 @@ export async function resolveNatural(input: string): Promise<NlOutcome> {
   const single = !/\s/.test(body);
   if (single && known.symbols?.has(body.toUpperCase())) return { kind: "asis" };
   const r = nat.routeNatural(body, { isFunction, companies: uni.length ? uni : null });
+  if (r.kind === "none" && r.lookup) {
+    // Nothing local knew the name: ONE Yahoo name search (equities, ETFs, indexes). A failed search is the same as no answer.
+    const [sd, remote] = await Promise.all([import("../gui/suggestData"), import("./nlRemote")]);
+    const hits = await sd.remoteSearch(r.lookup.phrase).catch(() => []);
+    const found = remote.pickRemote(r.lookup.phrase, hits, r.lookup.template);
+    if (found) return found.kind === "command" ? { ...found, command: prefix + found.command } : { kind: "choices", choices: found.choices.map((c) => ({ ...c, command: prefix + c.command })) };
+  }
   if (r.kind === "command") return { ...r, command: prefix + r.command };
   if (r.kind === "choices") return { kind: "choices", choices: r.choices.map((c) => ({ ...c, command: prefix + c.command })) };
   return single ? { kind: "asis" } : r;

@@ -454,7 +454,7 @@ export default function BT({ panelId, args }: FunctionProps) {
       {state.k === "usage" && (
         <>
           {/* Nothing open yet: say how to start one (the full usage stays below for reference). */}
-          <PanelNote kind="empty" hint="Run one: BT AAPL SMA20>SMA50 1D 5Y. BT RUNS lists stored runs. In GUI mode the sidebar search box takes the same command.">
+          <PanelNote kind="empty" hint="Run one: BT AAPL SMA20>SMA50 1D 5Y. BT RUNS lists stored runs. In GUI mode the command line at the top takes the same command.">
             NO BACKTEST OPEN
           </PanelNote>
           <BtStarter onRun={runStarter} />

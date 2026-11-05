@@ -18,14 +18,14 @@ export const TOUR_STEPS: readonly TourStep[] = [
     selectors: ['[data-testid="gui-menubar"] .gm-slot'],
   },
   {
-    title: "Sidebar and search",
-    text: "The same functions as a list. Type in the search box (a name, a code like GP, or a command like AAPL GP) and press Enter.",
+    title: "Sidebar",
+    text: "The same functions as a list, grouped by topic. Click a row to open it. To search, type a name or a command in the box at the very top.",
     selectors: ['[data-testid="gui-sidebar"]'],
   },
   {
-    title: "Symbol box",
-    text: "Type a ticker such as MSFT and press Enter to load it into the focused panel. A chart of AAPL becomes a chart of MSFT.",
-    selectors: ['[data-testid="gui-symbol"]'],
+    title: "Command line",
+    text: "Type a ticker such as MSFT, a company name or a question, then press Enter (or click GO). A chart of AAPL becomes a chart of MSFT.",
+    selectors: ["#cmdline"],
   },
   {
     title: "Mode switch",

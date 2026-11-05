@@ -106,6 +106,8 @@ export const INDICATORS = [
   "SMA20", "SMA50", "EMA20", "BB", "RSI", "MACD", "VWAP",
   "ATR", "STOCH", "ADX", "OBV", "CCI", "WILLR", "MFI", "KELT", "DONCH", "SUPERTREND", "PSAR", "ICHIMOKU",
   "PAT:CANDLE", "PAT:SMC",
+  // Added at the END on purpose: GP's indicator picker toggles by position (key 1 = first), so older keys keep their meaning.
+  "SMA100", "SMA200", "EMA50", "EMA200",
 ] as const;
 export type IndicatorName = (typeof INDICATORS)[number];
 
@@ -128,6 +130,10 @@ export function compute(s: Series, which: IndicatorName[]): Record<string, Float
     if (w === "SMA20") out.SMA20 = sma(s.c, 20);
     else if (w === "SMA50") out.SMA50 = sma(s.c, 50);
     else if (w === "EMA20") out.EMA20 = ema(s.c, 20);
+    else if (w === "SMA100") out.SMA100 = sma(s.c, 100);
+    else if (w === "SMA200") out.SMA200 = sma(s.c, 200);
+    else if (w === "EMA50") out.EMA50 = ema(s.c, 50);
+    else if (w === "EMA200") out.EMA200 = ema(s.c, 200);
     else if (w === "BB") {
       const b = bollinger(s.c, 20, 2);
       out.BB_MID = b.mid;

@@ -5,7 +5,7 @@ import { Grid, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { navigate, replaceView } from "../state/workspace";
 import { rowsFallbackText } from "./fallbackText";
-import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORT_PLAIN, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
 import { QuoteErrors } from "./QuoteErrors";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
@@ -33,7 +33,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   useLiveRows(rows, grid, liveSymbol);
   // Says why a source was skipped (e.g. KITE LOGIN EXPIRED) when any row came from a fallback; empty otherwise.
   const fallbackLine = rowsFallbackText(rows);
-  useCsvExport(panelId, () => gridCsv(`Q_${rows.map((r) => r.symbol).join("_").slice(0, 60)}`, COLUMNS, rows));
+  useCsvExport(panelId, () => gridCsv(`Q_${rows.map((r) => r.symbol).join("_").slice(0, 60)}`, QUOTE_COLUMNS, rows));
 
   useEffect(
     () =>
@@ -80,7 +80,16 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   return (
     <div className="fn">
       <div className="line">
-        <span className="acc">QUOTE MONITOR</span> <b className="pv">{rows.length}</b> SECURITIES{usingDefault && " (DEFAULT LIST)"} · <span className="dim">SORT</span> {sort}
+        {gui ? (
+          // GUI: plain words ("6 stocks · sorted as typed"); Terminal keeps its header below.
+          <>
+            <span className="acc">{rows.length} {rows.length === 1 ? "stock" : "stocks"}</span>{usingDefault && " (starter list)"} · sorted {SORT_PLAIN[sort]}
+          </>
+        ) : (
+          <>
+            <span className="acc">QUOTE MONITOR</span> <b className="pv">{rows.length}</b> SECURITIES{usingDefault && " (DEFAULT LIST)"} · <span className="dim">SORT</span> {sort}
+          </>
+        )}
         {loading && <span className="dim"> · LOADING…</span>}
         {fallbackLine && <span className="warn"> · {fallbackLine}</span>}
         <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D DEL · S SORT · E CSV · F5 REFRESH</span>

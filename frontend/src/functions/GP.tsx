@@ -28,7 +28,7 @@ import type { FunctionProps } from "./registry";
 export { parseGpArgs };
 
 /** Indicator picker keys: 1-9 then letters (I is left out: it closes the picker). */
-const PICK_KEYS = "123456789ABCDEFGHJKLMNP";
+const PICK_KEYS = "123456789ABCDEFGHJKLMNPQR"; // one key per INDICATORS entry, in order (I and O are skipped: they look like 1 and 0)
 const ANCHOR_NAME = { C: "CLOSE", H: "HIGH", L: "LOW", O: "OPEN" } as const;
 const ANCHOR_NEXT = { C: "H", H: "L", L: "O", O: "C" } as const;
 
@@ -428,7 +428,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         {Object.values(customErrors).map((m) => (
           <span className="err" key={m} data-testid="gp-custom-err"> · {m}</span>
         ))}
-        <span className="dim"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · T/H/B DRAW · A ALERT (SHIFT+A OR ALT+CLICK: AT A CLICKED PRICE) · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
+        <span className="dim legend"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · T/H/B DRAW · A ALERT (SHIFT+A OR ALT+CLICK: AT A CLICKED PRICE) · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
       </div>
       {p.evt && (
         <div className="line dim">
