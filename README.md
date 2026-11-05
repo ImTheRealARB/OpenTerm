@@ -536,7 +536,7 @@ The screenshots in this README are retaken with `node scripts/screenshots.mjs` (
 - [Commands to try](docs/COMMANDS.md) · [Data limits](docs/DATA_LIMITS.md) · [Performance](docs/PERFORMANCE.md)
 - [Adding a function](docs/ADDING_A_FUNCTION.md) · [Adding a provider](docs/ADDING_A_PROVIDER.md)
 - [Release notes](docs/RELEASE_NOTES.md) · [Changelog](CHANGELOG.md) · [Desktop build](docs/DESKTOP.md) · [MCP server](docs/MCP.md)
-- [Project status and handoff](HANDOFF.md) · [Third-party code and licences](THIRD_PARTY.md)
+- [Third-party code and licences](THIRD_PARTY.md)
 
 ## Credits and licence
 

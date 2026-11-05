@@ -11,3 +11,7 @@ bench-report.json
 playwright-report/
 test-results/
 .claude/
+
+# --- Logs and local data ---
+*.log
+backend/data/
