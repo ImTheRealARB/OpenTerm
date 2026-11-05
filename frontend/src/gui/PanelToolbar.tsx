@@ -16,7 +16,7 @@ import { chromeKeyDown, focusCommandLine } from "./chrome";
 import { openHelp } from "./helpState";
 import { runCommand } from "./run";
 import { useTabsOn } from "./tabsState";
-import { askButton, askCommands, buttonsFor, keyInit, type ToolbarButton } from "./toolbars";
+import { askButton, askCommands, buttonsFor, keyHint, keyInit, type ToolbarButton } from "./toolbars";
 
 /**
  * GUI-only button row under a panel's title bar.
@@ -35,7 +35,9 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
   const [ask, setAsk] = useState<ToolbarButton | null>(null);
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  const buttons = buttonsFor(fn, args);
+  const buttons = buttonsFor(fn, args).filter((b) => !b.bandHidden); // bandHidden ones live in the help drawer only
+  // GP: the range that is on now, so its button shows as the active choice (blue fill). Empty for every other function.
+  const activeRange = fn === "GP" ? parseGpArgs([...args], settingsStore.get().chart).range.toUpperCase() : "";
   // Only the GP candle-length dropdown uses this; other panels pass no symbol to fetch for.
   const limits = useHistoryLimits(fn === "GP" ? symbol : undefined);
 
@@ -130,11 +132,18 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
 
   return (
     <div className="pt" role="toolbar" aria-label={`Panel ${id} buttons`} data-testid={`pt-${id}`} onKeyDown={chromeKeyDown}>
-      {buttons.map((b) => (
-        <button key={b.label} type="button" className="pt-b pt-fn" title={b.title ?? b.label} onClick={(e) => press(b, e)}>
-          {b.label}
-        </button>
-      ))}
+      {buttons.map((b) => {
+        const hint = keyHint(b);
+        // The range buttons (1D ... MAX) are choices: the one that is on is marked, and says so to screen readers.
+        const isRange = fn === "GP" && b.key >= "1" && b.key <= "8" && b.label.length <= 3;
+        const on = isRange && b.label === activeRange;
+        return (
+          <button key={b.label} type="button" className={"pt-b pt-fn" + (on ? " on" : "")} aria-pressed={isRange ? on : undefined} title={b.title ?? b.label} onClick={(e) => press(b, e)}>
+            {hint && <span className="pt-k" aria-hidden="true">{hint}) </span>}
+            {b.label}
+          </button>
+        );
+      })}
       {fn === "GP" && (
         // Chart type (candles, line, ...). Same path as typing "GP LINE"; the C key still cycles through them.
         <select

@@ -9,6 +9,9 @@ import { hideTip, showTipAt, type Box } from "./glossaryTip";
 /** Column titles that are not a glossary key as written. Keys are the title in upper case. */
 const ALIAS: Readonly<Record<string, string>> = {
   "MKT CAP": "MARKET CAP",
+  // GUI header words of the quote grids (functions/quoteRows.ts guiTitle) and the glossary entry each one explains.
+  "PRICE": "LAST",
+  "CHANGE %": "CHANGE",
   "%CHG": "CHANGE",
   "% CHG": "CHANGE",
   "CHG%": "CHANGE",

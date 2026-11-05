@@ -132,7 +132,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
       )}
       {loading && !env && !error && <PanelNote kind="loading">LOADING FA {symbol}…</PanelNote>}
       {d && rows.length === 0 && !error && (
-        <PanelNote kind="empty" hint="Press 1-3 for another statement, A / Q for annual or quarterly, or H to look at older periods.">
+        <PanelNote kind="empty" hint={gui ? undefined : "Press 1-3 for another statement, A / Q for annual or quarterly, or H to look at older periods."}>
           NO {tab} DATA REPORTED FOR {symbol}
         </PanelNote>
       )}

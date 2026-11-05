@@ -29,10 +29,10 @@ async function setup(page: Page, opts: { mode?: "terminal" | "gui"; welcome?: bo
 }
 
 const panel = (page: Page, id = 1) => page.locator(`[data-panel="${id}"]`);
-/** Runs a command through the sidebar search box (same job as the command line). */
+/** Runs a command through the command line. */
 const run = async (page: Page, text: string) => {
-  await page.getByTestId("gui-search").fill(text);
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill(text);
+  await page.locator("#cmdline").press("Enter");
 };
 
 test("GP toolbar: a range button changes the range, like pressing the number key", async ({ page }) => {
@@ -121,24 +121,22 @@ test("terminal mode shows no toolbar, banner, drawer or welcome card", async ({ 
   await expect(page.getByTestId("welcome-card")).toHaveCount(0);
 });
 
-test("banner: the x dismisses it for good (survives a reload); Switch now goes to terminal", async ({ page }) => {
+test("there is no 'switch to terminal' banner any more; the mode switch lives in the Settings menu", async ({ page }) => {
   await setup(page);
-  const banner = page.getByTestId("gui-banner");
-  await expect(banner).toContainText("Switch to Terminal mode for keyboard speed");
-  await page.getByTestId("gui-banner-close").click();
-  await expect(banner).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem("openterm.guiBanner"))).not.toBeNull();
-  await page.reload();
-  await page.waitForFunction(() => window.__openterm_perf?.ready);
   await expect(page.getByTestId("gui-menubar")).toBeVisible();
-  await expect(banner).toHaveCount(0);
+  await expect(page.getByTestId("gui-banner")).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Settings" }).click();
+  await page.getByRole("menuitem", { name: /Switch to Terminal mode/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-mode", "terminal");
 });
 
-test("banner: Switch now switches to terminal mode", async ({ page }) => {
-  await setup(page);
-  await page.getByTestId("gui-banner-switch").click();
-  await expect(page.locator("html")).toHaveAttribute("data-mode", "terminal");
-  await expect(page.getByTestId("gui-banner")).toHaveCount(0);
+test("welcome card: Esc closes it even after a click moved the focus out of the card", async ({ page }) => {
+  await setup(page, { welcome: true });
+  const card = page.getByTestId("welcome-card");
+  await expect(card).toBeVisible();
+  await page.mouse.click(700, 700); // focus leaves the card's buttons
+  await page.keyboard.press("Escape");
+  await expect(card).toHaveCount(0);
 });
 
 test("welcome card: shows on a first run, 'See a chart' opens GP for AAPL, and it does not come back after a reload", async ({ page }) => {

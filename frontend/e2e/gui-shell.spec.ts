@@ -64,24 +64,22 @@ test("a fresh GUI shows the menu bar and the sidebar, and no page errors", async
   expect(errors).toEqual([]);
 });
 
-test("sidebar search: GP + Enter opens the chart in the focused panel", async ({ page }) => {
+test("command line: GP + Enter opens the chart in the focused panel", async ({ page }) => {
   await setupGui(page);
   // GP needs a security: the symbol box loads one first (same as typing AAPL on the command line).
   await page.getByTestId("gui-symbol").fill("AAPL");
   await page.getByTestId("gui-symbol").press("Enter");
   await expect(header(page)).toContainText("AAPL");
-  await page.getByTestId("gui-search").fill("GP");
-  await expect(page.getByTestId("gui-sidebar").locator(".gs-item").first()).toContainText("GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("GP");
   await expect(header(page)).toContainText("AAPL");
-  await expect(page.getByTestId("gui-search")).toHaveValue(""); // cleared after a successful run
 });
 
 test("symbol box keeps the panel's function: GP of AAPL becomes GP of MSFT", async ({ page }) => {
   await setupGui(page);
-  await page.getByTestId("gui-search").fill("AAPL GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("AAPL GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("GP");
   await page.getByTestId("gui-symbol").fill("MSFT");
   await page.getByTestId("gui-symbol").press("Enter");
@@ -103,8 +101,8 @@ test("sidebar: clicking a row runs it, groups collapse, a bad command shows the 
   await news.click();
   await expect(news).toHaveAttribute("aria-expanded", "false");
   // GP without any security: the same error the command line gives.
-  await page.getByTestId("gui-search").fill("GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(page.locator(".msg")).toContainText("GP NEEDS A SECURITY");
 });
 
@@ -128,14 +126,14 @@ test("menu bar: a category opens its functions and picking one runs it; Esc clos
   await expect(page.locator(".cmd input")).toBeFocused();
 });
 
-test("Esc in the sidebar search returns to the command line; Ctrl+K still works from it", async ({ page }) => {
+test("Esc in the symbol box returns to the command line; Ctrl+K still works from it", async ({ page }) => {
   await setupGui(page);
-  await page.getByTestId("gui-search").focus();
+  await page.getByTestId("gui-symbol").focus();
   await page.keyboard.type("chart");
   await page.keyboard.press("Escape");
   await expect(page.locator(".cmd input")).toBeFocused();
-  await page.getByTestId("gui-search").focus();
-  await page.keyboard.press("Control+k"); // chords bubble past the search box to the global handler
+  await page.getByTestId("gui-symbol").focus();
+  await page.keyboard.press("Control+k"); // chords bubble past the box to the global handler
   await expect(page.locator(".cmd input")).toBeFocused();
 });
 
@@ -172,8 +170,8 @@ test("Alt+G toggles the mode, and SETTINGS MODE sets it from the command line", 
 
 test("a panel keeps its content when the mode is switched (no remount)", async ({ page }) => {
   await setupGui(page);
-  await page.getByTestId("gui-search").fill("AAPL GP");
-  await page.getByTestId("gui-search").press("Enter");
+  await page.locator("#cmdline").fill("AAPL GP");
+  await page.locator("#cmdline").press("Enter");
   await expect(header(page)).toContainText("GP");
   await page.getByTestId("mode-terminal").click();
   await expect(page.getByTestId("gui-menubar")).toHaveCount(0);

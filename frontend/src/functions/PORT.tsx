@@ -568,7 +568,7 @@ function PortfolioIndex({ panelId }: { panelId: number }) {
           </tbody>
         </table>
       )}
-      <div className="dim">J K / ↑ ↓ SELECT · ENTER OPEN · DEL DELETE · N NEW · F5 REFRESH · PORT NAME ADD SYM QTY [COST]</div>
+      <div className="dim legend">J K / ↑ ↓ SELECT · ENTER OPEN · DEL DELETE · N NEW · F5 REFRESH · PORT NAME ADD SYM QTY [COST]</div>
     </div>
   );
 }

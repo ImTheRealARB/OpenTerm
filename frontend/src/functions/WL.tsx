@@ -11,7 +11,7 @@ import { useStore } from "../state/store";
 import { settingsStore } from "../settings/runtime";
 import { navigate } from "../state/workspace";
 import { requestAsk } from "../gui/askBus";
-import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORT_PLAIN, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
 import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -76,7 +76,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   const latest = useLatest({ rows, sort, symbols });
 
   useLiveRows(rows, grid, liveSymbol);
-  useCsvExport(panelId, () => gridCsv(`WL_${name}`, COLUMNS, rows));
+  useCsvExport(panelId, () => gridCsv(`WL_${name}`, QUOTE_COLUMNS, rows));
 
   useEffect(
     () =>
@@ -125,7 +125,15 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   return (
     <div className="fn">
       <div className="line">
-        <span className="acc">WATCHLIST {name}</span> <b className="pv">{rows.length}</b> SECURITIES · <span className="dim">SORT</span> {sort}
+        {guiMode ? (
+          <>
+            <span className="acc">Watchlist {name}</span> · {rows.length} {rows.length === 1 ? "stock" : "stocks"} · sorted {SORT_PLAIN[sort]}
+          </>
+        ) : (
+          <>
+            <span className="acc">WATCHLIST {name}</span> <b className="pv">{rows.length}</b> SECURITIES · <span className="dim">SORT</span> {sort}
+          </>
+        )}
         {(loading || (symbols === null && !err)) && <span className="dim"> · LOADING…</span>}
         {/* With a list on screen the error means the data is old; with none, the PanelNote below carries it. */}
         {err && symbols !== null && <span className="err"> · STALE: {err}</span>}
@@ -268,7 +276,7 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
           </tbody>
         </table>
       )}
-      <div className="dim">J K / ↑ ↓ SELECT · ENTER OPEN · DEL DELETE · N NEW · F5 REFRESH · WL NAME ADD|RM SYM...</div>
+      <div className="dim legend">J K / ↑ ↓ SELECT · ENTER OPEN · DEL DELETE · N NEW · F5 REFRESH · WL NAME ADD|RM SYM...</div>
     </div>
   );
 }

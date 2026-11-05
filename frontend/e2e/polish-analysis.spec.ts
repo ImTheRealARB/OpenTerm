@@ -31,11 +31,11 @@ async function setup(page: Page, mode: Mode) {
 
 const panel = (page: Page, id = 1) => page.locator(`[data-panel="${id}"]`);
 
-/** Runs a command the way the user would in each shell: the sidebar search box in GUI mode, Ctrl+K in the terminal shell. */
+/** Runs a command the way the user would in each shell: the command line in GUI mode, Ctrl+K in the terminal shell. */
 async function run(page: Page, mode: Mode, text: string) {
   if (mode === "gui") {
-    await page.getByTestId("gui-search").fill(text);
-    await page.getByTestId("gui-search").press("Enter");
+    await page.locator("#cmdline").fill(text);
+    await page.locator("#cmdline").press("Enter");
     return;
   }
   await page.keyboard.press("Control+k");

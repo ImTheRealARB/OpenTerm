@@ -19,7 +19,7 @@ describe("termForColumn", () => {
     expect(glossaryColumns(["SYMBOL", "NAME", "LAST", "%CHG", "VOLUME", "MKT CAP"])).toEqual([2, 3, 4, 5]);
   });
   it("every alias points at a real glossary entry", () => {
-    for (const t of ["MKT CAP", "VOL", "YLD", "DIV YLD", "ADJ CLOSE", "MAX DD", "B - A", "1Y RANGE", "UNRL %", "WIN", "MKT VAL", "DAY CHG", "24H LOW"]) {
+    for (const t of ["MKT CAP", "VOL", "YLD", "DIV YLD", "ADJ CLOSE", "MAX DD", "B - A", "1Y RANGE", "UNRL %", "WIN", "MKT VAL", "DAY CHG", "24H LOW", "PRICE", "CHANGE %"]) {
       expect(GLOSSARY[termForColumn(t)], t).toBeTruthy();
     }
   });

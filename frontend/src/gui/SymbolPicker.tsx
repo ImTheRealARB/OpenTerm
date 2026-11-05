@@ -42,7 +42,7 @@ export function SymbolPicker() {
   return (
     <div className="gm-symbol">
       <label>
-        <span className="gm-symbol-label">SYMBOL</span>
+        <span className="gm-symbol-label">Security</span>
         <input
           ref={input}
           data-testid="gui-symbol"

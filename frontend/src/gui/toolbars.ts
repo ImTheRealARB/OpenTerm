@@ -20,6 +20,11 @@ export interface ToolbarButton {
    * For an `ask` button it is only the documentation of the equivalent key (shown in the tooltip and the help drawer).
    */
   key: string;
+  /**
+   * Listed in the help drawer but not drawn in the function band (keeps one-row bands one row: GP zoom, pan, crosshair).
+   * The key itself still works from the keyboard.
+   */
+  bandHidden?: boolean;
   /** Press the key with Shift held (BT: `V` goes to the previous view). */
   shift?: boolean;
   /** Tooltip and help-drawer text. */
@@ -51,7 +56,7 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Add an alert", key: "n", title: "New alert (N)", ask: { prompt: "Stock and level, e.g. AAPL > 200 or AAPL -3%", command: "ALRT {input}" } },
   ],
   Q: [
-    { label: "Open DES", key: "Enter", title: "Open the description of the selected security (Enter)" },
+    { label: "Details", key: "Enter", title: "Open the description (DES) of the selected security (Enter)" },
     { label: "Add", key: "a", title: "Add securities: puts the command in the command line (A)" },
     { label: "Remove", key: "d", title: "Remove the selected security from this monitor (D)" },
     { label: "Sort", key: "s", title: "Cycle the sort order (S)" },
@@ -68,13 +73,13 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "MAX", key: "8", title: "Range maximum (8)" },
     { label: "Log", key: "l", title: "Toggle the logarithmic price scale (L)" },
     { label: "Indicators", key: "i", title: "Pick indicators (I); then press the letter shown next to each one" },
-    { label: "Indicators…", key: "i", open: "IND", title: "Indicator library: search, write a formula, Enter adds it to this chart" },
-    { label: "Crosshair", key: "x", title: "Toggle the crosshair (X)" },
+    { label: "Indicators…", key: "i", open: "IND", bandHidden: true, title: "Indicator library: search, write a formula, Enter adds it to this chart" },
+    { label: "Crosshair", key: "x", bandHidden: true, title: "Toggle the crosshair (X)" },
     { label: "Alert at price", key: "A", shift: true, title: "Click the chart at the price for an alert (Shift+A; A uses the crosshair)" },
-    { label: "Zoom +", key: "+", title: "Zoom in (+)" },
-    { label: "Zoom -", key: "-", title: "Zoom out (-)" },
-    { label: "<", key: "ArrowLeft", title: "Pan left, or move the crosshair when it is on (Left arrow)" },
-    { label: ">", key: "ArrowRight", title: "Pan right, or move the crosshair when it is on (Right arrow)" },
+    { label: "Zoom +", key: "+", bandHidden: true, title: "Zoom in (+)" },
+    { label: "Zoom -", key: "-", bandHidden: true, title: "Zoom out (-)" },
+    { label: "<", key: "ArrowLeft", bandHidden: true, title: "Pan left, or move the crosshair when it is on (Left arrow)" },
+    { label: ">", key: "ArrowRight", bandHidden: true, title: "Pan right, or move the crosshair when it is on (Right arrow)" },
   ],
   WL: [
     // A named list (WL TECH):
@@ -82,7 +87,7 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Remove", key: "d", when: "args", title: "Remove the selected symbol (D); U undoes it" },
     { label: "Undo", key: "u", when: "args", title: "Undo the last removal (U)" },
     { label: "Sort", key: "s", when: "args", title: "Cycle the sort order (S)" },
-    { label: "Open DES", key: "Enter", when: "args", title: "Open the description of the selected symbol (Enter)" },
+    { label: "Details", key: "Enter", when: "args", title: "Open the description of the selected symbol (Enter)" },
     // The index of saved lists (WL alone):
     { label: "Open list", key: "Enter", when: "noargs", title: "Open the selected watchlist (Enter)" },
     { label: "Delete list", key: "x", when: "noargs", title: "Delete the selected watchlist: press twice to confirm (X)" },
@@ -137,6 +142,15 @@ export function buttonsFor(code: string | undefined, args: readonly string[]): T
   return (TOOLBARS[code] ?? []).filter(
     (b) => (!b.when || (b.when === "args") === (args.length > 0)) && (!b.firstArg || b.firstArg.toUpperCase() === (args[0] ?? "").toUpperCase()),
   );
+}
+
+/**
+ * The key letter shown before a button's label in the function band, pro-terminal style: "A) Add", "S) Sort".
+ * Only plain letters are shown: digits (range and view pickers, whose labels already say what they are), arrows, "+", "-", Enter,
+ * Shift chords and buttons that open another panel (`open`) get no prefix. Empty string = show nothing.
+ */
+export function keyHint(b: ToolbarButton): string {
+  return !b.shift && !b.open && /^[a-z]$/i.test(b.key) ? b.key.toUpperCase() : "";
 }
 
 /** The `KeyboardEvent` init for a button's key: exactly what the browser would send for that key press. */

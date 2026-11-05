@@ -18,8 +18,8 @@ export const TOUR_STEPS: readonly TourStep[] = [
     selectors: ['[data-testid="gui-menubar"] .gm-slot'],
   },
   {
-    title: "Sidebar and search",
-    text: "The same functions as a list. Type in the search box (a name, a code like GP, or a command like AAPL GP) and press Enter.",
+    title: "Sidebar",
+    text: "The same functions as a list, grouped by topic. Click a row to open it. To search, type a name or a command in the box at the very top.",
     selectors: ['[data-testid="gui-sidebar"]'],
   },
   {

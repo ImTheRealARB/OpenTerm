@@ -1,11 +1,10 @@
 import { useMemo, useRef, useState } from "react";
-import { FUNCTION_LIST, isFunction } from "../functions/registry";
-import { CATEGORIES, categoryOf, groupByCategory, type Category } from "../functions/categories";
+import { FUNCTION_LIST } from "../functions/registry";
+import { CATEGORIES, groupByCategory, type Category } from "../functions/categories";
 import { chromeKeyDown, moveFocus } from "./chrome";
-import { runCommand, runSymbol, runTyped } from "./run";
-import { searchFunctions, sidebarEnter } from "./search";
+import { runCommand } from "./run";
 import { useSidebarHidden } from "./sidebarState";
-import { useCompanies } from "./useCompanies";
+import { shortTitle } from "./titleText";
 
 type Def = (typeof FUNCTION_LIST)[number];
 
@@ -29,9 +28,9 @@ const START_HERE: readonly { label: string; code: string; text: string }[] = [
 ];
 
 /**
- * GUI sidebar: every registered function grouped by category, with a search box that does the same job as the
- * command line. Typing filters the list (code or title); Enter runs the typed command, or the top match for a loose
- * word (see `sidebarEnter`). Clicking a row runs that function in the focused panel. Groups collapse and expand.
+ * GUI sidebar: "Start here" tasks, then every registered function grouped by category. Clicking a row runs that function in
+ * the focused panel. Groups collapse and expand. There is no search box here: the command line already finds functions and
+ * companies by plain words ("chart", "tesla"), so a second box only made beginners choose between two.
  */
 export function Sidebar() {
   // A wrapper, so the hooks inside SidebarPanel always run in the same order (it simply is not mounted while hidden).
@@ -39,14 +38,9 @@ export function Sidebar() {
 }
 
 function SidebarPanel() {
-  const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<ReadonlySet<Category>>(() => new Set(CATEGORIES.filter((c) => !OPEN_AT_START.includes(c))));
   const root = useRef<HTMLElement>(null);
   const groups = useMemo(() => groupByCategory(FUNCTION_LIST), []);
-  const matches = useMemo(() => searchFunctions(query, FUNCTION_LIST), [query]);
-  const searching = query.trim() !== "";
-  // Company-name matches ("apple" -> AAPL), fetched only while the sidebar search has text (lazy, see useCompanies).
-  const companies = useCompanies(query, searching);
 
   const toggle = (c: Category) =>
     setCollapsed((prev) => {
@@ -55,26 +49,26 @@ function SidebarPanel() {
       return next;
     });
 
-  const row = (f: Def, i: number) => (
+  const row = (f: Def) => (
     <button
       key={f.code}
       type="button"
-      className={"gs-item" + (f.load ? "" : " dim") + (searching && i === 0 ? " top" : "")}
+      className={"gs-item" + (f.load ? "" : " dim")}
       title={f.title}
       data-code={f.code}
       onClick={() => runCommand(f.code)}
     >
       <span className="gs-code">{f.code}</span>
-      <span className="gs-title">{f.title}</span>
+      <span className="gs-title">{shortTitle(f.title)}</span>
     </button>
   );
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-      // Arrow keys walk the focusable rows (search box, group headers, function rows) in order.
+      // Arrow keys walk the focusable rows (Start-here tasks, group headers, function rows) in order.
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        moveFocus(root.current!, ".gs-search, .gs-task, .gs-head, .gs-item", e.key === "ArrowDown" ? 1 : -1);
+        moveFocus(root.current!, ".gs-task, .gs-head, .gs-item", e.key === "ArrowDown" ? 1 : -1);
       }
     }
     chromeKeyDown(e);
@@ -82,26 +76,8 @@ function SidebarPanel() {
 
   return (
     <aside className="gs" ref={root} data-testid="gui-sidebar" aria-label="Functions" onKeyDown={onKeyDown}>
-      <input
-        className="gs-search"
-        data-testid="gui-search"
-        type="text"
-        spellCheck={false}
-        autoComplete="off"
-        placeholder="Search or type a command"
-        aria-label="Search functions, or type a command and press Enter"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" || e.ctrlKey || e.altKey || e.metaKey) return;
-          e.preventDefault();
-          const cmd = sidebarEnter(query, matches[0], isFunction);
-          // Clear the box only when the command ran (a failed one keeps its text and the error shows in the top bar).
-          if (cmd !== null) void (/\s/.test(cmd) ? runTyped(cmd) : Promise.resolve(runCommand(cmd))).then((ok) => ok && setQuery(""));
-        }}
-      />
       <div className="gs-list">
-        {!searching && (
+        {
           // Not a ".gs-head": the category headers are counted by the shell test, and this group is always open.
           <section className="gs-start" data-testid="start-here" aria-label="Start here">
             <div className="gs-start-title">Start here</div>
@@ -112,29 +88,8 @@ function SidebarPanel() {
               </button>
             ))}
           </section>
-        )}
-        {searching && companies.length > 0 && (
-          <div className="gs-companies" aria-label="Matching stocks">
-            {companies.slice(0, 4).map((h) => (
-              <button key={h.symbol} type="button" className="gs-item gs-company" data-symbol={h.symbol} onClick={() => runSymbol(h.symbol)}>
-                <span className="gs-code">{h.symbol}</span>
-                <span className="gs-title">{h.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {searching ? (
-          matches.length ? (
-            matches.map((f, i) => (
-              <div key={f.code} className="gs-hit">
-                {row(f, i)}
-                <span className="gs-cat dim">{categoryOf(f.code)}</span>
-              </div>
-            ))
-          ) : (
-            <div className="gs-empty dim">No function matches. Enter runs it as a command.</div>
-          )
-        ) : (
+        }
+        {
           groups.map((g) => {
             const isOpen = !collapsed.has(g.category);
             return (
@@ -148,7 +103,7 @@ function SidebarPanel() {
               </section>
             );
           })
-        )}
+        }
       </div>
     </aside>
   );

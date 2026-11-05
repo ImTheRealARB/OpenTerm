@@ -12,6 +12,7 @@ import { toggleSidebar, useSidebarHidden } from "./sidebarState";
 import { toggleStatusBar, useStatusBarShown } from "./statusBarState";
 import { setTabs, useTabsOn } from "./tabsState";
 import { TEMPLATE_INFO } from "./templateMenu";
+import { shortTitle } from "./titleText";
 
 /** One row of a dropdown: a function, or one of the extra entries under Settings (status bar, font, switch mode, tour, welcome card). */
 type Entry =
@@ -43,7 +44,7 @@ export function MenuBar() {
   const tabsOn = useTabsOn();
 
   const entries = (c: Category): Entry[] => {
-    const list: Entry[] = (groups.find((g) => g.category === c)?.items ?? []).map((f) => ({ kind: "fn", code: f.code, title: f.title, built: !!f.load }));
+    const list: Entry[] = (groups.find((g) => g.category === c)?.items ?? []).map((f) => ({ kind: "fn", code: f.code, title: shortTitle(f.title), built: !!f.load }));
     if (c === "Settings") list.push(...TEMPLATE_INFO.map((t) => ({ kind: "fn" as const, code: "TMPL", title: "Template: " + t.label, built: true, run: "TMPL " + t.id })), { kind: "status" }, { kind: "font" }, { kind: "terminal" }, { kind: "tour" }, { kind: "welcome" });
     return list;
   };

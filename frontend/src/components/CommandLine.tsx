@@ -113,6 +113,8 @@ export function CommandLine() {
   };
   // Phase 10: opt-in vim editing (SETTINGS). Off by default; the default path is one boolean check.
   const vimOn = useStore(settingsStore, (st) => st.vim);
+  // GUI mode asks in plain words (companies, codes and questions); Terminal keeps its short command hint.
+  const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const vim = useRef(VIM_INSERT);
   const [vimMode, setVimMode] = useState<VimMode>("insert");
   const setVim = (mode: VimMode) => {
@@ -312,7 +314,7 @@ export function CommandLine() {
         aria-label="Command line"
         autoComplete="off"
         spellCheck={false}
-        placeholder="TYPE A COMMAND  e.g. AAPL GP  |  HELP  |  ? FOR SHORTCUTS"
+        placeholder={gui ? "Type a company, a code or a question, e.g. apple 5 years" : "TYPE A COMMAND  e.g. AAPL GP  |  HELP  |  ? FOR SHORTCUTS"}
         onKeyDown={onKeyDown}
         onInput={onInput}
         onFocus={() => {

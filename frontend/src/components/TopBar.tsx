@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { statusMsg } from "../command/execute";
+import { execute, statusMsg } from "../command/execute";
 import { APP_NAME } from "../config";
 import { MARKETS, basisNote, basisOf, lightOf } from "../markets/hours";
 import { loadHolidays, unavailable } from "../markets/holidays";
@@ -74,10 +74,17 @@ function Message() {
 }
 
 export function TopBar() {
+  // GUI mode shows a HELP key next to the command line (it runs the HELP function, same as typing HELP + Enter).
+  const gui = useStore(settingsStore, (s) => s.mode === "gui");
   return (
     <div className="top">
       <div className="brand">{APP_NAME}</div>
       <CommandLine />
+      {gui && (
+        <button type="button" className="top-help" data-testid="top-help" title="Open the function list and help" onClick={() => void execute("HELP")}>
+          HELP
+        </button>
+      )}
       <Message />
       <Clock />
     </div>

@@ -65,13 +65,15 @@ export function PanelNote({
 }) {
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
   const line = gui ? (plain ?? plainLine(kind, textOf(children))) : null;
+  // GUI: every panel has a Refresh button, so a hint that only says "press F5" is a key legend, not help. Terminal keeps it.
+  const shownHint = gui && typeof hint === "string" ? hint.split(/(?<=\.)\s+/).filter((sentence) => !/\bF5\b/i.test(sentence)).join(" ") : hint;
   const buttons: NoteAction[] = gui ? [...(actions ?? []), ...(onRetry && (kind === "error" || kind === "stale") ? [{ label: "Retry", onClick: onRetry }] : [])] : [];
   return (
     // role=status lets screen readers announce the change; data-kind lets e2e tests assert the state without
     // depending on the wording.
     <div className={`pnote pnote-${kind}`} role="status" data-kind={kind}>
       <div className="pnote-msg">{children}</div>
-      {hint != null && <div className="pnote-hint">{hint}</div>}
+      {shownHint != null && shownHint !== "" && <div className="pnote-hint">{shownHint}</div>}
       {line && <div className="pnote-plain">{line}</div>}
       {buttons.length > 0 && (
         <div className="pnote-actions">

@@ -1,8 +1,13 @@
 /**
- * Plain-English commands ("apple stock price chart", "microsoft 5 year chart", "tesla news").
+ * Plain-English commands ("apple stock price chart", "microsoft 5 year chart", "tesla news", "reliance stock price 5 years").
  *
- * Rule-based and offline: a few word tables and the company-name search of the GUI (gui/companySearch). No AI, no network
- * (the caller passes the company list in), no React and no `window`, so vitest runs it in Node.
+ * Rule-based and offline: word tables plus the company-name search of nlIndex.ts. No AI, no network (the caller passes the
+ * company list in), no React and no `window`, so vitest runs it in Node. The one network step, Yahoo's name search for names
+ * nothing local knows, lives in nlResolve.ts and is only asked for through the `lookup` field of a `none` result.
+ *
+ * Files: this one reads the sentence (chart modifiers, intent, assembling the command); nlRange.ts reads "how far back";
+ * nlIndex.ts finds the company; nlAliases.ts is the data for indices / commodities / crypto / currencies / nicknames / Indian
+ * names; nlWords.ts has the filler and everyday-word lists.
  *
  * WHEN THIS FILE IS CONSULTED (decided in command/nlRun.ts `needsNatural`, not here):
  *   - Exact codes always win. If `parseCommand` accepts the input, natural language is never asked, with ONE exception:
@@ -13,32 +18,36 @@
  *   - A failed parse ("apple chart", "bank of america news": BAD SYMBOL / UNKNOWN FUNCTION) asks natural language before
  *     the error is shown; "none" then shows the original error.
  *
- * AMBIGUITY RULE (never guess between companies): candidates are the name matches of the longest word run that matches.
- * An exact ticker wins outright. Otherwise the best name tier (name starts with the words beats a later word starts with them)
- * is kept and the hits are grouped by company (share classes of one company share a group). The top group wins only if its
- * market cap is at least DOMINANCE (10) times the next group's ("apple" -> Apple Inc., not Apple Hospitality REIT). A winning
- * group with several share classes ("alphabet": GOOGL / GOOG) and an unclear top both return `choices` (max 5).
+ * AMBIGUITY RULE (never guess between companies): see nlIndex.ts. Short version: share classes of one company are one company
+ * (the most traded class wins), preferred shares and warrants never match, and the biggest company wins only if it is 10 times
+ * bigger than the next; otherwise `choices` (max 5).
  */
-import { matchCompanies, type CompanyHit, type UniverseEntry } from "../gui/companySearch";
+import { closestCompanies, type UniverseEntry } from "../gui/companySearch";
+import { closestAliases } from "./nlAliases";
+import { findCompanies, findCompany, isFiller, toYahoo, unresolvedWords } from "./nlIndex";
+import { GP_RANGES, extractRange, take } from "./nlRange";
+
+export { DOMINANCE } from "./nlIndex";
+export { GP_RANGES };
 
 export type NlResult =
   | { kind: "command"; command: string; why: string }
   | { kind: "choices"; choices: { command: string; label: string }[] }
-  | { kind: "none" };
+  /**
+   * Nothing understood. `lookup` (only when a company phrase was left over) lets the async caller try Yahoo's name search for
+   * `phrase` and put the symbol it finds where `{S}` is in `template` (e.g. "{S} GP 5Y"). This file never does the search.
+   */
+  | { kind: "none"; lookup?: { phrase: string; template: string } };
 
 export interface NlContext {
   isFunction(code: string): boolean;
-  /** The screener universe, or null when it is not loaded (then only intent-only phrases work, e.g. "news"). */
+  /** The screener universe, or null when it is not loaded (then only intent-only phrases and the alias table work). */
   companies: readonly UniverseEntry[] | null;
+  /** Today; only used for "since 2020"-style ranges. Defaults to the real date (tests pass a fixed one). */
+  now?: Date;
 }
 
-/** The top company's market cap must be this many times the next company's to be picked without asking. */
-export const DOMINANCE = 10;
-const MAX_CHOICES = 5;
-
-/** Ranges GP accepts (kept in step with gpArgs RANGES by natural.test.ts). */
-export const GP_RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"];
-/** Indicator words (kept in step with chart/indicators by natural.test.ts). */
+/** Chart indicators (kept in step with chart/indicators by natural.test.ts). Each is [pattern, GP token]. */
 const INDICATOR_WORDS: [RegExp, string][] = [
   [/\bbollinger(?: bands?)?\b|\bbb\b/, "BB"],
   [/\brsi\b|\brelative strength(?: index)?\b/, "RSI"],
@@ -53,19 +62,20 @@ const INDICATOR_WORDS: [RegExp, string][] = [
   [/\bsupertrend\b/, "SUPERTREND"],
   [/\bparabolic sar\b|\bpsar\b/, "PSAR"],
 ];
-const SMA_PERIODS = new Set([20, 50]);
-const EMA_PERIODS = new Set([20]);
+/** Moving-average lengths the chart can draw (chart/indicators.ts INDICATORS). Others are named in the `why`, not drawn. */
+const SMA_PERIODS = new Set([20, 50, 100, 200]);
+const EMA_PERIODS = new Set([20, 50, 200]);
 
-/** Words that carry no meaning for the command (trimmed from both ends of the company phrase; kept inside it: "bank of america"). */
-const FILLER = new Set(
-  ("show me the a an for of please open get what whats is are how doing do does to see give display pull up on in at and with " +
-    "my us tell about look looking check can could you i want need would like let lets go find view its it s share shares " +
-    "company inc corp corporation ltd plc co now currently current latest recent recently over past last this vs versus " +
-    "chart charts graph graphs stock stocks price prices").split(" "),
-);
-
-/** Intent phrases, first match wins (specific phrases before general ones). `codes`: first one that is registered. */
+/**
+ * Intent phrases, first match wins (specific phrases before general ones). `codes`: first one that is registered.
+ * Every row is only mapped to a function that really shows the thing: valuation numbers (P/E, market cap) are in DES, analyst
+ * numbers in EE (EPS and revenue estimates) and ANR (ratings, price targets), the option chain in OMON, news in N.
+ */
 const INTENTS: [RegExp, string[], string[]?][] = [
+  [/\banalyst(?:s)? (?:price )?targets?\b|\bprice targets?\b|\banalyst ratings?\b|\banalysts?\b|\bupgrades?\b|\bdowngrades?\b|\brecommendations?\b|\bwall street (?:rating|target)s?\b/, ["ANR"]],
+  [/\b(?:eps |revenue |earnings |analyst )?estimates?\b|\bconsensus\b|\bforecasts?\b|\bexpected (?:eps|earnings|revenue)\b|\bguidance\b/, ["EE"]],
+  [/\boption chains?\b|\boptions?\b|\bcalls and puts\b|\bimplied vol(?:atility)?\b/, ["OMON"]],
+  [/\bp\/e\b|\bpe ratios?\b|\bpe\b|\bprice[- ]to[- ]earnings\b|\bprice earnings\b|\bvaluations?\b|\bmarket cap(?:italization|italisation)?\b|\bmarket value\b|\bmcap\b|\bworth\b|\bhow big\b/, ["DES"]],
   [/\bincome statements?\b|\bprofit and loss\b|\bp&l\b|\bp and l\b/, ["FA"], ["IS"]],
   [/\bbalance sheets?\b/, ["FA"], ["BS"]],
   [/\bcash ?flows?\b/, ["FA"], ["CF"]],
@@ -76,50 +86,76 @@ const INTENTS: [RegExp, string[], string[]?][] = [
   [/\bpeers?\b|\bcompetitors?\b|\bcompare(?:d)? to peers\b|\bsimilar companies\b/, ["COMP"]],
   [/\bseasonality\b|\bseasonal\b/, ["SEAS"]],
   [/\bdividends?\b|\bpayouts?\b/, ["DVD"]],
-  [/\bnews\b|\bheadlines?\b/, ["N"]],
+  [/\bnews\b|\bheadlines?\b|\bwhat(?:s| is)? (?:happening|going on|new)(?: with| at| in)?\b|\blatest on\b|\bupdates? on\b|\bany news\b/, ["N"]],
   [/\boverview\b|\bprofile\b|\bdescription\b|\bdescribe\b|\bwhat does\b|\bwho is\b|\bsummary\b/, ["DES"]],
   [/\bcharts?\b|\bgraphs?\b|\bplot\b|\bprice history\b|\bstock price\b|\bprices?\b|\bstock\b/, ["GP"]],
 ];
 
-const clean = (s: string): string =>
-  s.toLowerCase().replace(/[’']s\b/g, "s").replace(/[’']/g, "").replace(/[,;:!?"()]+/g, " ").replace(/\s+/g, " ").trim();
+/**
+ * "earnings date" / "when does X report": no function shows a company's next report date (ERN is a calendar of all companies,
+ * EE shows estimates by period), so the words are dropped and the `why` says so, instead of opening financials by mistake.
+ */
+const EARNINGS_DATE = /\b(?:earnings|results|report|reporting) dates?\b|\bnext earnings\b|\bwhen (?:does|do|is|will)\b.*\b(?:report|earnings)\b|\bearnings (?:call|report)\b/;
 
-/** Takes `re`'s first match out of the working text; returns the match or null. */
-function take(state: { s: string }, re: RegExp): RegExpExecArray | null {
-  const m = re.exec(state.s);
-  if (m) state.s = (state.s.slice(0, m.index) + " " + state.s.slice(m.index + m[0].length)).replace(/\s+/g, " ");
-  return m;
-}
+/** Lower case, possessives and apostrophes dropped ("apple's" -> "apple"), sentence punctuation to spaces. */
+const clean = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[’']s\b/g, "") // possessive: "apple's" must not become "apples"
+    .replace(/[’']/g, "")
+    .replace(/[,;:!?"()]+/g, " ")
+    .replace(/\.(?=\s|$)/g, " ") // "inc." -> "inc", but "amazon.com" keeps its dot
+    .replace(/\bclass ([a-c])\b/g, "class_$1") // "class a" is part of a name, not the filler word "a"
+    .replace(/\s+/g, " ")
+    .trim();
 
 interface Parts {
   range?: string;
+  /** The range came from "last quarter": financials may read it as the quarterly period instead. */
+  quarter?: boolean;
   type?: string;
   log: boolean;
   indicators: string[];
   period?: "A" | "Q";
+  /** Things the user asked for that could not be done exactly; shown in the `why`. */
+  notes: string[];
   rest: string;
 }
 
 /** Pulls the chart/financials modifiers out of the text; what is left holds the intent and the company words. */
-function extractModifiers(text: string): Parts {
-  const st = { s: " " + text + " " };
-  const p: Parts = { log: false, indicators: [], rest: "" };
+function extractModifiers(text: string, now: Date): Parts {
+  // "200-day" -> "200 day", "5-year" -> "5 year"
+  const st = { s: " " + text.replace(/(\d)-(?=day|week|month|year|yr)/g, "$1 ") + " " };
+  const p: Parts = { log: false, indicators: [], notes: [], rest: "" };
 
-  // Ranges.
-  const num = "(\\d+|a|one|two|three|five|ten)";
-  const n = (w: string) => ({ a: 1, one: 1, two: 2, three: 3, five: 5, ten: 10 })[w] ?? Number(w);
-  let m: RegExpExecArray | null;
-  if ((m = take(st, /\b(?:year to date|ytd)\b/))) p.range = "YTD";
-  else if ((m = take(st, /\b(?:max|maximum|all time|all-time|alltime|full history|since inception|lifetime)\b/))) p.range = "MAX";
-  else if ((m = take(st, new RegExp(`\\b${num} ?(?:years?|yrs?|y)\\b`)))) p.range = `${n(m[1])}Y`;
-  else if ((m = take(st, new RegExp(`\\b${num} ?(?:months?|mos?|m)\\b`)))) p.range = `${n(m[1])}M`;
-  else if ((m = take(st, new RegExp(`\\b${num} ?(?:weeks?|wks?|w)\\b`)))) p.range = n(m[1]) === 1 ? "5D" : n(m[1]) <= 4 ? "1M" : "3M";
-  else if ((m = take(st, new RegExp(`\\b${num} ?(?:days?|d)\\b(?! ?(?:simple )?(?:moving average|sma|ma)\\b)`)))) p.range = n(m[1]) === 1 ? "1D" : n(m[1]) <= 5 ? "5D" : "1M";
-  else if ((m = take(st, /\b(?:today|intraday|todays|this morning)\b/))) p.range = "1D";
-  else if ((m = take(st, /\b(?:this|past|last) year\b/))) p.range = "1Y";
-  else if ((m = take(st, /\b(?:this|past|last) month\b/))) p.range = "1M";
-  else if ((m = take(st, /\b(?:this|past|last) week\b/))) p.range = "5D";
-  if (p.range && !GP_RANGES.includes(p.range)) p.range = undefined; // "4 years": not a GP range, the words are dropped
+  // Moving averages FIRST (before ranges, so "200 day moving average" is not read as 200 days):
+  // "sma 50", "50 day moving average", "200 dma", "ema 20", "exponential moving average 50".
+  const WORD = String.raw`(?:simple |exponential )?(?:moving averages?|smas?|emas?|dmas?|mas?)`;
+  // "50 day and 200 day moving average" -> "50 day moving average 200 day moving average"
+  st.s = st.s.replace(
+    new RegExp(String.raw`(\d+)(?: days?| d)? (?:and|&) (\d+)(?: days?| d)? (${WORD})`, "g"),
+    (_m, a: string, b: string, w: string) => ` ${a} day ${w} ${b} day ${w} `,
+  );
+  const after = new RegExp(String.raw`\b${WORD} ?(\d+)\b`);
+  const before = new RegExp(String.raw`\b(\d+) ?(?:days? |d )?${WORD}\b`);
+  for (const re of [before, after]) {
+    let r: RegExpExecArray | null;
+    while ((r = take(st, re))) {
+      const kind = /ema|exponential/.test(r[0]) ? "EMA" : "SMA";
+      const k = Number(r[1]);
+      if ((kind === "EMA" ? EMA_PERIODS : SMA_PERIODS).has(k)) {
+        if (!p.indicators.includes(`${kind}${k}`)) p.indicators.push(`${kind}${k}`);
+      } else p.notes.push(`${kind}${k} is not on the chart (SMA 20 50 100 200, EMA 20 50 200)`);
+    }
+  }
+
+  // How far back.
+  const found = extractRange(st, now);
+  if (found) {
+    p.range = found.range;
+    p.quarter = found.quarter;
+    if (found.note) p.notes.push(found.note);
+  }
 
   // Chart type, log scale.
   if (take(st, /\bcandle ?sticks?\b|\bcandles?\b/)) p.type = "CANDLE";
@@ -128,16 +164,7 @@ function extractModifiers(text: string): Parts {
   else if (take(st, /\barea\b/)) p.type = "AREA";
   if (take(st, /\blog(?:arithmic)?(?: scale)?\b/)) p.log = true;
 
-  // Indicators: "moving average 50", "sma 50", "50 day moving average", "ema 20".
-  const ma = (kind: "SMA" | "EMA", re: RegExp, ok: Set<number>) => {
-    let r: RegExpExecArray | null;
-    while ((r = take(st, re))) {
-      const k = Number(r[1] ?? r[2]);
-      if (ok.has(k) && !p.indicators.includes(`${kind}${k}`)) p.indicators.push(`${kind}${k}`);
-    }
-  };
-  ma("EMA", /\bexponential(?: moving average)? ?(\d+)\b|\bema ?(\d+)\b/, EMA_PERIODS);
-  ma("SMA", /\b(?:simple )?(?:moving average|sma|ma) ?(\d+)\b|\b(\d+) ?(?:day |d )?(?:simple )?(?:moving average|sma|ma)\b/, SMA_PERIODS);
+  // Named indicators.
   for (const [re, name] of INDICATOR_WORDS) if (take(st, re) && !p.indicators.includes(name)) p.indicators.push(name);
   take(st, /\bindicators?\b|\bmoving averages?\b/);
 
@@ -149,69 +176,25 @@ function extractModifiers(text: string): Parts {
   return p;
 }
 
-const baseName = (name: string): string =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, " ")
-    .replace(/\b(?:class [a-z]\b.*|capital stock.*|common stock.*|ordinary shares.*|american depositary.*)$/, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const simple = (s: string): string => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
-
-type Resolved = { kind: "one"; hit: CompanyHit } | { kind: "many"; hits: CompanyHit[] } | { kind: "no" };
-
-/** Resolves one phrase to a company, or several candidates when it is not clear (see the file header). */
-function resolveRun(run: string, uni: readonly UniverseEntry[]): Resolved {
-  const q = clean(run);
-  if (!q) return { kind: "no" };
-  const exact = !q.includes(" ") ? uni.find((e) => e.symbol.toLowerCase() === q) : undefined;
-  if (exact) return { kind: "one", hit: { symbol: exact.symbol, name: exact.name, via: "symbol" } };
-  const qn = simple(q);
-  if (qn.length < 3) return { kind: "no" };
-  const hits = matchCompanies(qn, uni, 40).filter((h) => h.via === "name");
-  if (!hits.length) return { kind: "no" };
-  const tierOf = (h: CompanyHit) => (simple(h.name).startsWith(qn) ? 2 : 1);
-  const best = Math.max(...hits.map(tierOf));
-  const top = hits.filter((h) => tierOf(h) === best);
-  const mcap = (h: CompanyHit) => uni.find((e) => e.symbol === h.symbol)?.mcap ?? 0;
-  const groups: CompanyHit[][] = [];
-  for (const h of top) {
-    const g = groups.find((x) => baseName(x[0].name) === baseName(h.name));
-    if (g) g.push(h);
-    else groups.push([h]);
-  }
-  const gcap = (g: CompanyHit[]) => Math.max(...g.map(mcap));
-  groups.sort((a, b) => gcap(b) - gcap(a));
-  const first = groups[0];
-  const second = groups[1];
-  const dominant = !second || gcap(first) >= DOMINANCE * gcap(second);
-  if (dominant && first.length === 1) return { kind: "one", hit: first[0] };
-  if (dominant) return { kind: "many", hits: [...first].sort((a, b) => mcap(b) - mcap(a)).slice(0, MAX_CHOICES) };
-  return { kind: "many", hits: groups.map((g) => g[0]).slice(0, MAX_CHOICES) };
-}
-
-/** Longest run of the phrase's words that names a company (a run never starts or ends on a filler word). */
-function findCompany(words: string[], uni: readonly UniverseEntry[]): Resolved {
-  for (let len = words.length; len >= 1; len--) {
-    for (let i = 0; i + len <= words.length; i++) {
-      if (FILLER.has(words[i]) || FILLER.has(words[i + len - 1])) continue;
-      const r = resolveRun(words.slice(i, i + len).join(" "), uni);
-      if (r.kind !== "no") return r;
-    }
-  }
-  return { kind: "no" };
-}
+const isNum = (w: string): boolean => /^\d+$/.test(w);
 
 export function interpretNatural(input: string, ctx: NlContext): NlResult {
   const text = clean(input);
   if (!text) return { kind: "none" };
-  const p = extractModifiers(text);
+  // Words the user typed in CAPITALS may be tickers even when they are English words ("NOW", "HAS"); an all-caps sentence says nothing.
+  const upper = new Set(input === input.toUpperCase() ? [] : (input.match(/\b[A-Z][A-Z0-9]+\b/g) ?? []).map((w) => w.toLowerCase()));
+  const p = extractModifiers(text, ctx.now ?? new Date());
+  let rest = p.rest;
+  const notes = p.notes;
+
+  if (EARNINGS_DATE.test(rest)) {
+    rest = rest.replace(EARNINGS_DATE, " ").replace(/\s+/g, " ").trim();
+    notes.push("no screen shows a company's next earnings date yet");
+  }
 
   // Intent: the first phrase whose function is registered; then every intent word is removed from the company phrase.
   let fn: string | undefined;
   let fnArgs: string[] = [];
-  let rest = p.rest;
   for (const [re, codes, args] of INTENTS) {
     if (!re.test(" " + rest + " ")) continue;
     const code = codes.find((c) => ctx.isFunction(c));
@@ -225,32 +208,76 @@ export function interpretNatural(input: string, ctx: NlContext): NlResult {
   const chartish = p.range !== undefined || p.type !== undefined || p.log || p.indicators.length > 0;
   if (!fn && chartish && ctx.isFunction("GP")) fn = "GP";
 
+  const words = rest.split(" ").filter(Boolean);
+  while (words.length && isFiller(words[0], upper)) words.shift();
+  while (words.length && isFiller(words[words.length - 1], upper)) words.pop();
+  // "3m stock": the range reader took "3m" as three months, but it is also the company 3M.
+  if (!words.length && /\b3m\b/.test(text) && p.range === "3M") {
+    words.push("3m");
+    p.range = undefined;
+    notes.length = 0;
+  }
+  // "last quarter" next to a financials request means the quarterly figures, not a 3-month chart.
+  let range = p.range;
+  let period = p.period;
+  if (fn === "FA" && p.quarter) {
+    range = undefined;
+    period = "Q";
+  }
+
   const args: string[] = [];
   if (fn === "GP") {
-    if (p.range) args.push(p.range);
+    if (range) args.push(range);
     if (p.type) args.push(p.type);
     if (p.log) args.push("LOG");
     args.push(...p.indicators);
   } else if (fn === "FA") {
-    if (p.period) args.push(p.period);
+    if (period) args.push(period);
     args.push(...fnArgs);
   }
 
-  const words = rest.split(" ").filter(Boolean);
-  while (words.length && (FILLER.has(words[0]) || /^\d+$/.test(words[0]))) words.shift();
-  while (words.length && (FILLER.has(words[words.length - 1]) || /^\d+$/.test(words[words.length - 1]))) words.pop();
   const make = (symbol: string | null): string => [symbol, fn, ...args].filter(Boolean).join(" ");
+  const why = (head: string, label?: string): string => [head + (label ? ` (${label})` : ""), ...notes].join(" · ");
 
-  if (!words.length) {
+  if (!words.length || words.every(isNum)) {
     // No company: only a phrase with an intent can still run ("news", "show me the chart" use the panel's security).
-    return fn ? { kind: "command", command: make(null), why: fn } : { kind: "none" };
+    return fn ? { kind: "command", command: make(null), why: why(fn) } : { kind: "none" };
   }
-  if (!ctx.companies) return { kind: "none" };
-  const r = findCompany(words, ctx.companies);
-  if (r.kind === "no") return { kind: "none" };
-  if (r.kind === "one") return { kind: "command", command: make(r.hit.symbol), why: `${r.hit.symbol} ${fn ?? ""}`.trim() };
-  return {
-    kind: "choices",
-    choices: r.hits.slice(0, MAX_CHOICES).map((h) => ({ command: make(h.symbol), label: `${h.symbol}  ${h.name}` })),
-  };
+
+  const found = findCompany(words, ctx.companies, upper);
+  if (found) {
+    // "apple microsoft nvidia 1 year": several companies and no "vs" -> one chart comparing them (GP takes up to 3 after VS).
+    if (found.len < words.length && (!fn || fn === "GP") && ctx.isFunction("GP")) {
+      const many = findCompanies(words, ctx.companies, upper);
+      if (many) {
+        const symbols = many.map((f) => (f.res.kind === "one" ? f.res.symbol : "")).slice(0, 4);
+        const [first, ...others] = symbols;
+        const cmd = [first, "GP", ...(fn ? args : []), "VS", ...others].join(" ");
+        const cut = many.length > 4 ? ["GP compares at most 4 names; the rest were left out"] : [];
+        return { kind: "command", command: cmd, why: [`${first} GP VS ${others.join(" ")}`, ...notes, ...cut].join(" · ") };
+      }
+    }
+    const r = found.res;
+    if (r.kind === "one") return { kind: "command", command: make(r.symbol), why: why(`${r.symbol} ${fn ?? ""}`.trim(), r.label) };
+    if (r.kind === "many") {
+      return { kind: "choices", choices: r.picks.slice(0, 5).map((h) => ({ command: make(h.symbol), label: `${h.symbol}  ${h.name}` })) };
+    }
+  }
+
+  // Nothing matched. A mistyped name ("mircosoft", "appl") gets "did you mean" only when a company's name is a letter or two away.
+  if (ctx.companies) {
+    for (const w of unresolvedWords(words)) {
+      const near = [
+        ...closestAliases(w).map((a) => ({ symbol: a.symbol, name: a.label })),
+        ...closestCompanies(w, ctx.companies, 3, { strict: true }).map((h) => ({ symbol: toYahoo(h.symbol), name: h.name })),
+      ].filter((h, i, all) => all.findIndex((x) => x.symbol === h.symbol) === i);
+      if (near.length) return { kind: "choices", choices: near.slice(0, 4).map((h) => ({ command: make(h.symbol), label: `${h.symbol}  ${h.name}` })) };
+    }
+    // Still nothing: let the async side try Yahoo's name search for what is left (a short phrase of real words).
+    const left = words.filter((w) => !isFiller(w, upper) && !isNum(w));
+    if (left.length && left.length <= 4 && left.join(" ").length >= 3) {
+      return { kind: "none", lookup: { phrase: left.join(" "), template: make("{S}") } };
+    }
+  }
+  return { kind: "none" };
 }

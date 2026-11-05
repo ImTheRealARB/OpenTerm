@@ -17,6 +17,9 @@
   --hdr: #d9d9d9;
   --menu: #a00000;
   --menu-fg: #ffffff;
+  /* Pro-terminal tokens, used by GUI mode (gui.css). They follow the theme, so a theme switch never leaves them unreadable. */
+  --field: var(--fg); --field-fg: var(--bg); /* input fields and dropdowns */
+  --go: var(--up); --go-fg: var(--bg); /* the GO key */
   --font-base: "JetBrains Mono", "IBM Plex Mono", Consolas, "Cascadia Mono", Menlo, monospace;
   /* --font-user is set by the SETTINGS font option (settings/font.ts); when unset the built-in stack applies. */
   --font: var(--font-user, var(--font-base));

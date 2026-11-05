@@ -220,7 +220,7 @@ export default function BtRuns({ panelId }: { panelId: number }) {
       {runs.length ? (
         <Grid ref={grid} columns={COLS} rows={rows} />
       ) : (
-        <PanelNote kind="empty" hint="Start one: BT AAPL SMA20>SMA50 1D 5Y (BT <SYMBOLS> <RULE> stores it here). In GUI mode type it in the sidebar search box.">
+        <PanelNote kind="empty" hint="Start one: BT AAPL SMA20>SMA50 1D 5Y (BT <SYMBOLS> <RULE> stores it here). In GUI mode type it in the command line at the top.">
           NO RUNS YET
         </PanelNote>
       )}

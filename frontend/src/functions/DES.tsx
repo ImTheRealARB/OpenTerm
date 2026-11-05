@@ -75,10 +75,20 @@ const TERM_OF: Record<string, string> = {
 
 /** GUI-only plain labels for the ratio rows (Terminal keeps the codes). */
 const GUI_LABEL: Record<string, string> = {
-  "P/E (TTM)": "P/E, last 12 months",
-  "P/E (FWD)": "P/E, next 12 months",
-  "EPS (TTM)": "EPS, last 12 months",
-  "EPS (FWD)": "EPS, next 12 months",
+  "MKT CAP": "Market cap",
+  "ENTERPRISE VALUE": "Enterprise value",
+  "P/E (TTM)": "P/E (last 12 months)",
+  "P/E (FWD)": "P/E (next 12 months)",
+  "EPS (TTM)": "EPS (last 12 months)",
+  "EPS (FWD)": "EPS (next 12 months)",
+  "DIV YIELD": "Dividend yield",
+  "BETA": "Beta",
+  "P/BOOK": "Price to book",
+  "SHARES OUT": "Shares outstanding",
+  "FLOAT": "Free float",
+  "AVG VOLUME": "Average volume",
+  "EMPLOYEES": "Employees",
+  "DAY RANGE": "Day range",
 };
 
 /**
@@ -211,7 +221,7 @@ export default function DES({ panelId, security }: FunctionProps) {
             {p.website && <span className="acc"> · {p.website}</span>}
           </div>
           <div style={{ margin: "4px 0" }}>
-            <span className="dim" {...termProps("52-WEEK RANGE", gui)}>52W RANGE </span>
+            <span className="dim" {...termProps("52-WEEK RANGE", gui)}>{gui ? "52-week range " : "52W RANGE "}</span>
             <Range52 lo={p.low_52w ?? q?.low_52w ?? null} hi={p.high_52w ?? q?.high_52w ?? null} px={q?.price ?? null} />
           </div>
           <div className="kv">
@@ -236,7 +246,7 @@ export default function DES({ panelId, security }: FunctionProps) {
       <div className="dim" style={{ marginTop: 6 }}>
         {prof.env && `PROFILE: ${prof.env.source?.toUpperCase()} · ${fmtAge(prof.env.age_s)} OLD${prof.env.stale ? " (STALE)" : ""}`}
         {prof.env?.fallback_from.length ? ` · ${fallbackText(prof.env.fallback_from, prof.env.fallback_notes)}` : ""}
-        {" · F5 REFRESH"}
+        {!gui && " · F5 REFRESH"}
       </div>
     </div>
   );

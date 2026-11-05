@@ -96,8 +96,23 @@ export const QUOTE_COLUMNS: Column<QRow>[] = [
   { title: "CCY", width: 4, text: (r) => r.q?.currency ?? "", color: () => "dim" },
 ];
 
-/** GUI mode: a wider NAME column, so a row's error text ("NO DATA FOR SYMBOL") is not cut off. Terminal keeps QUOTE_COLUMNS. */
-export const QUOTE_COLUMNS_GUI: Column<QRow>[] = QUOTE_COLUMNS.map((c) => (c.title === "NAME" ? { ...c, width: 24 } : c));
+/** GUI header words for the quote grids (Terminal keeps its short codes). Glossary tips still work: see ALIAS in gui/gridTips.ts. */
+const GUI_TITLE: Readonly<Record<string, string>> = {
+  SECURITY: "Ticker", SRC: "Source", NAME: "Name", LAST: "Price", CHG: "Change", "%CHG": "Change %",
+  VOLUME: "Volume", HIGH: "High", LOW: "Low", TIME: "Time", CCY: "Currency",
+};
+/** The plain-word header for a column title, or the title itself when there is no plain word for it. */
+export const guiTitle = (title: string): string => GUI_TITLE[title] ?? title;
+
+/** GUI mode: plain-word headers, a wider NAME column (so a row's error text "NO DATA FOR SYMBOL" is not cut off) and every column
+ *  at least as wide as its header. Terminal keeps QUOTE_COLUMNS. */
+export const QUOTE_COLUMNS_GUI: Column<QRow>[] = QUOTE_COLUMNS.map((c) => {
+  const title = guiTitle(c.title);
+  return { ...c, title, width: Math.max(c.title === "NAME" ? 24 : c.width, title.length + 1) };
+});
+
+/** GUI words for the sort order in the first line ("6 stocks, sorted as typed"). */
+export const SORT_PLAIN: Readonly<Record<string, string>> = { INPUT: "as typed", SYMBOL: "by ticker", "%CHG": "by change %", VOLUME: "by volume" };
 
 export const SORTS = ["INPUT", "SYMBOL", "%CHG", "VOLUME"] as const;
 export type Sort = (typeof SORTS)[number];
