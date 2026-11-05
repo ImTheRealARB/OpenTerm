@@ -134,6 +134,8 @@ The full list of functions is in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 Speed is the main feature, not an afterthought. Every number below is a **budget that the project's own benchmark
 (`node scripts/bench.mjs`) must meet** before a change is accepted. Latest recorded run (Windows PC, 2026-11-05: 37 of 37 pass):
 
+<!-- TODO(clean bench): wrapup run 1 (docs/PERFORMANCE.md, 2026-11-05) read: cold start 121.6 ms (cell says about 110), tick-to-pixel 44.2 ms (says about 37), 50k-bar pan 33.3 ms (says 16.7, the known lone miss), BT 10-year 276.8 ms (says about 0.2 s). Re-measure these four on a quiet machine, then edit the cells and delete this comment. Other cells already agree. -->
+
 | What you do | Result | Budget |
 |---|---|---|
 | Open the app to a usable command line | **about 110 ms** | 1500 ms |
