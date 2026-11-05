@@ -1,7 +1,7 @@
 import { Component, Profiler, useEffect, useReducer, type ReactNode } from "react";
 import { FUNCTIONS, loadModule, loadedModule } from "../functions/registry";
 import { panelPainted, recordPanelRender } from "../perf/metrics";
-import { PanelToolbar } from "../gui/PanelToolbar";
+import { LazyPanelToolbar } from "../gui/LazyPanelToolbar";
 import { settingsStore } from "../settings/runtime";
 import { PanelIdContext } from "../state/panelContext";
 import { useStore } from "../state/store";
@@ -132,7 +132,7 @@ export function Panel({ id }: { id: number }) {
         ))}
       </header>
       {menu && <WindowMenu id={id} />}
-      {gui && <PanelToolbar id={id} fn={view.fn} args={view.args} symbol={view.security?.symbol} />}
+      {gui && <LazyPanelToolbar id={id} fn={view.fn} args={view.args} symbol={view.security?.symbol} />}
       <div className="pb">
         <PanelBoundary resetKey={resetKey}>
           <Profiler id={String(id)} onRender={(_id, _phase, ms) => recordPanelRender(id, ms)}>
