@@ -11,8 +11,7 @@ import { FONT_NAME_RE } from "./font";
 import { FONT_PRESETS, cyclePreset, findPreset, type FontPreset } from "./fontPresets";
 import { THEMES, isTheme } from "./themes";
 
-/** `checkFont`: the caller must confirm this font is installed (needs a canvas, so it is not done in this pure file) before applying. */
-export type SettingsCommand = { ok: true; next: Settings; message: string; checkFont?: string } | { ok: false; error: string };
+export type SettingsCommand = { ok: true; next: Settings; message: string } | { ok: false; error: string };
 
 const SEPARATORS: Record<string, string> = { COMMA: ",", DOT: ".", SPACE: " ", APOS: "'", NONE: "" };
 const SEP_NAMES: Record<string, string> = { ",": "COMMA", ".": "DOT", " ": "SPACE", "'": "APOS", "": "NONE" };
@@ -43,14 +42,13 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       if (!name) return fail(usage);
       const pick = (p: FontPreset): SettingsCommand => ({
         ok: true, next: { ...cur, font: p.name }, message: `FONT ${p.label.toUpperCase()}`,
-        checkFont: p.system ? p.name : undefined, // a system preset can be missing on this computer
       });
       const up = name.toUpperCase();
       if (up === "NEXT" || up === "PREV") return pick(cyclePreset(cur.font, up === "NEXT" ? 1 : -1));
       const preset = findPreset(name);
       if (preset) return pick(preset);
       if (!FONT_NAME_RE.test(name)) return fail(`FONT NAME: LETTERS, DIGITS, SPACES AND . _ + - ONLY (60 MAX). ${usage}`);
-      return { ok: true, next: { ...cur, font: name }, message: `FONT ${name}`, checkFont: name }; // any other installed font
+      return { ok: true, next: { ...cur, font: name }, message: `FONT ${name}` }; // any other installed font
     }
     case "VIM":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS VIM ON|OFF");

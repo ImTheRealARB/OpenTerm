@@ -55,12 +55,6 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
     }
     const cmd = (parsed.fn === "THEME" ? settingsCommands.themeArgs : settingsCommands.settingsArgs)(args, getSettings());
     if (cmd && !cmd.ok) return fail(cmd.error);
-    if (cmd?.checkFont) {
-      // A system preset or custom name: applied at once, then checked; an unconfirmed font gets a loud warning, not a refusal
-      // (the check can be wrong, e.g. in browsers that guard against fingerprinting). See settings/fontSwitch.ts.
-      void import("../settings/fontSwitch").then(({ chooseFont }) => chooseFont(cmd.next.font));
-      return true;
-    }
     if (cmd) {
       updateSettings(() => cmd.next);
       info(cmd.message);
