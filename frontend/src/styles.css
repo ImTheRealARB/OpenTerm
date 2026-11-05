@@ -1,21 +1,22 @@
 /* Utilitarian by design: no shadows, radii, gradients, transitions or web fonts. */
 :root {
   --bg: #000000;
-  --fg: #fb8b1e;
-  --fg-dim: #b5732a;
-  --up: #1ee05a;
-  --down: #ff433d;
-  --sel: #1d4f91;
-  --accent: #4fc1ff;
-  --warn: #ffe100;
-  --err: #ff433d;
+  /* Measured from Bloomberg's own Terminal screen recordings and renders (2026-11-05): most common bright colour per hue family. */
+  --fg: #f69c2a;
+  --fg-dim: #b0801f;
+  --up: #36e42a;
+  --down: #de120c;
+  --sel: #1e66a8;
+  --accent: #0c84fc;
+  --warn: #fcfc54;
+  --err: #de120c;
   --line: #3a3a3a;
   /* Extra surface tokens (not theme-checked): data values, gray header bands, red menu band. */
-  --val: #ffffff;
-  --bar: #262626;
+  --val: #d8d8d8;
+  --bar: #242424;
   --bar-hi: #3d3d3d; /* focused window title band */
   --hdr: #d9d9d9;
-  --menu: #a00000;
+  --menu: #7e001e;
   --menu-fg: #ffffff;
   /* Pro-terminal tokens, used by GUI mode (gui.css). They follow the theme, so a theme switch never leaves them unreadable. */
   --field: var(--fg); --field-fg: var(--bg); /* input fields and dropdowns */

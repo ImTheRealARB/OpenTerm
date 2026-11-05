@@ -2,14 +2,14 @@
    Defaults live on :root; every theme block below overrides them so dark and light both read correctly. */
 :root {
   --grid-hdr-bg: #2a2a2a;   /* column-header band */
-  --grid-hdr-fg: #fb8b1e;   /* column-header labels (amber) */
+  --grid-hdr-fg: #f69c2a;   /* column-header labels (amber) */
   --grid-row-rule: #1c1c1c; /* thin rule under each row */
   --grid-col-rule: #1c1c1c; /* thin rule between columns */
-  --grid-sel: #1d4f91;      /* selection bar (blue) */
+  --grid-sel: #1e66a8;      /* selection bar (blue) */
   --chart-grid: #1a1a1a;    /* price-chart grid lines (dim gray) */
-  --chart-up: #1ee05a;      /* candle / bar up */
-  --chart-down: #ff433d;    /* candle / bar down */
-  --chart-line: #ffffff;    /* line / area series */
+  --chart-up: #36e42a;      /* candle / bar up */
+  --chart-down: #de120c;    /* candle / bar down */
+  --chart-line: #d8d8d8;    /* line / area series */
 }
 :root[data-theme="green"] {
   --grid-hdr-bg: #0a1f10; --grid-hdr-fg: #33ff66; --grid-row-rule: #0a2412; --grid-col-rule: #0a2412;
