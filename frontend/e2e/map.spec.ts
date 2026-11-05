@@ -32,7 +32,7 @@ const CHOKE = {
 };
 const ship = (mmsi: number, name: string, over = {}) => ({
   mmsi, name, imo: null, type: "CARGO", type_code: 70, sog: 8.5, cog: 355, heading: 356, nav: 0, nav_name: "UNDERWAY (ENGINE)",
-  dest: null, eta: null, length: null, draught: null, lat: 26.4, lon: 56.3, seen: t - 30, static_age_s: null, ...over,
+  dest: null, eta: null, length: null, draught: null, lat: 26.4, lon: 56.3, seen: t - 30, static_age_s: null, remembered: false, age_s: 30, ...over,
 });
 
 /** Mocks every layer route. `over` replaces single routes (a function answering the request). */
@@ -228,5 +228,35 @@ test("AIS: M opens the same area on the map", async ({ page }) => {
   await page.keyboard.press("m");
   await expect(row(page, "vessels")).toContainText("1 ·");
   await expect.poll(() => gauge(page, "map.centerLat")).toBeGreaterThan(26.3);
+  expect(errors).toEqual([]);
+});
+
+const FLT_PAYLOAD = {
+  area: "FRANKFURT", kind: "AREA", box: [49.8, 8.2, 50.3, 9.0],
+  rows: [
+    { icao24: "3c6444", callsign: "DLH400", country: "Germany", lat: 50.0, lon: 8.5, alt_m: 3048, geo_alt_m: 3100, alt_ft: 10000, speed_ms: 120, speed_kt: 233, heading: 270, vrate_ms: 0, vrate_fpm: 0, on_ground: false, squawk: "1000", spi: false, source: "ADS-B", seen: t - 5, age_s: 5 },
+    { icao24: "3c6445", callsign: "TEST2", country: "Germany", lat: 50.05, lon: 8.6, alt_m: 0, geo_alt_m: null, alt_ft: 0, speed_ms: 0, speed_kt: 0, heading: null, vrate_ms: null, vrate_fpm: null, on_ground: true, squawk: "", spi: false, source: "ADS-B", seen: t - 20, age_s: 20 },
+  ],
+  truncated: 0, received: 2, no_position: 0, source_time: t, credits_cost: 1, credits_remaining: 397, authenticated: false, access: "TEST ACCESS", note: "TEST FLIGHTS NOTE", country_note: "", fixture: false,
+};
+
+test("MAP: key 6 loads aircraft for the FLT city nearest the centre cross, shows heading in the detail list, and A loads again", async ({ page }) => {
+  const { errors } = await setup(page);
+  const asked: string[] = [];
+  await mockLayers(page, {
+    "**/api/world/flt?**": (r) => {
+      asked.push(new URL(r.request().url()).searchParams.get("q") ?? "");
+      return r.fulfill({ json: env(FLT_PAYLOAD, { source: "OPENSKY TEST" }) });
+    },
+  });
+  await run(page, "MAP");
+  await expect(row(page, "flights")).toContainText("OFF");
+  // Wait for the chokepoint list first: when it arrives MAP re-applies the typed command and switches layers it did not name OFF again.
+  await expect(row(page, "chokepoints")).toContainText("2 ·");
+  await page.keyboard.press("6");
+  await expect(row(page, "flights")).toContainText("2 ·");
+  expect(asked).toEqual(["FRANKFURT"]); // the world view's centre is nearest to Frankfurt of the seven FLT cities
+  await page.keyboard.press("a");
+  await expect.poll(() => asked.length).toBe(2); // A loads (fresh) again
   expect(errors).toEqual([]);
 });

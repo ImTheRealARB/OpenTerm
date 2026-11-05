@@ -26,7 +26,9 @@ export function toShapes(p: AisPayload): PointShape[] {
       kind: "pt",
       id: `${p.area}:${r.mmsi}`,
       label: r.name || `MMSI ${r.mmsi}`,
-      tone: trouble ? "warn" : moving ? "acc" : "dim",
+      // A ship remembered from an EARLIER listen is drawn dim: its position may be minutes old. Trouble stays loud even when remembered,
+      // because hiding a grounded ship is worse than showing a stale dot (its detail line says how old the position is).
+      tone: trouble ? "warn" : r.remembered ? "dim" : moving ? "acc" : "dim",
       r: 3,
       lat: r.lat,
       lon: r.lon,
@@ -42,6 +44,7 @@ export function toShapes(p: AisPayload): PointShape[] {
         ["DESTINATION", r.dest ? `${r.dest} (TYPED BY CREW${r.static_age_s != null ? `, ${fmtAge(r.static_age_s)} OLD` : ""})` : "NONE RECEIVED YET"],
         ["ETA UTC", r.eta ?? ""],
         ["POSITION", fmtLatLon(r.lat, r.lon)],
+        ["POSITION AGE", `${fmtAge(r.age_s)} (${r.remembered ? "MEMORY, FROM AN EARLIER LISTEN" : "HEARD THIS LISTEN"})`],
         ["AREA", p.area],
       ],
     };
@@ -54,11 +57,13 @@ export const vessels: MapLayer = {
   key: "1",
   source: "AISSTREAM (LIVE SHIP POSITIONS)",
   shapes: "DOTS",
-  colour: "AMBER-BLUE = UNDER WAY, DIM = STOPPED, YELLOW = NOT UNDER COMMAND OR AGROUND",
+  colour: "AMBER-BLUE = UNDER WAY, DIM = STOPPED OR REMEMBERED FROM AN EARLIER LISTEN, YELLOW = NOT UNDER COMMAND OR AGROUND",
   refresh: "LISTENS ~8 S PER AREA; F5 LISTENS AGAIN; V ADDS THE AREA NEAR THE CENTRE",
   refreshMs: 0,
   needsKey: "AISSTREAM_API_KEY",
   perArea: true,
+  loadKey: "V",
+  loadLabel: "SHIPS",
   async load({ api, fresh, area }): Promise<LayerData> {
     if (!area) throw new Error("VESSELS NEEDS AN AREA");
     const env = await api.ais(area, fresh);
@@ -68,6 +73,7 @@ export const vessels: MapLayer = {
     if (outside > 0) notes.push(`${area}: ${outside} POSITIONS OUTSIDE THE BOX LEFT OFF THE MAP (THE TEST REPLAY RETURNS THE SAME SHIPS FOR EVERY BOX)`);
     if (d.fixture) notes.unshift("DOC-SHAPED TEST DATA: INVENTED SHIPS IN THE DOCUMENTED MESSAGE SHAPE, NOT REAL TRAFFIC");
     if (d.rows.length === outside) notes.push(`${area}: NO POSITION REPORTS IN ${d.listened_s.toFixed(0)} S: A QUIET AREA OR A SLOW FEED, NOT PROOF THE AREA IS EMPTY`);
+    if (d.remembered > 0) notes.push(`${area}: ${d.remembered} SHIPS FROM MEMORY (UP TO ${Math.round(d.memory_s / 60)} MIN OLD), DRAWN DIM`);
     if (d.truncated > 0) notes.push(`${area}: ${d.truncated} OLDER SHIPS LEFT OUT (SHOWING THE NEWEST ${d.rows.length})`);
     return layerData(env, toShapes(d), notes, d.fixture);
   },

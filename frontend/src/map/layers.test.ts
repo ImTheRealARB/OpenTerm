@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { chokepoints, toShapes as chokeShapes } from "./layers/chokepoints";
 import { toShapes as eventShapes, toneOf } from "./layers/events";
+import { FLT_BOXES, nearestFltArea, toShapes as flightShapes } from "./layers/flights";
 import { DEFAULT_ON, LAYERS } from "./layers/index";
 import { radius as portRadius, toShapes as portShapes } from "./layers/ports";
 import { radius as quakeRadius, toShapes as quakeShapes, tone as quakeTone } from "./layers/quakes";
 import { toShapes as vesselShapes } from "./layers/vessels";
-import type { AisRow, GeoEvents, GeoPorts, GeoQuakes } from "../net/api";
+import { FLT_AREAS } from "../functions/fltArgs";
+import type { AisRow, FltPayload, FltRow, GeoEvents, GeoPorts, GeoQuakes } from "../net/api";
 
 const ship = (over: Partial<AisRow>): AisRow => ({
   mmsi: 1, name: "TEST", imo: null, type: "Tanker", type_code: 80, sog: 12, cog: 90, heading: null, nav: 0, nav_name: "UNDER WAY USING ENGINE",
-  dest: null, eta: null, length: null, draught: null, lat: 26.4, lon: 56.3, seen: 1_700_000_000, static_age_s: null, ...over,
+  dest: null, eta: null, length: null, draught: null, lat: 26.4, lon: 56.3, seen: 1_700_000_000, static_age_s: null, remembered: false, age_s: 12, ...over,
 });
 
 describe("layer registry", () => {
@@ -29,10 +31,18 @@ describe("layer registry", () => {
 });
 
 describe("vessels", () => {
-  const payload = (rows: AisRow[]) => ({ area: "HORMUZ", box: [25.8, 55.6, 27, 57] as [number, number, number, number], rows, truncated: 0, received: 5, capped: false, listened_s: 8, fixture: false, note: "" });
+  const payload = (rows: AisRow[]) => ({ area: "HORMUZ", box: [25.8, 55.6, 27, 57] as [number, number, number, number], rows, truncated: 0, received: 5, capped: false, listened_s: 8, fixture: false, note: "", remembered: rows.filter((r) => r.remembered).length, memory_s: 300 });
   it("colours by what the ship reports: moving, stopped, trouble", () => {
     const [moving, stopped, trouble, noSpeed] = vesselShapes(payload([ship({ mmsi: 1 }), ship({ mmsi: 2, sog: 0.1 }), ship({ mmsi: 3, nav_name: "AGROUND" }), ship({ mmsi: 4, sog: null })]));
     expect([moving.tone, stopped.tone, trouble.tone, noSpeed.tone]).toEqual(["acc", "dim", "warn", "dim"]);
+  });
+  it("draws a ship remembered from an earlier listen dim and says how old its position is; trouble stays loud", () => {
+    const [heard, remembered, rememberedTrouble] = vesselShapes(
+      payload([ship({ mmsi: 1 }), ship({ mmsi: 2, remembered: true, age_s: 240 }), ship({ mmsi: 3, remembered: true, nav_name: "AGROUND" })]),
+    );
+    expect([heard.tone, remembered.tone, rememberedTrouble.tone]).toEqual(["acc", "dim", "warn"]);
+    expect(remembered.detail.find(([k]) => k === "POSITION AGE")?.[1]).toContain("MEMORY");
+    expect(heard.detail.find(([k]) => k === "POSITION AGE")?.[1]).toContain("HEARD THIS LISTEN");
   });
   it("draws only ships inside the box that was asked for", () => {
     const shapes = vesselShapes(payload([ship({ mmsi: 1, lat: 26.4, lon: 56.3 }), ship({ mmsi: 2, lat: 30.2, lon: 32.5 })]));
@@ -105,5 +115,42 @@ describe("chokepoints", () => {
     expect(b.kind).toBe("box");
     expect(b.kind === "box" && b.box).toEqual([25.8, 55.6, 27, 57]);
     expect(b.detail.some(([, v]) => v.includes("PRESS V"))).toBe(true);
+  });
+});
+
+describe("flights", () => {
+  const plane = (over: Partial<FltRow>): FltRow => ({
+    icao24: "400a1b", callsign: "BAW123", country: "United Kingdom", lat: 51.47, lon: -0.45, alt_m: 3048, geo_alt_m: 3100, alt_ft: 10000, speed_ms: 120, speed_kt: 233,
+    heading: 270, vrate_ms: 0, vrate_fpm: 0, on_ground: false, squawk: "1234", spi: false, source: "ADS-B", seen: 1_700_000_000, age_s: 4, ...over,
+  });
+  const payload = (rows: FltRow[]): FltPayload => ({
+    area: "LONDON", kind: "AREA", box: FLT_BOXES.LONDON, rows, truncated: 0, received: rows.length, no_position: 0, source_time: 1_700_000_000, credits_cost: 1,
+    credits_remaining: 397, authenticated: false, access: "ANONYMOUS", note: "", country_note: "", fixture: false,
+  });
+  it("draws in-the-air aircraft in the moving colour and parked ones dim, with heading and the report time", () => {
+    const [air, ground] = flightShapes(payload([plane({}), plane({ icao24: "400a1c", on_ground: true, alt_ft: 0, heading: null })]), "LONDON");
+    expect([air.tone, ground.tone]).toEqual(["acc", "dim"]);
+    expect(air.time).toBe(1_700_000_000);
+    expect(air.detail.find(([k]) => k === "HEADING")?.[1]).toContain("270");
+    expect(ground.detail.find(([k]) => k === "HEADING")?.[1]).toBe("NOT REPORTED");
+    expect(ground.detail.find(([k]) => k === "ALTITUDE")?.[1]).toBe("ON THE GROUND");
+    expect(air.detail.find(([k]) => k === "REGISTERED IN")?.[1]).toBe("United Kingdom");
+  });
+  it("leaves out the time when the source gave none, and drops aircraft outside the box", () => {
+    const shapes = flightShapes(payload([plane({ seen: null }), plane({ icao24: "ffffff", lat: 40, lon: -70 })]), "LONDON");
+    expect(shapes).toHaveLength(1);
+    expect(shapes[0].time).toBeUndefined();
+    expect(shapes[0].id).toBe("LONDON:400a1b");
+  });
+  it("picks the preset city nearest the map centre, and knows a box for every FLT area", () => {
+    expect(nearestFltArea(51.5, 0)).toBe("LONDON");
+    expect(nearestFltArea(19, 73)).toBe("MUMBAI");
+    expect(nearestFltArea(1, 104)).toBe("SINGAPORE");
+    expect(Object.keys(FLT_BOXES)).toEqual([...FLT_AREAS]);
+  });
+  it("is the sixth layer, per-area, needs no key, and is not on by default", () => {
+    const l = LAYERS.find((x) => x.id === "flights")!;
+    expect([l.key, l.perArea, l.loadKey, l.needsKey]).toEqual(["6", true, "A", undefined]);
+    expect(DEFAULT_ON).not.toContain("flights");
   });
 });

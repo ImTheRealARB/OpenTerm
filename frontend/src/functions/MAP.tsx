@@ -6,9 +6,9 @@
  * The coastline is Natural Earth public-domain data shipped inside the app (`map/worldData.json`, THIRD_PARTY.md). Only the
  * layers' data comes from the network, and each layer says where from and how old it is.
  *
- * Keys: arrows pan, + / - zoom, 0 whole world, 1-5 switch layers, J / K + Space pick a layer, N / P step through the dots
+ * Keys: arrows pan, + / - zoom, 0 whole world, 1-6 switch layers, J / K + Space pick a layer, N / P step through the dots
  * nearest the centre cross, Enter picks the one nearest the cross, C centres on the pick, V lists ships in the chokepoint box
- * nearest the cross (or the picked box), F5 reloads, Esc drops the pick. Mouse: drag pans, wheel zooms, click picks.
+ * nearest the cross (or the picked box), A loads aircraft over the FLT city nearest the cross, F5 reloads, Esc drops the pick. Mouse: drag pans, wheel zooms, click picks.
  * `MAP VESSELS HORMUZ` opens centred on a chokepoint with its ships; `MAP PORTS QUAKES` shows just those layers.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -331,18 +331,24 @@ export default function MAP({ panelId, args }: FunctionProps) {
     return nearestChokepoint(rows, view.current.lat, view.current.lon)?.id ?? null;
   }, [latest]);
 
+  /** The area a per-area layer should load: its own fixed list's nearest entry (flights), else the chokepoint rule above (vessels). */
+  const areaFor = useCallback(
+    (layer: MapLayer): string | null => (layer.nearestArea ? layer.nearestArea(view.current.lat, view.current.lon) : areaForShips()),
+    [areaForShips],
+  );
+
   const setLayerOn = useCallback(
     (layer: MapLayer, on: boolean, area: string | null = null) => {
       setStates((s) => ({ ...s, [layer.id]: { ...s[layer.id], on } }));
       if (!on) return;
       const st = latest.current.states[layer.id];
       if (layer.perArea) {
-        const a = area ?? areaForShips();
-        if (!a) setMsg("VESSELS: THE CHOKEPOINT LIST HAS NOT LOADED YET, PRESS V IN A MOMENT");
+        const a = area ?? areaFor(layer);
+        if (!a) setMsg(`${layer.name}: THE CHOKEPOINT LIST HAS NOT LOADED YET, PRESS ${layer.loadKey ?? "THE LOAD KEY"} IN A MOMENT`);
         else if (!st.parts[a]) loadPart(layer, a, false);
       } else if (Object.keys(st.parts).length === 0) loadPart(layer, null, false);
     },
-    [latest, loadPart, areaForShips],
+    [latest, loadPart, areaFor],
   );
 
   // Chokepoint list: needed for MAP <AREA> and for V. Tiny and static, cached by the api layer.
@@ -371,7 +377,7 @@ export default function MAP({ panelId, args }: FunctionProps) {
     if (parsed.area) want.add("chokepoints"); // an area is a box: show the box, so the place is on the map
     // With only an area typed (MAP HORMUZ) keep the default layers; the area is where to look.
     for (const l of LAYERS) {
-      if (want.has(l.id)) setLayerOn(l, true, l.perArea ? parsed.area : null);
+      if (want.has(l.id)) setLayerOn(l, true, l.perArea && !l.nearestArea ? parsed.area : null); // a typed chokepoint is for vessels only
       else setStates((s) => (s[l.id].on ? { ...s, [l.id]: { ...s[l.id], on: false } } : s));
     }
     const row = parsed.area ? choke.find((c) => c.id === parsed.area) : null;
@@ -547,16 +553,17 @@ export default function MAP({ panelId, args }: FunctionProps) {
           setSel(null);
           return true;
         }
-        if (k === "v" || k === "V") {
-          const vessels = LAYERS.find((l) => l.perArea);
-          const a = areaForShips();
-          if (!vessels || !a) {
-            setMsg("V: THE CHOKEPOINT LIST HAS NOT LOADED YET");
+        // Each per-area layer has its own load key: V = ships (chokepoint box), A = aircraft (city box).
+        const areaLayer = LAYERS.find((l) => l.perArea && l.loadKey && l.loadKey.toLowerCase() === k.toLowerCase());
+        if (areaLayer) {
+          const a = areaFor(areaLayer);
+          if (!a) {
+            setMsg(`${areaLayer.loadKey}: THE CHOKEPOINT LIST HAS NOT LOADED YET`);
             return true;
           }
-          setStates((s) => ({ ...s, [vessels.id]: { ...s[vessels.id], on: true } }));
-          setMsg(`V: LISTENING FOR SHIPS IN ${a} (ABOUT 8 S)`);
-          loadPart(vessels, a, true);
+          setStates((s) => ({ ...s, [areaLayer.id]: { ...s[areaLayer.id], on: true } }));
+          setMsg(`${areaLayer.loadKey}: LOADING ${areaLayer.loadLabel ?? areaLayer.name} FOR ${a}`);
+          loadPart(areaLayer, a, true);
           return true;
         }
         if (k === "F5") {
@@ -570,7 +577,7 @@ export default function MAP({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, setView, setLayerOn, loadPart, areaForShips],
+    [panelId, latest, setView, setLayerOn, loadPart, areaFor],
   );
 
   // --- the side lists ------------------------------------------------------------------------------------------------------------------
@@ -579,7 +586,7 @@ export default function MAP({ panelId, args }: FunctionProps) {
     const st = states[l.id];
     if (!st.on) return { text: "OFF", tone: "dim" };
     const parts = Object.values(st.parts);
-    if (parts.length === 0) return { text: l.perArea ? "NO AREA YET: PRESS V" : "…", tone: "dim" };
+    if (parts.length === 0) return { text: l.perArea ? `NO AREA YET: PRESS ${l.loadKey ?? "ITS KEY"}` : "…", tone: "dim" };
     const err = parts.find((p) => p.status === "err");
     const data = parts.filter((p) => p.data);
     const count = data.reduce((n, p) => n + (p.data?.shapes.length ?? 0), 0);
@@ -607,7 +614,7 @@ export default function MAP({ panelId, args }: FunctionProps) {
     <div className="fn">
       <div className="line">
         <span className="acc">MAP</span> <span ref={centreText} />
-        <span className="dim"> · ARROWS PAN · +/- ZOOM · 1-5 LAYERS · N/P STEP · ENTER PICK · V SHIPS · F5 RELOAD</span>
+        <span className="dim"> · ARROWS PAN · +/- ZOOM · 1-6 LAYERS · N/P STEP · ENTER PICK · V SHIPS · A AIRCRAFT · F5 RELOAD</span>
         {msg && <span className="warn"> · {msg}</span>}
       </div>
       {parsed.error && <div className="err">{parsed.error}</div>}

@@ -8,9 +8,10 @@ const ALIASES: Record<string, string> = {
   CHOKEPOINTS: "chokepoints", CHOKE: "chokepoints", STRAITS: "chokepoints",
   QUAKES: "quakes", EQ: "quakes", EARTHQUAKES: "quakes",
   EVENTS: "events", EONET: "events", NATURAL: "events",
+  FLIGHTS: "flights", FLT: "flights", AIRCRAFT: "flights",
 };
 
-export const MAP_USAGE = `MAP [VESSELS|PORTS|CHOKEPOINTS|QUAKES|EVENTS] [${AIS_AREAS.join("|")}]`;
+export const MAP_USAGE = `MAP [VESSELS|PORTS|CHOKEPOINTS|QUAKES|EVENTS|FLIGHTS] [${AIS_AREAS.join("|")}]`;
 
 export interface MapArgs {
   /** Layer ids to switch ON (in the order typed), or null = the default set. */

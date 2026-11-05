@@ -35,6 +35,11 @@ export interface MapLayer {
   needsKey?: string;
   /** True when the layer loads one named area at a time (vessels), and which key loads another area. */
   perArea?: boolean;
+  /** For perArea layers: the panel key that loads another area ("V" for vessels, "A" for flights) and what it listens for in the status line. */
+  loadKey?: string;
+  loadLabel?: string;
+  /** For perArea layers whose areas are a fixed list (flights): the area nearest this map centre. Without it the panel uses the chokepoint boxes (vessels). */
+  nearestArea?(lat: number, lon: number): string | null;
   load(ctx: LoadCtx): Promise<LayerData>;
 }
 

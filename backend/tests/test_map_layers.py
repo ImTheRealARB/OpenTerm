@@ -127,3 +127,15 @@ def test_chokepoints_route(client):
 def test_the_sources_screen_lists_the_two_new_adapters(client):
     rows = {p["name"]: p for p in client.get("/api/sources").json()["providers"]}
     assert {"usgs", "eonet"} <= set(rows)
+
+
+def test_the_flights_layer_copy_of_the_flt_boxes_matches_the_backend_presets():
+    """The MAP flights layer picks the nearest FLT city from a TS copy of the boxes (`FLT_BOXES`); a drift would load the wrong city."""
+    import re
+
+    from openterm.world import flights
+
+    ts = (Path(__file__).parents[2] / "frontend" / "src" / "map" / "layers" / "flights.ts").read_text(encoding="utf-8")
+    block = re.search(r"FLT_BOXES: Record<string, Box> = \{(.*?)\};", ts, re.DOTALL).group(1)
+    listed = {name: tuple(float(x) for x in nums.split(",")) for name, nums in re.findall(r"(\w+): \[([^\]]+)\]", block)}
+    assert listed == flights.PRESETS

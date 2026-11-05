@@ -6,11 +6,12 @@
 import type { MapLayer } from "../layer";
 import { chokepoints } from "./chokepoints";
 import { events } from "./events";
+import { flights } from "./flights";
 import { ports } from "./ports";
 import { quakes } from "./quakes";
 import { vessels } from "./vessels";
 
-export const LAYERS: MapLayer[] = [vessels, ports, chokepoints, quakes, events];
+export const LAYERS: MapLayer[] = [vessels, ports, chokepoints, quakes, events, flights];
 
 /** Layers shown ON when MAP is opened with no layer words: everything keyless. Vessels waits for a key, a listen and an area. */
 export const DEFAULT_ON = ["chokepoints", "ports", "quakes", "events"];
