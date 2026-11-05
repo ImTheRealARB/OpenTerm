@@ -265,6 +265,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `TRADE` | Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY) |  | `<REPORTER> [<PARTNER>\|WORLD] [TOTAL\|<HS 2/4/6 digits>] [<N>Y]` | `TRADE` |
 | `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
 | `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
+| `AIS` | Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships) |  | `<SUEZ\|PANAMA\|HORMUZ\|MALACCA\|BABEL\|BOSPHORUS\|GIBRALTAR\|DOVER\|BOX S W N E>` | `AIS` |
 
 ## Global keyboard shortcuts
 

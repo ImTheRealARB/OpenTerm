@@ -139,6 +139,7 @@ const defs: FunctionDef[] = [
   { code: "USMAC", title: "US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys)", needsSecurity: false, argsSchema: "BLS [CPI|CORECPI|PPI|UNEMP|LFPR|PAYROLL|AHE|JOLTS|<series id>] | BEA [GDPG|PCEG|GDP|TRADEBAL|SERVBAL|CURACCT|INDUSTRY] | CENSUS [RETAIL [TOTAL|AUTO|FOOD|GEN|REST] | TRADE <COUNTRY> <HS2>]", phase: 20, load: () => import("./USMAC") },
   { code: "DBSRCH", title: "Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST", needsSecurity: false, argsSchema: "<WORDS> | DS:<PROVIDER>/<DATASET> [WORDS]", phase: 19, load: () => import("./DBSRCH") },
   { code: "PORTS", title: "Port activity: daily port calls and trade estimates (IMF PortWatch)", needsSecurity: false, argsSchema: "[PORT|COUNTRY]", phase: 20, load: () => import("./PORTS") },
+  { code: "AIS", title: "Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships)", needsSecurity: false, argsSchema: "<SUEZ|PANAMA|HORMUZ|MALACCA|BABEL|BOSPHORUS|GIBRALTAR|DOVER|BOX S W N E>", phase: 20, load: () => import("./AIS") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

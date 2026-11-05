@@ -222,6 +222,10 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   (`TRADE`, `USMAC`), `providers/{frankfurter,marketaux,companies_house,etherscan}.py` (`UKCO`, `ADDR`). Fixtures named `*_docshape_*` are invented numbers shaped from docs, not recordings; `classify()` in `keys.py`
   also reads bad-key errors that arrive inside an HTTP 200 body (BLS, BEA, Etherscan). See `docs/DATA_SOURCES.md` for what is left.
 
+- **AIS / AISstream (2026-11-05):** `providers/aisstream.py` (+ pure `aisstream_parse.py`, `world/ais.py`, route `/api/world/ais`, panel `AIS`) is a socket-per-request source: one listen of <= 15 s / 5,000 messages, behind an `asyncio.Lock`
+  (the account allows 3 connections), `websockets` imported inside functions. Key `AISSTREAM_API_KEY` is sent only in the first WebSocket message; its test is `aisstream.check_key` (run_test branch, not `TESTS`). Built from the docs with no key: fixture
+  `ais_stream_docshape.json` is invented ("DOC SHAPE" ships) and labelled DOC-SHAPED. Tests use a real local `websockets.serve` server; measure elapsed time INSIDE the `async with` (leaving it waits for the fake server's handler). The panel's preset list
+  (`aisArgs.ts` `AIS_AREAS`) must equal `world/ais.py` `PRESETS` (a pytest reads the TS file). Never `ws.close()` without `close_timeout` after stopping reading: a full client queue never sees the close frame and `close()` waits 10 s.
 - **PORTS / DBSRCH (2026-11-05):** PORTS reuses `PortWatchProvider` (capability `ports_activity`; never downloads the whole 1,600-port layer: server-side `outStatistics` for the top 25, or a name/country match for at most 20 ports; ArcGIS first-query latency is 12-33 s, timeout 45 s).
   DBSRCH = `world/dbsearch.py` + `DbnomicsProvider.search_datasets/search_series` (capability `worldstats_search`); OECD/Eurostat/BIS/IMF are reached via DBnomics, not separate adapters. The `DBN_REF` dataset part allows `@`.
 

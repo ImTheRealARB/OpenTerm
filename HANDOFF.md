@@ -5,6 +5,21 @@ _Last updated: 2026-11-05 (local gate + bench of NEXT_FEATURES: ALL PASS, bench 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
+## AISstream / `AIS` (2026-11-05, branch `claude/aisstream-be3837`, committed locally, NOT pushed)
+Built: `AIS <SUEZ|PANAMA|HORMUZ|MALACCA|BABEL|BOSPHORUS|GIBRALTAR|DOVER>` or `AIS BOX <S> <W> <N> <E>`: ships that reported a position in the box during one ~8 s listen (newest report per ship; name, MMSI, type, knots,
+course, status, destination, ETA, position, age). Files: `providers/aisstream.py` (socket, lock = one listen at a time, caps 15 s / 5,000 messages / 1 MiB frames, short close timeout), `providers/aisstream_parse.py` (pure),
+`world/ais.py` (presets, rows), route `GET /api/world/ais?q=`, key `aisstream` / `AISSTREAM_API_KEY` in `keys.py` (key test = `aisstream.check_key`, a WebSocket subscribe to a 0.1 degree box in open Atlantic, not an HTTP call),
+`frontend/src/functions/AIS.tsx` + `aisArgs.ts`, `AisPayload` in `net/api.ts`, tests `backend/tests/test_aisstream.py` (44, includes a REAL local WebSocket server so the connect/subscribe/read/close code runs), `AIS.test.ts`,
+`e2e/ais.spec.ts` (4 mocked tests). Fixture `tests/fixtures/ais_stream_docshape.json` = invented ships (names "DOC SHAPE ..."), labelled DOC-SHAPED in `source` and as a warn line in the panel.
+- **No key existed, so NOTHING here has run against aisstream.io.** Guesses to check on the first real key (paste it in APIKEYS, TEST, open `AIS HORMUZ`): (1) how a bad key is answered (code assumes a JSON `{"error": "...Key..."}` message
+  then close; a bare close shows ERROR "CLOSED THE CONNECTION", not INVALID); (2) `MetaData.time_utc` format (parsed leniently, falls back to receive time); (3) class B and ShipStaticData field names are from the docs' model list, not seen live;
+  (4) how many ships send ShipStaticData within 8 s (destinations stay blank until a static record arrives; the server remembers the last one per MMSI for 6 h, in memory, up to 4,000 ships); (5) my chokepoint boxes were drawn by eye;
+  (6) "BETA, no SLA" and "no uptime promise" are the docs' words: expect gaps.
+- Honest labelling: panel says positions are AS REPORTED BY SHIPS, can be delayed, switched off or spoofed, coverage partial; an empty listen says "A QUIET AREA OR A SLOW FEED, DOES NOT SHOW THE AREA IS EMPTY"; destination/ETA are marked crew-typed with their age.
+- Not done: e2e NOT RUN (port 8000 was held by another session's backend; unmocked requests would hit it); no MMSI filter (`FiltersShipMMSI`, up to 200) or tracking of one vessel; no auto refresh (F5 relistens); no streaming into the hub
+  (deliberate: the docs forbid browser connections and cap the account at 3 connections); "uncompressed connections get bandwidth limits from September 2026": the client asks for permessage-deflate (websockets default), `CompressionEnabled` is not checked.
+- Gates (2026-11-05, this branch): ruff clean, tsc clean, vitest 1106 pass, pytest 1984 pass. e2e and bench NOT run.
+
 ## Kite market data (2026-11-05, same branch, NOT committed)
 Kite is a `quotes` + `history` provider ranked #1 for Indian symbols; expired login falls back to Yahoo and shows `KITE LOGIN EXPIRED` (GP, via `fallback_notes` and `functions/fallbackText.ts`). Measured live: quote 52 ms vs Yahoo 341 ms, 5 min 1M history 125 vs 216 ms, minute depth back to 2015. Real fixtures recorded (quote, 5 min bars). Numbers and caveats in `docs/DATA_SOURCES.md`. Not done: WebSocket ticker re-check, live tests of F&O/MCX/CDS, `fallbackText` is wired into GP only (DES/HIST/Q still show the generic text). The backend on port 8000 was NOT restarted (kill was denied): it still runs the old code; restart it to pick this up.
 

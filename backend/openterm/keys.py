@@ -87,6 +87,8 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://www.marketaux.com/register"),
     KeySpec("etherscan", ("ETHERSCAN_KEY",), 20, "Etherscan (free): EVM address balance, recent transactions and gas price (ADDR). 3 calls a second",
             "https://etherscan.io/apidashboard"),
+    KeySpec("aisstream", ("AISSTREAM_API_KEY",), 20, "AISstream (free, beta): live ship positions in a box (AIS). WebSocket, 3 connections per account",
+            "https://aisstream.io/authenticate"),
     # Trade + US macro family (free, read-only). Panels TRADE (Comtrade) and USMAC (BLS, BEA, Census).
     KeySpec("comtrade", ("UN_COMTRADE_KEY",), 19, "UN Comtrade (free): trade flows between two countries by HS product (TRADE)",
             "https://comtradedeveloper.un.org/"),
@@ -478,6 +480,14 @@ async def run_test(store: KeyStore, name: str, http: httpx.AsyncClient, fixtures
     elif name == "smtp":
         state, detail = ("ERROR", "SMTP IS NOT TESTED IN FIXTURE MODE") if fixtures else \
             await asyncio.to_thread(_smtp_check, values)
+    elif name == "aisstream":  # a WebSocket, not an HTTP call: subscribe to a tiny box and wait for the confirmation (see aisstream.check_key)
+        if fixtures:
+            state, detail = "ERROR", "AISSTREAM IS NOT TESTED IN FIXTURE MODE (NO NETWORK)"
+        else:
+            # imported here so `websockets` stays off the startup path
+            from .providers.aisstream import check_key
+
+            state, detail = await check_key(values)
     else:
         method, url, params, headers, body = TESTS[name](values)
         try:

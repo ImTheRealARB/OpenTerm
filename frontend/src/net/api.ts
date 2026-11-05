@@ -1297,6 +1297,18 @@ export interface AddrPayload {
   balance: { wei: string; balance: number } | null; txs: AddrTx[] | null; gas: AddrGas | null;
 }
 
+/** AIS (`/api/world/ais`): ship positions in a chokepoint box from AISstream (free key AISSTREAM_API_KEY). Positions are as reported by ships. */
+export interface AisRow {
+  mmsi: number; name: string; imo: number | null; type: string; type_code: number | null;
+  sog: number | null; cog: number | null; heading: number | null; nav: number | null; nav_name: string;
+  dest: string | null; eta: string | null; length: number | null; draught: number | null;
+  lat: number; lon: number; seen: number; static_age_s: number | null;
+}
+export interface AisPayload {
+  area: string; box: [number, number, number, number]; rows: AisRow[]; truncated: number;
+  received: number; capped: boolean; listened_s: number; fixture: boolean; note: string;
+}
+
 export const worldApi = {
   trade: (reporter: string, partner: string, hs: string, years: number, fresh = false) =>
     request<Envelope<TradePayload>>(`/api/world/trade?${qs({ reporter, partner, hs, years: String(years) })}`, fresh ? 0 : 600_000),
@@ -1323,6 +1335,8 @@ export const worldApi = {
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ukco: (q: string, fresh = false) => request<Envelope<UkcoPayload>>(`/api/world/ukco?${qs({ q })}`, fresh ? 0 : 300_000),
   addr: (q: string, fresh = false) => request<Envelope<AddrPayload>>(`/api/world/addr?${qs({ q })}`, fresh ? 0 : 15_000),
+  /** One listen takes about 8 s on the server (cached 20 s there); the client cache is short so F5 really listens again. */
+  ais: (q: string, fresh = false) => request<Envelope<AisPayload>>(`/api/world/ais?${qs({ q })}`, fresh ? 0 : 15_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
   events: (symbol: string, fresh = false) =>
