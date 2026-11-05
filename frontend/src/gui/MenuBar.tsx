@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FUNCTION_LIST } from "../functions/registry";
 import { CATEGORIES, groupByCategory, type Category } from "../functions/categories";
 import { FONT_PRESETS, findPreset } from "../settings/fontPresets";
-import { chooseFont } from "../settings/fontSwitch";
-import { setMode, settingsStore } from "../settings/runtime";
+import { setMode, settingsStore, updateSettings } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { chromeKeyDown, focusCommandLine, moveFocus } from "./chrome";
 import { runCommand } from "./run";
@@ -143,7 +142,7 @@ export function MenuBar() {
             <div className="gm-drop" role="menu" aria-label={c}>
               {entries(c).map((en) =>
                 en.kind === "font" ? (
-                  // One-click font switch: bundled presets load on first use; any other installed font via SETTINGS FONT <name>.
+                  // One-click font switch (silent): bundled presets load on first use; any other installed font via SETTINGS FONT <name>.
                   <div key="font" className="gm-fontrow" role="none">
                     <span className="gm-code">FONT</span>
                     <select
@@ -155,7 +154,7 @@ export function MenuBar() {
                       onChange={(e) => {
                         const v = e.target.value;
                         setOpen(null);
-                        chooseFont(v);
+                        updateSettings((s) => ({ ...s, font: v }));
                         focusCommandLine();
                       }}
                     >

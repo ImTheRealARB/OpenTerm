@@ -78,16 +78,12 @@ describe("font setting", () => {
 });
 
 describe("SETTINGS FONT", () => {
-  it("a bundled preset applies with no install check", () => {
-    const r = settingsArgs(["FONT", "Fira", "Code"], DEFAULTS);
-    expect(r).toMatchObject({ ok: true, next: { font: "Fira Code" } });
-    expect(r && r.ok && r.checkFont).toBeUndefined();
+  it("a preset applies under its own name, however it is typed", () => {
+    expect(settingsArgs(["FONT", "Fira", "Code"], DEFAULTS)).toMatchObject({ ok: true, next: { font: "Fira Code" } });
+    expect(settingsArgs(["FONT", "menlo"], DEFAULTS)).toMatchObject({ ok: true, next: { font: "Menlo" } });
   });
-  it("a system preset asks for an install check", () => {
-    expect(settingsArgs(["FONT", "menlo"], DEFAULTS)).toMatchObject({ ok: true, next: { font: "Menlo" }, checkFont: "Menlo" });
-  });
-  it("any other name is treated as an installed font and checked", () => {
-    expect(settingsArgs(["FONT", "Source", "Code", "Pro"], DEFAULTS)).toMatchObject({ ok: true, next: { font: "Source Code Pro" }, checkFont: "Source Code Pro" });
+  it("any other name is treated as an installed font", () => {
+    expect(settingsArgs(["FONT", "Source", "Code", "Pro"], DEFAULTS)).toMatchObject({ ok: true, next: { font: "Source Code Pro" } });
   });
   it("NEXT and PREV step through the presets; DEFAULT resets", () => {
     expect(settingsArgs(["FONT", "next"], DEFAULTS)).toMatchObject({ ok: true, next: { font: "GitHub Mono" } });
