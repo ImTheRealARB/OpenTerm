@@ -137,6 +137,42 @@ export const INTERVAL_CHOICES: readonly (readonly [string, string])[] = [
   ["Auto", ""], ["5 min", "5m"], ["15 min", "15m"], ["30 min", "30m"], ["1 hour", "60m"], ["Daily", "1d"], ["Weekly", "1wk"], ["Monthly", "1mo"],
 ];
 
+/**
+ * How far back Yahoo serves each minute candle length (days). A COPY of `_MAX_DAYS` in backend/openterm/ranges.py:
+ * the backend stays the authority (it rejects a clash), this copy only lets the GUI warn before the request.
+ * Daily, weekly and monthly candles have no limit, so they are absent.
+ */
+export const INTERVAL_MAX_DAYS: Readonly<Record<string, number>> = { "1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60, "60m": 730, "90m": 60 };
+/** Days each range covers (copy of `_RANGE_DAYS` in ranges.py; ranges not listed have no limit check). */
+const RANGE_DAYS: Readonly<Record<string, number>> = { "1D": 1, "5D": 5, "1M": 31, "3M": 92, "6M": 183, YTD: 366, "1Y": 366, "2Y": 731, "5Y": 1827, "10Y": 3653, MAX: 100_000 };
+const MINUTE_WORDS: Readonly<Record<string, string>> = { "1MIN": "1m", "2MIN": "2m", "5MIN": "5m", "15MIN": "15m", "30MIN": "30m", "60MIN": "60m", "1H": "60m", "90MIN": "90m" };
+
+/** The Yahoo token for a candle length typed either way ("15min" and "15m" both give "15m"). */
+export function intervalToken(raw: string): string {
+  return YAHOO_INTERVALS.has(raw) ? raw : (MINUTE_WORDS[raw.toUpperCase()] ?? raw.toLowerCase());
+}
+
+/** Does this candle length reach back far enough for this range? (Daily and longer always do.) */
+export function intervalFits(range: string, interval: string): boolean {
+  const limit = INTERVAL_MAX_DAYS[intervalToken(interval)];
+  const days = RANGE_DAYS[range.toUpperCase()];
+  return limit === undefined || days === undefined || days <= limit;
+}
+
+/** The longest range this candle length can show, or null when it has no limit. 5 min -> "1M". */
+export function longestRangeFor(interval: string): string | null {
+  const limit = INTERVAL_MAX_DAYS[intervalToken(interval)];
+  if (limit === undefined) return null;
+  const fitting = Object.entries(RANGE_DAYS).filter(([, d]) => d <= limit);
+  return fitting.reduce((best, cur) => (cur[1] >= best[1] ? cur : best))[0];
+}
+
+/** "up to 60 days" for a limited candle length, or "" when it has no limit. */
+export function intervalLimitText(interval: string): string {
+  const limit = INTERVAL_MAX_DAYS[intervalToken(interval)];
+  return limit === undefined ? "" : `up to ${limit} days`;
+}
+
 /** The args of a GP view with its candle length replaced ("" = back to Auto). Everything else (range, indicators...) is kept. */
 export function withInterval(args: string[], interval: string, defaults: { range: string; type: ChartType }): string[] {
   return serializeGp({ ...parseGpArgs(args, defaults), interval: interval || undefined }, defaults.type);
