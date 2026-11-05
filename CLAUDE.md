@@ -232,6 +232,15 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
 - **PORTS / DBSRCH (2026-11-05):** PORTS reuses `PortWatchProvider` (capability `ports_activity`; never downloads the whole 1,600-port layer: server-side `outStatistics` for the top 25, or a name/country match for at most 20 ports; ArcGIS first-query latency is 12-33 s, timeout 45 s).
   DBSRCH = `world/dbsearch.py` + `DbnomicsProvider.search_datasets/search_series` (capability `worldstats_search`); OECD/Eurostat/BIS/IMF are reached via DBnomics, not separate adapters. The `DBN_REF` dataset part allows `@`.
 
+- **MAP (2026-11-05, branch `claude/map-function-5ea8a7`):** a world map panel; the map is drawn by us on a `<canvas>` (no tiles, no web fonts, no map library): `frontend/src/map/` holds the pure code (`projection.ts` Web Mercator,
+  `worldMap.ts` arc decode + culling, `hit.ts` picking, `mapArgs.ts`, `types.ts`, `layer.ts`), `worldData.json` (Natural Earth 1:50m reduced by `scripts/build_world_map.mjs`; THIRD_PARTY.md) and `layers/` (one file per layer + `index.ts`).
+  **Adding a layer = one file in `map/layers/` exporting a `MapLayer` + one line in `layers/index.ts`** (list order = the number keys, drawn bottom-up so layer 1 is on top). Layer files import only TYPES from `net/api` and get `worldApi` through
+  `LoadCtx`, so their pure `toShapes` is vitest-able. Panel = `functions/MAP.tsx` (state per layer, `parts` per area for vessels, gauges `map.*`, `.sr` mirror `data-testid=map-sr`, layer rows `map-layer-<id>`).
+  Backend: `/api/world/geo/{quakes,events,ports,chokepoints}` (`world_routes.py`, `world/geosvc.py`, pure `world/geo.py`), providers `usgs` + `eonet` (`providers/geo.py`), `PortWatchProvider.ports_geo`; vessels reuse `/api/world/ais`.
+  Gotchas: a global `.hd` class exists in `styles.css` (flex, huge), so MAP's side headers are `.mhd`; shipped coast arcs are cut at the date line in `decodeArcs` (otherwise a line crosses the map); the AIS test replay returns the
+  same (Suez) ships for every box, so the vessels layer drops ships outside the asked box and says so; EONET wildfires (7,000+ points, 5 MB) are excluded on purpose; OpenSky refused the connection from here. M in AIS / PORTS / SHIP opens MAP (`map/jump.ts`).
+  To run e2e without freeing port 8000: start your own backend on another port serving `frontend/dist` (`OPENTERM_STATIC_DIR`, `OPENTERM_FIXTURES=1`) and run `PW_PORT=<port> npx playwright test e2e/map.spec.ts` (Playwright reuses a server that already answers).
+
 ## Public repo (2026-11-02)
 - The repo is public. `scripts/setup(.ps1)` is the LIGHT install (`uv sync --no-dev`, `npm ci`, about 330 MB); `-Dev`/`--dev` adds test tools and Chromium (about 1.5 GB). `start` scripts use `uv run --no-dev`.
 - README is written for beginners (winget/brew install steps, first-five-minutes table, troubleshooting) and leads with the speed table: when `docs/PERFORMANCE.md` numbers change, update the README table.

@@ -18,7 +18,7 @@ export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
   STBL: "Markets", DEFI: "Markets", UNLK: "Markets", CMDTY: "Markets", NRG: "Markets", WETR: "Markets", SHIP: "Markets", PORTS: "Markets",
   RATES: "Markets", YAS: "Markets", SWPM: "Markets", CDSW: "Markets", CT: "Markets", WIRP: "Markets", COT: "Markets",
   ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", DBSRCH: "Markets", WECO: "Markets",
-  CENB: "Markets", PRED: "Markets", TRADE: "Markets", USMAC: "Markets", ADDR: "Markets", AIS: "Markets",
+  CENB: "Markets", PRED: "Markets", TRADE: "Markets", USMAC: "Markets", ADDR: "Markets", AIS: "Markets", MAP: "Markets",
   // Charts: anything that is mainly a picture of a time series or a map
   GP: "Charts", IND: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",
   // News: headlines and company events

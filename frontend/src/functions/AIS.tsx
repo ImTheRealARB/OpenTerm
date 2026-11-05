@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { mapArgsFor, openMap } from "../map/jump";
 import { worldApi, type AisRow } from "../net/api";
 import { replaceView } from "../state/workspace";
 import { fmtAge, fmtDegrees, fmtEta, fmtKnots, fmtLatLon, aisQuery, quietText, stepArea } from "./aisArgs";
@@ -78,6 +79,13 @@ export default function AIS({ panelId, args }: FunctionProps) {
           return true;
         }
         const k = e.key.toLowerCase();
+        if (k === "m") {
+          // M = show this area on the map (a custom BOX has no map area, so M does nothing there)
+          const words = mapArgsFor("AIS", latest.current.query);
+          if (!words) return false;
+          openMap(panelId, words);
+          return true;
+        }
         if (k === "n" || k === "p") {
           // A new area is a new view argument, so the layout saves it and the load effect refetches.
           const next = stepArea(latest.current.query, k === "n" ? 1 : -1);
@@ -96,7 +104,7 @@ export default function AIS({ panelId, args }: FunctionProps) {
         <span className="acc">AIS</span> SHIPS REPORTING POSITION · {d ? d.area : query}
         {d && <span className="dim"> · {rows.length} SHIPS IN {d.listened_s.toFixed(0)} S</span>}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · N/P AREA · E CSV · F5 LISTEN AGAIN</span>
+        <span className="dim"> · N/P AREA · M MAP · E CSV · F5 LISTEN AGAIN</span>
       </div>
       {d?.fixture && <div className="warn">DOC-SHAPED TEST DATA: INVENTED SHIPS IN THE DOCUMENTED MESSAGE SHAPE, NOT REAL TRAFFIC AND NOT A RECORDING</div>}
       {d && <div className="dim">{d.note}</div>}

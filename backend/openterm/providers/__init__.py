@@ -232,3 +232,8 @@ ADAPTERS.update({"frankfurter": FrankfurterProvider, "companies_house": Companie
 from .aisstream import AisStreamProvider
 
 ADAPTERS["aisstream"] = AisStreamProvider
+
+# --- MAP: keyless geo feeds (USGS earthquakes, NASA EONET events) ---
+from .geo import EonetProvider, UsgsProvider
+
+ADAPTERS.update({"usgs": UsgsProvider, "eonet": EonetProvider})

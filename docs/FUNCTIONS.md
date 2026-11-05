@@ -266,6 +266,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
 | `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
 | `AIS` | Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships) |  | `<SUEZ\|PANAMA\|HORMUZ\|MALACCA\|BABEL\|BOSPHORUS\|GIBRALTAR\|DOVER\|BOX S W N E>` | `AIS` |
+| `MAP` | World map: ships, ports, chokepoints, earthquakes and natural events as layers |  | `[VESSELS\|PORTS\|CHOKEPOINTS\|QUAKES\|EVENTS] [AREA]` | `MAP` |
 
 ## Global keyboard shortcuts
 

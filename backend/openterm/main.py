@@ -50,6 +50,7 @@ DEFAULT_ORDER["worldstats_search"] = ["dbnomics"]  # DBSRCH: find DBnomics datas
 DEFAULT_ORDER |= {"weather_geocode": ["openmeteo"], "weather_forecast": ["openmeteo"], "nws_alerts": ["nws"]}
 DEFAULT_ORDER["shipping_chokepoints"] = ["portwatch"]
 DEFAULT_ORDER["ports_activity"] = ["portwatch"]  # PORTS: same keyless IMF PortWatch provider, daily port calls
+DEFAULT_ORDER |= {"geo_quakes": ["usgs"], "geo_events": ["eonet"]}  # MAP layers (keyless)
 # Step 9: the NSE archive is the LAST history source (Yahoo answers first; it only serves `.NS` at `1d`); AMFI NAV for the SECF fund rows
 DEFAULT_ORDER["history"] = [*DEFAULT_ORDER["history"], "nse_archive"]
 DEFAULT_ORDER["mfnav"] = ["amfi"]

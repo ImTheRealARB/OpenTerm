@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { mapArgsFor, openMap } from "../map/jump";
 import { ApiError, worldApi, type Envelope, type PortRow, type PortsPayload } from "../net/api";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { fmtTons, headline, portLabel, queryArg } from "./portsFormat";
@@ -89,6 +90,10 @@ export default function PORTS({ panelId, args }: FunctionProps) {
           void load(true);
           return true;
         }
+        if (e.key === "m") {
+          openMap(panelId, mapArgsFor("PORTS")!); // M = the busiest ports on the map
+          return true;
+        }
         return false;
       }),
     [panelId, latest, load],
@@ -100,7 +105,7 @@ export default function PORTS({ panelId, args }: FunctionProps) {
       <div className="line">
         <span className="acc">PORTS</span> {d ? headline(d.mode, d.query, rows.length) : "PORT ACTIVITY"}
         <EnvStatus env={env} loading={loading} />
-        <span className="dim"> · E CSV · F5 REFRESH{d?.mode === "top" ? " · PORTS <PORT OR COUNTRY> TO SEARCH" : ""}</span>
+        <span className="dim"> · M MAP · E CSV · F5 REFRESH{d?.mode === "top" ? " · PORTS <PORT OR COUNTRY> TO SEARCH" : ""}</span>
       </div>
       {d && <div className="dim">NEWEST DAY ON RECORD {d.newest}. {d.note}</div>}
       <ErrorLine error={error} hasData={!!d} usage="PORTS [PORT OR COUNTRY]" />
