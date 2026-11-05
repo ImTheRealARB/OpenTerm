@@ -8,6 +8,21 @@ FUTURES_EXCHANGES = ("NFO", "MCX")
 #: the spot instrument an index option or future is quoted against (name in the dump -> Kite key)
 UNDERLYING_KEYS = {"NIFTY": "NSE:NIFTY 50", "BANKNIFTY": "NSE:NIFTY BANK", "FINNIFTY": "NSE:NIFTY FIN SERVICE",
                    "MIDCPNIFTY": "NSE:NIFTY MID SELECT"}
+#: BFO (BSE derivatives) names whose spot is a BSE index; anything else on BFO is quoted as `BSE:<NAME>`
+BSE_UNDERLYING_KEYS = {"SENSEX": "BSE:SENSEX", "BANKEX": "BSE:BANKEX", "SENSEX50": "BSE:SENSEX50"}
+#: exchanges whose chains and futures tables (OMON / CT) we serve. The root is the dump's `name` column (`SENSEX`, `USDINR`, `CRUDEOIL`)
+CHAIN_EXCHANGES = ("NFO", "BFO", "MCX", "CDS")
+#: exchanges with no spot instrument to quote against: the option's underlying is the nearest future (MCX commodities, CDS currencies)
+FUTURE_SPOT_EXCHANGES = ("MCX", "CDS")
+
+
+def spot_key(exchange: str, name: str) -> str | None:
+    """The Kite key of the spot an option on `name` is priced against, or None when the nearest future stands in (MCX, CDS)."""
+    if exchange == "NFO":
+        return UNDERLYING_KEYS.get(name, f"NSE:{name}")
+    if exchange == "BFO":
+        return BSE_UNDERLYING_KEYS.get(name, f"BSE:{name}")
+    return None
 
 
 def to_kite(symbol: str) -> str | None:
@@ -40,9 +55,10 @@ def to_yahoo(key: str) -> str | None:
 
 
 def derivative_root(symbol: str) -> tuple[str, str] | None:
-    """`NIFTY.NFO` -> ("NFO", "NIFTY"); None for anything that is not an NFO / MCX symbol."""
+    """`NIFTY.NFO` -> ("NFO", "NIFTY"), `SENSEX.BFO` -> ("BFO", "SENSEX"), `USDINR.CDS` -> ("CDS", "USDINR"); None for anything else."""
     s = symbol.strip().upper()
-    for suffix in (".NFO", ".MCX"):
+    for exchange in CHAIN_EXCHANGES:
+        suffix = f".{exchange}"
         if s.endswith(suffix) and len(s) > len(suffix):
-            return suffix[1:], s[: -len(suffix)]
+            return exchange, s[: -len(suffix)]
     return None

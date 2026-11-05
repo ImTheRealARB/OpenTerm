@@ -54,7 +54,9 @@ test("AIS: without a key the panel says KEY REQUIRED and Enter opens APIKEYS; no
   await run(page, "AIS HORMUZ");
   const p = panel(page);
   await expect(p).toContainText("KEY REQUIRED: set AISSTREAM_API_KEY in APIKEYS");
-  await expect(p.locator(".sr")).toHaveCount(0);
+  // the empty grid still mounts its (empty) live region, so "nothing is faked" is asserted on ship content: no detail line, no ship rows
+  await expect(p.getByTestId("ais-detail")).toHaveCount(0);
+  await expect(p.locator(".sr")).toHaveText("");
   expect(errors).toEqual([]);
 });
 

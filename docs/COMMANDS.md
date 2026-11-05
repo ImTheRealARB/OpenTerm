@@ -175,6 +175,15 @@ While a document is loaded, questions use ONLY its text (chunks C1, C2... cited)
 Kite (read-only, needs your own Kite Connect app): paste `KITE_API_KEY` and `KITE_API_SECRET` in `APIKEYS`, register `http://127.0.0.1:8000/api/kite/callback` as the redirect URL, then
 `KITE LOGIN` (once per trading day), `KITE STATUS`, `KITE LOGOUT`. After login `RELIANCE.NS`, `^NSEI` and NFO/MCX bars come from Kite, and `OMON NIFTY.NFO R=6.5 Q=1.2` builds the chain with OI
 (IV and Greeks only when `R=` / `Q=` are typed, labelled computed here). There is no order surface.
+Option chains and futures tables work on every Kite derivatives exchange: `OMON NIFTY.NFO`, `OMON SENSEX.BFO` (BSE index options), `OMON CRUDEOIL.MCX`, `OMON USDINR.CDS`; `CT NIFTY.NFO`, `CT SENSEX.BFO`, `CT GOLD.MCX`, `CT USDINR.CDS`.
+On MCX and CDS there is no spot index, so the nearest future that expires with the option stands in as the spot (the table says so). `GP RELIANCE.NS 1D` shows the last session (09:15 to 15:30 IST), as it does for US names.
+
+## Trade, shipping and official data
+- `SHIP` ship counts through 28 sea chokepoints (IMF PortWatch). `PORTS` the 25 busiest ports; `PORTS singapore` finds ports by name or country. No key.
+- `AIS HORMUZ` (also `SUEZ PANAMA MALACCA BABEL BOSPHORUS GIBRALTAR DOVER`, or `AIS BOX <S> <W> <N> <E>`) ships that reported a position during an 8 second listen. Needs a free `AISSTREAM_API_KEY`.
+- `DBSRCH inflation` searches IMF, OECD, Eurostat, BIS and ECB series; Enter drills in, and the last step opens the series in `ECST`. No key.
+- `TRADE USA CHN 85 8Y` trade flows by product (here US with China, HS chapter 85, 8 years) (`UN_COMTRADE_KEY`). `USMAC BLS CPI`, `USMAC BEA GDPG`, `USMAC CENSUS RETAIL` US macro series (`BLS_API_KEY`, `BEA_API_KEY`, `CENSUS_API_KEY`).
+- `UKCO tesco` UK company profile, officers and filings (`COMPANIES_HOUSE_KEY`). `ADDR GAS` or `ADDR 0x...` Ethereum balance, recent transactions and gas (`ETHERSCAN_KEY`).
 
 ## Phase 19: charting, discovery, macro, crypto, India data
 - `AAPL GP 1Y ATR STOCH KELT SUPERTREND ICHIMOKU PAT:CANDLE PAT:SMC` : new studies and pattern marks (rule-based, not signals). `I` in GP opens the picker (keys 1-9, then A, B, C...).

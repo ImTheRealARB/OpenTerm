@@ -772,3 +772,24 @@ p95, the known lone-miss value also seen on `main`); runs 1 and 3 read 16.7 ms w
 | IMAP canvas paint, 5,000 tiles p95 | 10.2 ms | 7.2 ms | 7.5 ms | 16 ms |
 
 Backend p95 lines read about 1 ms higher than on the Linux cloud box; the Windows review-sprint bench (2026-10-19, above) read cached /api/quote 1.0 ms too, so that is the machine, not this work.
+
+### Wrap-up bench (2026-11-05, branch `claude/wrapup-f02dcc`, Windows, user's app running on :8000 so servers on :8100 / :4273)
+
+Changes since the last full bench: Kite follow-ups, `.BFO` / `.CDS` chains, Kite `1D`, ticker drop detection, the AIS / SHIP / PORTS / DBSRCH / free-data batch. No chart, grid or tick code changed.
+
+| Metric | Run 1 | Run 2 (CPU shared with another session) | Budget |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 120.7 KB | 120.7 KB | 400 KB |
+| Cold start to usable command line | 121.6 ms | 131.0 ms | 1500 ms |
+| Keystroke to echo p95 | 14.7 ms | 14.7 ms | 16.7 ms |
+| Command submit to first paint, cached, p95 | 19.0 ms | 18.1 ms | 100 ms |
+| Tick received to pixel p95 (200 SYN x 20/s, 9 panels) | 44.2 ms | 55.9 ms (FAIL) | 50 ms |
+| Frame time p95, 10k-row grid scroll | 16.7 ms | 16.7 ms | 20 ms |
+| Frame time p95, 50k-bar chart pan/zoom | 33.3 ms (FAIL, known lone miss) | 33.3 ms (FAIL) | 20 ms |
+| BT 10-year daily run p95, server-side | 276.8 ms | 455.6 ms (FAIL) | 300 ms |
+| SEAS 10,000 bars p95 | 9.5 ms | 22.4 ms (FAIL) | 15 ms |
+| JS heap, 9 panels + 200 symbols | 6.7 MB | 11.5 MB | 500 MB |
+| Backend p95, cached /api/quote | 1.0 ms | 1.1 ms | 20 ms |
+
+Run 1: 36 of 37 (only the chart pan line). Run 2: 33 of 37; the BT, SEAS and tick lines moved together, the pattern of a busy machine (another session was building at the time). A third run was cut short by a pause. A clean rerun on a quiet machine is still to do; the other 31 lines passed in both runs.
+Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs needed a fixture backend or a test fix, see HANDOFF.md "Wrap-up job").
