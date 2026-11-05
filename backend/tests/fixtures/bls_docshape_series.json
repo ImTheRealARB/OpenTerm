@@ -1,0 +1,1025 @@
+{
+ "doc_shaped": "BUILT from the BLS API v2 documentation (api_signature_v2.htm), not recorded: no key was available on 2026-11-05. Values are invented. One M13 row (annual average) and one '-' value with a footnote are included on purpose.",
+ "status": 200,
+ "body": {
+  "status": "REQUEST_SUCCEEDED",
+  "responseTime": 20,
+  "message": [],
+  "Results": {
+   "series": [
+    {
+     "seriesID": "CUSR0000SA0",
+     "data": [
+      {
+       "year": "2025",
+       "period": "M13",
+       "periodName": "Annual",
+       "value": "999.9",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "328.8",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "328.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "327.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "326.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "325.6",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "324.8",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "324.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "323.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "322.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "321.6",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "320.8",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "320.0",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "CUSR0000SA0L1E",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "333.7",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "333.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "332.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "331.6",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "330.9",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "330.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "329.5",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "328.8",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "328.1",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "327.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "326.7",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "326.0",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "WPSFD4",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "153.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "153.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "152.7",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "152.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "152.1",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "151.8",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "151.5",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "151.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "150.9",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "150.6",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "150.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "150.0",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "LNS14000000",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "4.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "-",
+       "footnotes": [
+        {
+         "code": "X",
+         "text": "Data unavailable due to the 2025 lapse in appropriations (fixture text)."
+        }
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "4.1",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "LNS11300000",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "62.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "62.4",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "CES0000000001",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "159440.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159400.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159360.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159320.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159280.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159240.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159200.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159160.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159120.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159080.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159040.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "159000.0",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "CES0500000003",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "37.4",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "37.3",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "37.2",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "37.1",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "37.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.9",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.9",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.8",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.7",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.6",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.5",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "36.4",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    },
+    {
+     "seriesID": "JTS000000000000000JOL",
+     "data": [
+      {
+       "year": "2026",
+       "period": "M08",
+       "periodName": "Month",
+       "latest": "true",
+       "value": "7235.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M07",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7250.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M06",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7265.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M05",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7280.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M04",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7295.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M03",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7310.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M02",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7325.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2026",
+       "period": "M01",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7340.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M12",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7355.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M11",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7370.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M10",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7385.0",
+       "footnotes": [
+        {}
+       ]
+      },
+      {
+       "year": "2025",
+       "period": "M09",
+       "periodName": "Month",
+       "latest": null,
+       "value": "7400.0",
+       "footnotes": [
+        {}
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

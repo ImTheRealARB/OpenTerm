@@ -1,0 +1,174 @@
+{
+ "doc_shaped": "BUILT from Census's variable lists (eits/marts, intltrade) and the documented array-of-arrays answer, not recorded: no key was available on 2026-11-05. Values are invented.",
+ "status": 200,
+ "body": [
+  [
+   "E_COMMODITY",
+   "E_COMMODITY_LDESC",
+   "CTY_CODE",
+   "CTY_NAME",
+   "ALL_VAL_MO",
+   "time"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1125000000",
+   "2025-01"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1150000000",
+   "2025-02"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1175000000",
+   "2025-03"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1200000000",
+   "2025-04"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1225000000",
+   "2025-05"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1250000000",
+   "2025-06"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1275000000",
+   "2025-07"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1300000000",
+   "2025-08"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1325000000",
+   "2025-09"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1350000000",
+   "2025-10"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1375000000",
+   "2025-11"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1400000000",
+   "2025-12"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1425000000",
+   "2026-01"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1450000000",
+   "2026-02"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1475000000",
+   "2026-03"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1500000000",
+   "2026-04"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1525000000",
+   "2026-05"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1550000000",
+   "2026-06"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1575000000",
+   "2026-07"
+  ],
+  [
+   "85",
+   "ELECTRICAL MACHINERY, EQUIPMENT AND PARTS; SOUND/TV EQUIPMENT",
+   "5700",
+   "CHINA",
+   "1600000000",
+   "2026-08"
+  ]
+ ]
+}

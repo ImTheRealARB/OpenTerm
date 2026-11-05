@@ -724,3 +724,135 @@ def _route_phase19h(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase19h(request) or _route_before_phase19h(request)
+
+
+# --- SHIP: IMF PortWatch chokepoints (recorded 2026-11-05 from the real ArcGIS layer; where= is ignored, one page of 868 rows) ---
+_route_before_portwatch = _route
+
+
+def _route_portwatch(request: httpx.Request) -> httpx.Response | None:
+    if request.url.host == "services9.arcgis.com" and request.url.path.endswith("/Daily_Chokepoints_Data/FeatureServer/0/query"):
+        q = request.url.params
+        if q.get("resultOffset", "0") != "0":
+            return httpx.Response(200, json={"features": []})  # the recording fits in one page
+        if q.get("where", "").startswith("portid="):
+            return _load("portwatch_probe")
+        return _load("portwatch_chokepoints_daily")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_portwatch(request) or _route_before_portwatch(request)
+
+
+# --- Trade + US macro family (UN Comtrade, BLS, BEA, Census): ALL DOC-SHAPED, no key was available to record real answers ---
+# Every file is marked `doc_shaped` and its numbers are invented. A request without a key gets the 401 (or in-body error) the real
+# service gives; the key value "invalid-fixture-key" gets the "wrong key" answer. Unrecorded combinations are 404 / 204 / empty.
+_BAD_KEY = "invalid-fixture-key"
+_route_before_tradeus = _route
+
+
+def _route_tradeus(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "comtradeapi.un.org":
+        key = request.headers.get("ocp-apim-subscription-key", "")
+        if not key or key == _BAD_KEY:
+            return httpx.Response(401, json={"statusCode": 401, "message": "Access denied due to invalid subscription key (fixture text)."})
+        if q.get("maxrecords"):  # the APIKEYS key test (1 record): any data proves the key
+            return _load("comtrade_docshape_usa_chn_total")
+        ok = q.get("reporterCode") == "842" and q.get("partnerCode") == "156" and q.get("cmdCode") == "TOTAL"
+        return _load("comtrade_docshape_usa_chn_total" if ok else "comtrade_docshape_empty")
+    if host == "api.bls.gov":
+        try:
+            body = json.loads(request.content or b"{}")
+        except ValueError:
+            return httpx.Response(400, text="bad json")
+        key = body.get("registrationkey", "")
+        if not key or key == _BAD_KEY:
+            return _load("bls_docshape_bad_key")
+        rec = json.loads((FIXTURES / "bls_docshape_series.json").read_text(encoding="utf-8"))
+        wanted = set(body.get("seriesid", []))
+        rec["body"]["Results"]["series"] = [s for s in rec["body"]["Results"]["series"] if s["seriesID"] in wanted]
+        return httpx.Response(200, json=rec["body"])
+    if host == "apps.bea.gov" and p == "/api/data":
+        if not q.get("UserID") or q.get("UserID") == _BAD_KEY:
+            return _load("bea_docshape_bad_userid")
+        if q.get("method", "").upper() == "GETDATASETLIST":
+            return _load("bea_docshape_datasetlist")
+        ds, table, ind = q.get("datasetname"), q.get("TableName"), q.get("Indicator")
+        if ds == "NIPA" and table in ("T10101", "T10105"):
+            return _load(f"bea_docshape_nipa_{table}")
+        if ds == "ITA" and ind in ("BalGds", "BalServ", "BalCurrAcct"):
+            return _load(f"bea_docshape_ita_{ind}")
+        if ds == "GDPbyIndustry":
+            return _load("bea_docshape_gdpbyindustry")
+        return httpx.Response(200, json={"BEAAPI": {"Results": {"Data": []}}})
+    if host == "api.census.gov" and p.startswith("/data/timeseries/"):
+        if not q.get("key") or q.get("key") == _BAD_KEY:
+            return httpx.Response(401, text="Invalid Key (fixture text)")
+        if p.endswith("/eits/marts"):
+            rec = json.loads((FIXTURES / "census_docshape_marts.json").read_text(encoding="utf-8"))
+            wanted = set((q.get("category_code") or "").split(","))
+            head, rows = rec["body"][0], rec["body"][1:]
+            i = head.index("category_code")
+            return httpx.Response(200, json=[head, *[r for r in rows if not wanted or r[i] in wanted]])
+        for flow, col in (("exports", "E_COMMODITY"), ("imports", "I_COMMODITY")):
+            if p.endswith(f"/intltrade/{flow}/hs"):
+                if q.get(col) == "85" and q.get("CTY_CODE") == "5700":
+                    return _load(f"census_docshape_{flow}_hs85_china")
+                return httpx.Response(204)
+        return httpx.Response(404, text="not recorded")
+    return None
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    return _route_tradeus(request) or _route_before_tradeus(request)
+
+
+# --- Frankfurter (real recording), Companies House, Marketaux, Etherscan (doc-shaped, marked in each file) ---
+# Fixture mode accepts only keys that start with "docshape" for the three keyed hosts and answers every other key with that service's
+# invalid-key answer (Etherscan's is a real recording, Marketaux's status is real, Companies House's is a placeholder).
+_DOCSHAPE_KEY = "docshape"
+_ETHERSCAN = {("account", "balance"): "etherscan_balance_docshape", ("account", "txlist"): "etherscan_txlist_docshape",
+              ("gastracker", "gasoracle"): "etherscan_gasoracle_docshape"}
+_CH_PATHS = {"/search/companies": "companies_house_search_docshape", "/company/09999999": "companies_house_profile_docshape",
+             "/company/09999999/officers": "companies_house_officers_docshape", "/company/09999999/filing-history": "companies_house_filings_docshape"}
+_route_before_freesrc = _route
+
+
+def _ch_user(request: httpx.Request) -> str:
+    """The user-name half of a basic-auth header (Companies House: the API key), or '' when absent or malformed."""
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "basic":
+        return ""
+    try:
+        return base64.b64decode(token).decode("utf-8").partition(":")[0]
+    except ValueError:
+        return ""
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host == "api.frankfurter.dev":
+        if p == "/v2/rates" and q.get("base") == "EUR" and q.get("providers") == "ecb":
+            wanted = set((q.get("quotes") or "").split(","))
+            rows = [r for r in json.loads((FIXTURES / "frankfurter_rates_eur_usd_inr.json").read_text(encoding="utf-8"))["body"] if r["quote"] in wanted]
+            if rows:
+                return httpx.Response(200, json=rows)
+        return httpx.Response(404, json={"status": 404, "message": "not recorded"})
+    if host == "api.etherscan.io":
+        if not q.get("apikey", "").startswith(_DOCSHAPE_KEY):
+            return _load("keytest_etherscan_invalid")
+        name = _ETHERSCAN.get((q.get("module"), q.get("action")))
+        return _load(name) if name else httpx.Response(404, text="not recorded")
+    if host == "api.marketaux.com":
+        if not q.get("api_token", "").startswith(_DOCSHAPE_KEY):
+            return _load("keytest_marketaux_401")
+        name = "marketaux_news_aapl_docshape" if q.get("symbols") == "AAPL" else "marketaux_news_top_docshape" if not q.get("symbols") else None
+        return _load(name) if name else httpx.Response(200, json={"meta": {"found": 0, "returned": 0, "limit": 3, "page": 1}, "data": []})
+    if host == "api.company-information.service.gov.uk":
+        if not _ch_user(request).startswith(_DOCSHAPE_KEY):
+            return _load("keytest_companies_house_401")
+        name = _CH_PATHS.get(p)
+        return _load(name) if name else httpx.Response(404, json={"errors": [{"type": "ch:service", "error": "company-profile-not-found"}]})
+    return _route_before_freesrc(request)

@@ -19,7 +19,11 @@ CRYPTO = "crypto"
 
 
 class ProviderError(Exception):
-    """kind: not_found | unsupported | rate_limited | unavailable | key_required"""
+    """kind: not_found | unsupported | depth | rate_limited | unavailable | key_required
+
+    `depth` = the source has this symbol and interval but not that far back ("INTERVAL 5m ONLY AVAILABLE FOR THE LAST 60 DAYS").
+    Like `unsupported` it is not an outage (no circuit-breaker strike); the next source in the hierarchy gets a go.
+    """
 
     def __init__(self, kind: str, message: str = ""):
         super().__init__(message or kind)
@@ -40,6 +44,9 @@ class Provider:
     """Token bucket (requests/second, burst)."""
     headers: ClassVar[dict[str, str]] = {}
     timeout: float = 6.0
+    intraday_days: dict[str, int] | None = None
+    """How many days back each minute/hour candle length reaches, e.g. {"5m": 60}. None = not declared (daily-only sources, or
+    sources that do not enforce a limit yet): the limits report (`Router.history_limits`) ignores them."""
     max_wait: float = 0.25
     """Longest wait for a rate-limit slot before failing over. Sources with one slot per few seconds raise it."""
     """Seconds per upstream request. Slow but useful sources (GDELT, Nasdaq movers) raise it."""

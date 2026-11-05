@@ -1,0 +1,19 @@
+{
+ "doc_shaped": "BUILT from the BEA API guide as remembered (world/bea.py header), not recorded: no UserID was available on 2026-11-05. Values are invented; they print with thousands commas like the real service.",
+ "status": 200,
+ "body": {
+  "BEAAPI": {
+   "Request": {
+    "RequestParam": []
+   },
+   "Results": {
+    "Dataset": [
+     {
+      "DatasetName": "NIPA",
+      "DatasetDescription": "Standard NIPA tables"
+     }
+    ]
+   }
+  }
+ }
+}

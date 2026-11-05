@@ -1,0 +1,7 @@
+{
+ "doc_shaped": "Built from the resource pages on developer-specs.company-information.service.gov.uk, NOT a recording: no key was available. The people are invented.",
+ "status": 200,
+ "body": {"kind": "officer-list", "items_per_page": 50, "start_index": 0, "total_results": 2, "active_count": 1, "resigned_count": 1, "items": [
+  {"name": "SAMPLE, Resigned Person", "officer_role": "director", "appointed_on": "2015-03-02", "resigned_on": "2019-06-30", "nationality": "British", "occupation": "Engineer", "country_of_residence": "England"},
+  {"name": "EXAMPLE, Active Person", "officer_role": "director", "appointed_on": "2019-07-01", "nationality": "British", "occupation": "Company Director", "country_of_residence": "England"}]}
+}

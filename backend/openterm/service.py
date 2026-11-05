@@ -140,9 +140,10 @@ class DataService:
             bars, failed = await self.router.call("history", lambda p: p.history(symbol, r, i), symbol)
             return {"data": bars.model_dump(), "fallback_from": failed}
 
-        # Phase 15: a Kite login changes who answers Indian symbols, so the cache key says whether Kite is in the chain right now
-        kite = ":k" if any(p.name == "kite" for p in self.router.candidates("history", symbol)) else ""
-        return await self._swr(f"h:{symbol}:{r}:{i}{kite}", ttl, fetch)
+        # A Kite login or an Upstox token changes who answers Indian symbols, so the cache key names the key-gated sources that
+        # are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
+        gated = "".join(f":{p.name[0]}" for p in self.router.candidates("history", symbol) if p.name in ("kite", "upstox"))
+        return await self._swr(f"h:{symbol}:{r}:{i}{gated}", ttl, fetch)
 
     async def profile(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)

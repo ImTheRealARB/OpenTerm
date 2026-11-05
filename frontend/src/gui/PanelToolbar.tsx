@@ -6,7 +6,8 @@ import type { OptionAction } from "../components/windowMenu";
 import { effectiveBindings } from "../keys/keys";
 import { dispatchPanelKey } from "../keys/panelKeys";
 import { CHART_TYPES, CHART_TYPE_LABELS, type ChartType } from "../chart/chartTypes";
-import { INTERVAL_CHOICES, intervalFits, intervalLimitText, parseGpArgs, withChartType, withInterval } from "../functions/gpArgs";
+import { INTERVAL_CHOICES, intervalFits, intervalToken, limitText, parseGpArgs, withChartType, withInterval } from "../functions/gpArgs";
+import { useHistoryLimits } from "../functions/useHistoryLimits";
 import { settingsStore } from "../settings/runtime";
 import { focusPanel, replaceView, workspace } from "../state/workspace";
 import { useStore } from "../state/store";
@@ -35,6 +36,8 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const buttons = buttonsFor(fn, args);
+  // Only the GP candle-length dropdown uses this; other panels pass no symbol to fetch for.
+  const limits = useHistoryLimits(fn === "GP" ? symbol : undefined);
 
   // A panel's empty state ("Add a stock") can open one of our ask boxes (see askBus.ts).
   useEffect(
@@ -170,12 +173,13 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
           }}
         >
           {INTERVAL_CHOICES.map(([label, token]) => {
-            // Yahoo only serves minute candles for recent days: say how far, and grey out what the current range cannot use.
-            const limit = token ? intervalLimitText(token) : "";
-            const fits = !token || intervalFits(parseGpArgs([...args]).range, token);
+            // Minute candles only reach back so far, and how far depends on which source answers for this symbol (the backend
+            // reports it): say how far, and grey out what the current range cannot use.
+            const days = token ? limits?.[intervalToken(token)] : undefined;
+            const fits = !token || intervalFits(parseGpArgs([...args]).range, token, limits);
             return (
               <option key={label} value={token} disabled={!fits}>
-                {limit ? `${label} (${limit})` : label}
+                {days !== undefined ? `${label} (${limitText(days)})` : label}
               </option>
             );
           })}

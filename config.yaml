@@ -28,12 +28,12 @@ cache:
   peers_ttl_s: 86400
 providers:
   # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
-  quotes: [yahoo, nasdaq]
-  history: [binance_klines, yahoo, nasdaq, nse_archive]   # nse_archive: .NS at 1d only, last (Phase 19 step 9)
+  # quotes and history are NOT pinned here: their order comes from the source hierarchy (backend/openterm/providers/hierarchy.py),
+  # best source first (depth, freshness, rate limits). Pin a list here only to override it by hand (the log then says so).
   search: [yahoo]
   profile: [yahoo, nasdaq]
-  news_top: [rss, finnhub, alpaca]            # finnhub and alpaca are inert until a key is set in APIKEYS
-  news_symbol: [yahoo_rss, finnhub, alpaca, gdelt]
+  news_top: [rss, finnhub, alpaca, marketaux]  # finnhub, alpaca and marketaux are inert until a key is set in APIKEYS
+  news_symbol: [yahoo_rss, finnhub, alpaca, marketaux, gdelt]
   news_keyword: [gdelt]
   movers: [nasdaq]
   crypto: [coingecko, binance]

@@ -1,0 +1,12 @@
+{
+ "doc_shaped": "Built from the field list in marketaux.com/documentation, NOT a recording: no Marketaux key was available. Invented headline on an example.com address.",
+ "status": 200,
+ "body": {"meta": {"found": 1, "returned": 1, "limit": 3, "page": 1}, "data": [
+  {"uuid": "00000000-0000-4000-8000-000000000003", "title": "Example markets wrap: stocks drift", "description": "A made-up market-wide teaser.",
+   "keywords": "", "snippet": "Made-up snippet three.", "url": "https://news.example.com/example-markets-wrap", "image_url": "https://news.example.com/3.jpg", "language": "en",
+   "published_at": "2026-11-04T12:00:00.000000Z", "source": "news.example.com", "relevance_score": null,
+   "entities": [{"symbol": "SPY", "name": "SPDR S&P 500 ETF", "exchange": "NYSE", "exchange_long": "NYSE Arca", "country": "us", "type": "etf",
+                 "industry": "ETF", "match_score": 15.0, "sentiment_score": 0.1, "highlights": []},
+                {"symbol": "QQQ", "name": "Invesco QQQ", "exchange": "NASDAQ", "exchange_long": "NASDAQ Stock Market", "country": "us", "type": "etf",
+                 "industry": "ETF", "match_score": 12.0, "sentiment_score": 0.3, "highlights": []}], "similar": []}]}
+}

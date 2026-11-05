@@ -1,0 +1,15 @@
+{
+ "doc_shaped": "Built from the field list in marketaux.com/documentation, NOT a recording: no Marketaux key was available. Invented headlines on example.com addresses.",
+ "status": 200,
+ "body": {"meta": {"found": 2, "returned": 2, "limit": 3, "page": 1}, "data": [
+  {"uuid": "00000000-0000-4000-8000-000000000001", "title": "Example Corp reports record quarter", "description": "A made-up teaser for the first example headline.",
+   "keywords": "", "snippet": "Made-up snippet one.", "url": "https://news.example.com/example-corp-record-quarter", "image_url": "https://news.example.com/1.jpg", "language": "en",
+   "published_at": "2026-11-04T10:12:00.000000Z", "source": "news.example.com", "relevance_score": null,
+   "entities": [{"symbol": "AAPL", "name": "Apple Inc.", "exchange": "NASDAQ", "exchange_long": "NASDAQ Stock Market", "country": "us", "type": "equity",
+                 "industry": "Technology", "match_score": 25.5, "sentiment_score": 0.5, "highlights": []}], "similar": []},
+  {"uuid": "00000000-0000-4000-8000-000000000002", "title": "Example Corp faces a supply delay", "description": "A made-up teaser for the second example headline.",
+   "keywords": "", "snippet": "Made-up snippet two.", "url": "https://news.example.com/example-corp-supply-delay", "image_url": "https://news.example.com/2.jpg", "language": "en",
+   "published_at": "2026-11-03T08:00:00.000000Z", "source": "news.example.com", "relevance_score": null,
+   "entities": [{"symbol": "AAPL", "name": "Apple Inc.", "exchange": "NASDAQ", "exchange_long": "NASDAQ Stock Market", "country": "us", "type": "equity",
+                 "industry": "Technology", "match_score": 20.1, "sentiment_score": -0.25, "highlights": []}], "similar": []}]}
+}

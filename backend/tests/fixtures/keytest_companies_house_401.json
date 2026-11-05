@@ -1,0 +1,5 @@
+{
+ "doc_shaped": "No account or key was available and the API refuses anonymous callers, so this answer was NOT recorded. Companies House answers 401 for an unknown key; the body below is a placeholder, the code only reads the status.",
+ "status": 401,
+ "body": {"error": "Invalid Authorization header (doc-shaped body)"}
+}

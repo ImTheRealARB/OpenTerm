@@ -1,0 +1,9 @@
+{
+ "doc_shaped": "Built from the resource pages on developer-specs.company-information.service.gov.uk, NOT a recording: no key was available. The company is invented.",
+ "status": 200,
+ "body": {"company_number": "09999999", "company_name": "EXAMPLE TRADING LIMITED", "company_status": "active", "type": "ltd", "jurisdiction": "england-wales",
+  "date_of_creation": "2015-03-02", "sic_codes": ["62012"], "has_charges": false, "has_insolvency_history": false, "can_file": true,
+  "registered_office_address": {"address_line_1": "1 Example Street", "locality": "London", "postal_code": "EC1A 1AA", "country": "England"},
+  "accounts": {"next_due": "2026-12-31", "overdue": false, "last_accounts": {"made_up_to": "2025-03-31", "type": "total-exemption-full"}},
+  "confirmation_statement": {"next_due": "2027-03-16", "overdue": false, "last_made_up_to": "2026-03-02"}}
+}

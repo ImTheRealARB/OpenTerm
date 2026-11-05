@@ -20,7 +20,7 @@ import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { currentView, navigate, replaceView, workspace } from "../state/workspace";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { KEY_RANGES, MAX_CUSTOM, formulaInd, intervalFits, intervalLimitText, libraryInd, longestRangeFor, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
+import { KEY_RANGES, MAX_CUSTOM, depthLimitFromError, formulaInd, libraryInd, limitText, longestRangeWithin, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
 import { useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 
@@ -70,8 +70,10 @@ export default function GP({ panelId, security, args }: FunctionProps) {
     replaceView(panelId, (v) => ({ ...v, args: serializeGp(next, chartDefaults.type) }));
   };
 
-  // The chosen candle length is longer than Yahoo keeps it for (e.g. 5 min + 1Y). The server rejects it; this lets the error offer fixes.
-  const clash = !!p.interval && !intervalFits(p.range, p.interval);
+  // The chosen candle length does not reach back that far (e.g. 5 min + 1Y on Yahoo). The server says so ("... ONLY AVAILABLE FOR THE
+  // LAST 60 DAYS") and it knows which source answered, so the error text is the authority; this lets the note offer fixes.
+  const depthDays = state.error ? depthLimitFromError(state.error) : null;
+  const clash = depthDays !== null;
 
   // --- library indicators and formulas (IND): one GP answers, the same add/remove path as the toolbar toggles ---
   const [customErrors, setCustomErrors] = useState<Record<string, string>>({});
@@ -447,7 +449,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
           // GUI wording: a symbol the user picked is valid, so never blame the spelling here; say what is actually wrong.
           plain={
             clash
-              ? `Yahoo only keeps ${p.interval} candles for ${intervalLimitText(p.interval!)}, and ${p.range} is longer than that. Your candle length is kept; pick one of the fixes below.`
+              ? `The data source only has ${p.interval ?? "these"} candles ${limitText(depthDays!)} back, and ${p.range} is longer than that. Your candle length is kept; pick one of the fixes below.`
               : /NO DATA|NOT FOUND/i.test(state.error)
                 ? `No chart data came back for ${symbol} over ${p.range}. The name is fine: the data source has nothing for it right now (in sample-data mode that can be a gap in the recordings). Retry, try another range, or chart a different stock.`
                 : undefined
@@ -456,7 +458,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
             ...(clash
               ? [
                   { label: "Use Auto candles", onClick: () => update((q) => ({ ...q, interval: undefined })) },
-                  ...(longestRangeFor(p.interval!) ? [{ label: `Show ${longestRangeFor(p.interval!)} instead`, onClick: () => update((q) => ({ ...q, range: longestRangeFor(q.interval!)! })) }] : []),
+                  ...(longestRangeWithin(depthDays!) ? [{ label: `Show ${longestRangeWithin(depthDays!)} instead`, onClick: () => update((q) => ({ ...q, range: longestRangeWithin(depthDays!)! })) }] : []),
                 ]
               : []),
             ...(symbol !== "AAPL" ? [{ label: "Try AAPL", onClick: () => navigate(panelId, { fn: "GP", security: { symbol: "AAPL" }, args: [] }) }] : []),

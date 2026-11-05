@@ -1,0 +1,5 @@
+{
+ "doc_shaped": "The HTTP status 401 is REAL (GET https://api.marketaux.com/v1/news/all?api_token=<made-up key> answered 401 on 2026-11-05) but the body was not readable then: it is the documented invalid_api_token error shape (marketaux.com/documentation).",
+ "status": 401,
+ "body": {"error": {"code": "invalid_api_token", "message": "Invalid API token (doc-shaped body)."}}
+}

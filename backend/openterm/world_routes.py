@@ -93,6 +93,17 @@ async def energy_board(request: Request):
         return error(e)
 
 
+@router.get("/ship")
+async def ship_board(request: Request):
+    """SHIP: daily ship transits through 28 sea chokepoints (IMF PortWatch, satellite AIS, weekly, 8 to 12 days behind)."""
+    from .world.shipsvc import ship
+
+    try:
+        return await ship(svc(request))
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/wetr")
 async def weather_board(request: Request, place: str = Query("", max_length=80)):
     """WETR: demand-city degree-day basket; with a place name or `lat,lon`, its 7-day forecast and (US, with SEC_USER_AGENT) NWS alerts."""
@@ -215,5 +226,51 @@ async def defi_yields(request: Request, q: str = Query("", max_length=40)):
 
     try:
         return await defi(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/trade")
+async def trade_flows(request: Request, reporter: str = Query(..., max_length=24), partner: str = Query("WLD", max_length=24),
+                      hs: str = Query("TOTAL", max_length=10), years: int = Query(5, ge=1, le=12)):
+    """TRADE: exports and imports between two countries by HS product, per year (UN Comtrade, free key UN_COMTRADE_KEY, 424 without it)."""
+    from .world.usdata import trade
+
+    try:
+        return await trade(svc(request), request.app.state.keys, reporter, partner, hs, years)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/usmac")
+async def us_macro(request: Request, src: str = Query(..., max_length=8), q: str = Query("", max_length=120), years: int = Query(3, ge=1, le=20)):
+    """USMAC: US series from BLS (jobs, prices; BLS_API_KEY), BEA (GDP, trade, industry; BEA_API_KEY) or Census (retail sales, trade by
+    country; CENSUS_API_KEY). Every series carries its own latest period. 424 KEY REQUIRED without the key."""
+    from .world.usdata import usmac
+
+    try:
+        return await usmac(svc(request), request.app.state.keys, src, q, years)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/ukco")
+async def uk_company(request: Request, q: str = Query(..., max_length=120)):
+    """UKCO: UK Companies House. A company number gives profile + officers + filings; a name gives a search. 424 KEY REQUIRED without COMPANIES_HOUSE_KEY."""
+    from .world.uk_company import ukco
+
+    try:
+        return await ukco(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/addr")
+async def evm_address(request: Request, q: str = Query(..., max_length=120)):
+    """ADDR: an EVM address (balance, last 20 transactions, gas) or `GAS`, on Ethereum or a named chain (Etherscan V2). 424 KEY REQUIRED without ETHERSCAN_KEY."""
+    from .world.chain import addr
+
+    try:
+        return await addr(svc(request), q)
     except DataError as e:
         return error(e)

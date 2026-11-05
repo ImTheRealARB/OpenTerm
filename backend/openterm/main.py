@@ -21,6 +21,7 @@ from .db import open_db
 from .delivery.routes import router as delivery_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
+from .providers.hierarchy import HIERARCHY, order_for
 from .quant_routes import router as quant_router
 from .responses import Orjson
 from .router import Router
@@ -42,9 +43,11 @@ DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]}
 MAX_SUBS_PER_CLIENT = 2000
 # --- Phase 19 (capabilities fill in step by step; all keyless) ---
 DEFAULT_ORDER["figi"] = ["openfigi"]
+DEFAULT_ORDER |= {"comtrade": ["comtrade"], "bls": ["bls"], "bea": ["bea"], "census": ["census"]}  # trade + US macro family (keyed)
 DEFAULT_ORDER |= {"holidays": ["nager"], "worldstats": ["worldbank", "dbnomics"], "worldstats_latest": ["worldbank"],
                   "worldstats_countries": ["worldbank"], "worldstats_dbn": ["dbnomics"], "policy_rates": ["policy_rates"]}
 DEFAULT_ORDER |= {"weather_geocode": ["openmeteo"], "weather_forecast": ["openmeteo"], "nws_alerts": ["nws"]}
+DEFAULT_ORDER["shipping_chokepoints"] = ["portwatch"]
 # Step 9: the NSE archive is the LAST history source (Yahoo answers first; it only serves `.NS` at `1d`); AMFI NAV for the SECF fund rows
 DEFAULT_ORDER["history"] = [*DEFAULT_ORDER["history"], "nse_archive"]
 DEFAULT_ORDER["mfnav"] = ["amfi"]
@@ -59,8 +62,10 @@ DEFAULT_ORDER |= {
 # --- Phase 13 step 6: keyed sources sit after the keyless ones; inert without a key ---
 DEFAULT_ORDER["ratings"] = ["yahoo_research", "finnhub"]
 DEFAULT_ORDER["surprises"] = ["yahoo_research", "finnhub"]
-DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca"]
-DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "gdelt"]
+DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca", "marketaux"]
+DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "marketaux", "gdelt"]
+# UKCO (Companies House) and ADDR (Etherscan): one keyed source each; no key = KEY REQUIRED, never fake data
+DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"]}
 # --- Phase 14: option chains (Yahoo first; Tradier is a keyed fallback) ---
 DEFAULT_ORDER["option_chain"] = ["yahoo_options", "tradier"]
 DEFAULT_ORDER["crypto_options"] = ["deribit"]
@@ -93,8 +98,13 @@ async def lifespan(app: FastAPI):
     http = httpx.AsyncClient(
         http2=True, limits=httpx.Limits(max_connections=50, max_keepalive_connections=20), timeout=6.0
     )
-    order = {**DEFAULT_ORDER, **(cfg.get("providers") or {})}
-    order["history"] = ["kite", *[n for n in order.get("history", []) if n != "kite"]]  # Phase 15: Kite first, only while logged in
+    # Source hierarchy (providers/hierarchy.py): best source first per capability. A `providers:` entry in config.yaml pins that
+    # capability by hand and wins, but the log says so, because it also hides every source added to the hierarchy later.
+    pinned = cfg.get("providers") or {}
+    order = {**DEFAULT_ORDER, **{cap: order_for(cap) for cap in HIERARCHY}, **pinned}
+    for cap in HIERARCHY:
+        if cap in pinned and list(pinned[cap]) != order_for(cap):
+            logging.getLogger("openterm").warning("config.yaml pins the %s order %s: the source hierarchy %s is ignored", cap, pinned[cap], order_for(cap))
     if settings.openterm_synthetic:
         order = {k: [*v, "synthetic"] if k in ("quotes", "history") else v for k, v in order.items()}
     router = Router(
@@ -158,6 +168,7 @@ async def lifespan(app: FastAPI):
     kite = router.providers["kite"]
     kite.attach(KiteSession(store), db)
     router.providers["nse_archive"].attach(db)  # Phase 19 step 9: day files are kept in the kv table
+    router.providers["upstox"].attach(db)  # the instruments table is kept in the kv table for 24 h
     ticker = KiteTicker(emit, kite.session, kite.instruments, prev_close) if not settings.openterm_fixtures else None
     hub = Hub(yahoo, poller, synthetic, on_tick=service.apply_tick, iex=iex, kite=ticker)
     hub_ref.append(hub)
@@ -183,7 +194,7 @@ async def lifespan(app: FastAPI):
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
         if name == "fred" and "fred" in router.providers:
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
-        if name in ("finnhub", "alpaca", "tradier") and name in router.providers:  # Phase 13/14: keyed sources
+        if name in ("finnhub", "alpaca", "tradier", "upstox", "companies_house", "marketaux", "etherscan") and name in router.providers:  # keyed sources
             router.providers[name].set_keys(store.get(name))
         if name == "kite":  # Phase 15: a new key or secret drops the login; the session re-reads the store
             kite.session.reload()
@@ -193,7 +204,7 @@ async def lifespan(app: FastAPI):
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        for name in ("fred", "finnhub", "alpaca", "tradier"):
+        for name in ("fred", "finnhub", "alpaca", "tradier", "upstox", "companies_house", "marketaux", "etherscan"):
             await asyncio.to_thread(on_key_change, name)
 
     key_loader = asyncio.create_task(apply_stored_keys())

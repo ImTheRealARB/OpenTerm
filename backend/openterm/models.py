@@ -108,6 +108,8 @@ class NewsItem(BaseModel):
     summary: str | None = None
     """The feed's own teaser, tags stripped, at most 300 characters."""
     source: str
+    sentiment: float | None = None
+    """-1 (negative) to +1 (positive), only from sources that score their articles (Marketaux). It is the source's score, not ours."""
 
 
 class Mover(BaseModel):

@@ -16,8 +16,8 @@ DEFAULT_INTERVAL = {
     "1d": "5m", "5d": "15m", "1mo": "60m", "3mo": "1d", "6mo": "1d", "ytd": "1d",
     "1y": "1d", "2y": "1d", "3y": "1d", "5y": "1wk", "10y": "1mo", "20y": "1d", "max": "1mo",
 }
-# Yahoo intraday lookback limits (days).
-_MAX_DAYS = {"1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60, "60m": 730, "90m": 60}
+# How far back each intraday candle length reaches is NOT checked here: it depends on which source answers, so each provider
+# declares `intraday_days` and the router reports it (Router.history_limits). Yahoo's is in providers/yahoo.py.
 _RANGE_DAYS = {
     "1d": 1, "5d": 5, "1mo": 31, "3mo": 92, "6mo": 183, "ytd": 366,
     "1y": 366, "2y": 731, "3y": 1096, "5y": 1827, "10y": 3653, "20y": 7305, "max": 100_000,
@@ -34,9 +34,6 @@ def normalize(range_: str | None, interval: str | None) -> tuple[str, str]:
             raise ValueError(f"BAD INTERVAL: {interval}")
     else:
         i = DEFAULT_INTERVAL[r]
-    limit = _MAX_DAYS.get(i)
-    if limit is not None and _RANGE_DAYS[r] > limit:
-        raise ValueError(f"INTERVAL {interval} ONLY AVAILABLE FOR THE LAST {limit} DAYS")
     return r, i
 
 

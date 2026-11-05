@@ -1,0 +1,10 @@
+{
+ "doc_shaped": "BUILT from the Comtrade+ API documentation's field list (see world/comtrade.py), not recorded: no key was available on 2026-11-05. Values are invented test numbers.",
+ "status": 200,
+ "body": {
+  "elapsedTime": 0.12,
+  "count": 0,
+  "data": [],
+  "error": ""
+ }
+}

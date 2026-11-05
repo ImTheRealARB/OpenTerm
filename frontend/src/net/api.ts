@@ -143,6 +143,9 @@ export const api = {
     request<{ results: Record<string, QuoteResult> }>(`/api/quote?${qs({ symbols: symbols.join(",") })}`, 2000),
   history: (symbol: string, range?: string, interval?: string) =>
     request<Envelope<Bars>>(`/api/history?${qs({ symbol, range, interval })}`, 60_000),
+  /** How many days back each minute candle length reaches for this symbol right now (the deepest source that is on decides). */
+  historyLimits: (symbol: string) =>
+    request<{ symbol: string; intraday_days: Record<string, number>; source: string[] }>(`/api/history/limits?${qs({ symbol })}`, 30_000),
   search: (q: string) => request<Envelope<SearchHit[]>>(`/api/search?${qs({ q })}`, 600_000),
   profile: (symbol: string) => request<Envelope<unknown>>(`/api/profile?${qs({ symbol })}`, 600_000),
   sources: () => request<SourcesPayload>("/api/sources", 1000),
@@ -236,6 +239,8 @@ export interface NewsItem {
   published: number | null;
   summary: string | null;
   source: string;
+  /** -1 to +1: the source's own score (Marketaux only), not ours. Null for every other source. */
+  sentiment?: number | null;
 }
 
 export interface NewsPayload {
@@ -982,6 +987,30 @@ export interface NrgPayload {
   groups: string[];
   note: string;
 }
+/** SHIP: one sea chokepoint (IMF PortWatch daily ship counts). Averages are over the days on record; None = not enough data, never a guess. */
+export interface ShipRow {
+  id: string;
+  name: string;
+  date: string;
+  age_days: number;
+  stale: boolean;
+  last: number | null;
+  avg7: number | null;
+  base: number | null;
+  chg_pct: number | null;
+  tanker: number | null;
+  container: number | null;
+  dry_bulk: number | null;
+  capacity: number | null;
+  n_days: number;
+  base_days: number;
+  series: [string, number | null][];
+}
+export interface ShipPayload {
+  rows: ShipRow[];
+  newest: string;
+  note: string;
+}
 /** WETR: Open-Meteo forecast day (temperatures in C, degree days in F-days). */
 export interface WxDay {
   date: string;
@@ -1133,11 +1162,86 @@ export interface MfItem {
 }
 export interface MfNavPayload { query: string; items: MfItem[]; total: number; shown: number; nav_date: string | null; schemes: number; note: string }
 
+/** TRADE (UN Comtrade): one row per year, US dollars. A flow the reporter has not filed is null, never zero. */
+export interface TradeRow {
+  year: number;
+  exports: number | null;
+  imports: number | null;
+  total: number | null;
+  balance: number | null;
+}
+export interface TradePayload {
+  reporter: { iso: string; name: string };
+  partner: { iso: string; name: string };
+  cmd: string;
+  cmd_desc: string;
+  unit: string;
+  rows: TradeRow[];
+  source: string;
+  note: string;
+}
+/** USMAC (BLS, BEA, Census): one series per row, each with its own latest period. `points` is oldest first; null = no value published. */
+export interface UsSeries {
+  id: string;
+  alias: string;
+  label: string;
+  unit: string;
+  freq: string;
+  last: number | null;
+  last_period: string | null;
+  prev: number | null;
+  prev_period: string | null;
+  chg: number | null;
+  chg_pct: number | null;
+  notes: string[];
+  points: [string, number | null][];
+}
+export interface UsMacroPayload {
+  src: "BLS" | "BEA" | "CENSUS";
+  series: UsSeries[];
+  missing: string[];
+  messages: string[];
+  source: string;
+  note: string;
+}
+
+/** UKCO (`/api/world/ukco`): UK Companies House. `mode` SEARCH lists companies; COMPANY has the profile, officers and filings (null = not loaded, see notes). */
+export interface UkcoSearchRow { number: string; name: string | null; status: string | null; type: string | null; created: string | null; ceased: string | null; address: string }
+export interface UkcoProfile {
+  number: string; name: string | null; status: string | null; status_detail: string | null; type: string | null; subtype: string | null;
+  created: string | null; ceased: string | null; jurisdiction: string | null; sic: string[]; address: string;
+  accounts: { last_made_up_to: string | null; next_due: string | null; overdue: boolean | null };
+  confirmation: { last_made_up_to: string | null; next_due: string | null; overdue: boolean | null };
+  has_charges: boolean | null; has_insolvency_history: boolean | null;
+}
+export interface UkcoOfficer { name: string | null; role: string; appointed: string | null; resigned: string | null; nationality: string | null; occupation: string | null; country: string | null }
+export interface UkcoFiling { date: string | null; category: string; type: string | null; description: string; pages: number | null; paper: boolean }
+export type UkcoPayload =
+  | { mode: "SEARCH"; query: string; total: number | null; items: UkcoSearchRow[]; note: string }
+  | {
+      mode: "COMPANY"; number: string; profile: UkcoProfile; notes: string[]; note: string;
+      officers: { total: number | null; active: number | null; resigned: number | null; items: UkcoOfficer[] } | null;
+      filings: { total: number | null; items: UkcoFiling[] } | null;
+    };
+
+/** ADDR (`/api/world/addr`): an EVM address's balance and latest transactions, and the gas oracle (Etherscan V2). Amounts are in the chain's native coin. */
+export interface AddrTx { hash: string; block: number | null; time: number | null; dir: "IN" | "OUT" | "SELF" | "CREATE"; from: string | null; to: string | null; value: number; fee: number | null; failed: boolean; method: string; confirmations: number | null }
+export interface AddrGas { last_block: number | null; safe: number | null; propose: number | null; fast: number | null; base_fee: number | null }
+export interface AddrPayload {
+  mode: "ADDRESS" | "GAS"; chain: string; chainid: number; coin: string; address: string | null; note: string; notes: string[];
+  balance: { wei: string; balance: number } | null; txs: AddrTx[] | null; gas: AddrGas | null;
+}
+
 export const worldApi = {
+  trade: (reporter: string, partner: string, hs: string, years: number, fresh = false) =>
+    request<Envelope<TradePayload>>(`/api/world/trade?${qs({ reporter, partner, hs, years: String(years) })}`, fresh ? 0 : 600_000),
+  usmac: (src: string, q: string, years: number, fresh = false) =>
+    request<Envelope<UsMacroPayload>>(`/api/world/usmac?${qs({ src, q, years: String(years) })}`, fresh ? 0 : 600_000),
   stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
   weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
   cenb: (fresh = false) => request<Envelope<CenbPayload>>("/api/world/cenb", fresh ? 0 : 300_000),
   nrg: (fresh = false) => request<Envelope<NrgPayload>>("/api/world/nrg", fresh ? 0 : 300_000),
+  ship: (fresh = false) => request<Envelope<ShipPayload>>("/api/world/ship", fresh ? 0 : 300_000),
   wetr: (place: string, fresh = false) => request<Envelope<WetrPayload>>(`/api/world/wetr?${qs({ place })}`, fresh ? 0 : 300_000),
   holidays: (mkt: string, year: number) => request<Envelope<HolidayCalendar>>(`/api/world/holidays?${qs({ mkt, year: String(year) })}`, 3_600_000),
   pred: (q: string, fresh = false) => request<Envelope<PredPayload>>(`/api/world/pred?${qs({ q })}`, fresh ? 0 : 60_000),
@@ -1149,6 +1253,8 @@ export const worldApi = {
   defi: (q: string, fresh = false) => request<Envelope<DefiPayload>>(`/api/world/defi?${qs({ q })}`, fresh ? 0 : 600_000),
   mfnav: (q: string, fresh = false) => request<Envelope<MfNavPayload>>(`/api/world/mfnav?${qs({ q })}`, fresh ? 0 : 3_600_000),
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
+  ukco: (q: string, fresh = false) => request<Envelope<UkcoPayload>>(`/api/world/ukco?${qs({ q })}`, fresh ? 0 : 300_000),
+  addr: (q: string, fresh = false) => request<Envelope<AddrPayload>>(`/api/world/addr?${qs({ q })}`, fresh ? 0 : 15_000),
   ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
   /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
   events: (symbol: string, fresh = false) =>

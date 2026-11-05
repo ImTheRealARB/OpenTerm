@@ -4,6 +4,11 @@ Providers are adapters that map an upstream API into the normalized models in
 `backend/openterm/models.py` (`Quote`, `Bars`, `SearchHit`). The router, cache, rate limiting,
 fallback, health tracking and the SOURCES screen all work from the adapter's declarations.
 
+0. Decide where it ranks. The order sources answer in is one table, `providers/hierarchy.py` (best first: depth, freshness, rate limits;
+   see [DATA_SOURCES.md](DATA_SOURCES.md)). Add a `Rank` there with the reasons; a test checks the entry is complete. If the source reaches
+   back a limited number of days for minute candles, declare `intraday_days = {"5m": 60, ...}` on the adapter and raise
+   `ProviderError("depth", ...)` when asked for more (the next source then answers, and no circuit-breaker strike is counted).
+
 1. Create `backend/openterm/providers/foo.py`:
 
    ```python

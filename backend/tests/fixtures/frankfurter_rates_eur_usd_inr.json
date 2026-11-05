@@ -1,0 +1,11 @@
+{
+ "recorded": "2026-11-05 by hand from GET https://api.frankfurter.dev/v2/rates?from=2026-10-28&to=2026-11-03&base=EUR&quotes=USD,INR&providers=ecb (REAL answer; Frankfurter v2 returns a JSON array)",
+ "status": 200,
+ "body": [
+  {"date":"2026-10-28","base":"EUR","quote":"INR","rate":106.0095},{"date":"2026-10-28","base":"EUR","quote":"USD","rate":1.1133},
+  {"date":"2026-10-29","base":"EUR","quote":"INR","rate":106.0345},{"date":"2026-10-29","base":"EUR","quote":"USD","rate":1.113},
+  {"date":"2026-10-30","base":"EUR","quote":"INR","rate":106.084},{"date":"2026-10-30","base":"EUR","quote":"USD","rate":1.1172},
+  {"date":"2026-11-02","base":"EUR","quote":"INR","rate":106.4505},{"date":"2026-11-02","base":"EUR","quote":"USD","rate":1.1216},
+  {"date":"2026-11-03","base":"EUR","quote":"INR","rate":105.9155},{"date":"2026-11-03","base":"EUR","quote":"USD","rate":1.1179}
+ ]
+}
