@@ -208,3 +208,22 @@ from .defillama import DefiLlamaProvider
 from .okx import OkxProvider
 
 ADAPTERS.update({"binance_deriv": BinanceDerivProvider, "okx": OkxProvider, "defillama": DefiLlamaProvider})
+
+# --- Trade + US macro family (free keys, read only): TRADE and USMAC. The key is read per call, so nothing to wire in main.on_key_change ---
+from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
+
+ADAPTERS.update({"comtrade": ComtradeProvider, "bls": BlsProvider, "bea": BeaProvider, "census": CensusProvider})
+
+# --- SHIP: IMF PortWatch (keyless) ---
+from .portwatch import PortWatchProvider
+
+ADAPTERS.update({"portwatch": PortWatchProvider})
+
+# --- More free read-only sources: Frankfurter (ECB FX fixes, keyless), UK Companies House, Marketaux news, Etherscan (free keys; inert until set) ---
+from .companies_house import CompaniesHouseProvider
+from .etherscan import EtherscanProvider
+from .frankfurter import FrankfurterProvider
+from .marketaux import MarketauxProvider
+
+ADAPTERS.update({"frankfurter": FrankfurterProvider, "companies_house": CompaniesHouseProvider,
+                 "marketaux": MarketauxProvider, "etherscan": EtherscanProvider})

@@ -1,0 +1,6 @@
+{
+ "doc_shaped": "Example answer copied from docs.etherscan.io (Get Gas Oracle), NOT a recording: no Etherscan key was available. Gas prices are gwei strings.",
+ "status": 200,
+ "body": {"status": "1", "message": "OK", "result": {"LastBlock": "23467872", "SafeGasPrice": "0.496839934", "ProposeGasPrice": "0.496840168",
+   "FastGasPrice": "0.55411917", "suggestBaseFee": "0.496839934", "gasUsedRatio": "0.405942555555556,0.784013777777778,0.502624148542588,0.719479644444444,0.45673524947105"}}
+}

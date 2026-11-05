@@ -1,0 +1,8 @@
+{
+ "doc_shaped": "Built from the resource pages on developer-specs.company-information.service.gov.uk, NOT a recording: no key was available. The company is invented.",
+ "status": 200,
+ "body": {"kind": "search#companies", "items_per_page": 20, "start_index": 0, "total_results": 1, "page_number": 1, "items": [
+  {"kind": "searchresults#company", "title": "EXAMPLE TRADING LIMITED", "company_number": "09999999", "company_status": "active", "company_type": "ltd",
+   "date_of_creation": "2015-03-02", "address_snippet": "1 Example Street, London, EC1A 1AA", "description": "09999999 - Incorporated on 2 March 2015",
+   "address": {"address_line_1": "1 Example Street", "locality": "London", "postal_code": "EC1A 1AA"}, "links": {"self": "/company/09999999"}}]}
+}

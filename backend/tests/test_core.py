@@ -71,8 +71,9 @@ def test_ranges():
     assert normalize("1M", None) == ("1mo", "60m")  # 1M is a month range, never a minute
     assert normalize("5D", "1m") == ("5d", "1m")
     assert normalize("1Y", "W") == ("1y", "1wk")
-    with pytest.raises(ValueError):
-        normalize("1Y", "1m")  # Yahoo keeps 1m bars for 7 days only
+    # How far back a minute candle reaches depends on which source answers, so normalize() no longer rejects it:
+    # each provider declares its own depth (Yahoo: see test_yahoo_declares_and_enforces_its_intraday_depth).
+    assert normalize("1Y", "1m") == ("1y", "1m")
     with pytest.raises(ValueError):
         normalize("7Q", None)
 

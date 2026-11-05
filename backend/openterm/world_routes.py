@@ -60,6 +60,17 @@ async def world_stats(request: Request, country: str = Query("", max_length=40),
         return error(e)
 
 
+@router.get("/dbsearch")
+async def dbnomics_search(request: Request, q: str = Query("", max_length=160), dataset: str = Query("", max_length=120), offset: int = Query(0, ge=0, le=100000)):
+    """DBSRCH: DBnomics datasets matching the words in `q`; with `dataset=<provider>/<code>`, the matching series of that dataset (open one with ECST DBN:...)."""
+    from .world.macro import dbsearch_svc
+
+    try:
+        return await dbsearch_svc(svc(request), q, dataset, offset)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/weco")
 async def world_weco(request: Request):
     """WECO: G20 headline indicators, each cell with its own data year."""
@@ -89,6 +100,28 @@ async def energy_board(request: Request):
 
     try:
         return await nrg(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/ship")
+async def ship_board(request: Request):
+    """SHIP: daily ship transits through 28 sea chokepoints (IMF PortWatch, satellite AIS, weekly, 8 to 12 days behind)."""
+    from .world.shipsvc import ship
+
+    try:
+        return await ship(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/ports")
+async def ports_board(request: Request, q: str = Query("", max_length=120)):
+    """PORTS: daily port calls and trade estimates (IMF PortWatch, satellite AIS, weekly). Bare = the 25 busiest ports; `q` = ports matching its words."""
+    from .world.portssvc import ports_board as board
+
+    try:
+        return await board(svc(request), q)
     except DataError as e:
         return error(e)
 
@@ -215,5 +248,51 @@ async def defi_yields(request: Request, q: str = Query("", max_length=40)):
 
     try:
         return await defi(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/trade")
+async def trade_flows(request: Request, reporter: str = Query(..., max_length=24), partner: str = Query("WLD", max_length=24),
+                      hs: str = Query("TOTAL", max_length=10), years: int = Query(5, ge=1, le=12)):
+    """TRADE: exports and imports between two countries by HS product, per year (UN Comtrade, free key UN_COMTRADE_KEY, 424 without it)."""
+    from .world.usdata import trade
+
+    try:
+        return await trade(svc(request), request.app.state.keys, reporter, partner, hs, years)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/usmac")
+async def us_macro(request: Request, src: str = Query(..., max_length=8), q: str = Query("", max_length=120), years: int = Query(3, ge=1, le=20)):
+    """USMAC: US series from BLS (jobs, prices; BLS_API_KEY), BEA (GDP, trade, industry; BEA_API_KEY) or Census (retail sales, trade by
+    country; CENSUS_API_KEY). Every series carries its own latest period. 424 KEY REQUIRED without the key."""
+    from .world.usdata import usmac
+
+    try:
+        return await usmac(svc(request), request.app.state.keys, src, q, years)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/ukco")
+async def uk_company(request: Request, q: str = Query(..., max_length=120)):
+    """UKCO: UK Companies House. A company number gives profile + officers + filings; a name gives a search. 424 KEY REQUIRED without COMPANIES_HOUSE_KEY."""
+    from .world.uk_company import ukco
+
+    try:
+        return await ukco(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/addr")
+async def evm_address(request: Request, q: str = Query(..., max_length=120)):
+    """ADDR: an EVM address (balance, last 20 transactions, gas) or `GAS`, on Ethereum or a named chain (Etherscan V2). 424 KEY REQUIRED without ETHERSCAN_KEY."""
+    from .world.chain import addr
+
+    try:
+        return await addr(svc(request), q)
     except DataError as e:
         return error(e)

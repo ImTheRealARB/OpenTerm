@@ -1,0 +1,11 @@
+{
+ "doc_shaped": "Example answer copied from docs.etherscan.io (Get Normal Transactions By Address; the address in the docs is 0xc5102fE9359FD9a28f877a67E36B0F050d81a3CC), NOT a recording: no Etherscan key was available. One transaction, every value a string.",
+ "status": 200,
+ "body": {"status": "1", "message": "OK", "result": [
+  {"blockNumber": "23467053", "blockHash": "0xf5646226f819fbdd6b2f1cb99de6e5d17da3d876ec166e69f4e9736c8ebf7ab4", "timeStamp": "1759129619",
+   "hash": "0xf9db905d77704596d3600816bc70201586cfeec13bcf576320e2f38d6ca851a0", "nonce": "8", "transactionIndex": "184",
+   "from": "0x2449ecef5012f0a0e153b278ef4fcc9625bc4c78", "to": "0xc5102fe9359fd9a28f877a67e36b0f050d81a3cc", "value": "0", "gas": "73271",
+   "gasPrice": "238744402", "input": "0x5c19a95c0000000000000000000000002449ecef5012f0a0e153b278ef4fcc9625bc4c78", "methodId": "0x5c19a95c",
+   "functionName": "delegate(address to)", "contractAddress": "", "cumulativeGasUsed": "22498564", "txreceipt_status": "1", "gasUsed": "48847",
+   "confirmations": "589", "isError": "0"}]}
+}

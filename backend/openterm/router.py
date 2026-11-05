@@ -9,6 +9,7 @@ from typing import TypeVar
 
 from .perf import percentile
 from .providers.base import Provider, ProviderError
+from .providers.hierarchy import rank_of
 
 log = logging.getLogger("openterm.router")
 T = TypeVar("T")
@@ -41,8 +42,8 @@ class Health:
 
     def fail(self, err: ProviderError) -> None:
         self.calls += 1
-        if err.kind in ("not_found", "unsupported"):
-            return  # the provider is fine; it just lacks this symbol
+        if err.kind in ("not_found", "unsupported", "depth", "login_expired"):
+            return  # the provider is fine; it just lacks this symbol, or does not reach back that far
         self.errors += 1
         self.consecutive += 1
         self.last_error = f"{err.kind}: {err}"
@@ -59,6 +60,9 @@ class AllFailed(Exception):
         kinds = {e.kind for _, e in errors}
         if not errors:
             self.kind, msg = "unsupported", "NO PROVIDER SUPPORTS THIS SYMBOL"
+        elif "depth" in kinds and kinds <= {"not_found", "unsupported", "depth"}:
+            # Every source that has the symbol is too shallow for this interval + range: a request problem, not missing data.
+            self.kind, msg = "bad_request", next(str(e) for _, e in errors if e.kind == "depth")
         elif kinds <= {"not_found", "unsupported"}:
             self.kind, msg = "not_found", "NO DATA FOR SYMBOL"
         elif "key_required" in kinds and kinds <= {"not_found", "unsupported", "key_required"}:
@@ -91,7 +95,7 @@ class Router:
         try:
             result = await fn(p)
         except ProviderError as e:
-            if e.kind == "key_required":  # not an outage: no circuit-breaker strike
+            if e.kind in ("key_required", "login_expired"):  # not an outage: no circuit-breaker strike
                 log.debug("provider %s needs a key", p.name)
                 raise
             self.health[p.name].fail(e)
@@ -141,6 +145,21 @@ class Router:
                     errors[s].append((name, e))
         return found, {s: AllFailed(errors[s]) for s in symbols if s not in found}
 
+    def history_limits(self, symbol: str) -> dict:
+        """How far back each intraday candle length reaches for this symbol, from the best source that can serve it.
+
+        {"intraday_days": {"5m": 1400, ...}, "source": "kite"}. Each length takes the deepest limit among the sources that are
+        switched on for the symbol and have declared one (Provider.intraday_days); a length no source declares is absent.
+        Daily and longer candles are not limited here. Used by the chart so it only offers what will work.
+        """
+        best: dict[str, tuple[int, str]] = {}
+        for p in self.candidates("history", symbol):
+            for interval, days in (p.intraday_days or {}).items():
+                if interval not in best or days > best[interval][0]:
+                    best[interval] = (days, p.name)
+        sources = {name for _, name in best.values()}
+        return {"symbol": symbol, "intraday_days": {i: d for i, (d, _) in best.items()}, "source": sorted(sources)}
+
     def summary(self) -> list[dict]:
         now = time.time()
         out = []
@@ -152,6 +171,7 @@ class Router:
                 "label": p.label,
                 "source": p.source,
                 "capabilities": sorted(p.capabilities),
+                "hierarchy": rank_of(name),  # where it sits per capability and why (providers/hierarchy.py)
                 "markets": p.markets,
                 "terms": p.terms,
                 "status": "DOWN" if h.down else ("DEGRADED" if h.consecutive else ("OK" if h.last_ok else "IDLE")),

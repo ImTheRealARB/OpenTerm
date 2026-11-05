@@ -1,0 +1,65 @@
+{
+ "status": 200,
+ "_note": "REAL Kite GET /quote answer recorded 2026-11-05 (order-book depth removed). No token inside.",
+ "body": {
+  "status": "success",
+  "data": {
+   "BSE:SENSEX": {
+    "instrument_token": 265,
+    "tradingsymbol": "SENSEX",
+    "timestamp": "2026-11-05 10:12:15",
+    "last_price": 78757.53,
+    "net_change": 1456.13,
+    "indicative_close_price": 0,
+    "ohlc": {
+     "open": 78910.94,
+     "high": 79001.19,
+     "low": 78520.56,
+     "close": 77301.4
+    }
+   },
+   "NSE:NIFTY 50": {
+    "instrument_token": 256265,
+    "tradingsymbol": "NIFTY 50",
+    "timestamp": "2026-11-05 10:12:16",
+    "last_price": 24374.45,
+    "net_change": 413.85,
+    "indicative_close_price": 0,
+    "ohlc": {
+     "open": 24378.05,
+     "high": 24442.2,
+     "low": 24296.3,
+     "close": 23960.6
+    }
+   },
+   "NSE:RELIANCE": {
+    "instrument_token": 738561,
+    "timestamp": "2026-11-05 10:12:16",
+    "last_trade_time": "2026-11-05 10:12:16",
+    "last_price": 1309.5,
+    "last_quantity": 20,
+    "buy_quantity": 503674,
+    "sell_quantity": 1665318,
+    "volume": 3803834,
+    "average_price": 1317.26,
+    "oi": 0,
+    "oi_day_high": 0,
+    "oi_day_low": 0,
+    "net_change": 0,
+    "lower_circuit_limit": 1179.9,
+    "upper_circuit_limit": 1442.1,
+    "low_limit_price_protection": 0,
+    "high_limit_price_protection": 0,
+    "reference_limit_price": 0,
+    "indicative_close_price": 0,
+    "total_imbalance_qty": 0,
+    "ohlc": {
+     "open": 1324,
+     "high": 1325,
+     "low": 1308.1,
+     "close": 1311
+    }
+   }
+  }
+ }
+}

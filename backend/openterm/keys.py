@@ -8,6 +8,7 @@ no keyring backend. Values never leave the backend: status rows carry presence, 
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
 import time
 from collections.abc import Callable, Mapping
@@ -79,7 +80,23 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://support.google.com/accounts/answer/185833", secret_fields=("SMTP_PASSWORD",)),
     KeySpec("webhook", ("ALERT_WEBHOOK_URL",), 17, "Slack/Discord-style webhook for alerts and briefs (the URL is a secret)",
             "https://api.slack.com/messaging/webhooks"),
-    KeySpec("kite", ("KITE_API_KEY", "KITE_API_SECRET"), 15,
+    # Free read-only sources: UKCO (Companies House), N headlines with sentiment (Marketaux), ADDR (Etherscan).
+    KeySpec("companies_house", ("COMPANIES_HOUSE_KEY",), 20, "UK Companies House (free): company profile, officers, filing history (UKCO). 600 requests per 5 minutes",
+            "https://developer.company-information.service.gov.uk/get-started"),
+    KeySpec("marketaux", ("MARKETAUX_KEY",), 20, "Marketaux (free): financial news with a sentiment score per company, added to N. About 100 requests a day",
+            "https://www.marketaux.com/register"),
+    KeySpec("etherscan", ("ETHERSCAN_KEY",), 20, "Etherscan (free): EVM address balance, recent transactions and gas price (ADDR). 3 calls a second",
+            "https://etherscan.io/apidashboard"),
+    # Trade + US macro family (free, read-only). Panels TRADE (Comtrade) and USMAC (BLS, BEA, Census).
+    KeySpec("comtrade", ("UN_COMTRADE_KEY",), 19, "UN Comtrade (free): trade flows between two countries by HS product (TRADE)",
+            "https://comtradedeveloper.un.org/"),
+    KeySpec("bls", ("BLS_API_KEY",), 19, "BLS (free): US CPI, jobs, wages, job openings, 500 queries a day (USMAC BLS)",
+            "https://data.bls.gov/registrationEngine/"),
+    KeySpec("bea", ("BEA_API_KEY",), 19, "BEA (free): US GDP, trade balance, value added by industry (USMAC BEA)",
+            "https://apps.bea.gov/API/signup/"),
+    KeySpec("census", ("CENSUS_API_KEY",), 19, "US Census (free): monthly retail sales, US goods trade by country and HS chapter (USMAC CENSUS)",
+            "https://api.census.gov/data/key_signup.html"),
+    KeySpec("kite",("KITE_API_KEY", "KITE_API_SECRET"), 15,
             "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
             "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
             hidden_secret=("KITE_ACCESS_TOKEN",)),
@@ -347,10 +364,19 @@ def from_settings(settings) -> KeyStore:
 QUOTA_WORDS = ("limit reach", "quota", "upgrade your plan", "rate limit exceeded", "too many requests")
 
 
+def _body_rejects_key(low: str) -> bool:
+    """BLS and BEA answer HTTP 200 with the complaint in the body (doc-shaped, unverified against a live bad key)."""
+    # Etherscan: HTTP 200 with {"status":"0","message":"NOTOK","result":"Invalid API Key"} (text from docs.etherscan.io "Common Error Messages").
+    return (("request_not_processed" in low and "key" in low) or ('"apierrorcode"' in low and ("userid" in low or "user id" in low))
+            or "invalid api key" in low)
+
+
 def classify(status: int, body: str) -> str:
     low = (body or "").lower()
-    if status == 429 or (200 <= status < 300 and any(w in low for w in QUOTA_WORDS)):
+    if status in (429, 402) or (200 <= status < 300 and any(w in low for w in QUOTA_WORDS)):  # 402: Marketaux "usage_limit_reached"
         return "QUOTA"
+    if 200 <= status < 300 and _body_rejects_key(low):
+        return "INVALID"
     if 200 <= status < 300:
         return "OK"
     if status in (401, 403) or (status == 400 and ("api_key" in low or "api key" in low)):
@@ -391,6 +417,25 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
     "tradier": lambda k: ("GET", "https://sandbox.tradier.com/v1/markets/clock", None,
                           {**_bearer(k["TRADIER_TOKEN"]), "Accept": "application/json"}, None),
     "telegram": lambda k: ("GET", f"https://api.telegram.org/bot{k['TELEGRAM_BOT_TOKEN']}/getMe", None, None, None),
+    # Companies House: HTTP basic auth, the key is the user name and the password is empty. A search for one company is the cheapest call.
+    "companies_house": lambda k: ("GET", "https://api.company-information.service.gov.uk/search/companies", {"q": "tesco", "items_per_page": "1"},
+                                 {"Authorization": "Basic " + base64.b64encode(f"{k['COMPANIES_HOUSE_KEY']}:".encode()).decode("ascii")}, None),
+    # Marketaux has no free "who am I" call: one article is the cheapest, and it does spend one of the ~100 daily requests.
+    "marketaux": lambda k: ("GET", "https://api.marketaux.com/v1/news/all", {"api_token": k["MARKETAUX_KEY"], "limit": "1", "language": "en"}, None, None),
+    # Etherscan answers HTTP 200 with status "0" for a bad key; classify() reads "Invalid API Key" out of the body.
+    "etherscan": lambda k: ("GET", "https://api.etherscan.io/v2/api", {"chainid": "1", "module": "gastracker", "action": "gasoracle",
+                                                                       "apikey": k["ETHERSCAN_KEY"]}, None, None),
+    # Trade + US macro family: each uses the source's cheapest documented call (doc-shaped, never run against a live key).
+    "comtrade": lambda k: ("GET", "https://comtradeapi.un.org/data/v1/get/C/A/HS",
+                           {"reporterCode": "842", "partnerCode": "0", "period": "2022", "cmdCode": "TOTAL", "flowCode": "X", "maxrecords": "1"},
+                           {"Ocp-Apim-Subscription-Key": k["UN_COMTRADE_KEY"]}, None),
+    "bls": lambda k: ("POST", "https://api.bls.gov/publicAPI/v2/timeseries/data/", None, None,
+                      {"seriesid": ["LNS14000000"], "startyear": "2025", "endyear": "2025", "registrationkey": k["BLS_API_KEY"]}),
+    "bea": lambda k: ("GET", "https://apps.bea.gov/api/data", {"UserID": k["BEA_API_KEY"], "method": "GETDATASETLIST", "ResultFormat": "JSON"},
+                      None, None),
+    "census": lambda k: ("GET", "https://api.census.gov/data/timeseries/eits/marts",
+                         {"get": "cell_value", "time": "2024-01", "category_code": "44X72", "data_type_code": "SM", "key": k["CENSUS_API_KEY"]},
+                         None, None),
 }
 
 

@@ -445,6 +445,11 @@ link for each one is shown there). Keys are never typed on the command line and 
 | An AI key: OpenRouter, Anthropic, OpenAI, Gemini, DeepSeek, Groq, Mistral, xAI, Together, Fireworks or OpenCode | The optional AI panels. Pay per use, billed by that provider |
 | Telegram, SMTP email or a webhook URL | Alert and daily brief delivery |
 | `KITE_API_KEY` and `KITE_API_SECRET` | Zerodha Kite Connect for NSE and BSE data (read-only, needs a paid Kite developer app) |
+| `UN_COMTRADE_KEY` | Free: trade flows between countries by product (`TRADE`) |
+| `BLS_API_KEY`, `BEA_API_KEY`, `CENSUS_API_KEY` | Free: US inflation, jobs, GDP, trade, retail (`USMAC`) |
+| `COMPANIES_HOUSE_KEY` | Free: UK company profile, officers, filings (`UKCO`) |
+| `MARKETAUX_KEY` | Free: news with sentiment scores in `N` |
+| `ETHERSCAN_KEY` | Free: Ethereum balances, transactions, gas (`ADDR`) |
 
 ## How the command line works
 

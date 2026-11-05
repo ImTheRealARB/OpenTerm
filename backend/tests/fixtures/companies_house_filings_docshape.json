@@ -1,0 +1,7 @@
+{
+ "doc_shaped": "Built from the resource pages on developer-specs.company-information.service.gov.uk, NOT a recording: no key was available. The filings are invented.",
+ "status": 200,
+ "body": {"filing_history_status": "filing-history-available", "items_per_page": 25, "start_index": 0, "total_count": 2, "items": [
+  {"category": "confirmation-statement", "date": "2026-03-16", "description": "confirmation-statement-with-no-updates", "type": "CS01", "pages": 3, "paper_filed": false, "transaction_id": "MzAwMDAwMDAwMGFkaXF6a2N4"},
+  {"category": "accounts", "date": "2025-12-10", "description": "accounts-with-accounts-type-total-exemption-full", "type": "AA", "pages": 8, "paper_filed": false, "transaction_id": "MzAwMDAwMDAwMGFkaXF6a2N5"}]}
+}

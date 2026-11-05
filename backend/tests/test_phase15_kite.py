@@ -220,6 +220,58 @@ def test_expired_login_falls_back_to_yahoo_and_says_so(client, monkeypatch):
     assert status(client)["state"] == "KITE LOGIN EXPIRED"
 
 
+# --- Kite as a quotes provider and real recordings (2026-11-05) ---------------------------------------------------------------------------
+
+def real(name: str) -> dict:
+    return json.loads((FIX / f"{name}.json").read_bytes().decode("utf-8"))["body"]["data"]
+
+
+def test_logged_in_quotes_for_indian_symbols_come_from_kite_and_us_names_skip_it(client):
+    login(client)
+    r = client.get("/api/quote", params={"symbols": "RELIANCE.NS,AAPL"}).json()["results"]
+    want = real("kite_quote_reliance_nifty_sensex_real")["NSE:RELIANCE"]
+    q = r["RELIANCE.NS"]["data"]
+    assert r["RELIANCE.NS"]["source"].startswith("kite") and q["price"] == want["last_price"] and q["prev_close"] == want["ohlc"]["close"]
+    assert q["change"] == pytest.approx(want["last_price"] - want["ohlc"]["close"]) and q["currency"] == "INR"
+    assert "KITE" not in str(r["AAPL"].get("source", "")).upper()  # global symbols cost Kite nothing
+
+
+def test_the_sensex_index_maps_to_kite(client):
+    login(client)
+    q = client.get("/api/quote", params={"symbols": "^BSESN"}).json()["results"]["^BSESN"]
+    assert q["source"].startswith("kite") and q["data"]["price"] == real("kite_quote_reliance_nifty_sensex_real")["BSE:SENSEX"]["last_price"]
+
+
+def test_real_5_minute_recording_becomes_bars(client):
+    login(client)
+    r = client.get("/api/history", params={"symbol": "RELIANCE.NS", "range": "5D", "interval": "5m"}).json()
+    candles = real("kite_historical_reliance_5m_real")["candles"]
+    assert "data" in r, r
+    assert r["source"].startswith("kite") and r["data"]["c"][-len(candles):] == [c[4] for c in candles][-len(r["data"]["c"]):]
+
+
+def test_history_limits_report_kites_depth_once_logged_in(client):
+    assert client.get("/api/history/limits", params={"symbol": "RELIANCE.NS"}).json()["intraday_days"]["5m"] == 60  # Yahoo
+    login(client)
+    lim = client.get("/api/history/limits", params={"symbol": "RELIANCE.NS"}).json()
+    assert lim["intraday_days"]["5m"] == 4200 and "kite" in lim["source"]
+    assert client.get("/api/history/limits", params={"symbol": "AAPL"}).json()["intraday_days"]["5m"] == 60
+
+
+def test_expired_login_falls_back_for_quotes_and_history_and_gives_the_reason(client, monkeypatch):
+    login(client)
+    monkeypatch.setenv("OPENTERM_KITE_EXPIRED", "1")
+    h = client.get("/api/history", params={"symbol": "RELIANCE.NS", "range": "1Y", "interval": "1d"}).json()  # Yahoo has a recording for daily
+    assert "kite" in h["fallback_from"] and "KITE LOGIN EXPIRED" in h["fallback_notes"]["kite"]
+    # once the first call marked the login expired, quotes skip the network and say the same thing
+    q = client.get("/api/quote", params={"symbols": "RELIANCE.NS"}).json()["results"]["RELIANCE.NS"]
+    assert "data" in q, q
+    assert "kite" in q["fallback_from"] and "KITE LOGIN EXPIRED" in q["fallback_notes"]["kite"] and q["source"] != "kite"
+    # an expired login is not an outage: the circuit breaker must not trip, so a new login works at once
+    kite_row = next(p for p in client.get("/api/sources").json()["providers"] if p["name"] == "kite")
+    assert kite_row["status"] != "DOWN"
+
+
 # --- option chains with open interest -----------------------------------------------------------------------------------------------------
 
 def quote_fixture() -> dict:

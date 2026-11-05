@@ -132,6 +132,13 @@ const defs: FunctionDef[] = [
   { code: "TMPL", title: "Workspace templates: Long-term, Day trader, Macro, India", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", phase: 20, load: () => import("./TMPL"), idlePreload: false },
   { code: "IND", title: "Indicator library, formulas and presets for GP", needsSecurity: false, argsSchema: "[search]", phase: 20, load: () => import("./IND"), idlePreload: false },
   { code: "FUNC", title: "Function directory: type to filter, Enter opens", needsSecurity: false, phase: 20, load: () => import("./FUNC") },
+  { code: "UKCO", title: "UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY)", needsSecurity: false, argsSchema: "<NAME|NUMBER>", phase: 20, load: () => import("./UKCO") },
+  { code: "ADDR", title: "EVM address balance, recent transactions and gas price on Ethereum or L2s (Etherscan, free key ETHERSCAN_KEY; read only)", needsSecurity: false, argsSchema: "[0xADDRESS|GAS] [ETH|ARB|OP|BASE|POLY|BSC]", phase: 20, load: () => import("./ADDR") },
+  { code: "SHIP", title: "Ship traffic at sea chokepoints (IMF PortWatch)", needsSecurity: false, phase: 20, load: () => import("./SHIP") },
+  { code: "TRADE", title: "Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY)", needsSecurity: false, argsSchema: "<REPORTER> [<PARTNER>|WORLD] [TOTAL|<HS 2/4/6 digits>] [<N>Y]", phase: 20, load: () => import("./TRADE") },
+  { code: "USMAC", title: "US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys)", needsSecurity: false, argsSchema: "BLS [CPI|CORECPI|PPI|UNEMP|LFPR|PAYROLL|AHE|JOLTS|<series id>] | BEA [GDPG|PCEG|GDP|TRADEBAL|SERVBAL|CURACCT|INDUSTRY] | CENSUS [RETAIL [TOTAL|AUTO|FOOD|GEN|REST] | TRADE <COUNTRY> <HS2>]", phase: 20, load: () => import("./USMAC") },
+  { code: "DBSRCH", title: "Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST", needsSecurity: false, argsSchema: "<WORDS> | DS:<PROVIDER>/<DATASET> [WORDS]", phase: 19, load: () => import("./DBSRCH") },
+  { code: "PORTS", title: "Port activity: daily port calls and trade estimates (IMF PortWatch)", needsSecurity: false, argsSchema: "[PORT|COUNTRY]", phase: 20, load: () => import("./PORTS") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

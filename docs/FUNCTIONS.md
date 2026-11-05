@@ -177,6 +177,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `STBL` | Stablecoin supply by coin and chain (DefiLlama) |  | `[CHAIN]` | `STBL` |
 | `DEFI` | DeFi yield pools over US$1M TVL by chain or project (DefiLlama) |  | `[CHAIN\|PROJECT]` | `DEFI` |
 | `UNLK` | Token unlocks: not built, DefiLlama's emissions API is paid (HTTP 402) and there is no keyless source **(not built yet)** |  |  | `UNLK` |
+| `DBSRCH` | Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST |  | `<WORDS> \| DS:<PROVIDER>/<DATASET> [WORDS]` | `DBSRCH` |
 
 ### Derivatives, rates and credit
 
@@ -258,6 +259,12 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `TMPL` | Workspace templates: Long-term, Day trader, Macro, India |  | `[LONGTERM\|DAY\|MACRO\|INDIA]` | `TMPL` |
 | `IND` | Indicator library, formulas and presets for GP |  | `[search]` | `IND` |
 | `FUNC` | Function directory: type to filter, Enter opens |  |  | `FUNC` |
+| `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
+| `ADDR` | EVM address balance, recent transactions and gas price on Ethereum or L2s (Etherscan, free key ETHERSCAN_KEY; read only) |  | `[0xADDRESS\|GAS] [ETH\|ARB\|OP\|BASE\|POLY\|BSC]` | `ADDR` |
+| `SHIP` | Ship traffic at sea chokepoints (IMF PortWatch) |  |  | `SHIP` |
+| `TRADE` | Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY) |  | `<REPORTER> [<PARTNER>\|WORLD] [TOTAL\|<HS 2/4/6 digits>] [<N>Y]` | `TRADE` |
+| `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
+| `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
 
 ## Global keyboard shortcuts
 

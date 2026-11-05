@@ -81,6 +81,13 @@ async def history(request: Request, symbol: str = Query(..., max_length=32), ran
         return error(e)
 
 
+@router.get("/history/limits")
+async def history_limits(request: Request, symbol: str = Query(..., max_length=32)):
+    """How far back each intraday candle length reaches for this symbol, from the best source that can serve it right now
+    (so the chart offers only what will work: 5 min over 1 year is fine for a source with deep minute data, not for Yahoo)."""
+    return svc(request).router.history_limits(resolve(symbol))
+
+
 @router.get("/profile")
 async def profile(request: Request, symbol: str = Query(..., max_length=32)):
     try:

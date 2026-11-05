@@ -9,6 +9,7 @@ import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { api, type NewsItem, type NewsPayload } from "../net/api";
 import { newsEmptyHint, newsQuery } from "./newsArgs";
+import { sentimentClass, sentimentText } from "./newsSentiment";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
@@ -125,6 +126,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
       {pick && (
         <div className="summary">
           <span className="dim">{pick.publisher} · </span>
+          {pick.sentiment != null && <span className={sentimentClass(pick.sentiment)}>{sentimentText(pick.sentiment)} · </span>}
           {pick.summary ?? <span className="dim">NO SUMMARY IN THE FEED</span>}
         </div>
       )}

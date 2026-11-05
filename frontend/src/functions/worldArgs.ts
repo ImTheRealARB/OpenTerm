@@ -4,7 +4,8 @@ import type { WecoCell, WecoRow } from "../net/api";
 /** Indicator aliases the server knows (backend/openterm/world/stats.py INDICATORS). */
 export const ECST_INDICATORS = ["GDP", "GDPG", "GDPPC", "CPI", "UNEMP", "POP", "DEBT", "CA", "TRADE", "GDPGROWTH", "INFLATION", "UNEMPLOYMENT"] as const;
 const IS_IND = new Set<string>(ECST_INDICATORS);
-const DBN = /^DBN:[A-Za-z0-9_-]+\/[A-Za-z0-9_.:-]+\/[A-Za-z0-9_./-]+$/i;
+// Same shape as backend `world/stats.py` DBN_REF; the dataset part allows `@` (OECD codes such as DSD_TAXBEN_NRR@DF_NRR).
+const DBN = /^DBN:[A-Za-z0-9_-]+\/[A-Za-z0-9_.:@-]+\/[A-Za-z0-9_./-]+$/i;
 
 export interface EcstArgs {
   country: string;

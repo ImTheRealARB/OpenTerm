@@ -138,12 +138,14 @@ export const INTERVAL_CHOICES: readonly (readonly [string, string])[] = [
 ];
 
 /**
- * How far back Yahoo serves each minute candle length (days). A COPY of `_MAX_DAYS` in backend/openterm/ranges.py:
- * the backend stays the authority (it rejects a clash), this copy only lets the GUI warn before the request.
- * Daily, weekly and monthly candles have no limit, so they are absent.
+ * How many days back each minute candle length reaches for one symbol, as the BACKEND reports it (GET /api/history/limits):
+ * the deepest source that is switched on for that symbol decides (Yahoo 60 days; a deeper source such as Kite once a
+ * login is valid). Lengths the backend does not list (daily, weekly, monthly) are unlimited. `undefined` = not known yet: show
+ * everything and let the server's own error be the authority.
  */
-export const INTERVAL_MAX_DAYS: Readonly<Record<string, number>> = { "1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60, "60m": 730, "90m": 60 };
-/** Days each range covers (copy of `_RANGE_DAYS` in ranges.py; ranges not listed have no limit check). */
+export type IntradayLimits = Readonly<Record<string, number>>;
+
+/** Days each range covers (copy of `_RANGE_DAYS` in backend/openterm/ranges.py; ranges not listed have no limit check). */
 const RANGE_DAYS: Readonly<Record<string, number>> = { "1D": 1, "5D": 5, "1M": 31, "3M": 92, "6M": 183, YTD: 366, "1Y": 366, "2Y": 731, "5Y": 1827, "10Y": 3653, MAX: 100_000 };
 const MINUTE_WORDS: Readonly<Record<string, string>> = { "1MIN": "1m", "2MIN": "2m", "5MIN": "5m", "15MIN": "15m", "30MIN": "30m", "60MIN": "60m", "1H": "60m", "90MIN": "90m" };
 
@@ -152,25 +154,30 @@ export function intervalToken(raw: string): string {
   return YAHOO_INTERVALS.has(raw) ? raw : (MINUTE_WORDS[raw.toUpperCase()] ?? raw.toLowerCase());
 }
 
-/** Does this candle length reach back far enough for this range? (Daily and longer always do.) */
-export function intervalFits(range: string, interval: string): boolean {
-  const limit = INTERVAL_MAX_DAYS[intervalToken(interval)];
+/** Does this candle length reach back far enough for this range? (Daily and longer, or limits not known yet: yes.) */
+export function intervalFits(range: string, interval: string, limits?: IntradayLimits): boolean {
+  const limit = limits?.[intervalToken(interval)];
   const days = RANGE_DAYS[range.toUpperCase()];
   return limit === undefined || days === undefined || days <= limit;
 }
 
-/** The longest range this candle length can show, or null when it has no limit. 5 min -> "1M". */
-export function longestRangeFor(interval: string): string | null {
-  const limit = INTERVAL_MAX_DAYS[intervalToken(interval)];
-  if (limit === undefined) return null;
-  const fitting = Object.entries(RANGE_DAYS).filter(([, d]) => d <= limit);
-  return fitting.reduce((best, cur) => (cur[1] >= best[1] ? cur : best))[0];
+/** The longest range that fits within `days` of history. 60 -> "1M", 7 -> "5D". */
+export function longestRangeWithin(days: number): string | null {
+  const fitting = Object.entries(RANGE_DAYS).filter(([, d]) => d <= days);
+  return fitting.length ? fitting.reduce((best, cur) => (cur[1] >= best[1] ? cur : best))[0] : null;
 }
 
-/** "up to 60 days" for a limited candle length, or "" when it has no limit. */
-export function intervalLimitText(interval: string): string {
-  const limit = INTERVAL_MAX_DAYS[intervalToken(interval)];
-  return limit === undefined ? "" : `up to ${limit} days`;
+/** "up to 60 days", "up to 4 years": how far back a candle length reaches. */
+export function limitText(days: number): string {
+  if (days < 120) return `up to ${days} days`;
+  if (days < 730) return `up to ${Math.round(days / 30)} months`;
+  return `up to ${(days / 365).toFixed(1).replace(/\.0$/, "")} years`;
+}
+
+/** The days in the server's depth message ("INTERVAL 5m ONLY AVAILABLE FOR THE LAST 60 DAYS"), or null for any other error. */
+export function depthLimitFromError(message: string): number | null {
+  const m = /ONLY AVAILABLE FOR THE LAST (\d+) DAYS/i.exec(message);
+  return m ? Number(m[1]) : null;
 }
 
 /** The args of a GP view with its candle length replaced ("" = back to Auto). Everything else (range, indicators...) is kept. */

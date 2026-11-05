@@ -46,6 +46,7 @@ def envelope(value: dict, stored_at: float, stale: bool) -> dict:
         "age_s": round(time.time() - stored_at, 2),
         "stale": stale,
         "fallback_from": value.get("fallback_from", []),
+        **({"fallback_notes": value["fallback_notes"]} if value.get("fallback_notes") else {}),
     }
 
 
@@ -138,11 +139,12 @@ class DataService:
 
         async def fetch() -> dict:
             bars, failed = await self.router.call("history", lambda p: p.history(symbol, r, i), symbol)
-            return {"data": bars.model_dump(), "fallback_from": failed}
+            return {"data": bars.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
 
-        # Phase 15: a Kite login changes who answers Indian symbols, so the cache key says whether Kite is in the chain right now
-        kite = ":k" if any(p.name == "kite" for p in self.router.candidates("history", symbol)) else ""
-        return await self._swr(f"h:{symbol}:{r}:{i}{kite}", ttl, fetch)
+        # A Kite login changes who answers Indian symbols, so the cache key names the key-gated sources that
+        # are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
+        gated = "".join(f":{p.name[0]}" for p in self.router.candidates("history", symbol) if p.name in ("kite",))
+        return await self._swr(f"h:{symbol}:{r}:{i}{gated}", ttl, fetch)
 
     async def profile(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)
@@ -258,6 +260,16 @@ class DataService:
 
         return await self._swr(f"s:{q}", self.ttl["search"], fetch)
 
+    def _notes(self, failed: list[str]) -> dict[str, str]:
+        """{provider: reason} for the sources that were skipped for a reason worth saying ("KITE LOGIN EXPIRED: run KITE LOGIN")."""
+        out = {}
+        for n in failed:
+            p = self.router.providers.get(n)
+            why = p.why_down() if p is not None else None
+            if why:
+                out[n] = why
+        return out
+
     async def quotes(self, raw_symbols: list[str]) -> dict[str, dict[str, Any]]:
         """Returns {requested symbol: envelope | {"error", "kind"}}. Missing/stale ones are batched upstream."""
         symbols = {raw: resolve(raw) for raw in raw_symbols}
@@ -315,7 +327,7 @@ class DataService:
                     fut = futures[s]
                     if s in found:
                         q, failed = found[s]
-                        value = {"data": q.model_dump(), "fallback_from": failed}
+                        value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
                         self.cache.put(f"q:{s}", value)
                         fut.set_result(value)
                     else:

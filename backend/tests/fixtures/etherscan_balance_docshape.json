@@ -1,0 +1,5 @@
+{
+ "doc_shaped": "Example answer copied from docs.etherscan.io (Get Native Balance for an Address), NOT a recording: no Etherscan key was available. Wei, as a string.",
+ "status": 200,
+ "body": {"status": "1", "message": "OK", "result": "172774397764084972158218"}
+}

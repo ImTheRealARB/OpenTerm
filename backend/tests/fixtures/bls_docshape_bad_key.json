@@ -1,0 +1,12 @@
+{
+ "doc_shaped": "BUILT from the BLS API v2 documentation (api_signature_v2.htm), not recorded: no key was available on 2026-11-05. Values are invented. One M13 row (annual average) and one '-' value with a footnote are included on purpose. The message text is invented.",
+ "status": 200,
+ "body": {
+  "status": "REQUEST_NOT_PROCESSED",
+  "responseTime": 3,
+  "message": [
+   "The key provided by the User is invalid (fixture text)."
+  ],
+  "Results": {}
+ }
+}

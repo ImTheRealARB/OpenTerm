@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 import httpx
 
 from ..models import Bars, Profile, Quote, SearchHit
+from ..ranges import range_days
 from .base import HISTORY, PROFILE, QUOTES, SEARCH, Provider, ProviderError
 
 BASE = "https://query1.finance.yahoo.com"
@@ -123,6 +124,8 @@ def bars_from_chart(result: dict[str, Any], range_: str, interval: str, source: 
 
 class YahooProvider(Provider):
     name = "yahoo"
+    # Yahoo's intraday lookback (days). Daily and longer candles reach back about 20 years and are not listed.
+    intraday_days: ClassVar[dict[str, int]] = {"1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60, "60m": 730, "90m": 60}
     label = "Yahoo Finance (unofficial)"
     capabilities = frozenset({QUOTES, HISTORY, SEARCH, PROFILE})
     markets = "Global equities/ETFs (suffixes .NS .BO .L .T .HK ...), indices (^), FX (=X), crypto (-USD)"
@@ -182,6 +185,10 @@ class YahooProvider(Provider):
         return chart["result"][0]
 
     async def history(self, symbol: str, range_: str, interval: str) -> Bars:
+        limit = self.intraday_days.get(interval)
+        if limit is not None and range_days(range_) > limit:
+            # A deeper source higher in the hierarchy may still answer; if none does, this message reaches the user (HTTP 400).
+            raise ProviderError("depth", f"INTERVAL {interval} ONLY AVAILABLE FOR THE LAST {limit} DAYS")
         result = await self._chart(symbol, range_, interval)
         if not result.get("timestamp"):
             raise ProviderError("not_found", "no bars")

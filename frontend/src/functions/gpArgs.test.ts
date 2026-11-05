@@ -1,27 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { intervalFits, intervalLimitText, longestRangeFor, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
+import { depthLimitFromError, intervalFits, limitText, longestRangeWithin, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
 
-describe("Yahoo candle-length limits", () => {
-  it("minute candles only fit short ranges, daily and longer always fit", () => {
-    expect(intervalFits("5D", "5m")).toBe(true);
-    expect(intervalFits("1M", "15m")).toBe(true);
-    expect(intervalFits("1Y", "15m")).toBe(false);
-    expect(intervalFits("MAX", "1d")).toBe(true);
-    expect(intervalFits("1Y", "60m")).toBe(true);
-    expect(intervalFits("2Y", "60m")).toBe(false);
+describe("candle-length limits (reported by the backend per symbol)", () => {
+  const yahoo = { "1m": 7, "5m": 60, "15m": 60, "60m": 730 };
+  const deep = { "1m": 1400, "5m": 1400, "15m": 1400, "60m": 1400 };
+  it("minute candles only fit ranges inside the reported depth; daily and longer always fit", () => {
+    expect(intervalFits("5D", "5m", yahoo)).toBe(true);
+    expect(intervalFits("1M", "15m", yahoo)).toBe(true);
+    expect(intervalFits("1Y", "15m", yahoo)).toBe(false);
+    expect(intervalFits("MAX", "1d", yahoo)).toBe(true);
+    expect(intervalFits("1Y", "60m", yahoo)).toBe(true);
+    expect(intervalFits("2Y", "60m", yahoo)).toBe(false);
+  });
+  it("a deeper source (for example Kite for Indian shares) allows what Yahoo would not", () => {
+    expect(intervalFits("1Y", "5m", deep)).toBe(true);
+    expect(intervalFits("5Y", "5m", deep)).toBe(false);
+  });
+  it("offers everything while the limits are not known yet", () => {
+    expect(intervalFits("MAX", "1m", undefined)).toBe(true);
   });
   it("understands the typed words as well as the tokens", () => {
-    expect(intervalFits("1Y", "15min")).toBe(false);
-    expect(intervalFits("5D", "1MIN")).toBe(true);
-    expect(intervalFits("1M", "1MIN")).toBe(false);
+    expect(intervalFits("1Y", "15min", yahoo)).toBe(false);
+    expect(intervalFits("5D", "1MIN", yahoo)).toBe(true);
+    expect(intervalFits("1M", "1MIN", yahoo)).toBe(false);
   });
-  it("names the longest range a candle length can show", () => {
-    expect(longestRangeFor("1m")).toBe("5D");
-    expect(longestRangeFor("5m")).toBe("1M");
-    expect(longestRangeFor("60m")).toBe("1Y");
-    expect(longestRangeFor("1d")).toBeNull();
-    expect(intervalLimitText("5m")).toBe("up to 60 days");
-    expect(intervalLimitText("1wk")).toBe("");
+  it("names the longest range that fits and words the depth", () => {
+    expect(longestRangeWithin(7)).toBe("5D");
+    expect(longestRangeWithin(60)).toBe("1M");
+    expect(longestRangeWithin(730)).toBe("1Y");
+    expect(longestRangeWithin(0)).toBeNull();
+    expect(limitText(60)).toBe("up to 60 days");
+    expect(limitText(300)).toBe("up to 10 months");
+    expect(limitText(1400)).toBe("up to 3.8 years");
+    expect(limitText(730)).toBe("up to 2 years");
+  });
+  it("reads the depth out of the server's message, and only that message", () => {
+    expect(depthLimitFromError("INTERVAL 5m ONLY AVAILABLE FOR THE LAST 60 DAYS (AAPL 1Y).")).toBe(60);
+    expect(depthLimitFromError("NO DATA FOR SYMBOL")).toBeNull();
   });
 });
 

@@ -175,6 +175,8 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - **Finnhub and Alpaca** (keys in `APIKEYS`) are written from the documented response shapes; no key was available to record them, so their fixtures
   are labelled doc-shaped and the live shapes are unverified. Finnhub backs `ANR` with the recommendation trend only (no targets) and `EEO` with EPS
   surprises only (no revisions), and says so. **FMP is not wired** (its useful endpoints are paid). `TRAN` and `SEG` are not built (paid data).
+- **Intraday depth is per source, not global** (changed 2026-11-05): Yahoo keeps 1 minute for 7 days, 2/5/15/30/90 minutes for 60 days, 60 minutes for
+  730 days, and says so itself (`ProviderError("depth")`); `GET /api/history/limits?symbol=X` reports the deepest source that is switched on for `X`.
 - **Real-time quotes (`RT IEX`)** are the last trade on IEX only (one exchange, about 2-3% of volume): the price can differ from the consolidated last
   sale and the size is IEX volume. Polled once a second for at most 100 US symbols; Yahoo ticks resume when IEX stops answering for 5 seconds.
 - **CN** leaves GDELT out (one call per 5 s, 8-12 s answers); `N <SYM>` still uses it as a fallback. The score is a fixed positive/negative word list.
