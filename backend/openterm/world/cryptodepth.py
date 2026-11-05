@@ -12,8 +12,10 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from ..providers.base import ProviderError
+from ..providers.cryptoex_parse import kraken_single, kraken_unwrap
 
-QUOTES = ("USDT", "USDC", "USD", "EUR", "BTC", "ETH")
+COINBASE_LEVELS = 100  # Binance and OKX hand over 100 levels a side; Coinbase hands over every level, so cut it to the same depth
+QUOTES =("USDT", "USDC", "USD", "EUR", "BTC", "ETH")
 USD_QUOTES = {"USDT", "USDC", "USD"}
 MAJORS = ("BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "LINK", "LTC", "DOT", "TRX", "BCH", "ATOM", "NEAR")
 BANDS_PCT = (0.1, 0.5, 1.0)
@@ -79,6 +81,29 @@ def parse_okx_book(body: Any) -> tuple[list[tuple[float, float]], list[tuple[flo
         raise ProviderError("not_found" if isinstance(body, dict) and body.get("code") not in (None, "0") else "unavailable", f"OKX BOOK: {(body or {}).get('msg') or 'NO DATA'}" if isinstance(body, dict) else "OKX BOOK: NO DATA")
     d = data[0]
     return _levels(d.get("bids")), _levels(d.get("asks")), int(d["ts"]) if str(d.get("ts", "")).isdigit() else None
+
+
+def parse_kraken_book(body: Any) -> tuple[list[tuple[float, float]], list[tuple[float, float]], int | None]:
+    """Kraken Depth: {"result": {"<pair key>": {"asks": [[price, volume, unix_seconds], ...], "bids": [...]}}}.
+    The book's time is the newest level timestamp (Kraken stamps each level with its last change), in milliseconds."""
+    book = kraken_single(kraken_unwrap(body, "DEPTH"), "DEPTH")
+    if not isinstance(book, dict) or "bids" not in book or "asks" not in book:
+        raise ProviderError("unavailable", "KRAKEN DEPTH ANSWER HAS NO BIDS / ASKS")
+    stamps = [int(lv[2]) for side in (book["bids"], book["asks"]) for lv in side if len(lv) > 2 and str(lv[2]).isdigit()]
+    return _levels(book["bids"]), _levels(book["asks"]), max(stamps) * 1000 if stamps else None
+
+
+def parse_coinbase_book(body: Any) -> tuple[list[tuple[float, float]], list[tuple[float, float]], int | None]:
+    """Coinbase `/book?level=2`: {"bids": [[price, size, num_orders], ...], "asks": [...], "time": ISO 8601}.
+    Level 2 is the WHOLE aggregated book (about 20,000 levels, ~1 MB), so only the best `COINBASE_LEVELS` per side are kept."""
+    if not isinstance(body, dict) or "bids" not in body or "asks" not in body:
+        raise ProviderError("unavailable", "COINBASE BOOK ANSWER HAS NO BIDS / ASKS")
+    ts = None
+    try:
+        ts = int(datetime.fromisoformat(str(body["time"])).timestamp() * 1000)
+    except (KeyError, ValueError):
+        pass  # the time is only a label; a book without one is still a book
+    return _levels(body["bids"][:COINBASE_LEVELS]), _levels(body["asks"][:COINBASE_LEVELS]), ts
 
 
 def depth_summary(bids: list[tuple[float, float]], asks: list[tuple[float, float]], quote: str) -> dict[str, Any]:

@@ -120,7 +120,7 @@ def parse_retail_answer(body: Any, cats: list[str]) -> dict[str, Any]:
                 raise NotUnderstood(f"CENSUS REPEATS {code} {m}")
             pts[m] = num(_need(r, "cell_value"))
         if pts:
-            series.append(build_series(f"marts:{code}:SM:SA", cat, label, "USD MN", "M", sorted(pts.items())))
+            series.append(build_series(f"marts:{code}:SM:SA", cat, label, "USD MN", "M", sorted(pts.items()), kind="level"))
     if not series:
         raise NoData("CENSUS RETURNED NO RETAIL ROWS FOR " + ", ".join(cats))
     return {"series": series, "missing": [c for c in cats if c not in {s["alias"] for s in series}], "messages": [],
@@ -144,8 +144,8 @@ def parse_trade_answers(exports: Any, imports: Any, name: str, hs: str) -> dict[
     both = sorted(set(ex) & set(im))
     bal = [(m, (ex[m] - im[m]) if ex[m] is not None and im[m] is not None else None) for m in both]
     tag = f"{name} HS{hs}" + (f" {desc.upper()}" if desc else "")
-    series = [build_series(f"intltrade:exports:{hs}", "EXPORTS", f"US EXPORTS TO {tag}", "USD", "M", sorted(ex.items())),
-              build_series(f"intltrade:imports:{hs}", "IMPORTS", f"US IMPORTS FROM {tag}", "USD", "M", sorted(im.items())),
-              build_series(f"intltrade:balance:{hs}", "BALANCE", f"US BALANCE WITH {tag} (EXPORTS MINUS IMPORTS)", "USD", "M", bal)]
+    series = [build_series(f"intltrade:exports:{hs}", "EXPORTS", f"US EXPORTS TO {tag}", "USD", "M", sorted(ex.items()), kind="level"),
+              build_series(f"intltrade:imports:{hs}", "IMPORTS", f"US IMPORTS FROM {tag}", "USD", "M", sorted(im.items()), kind="level"),
+              build_series(f"intltrade:balance:{hs}", "BALANCE", f"US BALANCE WITH {tag} (EXPORTS MINUS IMPORTS)", "USD", "M", bal, kind="level")]
     return {"series": [s for s in series if s["points"]], "missing": [], "messages": [], "source": SOURCE_TRADE,
             "note": "MONTHLY, NOT SEASONALLY ADJUSTED. EXPORTS = TOTAL EXPORTS (ALL_VAL_MO), IMPORTS = GENERAL IMPORTS (GEN_VAL_MO). BALANCE ONLY WHERE BOTH MONTHS EXIST."}

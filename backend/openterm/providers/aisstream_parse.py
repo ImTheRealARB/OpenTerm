@@ -1,18 +1,23 @@
 """Pure parsers for AISstream (aisstream.io), the free beta WebSocket of live ship positions. No network, no pandas, no websockets import.
 
-Shapes come from the official documentation (aisstream.io/documentation, read 2026-11-05) and its generated model list, NOT from
-recordings: no API key existed when this was written. What the docs say, and what this file relies on:
+Shapes were written from the official documentation (aisstream.io/documentation) and then CHECKED AGAINST THE LIVE FEED on 2026-11-05
+(a real key, about 3,900 ships; the recording is tests/fixtures/ais_stream_recording.json). What this file relies on, as observed live:
   - Subscription (the first and only message we send): {"APIKey", "BoundingBoxes": [[[lat, lon], [lat, lon]]], "FilterMessageTypes": [...]}.
-    A box is two opposite corners; the docs example lists the north-west corner first.
-  - Every stream message is {"MessageType", "MetaData", "Message": {<MessageType>: {...}}}. A subscription confirmation has no MetaData.
+    A box is two opposite corners given as [latitude, longitude]; confirmed live (ships returned lie inside the box asked for).
+  - Frames are BINARY (UTF-8 JSON). The first frame is {"MessageType": "SubscriptionConfirmation", "Message": {"CompressionEnabled": true}}, no MetaData.
+  - Every other message is {"MetaData", "MessageType", "Message": {<MessageType>: {...}}}. MetaData has MMSI, MMSI_String, ShipName (space padded),
+    latitude, longitude and time_utc like "2026-11-05 06:13:54.598188257 +0000 UTC" (NINE fractional digits, not six).
   - PositionReport / StandardClassBPositionReport / ExtendedClassBPositionReport carry UserID (the MMSI, a ship's radio identity number),
     Latitude, Longitude, Sog (speed over ground, knots), Cog (course over ground, degrees), TrueHeading and Valid.
-    PositionReport also has NavigationalStatus; the Extended class B one also has Name and Type.
-  - ShipStaticData carries ImoNumber, CallSign, Name, Type, Dimension {A,B,C,D}, Eta {Month,Day,Hour,Minute}, MaximumStaticDraught, Destination.
+    PositionReport also has NavigationalStatus; the Extended class B one also has Name and Type (often 0 = not reported).
+  - ShipStaticData (class A ships) carries ImoNumber, CallSign, Name, Type, Dimension {A,B,C,D}, Eta {Month,Day,Hour,Minute}, MaximumStaticDraught,
+    Destination. Many ships send Eta all zeros and ImoNumber 0 (= not available).
+  - StaticDataReport (class B boats, "type 24") arrives in TWO parts per boat: PartNumber false = ReportA {Name, Valid}, true = ReportB {CallSign,
+    Dimension, ShipType, Valid}. Each message holds both keys, but only the one for its part is Valid. The two parts must be merged.
   - The ITU AIS standard marks "not available" with sentinel numbers (Sog 102.3, Cog 360, heading 511, lat 91, lon 181) and pads text
-    fields with "@". Those are turned into None here, never shown as numbers.
-NOT in the docs (from memory of the live feed, unverified): the MetaData `time_utc` text format (parsed leniently below, falls back to the
-time we received the message) and the exact wording of the error a bad key gets (`error_text` just passes it on).
+    fields with "@". Those are turned into None here, never shown as numbers. TrueHeading 456 was also seen live (out of range): None too.
+A WRONG KEY gets no JSON error: the service drops the connection right after the subscription with no close frame (close code 1006).
+`kind_of` still understands an {"error": ...} frame because the docs mention one, but it was never seen live.
 """
 
 from __future__ import annotations
@@ -25,8 +30,9 @@ import orjson
 
 URL = "wss://stream.aisstream.io/v0/stream"
 POSITION_TYPES = ("PositionReport", "StandardClassBPositionReport", "ExtendedClassBPositionReport")
-STATIC_TYPE = "ShipStaticData"
-FILTER_TYPES = (*POSITION_TYPES, STATIC_TYPE)
+STATIC_TYPE = "ShipStaticData"  # class A ships (big commercial vessels)
+STATIC_B_TYPE = "StaticDataReport"  # class B boats (smaller craft), sent in two parts
+FILTER_TYPES = (*POSITION_TYPES, STATIC_TYPE, STATIC_B_TYPE)
 MAX_SPAN_DEG = 12.0  # a bigger box floods us with messages for no benefit; the presets are all well under it
 
 
@@ -73,7 +79,7 @@ def kind_of(msg: dict[str, Any]) -> str:
         return "confirmation"
     if t in POSITION_TYPES:
         return "position"
-    if t == STATIC_TYPE:
+    if t in (STATIC_TYPE, STATIC_B_TYPE):
         return "static"
     return "other"
 
@@ -101,7 +107,8 @@ _TIME = re.compile(r"^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.(\d+))? \+0000
 
 
 def _time_utc(text: Any) -> float | None:
-    """MetaData.time_utc, e.g. "2022-12-29 18:22:32.318353 +0000 UTC" (format from memory of the live feed). None if it does not match."""
+    """MetaData.time_utc, e.g. "2026-11-05 06:13:54.598188257 +0000 UTC" (format seen live: nine fractional digits; we keep microseconds).
+    None if it does not match."""
     m = _TIME.match(str(text or ""))
     if not m:
         return None
@@ -138,8 +145,22 @@ def position(msg: dict[str, Any], now: float) -> dict[str, Any] | None:
     }
 
 
+def _size(dim: Any) -> tuple[int | None, int | None]:
+    """(length, beam) in metres from the AIS reference-point distances A (to bow) + B (to stern), C (to port) + D (to starboard)."""
+    dim = dim if isinstance(dim, dict) else {}
+    parts = {k: dim.get(k) for k in "ABCD"}
+    if not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in parts.values()):
+        return None, None
+    length, beam = parts["A"] + parts["B"], parts["C"] + parts["D"]
+    return (length or None), (beam or None)
+
+
 def static(msg: dict[str, Any], now: float) -> dict[str, Any] | None:
-    """ShipStaticData: identity, size and voyage (destination, ETA). Blank AIS fields become None."""
+    """ShipStaticData (class A) or StaticDataReport (class B): identity, size and voyage (destination, ETA). Blank AIS fields become None.
+
+    A class B boat sends its name (part A) and its type, call sign and size (part B) in separate messages, so a StaticDataReport comes back
+    with `partial: True` and None for what its part does not carry; the caller merges parts (see AisStreamProvider._assemble).
+    """
     inner = _inner(msg)
     if inner is None or inner.get("Valid") is False:
         return None
@@ -147,9 +168,19 @@ def static(msg: dict[str, Any], now: float) -> dict[str, Any] | None:
     mmsi = inner.get("UserID") or meta.get("MMSI")
     if not isinstance(mmsi, int) or isinstance(mmsi, bool) or mmsi <= 0:
         return None
-    dim = inner.get("Dimension") if isinstance(inner.get("Dimension"), dict) else {}
-    parts = {k: dim.get(k) for k in "ABCD"}
-    ok = all(isinstance(v, int) and v >= 0 for v in parts.values())
+    seen = _time_utc(meta.get("time_utc")) or now
+    if msg.get("MessageType") == STATIC_B_TYPE:
+        a, b = inner.get("ReportA"), inner.get("ReportB")
+        a = a if isinstance(a, dict) and a.get("Valid") is True else {}  # only the part this message is about is Valid
+        b = b if isinstance(b, dict) and b.get("Valid") is True else {}
+        length, beam = _size(b.get("Dimension"))
+        stype = b.get("ShipType")
+        return {
+            "mmsi": mmsi, "imo": None, "callsign": _text(b.get("CallSign")) or None, "name": _text(a.get("Name")) or None,
+            "type": stype if isinstance(stype, int) and not isinstance(stype, bool) else None,
+            "length": length, "beam": beam, "draught": None, "destination": None, "eta": None, "seen": seen, "partial": True,
+        }
+    length, beam = _size(inner.get("Dimension"))
     imo, draught = inner.get("ImoNumber"), _num(inner.get("MaximumStaticDraught"))
     return {
         "mmsi": mmsi,
@@ -157,12 +188,11 @@ def static(msg: dict[str, Any], now: float) -> dict[str, Any] | None:
         "callsign": _text(inner.get("CallSign")) or None,
         "name": _text(inner.get("Name")) or None,
         "type": inner.get("Type") if isinstance(inner.get("Type"), int) else None,
-        "length": parts["A"] + parts["B"] if ok and parts["A"] + parts["B"] > 0 else None,
-        "beam": parts["C"] + parts["D"] if ok and parts["C"] + parts["D"] > 0 else None,
+        "length": length, "beam": beam,
         "draught": draught if draught else None,
         "destination": _text(inner.get("Destination")) or None,
         "eta": _eta(inner.get("Eta")),
-        "seen": _time_utc(meta.get("time_utc")) or now,
+        "seen": seen, "partial": False,
     }
 
 

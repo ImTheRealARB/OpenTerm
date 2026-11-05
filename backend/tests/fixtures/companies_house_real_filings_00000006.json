@@ -1,0 +1,84 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET /company/00000006/filing-history?items_per_page=5 (basic auth with the key as user name; not stored). Unedited.",
+ "status": 200,
+ "body": {
+  "filing_history_status": "filing-history-available",
+  "items": [
+   {
+    "transaction_id": "MzIwODg2ODM4OGFkaXF6a2N4",
+    "type": "GAZ2(A)",
+    "date": "2018-07-10",
+    "category": "gazette",
+    "description": "gazette-dissolved-voluntary",
+    "pages": 1,
+    "paper_filed": true,
+    "links": {
+     "self": "/company/00000006/filing-history/MzIwODg2ODM4OGFkaXF6a2N4",
+     "document_metadata": "https://document-api.company-information.service.gov.uk/document/bg01EDBqES8DV0OAqOokaT4Gw8BnplUI4Nm9c4Mzuww"
+    }
+   },
+   {
+    "transaction_id": "MzIwMjMwNzAzMmFkaXF6a2N4",
+    "type": "GAZ1(A)",
+    "date": "2018-04-24",
+    "category": "gazette",
+    "description": "gazette-notice-voluntary",
+    "pages": 1,
+    "paper_filed": true,
+    "links": {
+     "self": "/company/00000006/filing-history/MzIwMjMwNzAzMmFkaXF6a2N4",
+     "document_metadata": "https://document-api.company-information.service.gov.uk/document/YFsv7JlBEGYQGnMOSno36V118VH7DnI_1t_PcfqbpYQ"
+    }
+   },
+   {
+    "transaction_id": "MzIwMTk3MTQ1M2FkaXF6a2N4",
+    "barcode": "A72WY463",
+    "type": "DS01",
+    "date": "2018-04-11",
+    "category": "dissolution",
+    "description": "dissolution-application-strike-off-company",
+    "pages": 3,
+    "paper_filed": true,
+    "links": {
+     "self": "/company/00000006/filing-history/MzIwMTk3MTQ1M2FkaXF6a2N4",
+     "document_metadata": "https://document-api.company-information.service.gov.uk/document/BIBq3MWfF1UkhqXkL2CqN86qGhne3-sbjgh6oP6tnho"
+    }
+   },
+   {
+    "transaction_id": "MzE5ODkwMzY1NmFkaXF6a2N4",
+    "type": "GAZ1",
+    "date": "2018-03-06",
+    "category": "gazette",
+    "description": "gazette-notice-compulsory",
+    "pages": 1,
+    "paper_filed": true,
+    "links": {
+     "self": "/company/00000006/filing-history/MzE5ODkwMzY1NmFkaXF6a2N4",
+     "document_metadata": "https://document-api.company-information.service.gov.uk/document/ZXNOfc4wjZQRHzwur-JiBaVDoHg9l_IId1hSdfxqvkc"
+    }
+   },
+   {
+    "transaction_id": "MzE2OTA2Nzk4OWFkaXF6a2N4",
+    "barcode": "X60CQSIQ",
+    "type": "TM01",
+    "date": "2017-02-17",
+    "category": "officers",
+    "subcategory": "termination",
+    "description": "termination-director-company-with-name-termination-date",
+    "description_values": {
+     "officer_name": "Fiona Catherine Mcbain",
+     "termination_date": "2016-12-31"
+    },
+    "pages": 1,
+    "action_date": "2016-12-31",
+    "links": {
+     "self": "/company/00000006/filing-history/MzE2OTA2Nzk4OWFkaXF6a2N4",
+     "document_metadata": "https://document-api.company-information.service.gov.uk/document/14E1W51NrqimjoSeYuqWIB8zLnavcKFrKdRcKfQGxuU"
+    }
+   }
+  ],
+  "items_per_page": 5,
+  "start_index": 0,
+  "total_count": 206
+ }
+}

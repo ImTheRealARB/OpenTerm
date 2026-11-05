@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..providers.etherscan_parse import ADDRESS, CHAINS
+from ..router import AllFailed
 from ..service import DataError
 
 TTL_S = 30.0  # blocks come every few seconds; half a minute keeps a refresh from burning the 3-calls-a-second limit
@@ -33,14 +34,21 @@ async def addr(svc: Any, q: str) -> dict[str, Any]:
     chainid = CHAINS[chain]
 
     async def fetch() -> dict:
-        if address is None:
-            out, failed = await svc.router.call("chain", lambda p: p.chain_gas_view(chainid))
-            data = {"mode": "GAS", "gas": out["gas"], "txs": None, "balance": None, "notes": []}
-            source = out["source"]
-        else:
-            out, failed = await svc.router.call("chain", lambda p: p.chain_address(address, chainid))
-            data = {"mode": "ADDRESS", **out}
-            source = out["source"]
+        try:
+            if address is None:
+                out, failed = await svc.router.call("chain", lambda p: p.chain_gas_view(chainid))
+                data = {"mode": "GAS", "gas": out["gas"], "txs": None, "balance": None, "notes": []}
+            else:
+                out, failed = await svc.router.call("chain", lambda p: p.chain_address(address, chainid))
+                data = {"mode": "ADDRESS", **out}
+        except AllFailed as e:
+            # A plan-limited chain is "unsupported": the router would turn that into the generic NO DATA FOR SYMBOL, which hides
+            # the reason. Show the source's own sentence (it names the free plan) instead.
+            plan = [err for _, err in e.errors if err.kind == "unsupported"]
+            if plan and e.kind == "not_found":
+                raise DataError("not_found", str(plan[0])) from e
+            raise
+        source = out["source"]
         data.update(chain=chain, chainid=chainid, coin=COINS[chain], address=address, note=NOTE)
         return {"data": data, "fallback_from": failed, "source": source}
 

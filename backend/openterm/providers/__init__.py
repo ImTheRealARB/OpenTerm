@@ -219,6 +219,11 @@ from .portwatch import PortWatchProvider
 
 ADAPTERS.update({"portwatch": PortWatchProvider})
 
+# --- MF: MFapi.in Indian mutual fund NAV history (keyless community service) ---
+from .mfapi import MfapiProvider
+
+ADAPTERS.update({"mfapi": MfapiProvider})
+
 # --- More free read-only sources: Frankfurter (ECB FX fixes, keyless), UK Companies House, Marketaux news, Etherscan (free keys; inert until set) ---
 from .companies_house import CompaniesHouseProvider
 from .etherscan import EtherscanProvider
@@ -237,3 +242,19 @@ ADAPTERS["aisstream"] = AisStreamProvider
 from .geo import EonetProvider, UsgsProvider
 
 ADAPTERS.update({"usgs": UsgsProvider, "eonet": EonetProvider})
+
+# --- Second crypto exchanges, keyless: Kraken and Coinbase Exchange (board, candles, order book) for when Binance is blocked or down ---
+from .coinbase import CoinbaseProvider
+from .kraken import KrakenProvider
+
+ADAPTERS.update({"kraken": KrakenProvider, "coinbase": CoinbaseProvider})
+
+# --- US government data: USASP (USASpending) and FEDREG (Federal Register) keyless; FEC (OpenFEC) and CONGRESS (Congress.gov) with a free api.data.gov key ---
+from .usgov import CongressProvider, FederalRegisterProvider, OpenFecProvider, UsaSpendingProvider
+
+ADAPTERS.update({"usaspending": UsaSpendingProvider, "federalregister": FederalRegisterProvider, "openfec": OpenFecProvider, "congressgov": CongressProvider})
+
+# --- FLT: live aircraft from the OpenSky Network (works with no key; an optional free account raises the daily credits) ---
+from .opensky import OpenSkyProvider
+
+ADAPTERS["opensky"] = OpenSkyProvider

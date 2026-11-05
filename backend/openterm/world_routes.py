@@ -126,6 +126,17 @@ async def ports_board(request: Request, q: str = Query("", max_length=120)):
         return error(e)
 
 
+@router.get("/mf")
+async def mutual_fund(request: Request, q: str = Query(..., max_length=120)):
+    """MF: Indian mutual funds from MFapi.in. `q` = a scheme code (the fund: NAV history and returns) or words (a search of scheme names)."""
+    from .world.mfundsvc import mf
+
+    try:
+        return await mf(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/wetr")
 async def weather_board(request: Request, place: str = Query("", max_length=80)):
     """WETR: demand-city degree-day basket; with a place name or `lat,lon`, its 7-day forecast and (US, with SEC_USER_AGENT) NWS alerts."""
@@ -298,6 +309,18 @@ async def evm_address(request: Request, q: str = Query(..., max_length=120)):
         return error(e)
 
 
+@router.get("/flt")
+async def flights_live(request: Request, q: str = Query(..., max_length=80)):
+    """FLT: live aircraft from OpenSky inside a city preset, a BOX you give, or a CALLSIGN prefix (a whole-world call, 4 credits). Works without a key
+    (anonymous, 400 credits a day); OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET raise the limit. Positions are as reported by transponders: partial coverage."""
+    from .world.flightssvc import flt
+
+    try:
+        return await flt(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/ais")
 async def ais_ships(request: Request, q: str = Query(..., max_length=80)):
     """AIS: ship positions inside a chokepoint preset or a BOX you give (AISstream, free key AISSTREAM_API_KEY). Listens a few seconds, newest position per ship.
@@ -322,6 +345,17 @@ async def geo_quakes(request: Request):
         return error(e)
 
 
+@router.get("/usasp")
+async def us_spending(request: Request, q: str = Query("", max_length=120)):
+    """USASP: US federal spending (USASpending.gov, keyless). Empty / AGENCY = top awarding agencies; `AGENCY:<name>` = that agency's top contract recipients; words = top recipients and awards."""
+    from .world.usgovsvc import usasp
+
+    try:
+        return await usasp(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/geo/events")
 async def geo_events(request: Request):
     """MAP natural-events layer: NASA EONET open events without wildfires (keyless)."""
@@ -329,6 +363,17 @@ async def geo_events(request: Request):
 
     try:
         return await events(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/fedreg")
+async def federal_register(request: Request, q: str = Query("", max_length=120)):
+    """FEDREG: Federal Register documents, newest first (keyless). Optional leading type word RULE / PROPOSED / NOTICE / PRESDOC, then search words."""
+    from .world.usgovsvc import fedreg_search
+
+    try:
+        return await fedreg_search(svc(request), q)
     except DataError as e:
         return error(e)
 
@@ -344,6 +389,17 @@ async def geo_ports(request: Request):
         return error(e)
 
 
+@router.get("/fec")
+async def campaign_finance(request: Request, q: str = Query(..., max_length=120)):
+    """FEC: OpenFEC. A name searches candidates and committees; an FEC id (H8CA12345 / C00123456) gives its totals by cycle. 424 KEY REQUIRED without FEC_API_KEY."""
+    from .world.usgovsvc import fec_view
+
+    try:
+        return await fec_view(svc(request), q)
+    except DataError as e:
+        return error(e)
+
+
 @router.get("/geo/chokepoints")
 async def geo_chokepoints(request: Request):
     """MAP chokepoints layer: the AIS preset boxes as rectangles (static, no network)."""
@@ -351,5 +407,16 @@ async def geo_chokepoints(request: Request):
 
     try:
         return await chokepoints(svc(request))
+    except DataError as e:
+        return error(e)
+
+
+@router.get("/congress")
+async def congress_bills(request: Request, q: str = Query("", max_length=120)):
+    """CONGRESS: Congress.gov bills. Empty = latest updated; words = title filter over the latest 250; `HR 1234` = one bill with its sponsor. 424 KEY REQUIRED without CONGRESS_API_KEY."""
+    from .world.usgovsvc import congress_view
+
+    try:
+        return await congress_view(svc(request), q)
     except DataError as e:
         return error(e)

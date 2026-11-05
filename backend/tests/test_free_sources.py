@@ -362,7 +362,7 @@ def test_etherscan_result_of():
                        ("Max rate limit reached, please use API Key for higher rate limit", "rate_limited"),
                        ("Too many invalid api key attempts, please try again later", "rate_limited"),  # a throttle, not a bad key
                        ("Community Free API limit reached. Resets 2026-06-24 12:00:00 UTC.", "rate_limited"),
-                       ("Free API access is not supported for this chain. Please upgrade your api plan", "unavailable"),
+                       ("Free API access is not supported for this chain. Please upgrade your api plan", "unsupported"),  # a plan limit, never an outage
                        ("Error! Invalid address format", "unavailable")):
         with pytest.raises(ProviderError) as e:
             ep.result_of({"status": "0", "message": "NOTOK", "result": text})
@@ -494,7 +494,7 @@ def test_ukco_company_and_search_over_http(client):
     c = client.get("/api/world/ukco", params={"q": "09999999"}).json()["data"]
     assert c["mode"] == "COMPANY" and c["profile"]["name"] == "EXAMPLE TRADING LIMITED" and c["officers"]["active"] == 1 and c["notes"] == []
     missing = client.get("/api/world/ukco", params={"q": "12345678"})
-    assert missing.status_code == 404
+    assert missing.status_code == 404 and missing.json()["error"] == "NO COMPANY WITH NUMBER 12345678"  # not the router's NO DATA FOR SYMBOL
     assert client.get("/api/world/ukco", params={"q": "x"}).status_code == 400
 
 
@@ -533,3 +533,70 @@ def test_history_of_an_fx_pair_falls_back_to_the_ecb_fix_and_says_so(client):
     d = r.json()
     assert "yahoo" in d["fallback_from"] and d["data"]["c"][-1] == 1.1179 and "ECB daily fix" in d["data"]["source"]
     assert d["data"]["o"] == d["data"]["c"] and d["data"]["v"] == [None] * 5
+
+
+# --- REAL recordings (2026-11-05, the owner's keys): the shapes the live services really send ---------------------------------
+VITALIK = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"  # a public address (behind vitalik.eth)
+
+
+def test_etherscan_real_answers_parse():
+    assert ep.balance(ep.result_of(body("etherscan_real_balance")))["balance"] == pytest.approx(5.780441042197210512)
+    rows = ep.transactions(ep.result_of(body("etherscan_real_txlist")), VITALIK)
+    assert [r["dir"] for r in rows] == ["IN", "IN", "OUT"] and all(r["fee"] is not None and r["block"] for r in rows)
+    g = ep.gas(ep.result_of(body("etherscan_real_gasoracle")))
+    assert g["last_block"] and 0 < g["safe"] <= g["propose"] <= g["fast"]  # gwei, ordered
+    # An address with no transactions: status "0" and message "No transactions found" (confirmed live), read as an empty list, not an error.
+    assert ep.transactions(ep.result_of(body("etherscan_real_txlist_empty")), "0x5a1c9d3b7e2f4a6c8d0e1f2a3b4c5d6e7f8a9b0c") == []
+
+
+async def test_a_chain_outside_the_free_plan_is_unsupported_and_never_trips_the_breaker():
+    """Live: a free key answers OP, BASE and BSC with status 0 'Free API access is not supported for this chain'. That used to be
+    `unavailable`, so three lookups of a Base address put Etherscan 'down' and Ethereum lookups failed with it."""
+    p = etherscan(lambda r: httpx.Response(200, json=body("etherscan_real_chain_not_on_free_plan")))
+    router = Router({"etherscan": p}, {"chain": ["etherscan"]})
+    for _ in range(5):  # more than TRIP_AFTER
+        with pytest.raises(AllFailed) as e:
+            await router.call("chain", lambda pr: pr.chain_gas_view(8453))
+        assert e.value.kind == "not_found" and "FREE ETHERSCAN PLAN" in str(e.value.errors[0][1])
+    assert not router.health["etherscan"].down and router.health["etherscan"].errors == 0
+
+
+def test_addr_on_a_chain_outside_the_free_plan_says_why_and_ethereum_still_works(client):
+    client.put("/api/keys/etherscan", json={"fields": {"ETHERSCAN_KEY": KEY}})
+    for _ in range(4):
+        r = client.get("/api/world/addr", params={"q": "GAS BASE"})
+        assert r.status_code == 404 and "FREE ETHERSCAN PLAN" in r.json()["error"]  # not the generic NO DATA FOR SYMBOL
+    assert client.get("/api/world/addr", params={"q": "GAS"}).status_code == 200
+
+
+def test_companies_house_real_answers_parse():
+    s = chp.search(body("companies_house_real_search_tesco"))
+    assert s["total"] > 100 and s["items"][0]["number"] == "00445790" and s["items"][0]["name"] == "TESCO PLC"
+    p = chp.profile(body("companies_house_real_profile_00000006"))  # a dissolved company: no confirmation statement, no next accounts due
+    assert p["name"].startswith("MARINE AND GENERAL") and p["status"] == "dissolved" and p["ceased"] == "2018-07-10"
+    assert p["accounts"]["next_due"] is None and p["confirmation"]["next_due"] is None and p["has_charges"] is True
+    assert p["address"].endswith("EC4N 6AF, England") and p["sic"] == ["65110"]
+    o = chp.officers(body("companies_house_real_officers_00000006"))
+    assert o["total"] == 52 and o["active"] == 0 and o["resigned"] == 49  # `inactive_count` (3) is a field of its own
+    assert o["items"][0]["role"] in ("SECRETARY", "DIRECTOR") and o["items"][0]["name"].startswith("REDACTED")
+    f = chp.filings(body("companies_house_real_filings_00000006"))
+    assert f["total"] == 206 and f["items"][0] == {"date": "2018-07-10", "category": "GAZETTE", "type": "GAZ2(A)",
+                                                  "description": "GAZETTE DISSOLVED VOLUNTARY", "pages": 1, "paper": True}
+
+
+async def test_companies_house_real_404_is_not_found_and_trips_nothing():
+    p = companies_house(lambda r: httpx.Response(404, json=body("companies_house_real_404")))
+    router = Router({"companies_house": p}, {"companies_house": ["companies_house"]})
+    for _ in range(5):
+        with pytest.raises(AllFailed) as e:
+            await router.call("companies_house", lambda pr: pr.ch_company("99999999"))
+        assert e.value.kind == "not_found"
+    assert not router.health["companies_house"].down
+
+
+def test_marketaux_real_answer_parses_with_the_requested_companys_sentiment():
+    items = mp.parse_news(body("marketaux_real_news_aapl"), "marketaux", "AAPL")
+    assert [i.sentiment for i in items] == [0.273, 0.107, -0.202]  # each article's AAPL entity score (0.2732, 0.1071, -0.2023 as sent), rounded to 3 places
+    assert all(i.published and i.publisher and i.url.startswith("https://") for i in items)  # `source` is a domain; `published_at` is UTC text
+    assert mp.parse_news(body("marketaux_real_news_aapl"), "marketaux", "TSLA")[0].sentiment is None  # filter_entities=true: only AAPL is there
+    assert mp.error_of(401, {"error": {"code": "invalid_api_token", "message": "An invalid API token was supplied."}}).kind == "key_required"

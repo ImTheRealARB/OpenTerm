@@ -36,7 +36,7 @@ STARTED = time.time()
 DEFAULT_ORDER = {
     "quotes": ["yahoo", "nasdaq"], "history": ["binance_klines", "yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
     "news_top": ["rss"], "news_symbol": ["yahoo_rss", "gdelt"], "news_keyword": ["gdelt"],
-    "movers": ["nasdaq"], "crypto": ["coingecko", "binance"],
+    "movers": ["nasdaq"], "crypto": ["coingecko", "binance", "kraken", "coinbase"],
 }
 # --- Phase 9 ---
 DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]})
@@ -49,6 +49,7 @@ DEFAULT_ORDER |= {"holidays": ["nager"], "worldstats": ["worldbank", "dbnomics"]
 DEFAULT_ORDER["worldstats_search"] = ["dbnomics"]  # DBSRCH: find DBnomics datasets and series by words
 DEFAULT_ORDER |= {"weather_geocode": ["openmeteo"], "weather_forecast": ["openmeteo"], "nws_alerts": ["nws"]}
 DEFAULT_ORDER["shipping_chokepoints"] = ["portwatch"]
+DEFAULT_ORDER |= {"mf_search": ["mfapi"], "mf_nav": ["mfapi"]}  # MF: MFapi.in scheme search and NAV history
 DEFAULT_ORDER["ports_activity"] = ["portwatch"]  # PORTS: same keyless IMF PortWatch provider, daily port calls
 DEFAULT_ORDER |= {"geo_quakes": ["usgs"], "geo_events": ["eonet"]}  # MAP layers (keyless)
 # Step 9: the NSE archive is the LAST history source (Yahoo answers first; it only serves `.NS` at `1d`); AMFI NAV for the SECF fund rows
@@ -68,7 +69,9 @@ DEFAULT_ORDER["surprises"] = ["yahoo_research", "finnhub"]
 DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca", "marketaux"]
 DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "marketaux", "gdelt"]
 # UKCO (Companies House) and ADDR (Etherscan): one keyed source each; no key = KEY REQUIRED, never fake data
-DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"], "ais": ["aisstream"]}
+DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"], "ais": ["aisstream"], "flights": ["opensky"]}
+# USASP / FEDREG (keyless) and FEC / CONGRESS (free api.data.gov keys; no key = KEY REQUIRED, never fake data)
+DEFAULT_ORDER |= {"usaspending": ["usaspending"], "federal_register": ["federalregister"], "openfec": ["openfec"], "congress_gov": ["congressgov"]}
 # --- Phase 14: option chains (Yahoo first; Tradier is a keyed fallback) ---
 DEFAULT_ORDER["option_chain"] = ["yahoo_options", "tradier"]
 DEFAULT_ORDER["crypto_options"] = ["deribit"]
@@ -83,7 +86,7 @@ DEFAULT_ORDER["factors"] = ["kenfrench"]
 DEFAULT_ORDER |= {"pred_poly": ["polymarket"], "pred_poly_market": ["polymarket"], "pred_poly_history": ["polymarket"],
                   "pred_kalshi": ["kalshi"], "pred_kalshi_market": ["kalshi"], "pred_kalshi_candles": ["kalshi"]}
 # --- Phase 19 step 7: crypto depth (Binance first; OKX when Binance fails, e.g. HTTP 451), liquidations (OKX only), DefiLlama ---
-DEFAULT_ORDER |= {"crypto_depth": ["binance_deriv", "okx"], "crypto_funding": ["binance_deriv", "okx"], "crypto_funding_detail": ["binance_deriv", "okx"],
+DEFAULT_ORDER |= {"crypto_depth": ["binance_deriv", "okx", "kraken", "coinbase"], "crypto_funding": ["binance_deriv", "okx"], "crypto_funding_detail": ["binance_deriv", "okx"],
                   "crypto_liq": ["okx"], "stablecoins": ["defillama"], "yields": ["defillama"]}
 # --- Phase 19: GP event markers ---
 DEFAULT_ORDER["earnings_history"] = ["nasdaq_research"]
@@ -196,7 +199,7 @@ async def lifespan(app: FastAPI):
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
         if name == "fred" and "fred" in router.providers:
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
-        if name in ("finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream") and name in router.providers:  # keyed sources
+        if name in ("finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov") and name in router.providers:  # keyed sources
             router.providers[name].set_keys(store.get(name))
         if name == "kite":  # Phase 15: a new key or secret drops the login; the session re-reads the store
             kite.session.reload()
@@ -206,7 +209,7 @@ async def lifespan(app: FastAPI):
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        for name in ("fred", "finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream"):
+        for name in ("fred", "finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov"):
             await asyncio.to_thread(on_key_change, name)
 
     key_loader = asyncio.create_task(apply_stored_keys())

@@ -1,0 +1,9 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://api.etherscan.io/v2/api (chainid=1 account/balance for 0xd8dA...6045, the public address behind vitalik.eth); the apikey parameter is not stored. Unedited.",
+ "status": 200,
+ "body": {
+  "status": "1",
+  "message": "OK",
+  "result": "5780441042197210512"
+ }
+}

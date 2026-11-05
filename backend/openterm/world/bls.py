@@ -20,16 +20,17 @@ URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
 SOURCE = "BLS PUBLIC DATA API V2 (US BUREAU OF LABOR STATISTICS)"
 MAX_SERIES = 12
 
-# alias -> (BLS series id, label, unit). All are the headline seasonally adjusted series.
-CATALOG: dict[str, tuple[str, str, str]] = {
-    "CPI": ("CUSR0000SA0", "CPI-U ALL ITEMS, SA", "INDEX 1982-84=100"),
-    "CORECPI": ("CUSR0000SA0L1E", "CPI-U LESS FOOD AND ENERGY, SA", "INDEX 1982-84=100"),
-    "PPI": ("WPSFD4", "PPI FINAL DEMAND, SA", "INDEX 2009-11=100"),
-    "UNEMP": ("LNS14000000", "UNEMPLOYMENT RATE, SA", "%"),
-    "LFPR": ("LNS11300000", "LABOR FORCE PARTICIPATION RATE, SA", "%"),
-    "PAYROLL": ("CES0000000001", "TOTAL NONFARM EMPLOYEES, SA", "THOUSANDS"),
-    "AHE": ("CES0500000003", "AVG HOURLY EARNINGS, TOTAL PRIVATE, SA", "USD"),
-    "JOLTS": ("JTS000000000000000JOL", "JOB OPENINGS, TOTAL NONFARM, SA", "THOUSANDS"),
+# alias -> (BLS series id, label, unit, kind). All are the headline seasonally adjusted series.
+# kind (see seriesboard.KINDS) is declared by hand: "rate" = the value is itself a percentage (changes read in pp), "level" = an index or amount.
+CATALOG: dict[str, tuple[str, str, str, str]] = {
+    "CPI": ("CUSR0000SA0", "CPI-U ALL ITEMS, SA", "INDEX 1982-84=100", "level"),
+    "CORECPI": ("CUSR0000SA0L1E", "CPI-U LESS FOOD AND ENERGY, SA", "INDEX 1982-84=100", "level"),
+    "PPI": ("WPSFD4", "PPI FINAL DEMAND, SA", "INDEX 2009-11=100", "level"),
+    "UNEMP": ("LNS14000000", "UNEMPLOYMENT RATE, SA", "%", "rate"),
+    "LFPR": ("LNS11300000", "LABOR FORCE PARTICIPATION RATE, SA", "%", "rate"),
+    "PAYROLL": ("CES0000000001", "TOTAL NONFARM EMPLOYEES, SA", "THOUSANDS", "level"),
+    "AHE": ("CES0500000003", "AVG HOURLY EARNINGS, TOTAL PRIVATE, SA", "USD", "level"),
+    "JOLTS": ("JTS000000000000000JOL", "JOB OPENINGS, TOTAL NONFARM, SA", "THOUSANDS", "level"),
 }
 BY_ID = {v[0]: k for k, v in CATALOG.items()}
 _RAW_ID = re.compile(r"^[A-Z0-9_#-]{5,40}$")  # the API rejects lowercase and other symbols in ids
@@ -107,8 +108,9 @@ def parse(body: Any, wanted: list[tuple[str, str]]) -> dict[str, Any]:
         cat = CATALOG.get(alias)
         cat_info = s.get("catalog") if isinstance(s.get("catalog"), dict) else {}
         title = cat_info.get("series_title")
+        # A raw series id that is not in the catalogue has no declared kind: say "unknown" instead of guessing level or rate.
         out.append(build_series(sid, alias, cat[1] if cat else (title or sid).upper(), cat[2] if cat else "", freq,
-                                sorted(pts.items()), notes))
+                                sorted(pts.items()), notes, kind=cat[3] if cat else "unknown"))
     if not out:
         raise NoData("BLS RETURNED NO DATA FOR " + ", ".join(a for a, _ in wanted) + (f" ({' '.join(messages)[:120]})" if messages else ""))
     return {"series": out, "missing": missing, "messages": messages[:4], "source": SOURCE,

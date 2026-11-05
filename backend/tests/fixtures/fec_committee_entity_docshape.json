@@ -1,0 +1,20 @@
+{
+ "status": 200,
+ "doc_shaped": "NOT A RECORDING. OpenFEC docs https://api.open.fec.gov/developers/. Invented numbers in the shape the documentation promises; no API key was available to record the real answer.",
+ "body": {
+  "api_version": "1.0",
+  "pagination": {
+   "count": 1,
+   "page": 1,
+   "pages": 1,
+   "per_page": 20
+  },
+  "results": [
+   {
+    "committee_id": "C00000001",
+    "name": "EXAMPLE TEST FOR CONGRESS",
+    "committee_type_full": "House"
+   }
+  ]
+ }
+}

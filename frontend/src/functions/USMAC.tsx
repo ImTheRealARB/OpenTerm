@@ -14,9 +14,10 @@ import { EnvStatus, ErrorLine } from "./macroUi";
 import { navKey, useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
-import { fmtNum, fmtSigned, parseUsmacArgs, signColor } from "./usArgs";
+import { fmtChange, fmtNum, parseUsmacArgs, signColor } from "./usArgs";
 
 interface PointRow {
+  kind: UsSeries["kind"]; // decides how the change is written (pp for a rate, % for a level)
   period: string;
   value: number | null;
   chg: number | null;
@@ -29,16 +30,17 @@ const BOARD: Column<UsSeries>[] = [
   { title: "LAST", width: 14, align: "right", text: (r) => fmtNum(r.last) },
   { title: "UNIT", width: 17, text: (r) => r.unit, color: () => "dim" },
   { title: "PERIOD", width: 8, text: (r) => r.last_period ?? "", color: () => "dim" },
-  { title: "CHG", width: 10, align: "right", text: (r) => fmtSigned(r.chg), color: (r) => signColor(r.chg) },
-  { title: "CHG%", width: 8, align: "right", text: (r) => (r.chg_pct == null ? "" : fmtSigned(r.chg_pct) + "%"), color: (r) => signColor(r.chg) },
+  // CHG is in percentage points ("pp") for a rate (unemployment, GDP growth) and CHG% stays empty there: see fmtChange.
+  { title: "CHG", width: 10, align: "right", text: (r) => fmtChange(r.kind, r.chg, r.chg_pct).chg, color: (r) => signColor(r.chg) },
+  { title: "CHG%", width: 8, align: "right", text: (r) => fmtChange(r.kind, r.chg, r.chg_pct).pct, color: (r) => signColor(r.chg) },
   { title: "NOTE", width: 40, text: (r) => r.notes[0] ?? "", color: () => "warn" },
 ];
 
 const HISTORY: Column<PointRow>[] = [
   { title: "PERIOD", width: 10, text: (r) => r.period, color: () => "acc" },
   { title: "VALUE", width: 16, align: "right", text: (r) => (r.value == null ? "NO VALUE" : fmtNum(r.value)), color: (r) => (r.value == null ? "warn" : "fg") },
-  { title: "CHG", width: 12, align: "right", text: (r) => fmtSigned(r.chg), color: (r) => signColor(r.chg) },
-  { title: "CHG%", width: 9, align: "right", text: (r) => (r.pct == null ? "" : fmtSigned(r.pct) + "%"), color: (r) => signColor(r.chg) },
+  { title: "CHG", width: 12, align: "right", text: (r) => fmtChange(r.kind, r.chg, r.pct).chg, color: (r) => signColor(r.chg) },
+  { title: "CHG%", width: 9, align: "right", text: (r) => fmtChange(r.kind, r.chg, r.pct).pct, color: (r) => signColor(r.chg) },
 ];
 
 /** Newest first; the change is against the period before it, and only when both have a value. */
@@ -47,7 +49,7 @@ function historyRows(s: UsSeries): PointRow[] {
   s.points.forEach(([period, value], i) => {
     const before = i > 0 ? s.points[i - 1][1] : null;
     const chg = value != null && before != null ? value - before : null;
-    out.push({ period, value, chg, pct: chg != null && before ? (chg / Math.abs(before)) * 100 : null });
+    out.push({ kind: s.kind, period, value, chg, pct: chg != null && before ? (chg / Math.abs(before)) * 100 : null });
   });
   return out.reverse();
 }
@@ -144,6 +146,8 @@ export default function USMAC({ panelId, args }: FunctionProps) {
         <div className="line">
           {open.label} <span className="dim">· {open.unit} · {open.freq === "M" ? "MONTHLY" : open.freq === "Q" ? "QUARTERLY" : open.freq === "A" ? "ANNUAL" : open.freq} · ID {open.id}</span>{" "}
           LAST <span className="acc">{fmtNum(open.last)}</span> ({open.last_period ?? "NO VALUE"})
+          {open.kind === "rate" && <span className="dim"> · CHANGES IN PERCENTAGE POINTS (PP)</span>}
+          {open.kind === "unknown" && <span className="warn"> · KIND UNKNOWN: PLAIN CHANGE ONLY, NO PERCENT</span>}
         </div>
       )}
       {d && <div className="dim">SOURCE: {d.source}. {d.note}</div>}

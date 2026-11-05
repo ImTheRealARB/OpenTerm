@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..providers import companies_house_parse as chp
+from ..router import AllFailed
 from ..service import DataError
 
 COMPANY_TTL_S = 3600.0  # a register entry changes when the company files something: an hour is fresh enough
@@ -24,12 +25,18 @@ async def ukco(svc: Any, q: str) -> dict[str, Any]:
     number = chp.as_number(text)
 
     async def fetch() -> dict:
-        if number:
-            out, failed = await svc.router.call("companies_house", lambda p: p.ch_company(number))
-            data = {"mode": "COMPANY", "number": number, **out}
-        else:
-            out, failed = await svc.router.call("companies_house", lambda p: p.ch_search(text))
-            data = {"mode": "SEARCH", "query": text, **out}
+        try:
+            if number:
+                out, failed = await svc.router.call("companies_house", lambda p: p.ch_company(number))
+                data = {"mode": "COMPANY", "number": number, **out}
+            else:
+                out, failed = await svc.router.call("companies_house", lambda p: p.ch_search(text))
+                data = {"mode": "SEARCH", "query": text, **out}
+        except AllFailed as e:
+            # The router's generic text for "not found" is NO DATA FOR SYMBOL, which is wrong for a company register. Say what was asked.
+            if e.kind == "not_found":
+                raise DataError("not_found", f"NO COMPANY WITH NUMBER {number}" if number else f"NO COMPANY NAME MATCHES {text.upper()[:40]}") from e
+            raise
         return {"data": {**data, "note": NOTE}, "fallback_from": failed, "source": out["source"]}
 
     key = f"w:ukco:{number}" if number else f"w:ukco:q:{text.upper()}"

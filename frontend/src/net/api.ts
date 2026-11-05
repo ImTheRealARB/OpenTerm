@@ -1251,12 +1251,16 @@ export interface UsSeries {
   alias: string;
   label: string;
   unit: string;
+  /** What the numbers are (mirror of seriesboard.KINDS in the backend). "rate" = already a percentage, so `chg` is in percentage
+   *  points and `chg_pct` is null; "unknown" = a raw BLS id outside the catalogue (plain change, no percent). */
+  kind: "level" | "rate" | "unknown";
   freq: string;
   last: number | null;
   last_period: string | null;
   prev: number | null;
   prev_period: string | null;
   chg: number | null;
+  /** Percent change of a "level" series only; null for a "rate" or "unknown" series (and when the previous value is zero). */
   chg_pct: number | null;
   notes: string[];
   points: [string, number | null][];
@@ -1297,16 +1301,40 @@ export interface AddrPayload {
   balance: { wei: string; balance: number } | null; txs: AddrTx[] | null; gas: AddrGas | null;
 }
 
+/**
+ * FLT (`/api/world/flt`): live aircraft from the OpenSky Network, as reported by transponders (ADS-B); coverage is partial. Anonymous works (limited credits);
+ * `authenticated` says whether an OpenSky login (APIKEYS) was used. Altitude/speed/climb come in both source units (m, m/s) and display units (ft, kt, ft/min).
+ * `seen` = epoch seconds of the position report; a MAP layer needs only lat, lon, heading and seen.
+ */
+export interface FltRow {
+  icao24: string; callsign: string; country: string; lat: number; lon: number;
+  alt_m: number | null; geo_alt_m: number | null; alt_ft: number | null;
+  speed_ms: number | null; speed_kt: number | null; heading: number | null;
+  vrate_ms: number | null; vrate_fpm: number | null;
+  on_ground: boolean; squawk: string; spi: boolean; source: string; seen: number | null; age_s: number | null;
+}
+export interface FltPayload {
+  area: string; kind: "AREA" | "BOX" | "CALLSIGN"; box: [number, number, number, number] | null; rows: FltRow[]; truncated: number;
+  received: number; no_position: number; source_time: number; credits_cost: number; credits_remaining: number | null;
+  authenticated: boolean; access: string; note: string; country_note: string; fixture: boolean;
+}
+
 /** AIS (`/api/world/ais`): ship positions in a chokepoint box from AISstream (free key AISSTREAM_API_KEY). Positions are as reported by ships. */
 export interface AisRow {
   mmsi: number; name: string; imo: number | null; type: string; type_code: number | null;
   sog: number | null; cog: number | null; heading: number | null; nav: number | null; nav_name: string;
   dest: string | null; eta: string | null; length: number | null; draught: number | null;
   lat: number; lon: number; seen: number; static_age_s: number | null;
+  /** true = position kept from an EARLIER listen (server memory, at most `memory_s` old); false = heard during this listen. */
+  remembered: boolean;
+  /** Seconds since the position report itself, as of the listen. */
+  age_s: number;
 }
 export interface AisPayload {
   area: string; box: [number, number, number, number]; rows: AisRow[]; truncated: number;
   received: number; capped: boolean; listened_s: number; fixture: boolean; note: string;
+  /** How many ships came from memory, and the memory's age limit in seconds (300). */
+  remembered: number; memory_s: number;
 }
 
 /** MAP layers (`/api/world/geo/...`): positions as lat/lon degrees and times as epoch seconds. */
@@ -1328,7 +1356,56 @@ export interface GeoPorts { rows: GeoPort[]; skipped: number; newest: string; no
 export interface GeoChokepoint { id: string; name: string; box: [number, number, number, number]; lat: number; lon: number }
 export interface GeoChokepoints { rows: GeoChokepoint[]; note: string }
 
+/**
+ * MF (`/api/world/mf`): Indian mutual funds from MFapi.in (community service, data from AMFI, not an official AMFI API). `mode` SEARCH lists scheme names;
+ * FUND is one scheme: its latest NAV, the returns table and the whole NAV series (`t` epoch seconds, `v` NAV, oldest first).
+ * A return with `pct: null` has no number on purpose (`why` says why): the history is shorter than the period, or has a hole there.
+ */
+export interface MfSearchRow { code: number; name: string }
+export interface MfSearch { mode: "SEARCH"; query: string; items: MfSearchRow[]; total: number; shown: number; note: string; source_note: string }
+export interface MfReturnRow {
+  period: string;
+  kind: "ABSOLUTE RETURN" | "CAGR";
+  target: string;
+  base_date: string | null;
+  base_nav: number | null;
+  pct: number | null;
+  why: string | null;
+}
+export interface MfFund {
+  mode: "FUND"; code: number; name: string; fund_house: string; scheme_type: string; category: string;
+  isin_growth: string | null; isin_div: string | null;
+  latest: { date: string; nav: number }; first_date: string; points: number;
+  returns: MfReturnRow[]; t: number[]; v: number[]; payout_plan: boolean; note: string; source_note: string;
+}
+export type MfPayload = MfSearch | MfFund;
+
+/**
+ * USASP / FEDREG / FEC / CONGRESS (`/api/world/usasp|fedreg|fec|congress`): US government data. USASP and FEDREG are keyless and were run live; FEC and
+ * CONGRESS need a free api.data.gov key (424 KEY REQUIRED without it) and are DOC-SHAPED (never run against a live key).
+ */
+export interface UsaspRecipient { name: string; uei: string | null; amount: number | null }
+export interface UsaspAward { award_id: string; recipient: string; amount: number | null; agency: string; start: string | null; end: string | null; description: string }
+export interface UsaspAgency { name: string; code: string | null; amount: number | null }
+export type UsaspPayload =
+  | { mode: "KEYWORD"; query: string; window: string; award_kind: string; recipients: UsaspRecipient[]; recipients_total: number | null; awards: UsaspAward[] | null; notes: string[]; note: string }
+  | { mode: "AGENCY"; window: string; award_kind: string; agencies: UsaspAgency[]; note: string }
+  | { mode: "AGENCY_RECIPIENTS"; agency: string; window: string; award_kind: string; recipients: UsaspRecipient[]; recipients_total: number | null; note: string };
+export interface FedregItem { number: string; title: string; type: string; agencies: string[]; date: string | null; abstract: string | null; url: string | null }
+export interface FedregPayload { query: string; type: string | null; total: number; shown: number; items: FedregItem[]; note: string }
+export interface FecItem { kind: "CANDIDATE" | "COMMITTEE"; id: string; name: string; party: string | null; office: string | null; state: string | null; district: string | null; last_year: number | null }
+export interface FecCycle { cycle: number; receipts: number | null; disbursements: number | null; cash: number | null; debts: number | null; individual: number | null; covered_to: string | null }
+export type FecPayload =
+  | { mode: "SEARCH"; query: string; items: FecItem[]; notes: string[]; note: string }
+  | { mode: "CANDIDATE" | "COMMITTEE"; id: string; name: string | null; cycles: FecCycle[]; latest: FecCycle | null; note: string };
+export interface CongressRow { congress: number; type: string; number: string; title: string; chamber: string | null; action_date: string | null; action: string; updated: string | null }
+export type CongressPayload =
+  | { mode: "LATEST" | "TITLE FILTER"; query: string; fetched: number; matched: number; items: CongressRow[]; note: string }
+  | { mode: "BILL"; congress: number; type: string; number: string; title: string; chamber: string | null; introduced: string | null; sponsors: string[];
+      cosponsors: number | null; policy_area: string | null; action_date: string | null; action: string; updated: string | null; note: string };
+
 export const worldApi = {
+  mf: (q: string, fresh = false) => request<Envelope<MfPayload>>(`/api/world/mf?${qs({ q })}`, fresh ? 0 : 600_000),
   trade: (reporter: string, partner: string, hs: string, years: number, fresh = false) =>
     request<Envelope<TradePayload>>(`/api/world/trade?${qs({ reporter, partner, hs, years: String(years) })}`, fresh ? 0 : 600_000),
   usmac: (src: string, q: string, years: number, fresh = false) =>
@@ -1353,8 +1430,13 @@ export const worldApi = {
   mfnav: (q: string, fresh = false) => request<Envelope<MfNavPayload>>(`/api/world/mfnav?${qs({ q })}`, fresh ? 0 : 3_600_000),
   figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
   ukco: (q: string, fresh = false) => request<Envelope<UkcoPayload>>(`/api/world/ukco?${qs({ q })}`, fresh ? 0 : 300_000),
+  usasp: (q: string, fresh = false) => request<Envelope<UsaspPayload>>(`/api/world/usasp?${qs({ q })}`, fresh ? 0 : 300_000),
+  fedreg: (q: string, fresh = false) => request<Envelope<FedregPayload>>(`/api/world/fedreg?${qs({ q })}`, fresh ? 0 : 120_000),
+  fec: (q: string, fresh = false) => request<Envelope<FecPayload>>(`/api/world/fec?${qs({ q })}`, fresh ? 0 : 300_000),
+  congress: (q: string, fresh = false) => request<Envelope<CongressPayload>>(`/api/world/congress?${qs({ q })}`, fresh ? 0 : 180_000),
   addr: (q: string, fresh = false) => request<Envelope<AddrPayload>>(`/api/world/addr?${qs({ q })}`, fresh ? 0 : 15_000),
   /** One listen takes about 8 s on the server (cached 20 s there); the client cache is short so F5 really listens again. */
+  flt: (q: string, fresh = false) => request<Envelope<FltPayload>>(`/api/world/flt?${qs({ q })}`, fresh ? 0 : 30_000),
   ais: (q: string, fresh = false) => request<Envelope<AisPayload>>(`/api/world/ais?${qs({ q })}`, fresh ? 0 : 15_000),
   /** MAP layers. Each has its own server cache (USGS 2 min, EONET 10 min, PortWatch 6 h), so the client cache stays short. */
   geoQuakes: (fresh = false) => request<Envelope<GeoQuakes>>("/api/world/geo/quakes", fresh ? 0 : 30_000),

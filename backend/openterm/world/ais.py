@@ -5,8 +5,14 @@ listens for a few seconds with hard caps and the newest position per ship is kep
 switched off or false, and a short listen sees only part of the traffic. The panel says so (NOTE), and an empty answer says "quiet
 area or slow feed", never "no ships".
 
-Presets are my own rough boxes around well-known chokepoints (checked on a map by eye, not from a gazetteer): they are a starting
-point; use BOX for anything else.
+Presets are rough boxes around well-known chokepoints. They were checked against live traffic on 2026-11-05: ships reported positions
+inside the MALACCA, GIBRALTAR and DOVER boxes (13, 19 and 5 ships in a ~3 minute world sample), and the other boxes sit on their straits
+by coordinates. Some boxes (SUEZ, HORMUZ, BABEL, BOSPHORUS,
+PANAMA) stayed EMPTY in 30-45 s listens because the free feed has no receiver coverage there, not because the box is wrong.
+Use BOX for anything else.
+
+Because the free feed is so sparse, the provider also remembers each ship's last position for 5 minutes. A listen answers with the ships it
+heard (`remembered: false`) plus remembered ones still inside the box (`remembered: true`, each with its age); nothing older than 5 minutes.
 """
 
 from __future__ import annotations
@@ -17,7 +23,7 @@ from typing import Any
 from ..providers import aisstream_parse as ap
 from ..service import DataError
 
-LISTEN_S = 8.0  # one listen; the provider hard-caps this at 15 s
+LISTEN_S = 15.0  # one listen; this IS the provider's hard cap (aisstream.MAX_SECONDS). The panel text "ABOUT 15 SECONDS" must match (AIS.tsx)
 MAX_MESSAGES = 3000
 MAX_ROWS = 300
 TTL_S = 20.0  # a refresh inside this reuses the last listen (and never opens a second connection)
@@ -35,7 +41,8 @@ PRESETS: dict[str, tuple[float, float, float, float]] = {
 }
 
 NOTE = ("AISSTREAM: POSITIONS ARE AS REPORTED BY SHIPS AND ARE NOT VERIFIED. THEY CAN BE DELAYED, SWITCHED OFF OR SPOOFED, AND COVERAGE IS PARTIAL. "
-        "A SHORT LISTEN IS A SAMPLE, NOT A COUNT OF SHIPS (FREE BETA FEED, NO UPTIME PROMISE). DESTINATION AND ETA ARE TYPED BY THE CREW. NOT FINANCIAL DATA.")
+        "A SHORT LISTEN IS A SAMPLE, NOT A COUNT OF SHIPS (FREE BETA FEED, NO UPTIME PROMISE, RECEIVER COVERAGE IS PATCHY: SUEZ, HORMUZ AND BAB EL-MANDEB OFTEN SHOW NOTHING). "
+        "DESTINATION AND ETA ARE TYPED BY THE CREW. NOT FINANCIAL DATA.")
 USAGE = f"AIS <{'|'.join(PRESETS)}> OR AIS BOX <SOUTH> <WEST> <NORTH> <EAST>"
 
 
@@ -55,7 +62,10 @@ def parse_args(q: str) -> tuple[str, tuple[float, float, float, float]]:
 
 
 def rows_of(listen: dict[str, Any], now: float) -> list[dict[str, Any]]:
-    """One row per ship: its newest position joined with the static record we hold for it (destination, ETA, size, type). Newest first."""
+    """One row per ship: its newest position joined with the static record we hold for it (destination, ETA, size, type). Newest first.
+
+    `remembered` is True when the position came from an EARLIER listen (the provider's 5 minute memory), False when this listen heard it;
+    `age_s` is how old the position report itself is, so the panel can show it either way."""
     statics = listen["statics"]
     rows = []
     for mmsi, p in listen["positions"].items():
@@ -71,6 +81,7 @@ def rows_of(listen: dict[str, Any], now: float) -> list[dict[str, Any]]:
             "dest": s["destination"] if s else None, "eta": s["eta"] if s else None,
             "length": s["length"] if s else None, "draught": s["draught"] if s else None,
             "lat": p["lat"], "lon": p["lon"], "seen": p["seen"],
+            "remembered": p["remembered"], "age_s": max(0, round(now - p["seen"])),  # p["remembered"] must exist: fail loudly if a provider forgets it
             "static_age_s": round(now - s["rx"]) if s else None,  # destination and ETA are only as fresh as this
         })
     rows.sort(key=lambda r: (-r["seen"], r["mmsi"]))
@@ -86,7 +97,8 @@ async def snapshot(svc: Any, q: str) -> dict[str, Any]:
         data = {
             "area": label, "box": list(box), "rows": rows[:MAX_ROWS], "truncated": max(0, len(rows) - MAX_ROWS),
             "received": listen["received"], "capped": listen["capped"], "listened_s": listen["listened_s"],
-            "fixture": "DOC-SHAPED" in listen["source"], "note": NOTE,
+            "remembered": listen["remembered"], "memory_s": listen["memory_s"],  # ships kept from earlier listens, and the memory's age limit
+            "fixture": listen["replay"], "note": NOTE,
         }
         return {"data": data, "fallback_from": failed, "source": listen["source"]}
 

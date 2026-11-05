@@ -171,7 +171,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
 | `PRED` | Prediction markets: Polymarket and Kalshi odds (MARKET-IMPLIED PROBABILITY, NOT A FORECAST; read only) |  | `[TEXT ...] [SRC=POLY\|KALSHI\|ALL]` | `PRED` |
-| `CDEP` | Crypto order book depth: cumulative bids / asks, spread, imbalance (Binance spot, OKX fallback) |  | `[PAIR] [LEVELS]` | `CDEP` |
+| `CDEP` | Crypto order book depth: cumulative bids / asks, spread, imbalance (Binance spot, OKX, Kraken, Coinbase fallbacks) |  | `[PAIR] [LEVELS]` | `CDEP` |
 | `FUND` | Perpetual funding rates (annualised) and basis, quarterly basis; one coin's funding history |  | `[COIN]` | `FUND` |
 | `LIQ` | Crypto liquidations: latest filled liquidation orders of a USDT perpetual (OKX) |  | `[COIN]` | `LIQ` |
 | `STBL` | Stablecoin supply by coin and chain (DefiLlama) |  | `[CHAIN]` | `STBL` |
@@ -265,8 +265,14 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `TRADE` | Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY) |  | `<REPORTER> [<PARTNER>\|WORLD] [TOTAL\|<HS 2/4/6 digits>] [<N>Y]` | `TRADE` |
 | `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
 | `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
+| `FLT` | Live aircraft over a city or box from the OpenSky Network (free; optional account for more credits; positions as reported by transponders) |  | `<LONDON\|NYC\|DUBAI\|SINGAPORE\|MUMBAI\|BENGALURU\|FRANKFURT\|BOX S W N E\|CALLSIGN PREFIX>` | `FLT` |
 | `AIS` | Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships) |  | `<SUEZ\|PANAMA\|HORMUZ\|MALACCA\|BABEL\|BOSPHORUS\|GIBRALTAR\|DOVER\|BOX S W N E>` | `AIS` |
 | `MAP` | World map: ships, ports, chokepoints, earthquakes and natural events as layers |  | `[VESSELS\|PORTS\|CHOKEPOINTS\|QUAKES\|EVENTS] [AREA]` | `MAP` |
+| `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
+| `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
+| `FEDREG` | US Federal Register: rules, proposed rules, notices and presidential documents, newest first (no key) |  | `[RULE\|PROPOSED\|NOTICE\|PRESDOC] [<WORDS>]` | `FEDREG` |
+| `FEC` | US campaign finance: candidate and committee search, receipts and disbursements by cycle (OpenFEC, free key FEC_API_KEY) |  | `<NAME> \| <FEC ID>` | `FEC` |
+| `CONGRESS` | US Congress bills: latest updated, title filter, one bill with its sponsor (Congress.gov API, free key CONGRESS_API_KEY) |  | `[<WORDS> \| HR 1234]` | `CONGRESS` |
 
 ## Global keyboard shortcuts
 

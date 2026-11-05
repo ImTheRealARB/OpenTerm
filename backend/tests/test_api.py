@@ -27,9 +27,12 @@ def test_search_and_sources(client):
         "yahoo", "nasdaq", "synthetic", "rss", "yahoo_rss", "gdelt", "coingecko", "binance", "binance_klines", "sec", "yahoo_own", "yahoo_research", "nasdaq_research", "finra", "sec_nport", "sec_13f", "finnhub", "alpaca", "yahoo_options", "tradier", "deribit", "ecb", "boe", "boc", "mof", "fred_oas", "treasurydirect", "yahoo_futures", "cftc", "fomc", "kenfrench", "kite", "portwatch", "comtrade", "bls", "census", "bea",
         "fred", "fred_csv", "treasury", "nasdaq_earnings", "agency_ics",  # Phase 7
         "nasdaq_screener", "yahoo_peers",  # Phase 9
-        "openfigi", "nager", "worldbank", "dbnomics", "policy_rates", "openmeteo", "nws", "polymarket", "kalshi", "nse_archive", "amfi", "binance_deriv", "okx", "defillama",  # Phase 19
+        "openfigi", "nager", "worldbank", "dbnomics", "policy_rates", "openmeteo", "nws", "polymarket", "kalshi", "nse_archive", "amfi", "mfapi", "binance_deriv", "okx", "defillama",  # Phase 19
         "frankfurter", "companies_house", "marketaux", "etherscan", "aisstream",  # free read-only sources
         "usgs", "eonet",  # MAP layers (keyless)
+        "kraken", "coinbase",  # second crypto exchanges
+        "opensky",  # FLT
+        "usaspending", "federalregister", "openfec", "congressgov",  # USASP, FEDREG, FEC, CONGRESS
     }
     assert s["fixtures"] is True
     keyed = {k["name"]: k["status"] for k in s["keyed"]}

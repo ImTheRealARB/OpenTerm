@@ -1,0 +1,102 @@
+{
+ "status": 200,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "category": "recipient",
+  "spending_level": "transactions",
+  "limit": 10,
+  "page_metadata": {
+   "page": 1,
+   "next": 2,
+   "previous": null,
+   "hasNext": true,
+   "hasPrevious": false
+  },
+  "results": [
+   {
+    "amount": 63812748976.74,
+    "recipient_id": "6cf5fb1b-4988-d087-5dc1-70939d8fc6c4-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "008016958",
+    "uei": "G4KDGE4JFFK7",
+    "total_outlays": null
+   },
+   {
+    "amount": 38176945622.02,
+    "recipient_id": "779b3e3e-364f-7cbc-28a4-a2b4484b86f4-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "794571448",
+    "uei": "XFJMYSYFJEK4",
+    "total_outlays": null
+   },
+   {
+    "amount": 14400840855.73,
+    "recipient_id": "695d5739-ecc3-8484-ba2b-f9c8b4652a4a-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "196189385",
+    "uei": "H7PNSVNN5827",
+    "total_outlays": null
+   },
+   {
+    "amount": 8033960907.65,
+    "recipient_id": "d7df489c-5a15-3e1b-e7fa-0e93eb94a166-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "848028494",
+    "uei": "CWM4UN76ZQW8",
+    "total_outlays": null
+   },
+   {
+    "amount": 7985186316.5,
+    "recipient_id": "6e7a895c-aa57-8600-2a8a-4e237f6213f6-C",
+    "name": "LOCKHEED MARTIN CORP",
+    "code": "926784042",
+    "uei": "FYHNA5WC8XD7",
+    "total_outlays": null
+   },
+   {
+    "amount": 6130865066.47,
+    "recipient_id": "8a7abf83-bb31-a229-bb3a-31eb356988eb-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "080821870",
+    "uei": "KMEVRAKJVBD3",
+    "total_outlays": null
+   },
+   {
+    "amount": 5094478773.6,
+    "recipient_id": "4051d253-67f0-30bd-2c7f-5eb539533924-C",
+    "name": "LOCKHEED MARTIN CORP",
+    "code": "003268869",
+    "uei": "SJDEB3MKJEW5",
+    "total_outlays": null
+   },
+   {
+    "amount": 4861858346.31,
+    "recipient_id": "894dbedb-aca8-9b52-0a82-3b0fd8713b6d-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "075457143",
+    "uei": "NGBVY5X32XZ5",
+    "total_outlays": null
+   },
+   {
+    "amount": 4456710664.48,
+    "recipient_id": "687c4cc7-53f1-d028-875d-2fc73de19122-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "158140041",
+    "uei": "H11HD5VHGHN3",
+    "total_outlays": null
+   },
+   {
+    "amount": 4262461470.54,
+    "recipient_id": "5ad7895c-192b-21cd-8baf-92c6dce0b593-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "002232973",
+    "uei": "HJP4JZG1FUL9",
+    "total_outlays": null
+   }
+  ],
+  "messages": [
+   "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+   "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+  ]
+ }
+}
