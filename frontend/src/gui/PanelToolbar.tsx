@@ -6,7 +6,7 @@ import type { OptionAction } from "../components/windowMenu";
 import { effectiveBindings } from "../keys/keys";
 import { dispatchPanelKey } from "../keys/panelKeys";
 import { CHART_TYPES, CHART_TYPE_LABELS, type ChartType } from "../chart/chartTypes";
-import { INTERVAL_CHOICES, parseGpArgs, withChartType, withInterval } from "../functions/gpArgs";
+import { INTERVAL_CHOICES, intervalFits, intervalLimitText, parseGpArgs, withChartType, withInterval } from "../functions/gpArgs";
 import { settingsStore } from "../settings/runtime";
 import { focusPanel, replaceView, workspace } from "../state/workspace";
 import { useStore } from "../state/store";
@@ -155,7 +155,7 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
         </select>
       )}
       {fn === "GP" && (
-        // Candle length. Changing it rewrites the panel's args (same path as typing "GP 5D 15MIN"); the range buttons reset it to Auto.
+        // Candle length. Changing it rewrites the panel's args (same path as typing "GP 5D 15MIN"); the range buttons keep it.
         <select
           className="pt-b pt-sel"
           data-testid="gp-interval"
@@ -169,11 +169,16 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
             e.currentTarget.blur();
           }}
         >
-          {INTERVAL_CHOICES.map(([label, token]) => (
-            <option key={label} value={token}>
-              {label}
-            </option>
-          ))}
+          {INTERVAL_CHOICES.map(([label, token]) => {
+            // Yahoo only serves minute candles for recent days: say how far, and grey out what the current range cannot use.
+            const limit = token ? intervalLimitText(token) : "";
+            const fits = !token || intervalFits(parseGpArgs([...args]).range, token);
+            return (
+              <option key={label} value={token} disabled={!fits}>
+                {limit ? `${label} (${limit})` : label}
+              </option>
+            );
+          })}
         </select>
       )}
       <span className="pt-sp" />

@@ -20,7 +20,7 @@ import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { currentView, navigate, replaceView, workspace } from "../state/workspace";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { KEY_RANGES, MAX_CUSTOM, formulaInd, libraryInd, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
+import { KEY_RANGES, MAX_CUSTOM, formulaInd, intervalFits, intervalLimitText, libraryInd, longestRangeFor, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
 import { useLatest } from "./quoteRows";
 import type { FunctionProps } from "./registry";
 
@@ -69,6 +69,9 @@ export default function GP({ panelId, security, args }: FunctionProps) {
     pRef.current = next;
     replaceView(panelId, (v) => ({ ...v, args: serializeGp(next, chartDefaults.type) }));
   };
+
+  // The chosen candle length is longer than Yahoo keeps it for (e.g. 5 min + 1Y). The server rejects it; this lets the error offer fixes.
+  const clash = !!p.interval && !intervalFits(p.range, p.interval);
 
   // --- library indicators and formulas (IND): one GP answers, the same add/remove path as the toolbar toggles ---
   const [customErrors, setCustomErrors] = useState<Record<string, string>>({});
@@ -339,7 +342,8 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         }
         const n = Number(k);
         if (n >= 1 && n <= 8) {
-          update((q) => ({ ...q, range: KEY_RANGES[n - 1], interval: undefined }));
+          // Change only the range; keep the candle length the user picked (it used to snap back to Auto here).
+          update((q) => ({ ...q, range: KEY_RANGES[n - 1] }));
           return true;
         }
         switch (k) {
@@ -439,14 +443,24 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       {state.error && !state.keyError && !L && (
         <PanelNote
           kind="error"
-          hint="F5 TO RETRY."
+          hint={clash ? "PICK A LONGER CANDLE (AUTO) OR A SHORTER RANGE." : "F5 TO RETRY."}
           // GUI wording: a symbol the user picked is valid, so never blame the spelling here; say what is actually wrong.
           plain={
-            /NO DATA|NOT FOUND/i.test(state.error)
-              ? `No chart data came back for ${symbol} over ${p.range}. The name is fine: the data source has nothing for it right now (in sample-data mode that can be a gap in the recordings). Retry, try another range, or chart a different stock.`
-              : undefined
+            clash
+              ? `Yahoo only keeps ${p.interval} candles for ${intervalLimitText(p.interval!)}, and ${p.range} is longer than that. Your candle length is kept; pick one of the fixes below.`
+              : /NO DATA|NOT FOUND/i.test(state.error)
+                ? `No chart data came back for ${symbol} over ${p.range}. The name is fine: the data source has nothing for it right now (in sample-data mode that can be a gap in the recordings). Retry, try another range, or chart a different stock.`
+                : undefined
           }
-          actions={symbol !== "AAPL" ? [{ label: "Try AAPL", onClick: () => navigate(panelId, { fn: "GP", security: { symbol: "AAPL" }, args: [] }) }] : []}
+          actions={[
+            ...(clash
+              ? [
+                  { label: "Use Auto candles", onClick: () => update((q) => ({ ...q, interval: undefined })) },
+                  ...(longestRangeFor(p.interval!) ? [{ label: `Show ${longestRangeFor(p.interval!)} instead`, onClick: () => update((q) => ({ ...q, range: longestRangeFor(q.interval!)! })) }] : []),
+                ]
+              : []),
+            ...(symbol !== "AAPL" ? [{ label: "Try AAPL", onClick: () => navigate(panelId, { fn: "GP", security: { symbol: "AAPL" }, args: [] }) }] : []),
+          ]}
           onRetry={() => setReload((n) => n + 1)}
         >
           {state.error} ({symbol} {p.range}).

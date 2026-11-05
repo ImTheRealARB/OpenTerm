@@ -1,5 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { parseGpArgs, serializeGp, withInterval } from "./gpArgs";
+import { intervalFits, intervalLimitText, longestRangeFor, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
+
+describe("Yahoo candle-length limits", () => {
+  it("minute candles only fit short ranges, daily and longer always fit", () => {
+    expect(intervalFits("5D", "5m")).toBe(true);
+    expect(intervalFits("1M", "15m")).toBe(true);
+    expect(intervalFits("1Y", "15m")).toBe(false);
+    expect(intervalFits("MAX", "1d")).toBe(true);
+    expect(intervalFits("1Y", "60m")).toBe(true);
+    expect(intervalFits("2Y", "60m")).toBe(false);
+  });
+  it("understands the typed words as well as the tokens", () => {
+    expect(intervalFits("1Y", "15min")).toBe(false);
+    expect(intervalFits("5D", "1MIN")).toBe(true);
+    expect(intervalFits("1M", "1MIN")).toBe(false);
+  });
+  it("names the longest range a candle length can show", () => {
+    expect(longestRangeFor("1m")).toBe("5D");
+    expect(longestRangeFor("5m")).toBe("1M");
+    expect(longestRangeFor("60m")).toBe("1Y");
+    expect(longestRangeFor("1d")).toBeNull();
+    expect(intervalLimitText("5m")).toBe("up to 60 days");
+    expect(intervalLimitText("1wk")).toBe("");
+  });
+});
 
 describe("GP arguments", () => {
   it("keeps the old forms working", () => {
