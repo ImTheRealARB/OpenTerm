@@ -247,8 +247,11 @@ test("SETTINGS panel: the INTERFACE MODE row switches the mode", async ({ page }
   }).toPass();
   await page.keyboard.press("g");
   await expect(row).toHaveAttribute("data-row", "theme");
-  // MODE is the last of the 15 setting rows: 14 steps down.
-  for (let i = 0; i < 14; i++) await page.keyboard.press("j");
+  // Walk down by row name, not by a fixed count, so adding a setting row (like the font rows) cannot break this.
+  // The cap stops the loop if "mode" is ever removed; the assertion below then fails with a clear message.
+  for (let i = 0; i < 40 && (await row.getAttribute("data-row")) !== "mode"; i++) {
+    await page.keyboard.press("j");
+  }
   await expect(row).toHaveAttribute("data-row", "mode");
   await expect(panel(page).locator("tr[data-row='mode']")).toContainText("GUI");
   await page.keyboard.press("l");
