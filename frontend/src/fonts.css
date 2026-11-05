@@ -4,7 +4,7 @@
  *   - nothing is downloaded until a page element (or canvas text) actually uses the family, so only the font in use loads;
  *   - `local()` comes first: a font already installed on the computer is used instead of downloaded;
  *   - `font-display: swap` shows text at once in the fallback and swaps when the file arrives (never blocks painting).
- * Latin subsets (full set for Bergoom); characters a font lacks fall through to the next family in the stack.
+ * Latin subsets; characters a font lacks fall through to the next family in the stack.
  * Generated once from a small script; edit by hand freely.
  */
 
@@ -104,18 +104,3 @@
   src: local("DejaVu Sans Mono Bold"), local("DejaVuSansMono-Bold"), url("/fonts/dejavu-mono-700.woff2") format("woff2");
 }
 
-@font-face {
-  font-family: "Bergoom";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: local("Bergoom"), local("Bergoom-Regular"), url("/fonts/bergoom-400.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Bergoom";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: local("Bergoom Bold"), local("Bergoom-Bold"), url("/fonts/bergoom-700.woff2") format("woff2");
-}

@@ -466,7 +466,7 @@ Key shortcuts: `Alt+1..9` focus a panel, `Ctrl+\` split, `Alt+W` close, `Ctrl+Sh
 `Alt+X` export the table to CSV. (Browsers reserve `Ctrl+W`, `Ctrl+T` and `Ctrl+1..9`, so the web version uses `Alt` instead.)
 All are listed by `SHORTCUTS` and defined in
 [`frontend/src/keys/keybindings.json`](frontend/src/keys/keybindings.json). `SETTINGS` has themes (`AMBER`, `GREEN`, `WHITE`,
-`LIGHT`), vim mode and key rebinding. Fonts switch in one click (menu-bar dropdown in GUI mode, or `SETTINGS FONT Fira Code`): JetBrains Mono (default), GitHub Mono, Geist Mono, Fira Code, Mononoki, Hack, DejaVu Sans Mono, Bergoom (an open-source Bloomberg-style font), plus Monaco, Menlo, Consolas and Comic Sans if your computer has them. Fonts are downloaded only when you pick them.
+`LIGHT`), vim mode and key rebinding. Fonts switch in one click (menu-bar dropdown in GUI mode, or `SETTINGS FONT Fira Code`): JetBrains Mono (default), GitHub Mono, Geist Mono, Fira Code, Mononoki, Hack, DejaVu Sans Mono, plus Monaco, Menlo, Consolas and Comic Sans if your computer has them. Fonts are downloaded only when you pick them.
 
 ## Honest about the data
 

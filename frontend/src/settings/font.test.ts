@@ -39,14 +39,14 @@ describe("font names", () => {
 describe("presets", () => {
   it("has the requested list in order, default first", () => {
     expect(FONT_PRESETS.map((p) => p.name)).toEqual([
-      "", "GitHub Mono", "Geist Mono", "Fira Code", "Mononoki", "Hack", "Monaco", "DejaVu Sans Mono", "Menlo", "Consolas", "Bergoom", "Comic Sans MS",
+      "", "GitHub Mono", "Geist Mono", "Fira Code", "Mononoki", "Hack", "Monaco", "DejaVu Sans Mono", "Menlo", "Consolas", "Comic Sans MS",
     ]);
   });
   it("every preset name is a valid stored font name", () => {
     for (const p of FONT_PRESETS) expect(isFontName(p.name), p.label).toBe(true);
   });
   it("finds a preset however it is typed", () => {
-    for (const [typed, name] of [["geist mono", "Geist Mono"], ["GEIST-MONO", "Geist Mono"], ["firacode", "Fira Code"], ["github", "GitHub Mono"], ["comic sans", "Comic Sans MS"], ["dejavu", "DejaVu Sans Mono"], ["JetBrains Mono", ""], ["default", ""], ["bloomberg", "Bergoom"]] as const) {
+    for (const [typed, name] of [["geist mono", "Geist Mono"], ["GEIST-MONO", "Geist Mono"], ["firacode", "Fira Code"], ["github", "GitHub Mono"], ["comic sans", "Comic Sans MS"], ["dejavu", "DejaVu Sans Mono"], ["JetBrains Mono", ""], ["default", ""]] as const) {
       expect(findPreset(typed)?.name, typed).toBe(name);
     }
     expect(findPreset("Source Code Pro")).toBeUndefined();

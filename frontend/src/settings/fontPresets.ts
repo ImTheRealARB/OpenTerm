@@ -32,8 +32,7 @@ export const FONT_PRESETS: readonly FontPreset[] = [
   { name: "DejaVu Sans Mono", label: "DejaVu Sans Mono", stack: NAMED("DejaVu Sans Mono"), system: false, aliases: ["dejavu"] },
   { name: "Menlo", label: "Menlo (macOS)", stack: NAMED("Menlo"), system: true },
   { name: "Consolas", label: "Consolas (Windows)", stack: NAMED("Consolas"), system: true },
-  { name: "Bergoom", label: "Bergoom (Bloomberg-style)", stack: NAMED("Bergoom"), system: false, aliases: ["bloomberg"] },
-  { name: "Comic Sans MS", label: "Comic Sans (joke)", stack: NAMED("Comic Sans MS"), system: true, aliases: ["comicsans", "comic"] },
+  { name: "Comic Sans MS", label: "Comic Sans", stack: NAMED("Comic Sans MS"), system: true, aliases: ["comicsans", "comic"] },
 ];
 
 /** Lower-case letters and digits only, so "Geist Mono", "geist-mono" and "GEISTMONO" all match. */
