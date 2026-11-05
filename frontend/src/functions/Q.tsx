@@ -4,6 +4,7 @@ import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { navigate, replaceView } from "../state/workspace";
+import { rowsFallbackText } from "./fallbackText";
 import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
 import { QuoteErrors } from "./QuoteErrors";
 import { settingsStore } from "../settings/runtime";
@@ -30,6 +31,8 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   const latest = useLatest({ rows, sort });
 
   useLiveRows(rows, grid, liveSymbol);
+  // Says why a source was skipped (e.g. KITE LOGIN EXPIRED) when any row came from a fallback; empty otherwise.
+  const fallbackLine = rowsFallbackText(rows);
   useCsvExport(panelId, () => gridCsv(`Q_${rows.map((r) => r.symbol).join("_").slice(0, 60)}`, COLUMNS, rows));
 
   useEffect(
@@ -79,6 +82,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
       <div className="line">
         <span className="acc">QUOTE MONITOR</span> <b className="pv">{rows.length}</b> SECURITIES{usingDefault && " (DEFAULT LIST)"} · <span className="dim">SORT</span> {sort}
         {loading && <span className="dim"> · LOADING…</span>}
+        {fallbackLine && <span className="warn"> · {fallbackLine}</span>}
         <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D DEL · S SORT · E CSV · F5 REFRESH</span>
       </div>
       {/* Only reachable if there are no inputs at all: say what to do instead of showing a blank grid. */}

@@ -20,9 +20,15 @@ class Dump:
     by_key: dict[str, dict] = field(default_factory=dict)
     by_token: dict[int, dict] = field(default_factory=dict)
     derivs: dict[tuple[str, str], list[dict]] = field(default_factory=dict)  # (exchange, underlying name) -> FUT / CE / PE rows
+    by_bse_code: dict[int, dict] = field(default_factory=dict)  # BSE scrip code (exchange_token) -> share row
 
     def find(self, key: str) -> dict | None:
-        return self.by_key.get(key)
+        """The row for `EXCHANGE:TRADINGSYMBOL`. A BSE key may also carry the numeric scrip code Yahoo uses (`BSE:500325` is `BSE:RELIANCE`):
+        Kite's trading symbol is the name, and the code is the row's exchange_token."""
+        row = self.by_key.get(key)
+        if row is None and key.startswith("BSE:") and key[4:].isdigit():
+            row = self.by_bse_code.get(int(key[4:]))
+        return row
 
     def chain_rows(self, exchange: str, name: str, kinds: tuple[str, ...]) -> list[dict]:
         return [r for r in self.derivs.get((exchange, name.upper()), []) if r["instrument_type"] in kinds]
@@ -43,6 +49,8 @@ def parse(text: str, fetched_at: float) -> Dump:
             continue  # one damaged line is dropped, never guessed
         d.by_key[f"{r['exchange']}:{r['tradingsymbol']}"] = r
         d.by_token[r["instrument_token"]] = r
+        if r["exchange"] == "BSE" and r["segment"] == "BSE" and r["exchange_token"]:
+            d.by_bse_code[r["exchange_token"]] = r
         if r["instrument_type"] in ("FUT", "CE", "PE") and r["name"]:
             d.derivs.setdefault((r["exchange"], r["name"].upper()), []).append(r)
     return d

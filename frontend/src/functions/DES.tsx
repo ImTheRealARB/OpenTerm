@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LivePrice } from "../components/LivePrice";
 import { fmtAge, fmtBig, fmtNum, fmtPct, fmtPrice } from "../format";
+import { fallbackText } from "./fallbackText";
 import { PanelNote, plainLine, type NoteAction } from "../components/PanelNote";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { termProps } from "../gui/term";
@@ -190,6 +191,7 @@ export default function DES({ panelId, security }: FunctionProps) {
         </span>
       </h2>
       {q && quote.env && <LivePrice quote={q} stale={quote.env.stale} ageS={quote.env.age_s} />}
+      {quote.env?.fallback_from.length ? <div className="warn">QUOTE: {fallbackText(quote.env.fallback_from, quote.env.fallback_notes)}</div> : null}
       {quote.keyError && <KeyRequiredLine error={quote.keyError} />}
       {quote.error && !quote.keyError && <div className="err">QUOTE: {quote.error}</div>}
       {gui && quote.error && !unknown && prof.error && (
@@ -233,7 +235,7 @@ export default function DES({ panelId, security }: FunctionProps) {
       {!p && !prof.error && <div className="dim">LOADING PROFILE…</div>}
       <div className="dim" style={{ marginTop: 6 }}>
         {prof.env && `PROFILE: ${prof.env.source?.toUpperCase()} · ${fmtAge(prof.env.age_s)} OLD${prof.env.stale ? " (STALE)" : ""}`}
-        {prof.env?.fallback_from.length ? ` · ${prof.env.fallback_from.join(",").toUpperCase()} DOWN, VIA FALLBACK` : ""}
+        {prof.env?.fallback_from.length ? ` · ${fallbackText(prof.env.fallback_from, prof.env.fallback_notes)}` : ""}
         {" · F5 REFRESH"}
       </div>
     </div>

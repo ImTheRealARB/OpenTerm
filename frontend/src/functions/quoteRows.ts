@@ -19,6 +19,9 @@ export interface QRow {
   fetchedAt: number;
   ageAtFetch: number;
   error?: string;
+  /** Sources that were skipped or failed before this row's source answered, and why (the envelope's `fallback_from` / `fallback_notes`). */
+  fallbackFrom?: string[];
+  fallbackNotes?: Record<string, string>;
   /** Interned symbol id, filled in lazily by `rowId`. */
   sid?: number;
 }
@@ -114,7 +117,10 @@ export const blankRow = (input: string): QRow => ({ input, symbol: input, fetche
 function toRow(input: string, r: QuoteResult | undefined, now: number): QRow {
   if (!r) return { input, symbol: input, fetchedAt: now, ageAtFetch: 0, error: "NO DATA FOR SYMBOL" };
   if ("error" in r) return { input, symbol: r.symbol ?? input, fetchedAt: now, ageAtFetch: 0, error: r.error };
-  return { input, symbol: r.data.symbol, q: r.data, stale: r.stale, fetchedAt: now, ageAtFetch: r.age_s };
+  return {
+    input, symbol: r.data.symbol, q: r.data, stale: r.stale, fetchedAt: now, ageAtFetch: r.age_s,
+    fallbackFrom: r.fallback_from, fallbackNotes: r.fallback_notes,
+  };
 }
 
 const CHUNK = 200; // the backend's per-request symbol cap

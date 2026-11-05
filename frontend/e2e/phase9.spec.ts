@@ -130,7 +130,7 @@ test("HIST: bad args are reported; stale and fallback data are labelled", async 
   const p = panel(page);
   await expect(p).toContainText("CANNOT READ BOGUS");
   await expect(p).toContainText("STALE");
-  await expect(p).toContainText("FALLBACK FROM STOOQ");
+  await expect(p).toContainText("STOOQ DOWN, VIA FALLBACK");
 });
 
 test("HIST: provider down shows the error with its detail", async ({ page }) => {

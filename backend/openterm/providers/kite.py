@@ -7,6 +7,7 @@ network call and no circuit-breaker strike, so Yahoo answers, `fallback_from` na
 
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime, timedelta
 
@@ -15,7 +16,7 @@ import httpx
 from ..kite.client import INTERVALS, KiteClient
 from ..kite.instruments import Instruments
 from ..kite.session import IST, KiteSession
-from ..kite.symbols import to_kite
+from ..kite.symbols import FUTURES_EXCHANGES, to_kite
 from ..models import Bars, Quote
 from ..ranges import range_days
 from .base import HISTORY, QUOTES, Provider, ProviderError
@@ -24,6 +25,24 @@ from .base import HISTORY, QUOTES, Provider, ProviderError
 #: 1 minute was verified back 10 years (3650). Longer asks are chunked into Kite's per-call windows (kite/client.py HISTORY_WINDOW_DAYS).
 INTRADAY_DAYS: dict[str, int] = {"1m": 3650, "5m": 4200, "15m": 4200, "30m": 4200, "60m": 4200}
 MAX_DAYS = 7305  # about 20 years; `max` is left to Yahoo
+OPEN_INTEREST_TYPES = ("FUT", "CE", "PE")  # Kite sends an `oi` column for every bar, but it is 0 throughout for shares and indices
+DERIVATIVE_EXCHANGES = (*FUTURES_EXCHANGES, "BFO", "CDS")
+#: the underlying's name at the front of a contract's trading symbol: `NIFTY26OCTFUT` -> NIFTY, `BAJAJ-AUTO26NOVFUT` -> BAJAJ-AUTO, `USDINR26N06FUT` -> USDINR
+ROOT_RE = re.compile(r"^([A-Z&-]+?)(?:\d{2}[A-Z0-9]|$)")
+
+
+def _num(v) -> float | None:
+    """Kite sends 0 for a price the exchange has not produced yet (an untraded contract's open, high and low): that is no number."""
+    return float(v) if v else None
+
+
+def _stamp(text: str | None) -> int | None:
+    """`YYYY-MM-DD HH:MM:SS` (IST) -> epoch seconds. An untraded contract's last_trade_time is the epoch itself (`1970-01-01 05:30:00`): no time."""
+    try:
+        t = int(datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=IST).timestamp()) if text else None
+    except ValueError:
+        return None
+    return t if t and t > 86400 * 365 else None
 
 
 def _kind(e) -> str:
@@ -85,6 +104,10 @@ class KiteProvider(Provider):
         if not keys or self.client is None:
             return []
         try:
+            if any(k.startswith("BSE:") and k[4:].isdigit() for k in keys.values()) and self.instruments is not None:
+                # `/quote` only knows the trading symbol (the name); a BSE scrip code (500325.BO) is looked up in the dump first
+                dump = await self.instruments.get()
+                keys = {s: (f"{r['exchange']}:{r['tradingsymbol']}" if (r := dump.find(k)) else k) for s, k in keys.items()}
             data = await self.client.quote(list(keys.values()))
         except DataError as e:
             raise ProviderError(_kind(e), str(e)) from e
@@ -97,15 +120,11 @@ class KiteProvider(Provider):
             ohlc = d.get("ohlc") or {}
             price, prev = float(d["last_price"]), ohlc.get("close")
             prev = float(prev) if prev else None
-            when = d.get("last_trade_time") or d.get("timestamp")
-            try:
-                market_time = int(datetime.strptime(when, "%Y-%m-%d %H:%M:%S").replace(tzinfo=IST).timestamp()) if when else None
-            except ValueError:
-                market_time = None
+            market_time = _stamp(d.get("last_trade_time")) or _stamp(d.get("timestamp"))
             out.append(Quote(
                 symbol=sym, currency="INR", exchange=key.partition(":")[0], tz="Asia/Kolkata", price=price, prev_close=prev,
                 change=price - prev if prev else None, change_pct=(price - prev) / prev * 100 if prev else None,
-                open=ohlc.get("open"), high=ohlc.get("high"), low=ohlc.get("low"), volume=int(d["volume"]) if d.get("volume") else None,
+                open=_num(ohlc.get("open")), high=_num(ohlc.get("high")), low=_num(ohlc.get("low")), volume=int(d["volume"]) if d.get("volume") else None,
                 market_time=market_time, source=self.source, as_of=now,
             ))
         return out
@@ -124,7 +143,7 @@ class KiteProvider(Provider):
         try:
             inst = await self.instruments.resolve(key)
             if inst is None:
-                raise ProviderError("not_found", f"{key} is not in the Kite instrument dump")
+                raise ProviderError("not_found", await self._missing(key))
             end = datetime.now(IST)
             start = end - timedelta(days=max(days, 2))
             candles = await self.client.candles(inst["instrument_token"], kite_interval, start, end)
@@ -133,13 +152,26 @@ class KiteProvider(Provider):
         if not candles:
             raise ProviderError("not_found", "no bars")
         stamp = lambda c: int(datetime.strptime(c[0], "%Y-%m-%dT%H:%M:%S%z").timestamp())
-        has_oi = all(len(c) >= 7 for c in candles)
+        has_oi = inst["instrument_type"] in OPEN_INTEREST_TYPES and all(len(c) >= 7 for c in candles)
         return Bars.model_construct(
             symbol=symbol, range=range_, interval=interval, currency="INR", exchange=inst["exchange"], tz="Asia/Kolkata",
             t=[stamp(c) for c in candles], o=[float(c[1]) for c in candles], h=[float(c[2]) for c in candles],
             l=[float(c[3]) for c in candles], c=[float(c[4]) for c in candles], v=[int(c[5]) for c in candles],
             source=self.source, as_of=time.time(), adj=None, fund=None, oi=[float(c[6]) for c in candles] if has_oi else None,
         )
+
+    async def _missing(self, key: str) -> str:
+        """Why a key is not in the dump. For a derivative the answer names the contracts that do exist: Kite drops expired contracts, and
+        a bare underlying (`NIFTY.NFO`) is not a contract, so the next thing the user needs is the live contract names."""
+        text = f"{key} is not in the Kite instrument dump"
+        exchange, _, trading = key.partition(":")
+        m = ROOT_RE.match(trading)
+        if exchange in DERIVATIVE_EXCHANGES and m and self.instruments is not None:
+            futures = sorted((r for r in (await self.instruments.get()).chain_rows(exchange, m.group(1), ("FUT",))),
+                             key=lambda r: r["expiry"] or "")
+            if futures:
+                return f"{text} (expired contracts are removed). {m.group(1)} CONTRACTS: {', '.join(r['tradingsymbol'] for r in futures[:4])}"
+        return text
 
     async def probe(self) -> None:
         if self.session is None or not self.session.logged_in:

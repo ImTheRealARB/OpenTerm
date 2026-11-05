@@ -12,7 +12,7 @@ class Tick:
     low: float | None
     time_ms: int
     source: str
-    """Short source code on the wire: y = Yahoo stream, p = REST poll, s = SYNTHETIC test data."""
+    """Short source code on the wire: y = Yahoo stream, p = REST poll, s = SYNTHETIC test data, a = Alpaca IEX, k = Kite ticker."""
 
     def wire(self) -> list:
         return [self.symbol, self.price, self.change, self.change_pct, self.volume, self.high, self.low,
