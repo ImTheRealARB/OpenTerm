@@ -56,12 +56,14 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
     const cmd = (parsed.fn === "THEME" ? settingsCommands.themeArgs : settingsCommands.settingsArgs)(args, getSettings());
     if (cmd && !cmd.ok) return fail(cmd.error);
     if (cmd?.checkFont) {
-      // A custom font is applied only after confirming it is installed here; a missing one is an error, not a silent fallback.
+      // The font is always applied. The install check is only a hint: browsers that guard against fingerprinting scramble the
+      // text measurement it relies on, so it can wrongly say "not installed" (it did, for a font that was installed).
+      // An unconfirmed font gets a loud warning instead of a refusal; the built-in font stays behind it as the fallback.
       const name = cmd.checkFont;
+      updateSettings(() => cmd.next);
       void import("../settings/fontCheck").then(({ fontInstalled }) => {
-        if (!fontInstalled(name)) return fail(`FONT "${name}" IS NOT INSTALLED ON THIS COMPUTER. INSTALL IT, THEN TRY AGAIN`);
-        updateSettings(() => cmd.next);
-        info(cmd.message);
+        if (fontInstalled(name)) info(cmd.message);
+        else fail(`FONT "${name}" APPLIED, BUT THIS BROWSER COULD NOT CONFIRM IT IS INSTALLED. IF NOTHING CHANGED, CHECK THE SPELLING`);
       });
       return true;
     }
