@@ -4,6 +4,10 @@ _Last updated: 2026-11-05 evening, PAUSED, see "RESUME HERE" (local gate + bench
 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
+## STATE AFTER THE HAND-OVER (2026-11-05 night): EVERYTHING IS MERGED. Read this first; the sections below are history.
+`main` = `f3f183c`. PR #20 (live-key fixes, new functions), #21 (wrapup + clean bench numbers), #22 (MAP + live AIS memory + FLIGHTS layer). Gate and bench: `docs/PERFORMANCE.md` Run 4.
+**Open, needs the user:** BLS key (APIKEYS); Census USMAC CENSUS panel untested (check it sends `seasonally_adj`); FEC_API_KEY + CONGRESS_API_KEY (one free key at https://api.data.gov/signup/), then run `FEC smith` / `CONGRESS` live and replace the invented `*_docshape` fixtures; `FLT LONDON` from a network that reaches OpenSky (record real fixtures, optional OPENSKY_CLIENT_ID / SECRET); Kite login lasts one trading day (`GET /api/kite/status`). **Small known issues:** MAP re-applies the typed command when the chokepoint list arrives (a layer toggled in that first moment goes off again); Kite BFO / CDS chains and ticker reconnect never ran against the live service; Kite `5D` is 5 calendar days. **Not built (ideas):** USDA NASS, CoinMarketCap, Tiingo, Twelve Data, EDINET, Angel One / Fyers. Phase 18 (brokers / orders) stays PAUSED.
+
 ## RESUME HERE (paused 2026-11-05 evening because the usage limit ran out; read this first)
 `main` = merge `8601be9` (PRs #15 bundle + SETTINGS e2e, #16 Kite + source hierarchy + free-data batch + PORTS + DBSRCH, #17 Kite follow-ups, #18 AIS). Upstox was REMOVED (the user could not get a token); Kite Connect (paid, token lasts one trading day, login at `/api/kite/login`) is the top source for Indian symbols.
 Two pieces of work are NOT on `main`; both live in worktrees under `.claude/worktrees/` on this machine and were never pushed:
