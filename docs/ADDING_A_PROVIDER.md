@@ -77,6 +77,11 @@ Zero keys must still work; a key unlocks more. A keyed provider never fails the 
    fixture and in `fixtures.py` (like `keytest_openrouter_ok` and Phase 7's FRED API files). Tests use
    `OPENTERM_KEYRING=memory` and a temp `OPENTERM_DOTENV_PATH`; the `client` fixture clears every `KEY_SPECS` env var.
 
+A source that is a WebSocket rather than HTTP (AISstream, `providers/aisstream.py`) cannot use a `TESTS` row. Give the module an
+async `check_key(values)` returning `(state, detail)`, call it from the `run_test` branch in `keys.py` (imported inside the branch so
+the socket library stays off the startup path), and report "not tested" in fixture mode. Test the wire code against a real local
+`websockets.serve` server (see `tests/test_aisstream.py`), not against mocks.
+
 LLM providers are not data providers: they go through the gateway in `backend/openterm/llm/` (`Gateway.chat`), which adds
 the price lookup and the daily spend cap. A new OpenAI-compatible host is one entry in `openai_compat.BASES` plus a
 `KEY_SPECS` row; its prices go in `config.yaml` `llm.prices` (unknown price = refused while a cap is set).

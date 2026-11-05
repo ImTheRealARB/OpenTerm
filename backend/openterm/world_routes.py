@@ -296,3 +296,15 @@ async def evm_address(request: Request, q: str = Query(..., max_length=120)):
         return await addr(svc(request), q)
     except DataError as e:
         return error(e)
+
+
+@router.get("/ais")
+async def ais_ships(request: Request, q: str = Query(..., max_length=80)):
+    """AIS: ship positions inside a chokepoint preset or a BOX you give (AISstream, free key AISSTREAM_API_KEY). Listens a few seconds, newest position per ship.
+    424 KEY REQUIRED without the key. Positions are as reported by ships: delayed, switchable off, spoofable, partial."""
+    from .world.ais import snapshot
+
+    try:
+        return await snapshot(svc(request), q)
+    except DataError as e:
+        return error(e)

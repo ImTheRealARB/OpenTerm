@@ -227,3 +227,8 @@ from .marketaux import MarketauxProvider
 
 ADAPTERS.update({"frankfurter": FrankfurterProvider, "companies_house": CompaniesHouseProvider,
                  "marketaux": MarketauxProvider, "etherscan": EtherscanProvider})
+
+# --- AIS: live ship positions (AISstream, free key). Module import is light: `websockets` is imported only when a listen starts ---
+from .aisstream import AisStreamProvider
+
+ADAPTERS["aisstream"] = AisStreamProvider

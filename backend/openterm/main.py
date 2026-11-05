@@ -67,7 +67,7 @@ DEFAULT_ORDER["surprises"] = ["yahoo_research", "finnhub"]
 DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca", "marketaux"]
 DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "marketaux", "gdelt"]
 # UKCO (Companies House) and ADDR (Etherscan): one keyed source each; no key = KEY REQUIRED, never fake data
-DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"]}
+DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"], "ais": ["aisstream"]}
 # --- Phase 14: option chains (Yahoo first; Tradier is a keyed fallback) ---
 DEFAULT_ORDER["option_chain"] = ["yahoo_options", "tradier"]
 DEFAULT_ORDER["crypto_options"] = ["deribit"]
@@ -195,7 +195,7 @@ async def lifespan(app: FastAPI):
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
         if name == "fred" and "fred" in router.providers:
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
-        if name in ("finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan") and name in router.providers:  # keyed sources
+        if name in ("finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream") and name in router.providers:  # keyed sources
             router.providers[name].set_keys(store.get(name))
         if name == "kite":  # Phase 15: a new key or secret drops the login; the session re-reads the store
             kite.session.reload()
@@ -205,7 +205,7 @@ async def lifespan(app: FastAPI):
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        for name in ("fred", "finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan"):
+        for name in ("fred", "finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream"):
             await asyncio.to_thread(on_key_change, name)
 
     key_loader = asyncio.create_task(apply_stored_keys())

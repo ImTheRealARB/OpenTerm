@@ -52,7 +52,7 @@ on the provider's page before building. Most search hits were comparison blogs, 
 | **Marketaux** | Financial news with sentiment scores | about 100 requests/day (unverified); the adapter stops at 90 a day and keeps answers 15 minutes | Built: merged into `N` headlines, sentiment shown on the detail line. Doc-shaped, unrun |
 | **Etherscan** | Ethereum and some other chains: balances, transactions, gas | 3 calls/s, 100,000/day, selected chains | Built: `ADDR` (balance, last 20 transactions, gas). Doc-shaped, unrun |
 | **CoinMarketCap Basic** | Crypto ranks and prices beyond the top 50 | 15,000 credits/month, 50 requests/minute | Checked (CMC's own article) |
-| **AISstream** | Live ship positions, destinations, ETAs, ship details (WebSocket) | free, **beta, no uptime promise**; no published quotas found | Checked |
+| **AISstream** | Live ship positions, destinations, ETAs, ship details (WebSocket) | free, **beta, no uptime promise**; 3 connections per account and per IP (docs) | Built: `AIS` (ship positions in a chokepoint or box, listen 8 s). Doc-shaped, unrun: no key yet |
 | **Twelve Data, Tiingo, Alpha Vantage** | Fallback prices, daily history | see above | Checked |
 | **Angel One SmartAPI, Fyers** | Indian broker data, backup to Kite | free with account; TOTP login | Checked (forums) |
 | **USDA NASS QuickStats** | US crop, livestock and food statistics | free key | Memory |
@@ -93,14 +93,17 @@ Built in this branch (none committed yet):
    request with `Invalid URL` (about 2 calls in 3), so the adapter retries up to 6 times and only for that known glitch.
 2. **UN Comtrade, BLS, BEA, Census** (free keys) as `TRADE` and `USMAC`. Doc-shaped fixtures, never run with a key.
 3. **Frankfurter** (FX history and quotes behind Yahoo), **Companies House** (`UKCO`), **Marketaux** (news sentiment), **Etherscan** (`ADDR`).
+4. **AISstream** (free key `AISSTREAM_API_KEY`, beta WebSocket) as `AIS`: `providers/aisstream.py` (socket, one listen at a time, hard caps of 15 s / 5,000 messages), `aisstream_parse.py` (pure),
+   `world/ais.py` (presets SUEZ PANAMA HORMUZ MALACCA BABEL BOSPHORUS GIBRALTAR DOVER, `BOX S W N E`). **Built from the documentation only; never run against the real service.** Not a streaming
+   feature: the server opens the socket for one short listen per request (cached 20 s), so nothing is subscribed at startup. The key goes in the first message, never in a URL. Details and
+   the list of untested guesses: HANDOFF.md "AISstream".
 
 Built after that (branch `claude/ports-and-official-stats`): `PORTS` (PortWatch ports) and `DBSRCH` (DBnomics series search). OECD, Eurostat, BIS and IMF series are
 reached through DBnomics (`DBSRCH`, then `ECST DBN:...`), so no separate adapters were written.
 
 Left, in order:
-1. **AISstream** (free key, beta): live vessel positions and ETAs. A WebSocket, so it fits the streaming hub; the biggest piece, no uptime promise.
-2. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, Kraken, Coinbase, MFapi**, CoinMarketCap, USDA NASS, FEC, OpenSky.
-3. Live-test every keyed source that has only doc-shaped fixtures.
+1. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, Kraken, Coinbase, MFapi**, CoinMarketCap, USDA NASS, FEC, OpenSky.
+2. Live-test every keyed source that has only doc-shaped fixtures (AISstream included).
 
 None of the global free tiers beats Yahoo for charts, so none should be ranked above it.
 
