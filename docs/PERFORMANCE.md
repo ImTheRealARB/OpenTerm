@@ -797,3 +797,18 @@ Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs neede
 **Run 3 (clean, 2026-11-05, branch `claude/wrapup-final` = main `49c0fd6` + wrapup):** machine rested 100 s, `OPENROUTER_API_KEY` unset, ports free: **37 of 37 PASS**. Cold start 94.5 ms (web), tick-to-pixel p95 36.8 ms, 50k-bar chart pan 16.7 ms, BT 10-year run 283.2 ms (budget 300; it reads 230 rested and rises after back-to-back runs, so it is the closest line to its budget). The README `## Built to be fast` cells are updated from this run.
 
 **Run 4 (main `f3f183c` = MAP merged, 2026-11-05 night, `OPENROUTER_API_KEY` unset):** gate: ruff, tsc, vitest, pytest 2234 pass; e2e 335 pass plus one `flt` CSV-export flake that passes alone. Bench: the first run (straight after the gate) missed one line, BT 10-year 338.5 ms (budget 300) with cold start 115.3 ms and tick-to-pixel 41.3 ms; after a 150 s rest it was **37 of 37**: cold start 97.3 ms, tick-to-pixel 36.8 to 37.7 ms, 50k-bar pan 16.8 ms, BT 10-year 193.6 ms. Runs 3 and 4 agree within noise, so the README table is unchanged except that BT reads 0.19 to 0.28 s depending on how warm the machine is (the README states the higher figure).
+
+## GUI redesign pass 2 (2026-11-05, Windows 11, 20 threads, idle machine, port 8000 free)
+- Bench: **37/37 PASS** on the first run. Startup bundle 121.7 KB gz (budget 400).
+- Full gate: ruff, tsc, pytest 2234, vitest all pass; Playwright 337/340 on the first run. Two failures were tests written
+  for the old GUI (fixed), one passed alone (flaky).
+- Worker counts, each measured twice back to back:
+
+| Suite | Setting | Run 1 | Run 2 | Failures |
+|---|---|---|---|---|
+| pytest | `-n 6` | 82 s | 80 s | 0 |
+| pytest | `-n 10` | 68 s | 67 s | 0 |
+| Playwright | 4 workers | 65 s | 66 s | 0, then 1 |
+| Playwright | 6 workers | 56 s | 57 s | 1, then 1 |
+
+Decision: pytest moves to `-n 10` (faster, green). Playwright stays at 4 workers: 6 is about 10 s faster but failed a test in both runs.

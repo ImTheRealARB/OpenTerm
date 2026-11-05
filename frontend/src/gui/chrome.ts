@@ -1,5 +1,5 @@
 /**
- * Shared behaviour for every GUI control (menu bar, sidebar, symbol box, mode toggle).
+ * Shared behaviour for every GUI control (menu bar, sidebar, mode toggle).
  *
  * The app has global keys on `window` (App.tsx): Tab cycles panels, plain letters go to the focused panel or start a
  * command, Enter/arrows can be panel keys. A GUI control that has focus must not lose its own keys to those, but it must

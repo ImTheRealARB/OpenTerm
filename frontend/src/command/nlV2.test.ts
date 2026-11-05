@@ -90,7 +90,9 @@ describe("NL_V2 failure table: every row", () => {
     ["eur usd", "EURUSD=X"],
     ["dollar rupee", "USDINR=X"],
     ["reliance stock price", "RELIANCE.NS GP"],
-    ["tata motors", "TATAMOTORS.NS"],
+    ["tata motors", "TMCV.NS"], // TATAMOTORS.NS is dead since the late-2025 demerger; "Tata Motors Limited" is now TMCV
+    ["tata motors passenger vehicles", "TMPV.NS"], // the other half has its own names (an alias holds one symbol)
+    ["tata motors cars", "TMPV.NS"],
     ["nifty 50", "^NSEI"],
     ["sensex", "^BSESN"],
     ["apple past six months", "AAPL GP 6M"],
@@ -340,7 +342,7 @@ describe("several companies without 'vs'", () => {
     expect(cmd("apple microsoft nvidia 1 year")).toBe("AAPL GP 1Y VS MSFT NVDA");
     expect(cmd("tesla and ford")).toBe("TSLA GP VS F");
     expect(cmd("apple, microsoft, and google 5 years")).toBe("AAPL GP 5Y VS MSFT GOOGL");
-    expect(cmd("compare reliance tata motors")).toBe("RELIANCE.NS GP VS TATAMOTORS.NS");
+    expect(cmd("compare reliance tata motors")).toBe("RELIANCE.NS GP VS TMCV.NS");
   });
   it("GP takes the first plus three: more names are cut and the why says so", () => {
     const r = routeNatural("apple microsoft nvidia tesla ford", ctx);
@@ -391,7 +393,7 @@ describe("Yahoo name search fallback (nlRemote.pickRemote, the pure half)", () =
     expect(pickRemote("zomato", [], "{S}")).toBeNull();
   });
   it("several different names are choices, not a guess", () => {
-    const r = pickRemote("tata", [hit("TATAMOTORS.NS", "Tata Motors Limited"), hit("TATASTEEL.NS", "Tata Steel Limited"), hit("TCS.NS", "Tata Consultancy Services")], "{S} GP");
+    const r = pickRemote("tata", [hit("TMCV.NS", "Tata Motors Limited"), hit("TATASTEEL.NS", "Tata Steel Limited"), hit("TCS.NS", "Tata Consultancy Services")], "{S} GP");
     expect(r?.kind).toBe("choices");
   });
   it("the search is only asked for when nothing local knew the name", () => {

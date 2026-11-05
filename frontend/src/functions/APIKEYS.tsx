@@ -110,7 +110,9 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
     if (!data || placedFor.current === want) return;
     placedFor.current = want;
     const i = want ? rows.findIndex((k) => !isHeaderRow(k) && (k.name === want || k.fields.some((f) => f.toLowerCase() === want))) : -1;
-    if (i >= 0) grid.current?.moveTo(i);
+    // No (known) argument: the first provider. The grid's `initialSelected={1}` is clamped to 0 while the rows are still
+    // empty, which left the cursor on the "AI models" header band.
+    grid.current?.moveTo(i >= 0 ? i : rows.findIndex((k) => !isHeaderRow(k)));
   }, [data, want, rows]);
 
   const closeEdit = () => {

@@ -1,45 +1,82 @@
 /**
  * Menu categories for GUI mode (pure: no React, no registry import, so vitest can load it anywhere).
  *
- * The GUI menu bar and sidebar group the ~100 functions in `registry.ts` under seven headings. This file is
- * the single place that says which function lives under which heading. `categories.test.ts` checks that every
- * registry code appears here exactly once and that nothing here is a stale code, so adding a function to the
- * registry without picking a category fails the tests (rather than silently missing from the GUI).
+ * The GUI menu bar and sidebar group the ~120 functions in `registry.ts` in two levels:
+ *   category (the seven menu-bar headings)  >  subgroup (a plain-word group, e.g. "Crypto")  >  function.
+ * `MENU` below is the single place that says where each function lives. Everything else (the code -> category map,
+ * the help drawer's "Category" line, the FUNC directory) is derived from it, so a function is placed exactly once.
+ *
+ * Rules the tests enforce (`categories.test.ts`):
+ *  - every registry code appears in exactly one subgroup, or is listed in `ALIASES` (an alias shares its original's place);
+ *  - at most 8 subgroups per category and at most 12 functions per subgroup, so no menu needs scrolling to be understood;
+ *  - no stale codes.
+ * Adding a function to the registry without placing it here fails the tests, rather than silently missing from the GUI.
+ *
+ * A category with a single subgroup (Charts, News, Portfolio, Backtest) is short enough to list its functions directly:
+ * the menu shows no second level for it. Within a subgroup, functions are listed in the order written here (most used first).
  */
 
 export const CATEGORIES = ["Markets", "Charts", "News", "Research", "Portfolio", "Backtest", "Settings"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-/** code -> category. Keep it grouped by category so a reader can see what each menu holds. */
-export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze({
-  // Markets: quotes, boards, calendars, macro and crypto/commodity data, derivatives and rates screens
-  Q: "Markets", QR: "Markets", WL: "Markets", WEI: "Markets", MOV: "Markets", EQS: "Markets", SECF: "Markets",
-  FX: "Markets", FXC: "Markets", FXFA: "Markets", CRYP: "Markets", CDEP: "Markets", FUND: "Markets", LIQ: "Markets",
-  STBL: "Markets", DEFI: "Markets", UNLK: "Markets", CMDTY: "Markets", NRG: "Markets", WETR: "Markets", SHIP: "Markets", PORTS: "Markets",
-  RATES: "Markets", YAS: "Markets", SWPM: "Markets", CDSW: "Markets", CT: "Markets", WIRP: "Markets", COT: "Markets",
-  ECO: "Markets", ERN: "Markets", IPO: "Markets", MACRO: "Markets", ECST: "Markets", DBSRCH: "Markets", WECO: "Markets", MF: "Markets",
-  CENB: "Markets", PRED: "Markets", TRADE: "Markets", USMAC: "Markets", ADDR: "Markets", AIS: "Markets", FLT: "Markets", MAP: "Markets",
-  // Charts: anything that is mainly a picture of a time series or a map
-  GP: "Charts", IND: "Charts", GIP: "Charts", HIST: "Charts", SEAS: "Charts", FRED: "Charts", IMAP: "Charts",
-  // News: headlines and company events
-  N: "News", CN: "News", EVTS: "News", BRIEF: "News",
-  // Research: company fundamentals, ownership, valuation, options analytics, quant tools and the AI layer
-  DES: "Research", FA: "Research", FIL: "Research", SEC: "Research", EE: "Research", EEO: "Research", ANR: "Research",
-  MGMT: "Research", DVD: "Research", SPLT: "Research", CACS: "Research", SI: "Research", HDS: "Research",
-  OWN: "Research", MGR: "Research", ETF: "Research", MEMB: "Research", COMP: "Research", CORR: "Research",
-  REGIME: "Research", DCF: "Research", WACC: "Research", RV: "Research", UKCO: "Research", USASP: "Research", FEDREG: "Research", FEC: "Research", CONGRESS: "Research",
-  OMON: "Research", PCR: "Research", OV: "Research", OSA: "Research", OVDV: "Research", SKEW: "Research", HIVG: "Research",
-  FACT: "Research", QL: "Research", ALPHA: "Research",
-  AI: "Research", SWARM: "Research", THESIS: "Research", AUDIT: "Research",
-  // Portfolio: positions, alerts, risk and attribution
-  PORT: "Portfolio", ALRT: "Portfolio", RISK: "Portfolio", OPT: "Portfolio", ATTR: "Portfolio",
-  // Backtest: rule backtests and the data you bring to them
-  BT: "Backtest", IMPORT: "Backtest",
-  // Settings: help, preferences, layouts, keys, data sources and the other utilities
-  HELP: "Settings", TMPL: "Settings", FUNC: "Settings", SHORTCUTS: "Settings", SETTINGS: "Settings", THEME: "Settings", APIKEYS: "Settings",
-  SOURCES: "Settings", LOG: "Settings", PERF: "Settings", JOBS: "Settings", LAYOUT: "Settings", MONITOR: "Settings",
-  KITE: "Settings", DLVR: "Settings",
-});
+/** One plain-word group of functions inside a category. */
+export interface Subgroup {
+  name: string;
+  codes: readonly string[];
+}
+
+/** Settings subgroups that also carry GUI-only rows (tour, welcome card, templates, font ...): see `gui/MenuBar.tsx`. */
+export const SUB_HELP = "Help";
+export const SUB_LOOK = "Look and layout";
+
+/** category -> its subgroups, in menu order. */
+export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
+  Markets: [
+    { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "SECF", "MF"] },
+    { name: "Calendars", codes: ["ECO", "ERN", "IPO", "CENB"] },
+    { name: "Currencies", codes: ["FX", "FXC", "FXFA"] },
+    { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "UNLK", "ADDR"] },
+    { name: "Commodities and energy", codes: ["CMDTY", "NRG", "WETR", "CT", "COT"] },
+    { name: "Rates and bonds", codes: ["RATES", "WIRP", "YAS", "SWPM", "CDSW"] },
+    { name: "Economy", codes: ["MACRO", "USMAC", "WECO", "ECST", "DBSRCH", "TRADE", "PRED"] },
+    { name: "Ships, flights and maps", codes: ["MAP", "SHIP", "PORTS", "AIS", "FLT"] },
+  ],
+  Charts: [{ name: "Charts", codes: ["GP", "IND", "GIP", "HIST", "SEAS", "IMAP", "FRED"] }],
+  News: [{ name: "News", codes: ["N", "CN", "EVTS", "BRIEF"] }],
+  Research: [
+    { name: "Company", codes: ["DES", "FA", "COMP", "MGMT", "DVD", "SPLT", "CACS"] },
+    { name: "Analysts and valuation", codes: ["ANR", "EE", "EEO", "DCF", "WACC", "RV"] },
+    { name: "Filings and owners", codes: ["FIL", "OWN", "HDS", "MGR", "SI", "ETF", "MEMB"] },
+    { name: "Options", codes: ["OMON", "PCR", "OV", "OSA", "OVDV", "SKEW", "HIVG"] },
+    { name: "Statistics", codes: ["CORR", "REGIME", "FACT", "QL", "ALPHA"] },
+    { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT"] },
+    { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO"] },
+  ],
+  Portfolio: [{ name: "Portfolio", codes: ["PORT", "ALRT", "RISK", "OPT", "ATTR"] }],
+  Backtest: [{ name: "Backtest", codes: ["BT", "IMPORT"] }],
+  Settings: [
+    { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
+    { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "LAYOUT", "TMPL"] },
+    { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
+    { name: "System", codes: ["JOBS", "PERF", "LOG"] },
+  ],
+};
+
+/**
+ * Codes that only repeat another function (same panel, second name). They work when typed and share the original's
+ * category, but the menus and sidebar leave them out: two rows for one thing only make a beginner choose between them.
+ */
+export const ALIASES: Readonly<Record<string, string>> = Object.freeze({ SEC: "FIL", MONITOR: "LAYOUT" });
+
+/** code -> category, derived from `MENU` (aliases take their original's category). */
+export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze(
+  (() => {
+    const out: Record<string, Category> = {};
+    for (const c of CATEGORIES) for (const g of MENU[c]) for (const code of g.codes) out[code] = c;
+    for (const [alias, original] of Object.entries(ALIASES)) out[alias] = out[original];
+    return out;
+  })(),
+);
 
 /** The category a function code belongs to. Throws for an unmapped code: `categories.test.ts` keeps that impossible. */
 export function categoryOf(code: string): Category {
@@ -53,10 +90,24 @@ export interface CategoryItem {
   title: string;
 }
 
-/** Groups function definitions by category, in `CATEGORIES` order, each group sorted by code. */
-export function groupByCategory<T extends CategoryItem>(items: readonly T[]): { category: Category; items: T[] }[] {
-  return CATEGORIES.map((category) => ({
-    category,
-    items: items.filter((f) => CATEGORY_OF[f.code] === category).sort((a, b) => a.code.localeCompare(b.code)),
-  }));
+/**
+ * One category's menu: its subgroups, each with the function definitions it lists (in `MENU` order). Codes missing
+ * from `defs` are skipped (the tests guarantee there are none in the real registry).
+ */
+export function menuOf<T extends CategoryItem>(category: Category, defs: readonly T[]): { name: string; items: T[] }[] {
+  const byCode = new Map(defs.map((d) => [d.code, d]));
+  return MENU[category].map((g) => ({ name: g.name, items: g.codes.map((c) => byCode.get(c)).filter((d): d is T => !!d) }));
+}
+
+/** Where a flyout (a menu's second level) goes: right of its row, or left when it would cross the window edge. Pure, for tests. */
+export function flyoutPosition(
+  row: { top: number; left: number; right: number },
+  size: { width: number; height: number },
+  viewport: { width: number; height: number },
+): { top: number; left: number; flipped: boolean } {
+  const flipped = row.right + size.width > viewport.width && row.left - size.width >= 0;
+  const left = flipped ? row.left - size.width : row.right;
+  // Keep the whole flyout on screen: a row near the bottom opens it upwards as far as needed.
+  const top = Math.max(0, Math.min(row.top, viewport.height - size.height));
+  return { top, left, flipped };
 }

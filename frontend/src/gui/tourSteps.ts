@@ -23,9 +23,9 @@ export const TOUR_STEPS: readonly TourStep[] = [
     selectors: ['[data-testid="gui-sidebar"]'],
   },
   {
-    title: "Symbol box",
-    text: "Type a ticker such as MSFT and press Enter to load it into the focused panel. A chart of AAPL becomes a chart of MSFT.",
-    selectors: ['[data-testid="gui-symbol"]'],
+    title: "Command line",
+    text: "Type a ticker such as MSFT, a company name or a question, then press Enter (or click GO). A chart of AAPL becomes a chart of MSFT.",
+    selectors: ["#cmdline"],
   },
   {
     title: "Mode switch",

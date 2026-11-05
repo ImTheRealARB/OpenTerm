@@ -49,3 +49,7 @@ One monospace family from `--font` (never hard-code a family). GUI: 13 px text, 
 - A new function needs a category and subgroup (`functions/categories.ts`) and, if it has buttons, an entry in `gui/toolbars.ts` that presses the panel's own keys.
 - A new GUI-only component loads lazily so the startup bundle does not grow.
 - Look at it in both modes at 1280 and 1440 px wide before calling it done.
+- One text box per screen: the command line. Do not add a second search or symbol box; a bare ticker typed there keeps the panel's current function.
+- The function band stays one row. Full width at 1280 px every button shows (5 px side padding, short plain labels: `Price alert`, not `Alert at price`). A narrower panel compacts the band before it would wrap: first the ? / CSV / Refresh / Max / Close buttons go (the title bar's OPTIONS menu has them), then GP's range buttons become one dropdown (`gui/PanelToolbar.tsx`, `data-fit` = the level).
+- Flyouts flip to the left when they would run off the right edge of the screen.
+- An empty-state note in GUI shows only its first sentence when a hint or button already says the rest (`NO WATCHLISTS.`).

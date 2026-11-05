@@ -47,33 +47,6 @@ export function cleanName(name: string): string {
 /** Lower-case, drop punctuation so "Tesla, Inc." and "tesla inc" compare equal. */
 const norm = (s: string): string => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 
-/**
- * Score one company for a query; 0 = no match. Higher is better:
- *   exact ticker 1000 > ticker prefix 800 > name starts with query 700 > a word of the name starts with it 600 > name contains it 300.
- */
-function score(q: string, e: UniverseEntry, nameN: string): { s: number; via: "symbol" | "name" } {
-  const sym = e.symbol.toLowerCase();
-  if (sym === q) return { s: 1000, via: "symbol" };
-  if (sym.startsWith(q)) return { s: 800 - sym.length, via: "symbol" };
-  if (nameN.startsWith(q)) return { s: 700, via: "name" };
-  if (nameN.includes(" " + q)) return { s: 600, via: "name" };
-  if (q.length >= 3 && nameN.includes(q)) return { s: 300, via: "name" };
-  return { s: 0, via: "name" };
-}
-
-/** Best matches for `query`, best first (ties: bigger company first). Empty for a blank query. */
-export function matchCompanies(query: string, universe: readonly UniverseEntry[], limit = 6): CompanyHit[] {
-  const q = norm(query);
-  if (!q) return [];
-  const scored: { e: UniverseEntry; s: number; via: "symbol" | "name" }[] = [];
-  for (const e of universe) {
-    const r = score(q, e, norm(e.name));
-    if (r.s > 0) scored.push({ e, ...r });
-  }
-  scored.sort((a, b) => b.s - a.s || (b.e.mcap ?? 0) - (a.e.mcap ?? 0));
-  return scored.slice(0, limit).map((x) => ({ symbol: x.e.symbol, name: cleanName(x.e.name), via: x.via }));
-}
-
 /** The set of two-letter pieces of a string ("tesla" -> te, es, sl, la); used to rate how alike two spellings are. */
 function bigrams(s: string): Set<string> {
   const out = new Set<string>();
@@ -142,27 +115,6 @@ export function closestCompanies(query: string, universe: readonly UniverseEntry
   const pool = scored.length ? scored : universe.map((e) => ({ e, s: 0 }));
   pool.sort((a, b) => b.s - a.s || (b.e.mcap ?? 0) - (a.e.mcap ?? 0));
   return pool.slice(0, limit).map((x) => ({ symbol: x.e.symbol, name: cleanName(x.e.name), via: "symbol" as const }));
-}
-
-/** Merge hit lists, keeping the first occurrence of each ticker. */
-export function mergeHits(...lists: CompanyHit[][]): CompanyHit[] {
-  const seen = new Set<string>();
-  const out: CompanyHit[] = [];
-  for (const l of lists) for (const h of l) if (!seen.has(h.symbol)) { seen.add(h.symbol); out.push(h); }
-  return out;
-}
-
-/**
- * What Enter should do when no suggestion is highlighted.
- *  - an exact ticker match, or no suggestions: run the text as typed (so "BRK-B" or "RELIANCE IN" still work);
- *  - the top suggestion matched on NAME ("apple"): run that ticker;
- *  - otherwise (a ticker prefix like "aap"): run the text as typed, as it always did.
- */
-export function enterTarget(text: string, hits: readonly CompanyHit[]): string {
-  const t = text.trim();
-  const top = hits[0];
-  if (!top || /\s/.test(t) || hits.some((h) => h.symbol.toLowerCase() === t.toLowerCase())) return t;
-  return top.via === "name" ? top.symbol : t;
 }
 
 /** The strict "did you mean" of closestCompanies: small spelling mistakes only. */

@@ -46,7 +46,7 @@ packages = ["openterm"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-n 6 --dist worksteal"  # pytest-xdist; 6 + worksteal beats 4 and auto here (docs/PERFORMANCE.md). Debug serially with -n 0.
+addopts = "-n 10 --dist worksteal"  # pytest-xdist; 10 measured 67 s vs 81 s for 6 on an idle 20-thread machine, both green (docs/PERFORMANCE.md). Debug serially with -n 0.
 
 [tool.ruff]
 line-length = 100

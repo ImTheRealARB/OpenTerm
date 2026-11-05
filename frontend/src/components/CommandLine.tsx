@@ -183,8 +183,19 @@ export function CommandLine() {
     nl: nlItems,
   };
   const extras = (f: (m: Extras) => void) => (extrasMod ? f(extrasMod) : void import("../command/cmdExtras").then((m) => f((extrasMod = m))));
-  const runNl = (command: string, typed: string, newPanel: boolean) => extras((m) => m.runNl(command, typed, newPanel, finish));
-  const viaNatural = (text: string, newPanel: boolean) => extras((m) => void m.viaNatural(text, newPanel, ui, finish));
+  // `gui` is passed as `keepFn` on every path that runs typed text: in GUI mode a bare ticker ("MSFT", or "apple" once
+  // plain English turns it into AAPL) keeps the panel's chart instead of opening DES. Terminal mode passes false = as before.
+  const runNl = (command: string, typed: string, newPanel: boolean) => extras((m) => m.runNl(command, typed, newPanel, gui, finish));
+  const viaNatural = (text: string, newPanel: boolean) => extras((m) => void m.viaNatural(text, newPanel, gui, ui, finish));
+
+  /** What Enter does with the line, also run by the GO button (GUI): a picked reading, plain English, or a plain command. */
+  const submit = (newPanel: boolean) => {
+    const text = input.current?.value ?? "";
+    const picked = items[sel];
+    if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, text, newPanel);
+    else if (needsNatural(text)) viaNatural(text, newPanel);
+    else if (execute(text, { newPanel, keepFn: gui })) finish();
+  };
 
   /** Vim normal-mode keys (and Esc from insert mode). Returns true when the key was consumed. */
   const vimHandle = (e: React.KeyboardEvent<HTMLInputElement>): boolean => {
@@ -218,10 +229,7 @@ export function CommandLine() {
     const el = e.currentTarget;
     if (e.key === "Enter") {
       e.preventDefault();
-      const picked = items[sel];
-      if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, el.value, e.shiftKey);
-      else if (needsNatural(el.value)) viaNatural(el.value, e.shiftKey);
-      else if (execute(el.value, { newPanel: e.shiftKey })) finish();
+      submit(e.shiftKey);
     } else if (e.key === "Tab" && !e.shiftKey && items.length) {
       e.preventDefault();
       accept(items[Math.max(0, sel)]);
@@ -327,7 +335,24 @@ export function CommandLine() {
           setHint(null);
         }}
       />
-      <span className="cmd-go" aria-hidden="true">GO</span>
+      {gui ? (
+        // GUI: GO is a real button. preventDefault on mousedown keeps the focus in the input (a click would blur it and
+        // close the suggestions). tabIndex -1: the keyboard already has Enter.
+        <button
+          type="button"
+          className="cmd-go"
+          tabIndex={-1}
+          aria-label="Run the typed command"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            submit(false);
+          }}
+        >
+          GO
+        </button>
+      ) : (
+        <span className="cmd-go" aria-hidden="true">GO</span>
+      )}
       {vimOn && focused && <span className="vim">{vimMode === "normal" ? "-- NORMAL --" : "-- INSERT --"}</span>}
       {focused && items.length === 0 && hint}
       {focused && items.length > 0 && (
@@ -341,7 +366,11 @@ export function CommandLine() {
               onMouseDown={(e) => {
                 e.preventDefault(); // keep the focus in the command line
                 if (s.kind === "NL" || s.kind === "MEAN") runNl(s.value, input.current?.value ?? "", false);
-                else accept(s);
+                else if (gui && (s.kind === "SEC" || s.kind === "RECENT")) {
+                  // GUI: clicking a company runs it (the typed text with its last word swapped for the symbol), like
+                  // Enter would. Terminal mode only fills the line so the user can add a function code before Enter.
+                  if (execute((input.current?.value ?? "").replace(/\S*$/, s.value), { keepFn: true })) finish();
+                } else accept(s);
               }}
             >
               <span>{s.value}</span>

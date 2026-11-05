@@ -84,7 +84,7 @@ describe("keyHint (the letter before a label in the function band)", () => {
     expect(keyHint(find("Q", "Sort"))).toBe("S");
     expect(keyHint(find("GP", "Log"))).toBe("L");
     expect(keyHint(find("GP", "1Y"))).toBe(""); // a digit: the label is the meaning
-    expect(keyHint(find("GP", "Alert at price"))).toBe(""); // Shift chord
+    expect(keyHint(find("GP", "Price alert"))).toBe(""); // Shift chord
     expect(keyHint(find("GP", "Indicators…"))).toBe(""); // opens another panel
     expect(keyHint(find("Q", "Details"))).toBe(""); // Enter
   });

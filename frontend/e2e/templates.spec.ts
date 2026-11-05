@@ -31,6 +31,7 @@ test("GUI: one click on Settings > Template: Day trader replaces the starter lay
   await expect(page.getByTestId("welcome-card")).toHaveCount(0);
   await expect(page.locator("[data-panel]")).toHaveCount(3); // starter layout
   await page.locator('.gm-cat[data-cat="Settings"]').click();
+  await page.locator('.gm-sub[data-group="Look and layout"]').hover(); // the templates live in this group's flyout
   await page.locator('.gm-item[data-template="DAY"]').click();
   await expect(page.locator("[data-panel]")).toHaveCount(4);
   await expect(page.locator('[data-panel="1"] .ph')).toContainText("GP");

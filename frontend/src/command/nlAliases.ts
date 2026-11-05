@@ -117,7 +117,13 @@ const TABLE: [string[], string, string][] = [
   [["ntpc"], "NTPC.NS", "NTPC on NSE"],
   [["ongc"], "ONGC.NS", "ONGC on NSE"],
   [["coal india"], "COALINDIA.NS", "Coal India on NSE"],
-  [["tata motors"], "TATAMOTORS.NS", "Tata Motors on NSE"],
+  // Tata Motors demerged in Oct 2025: TATAMOTORS.NS no longer quotes (Yahoo: no data; checked 2026-11-05). Yahoo's name search now
+  // gives two NSE companies, both still named "Tata Motors": "Tata Motors Limited" (TMCV, trucks and buses, listed 2025-11-12) and
+  // "Tata Motors Passenger Vehicles Limited" (TMPV, cars and Jaguar Land Rover; it kept the old share-price history).
+  // An alias holds ONE symbol, so a "which one?" list is not possible here. Plain "tata motors" opens the company whose legal
+  // name is exactly that (TMCV; it was also the larger by market cap that day), the label says which one it is, and TMPV has its own names.
+  [["tata motors", "tata motors commercial", "tata motors commercial vehicles", "tata motors cv", "tmcv"], "TMCV.NS", "Tata Motors (commercial vehicles) on NSE"],
+  [["tata motors passenger", "tata motors passenger vehicles", "tata motors pv", "tata motors cars", "tmpv"], "TMPV.NS", "Tata Motors Passenger Vehicles on NSE"],
   [["tata steel"], "TATASTEEL.NS", "Tata Steel on NSE"],
   [["tata power"], "TATAPOWER.NS", "Tata Power on NSE"],
   [["jsw steel"], "JSWSTEEL.NS", "JSW Steel on NSE"],

@@ -35,19 +35,18 @@
 :root[data-mode="gui"] .gm-item:hover, :root[data-mode="gui"] .gm-item:focus-visible { background: var(--sel); }
 :root[data-mode="gui"] .gm-item:hover > span:last-child, :root[data-mode="gui"] .gm-item:focus-visible > span:last-child { color: var(--val); }
 :root[data-mode="gui"] .gm-sep { border-top: 1px solid var(--line); margin-top: 2px; }
-
-/* --- Symbol picker (right end of the menu bar) --- */
-:root[data-mode="gui"] .gm-symbol { position: relative; flex: none; }
-:root[data-mode="gui"] .gm-symbol label { display: flex; align-items: center; gap: 6px; }
-/* Company-name suggestions under the symbol box. */
-:root[data-mode="gui"] .gm-suggest { position: absolute; right: 0; top: 23px; z-index: 50; min-width: 260px; margin: 0; padding: 2px 0; list-style: none; background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; }
-:root[data-mode="gui"] .gm-suggest li { padding: 0 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--hdr); }
-:root[data-mode="gui"] .gm-suggest li b { color: var(--fg); display: inline-block; min-width: 7ch; }
-:root[data-mode="gui"] .gm-suggest li:hover, :root[data-mode="gui"] .gm-suggest li.on { background: var(--sel); color: var(--val); }
-:root[data-mode="gui"] .gm-symbol-label { color: var(--fg); }
-:root[data-mode="gui"] .gm-symbol input { width: 170px; height: 20px; padding: 0 6px; background: var(--field); border: 1px solid var(--field); border-radius: 3px; color: var(--field-fg); font-weight: bold; text-transform: uppercase; }
-:root[data-mode="gui"] .gm-symbol input::placeholder { color: var(--field-fg); opacity: 0.65; font-weight: normal; text-transform: none; }
-:root[data-mode="gui"] .gm-symbol input:focus { border-color: var(--val); }
+/* Two-level menus: a long category's dropdown lists plain-word groups; each opens a flyout (gui/Flyout.tsx) beside it.
+   The flyout is position: fixed so the scrolling dropdown or sidebar list cannot clip it; Flyout.tsx sets top/left. */
+:root[data-mode="gui"] .gm-drop.gm-groups { min-width: 230px; overflow: visible; }
+:root[data-mode="gui"] .gm-sub, :root[data-mode="gui"] .gs-sub { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; width: 100%; text-align: left; cursor: pointer; white-space: nowrap; }
+:root[data-mode="gui"] .gm-sub > span:first-child, :root[data-mode="gui"] .gs-sub > span:first-child { color: var(--hdr); }
+:root[data-mode="gui"] .gm-arrow { color: var(--fg-dim); }
+:root[data-mode="gui"] .gm-sub.on, :root[data-mode="gui"] .gs-sub.on, :root[data-mode="gui"] .gs-sub:hover, :root[data-mode="gui"] .gs-sub:focus-visible { background: var(--sel); }
+:root[data-mode="gui"] .gm-sub.on > span, :root[data-mode="gui"] .gs-sub.on > span, :root[data-mode="gui"] .gs-sub:hover > span, :root[data-mode="gui"] .gs-sub:focus-visible > span { color: var(--val); }
+:root[data-mode="gui"] .gs-sub { height: 22px; padding: 0 8px 0 14px; }
+:root[data-mode="gui"] .gm-fly { position: fixed; top: 0; left: 0; z-index: 45; min-width: 340px; max-width: min(560px, 90vw); max-height: calc(100vh - 8px); overflow-y: auto;
+  background: var(--bg); border: 1px solid var(--fg); border-radius: 3px; padding: 2px 0; }
+:root[data-mode="gui"] .gm-fly.gs-fly { min-width: 320px; }
 
 /* --- Sidebar --- */
 :root[data-mode="gui"] .gs { flex: none; width: 248px; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--bg); }
@@ -174,15 +173,8 @@
 :root[data-mode="gui"] .app.has-tabs { grid-template-rows: 22px 28px auto 1fr 18px; }
 :root[data-mode="gui"] .app > .keys { display: none; }
 
-/* 19: category counts only on hover/focus; the carets are quiet. */
-:root[data-mode="gui"] .gs-head .dim { visibility: hidden; }
-:root[data-mode="gui"] .gs-head:hover .dim, :root[data-mode="gui"] .gs-head:focus-visible .dim { visibility: visible; }
+/* 19: the carets are quiet. */
 :root[data-mode="gui"] .gs-caret { color: var(--fg-dim); }
-
-/* 10: wider suggestions with room for the full name, and a "no match" row. */
-:root[data-mode="gui"] .gm-suggest { min-width: 340px; max-width: 480px; }
-:root[data-mode="gui"] .gm-suggest li { height: 18px; line-height: 18px; }
-:root[data-mode="gui"] .gm-none { padding: 2px 8px; color: var(--hdr); white-space: normal; }
 
 /* 8: DES company blurb clamped to ~4 lines with a Read more button; delayed note is small grey. */
 :root[data-mode="gui"] .desc-clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
@@ -221,7 +213,8 @@
 /* The typed text is white and plain case: it may be a sentence ("apple 5 years"), not only a code. */
 :root[data-mode="gui"] .cmd input { text-transform: none; color: var(--val); caret-color: var(--fg); }
 :root[data-mode="gui"] .cmd-pr { color: var(--fg); padding-right: 6px; }
-:root[data-mode="gui"] .cmd-go { margin: 0; padding: 0 12px; line-height: 20px; background: var(--go); color: var(--go-fg); border-radius: 0 2px 2px 0; }
+/* GO is a <button> in GUI mode: strip the browser's button chrome so it looks like the old label (bold, flat). `font` first: it also resets line-height. */
+:root[data-mode="gui"] .cmd-go { margin: 0; padding: 0 12px; border: 0; font: inherit; font-weight: bold; line-height: 20px; cursor: pointer; background: var(--go); color: var(--go-fg); border-radius: 0 2px 2px 0; }
 :root[data-mode="gui"] .ac { top: 25px; }
 :root[data-mode="gui"] .top-help { flex: none; height: 22px; padding: 0 10px; margin-right: 6px; background: var(--bar-hi); color: var(--hdr); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; font-weight: bold; }
 :root[data-mode="gui"] .top-help:hover, :root[data-mode="gui"] .top-help:focus-visible { background: var(--sel); color: var(--val); }
@@ -237,7 +230,8 @@
 
 /* --- Function band: the panel's buttons on the dark red menu colour, white labels. The letter before a label is the key it presses. --- */
 :root[data-mode="gui"] .pt { gap: 2px; min-height: 26px; padding: 3px 6px; background: var(--menu); border-bottom: 1px solid var(--line); }
-:root[data-mode="gui"] .pt .pt-b { height: 20px; background: transparent; color: var(--menu-fg); border-color: transparent; }
+/* 5 px sides (not 7): the GP band (8 ranges, Log, Indicators, Price alert, two dropdowns, help, CSV, Refresh, Max, Close) fits one row at 1280 px. */
+:root[data-mode="gui"] .pt .pt-b { height: 20px; padding: 0 5px; background: transparent; color: var(--menu-fg); border-color: transparent; }
 :root[data-mode="gui"] .pt .pt-b:hover:not(:disabled), :root[data-mode="gui"] .pt .pt-b:focus-visible { background: #00000055; color: var(--menu-fg); border-color: var(--menu-fg); }
 :root[data-mode="gui"] .pt .pt-b:disabled { color: var(--menu-fg); opacity: 0.55; }
 :root[data-mode="gui"] .pt-fn { color: var(--menu-fg); }

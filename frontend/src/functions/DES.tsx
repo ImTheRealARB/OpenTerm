@@ -5,7 +5,7 @@ import { fallbackText } from "./fallbackText";
 import { PanelNote, plainLine, type NoteAction } from "../components/PanelNote";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { termProps } from "../gui/term";
-import { runSymbol } from "../gui/run";
+import { runCommand } from "../gui/run";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, api, type Envelope, type Quote } from "../net/api";
 import { settingsStore } from "../settings/runtime";
@@ -163,7 +163,7 @@ export default function DES({ panelId, security }: FunctionProps) {
     // The stock list is loaded only now (import + fetch), never at startup.
     void import("../gui/suggestData")
       .then((m) => m.closest(symbol))
-      .then((hits) => alive && setNear(hits.map((h) => ({ label: `Try ${h.symbol}`, onClick: () => void runSymbol(h.symbol) }))))
+      .then((hits) => alive && setNear(hits.map((h) => ({ label: `Try ${h.symbol}`, onClick: () => void runCommand(h.symbol) }))))
       .catch(() => {});
     return () => {
       alive = false;

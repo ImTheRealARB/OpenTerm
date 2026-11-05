@@ -37,7 +37,10 @@ const SHOTS = [
     await page.getByTestId("sidebar-toggle").click();
   }],
   ["gui-search", "gui", async (page) => {
-    await page.getByPlaceholder("Company or ticker").fill("apple");
+    // The GUI has one text box (the command line); typing shows its suggestion list.
+    const input = page.locator(".cmd input").first();
+    await input.click();
+    await input.fill("apple stock price past 5 years");
     await page.waitForTimeout(1500);
   }],
   ["gui-glossary", "gui", async (page) => {

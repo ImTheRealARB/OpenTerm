@@ -125,8 +125,10 @@ test("there is no 'switch to terminal' banner any more; the mode switch lives in
   await setup(page);
   await expect(page.getByTestId("gui-menubar")).toBeVisible();
   await expect(page.getByTestId("gui-banner")).toHaveCount(0);
-  await page.getByRole("menuitem", { name: "Settings" }).click();
-  await page.getByRole("menuitem", { name: /Switch to Terminal mode/ }).click();
+  // Two-level menus: the mode switch is in Settings > "Look and layout" (a side flyout).
+  await page.locator('.gm-cat[data-cat="Settings"]').click();
+  await page.locator('.gm-sub[data-group="Look and layout"]').hover();
+  await page.getByTestId("gm-flyout").getByRole("menuitem", { name: /Switch to Terminal mode/ }).click();
   await expect(page.locator("html")).toHaveAttribute("data-mode", "terminal");
 });
 
@@ -189,7 +191,7 @@ test("tour: Take the tour walks through every step, Back works, Done ends it", a
   await expect(cap).toContainText("STEP 2 OF 5");
   await expect(cap).toContainText("Sidebar");
   await page.getByTestId("tour-next").click();
-  await expect(cap).toContainText("Symbol box");
+  await expect(cap).toContainText("Command line");
   await page.getByTestId("tour-back").click();
   await expect(cap).toContainText("STEP 2 OF 5");
   await page.getByTestId("tour-next").click();
@@ -213,6 +215,7 @@ test("tour: Esc ends it; it can be replayed from Settings > Take the tour", asyn
   await expect(page.getByTestId("tour-caption")).toHaveCount(0);
   const bar = page.getByTestId("gui-menubar");
   await bar.locator(".gm-cat", { hasText: "Settings" }).click();
+  await bar.locator('.gm-sub[data-group="Help"]').hover(); // Settings > Help opens its flyout
   await bar.locator('.gm-item:has-text("Take the tour")').click();
   await expect(page.getByTestId("tour-caption")).toContainText("STEP 1 OF 5");
   await page.keyboard.press("Escape");
@@ -220,6 +223,7 @@ test("tour: Esc ends it; it can be replayed from Settings > Take the tour", asyn
   await expect(page.locator(".cmd input")).toBeFocused();
   // And the welcome card from the same menu.
   await bar.locator(".gm-cat", { hasText: "Settings" }).click();
+  await bar.locator('.gm-sub[data-group="Help"]').hover();
   await bar.locator('.gm-item:has-text("Show welcome card")').click();
   await expect(page.getByTestId("welcome-card")).toBeVisible();
 });

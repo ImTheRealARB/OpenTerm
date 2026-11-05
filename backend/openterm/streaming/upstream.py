@@ -16,13 +16,14 @@ from collections.abc import Callable
 import orjson
 import websockets
 
-from ..providers.yahoo import UA
+from ..providers.yahoo import UA, day_range
 from ..symbols import SYNTHETIC_RE
 from .pricing import decode_b64
 from .tick import Tick
 
 log = logging.getLogger("openterm.stream")
 Emit = Callable[[Tick], None]
+
 
 
 class YahooStream:
@@ -104,7 +105,7 @@ class YahooStream:
         self.messages += 1
         self.emit(Tick(
             symbol=d["id"], price=d["price"], change=d.get("change"), change_pct=d.get("change_pct"),
-            volume=d.get("day_volume"), high=d.get("day_high"), low=d.get("day_low"),
+            volume=d.get("day_volume"), high=day_range(d.get("day_high")), low=day_range(d.get("day_low")),
             time_ms=int(d.get("time") or time.time() * 1000), source="y",
         ))
 

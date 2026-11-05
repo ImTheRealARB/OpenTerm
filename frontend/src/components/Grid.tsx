@@ -147,6 +147,13 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       ctx.fillStyle = th.colRule;
       for (let c = 1; c < cols.length; c++) ctx.fillRect(s.xs[c] - 1, y, 1, ROW_H_NOW() - 1);
     }
+    if (banded) {
+      // A section band ("Economic and official data") is one title across the whole row: draw the first column's text
+      // clipped to the row width, not to the first column (which cut it to "Economic a…"). Band users put text in column 0 only.
+      ctx.fillStyle = i === s.sel ? th.colors.val : th.colors.fg;
+      ctx.fillText(clip(cols[0]?.text(row) ?? "", Math.max(1, Math.floor((s.w - PAD * 2) / s.cw))), (s.xs[0] ?? 0) + PAD, y + ROW_H_NOW() / 2 + 1);
+      return;
+    }
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const x = s.xs[c];
@@ -290,6 +297,10 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       ctx.textBaseline = "middle";
       s.cw = ctx.measureText("0").width; // once per resize, never per cell
       layout();
+      // A panel can mount tiny (one row tall) and grow a frame later. clampTop() then scrolled down to keep the
+      // selection visible and nothing scrolled back, so a board starting on row 1 hid its first section band
+      // (WEI "Americas"). When the selection fits on screen from the very top, show the top.
+      if (s.sel < visibleCount()) s.top = 0;
       clampTop();
       redraw();
     };

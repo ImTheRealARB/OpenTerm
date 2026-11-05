@@ -1,6 +1,7 @@
 import { FUNCTIONS, isFunction } from "../functions/registry";
 import { commandStart } from "../perf/metrics";
 import { currentView, navigate, split, workspace } from "../state/workspace";
+import { bareSecurityFn } from "./bareSecurity";
 import { history } from "./history";
 import { layoutCommand } from "./layouts";
 import { parseCommand } from "./parser";
@@ -25,8 +26,10 @@ export function preloadSettingsCommands(): Promise<unknown> {
  * Parses and runs a command. Returns true on success (command line clears).
  * `replay` is internal: the same input run a second time (see the THEME / SETTINGS case below), so it is not
  * written to the command history twice.
+ * `keepFn` (GUI mode only, passed by the command line): a bare ticker ("MSFT") keeps the panel's current function when it
+ * takes a security, instead of opening DES. See `bareSecurity.ts`.
  */
-export function execute(input: string, opts: { newPanel?: boolean; replay?: boolean } = {}): boolean {
+export function execute(input: string, opts: { newPanel?: boolean; replay?: boolean; keepFn?: boolean } = {}): boolean {
   const parsed = parseCommand(input, isFunction);
   if (!parsed.ok) return fail(parsed.error);
   if (!opts.replay) history.push(parsed.raw.toUpperCase());
@@ -104,7 +107,8 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
 
   const cur = currentView(workspace.get().panels[panelId]);
   const sticky = cur.security;
-  const fn = fnOverride ?? parsed.fn ?? "DES";
+  // No function in the text means a bare security: DES, or (GUI, `keepFn`) the function this panel already shows.
+  const fn = fnOverride ?? parsed.fn ?? bareSecurityFn(opts.keepFn, cur.fn, (code) => FUNCTIONS.get(code)?.needsSecurity === true);
   const def = FUNCTIONS.get(fn)!;
   // Security context is sticky per panel, even across functions that don't use it.
   const security = parsed.security ?? sticky;

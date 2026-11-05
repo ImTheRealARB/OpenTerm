@@ -86,6 +86,11 @@ for (const mode of MODES) {
     // The error keeps its source and reason: never a silent blank.
     await expect(note).toContainText("PROVIDER DOWN");
     await expect(note).toContainText("sec: unavailable (timeout)");
-    await expect(note.locator(".pnote-hint")).toContainText("F5 TO RETRY");
+    // Terminal shows the key; GUI drops "F5" key legends because every panel's toolbar has a Refresh button.
+    if (mode === "gui") {
+      await expect(note).not.toContainText("F5");
+      await expect(panel(page).locator(".pt .pt-b", { hasText: "Refresh" })).toBeVisible();
+    }
+    else await expect(note.locator(".pnote-hint")).toContainText("F5 TO RETRY");
   });
 }
