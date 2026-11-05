@@ -60,10 +60,15 @@ const SHOTS = [
   }],
   ["macro", "terminal", async (page) => {
     await cmd(page, "RATES", { wait: 3000 });
-    await cmd(page, "ECO 30 MAJOR", { newPanel: true, wait: 5000 });
+    await cmd(page, "FRED CPIAUCSL", { newPanel: true, wait: 5000 });
   }],
   ["bt-editor", "terminal", async (page) => {
     await cmd(page, "BT EDIT demo", { wait: 2500 });
+    // The template picker has the focus after Esc: pick the second row (RSI mean reversion) and load it.
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(2500);
   }],
 ];
 
