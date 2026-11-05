@@ -5,6 +5,26 @@ _Last updated: 2026-11-05 (local gate + bench of NEXT_FEATURES: ALL PASS, bench 
 > **Resuming in a new session or account?** Read "Resume here", "Where things stand" and "Next" below. Try the app with
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
+## Update 2026-11-05 (branch `claude/settings-e2e-bundle-1d20f4`, not committed)
+- **e2e fix:** `gui-panels.spec.ts` "SETTINGS panel: the INTERFACE MODE row" pressed `j` a fixed 14 times, which landed on `font` after the font rows were
+  added. It now presses `j` until the cursor row is `mode` (cap 40). Passes alone. NOTE: Playwright's preview proxies `/api` to a hard-coded :8000, and this test
+  changes the mode setting, which syncs back with a PUT: with a live `python -m openterm` up, run it against a scratch vite config whose preview proxy points
+  at an unused port, or you overwrite that instance's saved settings.
+- **Startup bundle FIX applied (not committed):** `components/Panel.tsx` now renders `gui/LazyPanelToolbar.tsx` (own chunk `PanelToolbar-*.js`, 1.7 KB gz; empty `.pt` placeholder
+  keeps the height until it loads). Startup `index-*.js`: 122.20 -> 117.08 KB gz on this base (`vite build`). Checked: tsc, vitest `src/gui`, e2e gui-panels + beginner + gui-tabs (26 pass).
+  Gotcha hit: `useState(fn)` calls `fn` as a lazy initializer, so a stored component needs `useState(() => fn)`. The branch `claude/ports-and-official-stats` gets the fix when merged
+  (it touches `PanelToolbar.tsx` and `gpArgs.ts`, not `Panel.tsx`'s import line, so expect no conflict). Full gate and bench not run.
+- **Startup bundle investigation (the analysis behind it).** Vite-reported gzip of `index-*.js` per commit: `fb87fcb` 117.99 ->
+  `8cdedf2` 118.01 -> `4df76e1` 120.86 (+2.85, GUI tabs/dropdown commit) -> `2cf50aa` 120.97 -> `1380720` 121.28 (custom font) -> `1c84020` 122.21
+  (font presets, +0.9) -> `a0fc2d4` (= `main`) 122.20 -> `738a397` (`claude/ports-and-official-stats`) 123.03 (+0.83: registry entries for the 5 new
+  functions +1.7 KB raw, `net/api.ts` +0.75 KB raw, `useHistoryLimits.ts` +0.44 KB raw). The "119.5" in CLAUDE.md does not match this build's number for the
+  same era (`fb87fcb` reads 118.0 here), so compare only within one measurement method; the growth since is real (+4.2 KB on main, +0.8 on the branch).
+  **Main culprit:** `gui/PanelToolbar.tsx` is a static import of `components/Panel.tsx`, so the GUI toolbar and everything it imports sit in the startup chunk:
+  `functions/gpArgs.ts` (4.3 KB raw, +1.2 later), `chart/indicators.ts` (2.9 KB raw: the INDICATORS list), `chart/chartTypes.ts`, `gui/TabStrip.tsx` 1.8, `gui/sidebarState.ts`,
+  `gui/tabsState.ts`. Cheapest fix: load `PanelToolbar` through a lazy piece (`LazyGui` pattern, but it needs props `id fn args symbol`, so a prop-passing variant;
+  reserve the toolbar height so the panel does not jump) ~ -2.9 KB gz. Smaller option: give `gpArgs.ts` its own list of indicator names so it stops pulling
+  `indicators.ts` (~ -1 KB gz). Font presets (`fontPresets.ts` 2 KB raw) are needed at startup (`settings/font.ts`), leave them.
+
 ## Resume here (cloud session 2026-11-04 + local gate 2026-11-05; MERGED to `main` via https://github.com/ImTheRealARB/OpenTerm/pull/1, `d8ee11f`)
 `docs/specs/GUI_SIMPLE_AND_BUGS.md` Parts 0-5 are DONE and merged to `main` (2026-11-05). Cloud gate: ALL PASS
 (pytest 1726, vitest 586, e2e 245). Bench vs the cloud baseline: `docs/PERFORMANCE.md` "Cloud session end 2026-11-04". Commits labelled WIP are
