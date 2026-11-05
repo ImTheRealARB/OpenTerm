@@ -210,7 +210,8 @@ export function MenuBar() {
       <button type="button" className="gm-side" data-testid="layout-toggle" title={tabsOn ? "Show the open panels side by side" : "Show the open panels as tabs"} onClick={() => setTabs(!tabsOn)}>
         {tabsOn ? "Tiles" : "Tabs"}
       </button>
-      {CATEGORIES.map((c) => {
+      {/* The sidebar and the category menus are two ways to reach the same functions: show one or the other. */}
+      {sidebarHidden && CATEGORIES.map((c) => {
         const groups = menus.get(c)!;
         const twoLevel = groups.length > 1; // one group = short enough to list its functions directly
         return (

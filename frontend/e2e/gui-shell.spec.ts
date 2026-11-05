@@ -31,6 +31,7 @@ async function setupGui(page: Page, opts: { statusBar?: boolean } = {}) {
 test("the bottom status bar is hidden by default in GUI mode; Settings > Status toggles it, Settings > Font switches the font", async ({ page }) => {
   await setupGui(page, { statusBar: false });
   await expect(page.getByTestId("mode-gui")).toHaveCount(0); // the mode switch lives in the status bar
+  await page.getByTestId("sidebar-toggle").click(); // the horizontal menus replace the sidebar
   // The status bar and font rows live in Settings > Look and layout (the group's flyout opens on hover).
   const settingsMenu = async () => {
     await page.locator('.gm-cat[data-cat="Settings"]').click();
@@ -53,12 +54,12 @@ test("the bottom status bar is hidden by default in GUI mode; Settings > Status 
 
 const header = (page: Page) => page.locator('[data-panel="1"] .ph');
 
-test("a fresh GUI shows the menu bar and the sidebar, and no page errors", async ({ page }) => {
+test("a fresh GUI shows the sidebar (not the category menus), and no page errors", async ({ page }) => {
   const { errors } = await setupGui(page);
   await expect(page.locator("html")).toHaveAttribute("data-mode", "gui");
   const bar = page.getByTestId("gui-menubar");
-  await expect(bar).toBeVisible();
-  await expect(bar.locator(".gm-cat")).toHaveText(["Markets", "Charts", "News", "Research", "Portfolio", "Backtest", "Settings"]);
+  await expect(bar).toBeVisible(); // the strip stays: it holds the Sidebar and Tabs/Tiles buttons
+  await expect(bar.locator(".gm-cat")).toHaveCount(0); // the sidebar already lists every category
   await expect(page.getByTestId("gui-sidebar")).toBeVisible();
   await expect(page.getByTestId("gui-sidebar").locator(".gs-head")).toHaveCount(7);
   // The command line, workspace and status bar are still there.
@@ -66,6 +67,25 @@ test("a fresh GUI shows the menu bar and the sidebar, and no page errors", async
   await expect(page.locator('[data-panel="1"]')).toBeVisible();
   await expect(page.getByTestId("mode-gui")).toHaveAttribute("aria-pressed", "true");
   expect(errors).toEqual([]);
+});
+
+test("the Sidebar button swaps the sidebar for the category menus and back (one or the other, never both)", async ({ page }) => {
+  await setupGui(page);
+  const bar = page.getByTestId("gui-menubar");
+  await page.getByTestId("sidebar-toggle").click();
+  await expect(page.getByTestId("gui-sidebar")).toHaveCount(0);
+  await expect(bar.locator(".gm-cat")).toHaveText(["Markets", "Charts", "News", "Research", "Portfolio", "Backtest", "Settings"]);
+  await page.getByTestId("sidebar-toggle").click();
+  await expect(page.getByTestId("gui-sidebar")).toBeVisible();
+  await expect(bar.locator(".gm-cat")).toHaveCount(0);
+});
+
+test("with the status bar off there is no empty strip under the workspace", async ({ page }) => {
+  await setupGui(page, { statusBar: false });
+  await expect(page.locator("footer.status")).toHaveCount(0);
+  // The workspace's bottom edge is the bottom of the window (nothing reserved for the hidden footer).
+  const gap = await page.evaluate(() => window.innerHeight - document.querySelector(".ws")!.getBoundingClientRect().bottom);
+  expect(gap).toBeLessThanOrEqual(1);
 });
 
 test("command line: GP + Enter opens the chart in the focused panel", async ({ page }) => {
@@ -138,6 +158,7 @@ test("sidebar: clicking a row runs it, groups collapse, a bad command shows the 
 
 test("menu bar: a long category opens plain-word groups, a group opens a flyout, picking a function runs it; keys step in and out", async ({ page }) => {
   await setupGui(page);
+  await page.getByTestId("sidebar-toggle").click(); // the horizontal menus replace the sidebar
   const bar = page.getByTestId("gui-menubar");
   const fly = page.getByTestId("gm-flyout");
   await bar.locator(".gm-cat", { hasText: "Settings" }).click();
@@ -173,6 +194,7 @@ test("menu bar: a long category opens plain-word groups, a group opens a flyout,
 test("a flyout near the right edge opens to the left so it stays on screen", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 700 });
   await setupGui(page);
+  await page.getByTestId("sidebar-toggle").click(); // the horizontal menus replace the sidebar
   const bar = page.getByTestId("gui-menubar");
   await bar.locator(".gm-cat", { hasText: "Settings" }).click();
   await bar.locator('.gm-sub[data-group="Look and layout"]').hover();

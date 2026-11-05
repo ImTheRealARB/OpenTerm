@@ -124,8 +124,10 @@ chart and the top news.
 
 <img src="docs/screenshots/gui-search.png" alt="GUI mode: the command line understands company names and plain English" width="100%">
 
+<img src="docs/screenshots/gui-sidebar.png" alt="GUI mode with the sidebar open: Start here, then every category" width="100%">
+
 - **Type what you want in the command line at the top**, in plain English or as a code, and press `Enter` (or click `GO`).
-- **Or browse.** The menu bar and the sidebar list every screen by what it does, with its code next to it.
+- **Or browse.** The sidebar lists every screen by what it does, with its code next to it. The `Sidebar` button swaps it for the same list as menus across the top (one or the other, never both), which gives the panels the full width.
 - **Every panel says what it is** in its title bar, and its toolbar shows what you can do, with the key for each button.
 - **Hover a term** such as P/E or EPS for a one-line explanation, and click `?` on any panel for its help.
 - **Errors tell you the next step**, e.g. Retry or "Try AAPL", instead of a blank panel.
@@ -170,7 +172,7 @@ Every function is listed in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 
 <img src="docs/screenshots/chart.png" alt="GP: a daily candlestick chart with two moving averages and an RSI pane" width="100%">
 
-<img src="docs/screenshots/fundamentals.png" alt="DES and FA: a company profile next to its income statement" width="100%">
+<img src="docs/screenshots/fundamentals.png" alt="DES and HDS: a company profile next to its top institutional holders" width="100%">
 
 ## Built to be fast
 

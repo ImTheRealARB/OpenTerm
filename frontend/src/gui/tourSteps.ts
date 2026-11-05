@@ -14,8 +14,8 @@ export interface TourStep {
 export const TOUR_STEPS: readonly TourStep[] = [
   {
     title: "Menu bar",
-    text: "Every function is under one of these seven headings. Click a heading, then a function, and it opens in the focused panel.",
-    selectors: ['[data-testid="gui-menubar"] .gm-slot'],
+    text: "The Sidebar button swaps the sidebar for a menu bar: the same seven headings as a row across the top. Click a heading, then a function, and it opens in the focused panel.",
+    selectors: ['[data-testid="gui-menubar"] .gm-slot', '[data-testid="sidebar-toggle"]'],
   },
   {
     title: "Sidebar",

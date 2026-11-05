@@ -123,6 +123,7 @@ test("terminal mode shows no toolbar, banner, drawer or welcome card", async ({ 
 
 test("there is no 'switch to terminal' banner any more; the mode switch lives in the Settings menu", async ({ page }) => {
   await setup(page);
+  await page.getByTestId("sidebar-toggle").click(); // the horizontal menus replace the sidebar
   await expect(page.getByTestId("gui-menubar")).toBeVisible();
   await expect(page.getByTestId("gui-banner")).toHaveCount(0);
   // Two-level menus: the mode switch is in Settings > "Look and layout" (a side flyout).
@@ -213,6 +214,7 @@ test("tour: Take the tour walks through every step, Back works, Done ends it", a
 test("tour: Esc ends it; it can be replayed from Settings > Take the tour", async ({ page }) => {
   await setup(page);
   await expect(page.getByTestId("tour-caption")).toHaveCount(0);
+  await page.getByTestId("sidebar-toggle").click(); // the horizontal menus replace the sidebar
   const bar = page.getByTestId("gui-menubar");
   await bar.locator(".gm-cat", { hasText: "Settings" }).click();
   await bar.locator('.gm-sub[data-group="Help"]').hover(); // Settings > Help opens its flyout

@@ -7,8 +7,10 @@
 //   3. node scripts/screenshots.mjs [name ...]      (no names = all; BASE=http://127.0.0.1:8011 by default)
 //
 // Needs Playwright's Chromium (`.\scripts\setup.ps1 -Dev` installs it). Every shot uses a fresh browser context, because
-// panels are saved to the server and would otherwise pile up from shot to shot. The page is 1440x810 CSS pixels at 2x
-// pixel density: the text looks larger in the README than the old 1600x900 shots (the old ones were 1600x900 CSS pixels), and stays sharp.
+// panels are saved to the server and would otherwise pile up from shot to shot.
+// Why the page is small: GitHub shows a README picture about 880 px wide whatever its size, so a 1440 px page was shrunk to
+// 60% and the 12 px text became unreadable. The page is VIEW_W x VIEW_H CSS pixels (close to the display width, so the text
+// shows at about its real size) at 2x pixel density (so it stays sharp when the picture is viewed full size).
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -18,6 +20,8 @@ const { chromium } = require("@playwright/test");
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:8011";
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../docs/screenshots");
+const VIEW_W = 960;
+const VIEW_H = 600;
 const WAIT = Number(process.env.SHOT_WAIT ?? 7000); // ms for live data to arrive before the picture is taken
 
 /** Types a command in the command line. Shift+Enter opens it in a new panel next to the others. */
@@ -29,15 +33,34 @@ async function cmd(page, text, { newPanel = false, wait = 1500 } = {}) {
   await page.waitForTimeout(wait);
 }
 
+/** Closes panels from the last one back until only `n` are left (the GUI starter layout opens three). */
+async function keepOnly(page, n) {
+  while ((await page.locator("[data-panel]").count()) > n) {
+    // Focus the last panel by clicking its title bar, then close it with Alt+W (the web binding; Ctrl+W is the browser's).
+    await page.locator("[data-panel]").last().locator(".ph").click();
+    await page.keyboard.press("Alt+w");
+    await page.waitForTimeout(300);
+  }
+}
+
 /** Every shot: [file name without .png, mode, async (page) => void that sets the screen up]. */
 const SHOTS = [
   // Main picture: GUI mode, the ready-made starter screen (watchlist, chart, news), tiles side by side.
-  // The sidebar is hidden so the panels get the width: with it, the quote grid's price columns are cut off at this page size.
+  // The sidebar is hidden so the panels get the width (the category menus then run along the top instead).
   ["workspace", "gui", async (page) => {
     await page.getByTestId("sidebar-toggle").click();
   }],
+  // Sidebar open: one panel (DES) next to the list of every function, grouped by topic.
+  ["gui-sidebar", "gui", async (page) => {
+    await cmd(page, "AAPL DES", { wait: 4000 });
+  }],
   ["gui-search", "gui", async (page) => {
     // The GUI has one text box (the command line); typing shows its suggestion list.
+    // Menus instead of the sidebar, and the quote panel closed (its rows can read STALE when the stream is quiet), so the picture is the text box.
+    await page.getByTestId("sidebar-toggle").click();
+    await page.locator('[data-panel="1"] .ph').click();
+    await page.keyboard.press("Alt+w");
+    await page.waitForTimeout(400);
     const input = page.locator(".cmd input").first();
     await input.click();
     await input.fill("apple stock price past 5 years");
@@ -51,15 +74,20 @@ const SHOTS = [
   ["gui-error-next-step", "gui", async (page) => {
     await cmd(page, "ZZZZQ GP", { wait: 3000 });
   }],
-  ["chart", "terminal", async (page) => {
+  ["chart", "gui", async (page) => {
+    await page.getByTestId("sidebar-toggle").click();
+    await keepOnly(page, 1); // one big chart instead of three small panels
     await cmd(page, "NVDA GP 1Y SMA20 SMA50 RSI", { wait: 3000 });
   }],
   ["backtest", "terminal", async (page) => {
     await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y", { wait: 6000 });
   }],
-  ["fundamentals", "terminal", async (page) => {
+  ["fundamentals", "gui", async (page) => {
+    await page.getByTestId("sidebar-toggle").click();
+    await keepOnly(page, 1);
     await cmd(page, "AAPL DES", { wait: 3000 });
-    await cmd(page, "AAPL FA", { newPanel: true, wait: 5000 });
+    // HDS (top holders) comes from Yahoo and needs no key; FA needs SEC_USER_AGENT with a real contact address.
+    await cmd(page, "AAPL HDS", { newPanel: true, wait: 5000 });
   }],
   ["macro", "terminal", async (page) => {
     await cmd(page, "RATES", { wait: 3000 });
@@ -79,7 +107,7 @@ const wanted = process.argv.slice(2);
 const browser = await chromium.launch();
 for (const [name, mode, setup] of SHOTS) {
   if (wanted.length && !wanted.includes(name)) continue;
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 810 }, deviceScaleFactor: 2 });
+  const ctx = await browser.newContext({ viewport: { width: VIEW_W, height: VIEW_H }, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   // Seed the same browser storage the e2e tests use: GUI or Terminal mode, welcome card already seen, panels as tiles.
   await page.addInitScript((m) => {

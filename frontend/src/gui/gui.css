@@ -168,9 +168,12 @@
    ways of working are always available (it used to collapse to a hair until focused; changed 2026-11-05 at the user's request). */
 
 /* 18: the key-hint bar is expert content; GUI drops it (and its grid row). */
-:root[data-mode="gui"] .app { grid-template-rows: 28px auto 1fr 18px; }
+/* The last row is `auto`, not a fixed 18px: with the status bar switched off there is no footer, so the row collapses
+   and the workspace reaches the bottom of the window. */
+:root[data-mode="gui"] .app { grid-template-rows: 28px auto 1fr auto; }
+:root[data-mode="gui"] .status { height: 18px; }
 /* With tabs, one extra row at the very top (above the command line) holds the tab strip. */
-:root[data-mode="gui"] .app.has-tabs { grid-template-rows: 22px 28px auto 1fr 18px; }
+:root[data-mode="gui"] .app.has-tabs { grid-template-rows: 22px 28px auto 1fr auto; }
 :root[data-mode="gui"] .app > .keys { display: none; }
 
 /* 19: the carets are quiet. */

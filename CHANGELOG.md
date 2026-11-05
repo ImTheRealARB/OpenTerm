@@ -2,6 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## GUI layout and README screenshots (2026-11-05)
+- The sidebar and the menu bar's category menus are now one or the other: with the sidebar open the strip under the command line holds only the `Sidebar` and `Tabs`/`Tiles` buttons; hide the sidebar and the seven category menus appear there. The tour's first step follows.
+- With the status bar off (the GUI default) its grid row no longer stays reserved: the workspace reaches the bottom of the window.
+- README screenshots are GUI mode now and are taken on a 960 x 600 page at 2x (was 1440 x 810): GitHub scales a picture to about 880 px, so the old ones showed the text at 60% size. `scripts/screenshots.mjs` has the new sizes, a `gui-sidebar` shot, and `keepOnly` to close the starter panels.
+- e2e: 3 new/changed GUI tests (sidebar/menus swap, no empty footer strip); the specs that open a horizontal menu hide the sidebar first.
+
 ## Strategy editor (2026-11-03)
 - `BT EDIT` uses CodeMirror 6: Python syntax colours, line numbers, bracket matching, undo history. It loads as its own chunk (126 KB gzip) only when an editor opens; startup bundle unchanged (119.9 KB).
 - Starter templates: SMA cross, RSI mean reversion, breakout (`GET /api/bt/templates`). A new strategy name opens the template list; `T` (after Esc) reopens it.
