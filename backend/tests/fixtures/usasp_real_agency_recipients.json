@@ -1,0 +1,102 @@
+{
+ "status": 200,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "category": "recipient",
+  "spending_level": "transactions",
+  "limit": 10,
+  "page_metadata": {
+   "page": 1,
+   "next": 2,
+   "previous": null,
+   "hasNext": true,
+   "hasPrevious": false
+  },
+  "results": [
+   {
+    "amount": 63794042799.86,
+    "recipient_id": "6cf5fb1b-4988-d087-5dc1-70939d8fc6c4-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "008016958",
+    "uei": "G4KDGE4JFFK7",
+    "total_outlays": null
+   },
+   {
+    "amount": 42869044790.48,
+    "recipient_id": "d5ab5f51-db3a-a26f-96a1-1b24c3e2802c-C",
+    "name": "ELECTRIC BOAT CORPORATION",
+    "code": "963737366",
+    "uei": "E7BEKJ4V9528",
+    "total_outlays": null
+   },
+   {
+    "amount": 38176945622.02,
+    "recipient_id": "779b3e3e-364f-7cbc-28a4-a2b4484b86f4-C",
+    "name": "LOCKHEED MARTIN CORPORATION",
+    "code": "794571448",
+    "uei": "XFJMYSYFJEK4",
+    "total_outlays": null
+   },
+   {
+    "amount": 31234728099.51,
+    "recipient_id": "01c4a3a3-b4c5-ce4e-822b-d17f09985001-C",
+    "name": "RAYTHEON COMPANY",
+    "code": "794598573",
+    "uei": "VTEWM5QSE598",
+    "total_outlays": null
+   },
+   {
+    "amount": 22376707674.28,
+    "recipient_id": "62e141b3-4887-5b39-6b75-eace9326395c-C",
+    "name": "RTX CORPORATION",
+    "code": "001447952",
+    "uei": "QN1BCFY7JDJ5",
+    "total_outlays": null
+   },
+   {
+    "amount": 21286005914.11,
+    "recipient_id": "9ab85632-42cc-5fa4-2a9c-d734034ddd33-C",
+    "name": "THE BOEING COMPANY",
+    "code": "149879157",
+    "uei": "JJM4FRDZJDX1",
+    "total_outlays": null
+   },
+   {
+    "amount": 20175882997.37,
+    "recipient_id": "1068e466-707d-6b6f-367f-0255fab79b8c-C",
+    "name": "HUMANA GOVERNMENT BUSINESS INC",
+    "code": "805349198",
+    "uei": "ZE6ZM6NKSV43",
+    "total_outlays": null
+   },
+   {
+    "amount": 20103510084.06,
+    "recipient_id": "edc402f7-abac-eafe-2aae-3fdcd8d1bb8a-C",
+    "name": "AMERISOURCEBERGEN DRUG CORP",
+    "code": "007914906",
+    "uei": "KABZK8W6PQT3",
+    "total_outlays": null
+   },
+   {
+    "amount": 18518103338.51,
+    "recipient_id": "22d282c6-4508-7d30-97f1-7401ea73b12a-C",
+    "name": "THE BOEING COMPANY",
+    "code": "039267141",
+    "uei": "WZWRLY4G3PL8",
+    "total_outlays": null
+   },
+   {
+    "amount": 15402469960.37,
+    "recipient_id": "9c708c7c-f339-5fc8-0455-a5aaea1d2da5-C",
+    "name": "ATLANTIC DIVING SUPPLY, INC.",
+    "code": "027079776",
+    "uei": "GJMSFBCNMSK3",
+    "total_outlays": null
+   }
+  ],
+  "messages": [
+   "For searches, time period start and end dates are currently limited to an earliest date of 2007-10-01.  For data going back to 2000-10-01, use either the Custom Award Download feature on the website or one of our download or bulk_download API endpoints as listed on https://api.usaspending.gov/docs/endpoints. ",
+   "'subawards' will be deprecated in the future. Set ‘spending_level’ to ‘subawards’ instead. See documentation for more information. "
+  ]
+ }
+}

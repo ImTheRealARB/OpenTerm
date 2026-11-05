@@ -1,0 +1,156 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://apps.bea.gov/api/data (UserID not stored). Rows are filtered to a few lines/industries to keep the file small; no value is edited. UNIT_MULT is a power of ten: 6 = millions of dollars.",
+ "status": 200,
+ "body": {
+  "BEAAPI": {
+   "Request": {
+    "RequestParam": []
+   },
+   "Results": {
+    "TsLastUpdated": "2026-09-24 08:30:00.000",
+    "Dimensions": [
+     {
+      "Ordinal": "1",
+      "Name": "Indicator",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "2",
+      "Name": "AreaOrCountry",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "3",
+      "Name": "Frequency",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "4",
+      "Name": "Year",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "5",
+      "Name": "TimeSeriesId",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "6",
+      "Name": "TimeSeriesDescription",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "7",
+      "Name": "TimePeriod",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "8",
+      "Name": "CL_UNIT",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "9",
+      "Name": "UNIT_MULT",
+      "DataType": "string",
+      "IsValue": "0"
+     },
+     {
+      "Ordinal": "10",
+      "Name": "DataValue",
+      "DataType": "numeric",
+      "IsValue": "1"
+     }
+    ],
+    "Data": [
+     {
+      "Indicator": "BalCurrAcct",
+      "AreaOrCountry": "AllCountries",
+      "Frequency": "QSA",
+      "Year": "2025",
+      "TimeSeriesId": "TSI_ItaBalCurrAcct_QSA",
+      "TimeSeriesDescription": "Balance on current account; quarterly seasonally adjusted",
+      "TimePeriod": "2025Q1",
+      "CL_UNIT": "USD",
+      "UNIT_MULT": "6",
+      "DataValue": "-438239",
+      "NoteRef": "ITA1.1:4,ITA1.2:5,Q"
+     },
+     {
+      "Indicator": "BalCurrAcct",
+      "AreaOrCountry": "AllCountries",
+      "Frequency": "QSA",
+      "Year": "2025",
+      "TimeSeriesId": "TSI_ItaBalCurrAcct_QSA",
+      "TimeSeriesDescription": "Balance on current account; quarterly seasonally adjusted",
+      "TimePeriod": "2025Q2",
+      "CL_UNIT": "USD",
+      "UNIT_MULT": "6",
+      "DataValue": "-254890",
+      "NoteRef": "ITA1.1:4,ITA1.2:5,Q"
+     },
+     {
+      "Indicator": "BalCurrAcct",
+      "AreaOrCountry": "AllCountries",
+      "Frequency": "QSA",
+      "Year": "2025",
+      "TimeSeriesId": "TSI_ItaBalCurrAcct_QSA",
+      "TimeSeriesDescription": "Balance on current account; quarterly seasonally adjusted",
+      "TimePeriod": "2025Q3",
+      "CL_UNIT": "USD",
+      "UNIT_MULT": "6",
+      "DataValue": "-262872",
+      "NoteRef": "ITA1.1:4,ITA1.2:5,Q"
+     },
+     {
+      "Indicator": "BalCurrAcct",
+      "AreaOrCountry": "AllCountries",
+      "Frequency": "QSA",
+      "Year": "2025",
+      "TimeSeriesId": "TSI_ItaBalCurrAcct_QSA",
+      "TimeSeriesDescription": "Balance on current account; quarterly seasonally adjusted",
+      "TimePeriod": "2025Q4",
+      "CL_UNIT": "USD",
+      "UNIT_MULT": "6",
+      "DataValue": "-221065",
+      "NoteRef": "ITA1.1:4,ITA1.2:5,Q"
+     },
+     {
+      "Indicator": "BalCurrAcct",
+      "AreaOrCountry": "AllCountries",
+      "Frequency": "QSA",
+      "Year": "2026",
+      "TimeSeriesId": "TSI_ItaBalCurrAcct_QSA",
+      "TimeSeriesDescription": "Balance on current account; quarterly seasonally adjusted",
+      "TimePeriod": "2026Q1",
+      "CL_UNIT": "USD",
+      "UNIT_MULT": "6",
+      "DataValue": "-212597",
+      "NoteRef": "ITA1.1:4,ITA1.2:5,Q"
+     },
+     {
+      "Indicator": "BalCurrAcct",
+      "AreaOrCountry": "AllCountries",
+      "Frequency": "QSA",
+      "Year": "2026",
+      "TimeSeriesId": "TSI_ItaBalCurrAcct_QSA",
+      "TimeSeriesDescription": "Balance on current account; quarterly seasonally adjusted",
+      "TimePeriod": "2026Q2",
+      "CL_UNIT": "USD",
+      "UNIT_MULT": "6",
+      "DataValue": "-246023",
+      "NoteRef": "ITA1.1:4,ITA1.2:5,Q"
+     }
+    ]
+   }
+  }
+ }
+}

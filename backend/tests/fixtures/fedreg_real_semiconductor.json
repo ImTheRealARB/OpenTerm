@@ -1,0 +1,183 @@
+{
+ "status": 200,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "description": "Documents matching 'semiconductor'",
+  "count": 3828,
+  "total_pages": 50,
+  "next_page_url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bterm%5D=semiconductor&fields%5B%5D=title&fields%5B%5D=type&fields%5B%5D=agency_names&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=document_number&fields%5B%5D=html_url&format=json&order=newest&page=2&per_page=15",
+  "results": [
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (25-3.5e)",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "EPA is issuing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. The SNURs require persons to notify EPA at least 90 days before commencing the manufacture (defined by statute to include import) or processing of any of these chemical substances for an activity that is designated as a significant new use in the SNUR. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification; made an appropriate determination regarding that notification; and taken such actions as required by that determination.",
+    "document_number": "2026-22576",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22576/significant-new-use-rules-on-certain-chemical-substances-25-35e"
+   },
+   {
+    "title": "Foreign-Trade Zone (FTZ) 17, Notification of Proposed Production Activity; Honeywell Aerospace US LLC; (Aircraft Components); Olathe, Kansas",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "Foreign-Trade Zones Board"
+    ],
+    "publication_date": "2026-11-02",
+    "abstract": null,
+    "document_number": "2026-22302",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/02/2026-22302/foreign-trade-zone-ftz-17-notification-of-proposed-production-activity-honeywell-aerospace-us-llc"
+   },
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (26-7)",
+    "type": "Proposed Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-11-02",
+    "abstract": "EPA is proposing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. Once finalized, the SNURs would require persons who intend to manufacture (defined by statute to include import) or process any of these chemical substances for an activity that is proposed as a significant new use by this rulemaking to notify EPA at least 90 days before commencing that activity. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification, made an appropriate determination regarding that notification, and taken such actions as required by that determination.",
+    "document_number": "2026-22295",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/02/2026-22295/significant-new-use-rules-on-certain-chemical-substances-26-7"
+   },
+   {
+    "title": "Certain Dynamic Random Access Memory (DRAM) Devices, Products Containing the Same and Components Thereof (II); Notice of a Commission Determination Not To Review an Initial Determination Granting a Joint Motion To Terminate the Investigation as to All Respondents and To Limit Service of the Settlement Agreement; Termination of the Investigation",
+    "type": "Notice",
+    "agency_names": [
+     "International Trade Commission"
+    ],
+    "publication_date": "2026-11-02",
+    "abstract": "Notice is hereby given that the U.S. International Trade Commission (\"Commission\") has determined not to review an initial determination (\"ID\") (Order No. 7) of the presiding administrative law judge (\"ALJ\") granting a joint motion to terminate the above- captioned investigation as to all respondents based on a settlement agreement. The investigation is terminated.",
+    "document_number": "2026-22283",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/02/2026-22283/certain-dynamic-random-access-memory-dram-devices-products-containing-the-same-and-components"
+   },
+   {
+    "title": "Notice Regarding the Uyghur Forced Labor Prevention Act Entity List",
+    "type": "Notice",
+    "agency_names": [
+     "Homeland Security Department"
+    ],
+    "publication_date": "2026-10-29",
+    "abstract": "The U.S. Department of Homeland Security (DHS), as the Chair of the Forced Labor Enforcement Task Force (FLETF), announces the publication and availability of the updated Uyghur Forced Labor Prevention Act (UFLPA) Entity List, a consolidated register of the four lists required to be developed and maintained pursuant to the UFLPA, on the DHS UFLPA website. The updated UFLPA Entity List is also published as an appendix to this notice. This update adds three new entities to the UFLPA Entity List, two of which appear on two separate sub-lists.",
+    "document_number": "2026-22094",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/29/2026-22094/notice-regarding-the-uyghur-forced-labor-prevention-act-entity-list"
+   },
+   {
+    "title": "Exemptions To Permit Circumvention of Access Controls on Copyrighted Works",
+    "type": "Proposed Rule",
+    "agency_names": [
+     "Library of Congress",
+     "Copyright Office, Library of Congress"
+    ],
+    "publication_date": "2026-10-28",
+    "abstract": "The United States Copyright Office is conducting the tenth triennial rulemaking proceeding under the Digital Millennium Copyright Act (\"DMCA\"), concerning temporary exemptions to the DMCA's prohibition against circumvention of technological measures that control access to copyrighted works. Having carefully considered the petitions for new and renewal exemptions and comments received in response to the June 9, 2026 Notification of Inquiry, the Office announces the Register's intention to recommend all but one of the existing exemptions for renewal, and initiates three rounds of public comment on newly proposed exemptions. Comments submitted may not exceed twenty-five pages per class, excluding documentary evidence.",
+    "document_number": "2026-21939",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/28/2026-21939/exemptions-to-permit-circumvention-of-access-controls-on-copyrighted-works"
+   },
+   {
+    "title": "Notice of Publication of U.S. Resources Management Industry Listing and Opportunity To Apply for the Listing",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department"
+    ],
+    "publication_date": "2026-10-27",
+    "abstract": "The International Trade Administration (ITA) announces the launch of the U.S. Resources Management Industry Listing (RMIL), or \"industry listing.\" The RMIL is intended to identify U.S. companies operating in water and wastewater treatment; waste management and recycling, including critical minerals recycling; air quality measuring, monitoring and control; monitoring and instrumentation; weather and forecasting; and other resources management sectors for informational, engagement, and policy support purposes. The RMIL will provide a platform for U.S. companies to market their products and services, raising their visibility with international buyers seeking to purchase U.S. resources management solutions. The RMIL supports ITA's efforts to promote American technologies and services to overseas partners and position U.S. companies to compete for international project opportunities. Eligible companies may now apply to be listed in the RMIL. The industry listing will be published online and will be maintained by the International Trade Administration's Office of Energy and Environmental Industries.",
+    "document_number": "2026-21896",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/27/2026-21896/notice-of-publication-of-us-resources-management-industry-listing-and-opportunity-to-apply-for-the"
+   },
+   {
+    "title": "Critical Material List; Addition of Helium",
+    "type": "Notice",
+    "agency_names": [
+     "Energy Department"
+    ],
+    "publication_date": "2026-10-27",
+    "abstract": "The United States (U.S.) Department of Energy (DOE) is issuing this notice to advise the public that DOE added helium to the DOE Critical Material List. This notice also provides the link to the assessment that forms the justification for including helium on the Critical Material List. Helium is non-substitutable for multiple critical energy functions, including: semiconductor manufacturing, leak testing natural gas infrastructure, and quantum computing, along with being essential to key medical/scientific applications. Demand for helium is also growing as it enables advanced semiconductor manufacturing, which is essential for SI and data center supply chains.",
+    "document_number": "2026-21884",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/27/2026-21884/critical-material-list-addition-of-helium"
+   },
+   {
+    "title": "Outbound Investment Security Program Regulations",
+    "type": "Proposed Rule",
+    "agency_names": [
+     "Treasury Department",
+     "Investment Security Office"
+    ],
+    "publication_date": "2026-10-26",
+    "abstract": "This proposed rule sets forth regulations that would implement Subtitle C of the Comprehensive Outbound Investment National Security Act, which is codified at Title VIII of the Defense Production Act. The proposed rule would require United States persons to provide notification to the U.S. Department of the Treasury regarding certain transactions involving foreign persons that are engaged in notifiable technologies; and prohibit United States persons from engaging in certain other transactions involving foreign persons that are engaged in prohibited technologies. Where consistent with Title VIII, the proposed rule incorporates certain definitions and concepts from the current regulations governing the Outbound Investment Security Program. The proposed rule also would add applicability dates to the regulations, such that those regulations would continue to apply to activities that occurred within the relevant timeframe.",
+    "document_number": "2026-21786",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/26/2026-21786/outbound-investment-security-program-regulations"
+   },
+   {
+    "title": "Agency Information Collection Activities; Submission to the Office of Management and Budget (OMB) for Review and Approval; Comment Request; CHIPS Expansion Clawback Information Collection",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "National Institute of Standards and Technology"
+    ],
+    "publication_date": "2026-10-23",
+    "abstract": "The Department of Commerce, in accordance with the Paperwork Reduction Act of 1995 (PRA), invites the general public and other Federal agencies to comment on proposed, and continuing information collections, which helps us assess the impact of our information collection requirements and minimize the public's reporting burden. The purpose of this notice is to allow for 60 days of public comment preceding submission of the collection to OMB.",
+    "document_number": "2026-21693",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/23/2026-21693/agency-information-collection-activities-submission-to-the-office-of-management-and-budget-omb-for"
+   },
+   {
+    "title": "Granting of Requests for Early Termination of the Waiting Period under the Premerger Notification Rules",
+    "type": "Notice",
+    "agency_names": [
+     "Federal Trade Commission"
+    ],
+    "publication_date": "2026-10-22",
+    "abstract": null,
+    "document_number": "2026-21630",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/22/2026-21630/granting-of-requests-for-early-termination-of-the-waiting-period-under-the-premerger-notification"
+   },
+   {
+    "title": "Certain Semiconductor Devices, Products Containing Same, and Components Thereof; Notice of Commission Determination Not To Review an Initial Determination To Amend the Complaint and Notice of Investigation",
+    "type": "Notice",
+    "agency_names": [
+     "International Trade Commission"
+    ],
+    "publication_date": "2026-10-16",
+    "abstract": "Notice is hereby given that the U.S. International Trade Commission has determined not to review an initial determination (\"ID\") (Order No. 8) of the presiding administrative law judge (\"ALJ\") granting complainant GlobalFoundries U.S. Inc.'s motion to amend the complaint and notice of investigation (\"NOI\") to assert dependent claims 8-12 and 19 of U.S. Patent No. 8,507,983 (\"the '983 patent\").",
+    "document_number": "2026-21124",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/16/2026-21124/certain-semiconductor-devices-products-containing-same-and-components-thereof-notice-of-commission"
+   },
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (26-1)",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-10-15",
+    "abstract": "EPA is issuing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. The SNURs require persons to notify EPA at least 90 days before commencing the manufacture (defined by statute to include import) or processing of any of these chemical substances for an activity that is designated as a significant new use in the SNUR. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification; made an appropriate determination regarding that notification; and taken such actions as required by that determination.",
+    "document_number": "2026-21051",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/15/2026-21051/significant-new-use-rules-on-certain-chemical-substances-26-1"
+   },
+   {
+    "title": "Foreign-Trade Zone (FTZ) 230; Authorization of Limited Production Activity; Qorvo US, Inc.; (Semiconductor Wafers, Modules, and Chips); Greensboro, North Carolina; Correction",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "Foreign-Trade Zones Board"
+    ],
+    "publication_date": "2026-10-15",
+    "abstract": null,
+    "document_number": "2026-21041",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/15/2026-21041/foreign-trade-zone-ftz-230-authorization-of-limited-production-activity-qorvo-us-inc-semiconductor"
+   },
+   {
+    "title": "Foreign-Trade Zone (FTZ) 45; Authorization of Limited Production Activity; Qorvo US, Inc.; (Semiconductor Wafers and Modules); Hillsboro, Oregon; Correction",
+    "type": "Notice",
+    "agency_names": [
+     "Commerce Department",
+     "Foreign-Trade Zones Board"
+    ],
+    "publication_date": "2026-10-15",
+    "abstract": null,
+    "document_number": "2026-21040",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/15/2026-21040/foreign-trade-zone-ftz-45-authorization-of-limited-production-activity-qorvo-us-inc-semiconductor"
+   }
+  ]
+ }
+}

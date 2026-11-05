@@ -1,0 +1,9 @@
+{
+ "note": "DOC-SHAPED, NOT A RECORDING: the OAuth2 client-credentials answer shape (invented token).",
+ "status": 200,
+ "body": {
+  "access_token": "fixture-token-0123456789abcdef",
+  "expires_in": 1800,
+  "token_type": "Bearer"
+ }
+}

@@ -1,0 +1,184 @@
+{
+ "status": 200,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "description": "Documents matching 'semiconductor' and of type Rule",
+  "count": 486,
+  "total_pages": 33,
+  "next_page_url": "https://www.federalregister.gov/api/v1/documents?conditions%5Bterm%5D=semiconductor&conditions%5Btype%5D%5B%5D=RULE&fields%5B%5D=title&fields%5B%5D=type&fields%5B%5D=agency_names&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=document_number&fields%5B%5D=html_url&format=json&order=newest&page=2&per_page=15",
+  "results": [
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (25-3.5e)",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-11-05",
+    "abstract": "EPA is issuing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. The SNURs require persons to notify EPA at least 90 days before commencing the manufacture (defined by statute to include import) or processing of any of these chemical substances for an activity that is designated as a significant new use in the SNUR. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification; made an appropriate determination regarding that notification; and taken such actions as required by that determination.",
+    "document_number": "2026-22576",
+    "html_url": "https://www.federalregister.gov/documents/2026/11/05/2026-22576/significant-new-use-rules-on-certain-chemical-substances-25-35e"
+   },
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (26-1)",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-10-15",
+    "abstract": "EPA is issuing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. The SNURs require persons to notify EPA at least 90 days before commencing the manufacture (defined by statute to include import) or processing of any of these chemical substances for an activity that is designated as a significant new use in the SNUR. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification; made an appropriate determination regarding that notification; and taken such actions as required by that determination.",
+    "document_number": "2026-21051",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/15/2026-21051/significant-new-use-rules-on-certain-chemical-substances-26-1"
+   },
+   {
+    "title": "Extending the Reporting Deadline Under the Greenhouse Gas Reporting Rule for Reporting Year 2025 to March 10, 2027",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-10-14",
+    "abstract": "The Environmental Protection Agency (EPA) is taking interim final action to extend the reporting deadline under the Greenhouse Gas Reporting Rule for reporting year 2025 data from October 30, 2026, to March 10, 2027. This final action only changes the reporting deadline for annual greenhouse gas reports for reporting year 2025 and makes no other changes to the rule. The EPA is requesting comments on all aspects of this interim final rule.",
+    "document_number": "2026-20982",
+    "html_url": "https://www.federalregister.gov/documents/2026/10/14/2026-20982/extending-the-reporting-deadline-under-the-greenhouse-gas-reporting-rule-for-reporting-year-2025-to"
+   },
+   {
+    "title": "The Safer Affordable Fuel-Efficient (SAFE) Vehicles Rule III for Model Years 2022 to 2031 Passenger Cars and Light Trucks",
+    "type": "Rule",
+    "agency_names": [
+     "Transportation Department",
+     "National Highway Traffic Safety Administration"
+    ],
+    "publication_date": "2026-09-30",
+    "abstract": "NHTSA, on behalf of the U.S. Department of Transportation (DOT), is substantially recalibrating the Corporate Average Fuel Economy (CAFE) program to bring the program into compliance with the law and to remove previous regulatory distortions which have induced manufacturers to make design decisions that have neither aligned with market demand and the needs of American families nor have delivered the consistent improvements in the fuel economy performance of manufacturer fleets, as Congress intended. This recalibration finalizes amendments to fuel economy standards for light-duty vehicles for model years 2022- 2026 and MYs 2027-2031. This final rule also finalizes amendments to compliance aspects of the program, including to vehicle classification and other compliance pathways.",
+    "document_number": "2026-19964",
+    "html_url": "https://www.federalregister.gov/documents/2026/09/30/2026-19964/the-safer-affordable-fuel-efficient-safe-vehicles-rule-iii-for-model-years-2022-to-2031-passenger"
+   },
+   {
+    "title": "Measures To Restrict Stockpiling of Polysilicon and Polysilicon Derivatives Under Proclamation 11052",
+    "type": "Rule",
+    "agency_names": [
+     "Commerce Department",
+     "Industry and Security Bureau"
+    ],
+    "publication_date": "2026-09-24",
+    "abstract": "On August 6, 2026, the President issued Proclamation 11052, \"Adjusting Imports of Polysilicon and Its Derivatives Into the United States\" (Proclamation 11052), ordering the Secretary of Commerce (Secretary) to take action to restrict imports by a company if he determines the company is stockpiling polysilicon or polysilicon derivatives (Polysilicon Products) in advance of import adjustments that will be effective on December 4, 2026. The Bureau of Industry and Security (BIS), in this temporary final rule (TFR), announces the criteria and process it will use to monitor existing companies for evidence of stockpiling, limit a newly established importer's ability to stockpile, and subject companies that are stockpiling to an import prohibition if necessary. This TFR also establishes the process for such companies to obtain a waiver from any import prohibitions imposed pursuant to this rule, and imposes certain import limitations on new importers that register with U.S. Customs and Border Protection (CBP) on or after August 6, 2026.",
+    "document_number": "2026-19537",
+    "html_url": "https://www.federalregister.gov/documents/2026/09/24/2026-19537/measures-to-restrict-stockpiling-of-polysilicon-and-polysilicon-derivatives-under-proclamation-11052"
+   },
+   {
+    "title": "Airworthiness Directives; MD Helicopters, LLC Helicopters",
+    "type": "Rule",
+    "agency_names": [
+     "Transportation Department",
+     "Federal Aviation Administration"
+    ],
+    "publication_date": "2026-09-15",
+    "abstract": "The FAA is superseding Airworthiness Directive (AD) 2024-23- 06, which applied to certain MD Helicopters, LLC Model 369, 369A, 369D, 369E, 369F, 369FF, 369H, 369HE, 369HM, 369HS, 500N, and 600N helicopters. AD 2024-23-06 required repetitively inspecting the torque tube assembly and roller bearings, and depending on the results, replacing parts or accomplishing additional inspections. Since the FAA issued AD 2024-23-06, the FAA has determined that additional torque tube assemblies are affected by this unsafe condition. This AD continues to require the actions of AD 2024-23-06 and expands the applicability. The FAA is issuing this AD to address the unsafe condition on these products.",
+    "document_number": "2026-18927",
+    "html_url": "https://www.federalregister.gov/documents/2026/09/15/2026-18927/airworthiness-directives-md-helicopters-llc-helicopters"
+   },
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (24-5.5e)",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-08-26",
+    "abstract": "EPA is issuing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. The SNURs require persons to notify EPA at least 90 days before commencing the manufacture (defined by statute to include import) or processing of any of these chemical substances for an activity that is designated as a significant new use in the SNUR. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification; made an appropriate determination regarding that notification; and taken such actions as required by that determination.",
+    "document_number": "2026-17400",
+    "html_url": "https://www.federalregister.gov/documents/2026/08/26/2026-17400/significant-new-use-rules-on-certain-chemical-substances-24-55e"
+   },
+   {
+    "title": "Requirements for Interference-Tolerant Radio Altimeter Systems",
+    "type": "Rule",
+    "agency_names": [
+     "Transportation Department",
+     "Federal Aviation Administration"
+    ],
+    "publication_date": "2026-07-31",
+    "abstract": "In July 2025, President Trump signed the One Big Beautiful Bill Act. Section 40002 of that law re-institutes the Federal Communications Commission's general auction authority and specifically directs the Commission to complete a system of competitive bidding for not less than 100 megahertz in the 3.98-4.2 gigahertz band (Upper C- band). This final rule supports the Federal Communications Commission's July 2026 Report and Order that makes 160 megahertz of the Upper C-band available for terrestrial wireless flexible use via a system of competitive bidding. To ensure safe, efficient, and reliable aviation operations in the presence of wireless signals in the C-band, the Federal Aviation Administration is issuing new regulations that require all radio altimeters to meet specific minimum performance requirements. These new radio altimeters must withstand interference from wireless signals in neighboring spectrum bands and continue to provide accurate altitude readings to both pilots and integrated aircraft safety systems. These regulations require all aircraft equipped with radio altimeters operating under part 121 and those aircraft with radio altimeters operating under part 129 with 30 or more passenger seats or a payload capacity of more than 7,500 pounds to comply with the minimum performance requirements by December 30, 2030, which is prior to the date the Federal Communications Commission authorizes the use of the Upper C-band for new wireless services, as stated in its Report and Order. All other aircraft equipped with radio altimeters that are required to comply with part 91, including aircraft operating under parts 125, 133, 135, 136, 137, 194, and all other aircraft operating under part 129 that are not subject to the initial deadline, must comply with the same minimum performance requirements on or before October 31, 2034.",
+    "document_number": "2026-15585",
+    "html_url": "https://www.federalregister.gov/documents/2026/07/31/2026-15585/requirements-for-interference-tolerant-radio-altimeter-systems"
+   },
+   {
+    "title": "Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
+    "type": "Rule",
+    "agency_names": [
+     "Homeland Security Department"
+    ],
+    "publication_date": "2026-07-17",
+    "abstract": "The Department of Homeland Security (DHS) is amending its regulations to change the admission period in the F, J, and I classifications from duration of status to an admission for a fixed time period, and additional changes to admission and extension requirements. This final rule will provide additional protections and oversight of these nonimmigrant categories and will allow DHS to better evaluate whether these nonimmigrants are maintaining status while temporarily in the United States. This final rule provides amendments to the proposed rule covering this topic that was published in the Federal Register on August 28, 2025.",
+    "document_number": "2026-14439",
+    "html_url": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant"
+   },
+   {
+    "title": "Enhanced Favorable Treatment for the United Arab Emirates Under the Export Administration Regulations",
+    "type": "Rule",
+    "agency_names": [
+     "Commerce Department",
+     "Industry and Security Bureau"
+    ],
+    "publication_date": "2026-07-14",
+    "abstract": "In this final rule, the Bureau of Industry and Security (BIS) amends the Export Administration Regulations (EAR) to provide enhanced favorable treatment for the United Arab Emirates (UAE). Specifically, BIS is removing the UAE from Country Groups D:3 and D:4 and adding the UAE to Country Group A:5. More license exceptions will now be available, including Strategic Trade Authorization (STA) for the UAE Government and approved commercial entities in the UAE. STA will authorize the export, reexport, or transfer (in-country) of military items; certain commercial satellites and spacecraft; and dual-use items useful in, inter alia, oil and gas production, desalination, and civil nuclear power generation. The UAE Government and approved commercial entities will also have license-free access to advanced computing items, consistent with the May 2025 U.S.-UAE Artificial Intelligence Cooperation framework, without compromising U.S. digital infrastructure buildout.",
+    "document_number": "2026-14132",
+    "html_url": "https://www.federalregister.gov/documents/2026/07/14/2026-14132/enhanced-favorable-treatment-for-the-united-arab-emirates-under-the-export-administration"
+   },
+   {
+    "title": "Facilitating Implementation of Next Generation 911 Services (NG911); Improving 911 Reliability",
+    "type": "Rule",
+    "agency_names": [
+     "Federal Communications Commission"
+    ],
+    "publication_date": "2026-07-10",
+    "abstract": "In this document, the Federal Communications Commission (the FCC or Commission) adopts rules to ensure that emerging Next Generation 911 (NG911) networks are reliable and interoperable. NG911 is replacing legacy 911 technology across the country with internet Protocol (IP)- based infrastructure that will support new 911 capabilities, including text, video, and data. However, for NG911 to be fully effective, NG911 networks must be designed to safeguard the reliability of critical components and support the interoperability needed to seamlessly transfer 911 calls and data from one network to another. The rules require entities essential to delivering emergency calls in the NG911 environment to implement common sense measures to safeguard the reliability of NG911 networks and reduce the risk of 911 outages, and require certain entities to report on their support for NG911 interoperability. The rules also eliminate unnecessary and burdensome legacy rules to increase flexibility and encourage technical innovation to make NG911 services reliable, interoperable, and accessible to all.",
+    "document_number": "2026-13998",
+    "html_url": "https://www.federalregister.gov/documents/2026/07/10/2026-13998/facilitating-implementation-of-next-generation-911-services-ng911-improving-911-reliability"
+   },
+   {
+    "title": "Indefinite Suspension of the De Minimis Exemption for Merchandise Arriving Through All Modes Other Than the International Postal Network",
+    "type": "Rule",
+    "agency_names": [
+     "Homeland Security Department",
+     "U.S. Customs and Border Protection"
+    ],
+    "publication_date": "2026-06-24",
+    "abstract": "This document amends the U.S. Customs and Border Protection (CBP) regulations to implement an indefinite suspension of the de minimis administrative exemption for imports valued at $800 or less arriving via all modes other than through the international postal network. This indefinite suspension means that all entries of merchandise valued at $800 or less arriving through all modes other than the international postal network must utilize formal or informal entry procedures.",
+    "document_number": "2026-12670",
+    "html_url": "https://www.federalregister.gov/documents/2026/06/24/2026-12670/indefinite-suspension-of-the-de-minimis-exemption-for-merchandise-arriving-through-all-modes-other"
+   },
+   {
+    "title": "Indefinite Suspension of the De Minimis Exemption for Mail Shipments and New Postal Informal Entry Process",
+    "type": "Rule",
+    "agency_names": [
+     "Homeland Security Department",
+     "U.S. Customs and Border Protection"
+    ],
+    "publication_date": "2026-06-24",
+    "abstract": "This document amends the U.S. Customs and Border Protection (CBP) regulations to implement an indefinite suspension of the de minimis administrative exemption for imports valued at $800 or less arriving through the international postal network. This document also establishes a new postal informal entry process for certain merchandise entering the United States through the mail environment.",
+    "document_number": "2026-12669",
+    "html_url": "https://www.federalregister.gov/documents/2026/06/24/2026-12669/indefinite-suspension-of-the-de-minimis-exemption-for-mail-shipments-and-new-postal-informal-entry"
+   },
+   {
+    "title": "Significant New Use Rules on Certain Chemical Substances (25-2.5e)",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-05-29",
+    "abstract": "EPA is issuing significant new use rules (SNURs) under the Toxic Substances Control Act (TSCA) for certain chemical substances that were the subject of premanufacture notices (PMNs) and are also subject to an Order issued by EPA pursuant to TSCA. The SNURs require persons to notify EPA at least 90 days before commencing the manufacture (defined by statute to include import) or processing of any of these chemical substances for an activity that is designated as a significant new use in the SNUR. The required notification initiates EPA's evaluation of the conditions of that use for that chemical substance. In addition, the manufacture or processing for the significant new use may not commence until EPA has conducted a review of the required notification; made an appropriate determination regarding that notification; and taken such actions as required by that determination.",
+    "document_number": "2026-10712",
+    "html_url": "https://www.federalregister.gov/documents/2026/05/29/2026-10712/significant-new-use-rules-on-certain-chemical-substances-25-25e"
+   },
+   {
+    "title": "Phasedown of Hydrofluorocarbons: Reconsideration of Certain Regulatory Requirements Promulgated Under the Technology Transitions Provisions of the American Innovation and Manufacturing Act of 2020",
+    "type": "Rule",
+    "agency_names": [
+     "Environmental Protection Agency"
+    ],
+    "publication_date": "2026-05-26",
+    "abstract": "The U.S. Environmental Protection Agency (EPA) is finalizing changes to regulations promulgated under the Technology Transitions provision of the American Innovation and Manufacturing Act of 2020 (AIM Act), which authorizes the Administrator to restrict fully, partially, or on a graduated schedule, the use of a \"regulated substance\" in the sector or subsector in which they are used. This final rule addresses administrative petitions and input received from regulated industry and other interested parties relevant to requirements and restrictions across various refrigeration and air conditioning subsectors, including: refrigerated transport--intermodal containers; industrial process refrigeration and chillers for industrial process refrigeration used in semiconductor manufacturing; retail food supermarket systems; retail food remote condensing unit systems; cold storage warehouses; refrigerated laboratory centrifuges and laboratory shakers; and condensing units in residential and light commercial air conditioning and heat pumps. This final rule also allows the inventory of residential and light commercial air conditioning and heat pump equipment that was manufactured in the United States or imported into the United States before January 1, 2025, to continue to be installed.",
+    "document_number": "2026-10387",
+    "html_url": "https://www.federalregister.gov/documents/2026/05/26/2026-10387/phasedown-of-hydrofluorocarbons-reconsideration-of-certain-regulatory-requirements-promulgated-under"
+   }
+  ]
+ }
+}

@@ -1,0 +1,9 @@
+{
+ "recorded": "REAL answer recorded 2026-11-05 from GET https://api.etherscan.io/v2/api (chainid=8453 (Base) gastracker/gasoracle with a free key: HTTP 200, status 0); the apikey parameter is not stored. Unedited.",
+ "status": 200,
+ "body": {
+  "status": "0",
+  "message": "NOTOK",
+  "result": "Free API access is not supported for this chain. Please upgrade your api plan for full chain coverage. https://etherscan.io/apis"
+ }
+}

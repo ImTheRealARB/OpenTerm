@@ -1,0 +1,10 @@
+{
+ "status": 403,
+ "recorded": "2026-11-05, real answer",
+ "body": {
+  "error": {
+   "code": "API_KEY_INVALID",
+   "message": "An invalid api_key was supplied. Get one at https://api.congress.gov:443"
+  }
+ }
+}

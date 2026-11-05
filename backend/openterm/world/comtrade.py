@@ -7,9 +7,11 @@ Answer: {"elapsedTime": 0.4, "count": 6, "data": [{"refYear": 2023, "period": "2
          "reporterDesc": "USA", "flowCode": "X", "flowDesc": "Export", "partnerCode": 156, "partnerISO": "CHN", "partnerDesc": "China",
          "partner2Code": 0, "customsCode": "C00", "motCode": 0, "cmdCode": "TOTAL", "cmdDesc": "All Commodities",
          "qty": ..., "netWgt": ..., "cifvalue": ..., "fobvalue": ..., "primaryValue": 1.5e11, "isAggregate": true}], "error": ""}
-URL shape and the free-tier use checked against https://uncomtrade.org/docs/un-comtrade-api/ (2026-11-05). DOC-SHAPED: the response
-field list is from the Comtrade+ API documentation as remembered (the docs page could not be fetched); the parser fails loudly on
-a missing field. The trade value is `primaryValue` in US dollars (exports are FOB, imports CIF as the reporter files them). Free key:
+URL shape and the free-tier use checked against https://uncomtrade.org/docs/un-comtrade-api/ (2026-11-05). CHECKED LIVE the same day
+with a real key (fixtures `comtrade_real_ind_usa_*`): the field list above is right, and India's own report of trade with the USA
+(139.8 bn USD in 2025, 118.4 bn in 2024) matches the published figures. A call for reporterCode=0 (the world) answers an empty 200,
+so `usdata.trade` refuses WLD as a reporter before spending a call. The free key also has a per-minute limit: 7 calls in a row
+were fine, the 8th answered 429. The parser fails loudly on a missing field. The trade value is `primaryValue` in US dollars (exports are FOB, imports CIF as the reporter files them). Free key:
 500 calls a day, 100,000 records a call.
 """
 

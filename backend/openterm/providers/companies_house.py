@@ -8,7 +8,9 @@ at 2 requests a second and a company view costs 3 requests (profile, officers, f
 With no key `supports()` stays true and every call raises `key_required` BEFORE any network call, so UKCO answers
 `KEY REQUIRED: set COMPANIES_HOUSE_KEY in APIKEYS` instead of looking broken. A key Companies House refuses (401 / 403) says the same.
 
-Built from the official resource pages, NOT from recordings (doc-shaped fixtures; see companies_house_parse.py).
+Checked live on 2026-11-05 with a real key (fixtures `companies_house_real_*`; officers' names are redacted in them). Basic auth with the key
+as user name works; an unknown company number is HTTP 404 (`NO SUCH COMPANY`). Dissolved companies have no next accounts or confirmation
+dates. The fixture-mode routes and most tests still use the doc-shaped company 09999999.
 """
 
 from __future__ import annotations

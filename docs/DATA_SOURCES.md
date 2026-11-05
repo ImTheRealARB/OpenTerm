@@ -30,7 +30,7 @@ To add a source: write the adapter ([ADDING_A_PROVIDER.md](ADDING_A_PROVIDER.md)
 | **Kite Connect** | paid app, daily login | NSE, BSE, NFO, BFO, MCX, CDS: real-time quotes; minute bars back to 2015 (1 minute verified 10 years), open interest | `quotes` #1, `history` #1 |
 | **Frankfurter** (new) | none | ECB reference rates: one fix per business day for FX pairs (EURUSD=X, USDINR=X, crosses), back to 1999; no high/low | `history` below Yahoo, `quotes` below Yahoo (Yahoo-down fallback for FX) |
 | **Companies House, Marketaux, Etherscan** (new) | free keys | `UKCO` UK register; `N` headlines with sentiment; `ADDR` EVM address and gas | specialists (Marketaux joins the news order) |
-| Yahoo, Nasdaq, SEC EDGAR, FRED (keyless CSV), ECB, BoE, BoC, MoF, Treasury, CFTC, Deribit, OKX, Binance, CoinGecko, DefiLlama, Polymarket, Kalshi, World Bank, DBnomics, Open-Meteo, NWS, NSE archive, AMFI, GDELT, RSS | none | global shares, rates, futures, crypto, macro, weather, prediction markets, funds, news | fallbacks and specialists |
+| Yahoo, Nasdaq, SEC EDGAR, FRED (keyless CSV), ECB, BoE, BoC, MoF, Treasury, CFTC, Deribit, OKX, Binance, Kraken, Coinbase, CoinGecko, DefiLlama, Polymarket, Kalshi, World Bank, DBnomics, Open-Meteo, NWS, NSE archive, AMFI, GDELT, RSS | none | global shares, rates, futures, crypto, macro, weather, prediction markets, funds, news | fallbacks and specialists |
 | Finnhub, Alpaca (IEX), FMP, EIA, OpenFIGI, Tradier, FRED API | free keys | news, ratings, real-time US trades, energy, identifiers, options | specialists |
 
 ## Free sources worth adding (catalog, researched 2026-11-05)
@@ -56,8 +56,11 @@ on the provider's page before building. Most search hits were comparison blogs, 
 | **Twelve Data, Tiingo, Alpha Vantage** | Fallback prices, daily history | see above | Checked |
 | **Angel One SmartAPI, Fyers** | Indian broker data, backup to Kite | free with account; TOTP login | Checked (forums) |
 | **USDA NASS QuickStats** | US crop, livestock and food statistics | free key | Memory |
-| **FEC, USASpending, Federal Register, Congress.gov** | Political money, federal contracts, rules, bills | free keys, generous | Memory |
-| **OpenSky Network** | Live and historical flights | free account, daily credit limits | Memory |
+| **USASpending.gov** | Federal contracts, grants, agencies (USD obligated) | no key | Built: `USASP` (top contract recipients and largest awards for a keyword over 3 fiscal years; `USASP AGENCY` top agencies, Enter drills into an agency). Run live 2026-11-05, real recordings |
+| **Federal Register** | Rules, proposed rules, notices, presidential documents | no key | Built: `FEDREG [RULE\|PROPOSED\|NOTICE\|PRESDOC] <words>`. Run live 2026-11-05, real recordings (an empty search has no `results` key) |
+| **OpenFEC** | US campaign finance: candidates, committees, totals by cycle | free api.data.gov key `FEC_API_KEY`, 1,000 calls/hour | Built: `FEC`. DOC-SHAPED, NOT RUN with a key (fixtures `fec_*_docshape`, invented numbers). Only the gateway 403 answers are real |
+| **Congress.gov API v3** | US bills, sponsors, latest actions | free api.data.gov key `CONGRESS_API_KEY`, 5,000 calls/hour | Built: `CONGRESS`. DOC-SHAPED, NOT RUN with a key. The bill list has no sponsor and (per the docs) no text search, so words filter titles of the 250 latest updated bills |
+| **OpenSky Network** | Live aircraft (ADS-B) by box; history not used | works with no account (anonymous: 400 credits/day, 10 s resolution); optional free account via OAuth2 client credentials (`OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET`): 4,000/day, 5 s. One call costs 1-4 credits by box area; HTTP 429 carries `X-Rate-Limit-Retry-After-Seconds` | Built: `FLT` (`providers/opensky.py`, pure `world/flights.py`). **Doc-shaped, unrun:** OpenSky refused every connection from the build machine on 2026-11-05, so no live recording exists and the OAuth flow is tested only with a fake transport |
 | **NewsAPI, NewsData.io** | News search | small free tiers; NewsData about 200/day | Memory |
 | **OilPriceAPI** | WTI, Brent, gold, silver, gas; its freight endpoints are "being onboarded" | free key | Checked (vendor page); skip: EIA, FRED and Yahoo futures already cover it |
 
@@ -68,7 +71,7 @@ on the provider's page before building. Most search hits were comparison blogs, 
 | **IMF PortWatch** | Daily ship transit counts through 28 chokepoints (Suez, Panama, Hormuz, Malacca ...) and activity at about 1,600 ports; ArcGIS REST, 1,000 records per call; satellite AIS, so data lags | Checked |
 | **Frankfurter** | ECB FX rates for about 30 currencies back to 1999 | Built (real recording): `history` #5 and `quotes` #3, FX pairs only, daily fix |
 | **OECD SDMX, Eurostat, BIS, IMF data API** | Official macro, banking, debt, property prices, trade statistics | Checked (third-party guides; confirm endpoints) |
-| **Kraken, Coinbase public APIs** | Second crypto exchange when Binance is blocked | Memory |
+| **Kraken, Coinbase Exchange public APIs** | Second crypto exchange when Binance is blocked or down: CRYP board, chart candles, CDEP order book | Built (real recordings, 2026-11-05): `history` #4 Coinbase and #5 Kraken (below Yahoo), `crypto` board #3 Kraken and #4 Coinbase, `crypto_depth` #3 Kraken and #4 Coinbase. Numbers and limits in "Kraken and Coinbase" below |
 | **MFapi.in** | Mutual fund NAV history for every AMFI scheme | Memory |
 | **Drewry World Container Index** | Weekly container freight rates | Free on Drewry's site; API only "on request": not scrapable (bot rules) |
 | **SCFI (Shanghai Shipping Exchange)** | Weekly container index | Published weekly; no API found |
@@ -98,11 +101,31 @@ Built in this branch (none committed yet):
    feature: the server opens the socket for one short listen per request (cached 20 s), so nothing is subscribed at startup. The key goes in the first message, never in a URL. Details and
    the list of untested guesses: HANDOFF.md "AISstream".
 
+### Kraken and Coinbase (keyless second crypto exchanges, verified live 2026-11-05)
+
+`providers/kraken.py`, `providers/coinbase.py`, pure parsers in `providers/cryptoex_parse.py` and `world/cryptodepth.py` (`parse_kraken_book`, `parse_coinbase_book`). Polling only: no WebSocket
+stream was built for either (Binance and Yahoo streams are untouched). A USD pair is not a USDT pair: `Bars.currency`, `Coin.quote` and the depth ladder carry the real quote; a pair is never swapped.
+Symbols are the app's `BTC-USD` / `BTC-USDT` / `ETH-EUR` (dash required, so a share ticker can never reach an exchange); Kraken's `XBT` / `XDG` names and `XXBTZUSD` result keys are mapped inside the parser.
+
+| | Kraken | Coinbase Exchange |
+|---|---|---|
+| Board (`CRYP`) | `Ticker` takes all 22 pairs in one call: USD and EUR, 280-435 ms. **No 24h change** (Kraken only has today's open since 00:00 UTC, a different window), so that column is empty. Volume = 24h coins x 24h VWAP | one `/products/<id>/stats` call per coin, 21 coins in USD only (TRX has no product), about 2 s in all. Exact rolling 24h change. **No volume value** (volume is in coins) |
+| Candles | `OHLC`: **only the last 720 candles** of any length; `since=` cannot page back. 1m = 12 hours, 5m = 2.5 d, 15m = 7.5 d, 30m = 15 d, 60m = 30 d, 1d = 720 d; weekly goes back to 2013 (684 rows). No 2m / 90m / monthly. 205-240 ms | `candles`: 300 per call and a request for more is refused, so a range is fetched as windows of 299 candles in parallel (up to 14 calls = 4,000 candles; 0.85-0.95 s). API depth is much more (daily to 2015-07, 1 minute verified 1,000 days back); our cap is the paging budget. Only 1m / 5m / 15m / 1h / 1d: no 2m, 30m, weekly, monthly. Row order is `[time, low, high, open, close, volume]` |
+| Too deep | `ProviderError("depth")`, e.g. `INTERVAL 60m ONLY AVAILABLE FOR THE LAST 30 DAYS`; weekly never | intraday over 4,000 candles = `depth` (`1m` 2 days, `5m` 13, `15m` 41, `60m` 166); daily over 4,000 returns the newest 4,000 days |
+| Order book (`CDEP`) | `Depth?count=100`, 100 levels a side, ~200 ms real latency | `/book?level=2` is the **whole** book (~20,000 levels, ~1 MB); only the best 100 a side are kept, 280-400 ms |
+| Limits | public REST about 1 call/s (bucket 1/s, burst 5) | about 10 calls/s per IP (bucket 8/s, burst 12); a `User-Agent` header is required |
+| Declared `intraday_days` | 5m 2, 15m 7, 30m 15, 60m 30 (1m is 12 hours: not expressible in whole days, not declared) | 1m 2, 5m 13, 15m 41, 60m 166 |
+
+Errors: Kraken answers every error as HTTP 200 with an `error` list (`EQuery:Unknown asset pair` = not found, `EAPI:Rate limit` = rate limited); Coinbase answers 404 `{"message":"NotFound"}` for an unknown product.
+Fixtures (`backend/tests/fixtures/kraken_*.json`, `coinbase_*.json`) are real answers, long ones trimmed to their newest rows; `coinbase_stats_usd.json` joins the 21 per-product answers into one file.
+Order: `history` `... binance_klines, yahoo, coinbase, kraken ...` (Coinbase above Kraken because it can be paged; both below Yahoo because Yahoo's BTC-USD goes back 20 years, and Yahoo does not carry USDT pairs so those fall through to them);
+`crypto` board and `crypto_depth` are pinned lists (`config.yaml` `providers: crypto:` and `main.DEFAULT_ORDER`), not in the hierarchy table, which holds only `quotes` and `history`.
+
 Built after that (branch `claude/ports-and-official-stats`): `PORTS` (PortWatch ports) and `DBSRCH` (DBnomics series search). OECD, Eurostat, BIS and IMF series are
 reached through DBnomics (`DBSRCH`, then `ECST DBN:...`), so no separate adapters were written.
 
 Left, in order:
-1. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, Kraken, Coinbase, MFapi**, CoinMarketCap, USDA NASS, FEC, OpenSky.
+1. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, MFapi**, CoinMarketCap, USDA NASS, FEC. (OpenSky is built as FLT but still needs a live check from a network that can reach it.)
 2. Live-test every keyed source that has only doc-shaped fixtures (AISstream included).
 
 None of the global free tiers beats Yahoo for charts, so none should be ranked above it.
