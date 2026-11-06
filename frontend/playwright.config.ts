@@ -11,7 +11,8 @@ export default defineConfig({
   // (GITHUB_ACTIONS, not CI: local runs set CI=1 to stop reusing another worktree's preview server.)
   workers: process.env.GITHUB_ACTIONS ? 2 : 4,
   timeout: 20_000,
-  use: { baseURL: `http://127.0.0.1:${port}`, viewport: { width: 1600, height: 900 } },
+  // A failing test leaves a screenshot and a trace in test-results/ (CI uploads it): races on slow runners need evidence.
+  use: { baseURL: `http://127.0.0.1:${port}`, viewport: { width: 1600, height: 900 }, screenshot: "only-on-failure", trace: "retain-on-failure" },
   webServer: {
     // vite build without `npm run build`'s tsc --noEmit: type checking is its own gate, and it costs ~5 s here.
     command: "npx vite build && npm run preview -- --host 127.0.0.1 --port " + port + " --strictPort",
