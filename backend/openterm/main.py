@@ -246,9 +246,16 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         sched.shutdown(wait=False)
-        await engine.stop()
+        await engine.stop()  # awaits its own tasks (audit C-1)
         key_loader.cancel()
-        await asyncio.to_thread(jobs.close)
+        # Delivery sends and retry backoffs: cancel and WAIT, so a retry marks its row "INTERRUPTED BY SHUTDOWN" while the
+        # database is still open; before audit C-1 the row stayed "retrying" forever.
+        pending = list(getattr(app.state, "delivery_tasks", ()))
+        for t in pending:
+            t.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+        await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
         for part in (hub, ticker, iex, synthetic, poller, yahoo):

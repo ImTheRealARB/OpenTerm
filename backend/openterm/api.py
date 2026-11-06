@@ -1046,7 +1046,7 @@ async def bt_run(request: Request):
         return error(e)
     jobs, store = jobs_of(request), bt_of(request)
     if not await store.has_run(params["run_id"]):  # a deleted or trimmed run must not come back from the job cache
-        await jobs.store.forget(jobs.hash_for("bt.run", params))
+        await jobs.forget(jobs.hash_for("bt.run", params))
     # run_id is known before the job runs. A cached answer also carries the stored run, so opening it costs no
     # second request.
     job = {**await jobs.submit("bt.run", params, internal=True), "run_id": params["run_id"]}
@@ -1211,7 +1211,7 @@ async def bt_run_delete(request: Request, run_id: str):
     except BtError as e:
         return bt_error(e)
     if h:
-        await jobs_of(request).store.forget(h)
+        await jobs_of(request).forget(h)
     return {"deleted": run_id}
 
 
