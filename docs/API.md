@@ -10,6 +10,9 @@ Rules that always hold:
 - Every answer carries its source and age. A failure is shown as `STALE`, `ERR` or `PROVIDER DOWN`, never as made-up data.
 - There are no order or trading routes. The API reads data and runs historical backtests.
 - Keys are never returned by any route.
+- A request that changes something (POST, PUT, PATCH, DELETE) with a JSON body must send `Content-Type: application/json`, or it gets a 400.
+  If it carries an `Origin` header (browsers add one), the origin must be this machine (`localhost`, `127.0.0.1` or `[::1]`), or it gets a 403.
+  Scripts, curl and Excel send no `Origin`, so they only need the content type. This stops other web pages in your browser from driving OpenTerm.
 
 Start OpenTerm first (`openterm`, or `.\scripts\start.ps1`). Then open **http://127.0.0.1:8000/docs** for the interactive
 OpenAPI page (a web page that lists every route with its parameters and lets you try it). The raw schema is at `/openapi.json`.

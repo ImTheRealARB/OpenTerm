@@ -232,13 +232,15 @@ For `FA`, `FIL` and `OWN`, the SEC asks every program to say who is calling: set
 | A panel says `STALE`, `ERR` or `PROVIDER DOWN` | A free source is down or rate limiting you. `SOURCES` shows which one; wait and press `F5` |
 | The screen looks old after `git pull` | `.\scripts\start.ps1 -Rebuild` (Windows) or `./scripts/start --rebuild` |
 | You want a demo with no internet | Start with `OPENTERM_FIXTURES=1`: recorded data, clearly labelled |
+| `npm ci` prints `EUSAGE` and a long help text | Run it inside `frontend/` (`cd frontend`), where `package-lock.json` lives. The esbuild "install scripts" warning is harmless |
+| Your own script gets 400 `CONTENT-TYPE MUST BE application/json` | Send that header on POST / PUT / DELETE: see [docs/API.md](docs/API.md) |
 
 ## For developers
 
 ```sh
 ./scripts/setup --dev       # adds test tools and Chromium (about 1.5 GB more); Windows: .\scripts\setup.ps1 -Dev
 ./scripts/dev               # backend on :8000 and Vite with hot reload on http://localhost:5173
-node scripts/gates.mjs      # every check: ruff, tsc, pytest, vitest, Playwright
+node scripts/gates.mjs      # every check: ruff, tsc, ESLint (React hooks rules), pytest, vitest, Playwright
 node scripts/bench.mjs      # the performance budgets
 python scripts/new_function.py FOO --title "..."    # scaffold a new function
 ```
