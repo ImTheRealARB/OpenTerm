@@ -6,7 +6,10 @@ const port = Number(process.env.PW_PORT ?? 4173);
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
-  workers: 4, // the default (half the cores, 10 here) made 8-9 tests flake per run, on main too; 4 workers: 183 pass in 74 s vs 130 s
+  // Locally 4: the default (half the cores, 10 here) made 8-9 tests flake per run, on main too; 4 workers: 183 pass in 74 s vs 130 s.
+  // On GitHub Actions 2: a private repo's runner has 2 cores, and 4 browsers there timed out one random test per run.
+  // (GITHUB_ACTIONS, not CI: local runs set CI=1 to stop reusing another worktree's preview server.)
+  workers: process.env.GITHUB_ACTIONS ? 2 : 4,
   timeout: 20_000,
   use: { baseURL: `http://127.0.0.1:${port}`, viewport: { width: 1600, height: 900 } },
   webServer: {
