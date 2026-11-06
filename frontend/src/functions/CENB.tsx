@@ -6,9 +6,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type CenbPayload, type CenbRow, type Envelope } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { CenbPayload, CenbRow, Envelope } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -55,6 +59,7 @@ export default function CENB({ panelId }: FunctionProps) {
   );
   useCsvExport(panelId, () => (d ? gridCsv("CENB", columns, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -62,10 +67,6 @@ export default function CENB({ panelId }: FunctionProps) {
         const g = grid.current;
         const cur = latest.current;
         if (navKey(e, g, cur.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter") {
           const r = cur[g?.selected() ?? -1];
           setDetail(r ? `${r.bank} DECISIONS: ${r.dates.length ? r.dates.join(" ") : "NONE LOADED"} · SOURCE ${r.url}` : null);
@@ -73,7 +74,7 @@ export default function CENB({ panelId }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

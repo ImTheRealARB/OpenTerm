@@ -21,7 +21,7 @@ async def probe_down_providers(router: Router) -> None:
         if type(p).probe is Provider.probe:
             continue  # no probe(): the cooldown simply runs out (a missing probe used to count as a fresh failure every 30 s)
         try:
-            await router._attempt(p, lambda prov: prov.probe())
+            await router.attempt(p, lambda prov: prov.probe())
             log.info("provider %s recovered", name)
         except ProviderError:
             pass

@@ -8,13 +8,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api, type ApiError, type KeyRow, type KeysPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { ApiError } from "../net/core";
+import { keysApi } from "../net/keysApi";
+import type { KeyRow, KeysPayload } from "../net/types";
 import { apiKeysSignup } from "./apikeysSignup";
 import { maskKey } from "./apikeysMask";
 import { groupRows, isHeaderRow, type HeaderRow } from "./apikeysSections";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import { parseCap, spendLine } from "./spendCap";
 import type { FunctionProps } from "./registry";
 import { openUrl } from "./secPanel";
@@ -88,7 +92,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
 
   const refresh = useCallback(
     () =>
-      api
+      keysApi
         .keys()
         .then((d) => {
           setData(d);
@@ -136,7 +140,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
     }
     setMsg({ text: `SAVING ${ed.name.toUpperCase()} AND TESTING…`, cls: "dim" });
     try {
-      const row = await api.putKey(ed.name, fields);
+      const row = await keysApi.putKey(ed.name, fields);
       patch(row);
       setMsg({ text: `${ed.name.toUpperCase()} SAVED: ${row.state}${row.detail ? ` (${row.detail})` : ""}`, cls: row.state === "OK" ? "up" : "warn" });
       void refresh();
@@ -149,7 +153,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
   const test = async (r: KeyRow) => {
     setMsg({ text: `TESTING ${r.name.toUpperCase()}…`, cls: "dim" });
     try {
-      const row = await api.testKey(r.name);
+      const row = await keysApi.testKey(r.name);
       patch(row);
       setMsg({ text: `${r.name.toUpperCase()}: ${row.state}${row.detail ? ` (${row.detail})` : ""}`, cls: row.state === "OK" ? "up" : "warn" });
     } catch (e) {
@@ -160,7 +164,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
 
   const remove = async (r: KeyRow) => {
     try {
-      patch(await api.deleteKey(r.name));
+      patch(await keysApi.deleteKey(r.name));
       setMsg({ text: `${r.name.toUpperCase()} DELETED`, cls: "dim" });
     } catch (e) {
       const a = e as ApiError;
@@ -177,7 +181,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
     }
     setCapEdit(false);
     try {
-      const spend = await api.putLlmCap(cap);
+      const spend = await keysApi.putLlmCap(cap);
       setData((d) => (d ? { ...d, spend } : d));
       setMsg({ text: `AI SPEND CAP SET: US$${spend.cap.toFixed(2)} PER DAY`, cls: "up" });
     } catch (e) {
@@ -186,6 +190,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
     }
   };
 
+  usePanelRefresh(panelId, () => { void refresh(); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -240,9 +245,6 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
             setMsg(null);
             setCapEdit(true);
             return true;
-          case "F5":
-            void refresh();
-            return true;
           case "Escape":
             return c !== null;
         }
@@ -250,7 +252,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
       }),
     // everything is read through `latest`; save/test/remove only set state and call the api
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [panelId, latest, refresh],
+    [panelId, latest],
   );
 
   const onFieldKey = (e: React.KeyboardEvent<HTMLInputElement>, i: number) => {

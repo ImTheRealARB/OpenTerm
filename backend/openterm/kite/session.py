@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from ..errors import DataError
+
 IST = timezone(timedelta(hours=5, minutes=30))
 EXPIRY_HOUR_IST = 6
 KEY_REQUIRED_MESSAGE = "KEY REQUIRED: set KITE_API_KEY in APIKEYS"
@@ -98,8 +100,6 @@ class KiteSession:
 
     def auth(self) -> tuple[str, str]:
         """(api key, access token) for a request, or the DataError that names what is missing."""
-        from ..service import DataError
-
         st = self.state
         if st == "NO KEY":
             raise DataError("key_required", KEY_REQUIRED_MESSAGE, key="KITE_API_KEY")

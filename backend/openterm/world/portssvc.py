@@ -9,8 +9,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from ..errors import DataError
 from ..redact import redact
-from ..service import DataError
 from . import ports
 
 PORTS_TTL_S = 6 * 3600.0  # PortWatch publishes weekly, so asking more often only costs ArcGIS calls
@@ -43,4 +43,4 @@ async def ports_board(svc: Any, query: str) -> dict[str, Any]:
         return {"data": {"rows": rows, "newest": newest, "mode": mode, "query": " ".join(words), "no_daily_rows": missing, "note": NOTE},
                 "source": PORTS_SOURCE, "fallback_from": failed}
 
-    return await svc._swr(f"w:ports:{' '.join(words)}", PORTS_TTL_S, fetch)
+    return await svc.swr(f"w:ports:{' '.join(words)}", PORTS_TTL_S, fetch)

@@ -7,8 +7,8 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
+from ..errors import DataError
 from ..router import AllFailed
-from ..service import DataError
 from . import cenb, dbsearch, stats
 
 STATS_TTL_S = 6 * 3600.0
@@ -30,7 +30,7 @@ async def ecst(svc: Any, country: str, ind_text: str) -> dict[str, Any]:
             out, failed = await svc.router.call("worldstats_dbn", lambda p: p.worldstats_dbn(*dbn))
             return {"data": out, "fallback_from": failed, "source": out["source"]}
 
-        return await svc._swr("w:dbn:" + "/".join(dbn), STATS_TTL_S, fetch)
+        return await svc.swr("w:dbn:" + "/".join(dbn), STATS_TTL_S, fetch)
     ind = indicator(ind_text)
     try:
         iso = stats.resolve_country(country)
@@ -41,7 +41,7 @@ async def ecst(svc: Any, country: str, ind_text: str) -> dict[str, Any]:
         out, failed = await svc.router.call("worldstats", lambda p: p.worldstats(iso, ind))
         return {"data": out, "fallback_from": failed, "source": out["source"]}
 
-    return await svc._swr(f"w:st:{iso}:{ind.alias}", STATS_TTL_S, fetch2)
+    return await svc.swr(f"w:st:{iso}:{ind.alias}", STATS_TTL_S, fetch2)
 
 
 async def weco(svc: Any) -> dict[str, Any]:
@@ -69,7 +69,7 @@ async def weco(svc: Any) -> dict[str, Any]:
                          "note": "EACH CELL IS THE COUNTRY'S MOST RECENT VALUE WITH ITS OWN DATA YEAR; YEARS ARE NOT ALIGNED ACROSS COUNTRIES",
                          "source": "worldbank"}, "fallback_from": [], "source": "worldbank"}
 
-    return await svc._swr("w:weco", STATS_TTL_S, fetch)
+    return await svc.swr("w:weco", STATS_TTL_S, fetch)
 
 
 async def cenb_table(svc: Any) -> dict[str, Any]:
@@ -77,7 +77,7 @@ async def cenb_table(svc: Any) -> dict[str, Any]:
         out, failed = await svc.router.call("policy_rates", lambda p: p.policy_rates())
         return {"data": out, "fallback_from": failed, "source": "policy_rates"}
 
-    rates_env, fomc = await asyncio.gather(svc._swr("w:rates", RATES_TTL_S, rates_fetch), svc.derivs.fomc_dates(), return_exceptions=True)
+    rates_env, fomc = await asyncio.gather(svc.swr("w:rates", RATES_TTL_S, rates_fetch), svc.derivs.fomc_dates(), return_exceptions=True)
     notes = []
     if isinstance(rates_env, BaseException):
         if not isinstance(rates_env, (AllFailed, DataError)):
@@ -121,4 +121,4 @@ async def dbsearch_svc(svc: Any, q: str, dataset: str, offset: int) -> dict[str,
         out["source"] = source
         return {"data": out, "fallback_from": failed, "source": source}
 
-    return await svc._swr(f"w:dbs:{ref[0] + '/' + ref[1] if ref else '*'}:{offset}:{words.lower()}", SEARCH_TTL_S, fetch)
+    return await svc.swr(f"w:dbs:{ref[0] + '/' + ref[1] if ref else '*'}:{offset}:{words.lower()}", SEARCH_TTL_S, fetch)

@@ -8,12 +8,15 @@ import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type FundRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { FundRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { countdown, joinArg, sPct, signClass, utc } from "./cryptoArgs";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -39,7 +42,7 @@ const PRINTS: Column<Print>[] = [
 
 export default function FUND({ panelId, args }: FunctionProps) {
   const sym = useMemo(() => joinArg(args).toUpperCase(), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.fund(sym, fresh), sym, 30_000);
+  const { env, error, loading, reload: load } = useEnvelope(sym, (fresh) => worldApi.fund(sym, fresh), 30_000);
   const grid = useRef<GridHandle>(null);
   const d = env?.data;
   const rows = useMemo(() => d?.rows ?? [], [d]);
@@ -47,6 +50,7 @@ export default function FUND({ panelId, args }: FunctionProps) {
   const latest = useLatest({ rows, prints, detail: !!d?.detail });
   useCsvExport(panelId, () => (d ? (d.detail ? gridCsv(`FUND_${sym}`, PRINTS, prints) : gridCsv("FUND", BOARD, rows)) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -54,10 +58,6 @@ export default function FUND({ panelId, args }: FunctionProps) {
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.detail ? cur.prints.length : cur.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter" && !cur.detail) {
           const r = cur.rows[g?.selected() ?? -1];
           if (r && r.kind === "PERP") navigate(panelId, { fn: "FUND", args: [r.base], security: undefined });
@@ -69,7 +69,7 @@ export default function FUND({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const h = d?.detail;

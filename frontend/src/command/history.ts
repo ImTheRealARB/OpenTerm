@@ -1,4 +1,4 @@
-import { api } from "../net/api";
+import { workspaceApi } from "../net/workspaceApi";
 import { loadJSON, saveJSON } from "../state/store";
 
 /** Pre-phase-4 history lived in localStorage. It is uploaded once, then removed. */
@@ -21,11 +21,11 @@ export class CommandHistory {
 
   /** Loads the stored history. Commands typed before it arrives stay the newest entries. */
   async sync(): Promise<void> {
-    const { items } = await api.cmdHistory();
+    const { items } = await workspaceApi.cmdHistory();
     const legacy = loadJSON<string[]>(LEGACY_KEY, []);
     let stored = items;
     if (!items.length && legacy.length) {
-      await api.pushCmdHistory(legacy);
+      await workspaceApi.pushCmdHistory(legacy);
       stored = legacy.slice(-MAX);
     }
     try {
@@ -52,7 +52,7 @@ export class CommandHistory {
     const batch = this.pending;
     this.pending = [];
     try {
-      await api.pushCmdHistory(batch);
+      await workspaceApi.pushCmdHistory(batch);
     } catch {
       this.pending = [...batch, ...this.pending].slice(-MAX); // retried with the next command
     }

@@ -2,11 +2,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, macroApi, type Envelope, type YieldCurve } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { macroApi } from "../net/macroApi";
+import type { Envelope, YieldCurve } from "../net/types";
 import { navigate } from "../state/workspace";
 import { bpChange, curveShape, fmtBp, fredIdForTenor, nyToday, spreadBp, yieldBar } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import RatesView from "./RatesView";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -83,6 +87,7 @@ function RatesUS({ panelId }: FunctionProps) {
   const latest = useLatest(rows);
   useCsvExport(panelId, () => gridCsv("RATES", COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -99,13 +104,10 @@ function RatesUS({ panelId }: FunctionProps) {
             else setHint(`FRED HAS NO DAILY SERIES FOR THE ${r.tenor} TENOR`);
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const today = nyToday();

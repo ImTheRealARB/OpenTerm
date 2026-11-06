@@ -262,7 +262,7 @@ def test_key_required_envelope_is_424():
     import orjson
 
     from openterm.api import error
-    from openterm.service import DataError
+    from openterm.errors import DataError
 
     resp = error(DataError("key_required", "KEY REQUIRED", key="FINNHUB"))
     assert resp.status_code == 424

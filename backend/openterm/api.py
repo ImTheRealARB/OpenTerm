@@ -7,75 +7,27 @@ from fastapi.responses import Response
 
 from . import keys as keystore
 from . import logbuf
-from .origin import LOOPBACK
+from .errors import DataError
+from .http_util import (
+    bt_error,
+    data_errors,
+    error,
+    is_json_type,
+    jobs_of,
+    json_body,
+    json_object,
+    key_error,
+    loopback,
+    svc,
+    user,
+)
 from .providers import keyed_status
 from .redact import redact
 from .responses import Orjson, OrjsonRoute
-from .service import DataError, DataService
 from .symbols import resolve
-from .userdata import UserData, UserDataError
+from .userdata import UserDataError
 
 router = APIRouter(prefix="/api", route_class=OrjsonRoute)
-
-STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503, "key_required": 424,
-          "login_required": 401, "login_expired": 403}  # Phase 15: Kite
-
-
-def svc(request: Request) -> DataService:
-    return request.app.state.service
-
-
-def user(request: Request) -> UserData:
-    return request.app.state.userdata
-
-
-MAX_BODY = 4_000_000  # the biggest honest body (a PORT import, a job's params) is well under this
-
-
-def is_json_type(request: Request) -> bool:
-    """True for `Content-Type: application/json` (with or without a charset). A cross-site page can send `text/plain`
-    without the browser asking permission first; sending `application/json` makes the browser ask (CORS preflight), so
-    insisting on it is a second wall behind the Origin check (audit D-2)."""
-    return request.headers.get("content-type", "").split(";")[0].strip().lower() == "application/json"
-
-
-def require_json_type(request: Request) -> None:
-    if not is_json_type(request):
-        raise UserDataError("bad_request", "CONTENT-TYPE MUST BE application/json")
-
-
-async def json_object(request: Request) -> dict:
-    declared = request.headers.get("content-length", "")
-    if declared.isdigit() and int(declared) > MAX_BODY:  # refuse before buffering it
-        raise UserDataError("too_large", f"BODY OVER {MAX_BODY // 1_000_000} MB")
-    require_json_type(request)
-    raw = await request.body()
-    if len(raw) > MAX_BODY:
-        raise UserDataError("too_large", f"BODY OVER {MAX_BODY // 1_000_000} MB")
-    try:
-        body = orjson.loads(raw)
-    except orjson.JSONDecodeError:
-        raise UserDataError("bad_request", "BODY IS NOT JSON") from None
-    if not isinstance(body, dict):
-        raise UserDataError("bad_request", "BODY MUST BE A JSON OBJECT")
-    return body
-
-
-async def json_body(request: Request, key: str):
-    body = await json_object(request)
-    if key not in body:
-        raise UserDataError("bad_request", f"BODY NEEDS {key}")
-    return body[key]
-
-
-def error(e: DataError | UserDataError) -> Response:
-    body = {"error": redact(str(e)), "kind": e.kind}
-    if e.kind == "key_required" and getattr(e, "key", None):
-        body["key"] = e.key
-        body["detail"] = f"KEY REQUIRED: set {e.key} in APIKEYS"
-    elif getattr(e, "detail", None):
-        body["detail"] = redact(e.detail)
-    return Orjson(body, status_code=STATUS.get(e.kind, 500))
 
 
 @router.get("/quote")
@@ -87,12 +39,10 @@ async def quote(request: Request, symbols: str = Query(..., max_length=2000)):
 
 
 @router.get("/history")
+@data_errors
 async def history(request: Request, symbol: str = Query(..., max_length=32), range: str | None = None,
                   interval: str | None = None):
-    try:
-        return await svc(request).history(symbol, range, interval)
-    except DataError as e:
-        return error(e)
+    return await svc(request).history(symbol, range, interval)
 
 
 @router.get("/history/limits")
@@ -103,22 +53,19 @@ async def history_limits(request: Request, symbol: str = Query(..., max_length=3
 
 
 @router.get("/profile")
+@data_errors
 async def profile(request: Request, symbol: str = Query(..., max_length=32)):
-    try:
-        return await svc(request).profile(symbol)
-    except DataError as e:
-        return error(e)
+    return await svc(request).profile(symbol)
 
 
 @router.get("/search")
+@data_errors
 async def search(request: Request, q: str = Query(..., max_length=64)):
-    try:
-        return await svc(request).search(q)
-    except DataError as e:
-        return error(e)
+    return await svc(request).search(q)
 
 
 @router.get("/news")
+@data_errors
 async def news(
     request: Request,
     symbol: str | None = Query(None, max_length=24),
@@ -132,29 +79,22 @@ async def news(
 ):
     from .news_tags import clean_filters
 
-    try:
-        f = clean_filters(region, sector, commodity, section, q)
-        if f.active and not (f.region or f.sector or f.commodity or f.section):
-            f = None  # `q` alone keeps meaning "GDELT keyword search" (the old behaviour)
-        return await svc(request).news(symbol, q, f, limit)
-    except DataError as e:
-        return error(e)
+    f = clean_filters(region, sector, commodity, section, q)
+    if f.active and not (f.region or f.sector or f.commodity or f.section):
+        f = None  # `q` alone keeps meaning "GDELT keyword search" (the old behaviour)
+    return await svc(request).news(symbol, q, f, limit)
 
 
 @router.get("/movers")
+@data_errors
 async def movers(request: Request):
-    try:
-        return await svc(request).movers()
-    except DataError as e:
-        return error(e)
+    return await svc(request).movers()
 
 
 @router.get("/crypto")
+@data_errors
 async def crypto(request: Request, vs: str = Query("USD", max_length=5)):
-    try:
-        return await svc(request).crypto(vs)
-    except DataError as e:
-        return error(e)
+    return await svc(request).crypto(vs)
 
 
 @router.get("/resolve")
@@ -268,143 +208,111 @@ async def delete_watchlist(request: Request, name: str):
 
 # --- Phase 6: SEC fundamentals / filings / insiders, Yahoo holders ---
 @router.get("/fa")
+@data_errors
 async def fa(request: Request, symbol: str = Query(..., max_length=24), period: str = Query("A", max_length=1)):
-    try:
-        return await svc(request).fundamentals(symbol, period)
-    except DataError as e:
-        return error(e)
+    return await svc(request).fundamentals(symbol, period)
 
 
 # --- Phase 13: research functions (EE, EEO, ANR, MGMT, ...) ---
 @router.get("/research/{fn}")
+@data_errors
 async def research(
     request: Request, fn: str, symbol: str | None = Query(None, max_length=24), month: str | None = Query(None, max_length=7),
     index: str | None = Query(None, max_length=24), manager: str | None = Query(None, max_length=60),
 ):
-    try:
-        return await svc(request).research.run(fn, symbol=symbol, month=month, index=index, manager=manager)
-    except DataError as e:
-        return error(e)
+    return await svc(request).research.run(fn, symbol=symbol, month=month, index=index, manager=manager)
 
 
 @router.get("/valuation/{fn}")
+@data_errors
 async def valuation(request: Request, fn: str, symbol: str | None = Query(None, max_length=24)):
-    try:
-        query = {k: v for k, v in request.query_params.items() if k != "symbol"}
-        return await svc(request).research.run_valuation(fn, symbol, query)
-    except DataError as e:
-        return error(e)
+    query = {k: v for k, v in request.query_params.items() if k != "symbol"}
+    return await svc(request).research.run_valuation(fn, symbol, query)
 
 
 # --- Phase 14: options, rates, futures (OMON, PCR, OV, OVDV, SKEW, HIVG, OSA, YAS, SWPM, CDSW, FXFA, WIRP, CT, COT, RATES views) ---
 @router.get("/deriv/{fn}")
+@data_errors
 async def deriv(request: Request, fn: str):
-    try:
-        params = {k.lower(): v for k, v in request.query_params.items()}
-        return await svc(request).derivs.run(fn, **params)
-    except DataError as e:
-        return error(e)
+    params = {k.lower(): v for k, v in request.query_params.items()}
+    return await svc(request).derivs.run(fn, **params)
 
 
 # --- Phase 14 step 6: RATES views (the Treasury panel keeps GET /rates) ---
 @router.get("/rates/curve")
+@data_errors
 async def rates_curve(request: Request, ccy: str = Query("", max_length=8), fit: str | None = Query(None, max_length=8)):
-    try:
-        return await svc(request).rates_views.curve(ccy, fit)
-    except DataError as e:
-        return error(e)
+    return await svc(request).rates_views.curve(ccy, fit)
 
 
 @router.get("/rates/spreads")
+@data_errors
 async def rates_spreads(request: Request):
-    try:
-        return await svc(request).rates_views.spreads()
-    except DataError as e:
-        return error(e)
+    return await svc(request).rates_views.spreads()
 
 
 @router.get("/rates/auctions")
+@data_errors
 async def rates_auctions(request: Request):
-    try:
-        return await svc(request).rates_views.auctions()
-    except DataError as e:
-        return error(e)
+    return await svc(request).rates_views.auctions()
 
 
 # --- Phase 9: screener (EQS) and peers (COMP) ---
 @router.get("/screener")
+@data_errors
 async def screener(request: Request):
-    try:
-        return await svc(request).screener()
-    except DataError as e:
-        return error(e)
+    return await svc(request).screener()
 
 
 # --- Phase 7: macro ---
 @router.get("/fred")
+@data_errors
 async def fred(request: Request, id: str = Query(..., max_length=40), range: str | None = Query(None, max_length=4)):
-    try:
-        return await svc(request).fred_series(id, range)
-    except DataError as e:
-        return error(e)
+    return await svc(request).fred_series(id, range)
 
 
 @router.get("/filings")
+@data_errors
 async def filings(
     request: Request, symbol: str = Query(..., max_length=24), form: str | None = Query(None, max_length=20)
 ):
-    try:
-        return await svc(request).filings(symbol, form)
-    except DataError as e:
-        return error(e)
+    return await svc(request).filings(symbol, form)
 
 
 @router.get("/macro")
+@data_errors
 async def macro(request: Request, q: str | None = Query(None, max_length=80)):
-    try:
-        return await svc(request).macro(q)
-    except DataError as e:
-        return error(e)
+    return await svc(request).macro(q)
 
 
 @router.get("/insiders")
+@data_errors
 async def insiders(request: Request, symbol: str = Query(..., max_length=24)):
-    try:
-        return await svc(request).insiders(symbol)
-    except DataError as e:
-        return error(e)
+    return await svc(request).insiders(symbol)
 
 
 @router.get("/rates")
+@data_errors
 async def rates(request: Request):
-    try:
-        return await svc(request).rates()
-    except DataError as e:
-        return error(e)
+    return await svc(request).rates()
 
 
 @router.get("/holders")
+@data_errors
 async def holders(request: Request, symbol: str = Query(..., max_length=24)):
-    try:
-        return await svc(request).holders(symbol)
-    except DataError as e:
-        return error(e)
+    return await svc(request).holders(symbol)
 
 
 @router.get("/earnings")
+@data_errors
 async def earnings(request: Request, date: str | None = Query(None, max_length=10)):
-    try:
-        return await svc(request).earnings(date)
-    except DataError as e:
-        return error(e)
+    return await svc(request).earnings(date)
 
 
 @router.get("/eco")
+@data_errors
 async def eco(request: Request, start: str | None = Query(None, max_length=10), days: int = Query(14, ge=1, le=62)):
-    try:
-        return await svc(request).eco(start, days)
-    except DataError as e:
-        return error(e)
+    return await svc(request).eco(start, days)
 
 
 # --- Phase 8: portfolios and alerts -----------------------------------------------------------
@@ -596,11 +504,9 @@ async def rearm_news_alert(request: Request, alert_id: int):
 
 
 @router.get("/peers")
+@data_errors
 async def peers(request: Request, symbol: str = Query(..., max_length=24)):
-    try:
-        return await svc(request).peers(symbol)
-    except DataError as e:
-        return error(e)
+    return await svc(request).peers(symbol)
 
 
 # --- Phase 10: settings ---
@@ -690,13 +596,6 @@ async def ind_presets_delete(request: Request, name: str):
 
 
 # --- Phase 11: key store (APIKEYS). Values go in, never out. ---
-KEY_STATUS = {"unknown_provider": 404, "bad_request": 400, "env_locked": 409, "forbidden": 403}
-
-
-def key_error(kind: str, message: str) -> Response:
-    return Orjson({"error": redact(message), "kind": kind}, status_code=KEY_STATUS.get(kind, 500))
-
-
 def key_row(st: dict) -> dict:
     spec = keystore.KEY_SPECS[st["name"]]
     return {**st, "fields": list(spec.fields), "purpose": spec.purpose, "phase": spec.phase, "signup": spec.signup}
@@ -704,10 +603,6 @@ def key_row(st: dict) -> dict:
 
 def keys_of(request: Request) -> keystore.KeyStore:
     return request.app.state.keys
-
-
-def loopback(request: Request) -> bool:
-    return bool(request.client) and request.client.host in LOOPBACK
 
 
 @router.get("/keys")
@@ -764,10 +659,6 @@ async def keys_delete(request: Request, name: str):
 
 
 # --- Phase 11: background jobs ---
-def jobs_of(request: Request):
-    return request.app.state.jobs
-
-
 @router.post("/jobs")
 async def jobs_submit(request: Request):
     from .jobs.kinds import BadParams
@@ -881,15 +772,6 @@ def bt_of(request: Request):
         jobs_of(request).on_done["bt.run"] = on_done
         app.state.bt = store
     return app.state.bt
-
-
-def bt_error(e) -> Response:
-    body = {"error": redact(str(e)), "kind": getattr(e, "kind", "bad_request")}
-    if getattr(e, "detail", None):
-        body["detail"] = redact(e.detail)
-    if getattr(e, "col", None) is not None and e.col >= 0:
-        body["col"] = e.col
-    return Orjson(body, status_code=STATUS.get(body["kind"], 400))
 
 
 def _opt_num(opts: dict, key: str, lo: float, hi: float, default=None):

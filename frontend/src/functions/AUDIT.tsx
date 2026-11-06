@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { aiApi } from "../net/aiApi";
 import type { FunctionProps } from "./registry";
 
 interface Entry {
@@ -39,10 +40,10 @@ export default function AUDIT({ panelId }: FunctionProps) {
 
   const load = useCallback(async () => {
     try {
-      const [l, v] = await Promise.all([fetch("/api/ai/ledger?limit=100"), fetch("/api/ai/ledger/verify")]);
+      const [l, v] = await Promise.all([aiApi.ledger<{ entries: Entry[] }>(), aiApi.ledgerVerify<Verdict>()]);
       if (!l.ok || !v.ok) return setErr(`HTTP ${l.ok ? v.status : l.status}`);
-      setEntries(((await l.json()) as { entries: Entry[] }).entries);
-      setVerdict((await v.json()) as Verdict);
+      setEntries(l.json!.entries);
+      setVerdict(v.json as Verdict);
       setErr(null);
     } catch {
       setErr("BACKEND DOWN");

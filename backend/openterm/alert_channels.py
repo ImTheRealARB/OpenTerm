@@ -21,8 +21,6 @@ from .userdata import UserDataError
 
 log = logging.getLogger("openterm.alert_channels")
 
-# The three channels the backend can push on (same names as delivery.settings.PUSH; "desktop" lives in the browser).
-CANONICAL = ("email", "telegram", "webhook")
 # What a user may type after VIA (case-insensitive) -> the canonical name. TG is the short form of telegram.
 ALIASES = {"EMAIL": "email", "TELEGRAM": "telegram", "TG": "telegram", "WEBHOOK": "webhook"}
 

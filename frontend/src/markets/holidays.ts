@@ -1,5 +1,5 @@
 /** Loads exchange holidays for the market lights from /api/world/holidays (NY by rule; LN, TK, HK from Nager.Date; IN by partial NSE rules: fixed dates only, festivals NOT included). Failures are silent: the lights fall back to weekday sessions and say so. */
-import { worldApi } from "../net/api";
+import { worldApi } from "../net/worldApi";
 import { MARKETS, hasClosures, setClosures } from "./hours";
 
 const tried = new Set<string>();

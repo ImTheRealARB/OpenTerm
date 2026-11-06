@@ -9,14 +9,13 @@ import { parseBarsCsv } from "../bt/csvImport";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtNum } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtImported } from "../net/api";
-import { navKey, useLatest } from "./quoteRows";
+import { btApi } from "../net/btApi";
+import type { BtImported } from "../net/types";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
+import { errText } from "../net/errText";
 
-const errText = (e: unknown) => {
-  const a = e as ApiError;
-  return `${a.message ?? String(e)}${a.detail ? ` (${a.detail})` : ""}`;
-};
 const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.^=_-]{0,15}$/;
 
 const COLS: Column<BtImported>[] = [

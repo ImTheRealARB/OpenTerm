@@ -6,12 +6,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { fmtRate } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelRefresh } from "./panelRefresh";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
 import { getLive, onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import { crossPair, crossRate, parseCurrencies, usdLeg } from "./boards";
-import { navKey, useLatest, useQuotes, type QRow } from "./quoteRows";
+import { useQuotes, type QRow } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -84,6 +87,7 @@ export default function FXC({ panelId, args }: FunctionProps) {
     });
   }, [legKey]);
 
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -96,9 +100,6 @@ export default function FXC({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "GP", security: { symbol: crossPair(r.ccy, "USD") }, args: [] });
             return true;
           }
-          case "F5":
-            setReload((n) => n + 1);
-            return true;
         }
         return false;
       }),

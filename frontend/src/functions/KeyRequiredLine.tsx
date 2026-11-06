@@ -5,8 +5,7 @@
 import { useEffect } from "react";
 import { PanelNote } from "../components/PanelNote";
 import { registerPanelKeys } from "../keys/panelKeys";
-import type { ApiError } from "../net/api";
-import { keyRequiredOf } from "../net/api";
+import { type ApiError, keyRequiredOf } from "../net/core";
 import { settingsStore } from "../settings/runtime";
 import { usePanelId } from "../state/panelContext";
 import { useStore } from "../state/store";

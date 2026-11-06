@@ -13,6 +13,7 @@ import { Workspace } from "./components/Workspace";
 import { openWindowMenu, windowMenuKey } from "./components/windowMenuRun";
 import { match } from "./keys/keys";
 import { dispatchPanelKey } from "./keys/panelKeys";
+import { refreshPanelOrSay } from "./functions/panelRefresh";
 import { exportPanelCsv } from "./functions/tableExport";
 import { LazyPiece } from "./components/LazyPiece";
 import { GuiHelpDrawer, GuiOverlays, GuiSidebar, GuiTop, toggleHelp } from "./gui";
@@ -22,7 +23,7 @@ import { useStatusBarShown } from "./gui/statusBarState";
 import { getSettings, settingsStore, toggleMode } from "./settings/runtime";
 import { loadJSON, saveJSON, useStore } from "./state/store";
 import {
-  closePanel, currentView, cyclePanel, focusPanel, historyStep, resizeFocused, split, toggleMaximize, workspace,
+  closePanel, currentView, cyclePanel, focusPanel, historyStep, resizeFocused, splitOrSay, toggleMaximize, workspace,
 } from "./state/workspace";
 
 /** Bindings that always win over panel-local keys. */
@@ -184,10 +185,10 @@ export function App() {
           cyclePanel(-1);
           break;
         case "splitVertical":
-          if (split("v") === null) info("PANEL LIMIT (9) REACHED");
+          splitOrSay("v", info);
           break;
         case "splitHorizontal":
-          if (split("h") === null) info("PANEL LIMIT (9) REACHED");
+          splitOrSay("h", info);
           break;
         case "closePanel":
           closePanel();
@@ -214,7 +215,7 @@ export function App() {
           historyStep(1);
           break;
         case "refresh":
-          if (!dispatchPanelKey(workspace.get().focus, e)) info("NOTHING TO REFRESH IN THIS PANEL");
+          refreshPanelOrSay(workspace.get().focus); // calls what the panel registered, whatever key `refresh` is bound to
           break;
         case "saveWorkspace": {
           // Re-save the named layout in use; otherwise ask for a name on the command line.

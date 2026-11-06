@@ -19,14 +19,16 @@ import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtStrategy, type BtStrategyCard, type BtTemplate } from "../net/api";
+import { btApi } from "../net/btApi";
+import { ApiError } from "../net/core";
+import type { BtStrategy, BtStrategyCard, BtTemplate } from "../net/types";
 import { replaceView } from "../state/workspace";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
+import { errText as netErrText } from "../net/errText";
 
-const errText = (e: unknown) => {
-  const a = e as ApiError;
-  return `${a.message ?? String(e)}${a.detail ? `: ${a.detail}` : ""}`;
-};
+/** This editor joins the server's detail with a colon ("NOT SAVED: LINE 3: ..."). */
+const errText = (e: unknown) => netErrText(e, "colon");
 export const NAME_RE = /^[a-z0-9_-]{1,40}$/;
 
 const TEMPLATE_COLS: Column<BtTemplate>[] = [

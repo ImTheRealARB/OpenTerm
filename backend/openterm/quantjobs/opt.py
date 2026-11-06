@@ -13,7 +13,6 @@ import numpy as np
 from ..research.table import col, head, payload, section
 from . import common as cm
 
-METHODS = ("EQVOL", "RP", "MV", "MAXDIV", "HRP", "TURN")
 MIN_WINDOW = 30
 
 

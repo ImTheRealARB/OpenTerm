@@ -3,10 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, api9, type Envelope, type PeersPayload, type Quote } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, PeersPayload, Quote } from "../net/types";
 import { navigate } from "../state/workspace";
 import { latestOnly } from "./keyedLoad";
-import { dirColor, navKey, useLatest } from "./quoteRows";
+import { dirColor } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { periodReturn } from "./returns";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -55,18 +60,18 @@ export default function COMP({ panelId, security }: FunctionProps) {
   const load = useCallback(() => {
     const current = gate.current.start();
     setLoading(true);
-    return api9
+    return marketApi
       .peers(symbol)
       .then(async (pe) => {
         const { self, peers } = pe.data;
         const all = [self, ...peers];
         const failed: string[] = [];
         const [qres, hres] = await Promise.all([
-          api.quotes(all.map((p) => p.symbol)).catch((e: ApiError) => {
+          marketApi.quotes(all.map((p) => p.symbol)).catch((e: ApiError) => {
             failed.push(`QUOTES: ${e.message}`);
             return null;
           }),
-          Promise.allSettled(all.map((p) => api9.history(p.symbol, "2Y", "1d"))),
+          Promise.allSettled(all.map((p) => marketApi.history(p.symbol, "2Y", "1d"))),
         ]);
         let stale = pe.stale;
         let age = pe.age_s;
@@ -137,6 +142,7 @@ export default function COMP({ panelId, security }: FunctionProps) {
 
   useCsvExport(panelId, () => (rows.length ? gridCsv(`COMP_${symbol}`, columns, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -149,13 +155,10 @@ export default function COMP({ panelId, security }: FunctionProps) {
             if (r && r.role !== "MEDIAN") navigate(panelId, { fn: "DES", security: { symbol: r.symbol }, args: [] });
             return true;
           }
-          case "F5":
-            void load();
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const self = data?.peers.data.self;

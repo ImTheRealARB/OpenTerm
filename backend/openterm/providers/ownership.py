@@ -8,8 +8,9 @@ import re
 from typing import Any
 
 from .base import ProviderError
+from .http import SEARCH_BASE
 from .sec import HOLDERS, INSIDERS
-from .yahoo import SEARCH_BASE, YahooProvider, _raw
+from .yahoo import YahooProvider, raw_value
 
 # Yahoo's transaction text -> Form 4 code. Unknown wording keeps an empty code and shows the text.
 _TEXT_CODES = (
@@ -30,10 +31,10 @@ def holders_from_summary(symbol: str, r: dict, source: str, as_of: float) -> dic
         for h in (r.get(module) or {}).get("ownershipList") or []:
             out.append({
                 "holder": h.get("organization") or "",
-                "pct_held": _raw(h, "pctHeld"),
-                "shares": _raw(h, "position"),
-                "value": _raw(h, "value"),
-                "pct_change": _raw(h, "pctChange"),
+                "pct_held": raw_value(h, "pctHeld"),
+                "shares": raw_value(h, "position"),
+                "value": raw_value(h, "value"),
+                "pct_change": raw_value(h, "pctChange"),
                 "report_date": _date(h.get("reportDate")),
             })
         return out
@@ -41,10 +42,10 @@ def holders_from_summary(symbol: str, r: dict, source: str, as_of: float) -> dic
     out = {
         "symbol": symbol,
         "breakdown": {
-            "insiders_pct": _raw(mh, "insidersPercentHeld"),
-            "institutions_pct": _raw(mh, "institutionsPercentHeld"),
-            "institutions_float_pct": _raw(mh, "institutionsFloatPercentHeld"),
-            "institutions_count": _raw(mh, "institutionsCount"),
+            "insiders_pct": raw_value(mh, "insidersPercentHeld"),
+            "institutions_pct": raw_value(mh, "institutionsPercentHeld"),
+            "institutions_float_pct": raw_value(mh, "institutionsFloatPercentHeld"),
+            "institutions_count": raw_value(mh, "institutionsCount"),
         },
         "institutions": rows("institutionOwnership"),
         "funds": rows("fundOwnership"),
@@ -62,7 +63,7 @@ def insiders_from_summary(symbol: str, r: dict, source: str, as_of: float) -> di
         text = t.get("transactionText") or ""
         low = text.lower()
         code = next((c for k, c in _TEXT_CODES if k in low), "")
-        shares, value = _raw(t, "shares"), _raw(t, "value")
+        shares, value = raw_value(t, "shares"), raw_value(t, "value")
         m = re.search(r"price ([\d.]+)", low)
         price = float(m.group(1)) if m else (value / shares if value and shares else None)
         trades.append({

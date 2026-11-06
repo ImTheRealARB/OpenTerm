@@ -1,7 +1,8 @@
 /** Shared bits of the Phase 6 panels (FA, FIL, OWN, HDS): envelope loading and the header/error lines. */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { fmtAge } from "../format";
-import type { ApiError, Envelope } from "../net/api";
+import type { ApiError } from "../net/core";
+import type { Envelope } from "../net/types";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 
 export const US_ONLY = "SEC DATA COVERS US FILERS ONLY";
@@ -12,45 +13,8 @@ export const SEC_UA_HINT = 'SEC REJECTED THE REQUEST: SET SEC_USER_AGENT="Your N
 const SOURCE_NAMES: Record<string, string> = { sec: "SEC EDGAR", yahoo_own: "YAHOO FINANCE", fixtures: "FIXTURES" };
 export const sourceName = (s: string | null | undefined) => SOURCE_NAMES[s ?? ""] ?? (s ?? "").toUpperCase();
 
-/** Loads one envelope per `key`; a late answer for an old key is dropped. `reload(true)` is F5. */
-export function useEnvelope<T>(key: string, load: (fresh: boolean) => Promise<Envelope<T>>) {
-  const [env, setEnv] = useState<Envelope<T> | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(true);
-  const current = useRef(key);
-  const loader = useRef(load);
-  loader.current = load;
-
-  const reload = useCallback(
-    (fresh: boolean) => {
-      const k = key;
-      setLoading(true);
-      return loader
-        .current(fresh)
-        .then((e) => {
-          if (current.current !== k) return;
-          setEnv(e);
-          setError(null);
-        })
-        .catch((e: ApiError) => {
-          if (current.current === k) setError(e);
-        })
-        .finally(() => {
-          if (current.current === k) setLoading(false);
-        });
-    },
-    [key],
-  );
-
-  useEffect(() => {
-    current.current = key;
-    setEnv(null);
-    setError(null);
-    void reload(false);
-  }, [key, reload]);
-
-  return { env, error, loading, reload };
-}
+// The shared envelope loader lives in useEnvelope.ts; re-exported here so the SEC panels keep one import line.
+export { useEnvelope } from "./useEnvelope";
 
 /** Title line: name, source, staleness and the panel's key hints. */
 export function Header({ title, env, loading, extra, keys }: { title: ReactNode; env: Envelope<unknown> | null; loading: boolean; extra?: ReactNode; keys: string }) {

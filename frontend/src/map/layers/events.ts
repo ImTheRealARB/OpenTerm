@@ -1,6 +1,6 @@
 /** Layer 5: open natural events from NASA EONET (storms, volcanoes, floods, sea ice...), wildfires left out. Storms also draw their path. */
 import { fmtAge } from "../../functions/aisArgs";
-import type { GeoEvents } from "../../net/api";
+import type { GeoEvents } from "../../net/types";
 import { layerData, type MapLayer } from "../layer";
 import type { LayerData, Shape, Tone } from "../types";
 

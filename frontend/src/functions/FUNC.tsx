@@ -6,7 +6,7 @@ import { ALIASES } from "./aliases";
 import { CATEGORY_OF } from "./categories";
 import { buildRows, filterRows, type DirRow } from "./funcDirectory";
 import { FUNCTION_LIST } from "./registry";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 
 /**
  * FUNC: the function directory. Every function code with its one-line purpose.

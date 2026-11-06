@@ -18,11 +18,15 @@ import { TickerTape } from "../home/TickerTape";
 import { useQuoteMap } from "../home/useQuoteMap";
 import "../home/home.css";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, type NewsItem } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { marketApi } from "../net/marketApi";
+import type { NewsItem } from "../net/types";
 import { pollMs, settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { useLatest, type QRow } from "./quoteRows";
+import { type QRow } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
+import { errText } from "../net/errText";
 
 /** What one news block currently shows. */
 interface NewsState {
@@ -41,12 +45,11 @@ interface NewsState {
 const NEWS_BLOCKS = BLOCKS.filter((b): b is NewsBlock => b.kind === "news");
 const LOADING: NewsState = { items: [], source: "", ageS: 0, stale: false, failed: [], loading: true };
 
-const errText = (e: unknown): string => (e instanceof ApiError ? e.message + (e.detail ? ` (${e.detail})` : "") : e instanceof Error ? e.message : String(e));
 
 /** Fetches every news block (all at once, each independent). `fresh` skips the short client cache (F5). */
 function loadNews(fresh: boolean, alive: () => boolean, put: (id: string, s: NewsState) => void): void {
   for (const b of NEWS_BLOCKS) {
-    void Promise.allSettled(b.sections.map((s) => api.news(newsQuery(s, b.limit), fresh))).then((results) => {
+    void Promise.allSettled(b.sections.map((s) => marketApi.news(newsQuery(s, b.limit), fresh))).then((results) => {
       if (!alive()) return;
       const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
       const bad = results.flatMap((r, i) => (r.status === "rejected" ? [{ section: b.sections[i] ?? "top", why: errText(r.reason) }] : []));
@@ -172,16 +175,13 @@ export default function HOME({ panelId }: FunctionProps) {
   };
 
   const live = useLatest({ counts, cur, activate });
+  usePanelRefresh(panelId, () => refresh(true));
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         const { counts: c, cur: p, activate: act } = live.current;
         if (e.key === "Enter") {
           act(p.b, p.r);
-          return true;
-        }
-        if (e.key === "F5") {
-          refresh(true);
           return true;
         }
         const next = moveNav(c, p, e.key);

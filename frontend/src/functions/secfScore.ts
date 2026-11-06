@@ -3,7 +3,7 @@
  * a name word starts with, text inside a word, subsequence, one typo (insert / delete / swap / replace). Every query word must score;
  * ties go to the larger market cap. The universe is the EQS screener table plus Yahoo search hits (non-US names live only there).
  */
-import type { SearchHit } from "../net/api";
+import type { SearchHit } from "../net/types";
 import type { Universe } from "./eqsFilter";
 
 export interface Cand {

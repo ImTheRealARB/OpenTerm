@@ -1,5 +1,5 @@
 /** Pure helpers for PRED (no DOM, no network): argument parsing, source filter, probability / volume text and the chart series. */
-import type { PredDetail, PredOutcome, PredRow } from "../net/api";
+import type { PredDetail, PredOutcome, PredRow } from "../net/types";
 
 export const PRED_LABEL = "MARKET-IMPLIED PROBABILITY, NOT A FORECAST";
 export type PredSrc = "all" | "polymarket" | "kalshi";
@@ -82,8 +82,4 @@ export function predBars(d: Pick<PredDetail, "source" | "id" | "history">): Pred
   if (!h || h.t.length < 2 || h.t.length !== h.p.length) return null;
   const c = Float64Array.from(h.p, (p) => p * 100);
   return { symbol: `${d.source}:${d.id}`, interval: "60m", tz: "UTC", t: Float64Array.from(h.t), o: c, h: c, l: c, c, v: new Float64Array(c.length) };
-}
-
-export function closeText(r: Pick<PredRow, "close">): string {
-  return r.close ?? "";
 }

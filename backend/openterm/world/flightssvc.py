@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..errors import DataError
 from ..router import AllFailed
-from ..service import DataError
 from . import flights
 
 TTL_S = 30.0  # OpenSky's anonymous resolution is 10 s and credits are metered: nothing is gained by asking sooner
@@ -32,4 +32,4 @@ async def flt(svc: Any, q: str) -> dict[str, Any]:
             raise
         return {"data": flights.payload(kind, label, box, prefix, meta), "source": flights.SOURCE, "fallback_from": failed}
 
-    return await svc._swr(f"w:flt:{label}", TTL_S, fetch)
+    return await svc.swr(f"w:flt:{label}", TTL_S, fetch)

@@ -24,15 +24,19 @@ import { ruleToSentence } from "./ruleSentence";
 import { downloadText } from "../csv";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtMcResult, type BtRunRequest, type BtRunFull, type BtTrade, type BtWfResult, type BtWfWindow } from "../net/api";
+import { btApi } from "../net/btApi";
+import { ApiError } from "../net/core";
+import type { BtMcResult, BtRunFull, BtRunRequest, BtTrade, BtWfResult, BtWfWindow } from "../net/types";
 import { isActive, progressText } from "../net/jobFrames";
 import { adoptJob, cancelJob, fetchJob, useJob } from "../net/jobs";
 import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import BtEditor from "./BtEditor";
 import BtRuns from "./BtRuns";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
+import { errText } from "../net/errText";
 
 const BASE_VIEWS = ["CHART", "METRICS", "TRADES", "CODE"] as const;
 type View = (typeof BASE_VIEWS)[number] | "MC" | "WF";
@@ -50,10 +54,6 @@ type State =
   | { k: "done"; run: BtRunFull }
   | { k: "failed"; error: string };
 
-const errText = (e: unknown) => {
-  const a = e as ApiError;
-  return `${a.message ?? String(e)}${a.detail ? ` (${a.detail})` : ""}`;
-};
 
 interface MetricLine {
   row: MetricRow;

@@ -10,8 +10,8 @@
  * "5 years ago", "since ipo / inception / listing", "all time / max".
  */
 
-/** The ranges GP accepts, kept in step with functions/gpArgs.ts RANGES by natural.test.ts. */
-export const GP_RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"];
+/** The ranges GP accepts: the one shared list (chart/gpRanges.ts), also used by functions/gpArgs.ts. */
+export { GP_RANGES } from "../chart/gpRanges";
 
 /** Fixed ranges that are plain "this many months back" (YTD is a calendar thing, handled apart). */
 const SPANS: [string, number][] = [["1M", 1], ["3M", 3], ["6M", 6], ["1Y", 12], ["2Y", 24], ["5Y", 60], ["10Y", 120]];

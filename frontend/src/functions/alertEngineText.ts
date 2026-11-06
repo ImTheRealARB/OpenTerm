@@ -3,7 +3,7 @@
  * The engine fires alerts while the OpenTerm backend runs, even with no browser open; this says so, how fresh its data is,
  * and every match it refused to act on (and why), because "my alert did not fire" is the question this panel must answer.
  */
-import type { AlertEngineState } from "../net/api";
+import type { AlertEngineState } from "../net/types";
 
 /** "3 s", "2 min", "1 h": how long ago, for ages in seconds. */
 export function fmtAge(s: number): string {

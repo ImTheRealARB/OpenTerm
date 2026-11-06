@@ -1,10 +1,12 @@
 /**
- * Data client. Same-key requests share one fetch; responses are cached briefly so panels and
- * prefetch reuse them. Every payload keeps the backend's source/as_of/stale envelope intact.
+ * Payload types for every backend route the browser calls. TYPE-ONLY: this file has no runtime code and imports nothing
+ * that runs, so pure modules (and vitest, which has no `window`) can import from it without pulling in the request layer.
+ * Import with `import type { ... } from "../net/types"`. The clients that fetch these live next to it (marketApi.ts, secApi.ts, ...).
  */
-import { gauges } from "../perf/metrics";
-import type { JobRec } from "./jobFrames";
-import { keyRequired, type KeyRequiredInfo } from "./keyRequired";
+
+// ---------------------------------------------------------------------------
+// Shared envelope and market data
+// ---------------------------------------------------------------------------
 
 export interface Envelope<T> {
   data: T;
@@ -65,125 +67,9 @@ export interface SearchHit {
 
 export type QuoteResult = Envelope<Quote> | { error: string; kind: string; symbol: string };
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public kind = "unavailable",
-    /** Each provider's reason, e.g. "gdelt: rate_limited (429 from upstream)". */
-    public detail?: string,
-    /** Phase 11: the missing key's env name on a 424 KEY REQUIRED envelope (see keyRequired.ts). */
-    public key?: string,
-    /** Phase 12: 0-based column of a BT rule syntax error. */
-    public col?: number,
-  ) {
-    super(message);
-  }
-}
-
-/** The key and message of a KEY REQUIRED failure, or null for any other error. */
-export function keyRequiredOf(e: ApiError | null | undefined): KeyRequiredInfo | null {
-  return e ? keyRequired(e.status, { key: e.key, detail: e.detail }) : null;
-}
-
-const MAX_ENTRIES = 500;
-const cache = new Map<string, { value: unknown; at: number }>();
-const inflight = new Map<string, Promise<unknown>>();
-
-async function request<T>(path: string, maxAgeMs: number): Promise<T> {
-  const hit = cache.get(path);
-  if (hit && performance.now() - hit.at < maxAgeMs) return hit.value as T;
-  const pending = inflight.get(path);
-  if (pending) return pending as Promise<T>;
-
-  const t0 = performance.now();
-  const p = (async () => {
-    let res: Response;
-    try {
-      res = await fetch(path);
-    } catch {
-      throw new ApiError(0, "BACKEND DOWN");
-    }
-    const body = await res.json().catch(() => null);
-    gauges.set(`api.${path.split("?")[0]}`, performance.now() - t0);
-    if (!res.ok) throw new ApiError(res.status, body?.error ?? `HTTP ${res.status}`, body?.kind, body?.detail, body?.key);
-    cache.delete(path);
-    cache.set(path, { value: body, at: performance.now() });
-    if (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value!);
-    return body as T;
-  })();
-  inflight.set(path, p);
-  try {
-    return await p;
-  } finally {
-    inflight.delete(path);
-  }
-}
-
-/** Uncached write (or read that must be fresh). Errors carry the backend's message. */
-export async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(path, {
-      method,
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiError(0, "BACKEND DOWN");
-  }
-  const json = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail, json?.key, json?.col);
-  return json as T;
-}
-
-const qs = (o: Record<string, string | undefined>) =>
-  new URLSearchParams(Object.entries(o).filter((e): e is [string, string] => !!e[1])).toString();
-
-export const api = {
-  quotes: (symbols: string[]) =>
-    request<{ results: Record<string, QuoteResult> }>(`/api/quote?${qs({ symbols: symbols.join(",") })}`, 2000),
-  history: (symbol: string, range?: string, interval?: string) =>
-    request<Envelope<Bars>>(`/api/history?${qs({ symbol, range, interval })}`, 60_000),
-  /** How many days back each minute candle length reaches for this symbol right now (the deepest source that is on decides). */
-  historyLimits: (symbol: string) =>
-    request<{ symbol: string; intraday_days: Record<string, number>; source: string[] }>(`/api/history/limits?${qs({ symbol })}`, 30_000),
-  search: (q: string) => request<Envelope<SearchHit[]>>(`/api/search?${qs({ q })}`, 600_000),
-  profile: (symbol: string) => request<Envelope<unknown>>(`/api/profile?${qs({ symbol })}`, 600_000),
-  sources: () => request<SourcesPayload>("/api/sources", 1000),
-  log: (after: number) => request<{ records: LogRecord[] }>(`/api/log?after=${after}`, 0),
-  layouts: () => send<{ layouts: LayoutInfo[] }>("GET", "/api/layouts"),
-  layout: (name: string) => send<{ name: string; state: unknown; updated_at: number }>("GET", `/api/layouts/${encodeURIComponent(name)}`),
-  saveLayout: (name: string, state: unknown) =>
-    send<{ name: string; updated_at: number }>("PUT", `/api/layouts/${encodeURIComponent(name)}`, { state }),
-  deleteLayout: (name: string) => send<{ deleted: string }>("DELETE", `/api/layouts/${encodeURIComponent(name)}`),
-  // `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope.
-  news: (q: { symbol?: string; q?: string; section?: string; limit?: string; region?: string; sector?: string; commodity?: string }, fresh = false) =>
-    request<Envelope<NewsPayload>>(`/api/news?${qs(q)}`, fresh ? 0 : 30_000),
-  movers: (fresh = false) => request<Envelope<MoversPayload>>("/api/movers", fresh ? 0 : 30_000),
-  crypto: (vs: string, fresh = false) =>
-    request<Envelope<{ vs: string; coins: Coin[] }>>(`/api/crypto?${qs({ vs })}`, fresh ? 0 : 15_000),
-  watchlists: () => send<{ watchlists: WatchlistInfo[] }>("GET", "/api/watchlists"),
-  watchlist: (name: string) => send<Watchlist>("GET", `/api/watchlists/${encodeURIComponent(name)}`),
-  putWatchlist: (name: string, symbols: string[]) => send<Watchlist>("PUT", `/api/watchlists/${encodeURIComponent(name)}`, { symbols }),
-  editWatchlist: (name: string, change: { add?: string[]; remove?: string[] }) =>
-    send<Watchlist>("PATCH", `/api/watchlists/${encodeURIComponent(name)}`, change),
-  deleteWatchlist: (name: string) => send<{ deleted: string }>("DELETE", `/api/watchlists/${encodeURIComponent(name)}`),
-  cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
-  pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
-  // Phase 11 API keys: uncached (`send`); the backend never returns a value, only status.
-  keys: () => send<KeysPayload>("GET", "/api/keys"),
-  putKey: (name: string, fields: Record<string, string>) => send<KeyRow>("PUT", `/api/keys/${encodeURIComponent(name)}`, { fields }),
-  testKey: (name: string) => send<KeyRow>("POST", `/api/keys/${encodeURIComponent(name)}/test`),
-  deleteKey: (name: string) => send<KeyRow>("DELETE", `/api/keys/${encodeURIComponent(name)}`),
-  putLlmCap: (cap: number) => send<KeysPayload["spend"]>("PUT", "/api/llm/cap", { cap }),
-  // Phase 11 job runner (uncached). `job` carries the result; the list does not.
-  jobs: () => send<{ jobs: JobRec[] }>("GET", "/api/jobs"),
-  job: (id: string) => send<JobRec>("GET", `/api/jobs/${encodeURIComponent(id)}`),
-  submitJob: (kind: string, params: unknown) => send<JobRec>("POST", "/api/jobs", { kind, params }),
-  cancelJob: (id: string) => send<JobRec>("DELETE", `/api/jobs/${encodeURIComponent(id)}`),
-  clearFinishedJobs: () => send<{ cleared: number }>("DELETE", "/api/jobs?state=finished"),
-};
+// ---------------------------------------------------------------------------
+// API keys and AI spend (keysApi)
+// ---------------------------------------------------------------------------
 
 export type KeyState = "MISSING" | "UNTESTED" | "OK" | "INVALID" | "QUOTA" | "ERROR";
 
@@ -207,6 +93,10 @@ export interface KeysPayload {
   spend: { today: number; cap: number };
 }
 
+// ---------------------------------------------------------------------------
+// Indicator presets (presetsApi)
+// ---------------------------------------------------------------------------
+
 export interface PresetItem {
   id?: string;
   formula?: string;
@@ -220,6 +110,10 @@ export interface IndicatorPreset {
   updated_at: number;
 }
 
+// ---------------------------------------------------------------------------
+// Watchlists (workspaceApi)
+// ---------------------------------------------------------------------------
+
 export interface WatchlistInfo {
   name: string;
   count: number;
@@ -231,6 +125,10 @@ export interface Watchlist {
   symbols: string[];
   updated_at: number;
 }
+
+// ---------------------------------------------------------------------------
+// News (marketApi.news)
+// ---------------------------------------------------------------------------
 
 export interface NewsItem {
   id: string;
@@ -255,6 +153,10 @@ export interface NewsPayload {
   feeds_ok?: number;
   feeds_total?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Movers and the crypto board (marketApi)
+// ---------------------------------------------------------------------------
 
 export interface Mover {
   symbol: string;
@@ -290,17 +192,19 @@ export interface Coin {
   source: string;
 }
 
+// ---------------------------------------------------------------------------
+// Layouts (workspaceApi)
+// ---------------------------------------------------------------------------
+
 export interface LayoutInfo {
   name: string;
   panels: number;
   updated_at: number;
 }
 
-/** Warm the most likely next call for a highlighted security: its quote and 1Y daily bars. */
-export function prefetch(symbol: string): void {
-  void api.quotes([symbol]).catch(() => {});
-  void api.history(symbol, "1Y").catch(() => {});
-}
+// ---------------------------------------------------------------------------
+// Provider health and the server log (systemApi)
+// ---------------------------------------------------------------------------
 
 export interface ProviderSummary {
   name: string;
@@ -338,22 +242,10 @@ export interface LogRecord {
   msg: string;
 }
 
-// --- Phase 6: SEC fundamentals / filings / insiders, Yahoo holders ---
-import type { FaPayload, FaPeriod, FilingsPayload, HoldersPayload, InsidersPayload } from "../functions/secTables";
+// ---------------------------------------------------------------------------
+// Macro (macroApi)
+// ---------------------------------------------------------------------------
 
-/** `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope. */
-export const secApi = {
-  fa: (symbol: string, period: FaPeriod, fresh = false) =>
-    request<Envelope<FaPayload>>(`/api/fa?${qs({ symbol, period })}`, fresh ? 0 : 300_000),
-  filings: (symbol: string, form: string, fresh = false) =>
-    request<Envelope<FilingsPayload>>(`/api/filings?${qs({ symbol, form })}`, fresh ? 0 : 60_000),
-  insiders: (symbol: string, fresh = false) =>
-    request<Envelope<InsidersPayload>>(`/api/insiders?${qs({ symbol })}`, fresh ? 0 : 120_000),
-  holders: (symbol: string, fresh = false) =>
-    request<Envelope<HoldersPayload>>(`/api/holders?${qs({ symbol })}`, fresh ? 0 : 300_000),
-};
-
-// --- Phase 7: macro (FRED, MACRO, RATES, ERN, ECO) ---
 export interface FredSeries {
   id: string;
   title: string | null;
@@ -470,18 +362,10 @@ export interface EcoPayload {
   key_set: boolean;
 }
 
-export const macroApi = {
-  fred: (id: string, range: string, fresh = false) =>
-    request<Envelope<FredSeries>>(`/api/fred?${qs({ id, range })}`, fresh ? 0 : 60_000),
-  macro: (q: string, fresh = false) => request<Envelope<MacroPayload>>(`/api/macro?${qs({ q })}`, fresh ? 0 : 60_000),
-  rates: (fresh = false) => request<Envelope<YieldCurve>>("/api/rates", fresh ? 0 : 60_000),
-  earnings: (date: string, fresh = false) =>
-    request<Envelope<EarningsPayload>>(`/api/earnings?${qs({ date })}`, fresh ? 0 : 30_000),
-  eco: (start: string | null, days: number, fresh = false) =>
-    request<Envelope<EcoPayload>>(`/api/eco?${qs({ start: start ?? undefined, days: String(days) })}`, fresh ? 0 : 60_000),
-};
+// ---------------------------------------------------------------------------
+// Portfolios (portfolioApi)
+// ---------------------------------------------------------------------------
 
-// --- Phase 8: portfolios and alerts ---
 export interface Position {
   symbol: string;
   qty: number;
@@ -505,6 +389,10 @@ export interface Portfolio {
 }
 
 export type PositionIn = Partial<Position> & { symbol: string; qty: number };
+
+// ---------------------------------------------------------------------------
+// Price alerts (priceAlertsApi)
+// ---------------------------------------------------------------------------
 
 export interface Alert {
   id: number;
@@ -534,28 +422,10 @@ export interface AlertEngineState {
   skipped: { key: string; label: string; reason: string; age_s: number }[];
 }
 
-const pf = (name: string) => `/api/portfolios/${encodeURIComponent(name)}`;
+// ---------------------------------------------------------------------------
+// Screener and peers (marketApi)
+// ---------------------------------------------------------------------------
 
-export const api8 = {
-  portfolios: () => send<{ portfolios: PortfolioInfo[] }>("GET", "/api/portfolios"),
-  portfolio: (name: string) => send<Portfolio>("GET", pf(name)),
-  putPortfolio: (name: string, positions: PositionIn[], base?: string) =>
-    send<Portfolio>("PUT", pf(name), base ? { positions, base } : { positions }),
-  editPortfolio: (name: string, change: { add?: PositionIn[]; set?: PositionIn[]; remove?: string[]; base?: string }) =>
-    send<Portfolio>("PATCH", pf(name), change),
-  deletePortfolio: (name: string) => send<{ deleted: string }>("DELETE", pf(name)),
-  alerts: () => send<{ alerts: Alert[] }>("GET", "/api/alerts"),
-  createAlert: (a: { symbol: string; op: ">" | "<"; unit: "price" | "pct"; value: number; channels?: string[] }) => send<Alert>("POST", "/api/alerts", a),
-  deleteAlert: (id: number) => send<{ deleted: number }>("DELETE", `/api/alerts/${id}`),
-  alertEngine: () => send<AlertEngineState>("GET", "/api/alerts/engine"),
-  /** `synthetic` tells the server this firing came from labelled test data, so it is never pushed to Telegram or email. */
-  triggerAlert: (id: number, price: number, at: number, synthetic = false) =>
-    send<{ alert: Alert; changed: boolean }>("POST", `/api/alerts/${id}/trigger`, synthetic ? { price, at, synthetic: true } : { price, at }),
-  rearmAlert: (id: number) => send<Alert>("POST", `/api/alerts/${id}/rearm`),
-  clearAlerts: () => send<{ deleted: number }>("DELETE", "/api/alerts?status=triggered"),
-};
-
-// --- Phase 9: screener (EQS), peers (COMP) ---
 export interface ScreenerPayload {
   columns: string[];
   /** [symbol, name, last, chg, pct, volume, mcap, country_i, ipo, sector_i, industry_i] (see functions/eqsFilter.ts). */
@@ -590,15 +460,10 @@ export interface PeersPayload {
 /** Daily+ Yahoo bars carry dividend/split-adjusted closes (`adj`); other sources leave it out. */
 export type BarsAdj = Bars & { adj?: (number | null)[] | null };
 
-export const api9 = {
-  history: (symbol: string, range: string, interval?: string, fresh = false) =>
-    request<Envelope<BarsAdj>>(`/api/history?${qs({ symbol, range, interval })}`, fresh ? 0 : 60_000),
-  /** About 1 MB, cached server-side for 15 min; the client keeps it 5 min. */
-  screener: (fresh = false) => request<Envelope<ScreenerPayload>>("/api/screener", fresh ? 0 : 300_000),
-  peers: (symbol: string) => request<Envelope<PeersPayload>>(`/api/peers?${qs({ symbol })}`, 600_000),
-};
+// ---------------------------------------------------------------------------
+// Settings (settingsApi)
+// ---------------------------------------------------------------------------
 
-// --- Phase 10: settings ---
 export interface SettingsDoc {
   version: number;
   /** null until the first save. */
@@ -606,12 +471,10 @@ export interface SettingsDoc {
   updated_at: number | null;
 }
 
-export const settingsApi = {
-  get: () => send<SettingsDoc>("GET", "/api/settings"),
-  put: (settings: unknown) => send<{ version: number; settings: unknown; updated_at: number }>("PUT", "/api/settings", { version: 1, settings }),
-};
+// ---------------------------------------------------------------------------
+// Backtesting (btApi)
+// ---------------------------------------------------------------------------
 
-// --- Phase 12: backtester ---
 export interface BtSource {
   symbol?: string;
   name?: string | null;
@@ -619,6 +482,7 @@ export interface BtSource {
   age_s?: number | null;
   stale?: boolean;
 }
+
 export interface BtLabels {
   headline: string;
   engine: string;
@@ -632,6 +496,7 @@ export interface BtLabels {
   benchmark?: string;
   data_note?: string;
 }
+
 export interface BtTrade {
   symbol: string;
   direction: number;
@@ -646,6 +511,7 @@ export interface BtTrade {
   holding_bars?: number | null;
   exit_reason: string;
 }
+
 export interface BtRunCard {
   id: string;
   rule: string | null;
@@ -658,6 +524,7 @@ export interface BtRunCard {
   created_at: number;
   metrics: Record<string, number | null>;
 }
+
 export interface BtRunFull extends BtRunCard {
   /** [epoch seconds, value] */
   equity: [number, number][];
@@ -665,6 +532,7 @@ export interface BtRunFull extends BtRunCard {
   trades: BtTrade[];
   code?: string | null;
 }
+
 export interface BtRunRequest {
   rule?: string;
   code?: string;
@@ -695,6 +563,7 @@ export interface BtMcResult {
     confidence?: number; n_bootstrap?: number; error?: string };
   labels: BtLabels & { validation?: string };
 }
+
 export interface BtWfWindow {
   window: number;
   start: string;
@@ -705,6 +574,7 @@ export interface BtWfWindow {
   trades: number;
   win_rate: number;
 }
+
 /** Result of a bt.wf job. */
 export interface BtWfResult {
   run_id: string;
@@ -740,6 +610,7 @@ export interface BtStrategyCard {
   kind: "python" | "rule";
   updated_at: number;
 }
+
 export interface BtStrategy extends BtStrategyCard {
   code: string;
 }
@@ -755,70 +626,9 @@ export interface BtTemplate {
 /** The sandbox check answer: `ok`, or `ok: false` with the text ("LINE 3: IMPORT os IS NOT ALLOWED ...", or no LINE prefix). */
 export type BtCheck = { ok: true } | { ok: false; error: string };
 
-export const btApi = {
-  templates: () => send<{ templates: BtTemplate[] }>("GET", "/api/bt/templates"),
-  /** Runs the sandbox rules over the code without saving it (the editor's live check). */
-  check: (code: string) => send<BtCheck>("POST", "/api/bt/check", { code }),
-  strategies: () => send<{ strategies: BtStrategyCard[] }>("GET", "/api/bt/strategies"),
-  strategy: (name: string) => send<BtStrategy>("GET", `/api/bt/strategies/${encodeURIComponent(name)}`),
-  /** Python code, or a rule. The server checks both (the sandbox allowlist for code) and says why it refuses. */
-  putStrategy: (name: string, body: { code: string } | { rule: string }) =>
-    send<BtStrategyCard>("PUT", `/api/bt/strategies/${encodeURIComponent(name)}`, body),
-  deleteStrategy: (name: string) => send<{ deleted: string }>("DELETE", `/api/bt/strategies/${encodeURIComponent(name)}`),
-  imports: () => send<{ symbols: BtImported[] }>("GET", "/api/bt/import"),
-  deleteImport: (symbol: string) => send<{ deleted: string }>("DELETE", `/api/bt/import/${encodeURIComponent(symbol)}`),
-  /** Stores the CSV text as the symbol's daily bars (replaces an earlier import). */
-  importBars: async (symbol: string, csv: string): Promise<BtImported & { volume: boolean }> => {
-    let res: Response;
-    try {
-      res = await fetch(`/api/bt/import?symbol=${encodeURIComponent(symbol)}`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: csv });
-    } catch {
-      throw new ApiError(0, "BACKEND DOWN");
-    }
-    const json = await res.json().catch(() => null);
-    if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
-    return json;
-  },
-  runs: () => send<{ runs: BtRunCard[] }>("GET", "/api/bt/runs"),
-  compare: (a: string, b: string) => send<BtCompare>("GET", `/api/bt/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
-  /** The server-built export: a CSV part (`trades`, `equity`, `metrics`) or the Pine Script of a rule run. */
-  exportText: async (id: string, fmt: "csv" | "pine", part = "trades"): Promise<string> => {
-    let res: Response;
-    try {
-      res = await fetch(`/api/bt/runs/${encodeURIComponent(id)}/export?fmt=${fmt}&part=${part}`);
-    } catch {
-      throw new ApiError(0, "BACKEND DOWN");
-    }
-    if (!res.ok) {
-      const json = await res.json().catch(() => null);
-      throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
-    }
-    return res.text();
-  },
-  /** Start a Monte Carlo (`mc`) or walk-forward (`wf`) job on a stored run. */
-  validate: (id: string, kind: "mc" | "wf", body: Record<string, unknown> = {}) =>
-    send<JobRec>("POST", `/api/bt/runs/${encodeURIComponent(id)}/${kind}`, body),
-  /** The job, plus the id its run will be stored under (open it at once when the answer is cached). */
-  run: (body: BtRunRequest) => send<JobRec & { run_id: string; run?: BtRunFull }>("POST", "/api/bt/run", body),
-  get: (id: string) => send<BtRunFull>("GET", `/api/bt/runs/${encodeURIComponent(id)}`),
-};
-
-// --- Phase 13: research functions (EE, EEO, ANR, MGMT, ...) and valuation (DCF, WACC, RV) ---
-import type { TablePayload } from "../research/tablePayload";
-
-/** One call for every table function: `fn` is the backend route name (ee, anr, ipo, ...). `fresh` (F5) skips the client cache. */
-export const researchApi = {
-  get: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
-    request<Envelope<TablePayload>>(`/api/research/${fn}?${qs(params)}`, fresh ? 0 : 120_000),
-  valuation: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
-    request<Envelope<TablePayload>>(`/api/valuation/${fn}?${qs(params)}`, fresh ? 0 : 30_000),
-  /** Phase 14: options, rates, futures (OMON, OV, OSA, YAS, CT, COT, ...). */
-  deriv: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
-    request<Envelope<TablePayload>>(`/api/deriv/${fn}?${qs(params)}`, fresh ? 0 : 60_000),
-  /** Phase 14: non-US curves, credit spreads and auctions (RATES views). */
-  rates: (fn: string, params: Record<string, string | undefined>, fresh = false) =>
-    request<Envelope<TablePayload>>(`/api/rates/${fn}?${qs(params)}`, fresh ? 0 : 60_000),
-};
+// ---------------------------------------------------------------------------
+// Portfolio valuations (portfolioApi)
+// ---------------------------------------------------------------------------
 
 /** Phase 15: quant jobs (RISK, PORT OPT, PORT ATTR, ...). The answer is the job; its `result` is an envelope of a table payload. */
 export interface ValRow {
@@ -827,11 +637,9 @@ export interface ValRow {
   flow: number;
 }
 
-export const quantApi = {
-  run: (fn: string, body: Record<string, unknown>) => send<JobRec>("POST", `/api/quant/${encodeURIComponent(fn)}`, body),
-  vals: (name: string) => send<{ rows: ValRow[] }>("GET", `${pf(name)}/vals`),
-  putVals: (name: string, rows: ValRow[]) => send<{ rows: ValRow[] }>("PUT", `${pf(name)}/vals`, { rows }),
-};
+// ---------------------------------------------------------------------------
+// Kite Connect (kiteApi)
+// ---------------------------------------------------------------------------
 
 /** Phase 15: Kite Connect (read-only data source). Login is `/api/kite/login`, opened in a new tab; the api key never reaches this app. */
 export interface KiteStatus {
@@ -842,11 +650,9 @@ export interface KiteStatus {
   expires_note?: string | null;
 }
 
-export const kiteApi = {
-  loginUrl: "/api/kite/login",
-  status: () => send<KiteStatus>("GET", "/api/kite/status"),
-  logout: () => send<KiteStatus>("POST", "/api/kite/logout"),
-};
+// ---------------------------------------------------------------------------
+// News alerts (newsAlertsApi)
+// ---------------------------------------------------------------------------
 
 // Phase 13 step 6: news keyword alerts (ALRT NEWS WORD [SYM]); stored by the backend, evaluated here on each news refresh.
 export interface NewsAlert {
@@ -863,22 +669,16 @@ export interface NewsAlert {
   channels: string[] | null;
 }
 
-export const newsAlertsApi = {
-  list: () => send<{ alerts: NewsAlert[] }>("GET", "/api/newsalerts"),
-  create: (a: { word: string; symbol: string | null; channels?: string[] }) => send<NewsAlert>("POST", "/api/newsalerts", a),
-  delete: (id: number) => send<{ deleted: number }>("DELETE", `/api/newsalerts/${id}`),
-  trigger: (id: number, headline: string, url: string, at: number) =>
-    send<{ alert: NewsAlert; changed: boolean }>("POST", `/api/newsalerts/${id}/trigger`, { headline, url, at }),
-  rearm: (id: number) => send<NewsAlert>("POST", `/api/newsalerts/${id}/rearm`),
-  clear: () => send<{ deleted: number }>("DELETE", "/api/newsalerts?status=triggered"),
-};
+// ---------------------------------------------------------------------------
+// Chart events, tick bars and drawings (chartApi)
+// ---------------------------------------------------------------------------
 
-// --- Phase 19: GP drawings and event markers, world data ---
 export interface ChartEvent {
   date: string;
   kind: "E" | "D" | "S";
   detail: string;
 }
+
 export interface ChartEvents {
   symbol: string;
   events: ChartEvent[];
@@ -905,6 +705,10 @@ export interface TickBars {
   v: number[] | null;
 }
 
+// ---------------------------------------------------------------------------
+// World data (worldApi)
+// ---------------------------------------------------------------------------
+
 /** SECF: one OpenFIGI listing (exchange code is OpenFIGI's own). */
 export interface FigiListing {
   figi: string | null;
@@ -917,6 +721,7 @@ export interface FigiListing {
   market_sector: string | null;
   description: string | null;
 }
+
 export interface FigiItem {
   kind: "ISIN" | "CUSIP" | "SEDOL" | "FIGI";
   id: string;
@@ -924,6 +729,7 @@ export interface FigiItem {
   message: string | null;
   listings: FigiListing[];
 }
+
 export interface FigiResult {
   items: FigiItem[];
   note: string;
@@ -946,6 +752,7 @@ export interface WorldSeries {
   source: string;
   dataset?: string | null;
 }
+
 /**
  * DBSRCH (`/api/world/dbsearch`): DBnomics search. `mode` DATASETS lists datasets for the words; SERIES lists the matching series of one dataset.
  * `provider_name` names the ORIGINAL data provider (DBnomics only mirrors it). `ref` is the `DBN:` id ECST opens (null = ECST cannot take that id).
@@ -961,6 +768,7 @@ export interface DbsDatasetRow {
   updated: string | null;
   indexed: string | null;
 }
+
 export interface DbsSeriesRow {
   provider: string;
   dataset: string;
@@ -970,19 +778,25 @@ export interface DbsSeriesRow {
   indexed: string | null;
   ref: string | null;
 }
+
 export interface DbsDatasets { mode: "DATASETS"; total: number; offset: number; items: DbsDatasetRow[]; note: string; source: string }
+
 export interface DbsSeries { mode: "SERIES"; provider: string; dataset: string; dataset_name: string; total: number; offset: number; items: DbsSeriesRow[]; note: string; source: string }
+
 export type DbsPayload = DbsDatasets | DbsSeries;
+
 export interface WecoCell {
   v: number;
   year: number;
   stale: boolean;
 }
+
 export interface WecoRow {
   iso3: string;
   name: string;
   cells: Record<string, WecoCell | null>;
 }
+
 export interface WecoPayload {
   rows: WecoRow[];
   columns: { alias: string; label: string; unit: string }[];
@@ -990,6 +804,7 @@ export interface WecoPayload {
   note: string;
   source: string;
 }
+
 export interface CenbRow {
   bank: string;
   name: string;
@@ -1005,6 +820,7 @@ export interface CenbRow {
   url: string;
   note: string | null;
 }
+
 export interface CenbPayload {
   today: string;
   rows: CenbRow[];
@@ -1032,6 +848,7 @@ export interface NrgRow {
   stale: boolean;
   error: string | null;
 }
+
 export interface NrgPayload {
   rows: NrgRow[];
   spread: { value: number; date: string; label: string; unit: string } | null;
@@ -1039,6 +856,7 @@ export interface NrgPayload {
   groups: string[];
   note: string;
 }
+
 /** SHIP: one sea chokepoint (IMF PortWatch daily ship counts). Averages are over the days on record; None = not enough data, never a guess. */
 export interface ShipRow {
   id: string;
@@ -1058,11 +876,13 @@ export interface ShipRow {
   base_days: number;
   series: [string, number | null][];
 }
+
 export interface ShipPayload {
   rows: ShipRow[];
   newest: string;
   note: string;
 }
+
 /** PORTS: one port (IMF PortWatch daily port calls). Averages are over the days on record; None = not enough data, never a guess.
  *  imp7 / exp7 are PortWatch's own modelled daily trade estimates, averaged over the same 7 days. */
 export interface PortRow {
@@ -1089,6 +909,7 @@ export interface PortRow {
   locode: string | null;
   series: [string, number | null][];
 }
+
 export interface PortsPayload {
   rows: PortRow[];
   newest: string;
@@ -1099,6 +920,7 @@ export interface PortsPayload {
   no_daily_rows: number;
   note: string;
 }
+
 /** WETR: Open-Meteo forecast day (temperatures in C, degree days in F-days). */
 export interface WxDay {
   date: string;
@@ -1112,6 +934,7 @@ export interface WxDay {
   hdd: number | null;
   cdd: number | null;
 }
+
 export interface WxForecast {
   lat: number | null;
   lon: number | null;
@@ -1121,6 +944,7 @@ export interface WxForecast {
   cdd: number;
   days_counted: number;
 }
+
 export interface WxBasketRow {
   city: string;
   hdd: number;
@@ -1130,6 +954,7 @@ export interface WxBasketRow {
   tmax: number | null;
   tmin: number | null;
 }
+
 export interface WxAlert {
   event: string;
   severity: string;
@@ -1139,6 +964,7 @@ export interface WxAlert {
   onset: string | null;
   ends: string | null;
 }
+
 export interface WetrPayload {
   basket: { rows: WxBasketRow[]; average: { hdd: number; cdd: number } | null; weighting: string };
   place: { name: string; lat: number; lon: number; cc?: string | null; tz?: string | null; others?: string[] } | null;
@@ -1175,6 +1001,7 @@ export interface PredRow {
   event: string | null;
   basis?: string;
 }
+
 export interface PredPayload {
   rows: PredRow[];
   label: string;
@@ -1185,6 +1012,7 @@ export interface PredPayload {
   sources: string[];
   unit_note: string;
 }
+
 export interface PredOutcome {
   name: string;
   prob: number | null;
@@ -1192,6 +1020,7 @@ export interface PredOutcome {
   bid: number | null;
   ask: number | null;
 }
+
 export interface PredDetail {
   source: "polymarket" | "kalshi";
   id: string;
@@ -1214,33 +1043,43 @@ export interface PredDetail {
 
 /** Phase 19 step 7: CDEP / FUND / LIQ / STBL / DEFI (`/api/world/cdep|fund|liq|stbl|defi`). Ladder rows are [price, qty, cumulative qty, cumulative notional]. */
 export interface CdepBand { pct: number; bid: number; ask: number; imbalance_pct: number | null }
+
 export interface CdepPayload {
   base: string; quote: string; symbol: string; venue: string; ts_ms: number | null; usd: boolean;
   bids: [number, number, number, number][]; asks: [number, number, number, number][];
   best_bid: number; best_ask: number; mid: number; spread: number; spread_pct: number; imbalance_pct: number;
   bid_qty: number; ask_qty: number; levels: [number, number]; bands: CdepBand[];
 }
+
 export interface FundRow {
   sym: string; base: string; kind: "PERP" | "QUARTERLY"; mark: number | null; index: number | null; basis_pct: number | null;
   rate_pct: number | null; interval_h: number | null; ann_pct: number | null; next_ms: number | null;
   expiry: string | null; days: number | null; ann_basis_pct: number | null; source: string;
 }
+
 export interface FundHistory { prints: { t: number; rate_pct: number; ann_pct: number }[]; interval_h: number; mean_rate_pct: number | null; mean_ann_pct: number | null }
+
 export interface FundPayload { mode: "BOARD" | "DETAIL"; rows: FundRow[]; detail: FundHistory | null; venue: string | null; majors: string[] }
+
 export interface LiqEvent { t: number; side: "LONG" | "SHORT"; px: number; base: number; usd: number; inst: string }
+
 export interface LiqPayload {
   base: string; venue: string; events: number; span_s: number; since_ms: number | null; until_ms: number | null;
   long: { n: number; usd: number }; short: { n: number; usd: number }; largest: LiqEvent | null; recent: LiqEvent[]; ct_val: number; note: string;
 }
+
 export interface StblCoin {
   name: string; symbol: string; peg: string; mechanism: string | null; circulating: number; value: number | null;
   chg_1d: number | null; chg_7d: number | null; chg_30d: number | null; price: number | null; peg_dev_pct: number | null; chains: string[];
 }
+
 export interface StblPayload { coins: StblCoin[]; chains: { chain: string; usd: number; share_pct: number | null }[]; total_usd: number; n_coins: number; chain: string | null }
+
 export interface DefiPool {
   chain: string; project: string; symbol: string; tvl: number; apy: number; apy_base: number | null; apy_reward: number | null;
   stable: boolean; il: string | null; apy_30d: number | null; pool: string;
 }
+
 export interface DefiPayload { rows: DefiPool[]; matched: number; mode: "ALL" | "CHAIN" | "PROJECT"; query: string | null; pools_over_tvl: number; min_tvl: number }
 
 /** Phase 19 step 9: SECF fund rows from AMFI's NAVAll.txt (`/api/world/mfnav`). NAV is end of day per unit, not a market price. */
@@ -1248,6 +1087,7 @@ export interface MfItem {
   code: string; isin: string | null; isin_reinv: string | null; name: string; plan: string | null; option: string | null;
   nav: number; date: string; category: string | null; amc: string | null;
 }
+
 export interface MfNavPayload { query: string; items: MfItem[]; total: number; shown: number; nav_date: string | null; schemes: number; note: string }
 
 /** TRADE (UN Comtrade): one row per year, US dollars. A flow the reporter has not filed is null, never zero. */
@@ -1258,6 +1098,7 @@ export interface TradeRow {
   total: number | null;
   balance: number | null;
 }
+
 export interface TradePayload {
   reporter: { iso: string; name: string };
   partner: { iso: string; name: string };
@@ -1268,6 +1109,7 @@ export interface TradePayload {
   source: string;
   note: string;
 }
+
 /** USMAC (BLS, BEA, Census): one series per row, each with its own latest period. `points` is oldest first; null = no value published. */
 export interface UsSeries {
   id: string;
@@ -1288,6 +1130,7 @@ export interface UsSeries {
   notes: string[];
   points: [string, number | null][];
 }
+
 export interface UsMacroPayload {
   src: "BLS" | "BEA" | "CENSUS";
   series: UsSeries[];
@@ -1299,6 +1142,7 @@ export interface UsMacroPayload {
 
 /** UKCO (`/api/world/ukco`): UK Companies House. `mode` SEARCH lists companies; COMPANY has the profile, officers and filings (null = not loaded, see notes). */
 export interface UkcoSearchRow { number: string; name: string | null; status: string | null; type: string | null; created: string | null; ceased: string | null; address: string }
+
 export interface UkcoProfile {
   number: string; name: string | null; status: string | null; status_detail: string | null; type: string | null; subtype: string | null;
   created: string | null; ceased: string | null; jurisdiction: string | null; sic: string[]; address: string;
@@ -1306,8 +1150,11 @@ export interface UkcoProfile {
   confirmation: { last_made_up_to: string | null; next_due: string | null; overdue: boolean | null };
   has_charges: boolean | null; has_insolvency_history: boolean | null;
 }
+
 export interface UkcoOfficer { name: string | null; role: string; appointed: string | null; resigned: string | null; nationality: string | null; occupation: string | null; country: string | null }
+
 export interface UkcoFiling { date: string | null; category: string; type: string | null; description: string; pages: number | null; paper: boolean }
+
 export type UkcoPayload =
   | { mode: "SEARCH"; query: string; total: number | null; items: UkcoSearchRow[]; note: string }
   | {
@@ -1318,7 +1165,9 @@ export type UkcoPayload =
 
 /** ADDR (`/api/world/addr`): an EVM address's balance and latest transactions, and the gas oracle (Etherscan V2). Amounts are in the chain's native coin. */
 export interface AddrTx { hash: string; block: number | null; time: number | null; dir: "IN" | "OUT" | "SELF" | "CREATE"; from: string | null; to: string | null; value: number; fee: number | null; failed: boolean; method: string; confirmations: number | null }
+
 export interface AddrGas { last_block: number | null; safe: number | null; propose: number | null; fast: number | null; base_fee: number | null }
+
 export interface AddrPayload {
   mode: "ADDRESS" | "GAS"; chain: string; chainid: number; coin: string; address: string | null; note: string; notes: string[];
   balance: { wei: string; balance: number } | null; txs: AddrTx[] | null; gas: AddrGas | null;
@@ -1336,6 +1185,7 @@ export interface FltRow {
   vrate_ms: number | null; vrate_fpm: number | null;
   on_ground: boolean; squawk: string; spi: boolean; source: string; seen: number | null; age_s: number | null;
 }
+
 export interface FltPayload {
   area: string; kind: "AREA" | "BOX" | "CALLSIGN"; box: [number, number, number, number] | null; rows: FltRow[]; truncated: number;
   received: number; no_position: number; source_time: number; credits_cost: number; credits_remaining: number | null;
@@ -1353,6 +1203,7 @@ export interface AisRow {
   /** Seconds since the position report itself, as of the listen. */
   age_s: number;
 }
+
 export interface AisPayload {
   area: string; box: [number, number, number, number]; rows: AisRow[]; truncated: number;
   received: number; capped: boolean; listened_s: number; fixture: boolean; note: string;
@@ -1365,18 +1216,25 @@ export interface GeoQuake {
   id: string; lat: number; lon: number; depth_km: number | null; mag: number | null; mag_type: string | null;
   place: string; time: number; url: string | null; tsunami: boolean; alert: string | null; status: string | null;
 }
+
 export interface GeoQuakes { rows: GeoQuake[]; skipped: number; title: string; generated: number | null; note: string }
+
 export interface GeoEvent {
   id: string; title: string; category: string; category_title: string; lat: number; lon: number; time: number;
   mag: number | null; mag_unit: string | null; source: string | null; url: string | null; track: [number, number][];
 }
+
 export interface GeoEvents { rows: GeoEvent[]; skipped: number; title: string; note: string }
+
 export interface GeoPort {
   id: string; name: string; country: string | null; locode: string | null; lat: number; lon: number; rank: number;
   calls_per_day: number; newest: string;
 }
+
 export interface GeoPorts { rows: GeoPort[]; skipped: number; newest: string; note: string }
+
 export interface GeoChokepoint { id: string; name: string; box: [number, number, number, number]; lat: number; lon: number }
+
 export interface GeoChokepoints { rows: GeoChokepoint[]; note: string }
 
 /**
@@ -1385,7 +1243,9 @@ export interface GeoChokepoints { rows: GeoChokepoint[]; note: string }
  * A return with `pct: null` has no number on purpose (`why` says why): the history is shorter than the period, or has a hole there.
  */
 export interface MfSearchRow { code: number; name: string }
+
 export interface MfSearch { mode: "SEARCH"; query: string; items: MfSearchRow[]; total: number; shown: number; note: string; source_note: string }
+
 export interface MfReturnRow {
   period: string;
   kind: "ABSOLUTE RETURN" | "CAGR";
@@ -1395,12 +1255,14 @@ export interface MfReturnRow {
   pct: number | null;
   why: string | null;
 }
+
 export interface MfFund {
   mode: "FUND"; code: number; name: string; fund_house: string; scheme_type: string; category: string;
   isin_growth: string | null; isin_div: string | null;
   latest: { date: string; nav: number }; first_date: string; points: number;
   returns: MfReturnRow[]; t: number[]; v: number[]; payout_plan: boolean; note: string; source_note: string;
 }
+
 export type MfPayload = MfSearch | MfFund;
 
 /**
@@ -1408,74 +1270,39 @@ export type MfPayload = MfSearch | MfFund;
  * CONGRESS need a free api.data.gov key (424 KEY REQUIRED without it) and are DOC-SHAPED (never run against a live key).
  */
 export interface UsaspRecipient { name: string; uei: string | null; amount: number | null }
+
 export interface UsaspAward { award_id: string; recipient: string; amount: number | null; agency: string; start: string | null; end: string | null; description: string }
+
 export interface UsaspAgency { name: string; code: string | null; amount: number | null }
+
 export type UsaspPayload =
   | { mode: "KEYWORD"; query: string; window: string; award_kind: string; recipients: UsaspRecipient[]; recipients_total: number | null; awards: UsaspAward[] | null; notes: string[]; note: string }
   | { mode: "AGENCY"; window: string; award_kind: string; agencies: UsaspAgency[]; note: string }
   | { mode: "AGENCY_RECIPIENTS"; agency: string; window: string; award_kind: string; recipients: UsaspRecipient[]; recipients_total: number | null; note: string };
+
 export interface FedregItem { number: string; title: string; type: string; agencies: string[]; date: string | null; abstract: string | null; url: string | null }
+
 export interface FedregPayload { query: string; type: string | null; total: number; shown: number; items: FedregItem[]; note: string }
+
 export interface FecItem { kind: "CANDIDATE" | "COMMITTEE"; id: string; name: string; party: string | null; office: string | null; state: string | null; district: string | null; last_year: number | null }
+
 export interface FecCycle { cycle: number; receipts: number | null; disbursements: number | null; cash: number | null; debts: number | null; individual: number | null; covered_to: string | null }
+
 export type FecPayload =
   | { mode: "SEARCH"; query: string; items: FecItem[]; notes: string[]; note: string }
   | { mode: "CANDIDATE" | "COMMITTEE"; id: string; name: string | null; cycles: FecCycle[]; latest: FecCycle | null; note: string };
+
 export interface CongressRow { congress: number; type: string; number: string; title: string; chamber: string | null; action_date: string | null; action: string; updated: string | null }
+
 export type CongressPayload =
   | { mode: "LATEST" | "TITLE FILTER"; query: string; fetched: number; matched: number; items: CongressRow[]; note: string }
   | { mode: "BILL"; congress: number; type: string; number: string; title: string; chamber: string | null; introduced: string | null; sponsors: string[];
       cosponsors: number | null; policy_area: string | null; action_date: string | null; action: string; updated: string | null; note: string };
 
-export const worldApi = {
-  mf: (q: string, fresh = false) => request<Envelope<MfPayload>>(`/api/world/mf?${qs({ q })}`, fresh ? 0 : 600_000),
-  trade: (reporter: string, partner: string, hs: string, years: number, fresh = false) =>
-    request<Envelope<TradePayload>>(`/api/world/trade?${qs({ reporter, partner, hs, years: String(years) })}`, fresh ? 0 : 600_000),
-  usmac: (src: string, q: string, years: number, fresh = false) =>
-    request<Envelope<UsMacroPayload>>(`/api/world/usmac?${qs({ src, q, years: String(years) })}`, fresh ? 0 : 600_000),
-  stats: (country: string, ind: string, fresh = false) => request<Envelope<WorldSeries>>(`/api/world/stats?${qs({ country, ind })}`, fresh ? 0 : 600_000),
-  dbsearch: (q: string, dataset: string, offset: number, fresh = false) =>
-    request<Envelope<DbsPayload>>(`/api/world/dbsearch?${qs({ q, dataset, offset: String(offset) })}`, fresh ? 0 : 600_000),
-  weco: (fresh = false) => request<Envelope<WecoPayload>>("/api/world/weco", fresh ? 0 : 600_000),
-  cenb: (fresh = false) => request<Envelope<CenbPayload>>("/api/world/cenb", fresh ? 0 : 300_000),
-  nrg: (fresh = false) => request<Envelope<NrgPayload>>("/api/world/nrg", fresh ? 0 : 300_000),
-  ship: (fresh = false) => request<Envelope<ShipPayload>>("/api/world/ship", fresh ? 0 : 300_000),
-  ports: (q: string, fresh = false) => request<Envelope<PortsPayload>>(`/api/world/ports?${qs({ q })}`, fresh ? 0 : 300_000),
-  wetr: (place: string, fresh = false) => request<Envelope<WetrPayload>>(`/api/world/wetr?${qs({ place })}`, fresh ? 0 : 300_000),
-  holidays: (mkt: string, year: number) => request<Envelope<HolidayCalendar>>(`/api/world/holidays?${qs({ mkt, year: String(year) })}`, 3_600_000),
-  pred: (q: string, fresh = false) => request<Envelope<PredPayload>>(`/api/world/pred?${qs({ q })}`, fresh ? 0 : 60_000),
-  predDetail: (source: string, id: string, fresh = false) => request<Envelope<PredDetail>>(`/api/world/pred/detail?${qs({ source, id })}`, fresh ? 0 : 60_000),
-  cdep: (pair: string, fresh = false) => request<Envelope<CdepPayload>>(`/api/world/cdep?${qs({ pair })}`, fresh ? 0 : 4_000),
-  fund: (sym: string, fresh = false) => request<Envelope<FundPayload>>(`/api/world/fund?${qs({ sym })}`, fresh ? 0 : 30_000),
-  liq: (sym: string, fresh = false) => request<Envelope<LiqPayload>>(`/api/world/liq?${qs({ sym })}`, fresh ? 0 : 20_000),
-  stbl: (chain: string, fresh = false) => request<Envelope<StblPayload>>(`/api/world/stbl?${qs({ chain })}`, fresh ? 0 : 600_000),
-  defi: (q: string, fresh = false) => request<Envelope<DefiPayload>>(`/api/world/defi?${qs({ q })}`, fresh ? 0 : 600_000),
-  mfnav: (q: string, fresh = false) => request<Envelope<MfNavPayload>>(`/api/world/mfnav?${qs({ q })}`, fresh ? 0 : 3_600_000),
-  figi: (q: string, fresh = false) => request<Envelope<FigiResult>>(`/api/world/figi?${qs({ q })}`, fresh ? 0 : 600_000),
-  ukco: (q: string, fresh = false) => request<Envelope<UkcoPayload>>(`/api/world/ukco?${qs({ q })}`, fresh ? 0 : 300_000),
-  usasp: (q: string, fresh = false) => request<Envelope<UsaspPayload>>(`/api/world/usasp?${qs({ q })}`, fresh ? 0 : 300_000),
-  fedreg: (q: string, fresh = false) => request<Envelope<FedregPayload>>(`/api/world/fedreg?${qs({ q })}`, fresh ? 0 : 120_000),
-  fec: (q: string, fresh = false) => request<Envelope<FecPayload>>(`/api/world/fec?${qs({ q })}`, fresh ? 0 : 300_000),
-  congress: (q: string, fresh = false) => request<Envelope<CongressPayload>>(`/api/world/congress?${qs({ q })}`, fresh ? 0 : 180_000),
-  addr: (q: string, fresh = false) => request<Envelope<AddrPayload>>(`/api/world/addr?${qs({ q })}`, fresh ? 0 : 15_000),
-  /** One listen takes about 8 s on the server (cached 20 s there); the client cache is short so F5 really listens again. */
-  flt: (q: string, fresh = false) => request<Envelope<FltPayload>>(`/api/world/flt?${qs({ q })}`, fresh ? 0 : 30_000),
-  ais: (q: string, fresh = false) => request<Envelope<AisPayload>>(`/api/world/ais?${qs({ q })}`, fresh ? 0 : 15_000),
-  /** MAP layers. Each has its own server cache (USGS 2 min, EONET 10 min, PortWatch 6 h), so the client cache stays short. */
-  geoQuakes: (fresh = false) => request<Envelope<GeoQuakes>>("/api/world/geo/quakes", fresh ? 0 : 30_000),
-  geoEvents: (fresh = false) => request<Envelope<GeoEvents>>("/api/world/geo/events", fresh ? 0 : 30_000),
-  geoPorts: (fresh = false) => request<Envelope<GeoPorts>>("/api/world/geo/ports", fresh ? 0 : 60_000),
-  geoChokepoints: (fresh = false) => request<Envelope<GeoChokepoints>>("/api/world/geo/chokepoints", fresh ? 0 : 600_000),
-  ticks: (symbol: string, bar: string) => request<Envelope<TickBars>>(`/api/world/ticks/${encodeURIComponent(symbol)}?${qs({ bar })}`, 0),
-  /** GP `EVT`: earnings (last four reported), ex-dividend dates and splits. */
-  events: (symbol: string, fresh = false) =>
-    request<Envelope<ChartEvents>>(`/api/world/events?${qs({ symbol })}`, fresh ? 0 : 120_000),
-  drawings: (symbol: string) => send<{ symbol: string; drawings: unknown[]; updated_at: number | null }>("GET", `/api/drawings/${encodeURIComponent(symbol)}`),
-  saveDrawings: (symbol: string, drawings: unknown[]) =>
-    send<{ symbol: string; drawings: unknown[]; updated_at: number }>("PUT", `/api/drawings/${encodeURIComponent(symbol)}`, { drawings }),
-};
+// ---------------------------------------------------------------------------
+// Alert delivery (deliveryApi)
+// ---------------------------------------------------------------------------
 
-// --- Phase 17: alert delivery (DLVR) and the daily brief (BRIEF) ---
 export type DeliveryChannel = "email" | "telegram" | "webhook" | "desktop";
 
 /** Who a channel writes to, as the browser may know it: whether it is set, and a masked hint. Never the value itself. */
@@ -1483,6 +1310,7 @@ export interface DeliveryRecipient {
   configured: boolean;
   hint: string;
 }
+
 /**
  * The delivery settings the browser receives (backend/openterm/delivery/settings.py `public`). Secrets are never here
  * (they live in APIKEYS) and neither are the recipient address or Telegram chat id: only `recipients` hints.
@@ -1493,11 +1321,13 @@ export interface DeliverySettings {
   daily_cap: number;
   brief: { enabled: boolean; time: string; days: string; tz: string };
 }
+
 /** GET / PUT /api/delivery. `status` is per push channel: "off" | "ready" | "KEY REQUIRED: ..." (desktop has none). */
 export interface DeliveryPayload {
   settings: DeliverySettings;
   status: Partial<Record<DeliveryChannel, string>>;
 }
+
 /** One row of the delivery log (a send attempt). */
 export interface DeliveryRow {
   id: number;
@@ -1508,6 +1338,7 @@ export interface DeliveryRow {
   status: string;
   detail: string | null;
 }
+
 /**
  * A partial settings change; the backend merges it over the saved document. `email_to` / `telegram_chat_id` are
  * write-only: a non-empty value replaces the stored one, an empty one keeps it (the browser never reads them back).
@@ -1519,6 +1350,7 @@ export type DeliveryPatch = {
   channels?: Partial<Record<DeliveryChannel, boolean>>;
   brief?: Partial<DeliverySettings["brief"]>;
 };
+
 /** `POST /api/delivery/telegram/pair/start`: the bot's link and the one-time code to send it. */
 export interface TelegramPairStart {
   bot: string;
@@ -1526,20 +1358,16 @@ export interface TelegramPairStart {
   code: string;
   expires_in: number;
 }
+
 /** `POST .../pair/check`: `paired: true` once the code arrived (the chat id stays on the server). */
 export interface TelegramPairCheck {
   paired: boolean;
   expires_in?: number;
 }
 
-export const deliveryApi = {
-  get: () => send<DeliveryPayload>("GET", "/api/delivery"),
-  put: (patch: DeliveryPatch) => send<DeliveryPayload>("PUT", "/api/delivery", patch),
-  log: (limit = 100) => send<{ deliveries: DeliveryRow[] }>("GET", `/api/delivery/log?limit=${limit}`),
-  test: (channel: Exclude<DeliveryChannel, "desktop">) => send<{ results: DeliveryRow[] }>("POST", "/api/delivery/test", { channel }),
-  pairStart: () => send<TelegramPairStart>("POST", "/api/delivery/telegram/pair/start", {}),
-  pairCheck: () => send<TelegramPairCheck>("POST", "/api/delivery/telegram/pair/check", {}),
-};
+// ---------------------------------------------------------------------------
+// Daily brief (briefApi)
+// ---------------------------------------------------------------------------
 
 export interface BriefSection {
   id: string;
@@ -1550,12 +1378,9 @@ export interface BriefSection {
   error: string | null;
   lines: string[];
 }
+
 export interface Brief {
   at: number;
   sections: BriefSection[];
   watchlist?: string;
 }
-export const briefApi = {
-  get: () => send<{ brief: Brief | null }>("GET", "/api/brief"),
-  run: (sendIt: boolean) => send<{ brief: Brief; delivered: DeliveryRow[] | null }>("POST", `/api/brief/run?send=${sendIt ? 1 : 0}`),
-};

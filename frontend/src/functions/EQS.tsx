@@ -3,11 +3,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api9, type Envelope, type ScreenerPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, ScreenerPayload } from "../net/types";
 import { navigate } from "../state/workspace";
 import { parseFilter, screen, type UniverseRow } from "./eqsFilter";
 import { interpretNotes, interpretScreener, looksLikeEnglish } from "./eqsNatural";
-import { dirColor, navKey, useLatest } from "./quoteRows";
+import { dirColor } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -21,7 +26,7 @@ export default function EQS({ panelId, args }: FunctionProps) {
 
   const load = useCallback((fresh: boolean) => {
     setLoading(true);
-    return api9
+    return marketApi
       .screener(fresh)
       .then((e) => {
         setEnv(e);
@@ -61,6 +66,7 @@ export default function EQS({ panelId, args }: FunctionProps) {
 
   useCsvExport(panelId, () => (result ? gridCsv(`EQS_${args.join("_") || "ALL"}`, columns, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -73,13 +79,10 @@ export default function EQS({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "DES", security: { symbol: r[0] }, args: [] });
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const errors = result?.compiled.errors ?? filter.errors;

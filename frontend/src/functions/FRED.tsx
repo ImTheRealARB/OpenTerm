@@ -2,7 +2,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, macroApi, type Envelope, type FredSeries } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { macroApi } from "../net/macroApi";
+import type { Envelope, FredSeries } from "../net/types";
 import { navigate, replaceView } from "../state/workspace";
 import { FRED_RANGES, fmtSeriesChange, fmtSeriesValue, parseFredArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
@@ -62,6 +65,7 @@ export default function FRED({ panelId, args }: FunctionProps) {
   useCsvExport(panelId, () => cur && { name: `FRED_${cur.data.id}`, header: ["date", cur.data.id], rows: cur.data.t.map((t, i) => [new Date(t * 1000).toISOString().slice(0, 10), cur.data.v[i] == null ? "" : String(cur.data.v[i])]) });
   latest.current = { cur, crossOn };
 
+  usePanelRefresh(panelId, () => { setReload((r) => r + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -100,9 +104,6 @@ export default function FRED({ panelId, args }: FunctionProps) {
             return true;
           case "m":
             navigate(panelId, { fn: "MACRO", args: [], security: undefined });
-            return true;
-          case "F5":
-            setReload((r) => r + 1);
             return true;
         }
         return false;

@@ -1,11 +1,14 @@
 /** Named layouts (`LAYOUT SAVE|LOAD|DEL name`, Ctrl+S / Ctrl+O), stored in SQLite by the backend. */
 import { isFunction } from "../functions/registry";
-import { api, type ApiError, type LayoutInfo } from "../net/api";
+import type { ApiError } from "../net/core";
+import type { LayoutInfo } from "../net/types";
+import { workspaceApi } from "../net/workspaceApi";
 import { afterPaint, series } from "../perf/metrics";
 import { LAYOUT_NAME_RE, parseLayout, snapshot } from "../state/layoutState";
 import { createStore } from "../state/store";
 import { applyLayout, setLayoutName, workspace } from "../state/workspace";
 import { fail, info } from "./status";
+import { errMessage } from "../net/errText";
 
 /** Saved layouts for autocomplete and the LAYOUT panel. null until first fetched. */
 export const layoutList = createStore<LayoutInfo[] | null>(null);
@@ -14,13 +17,12 @@ let fetchedAt = 0;
 export async function refreshLayouts(maxAgeMs = 0): Promise<LayoutInfo[]> {
   const cur = layoutList.get();
   if (cur && performance.now() - fetchedAt < maxAgeMs) return cur;
-  const { layouts } = await api.layouts();
+  const { layouts } = await workspaceApi.layouts();
   fetchedAt = performance.now();
   layoutList.set(() => layouts);
   return layouts;
 }
 
-const errText = (e: unknown) => (e as ApiError).message ?? String(e);
 
 export function normName(raw: string | undefined): string | null {
   const name = (raw ?? "").trim().toUpperCase();
@@ -32,9 +34,9 @@ export async function saveLayout(raw: string): Promise<boolean> {
   if (!name) return fail("LAYOUT NAME: 1-32 OF A-Z 0-9 _ . -");
   const snap = snapshot(workspace.get());
   try {
-    await api.saveLayout(name, snap);
+    await workspaceApi.saveLayout(name, snap);
   } catch (e) {
-    return fail(`LAYOUT ${name} NOT SAVED: ${errText(e)}`);
+    return fail(`LAYOUT ${name} NOT SAVED: ${errMessage(e)}`);
   }
   setLayoutName(name);
   info(`LAYOUT ${name} SAVED (${Object.keys(snap.panels).length} PANELS)`);
@@ -48,9 +50,9 @@ export async function loadLayout(raw: string): Promise<boolean> {
   const t0 = performance.now();
   let state: unknown;
   try {
-    state = (await api.layout(name)).state;
+    state = (await workspaceApi.layout(name)).state;
   } catch (e) {
-    return fail((e as ApiError).status === 404 ? `NO LAYOUT ${name}` : `LAYOUT ${name} NOT LOADED: ${errText(e)}`);
+    return fail((e as ApiError).status === 404 ? `NO LAYOUT ${name}` : `LAYOUT ${name} NOT LOADED: ${errMessage(e)}`);
   }
   const parsed = parseLayout(state, isFunction);
   if (!parsed) return fail(`LAYOUT ${name} IS DAMAGED: NOT LOADED`);
@@ -64,9 +66,9 @@ export async function deleteLayout(raw: string): Promise<boolean> {
   const name = normName(raw);
   if (!name) return fail("LAYOUT NAME: 1-32 OF A-Z 0-9 _ . -");
   try {
-    await api.deleteLayout(name);
+    await workspaceApi.deleteLayout(name);
   } catch (e) {
-    return fail((e as ApiError).status === 404 ? `NO LAYOUT ${name}` : `LAYOUT ${name} NOT DELETED: ${errText(e)}`);
+    return fail((e as ApiError).status === 404 ? `NO LAYOUT ${name}` : `LAYOUT ${name} NOT DELETED: ${errMessage(e)}`);
   }
   if (workspace.get().name === name) setLayoutName(undefined);
   info(`LAYOUT ${name} DELETED`);

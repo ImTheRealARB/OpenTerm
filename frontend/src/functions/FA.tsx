@@ -3,10 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { secApi } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { secApi } from "../net/secApi";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { isKeyRequired } from "./KeyRequiredLine";
 import { ErrorLine, Header, SEC_UA_HINT, SEC_UA_RE, US_ONLY, useEnvelope } from "./secPanel";
@@ -51,6 +53,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
   const latest = useLatest({ rows, shaped, tab, period, env, offset });
   useCsvExport(panelId, () => shaped && { name: `FA_${symbol}_${tab}_${period}`, header: ["LINE", ...shaped.periods.map((p) => p.label)], rows: rows.map((r) => [r.label, ...r.cells]) });
 
+  usePanelRefresh(panelId, () => { void reload(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -83,13 +86,10 @@ export default function FA({ panelId, security, args }: FunctionProps) {
           case "ArrowRight":
             setOffset(Math.max(0, off - 1));
             return true;
-          case "F5":
-            void reload(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, reload],
+    [panelId, latest],
   );
 
   const d = env?.data;

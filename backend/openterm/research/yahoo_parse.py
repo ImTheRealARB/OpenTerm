@@ -1,6 +1,6 @@
 """Pure parsers: Yahoo quoteSummary modules -> table payloads (EE, EEO, ANR, MGMT) and small shared extracts.
 
-No I/O. Yahoo wraps most numbers as {"raw": n, "fmt": "..."}; `_raw` unwraps them. An empty wrapper ({}) is None.
+No I/O. Yahoo wraps most numbers as {"raw": n, "fmt": "..."}; `raw_value` unwraps them. An empty wrapper ({}) is None.
 """
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..providers.base import ProviderError
-from ..providers.yahoo import _raw
+from ..providers.yahoo import raw_value
 from .table import col, head, iso_date, payload, section
 
 PERIODS = {"0q": "CURRENT QTR", "+1q": "NEXT QTR", "0y": "CURRENT YEAR", "+1y": "NEXT YEAR"}
@@ -34,12 +34,12 @@ def estimates(symbol: str, result: dict, source: str) -> dict:
     for t in _trend(result):
         e, r = t.get("earningsEstimate") or {}, t.get("revenueEstimate") or {}
         label, end = PERIODS[t["period"]], t.get("endDate")
-        eps_rows.append({"period": label, "end": end, "avg": _raw(e, "avg"), "low": _raw(e, "low"),
-                         "high": _raw(e, "high"), "analysts": _raw(e, "numberOfAnalysts"),
-                         "year_ago": _raw(e, "yearAgoEps"), "growth": _raw(e, "growth")})
-        rev_rows.append({"period": label, "end": end, "avg": _raw(r, "avg"), "low": _raw(r, "low"),
-                         "high": _raw(r, "high"), "analysts": _raw(r, "numberOfAnalysts"),
-                         "year_ago": _raw(r, "yearAgoRevenue"), "growth": _raw(r, "growth")})
+        eps_rows.append({"period": label, "end": end, "avg": raw_value(e, "avg"), "low": raw_value(e, "low"),
+                         "high": raw_value(e, "high"), "analysts": raw_value(e, "numberOfAnalysts"),
+                         "year_ago": raw_value(e, "yearAgoEps"), "growth": raw_value(e, "growth")})
+        rev_rows.append({"period": label, "end": end, "avg": raw_value(r, "avg"), "low": raw_value(r, "low"),
+                         "high": raw_value(r, "high"), "analysts": raw_value(r, "numberOfAnalysts"),
+                         "year_ago": raw_value(r, "yearAgoRevenue"), "growth": raw_value(r, "growth")})
     cur = (_trend(result)[0].get("earningsEstimate") or {}).get("earningsCurrency")
     common = [col("period", "PERIOD", "text", 14), col("end", "ENDS", "date", 10)]
     tail = [col("analysts", "ANALYSTS", "int", 9), col("growth", "GROWTH", "pct", 8)]
@@ -61,16 +61,16 @@ def revisions_and_surprises(symbol: str, result: dict, source: str) -> dict:
     for t in _trend(result):
         label = PERIODS[t["period"]]
         tr, rv = t.get("epsTrend") or {}, t.get("epsRevisions") or {}
-        trend_rows.append({"period": label, "now": _raw(tr, "current"), "d7": _raw(tr, "7daysAgo"),
-                           "d30": _raw(tr, "30daysAgo"), "d60": _raw(tr, "60daysAgo"), "d90": _raw(tr, "90daysAgo")})
-        rev_rows.append({"period": label, "up7": _raw(rv, "upLast7days"), "up30": _raw(rv, "upLast30days"),
-                         "down7": _raw(rv, "downLast7Days"), "down30": _raw(rv, "downLast30days"),
-                         "down90": _raw(rv, "downLast90days")})
+        trend_rows.append({"period": label, "now": raw_value(tr, "current"), "d7": raw_value(tr, "7daysAgo"),
+                           "d30": raw_value(tr, "30daysAgo"), "d60": raw_value(tr, "60daysAgo"), "d90": raw_value(tr, "90daysAgo")})
+        rev_rows.append({"period": label, "up7": raw_value(rv, "upLast7days"), "up30": raw_value(rv, "upLast30days"),
+                         "down7": raw_value(rv, "downLast7Days"), "down30": raw_value(rv, "downLast30days"),
+                         "down90": raw_value(rv, "downLast90days")})
     sur_rows = []
     for h in (result.get("earningsHistory") or {}).get("history") or []:
         q = (h.get("quarter") or {}).get("fmt")
-        sur_rows.append({"quarter": q, "actual": _raw(h, "epsActual"), "estimate": _raw(h, "epsEstimate"),
-                         "diff": _raw(h, "epsDifference"), "surprise": _raw(h, "surprisePercent")})
+        sur_rows.append({"quarter": q, "actual": raw_value(h, "epsActual"), "estimate": raw_value(h, "epsEstimate"),
+                         "diff": raw_value(h, "epsDifference"), "surprise": raw_value(h, "surprisePercent")})
     sur_rows.sort(key=lambda r: r["quarter"] or "", reverse=True)
     beats = sum(1 for r in sur_rows if (r["diff"] or 0) > 0)
     return payload(
@@ -96,7 +96,7 @@ def ratings(symbol: str, result: dict, source: str) -> dict:
     hist = (result.get("upgradeDowngradeHistory") or {}).get("history") or []
     if not fd and not trend and not hist:
         raise ProviderError("not_found", "no analyst data")
-    price, mean_t = _raw(fd, "currentPrice"), _raw(fd, "targetMeanPrice")
+    price, mean_t = raw_value(fd, "currentPrice"), raw_value(fd, "targetMeanPrice")
     upside = mean_t / price - 1 if price and mean_t else None
 
     def pct(v: float | None) -> str | None:
@@ -107,14 +107,14 @@ def ratings(symbol: str, result: dict, source: str) -> dict:
 
     headline = [
         head("CONSENSUS", str(fd.get("recommendationKey") or "").upper() or None),
-        head("MEAN RATING", num(_raw(fd, "recommendationMean")), _raw(fd, "recommendationMean")),
-        head("ANALYSTS", str(_raw(fd, "numberOfAnalystOpinions")) if _raw(fd, "numberOfAnalystOpinions") else None,
-             _raw(fd, "numberOfAnalystOpinions")),
+        head("MEAN RATING", num(raw_value(fd, "recommendationMean")), raw_value(fd, "recommendationMean")),
+        head("ANALYSTS", str(raw_value(fd, "numberOfAnalystOpinions")) if raw_value(fd, "numberOfAnalystOpinions") else None,
+             raw_value(fd, "numberOfAnalystOpinions")),
         head("PRICE", num(price), price),
         head("TARGET MEAN", num(mean_t), mean_t),
-        head("TARGET MEDIAN", num(_raw(fd, "targetMedianPrice")), _raw(fd, "targetMedianPrice")),
-        head("TARGET HIGH", num(_raw(fd, "targetHighPrice")), _raw(fd, "targetHighPrice")),
-        head("TARGET LOW", num(_raw(fd, "targetLowPrice")), _raw(fd, "targetLowPrice")),
+        head("TARGET MEDIAN", num(raw_value(fd, "targetMedianPrice")), raw_value(fd, "targetMedianPrice")),
+        head("TARGET HIGH", num(raw_value(fd, "targetHighPrice")), raw_value(fd, "targetHighPrice")),
+        head("TARGET LOW", num(raw_value(fd, "targetLowPrice")), raw_value(fd, "targetLowPrice")),
         head("UPSIDE TO MEAN TARGET", pct(upside), upside),
     ]
     months = {"0m": "THIS MONTH", "-1m": "1 MONTH AGO", "-2m": "2 MONTHS AGO", "-3m": "3 MONTHS AGO"}
@@ -149,7 +149,7 @@ def management(symbol: str, result: dict, source: str, proxies: list[dict] | Non
     """MGMT. Officers and governance scores from Yahoo's company profile; proxy links come from the SEC filings feed."""
     ap = _module(result, "assetProfile")
     officers = [{"name": o.get("name"), "title": o.get("title"), "age": o.get("age"), "born": o.get("yearBorn"),
-                 "pay": _raw(o, "totalPay"), "fiscal_year": o.get("fiscalYear")} for o in ap.get("companyOfficers") or []]
+                 "pay": raw_value(o, "totalPay"), "fiscal_year": o.get("fiscalYear")} for o in ap.get("companyOfficers") or []]
     emp = ap.get("fullTimeEmployees")
     headline = [head("EMPLOYEES", f"{emp:,}" if isinstance(emp, int) else None, emp)]
     headline += [head(label, str(ap[k]), ap[k]) for k, label in GOVERNANCE if ap.get(k) is not None]

@@ -1,4 +1,5 @@
-import { api8, type PositionIn } from "../net/api";
+import { portfolioApi } from "../net/portfolioApi";
+import type { PositionIn } from "../net/types";
 import { optArgs } from "./quantArgs";
 import { runQuant } from "./quantRun";
 import { makeResearchPanel } from "./ResearchPanel";
@@ -41,9 +42,9 @@ export default makeResearchPanel({
     const positions = proposal(trades.rows as Record<string, unknown>[]);
     say(`SAVING ${target}…`);
     // copy the original's base currency: without it the server would create <NAME>.OPT in USD (audit B-1)
-    api8
+    portfolioApi
       .portfolio(name)
-      .then((src) => api8.putPortfolio(target, positions, src.base))
+      .then((src) => portfolioApi.putPortfolio(target, positions, src.base))
       .then(() => say(`SAVED ${target} · ${positions.length} POSITIONS · COST = PRICE AT PROPOSAL · ${name} NOT CHANGED`))
       .catch((err: { message?: string }) => say(`NOT SAVED: ${err.message ?? "ERROR"}`));
     return true;

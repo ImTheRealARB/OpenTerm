@@ -21,6 +21,21 @@ export interface FunctionDef {
   load?: () => Promise<{ default: ComponentType<FunctionProps> }>;
   /** Warm during idle time after startup. Off for heavy modules (GP pulls in the chart library). */
   idlePreload?: boolean;
+  /**
+   * Fetch this module the moment its code appears in the command line, before Enter (the chart chunk is skipped at idle
+   * because it is big, so GP and BT, which draws its equity curve with the same chart, load while the user is still typing).
+   * Separate from `idlePreload` on purpose: other heavy modules skip idle preload but are not worth fetching on every keystroke.
+   */
+  prefetchOnType?: boolean;
+  /** The panel's own content opens with the live price (DES, QR), so the GUI quote strip under the toolbar would repeat it. */
+  leadsWithPrice?: boolean;
+  /** Uses the panel's security only when typed with no arguments (bare `N` shows that security's news); `needsSecurity` stays false. */
+  securityWhenBare?: boolean;
+  /**
+   * Listed in a panel's RELATED window menu, at this position (1 = first). `security`: offered when the panel has a security;
+   * `market`: offered when it has none. Order lives here (not in windowMenu.ts) so a function's whole record is in one line.
+   */
+  related?: { security?: number; market?: number };
 }
 
 const defs: FunctionDef[] = [
@@ -31,32 +46,33 @@ const defs: FunctionDef[] = [
   { code: "TAPE", title: "Ticker tape settings", needsSecurity: false, argsSchema: "[ADD SYM | DEL SYM | RESET | ON | OFF]", phase: 20, load: () => import("./HOME") },
   { code: "PERF", title: "Performance monitor", needsSecurity: false, argsSchema: "[GRID rows | CHART bars | CALC]", phase: 1, load: () => import("./Perf") },
   { code: "SHORTCUTS", title: "Keyboard shortcuts", needsSecurity: false, phase: 1, load: () => import("./Shortcuts") },
-  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]", phase: 3, load: () => import("./GP"), idlePreload: false },
-  { code: "DES", title: "Security description", needsSecurity: true, phase: 3, load: () => import("./DES") },
+  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]", phase: 3, prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
+  { code: "DES", title: "Security description", needsSecurity: true, phase: 3, leadsWithPrice: true, related: { security: 1 }, load: () => import("./DES") },
   { code: "Q", title: "Quote monitor (live)", needsSecurity: false, argsSchema: "[SYM...]", phase: 3, load: () => import("./Q") },
-  { code: "QR", title: "Quote recap (live)", needsSecurity: true, phase: 3, load: () => import("./QR") },
-  { code: "N", title: "News", needsSecurity: false, argsSchema: "[TOP | keywords]", phase: 5, load: () => import("./N") },
+  { code: "QR", title: "Quote recap (live)", needsSecurity: true, phase: 3, leadsWithPrice: true, related: { security: 3 }, load: () => import("./QR") },
+  { code: "N", title: "News", needsSecurity: false, argsSchema: "[TOP | keywords]", phase: 5, securityWhenBare: true, related: { security: 5, market: 8 }, load: () => import("./N") },
   { code: "WL", title: "Watchlists", needsSecurity: false, argsSchema: "[NAME] [ADD|RM SYM...] | DEL NAME", phase: 5, load: () => import("./WL") },
-  { code: "WEI", title: "World equity indices", needsSecurity: false, phase: 5, load: () => import("./WEI") },
+  { code: "WEI", title: "World equity indices", needsSecurity: false, phase: 5, related: { market: 1 }, load: () => import("./WEI") },
   // P1
-  { code: "FA", title: "Financial analysis", needsSecurity: true, argsSchema: "[A|Q] [IS|BS|CF]", phase: 6, load: () => import("./FA") },
+  { code: "FA", title: "Financial analysis", needsSecurity: true, argsSchema: "[A|Q] [IS|BS|CF]", phase: 6, related: { security: 4 }, load: () => import("./FA") },
   { code: "FIL", title: "SEC filings", needsSecurity: true, argsSchema: "[FORM]", phase: 6, load: () => import("./FIL") },
+  // SEC and MONITOR are twins (TWINS in functions/aliases.ts): own code and title, same panel module as the original.
   { code: "SEC", title: "SEC filings (alias of FIL)", needsSecurity: true, argsSchema: "[FORM]", phase: 6, load: () => import("./FIL") },
   { code: "PORT", title: "Portfolio (live P&L, CSV import/export)", needsSecurity: false, argsSchema: "[NAME] [ADD SYM QTY [COST] [CCY] | RM SYM... | EXPORT | IMPORT | BASE CCY] | DEL NAME", phase: 8, load: () => import("./PORT") },
-  { code: "ECO", title: "Economic calendar", needsSecurity: false, argsSchema: "[1-62] [MAJOR] [YYYY-MM-DD]", phase: 7, load: () => import("./ECO") },
+  { code: "ECO", title: "Economic calendar", needsSecurity: false, argsSchema: "[1-62] [MAJOR] [YYYY-MM-DD]", phase: 7, related: { market: 7 }, load: () => import("./ECO") },
   { code: "MACRO", title: "FRED series browser", needsSecurity: false, argsSchema: "[query]", phase: 7, load: () => import("./MACRO") },
   { code: "FRED", title: "Plot a FRED series", needsSecurity: false, argsSchema: "SERIES_ID [1Y|2Y|5Y|10Y|20Y|MAX]", phase: 7, load: () => import("./FRED"), idlePreload: false },
   { code: "ALRT", title: "Price / percent alerts", needsSecurity: false, argsSchema: "[SYM > PRICE | SYM < PRICE | SYM +PCT% | SYM -PCT% | DEL ID | REARM ID | CLEAR]", phase: 8, load: () => import("./ALRT") },
   // P2
-  { code: "MOV", title: "Top movers", needsSecurity: false, argsSchema: "[GAINERS|LOSERS|ACTIVE|DOLLAR|NDX100]", phase: 5, load: () => import("./MOV") },
-  { code: "FX", title: "Currency rates", needsSecurity: false, phase: 5, load: () => import("./FX") },
+  { code: "MOV", title: "Top movers", needsSecurity: false, argsSchema: "[GAINERS|LOSERS|ACTIVE|DOLLAR|NDX100]", phase: 5, related: { market: 2 }, load: () => import("./MOV") },
+  { code: "FX", title: "Currency rates", needsSecurity: false, phase: 5, related: { market: 3 }, load: () => import("./FX") },
   { code: "FXC", title: "Currency cross matrix", needsSecurity: false, argsSchema: "[CCY ...]", phase: 5, load: () => import("./FXC") },
-  { code: "CRYP", title: "Crypto board", needsSecurity: false, argsSchema: "[USD|INR|EUR ...]", phase: 5, load: () => import("./CRYP") },
-  { code: "CMDTY", title: "Commodities", needsSecurity: false, phase: 5, load: () => import("./CMDTY") },
-  { code: "RATES", title: "Yield curve", needsSecurity: false, argsSchema: "[EUR|GBP|CAD|JPY|SPRD|AUCT|NS <ccy>]", phase: 7, load: () => import("./RATES") },
+  { code: "CRYP", title: "Crypto board", needsSecurity: false, argsSchema: "[USD|INR|EUR ...]", phase: 5, related: { market: 5 }, load: () => import("./CRYP") },
+  { code: "CMDTY", title: "Commodities", needsSecurity: false, phase: 5, related: { market: 4 }, load: () => import("./CMDTY") },
+  { code: "RATES", title: "Yield curve", needsSecurity: false, argsSchema: "[EUR|GBP|CAD|JPY|SPRD|AUCT|NS <ccy>]", phase: 7, related: { market: 6 }, load: () => import("./RATES") },
   { code: "ERN", title: "Earnings calendar", needsSecurity: false, argsSchema: "[TODAY|TOMORROW|+N|-N|YYYY-MM-DD]", phase: 7, load: () => import("./ERN") },
-  { code: "HDS", title: "Holders (13F)", needsSecurity: true, phase: 6, load: () => import("./HDS") },
-  { code: "OWN", title: "Ownership / insiders", needsSecurity: true, phase: 6, load: () => import("./OWN") },
+  { code: "HDS", title: "Holders (13F)", needsSecurity: true, phase: 6, related: { security: 6 }, load: () => import("./HDS") },
+  { code: "OWN", title: "Ownership / insiders", needsSecurity: true, phase: 6, related: { security: 7 }, load: () => import("./OWN") },
   { code: "EQS", title: "Equity screener", needsSecurity: false, argsSchema: "[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]", phase: 9, load: () => import("./EQS") },
   { code: "GIP", title: "Intraday tick chart (candles built from the live ticks seen since the session began)", needsSecurity: true, argsSchema: "[1S|5S|15S|1M]", phase: 19, load: () => import("./GIP"), idlePreload: false },
   { code: "IMAP", title: "Heat map of the equity universe (size = market cap, colour = % change)", needsSecurity: false, argsSchema: "[SECTOR|INDUSTRY|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]", phase: 19, load: () => import("./IMAP") },
@@ -75,21 +91,21 @@ const defs: FunctionDef[] = [
   { code: "NRG", title: "Energy board: crude, natural gas, refined products, retail fuel (FRED CSV, prices only)", needsSecurity: false, argsSchema: "[WTI|BRENT|HH|GASNY|GASGC|ULSD|HEAT|JET|PROPANE|GASRET|DIESELRET]", phase: 19, load: () => import("./NRG") },
   { code: "WETR", title: "Weather for commodities: degree-day basket, place forecast, NWS alerts (Open-Meteo)", needsSecurity: false, argsSchema: "[<place> | <lat,lon>]", phase: 19, load: () => import("./WETR") },
   { code: "CORR", title: "Correlation matrix", needsSecurity: false, argsSchema: "SYM SYM... [1M..MAX]", phase: 9, load: () => import("./CORR") },
-  { code: "COMP", title: "Peer comparison", needsSecurity: true, phase: 9, load: () => import("./COMP") },
+  { code: "COMP", title: "Peer comparison", needsSecurity: true, phase: 9, related: { security: 8 }, load: () => import("./COMP") },
   { code: "HIST", title: "Historical price table", needsSecurity: true, argsSchema: "[1M..MAX] [D|W|MO]", phase: 9, load: () => import("./HIST") },
   { code: "LAYOUT", title: "Save / load named workspaces", needsSecurity: false, argsSchema: "[SAVE|LOAD|DEL] name", phase: 4, load: () => import("./Layout") },
   { code: "MONITOR", title: "Alias of LAYOUT", needsSecurity: false, argsSchema: "[SAVE|LOAD|DEL] name", phase: 4, load: () => import("./Layout") },
   { code: "SETTINGS", title: "Settings: theme, vim mode, shortcuts, number format, clocks", needsSecurity: false, argsSchema: "[MODE|THEME|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|KEYS|RESET ...]", phase: 10, load: () => import("./SETTINGS") },
   { code: "THEME", title: "Colour theme", needsSecurity: false, argsSchema: "[AMBER|GREEN|WHITE|LIGHT]", phase: 10, load: () => import("./SETTINGS") },
   { code: "JOBS", title: "Background jobs: progress, cancel, results", needsSecurity: false, argsSchema: "[TEST [steps] [ms]]", phase: 11, load: () => import("./JOBS"), idlePreload: false },
-  { code: "BT", title: "Backtest a rule on historical bars (historical simulation, not a forecast)", needsSecurity: false, argsSchema: "<SYMS> <RULE|@NAME> [1D|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [MKT=engine]", phase: 12, load: () => import("./BT"), idlePreload: false },
+  { code: "BT", title: "Backtest a rule on historical bars (historical simulation, not a forecast)", needsSecurity: false, argsSchema: "<SYMS> <RULE|@NAME> [1D|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [MKT=engine]", phase: 12, prefetchOnType: true, load: () => import("./BT"), idlePreload: false },
   { code: "IMPORT", title: "Import your own daily bars (CSV) as a data source, labelled LOCAL DATA", needsSecurity: false, argsSchema: "[SYMBOL | LIST | DEL SYMBOL]", phase: 12, load: () => import("./IMPORT"), idlePreload: false },
-  { code: "EE", title: "Analyst estimates: EPS and revenue consensus by period", needsSecurity: true, phase: 13, load: () => import("./EE") },
+  { code: "EE", title: "Analyst estimates: EPS and revenue consensus by period", needsSecurity: true, phase: 13, related: { security: 10 }, load: () => import("./EE") },
   { code: "CN", title: "Company news from every source, keyword-scored (not a model)", needsSecurity: true, phase: 13, load: () => import("./CN") },
   { code: "EEO", title: "Estimate revisions and EPS surprises", needsSecurity: true, phase: 13, load: () => import("./EEO") },
-  { code: "ANR", title: "Analyst ratings, price targets and rating changes", needsSecurity: true, phase: 13, load: () => import("./ANR") },
+  { code: "ANR", title: "Analyst ratings, price targets and rating changes", needsSecurity: true, phase: 13, related: { security: 11 }, load: () => import("./ANR") },
   { code: "MGMT", title: "Officers, governance scores and proxy statements", needsSecurity: true, phase: 13, load: () => import("./MGMT") },
-  { code: "DVD", title: "Dividend history with declaration, record and pay dates", needsSecurity: true, phase: 13, load: () => import("./DVD") },
+  { code: "DVD", title: "Dividend history with declaration, record and pay dates", needsSecurity: true, phase: 13, related: { security: 9 }, load: () => import("./DVD") },
   { code: "SPLT", title: "Stock split history", needsSecurity: true, phase: 13, load: () => import("./SPLT") },
   { code: "CACS", title: "Corporate actions: dividends and splits by date", needsSecurity: true, phase: 13, load: () => import("./CACS") },
   { code: "IPO", title: "IPO calendar: upcoming, priced, filed, withdrawn", needsSecurity: false, argsSchema: "[YYYY-MM]", phase: 13, load: () => import("./IPO") },
@@ -101,7 +117,7 @@ const defs: FunctionDef[] = [
   { code: "ETF", title: "ETF profile, full N-PORT holdings and sector weights", needsSecurity: true, phase: 13, load: () => import("./ETF") },
   { code: "MEMB", title: "Index members and weights via the proxy ETF's N-PORT", needsSecurity: false, argsSchema: "SPX|NDX|DJI|RUT|MID|<ETF>", phase: 13, load: () => import("./MEMB") },
   { code: "MGR", title: "Manager 13F positions with quarter-over-quarter changes", needsSecurity: false, argsSchema: "<NAME|CIK>", phase: 13, load: () => import("./MGR") },
-  { code: "OMON", title: "Option chain: IV, Greeks computed here, open interest, volume", needsSecurity: true, argsSchema: "[YYYY-MM-DD] [ITM|OTM|ALL] [Q=pct]", phase: 14, load: () => import("./OMON") },
+  { code: "OMON", title: "Option chain: IV, Greeks computed here, open interest, volume", needsSecurity: true, argsSchema: "[YYYY-MM-DD] [ITM|OTM|ALL] [Q=pct]", phase: 14, related: { security: 12 }, load: () => import("./OMON") },
   { code: "PCR", title: "Put/call ratio by volume and open interest, per expiry", needsSecurity: true, phase: 14, load: () => import("./PCR") },
   { code: "OV", title: "Option pricer: Black-Scholes, binomial, Heston, barrier, IV solver (NOT RUNNABLE until every input is given)", needsSecurity: true, argsSchema: "K= EXP=|T= TYPE=C|P [IV= R= Q=] [V0= KAPPA= THETA= SIGMAV= RHO=] [H= BARR=] [PRICE=]", phase: 14, load: () => import("./OV") },
   { code: "OSA", title: "Multi-leg option payoff, breakevens, scenario grid, Greeks by leg", needsSecurity: true, argsSchema: "LEGS=+1C270@5,-1C290 | STRAT=BULLCALL,270,290 EXP=|T= [IV= R= MULT= COMM=]", phase: 14, load: () => import("./OSA") },
@@ -179,6 +195,24 @@ export function loadModule(code: string): Promise<ComponentType<FunctionProps>> 
     loading.set(code, p);
   }
   return p;
+}
+
+/**
+ * Does this view's tab/title name the panel's security? The security stays on the panel, but it is only shown when the function
+ * uses it (`needsSecurity`, or bare `N`). One rule for the panel title bar and the GUI tab strip.
+ */
+export function showsSecurity(view: { fn?: string; args: readonly string[] }): boolean {
+  const def = view.fn ? FUNCTIONS.get(view.fn) : undefined;
+  return !!def && (def.needsSecurity || (!!def.securityWhenBare && view.args.length === 0));
+}
+
+/** Codes for the RELATED window menu, in the order the registry's `related` ranks give. */
+export function relatedCodes(withSecurity: boolean): string[] {
+  const kind = withSecurity ? "security" : "market";
+  return defs
+    .filter((d) => d.related?.[kind] !== undefined)
+    .sort((a, b) => a.related![kind]! - b.related![kind]!)
+    .map((d) => d.code);
 }
 
 export const loadedModule = (code: string) => loaded.get(code);

@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TypeVar
 
+from . import errkinds as K
 from .perf import percentile
 from .providers.base import Provider, ProviderError
 from .providers.hierarchy import rank_of
@@ -42,13 +43,13 @@ class Health:
 
     def fail(self, err: ProviderError) -> None:
         self.calls += 1
-        if err.kind in ("not_found", "unsupported", "depth", "login_expired"):
+        if err.kind in K.NOT_AN_OUTAGE:
             return  # the provider is fine; it just lacks this symbol, or does not reach back that far
         self.errors += 1
         self.consecutive += 1
         self.last_error = f"{err.kind}: {err}"
         self.last_error_at = time.time()
-        if err.kind == "rate_limited" or self.consecutive >= TRIP_AFTER:
+        if err.kind == K.RATE_LIMITED or self.consecutive >= TRIP_AFTER:
             cooldown = min(MAX_COOLDOWN_S, 5.0 * 2 ** max(0, self.consecutive - 1))
             self.down_until = time.time() + cooldown
 
@@ -60,20 +61,20 @@ class AllFailed(Exception):
         kinds = {e.kind for _, e in errors}
         # An expired login (Kite) is a reason shown beside the fallback, not an outage: when the sources that DO answer say
         # "no such symbol" or "too shallow", the user gets that real answer instead of PROVIDER DOWN (audit A-3).
-        kinds_ex_login = kinds - {"login_expired"}
+        kinds_ex_login = kinds - {K.LOGIN_EXPIRED}
         if not errors:
-            self.kind, msg = "unsupported", "NO PROVIDER SUPPORTS THIS SYMBOL"
-        elif "depth" in kinds_ex_login and kinds_ex_login <= {"not_found", "unsupported", "depth"}:
+            self.kind, msg = K.UNSUPPORTED, "NO PROVIDER SUPPORTS THIS SYMBOL"
+        elif K.DEPTH in kinds_ex_login and kinds_ex_login <= {K.NOT_FOUND, K.UNSUPPORTED, K.DEPTH}:
             # Every source that has the symbol is too shallow for this interval + range: a request problem, not missing data.
-            self.kind, msg = "bad_request", next(str(e) for _, e in errors if e.kind == "depth")
-        elif kinds_ex_login and kinds_ex_login <= {"not_found", "unsupported"}:
-            self.kind, msg = "not_found", "NO DATA FOR SYMBOL"
-        elif "key_required" in kinds and kinds <= {"not_found", "unsupported", "key_required"}:
+            self.kind, msg = K.BAD_REQUEST, next(str(e) for _, e in errors if e.kind == K.DEPTH)
+        elif kinds_ex_login and kinds_ex_login <= {K.NOT_FOUND, K.UNSUPPORTED}:
+            self.kind, msg = K.NOT_FOUND, "NO DATA FOR SYMBOL"
+        elif K.KEY_REQUIRED in kinds and kinds <= {K.NOT_FOUND, K.UNSUPPORTED, K.KEY_REQUIRED}:
             # Phase 11: no keyless provider could answer, so the missing key is the reason.
-            self.kind, msg = "key_required", "KEY REQUIRED"
-            self.key = next((keys or {}).get(n) for n, e in errors if e.kind == "key_required")
+            self.kind, msg = K.KEY_REQUIRED, "KEY REQUIRED"
+            self.key = next((keys or {}).get(n) for n, e in errors if e.kind == K.KEY_REQUIRED)
         else:
-            self.kind, msg = "unavailable", "PROVIDER DOWN"
+            self.kind, msg = K.UNAVAILABLE, "PROVIDER DOWN"
         super().__init__(msg)
 
 
@@ -93,19 +94,21 @@ class Router:
         # Everything tripped: try anyway (half-open) rather than refusing outright.
         return up or sorted(ps, key=lambda p: self.health[p.name].down_until)
 
-    async def _attempt(self, p: Provider, fn: Callable[[Provider], Awaitable[T]]) -> T:
+    async def attempt(self, p: Provider, fn: Callable[[Provider], Awaitable[T]]) -> T:
+        """Calls `fn(p)` on ONE named provider, recording its health and latency (the circuit breaker sees it). Public: the scheduler's
+        probes and the per-provider news fan-out use it to talk to a specific source instead of walking the fallback order."""
         t0 = time.perf_counter()
         try:
             result = await fn(p)
         except ProviderError as e:
-            if e.kind in ("key_required", "login_expired"):  # not an outage: no circuit-breaker strike
+            if e.kind in K.NEEDS_USER_ACTION:  # not an outage: no circuit-breaker strike
                 log.debug("provider %s needs a key", p.name)
                 raise
             self.health[p.name].fail(e)
             log.warning("provider %s failed: %s %s", p.name, e.kind, e)
             raise
         except Exception as e:  # adapter bug or unexpected payload: treat as provider failure
-            err = ProviderError("unavailable", f"{type(e).__name__}: {e}")
+            err = ProviderError(K.UNAVAILABLE, f"{type(e).__name__}: {e}")
             self.health[p.name].fail(err)
             log.exception("provider %s crashed", p.name)
             raise err from e
@@ -120,10 +123,10 @@ class Router:
         keys: dict[str, str] = {}
         for p in self.candidates(capability, symbol):
             try:
-                return await self._attempt(p, fn), [n for n, _ in errors]
+                return await self.attempt(p, fn), [n for n, _ in errors]
             except ProviderError as e:
                 errors.append((p.name, e))
-                if e.kind == "key_required":
+                if e.kind == K.KEY_REQUIRED:
                     keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
         raise AllFailed(errors, keys)
 
@@ -137,12 +140,12 @@ class Router:
             if not batch:
                 continue
             try:
-                for q in await self._attempt(p, lambda prov, b=batch: prov.quotes(b)):
+                for q in await self.attempt(p, lambda prov, b=batch: prov.quotes(b)):
                     if q.symbol in errors:
                         found[q.symbol] = (q, [n for n, _ in errors[q.symbol]])
                 for s in batch:
                     if s not in found:
-                        errors[s].append((name, ProviderError("not_found")))
+                        errors[s].append((name, ProviderError(K.NOT_FOUND)))
             except ProviderError as e:
                 for s in batch:
                     errors[s].append((name, e))

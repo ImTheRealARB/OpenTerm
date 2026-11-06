@@ -4,9 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, type Envelope, type Mover, type MoversPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, Mover, MoversPayload } from "../net/types";
 import { navigate } from "../state/workspace";
-import { dirColor, navKey, useLatest } from "./quoteRows";
+import { dirColor } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -42,7 +47,7 @@ export default function MOV({ panelId, args }: FunctionProps) {
 
   const load = useCallback((fresh: boolean) => {
     setLoading(true);
-    return api
+    return marketApi
       .movers(fresh)
       .then((e) => {
         setEnv(e);
@@ -62,6 +67,7 @@ export default function MOV({ panelId, args }: FunctionProps) {
   const latest = useLatest({ rows, tab });
   useCsvExport(panelId, () => gridCsv(`MOV_${tab}`, COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -85,13 +91,10 @@ export default function MOV({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "DES", security: { symbol: r.symbol }, args: [] });
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const asOf = env?.data.table_as_of[tab] ?? env?.data.as_of_text;

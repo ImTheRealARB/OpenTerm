@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { btApi, type BtTemplate } from "../net/api";
+import { btApi } from "../net/btApi";
+import type { BtTemplate } from "../net/types";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 

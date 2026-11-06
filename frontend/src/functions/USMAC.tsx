@@ -9,9 +9,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type UsMacroPayload, type UsSeries } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, UsMacroPayload, UsSeries } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { fmtChange, fmtNum, parseUsmacArgs, signColor } from "./usArgs";
@@ -102,16 +106,13 @@ export default function USMAC({ panelId, args }: FunctionProps) {
     return open ? gridCsv(`USMAC_${src}_${open.alias}`, HISTORY, hist) : gridCsv(`USMAC_${src}`, BOARD, series);
   });
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         if (navKey(e, grid.current, cur.count)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter" && !cur.open) {
           const s = cur.series[grid.current?.selected() ?? -1];
           if (s) setDetail(s.id);
@@ -123,7 +124,7 @@ export default function USMAC({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   if (p.error) {

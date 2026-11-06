@@ -7,10 +7,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData } from "../chart/ChartView";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type PredDetail, type PredPayload, type PredRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, PredDetail, PredPayload, PredRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { filterSrc, fmtOutcome, fmtProb, fmtVolume, parsePredArgs, PRED_LABEL, PRED_USAGE, predBars, sourceTag } from "./predArgs";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -94,6 +98,7 @@ export default function PRED({ panelId, args }: FunctionProps) {
   const bars = useMemo(() => (det ? (predBars(det.data) as BarData | null) : null), [det]);
   const pick = useCallback((r: PredRow | undefined) => r && setOpen({ source: r.source, id: r.id }), []);
 
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -108,9 +113,6 @@ export default function PRED({ panelId, args }: FunctionProps) {
           case "Escape":
             if (!cur.open) return false;
             setOpen(null);
-            return true;
-          case "F5":
-            setReload((n) => n + 1);
             return true;
         }
         return false;

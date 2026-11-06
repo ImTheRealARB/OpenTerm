@@ -42,7 +42,7 @@ function clicker() {
   };
 }
 
-// A tiny stock universe for the company-name search (columnar screener payload, see ScreenerPayload in net/api.ts).
+// A tiny stock universe for the company-name search (columnar screener payload, see ScreenerPayload in net/types.ts).
 const UNIVERSE: [string, string, number][] = [
   ["AAPL", "Apple Inc. Common Stock", 187.25],
   ["MSFT", "Microsoft Corporation Common Stock", 410.1],

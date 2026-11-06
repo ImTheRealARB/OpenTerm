@@ -7,13 +7,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type TickBars } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { chartApi } from "../net/chartApi";
+import { ApiError } from "../net/core";
+import type { Envelope, TickBars } from "../net/types";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
 import { replaceView } from "../state/workspace";
 import { GIP_SECONDS, gipApiBar, nextGipBar, parseGipArgs } from "./gipArgs";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -48,7 +51,7 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
 
   const load = useCallback(() => {
     let alive = true;
-    worldApi
+    chartApi
       .ticks(symbol, gipApiBar(bar))
       .then((e) => {
         if (!alive) return;
@@ -88,6 +91,7 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
     };
   }, [symbol]);
 
+  usePanelRefresh(panelId, () => { setReload((r) => r + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -117,9 +121,6 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
             return true;
           case "-":
             chart.current?.zoom(1.25);
-            return true;
-          case "F5":
-            setReload((r) => r + 1);
             return true;
         }
         return false;

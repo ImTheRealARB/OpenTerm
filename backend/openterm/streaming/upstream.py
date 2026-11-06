@@ -16,7 +16,8 @@ from collections.abc import Callable
 import orjson
 import websockets
 
-from ..providers.yahoo import UA, day_range
+from ..providers.http import UA
+from ..providers.yahoo import day_range
 from ..symbols import SYNTHETIC_RE
 from .pricing import decode_b64
 from .tick import Tick

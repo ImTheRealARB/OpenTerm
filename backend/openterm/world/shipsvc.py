@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from ..service import DataError
+from ..errors import DataError
 from . import shipping
 
 SHIP_TTL_S = 6 * 3600.0  # PortWatch publishes weekly, so asking more often only costs ArcGIS calls
@@ -26,4 +26,4 @@ async def ship(svc: Any) -> dict[str, Any]:
         newest = max(r["date"] for r in rows)
         return {"data": {"rows": rows, "newest": newest, "note": NOTE}, "source": SHIP_SOURCE, "fallback_from": failed}
 
-    return await svc._swr("w:ship", SHIP_TTL_S, fetch)
+    return await svc.swr("w:ship", SHIP_TTL_S, fetch)

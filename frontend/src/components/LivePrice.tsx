@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { fmtChg, fmtPct, fmtPrice, fmtTime } from "../format";
-import type { Quote } from "../net/api";
+import type { Quote } from "../net/types";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";

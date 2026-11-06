@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from ..service import DataError
+from ..errors import DataError
 from . import parse as rp
 from . import tables as rt
 
@@ -43,7 +43,7 @@ class RatesViews:
             out, failed = await self.svc.router.call(capability, lambda p: getattr(p, capability)())
             return {"data": out["curve"], "source": out["source"], "fallback_from": failed}
 
-        return await self.svc._swr(f"rt:curve:{ccy}", self.ttl("curve"), fetch)
+        return await self.svc.swr(f"rt:curve:{ccy}", self.ttl("curve"), fetch)
 
     async def curve(self, ccy: str | None, fit: str | None = None) -> dict:
         c = self._ccy(ccy)
@@ -83,7 +83,7 @@ class RatesViews:
             rows = [rp.oas_row(sid, rt.OAS_NAMES[sid], out["series"].get(sid, [])) for sid in rt.OAS_NAMES]
             return {"data": rt.spreads_payload(rows, out["failed"], out["source"]), "fallback_from": failed}
 
-        return await self.svc._swr("rt:spreads", self.ttl("spreads"), fetch)
+        return await self.svc.swr("rt:spreads", self.ttl("spreads"), fetch)
 
     # --- Treasury auctions ----------------------------------------------------------------------
     async def auctions(self) -> dict:
@@ -91,4 +91,4 @@ class RatesViews:
             out, failed = await self.svc.router.call("auctions", lambda p: p.auctions())
             return {"data": rt.auctions_payload(out["results"], out["upcoming"], out["source"]), "fallback_from": failed}
 
-        return await self.svc._swr("rt:auctions", self.ttl("auctions"), fetch)
+        return await self.svc.swr("rt:auctions", self.ttl("auctions"), fetch)

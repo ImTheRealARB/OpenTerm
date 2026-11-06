@@ -7,17 +7,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type AddrTx } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { AddrTx } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { agoText, addrQuery, fmtCoin, fmtGwei, shortHex, txTime } from "./addrArgs";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 export default function ADDR({ panelId, args }: FunctionProps) {
   const query = useMemo(() => addrQuery(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.addr(query, fresh), query.toLowerCase(), 30_000);
+  const { env, error, loading, reload: load } = useEnvelope(query.toLowerCase(), (fresh) => worldApi.addr(query, fresh), 30_000);
   const grid = useRef<GridHandle>(null);
   const [picked, setPicked] = useState("");
   const d = env?.data;
@@ -57,16 +60,13 @@ export default function ADDR({ panelId, args }: FunctionProps) {
       : null,
   );
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         if (navKey(e, g, latest.current.txs.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter") {
           const r = latest.current.txs[g?.selected() ?? -1];
           if (r) setPicked(r.hash);
@@ -74,7 +74,7 @@ export default function ADDR({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

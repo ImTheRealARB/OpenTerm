@@ -24,7 +24,6 @@ log = logging.getLogger("openterm.kite")
 
 SEGMENT_DIVISOR = {"cds": 1e7, "bcd": 1e4}
 TOKEN_SEGMENTS = {3: "cds", 6: "bcd"}  # instrument_token & 0xff
-INDEX_SEGMENT = 9  # the index segment's token byte
 MAX_TOKENS = 3000  # Kite's limit per connection
 
 

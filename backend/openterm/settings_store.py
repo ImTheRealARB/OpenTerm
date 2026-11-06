@@ -23,7 +23,8 @@ TAPE_MAX = 30  # ticker tape symbols
 TAPE_SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9.\-=^&]{0,19}\Z")  # same rule as frontend settings/schema.ts
 THEMES = ("amber", "green", "white", "light")
 CHART_RANGES = ("1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX")
-CHART_TYPES = ("CANDLE", "OHLC", "LINE", "AREA")
+# Same seven as frontend chart/chartTypes.ts (test_ts_mirrors.py keeps them equal): SETTINGS CHART HEIKIN used to be refused here.
+CHART_TYPES = ("CANDLE", "HOLLOW", "OHLC", "LINE", "AREA", "BASELINE", "HEIKIN")
 THOUSANDS = (",", ".", " ", "'", "")
 DECIMALS = (".", ",")
 # Poll intervals in seconds: (min, max). The floors keep free providers inside their rate limits.

@@ -81,10 +81,9 @@ class OpenSkyProvider(Provider):
     key_name = "OPENSKY_CLIENT_ID"
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm", "Accept": "application/json"}
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
-        self.source = "opensky (doc-shaped fixture, NOT A RECORDING)" if self.fixtures else "opensky"
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self.source = "opensky (doc-shaped fixture, NOT A RECORDING)" if self.fixture else "opensky"
         self._id = ""
         self._secret = ""
         self._token = ""
@@ -209,6 +208,6 @@ class OpenSkyProvider(Provider):
         left = r.headers.get("X-Rate-Limit-Remaining")
         return {"time": t, "rows": rows, "received": len(rows) + no_position, "no_position": no_position,
                 "credits_remaining": int(left) if left is not None and left.lstrip("-").isdigit() else None,
-                "authenticated": bool(token), "fixture": self.fixtures}
+                "authenticated": bool(token), "fixture": self.fixture}
 
     # No probe(): the scheduler would call it every 30 s while the provider is tripped, and every call spends a metered credit.

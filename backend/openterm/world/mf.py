@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ..service import DataError
+from ..errors import DataError
 from .india import search_amfi
 
 TTL_S = 21600.0
@@ -23,7 +23,7 @@ async def lookup(svc: Any, q: str) -> dict[str, Any]:
         out, failed = await svc.router.call("mfnav", lambda p: p.navall())
         return {"data": out, "fallback_from": failed, "source": out["source"]}
 
-    env = await svc._swr("w:mfnav", TTL_S, fetch)
+    env = await svc.swr("w:mfnav", TTL_S, fetch)
     table = env["data"]
     items, total = search_amfi(table, query, LIMIT)
     return {**env, "data": {"query": query, "items": items, "total": total, "shown": len(items), "nav_date": table["nav_date"],

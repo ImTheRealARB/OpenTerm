@@ -9,10 +9,8 @@ import httpx
 from ..models import Bars, Profile, Quote, SearchHit
 from ..ranges import range_days
 from .base import HISTORY, PROFILE, QUOTES, SEARCH, Provider, ProviderError
+from .http import BASE, SEARCH_BASE, UA
 
-BASE = "https://query1.finance.yahoo.com"
-SEARCH_BASE = "https://query2.finance.yahoo.com"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36"
 SPARK_CHUNK = 20  # symbols per spark request (never above 100: Yahoo refuses long URLs / flags big batches)
 SPARK_PARALLEL = 2  # at most this many spark requests in flight at once
 SPARK_GAP_S = 0.15  # pause after each chunk, so 160+ symbols do not arrive as one burst and trip the rate limit
@@ -56,7 +54,8 @@ def quote_from_meta(meta: dict[str, Any], source: str, as_of: float, day_open: f
     )
 
 
-def _raw(module: dict[str, Any] | None, key: str) -> Any:
+def raw_value(module: dict[str, Any] | None, key: str) -> Any:
+    """Yahoo wraps most numbers as {"raw": 1.5, "fmt": "1.50"}: return the raw one (or the value itself when it is not wrapped)."""
     v = (module or {}).get(key)
     return v.get("raw") if isinstance(v, dict) else v
 
@@ -76,20 +75,20 @@ def profile_from_summary(symbol: str, r: dict[str, Any], source: str, as_of: flo
         website=ap.get("website"),
         employees=int(emp) if isinstance(emp, (int, float)) else None,
         description=ap.get("longBusinessSummary"),
-        market_cap=_raw(sd, "marketCap") or _raw(pr, "marketCap"),
-        enterprise_value=_raw(ks, "enterpriseValue"),
-        pe=_raw(sd, "trailingPE"),
-        forward_pe=_raw(sd, "forwardPE") or _raw(ks, "forwardPE"),
-        eps=_raw(ks, "trailingEps"),
-        forward_eps=_raw(ks, "forwardEps"),
-        dividend_yield=_raw(sd, "dividendYield"),
-        beta=_raw(sd, "beta") or _raw(ks, "beta"),
-        shares_out=_raw(ks, "sharesOutstanding"),
-        float_shares=_raw(ks, "floatShares"),
-        high_52w=_raw(sd, "fiftyTwoWeekHigh"),
-        low_52w=_raw(sd, "fiftyTwoWeekLow"),
-        avg_volume=_raw(sd, "averageVolume"),
-        price_to_book=_raw(ks, "priceToBook"),
+        market_cap=raw_value(sd, "marketCap") or raw_value(pr, "marketCap"),
+        enterprise_value=raw_value(ks, "enterpriseValue"),
+        pe=raw_value(sd, "trailingPE"),
+        forward_pe=raw_value(sd, "forwardPE") or raw_value(ks, "forwardPE"),
+        eps=raw_value(ks, "trailingEps"),
+        forward_eps=raw_value(ks, "forwardEps"),
+        dividend_yield=raw_value(sd, "dividendYield"),
+        beta=raw_value(sd, "beta") or raw_value(ks, "beta"),
+        shares_out=raw_value(ks, "sharesOutstanding"),
+        float_shares=raw_value(ks, "floatShares"),
+        high_52w=raw_value(sd, "fiftyTwoWeekHigh"),
+        low_52w=raw_value(sd, "fiftyTwoWeekLow"),
+        avg_volume=raw_value(sd, "averageVolume"),
+        price_to_book=raw_value(ks, "priceToBook"),
         delay_min=pr.get("exchangeDataDelayedBy"),
         source=source,
         as_of=as_of,

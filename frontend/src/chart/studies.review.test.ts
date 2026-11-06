@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { mfi, obv } from "./studies";
-import { clampIndex, listKey } from "./chartGuards";
 
 const f = (a: number[]) => Float64Array.from(a);
 
@@ -23,21 +22,5 @@ describe("volume studies with a missing volume bar", () => {
     v[5] = NaN;
     const out = mfi(h, l, c, v, 14);
     for (let i = 14; i < n; i++) expect(Number.isFinite(out[i])).toBe(true);
-  });
-});
-
-describe("chart guards", () => {
-  it("clampIndex keeps a stale keyboard-crosshair index inside the data", () => {
-    expect(clampIndex(4999, 250)).toBe(249);
-    expect(clampIndex(-3, 250)).toBe(0);
-    expect(clampIndex(7, 250)).toBe(7);
-    expect(clampIndex(5, 0)).toBe(-1);
-  });
-
-  it("listKey is equal for equal contents, so an inline [] prop does not rebuild the chart each render", () => {
-    expect(listKey([])).toBe(listKey([]));
-    expect(listKey(["RSI", "MACD"])).toBe(listKey(["RSI", "MACD"]));
-    expect(listKey(["RSI", "MACD"])).not.toBe(listKey(["MACD", "RSI"]));
-    expect(listKey(["RSI"])).not.toBe(listKey([]));
   });
 });

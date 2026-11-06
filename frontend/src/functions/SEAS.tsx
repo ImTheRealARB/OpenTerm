@@ -5,9 +5,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api9, type BarsAdj, type Envelope } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { BarsAdj, Envelope } from "../net/types";
 import { replaceView } from "../state/workspace";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { parseSeasArgs, SEAS_KINDS, seasonality, type SeasKind } from "./seasMath";
 import { useCsvExport } from "./tableExport";
@@ -33,7 +36,7 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
     let live = true;
     setEnv(null);
     setError(null);
-    api9
+    marketApi
       .history(symbol, "MAX", "1d", reload > 0)
       .then((e) => {
         if (!live) return;
@@ -58,6 +61,7 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
 
   const rowsRef = useLatest(result?.rows ?? []);
   const kindRef = useLatest(kind);
+  usePanelRefresh(panelId, () => { setReload((r) => r + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -79,7 +83,6 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
             replaceView(panelId, (v) => ({ ...v, args: [next] }));
             return true;
           }
-          case "F5": setReload((r) => r + 1); return true;
         }
         return false;
       }),

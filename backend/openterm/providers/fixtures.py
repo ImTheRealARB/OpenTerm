@@ -1,10 +1,14 @@
 """Replays responses recorded from the real endpoints (backend/tests/fixtures). Exact matches only:
-anything not recorded is a 404, so fixture mode can never invent data for an unknown symbol."""
+anything not recorded is a 404, so fixture mode can never invent data for an unknown symbol.
+
+Routing: many small checkers (`_route_*`), tried in the order of `ROUTE_TABLE` at the bottom of this file; the first to answer wins."""
 
 import asyncio
 import base64
 import json
 import os
+from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -74,11 +78,7 @@ def _news_table_feed(request: httpx.Request) -> httpx.Response | None:
                           headers={"content-type": "application/rss+xml"})
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    if (news := _news_table_feed(request)) is not None:
-        return news
-    if (r6 := _route_phase6(request)) is not None:  # Phase 6
-        return r6
+def _route_base(request: httpx.Request) -> httpx.Response:
     p = request.url.path
     q = request.url.params
     if request.url.host == "fc.yahoo.com":
@@ -167,7 +167,6 @@ _PHASE7_API = {
     ("series/observations", "GDP"): "fred_api_docshape_observations_GDP",
     ("releases/dates", None): "fred_api_docshape_releases_dates",
 }
-_route_before_phase7 = _route
 
 
 def _route_phase7(request: httpx.Request) -> httpx.Response | None:
@@ -203,9 +202,6 @@ def _route_phase7(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase7(request) or _route_before_phase7(request)
-
 # --- Phase 9: screener + peers ---
 # nasdaq_screener_trimmed.json is the real 2026-10-17 answer (7,002 rows) trimmed to 476 rows: the 250 largest by
 # market cap plus every 30th of the rest, kept in the original order. Nothing else was edited.
@@ -220,19 +216,34 @@ PATHS.update({
 # --- Phase 11: key tests (APIKEYS) ---
 # keytest_*_401: real answers to a made-up key, recorded 2026-10-18 with no account. keytest_openrouter_ok is built
 # from OpenRouter's docs for GET /api/v1/key (no key was available), marked "doc_shaped" in the file.
-KEY_TESTS = {
-    ("finnhub.io", "/api/v1/quote"): "keytest_finnhub_401",
-    ("api.openai.com", "/v1/models"): "keytest_openai_401",
-    ("api.anthropic.com", "/v1/models"): "keytest_anthropic_401",
-    ("openrouter.ai", "/api/v1/key"): "keytest_openrouter_ok",
+# Which recording answers which key test, by key-store name (the names in keys.TESTS).
+_KEY_TEST_FILES = {
+    "finnhub": "keytest_finnhub_401",
+    "openai": "keytest_openai_401",
+    "anthropic": "keytest_anthropic_401",
+    "openrouter": "keytest_openrouter_ok",
 }
-_route_before_phase11 = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _key_test_routes() -> dict[tuple[str, str], str]:
+    """(host, path) of each key test -> its recording. The URL comes from keys.TESTS itself (the real test builds it from the
+    key), so this table cannot drift from the call the APIKEYS "test" button makes. Dummy key values are enough to build the URL."""
+    from ..keys import TESTS
+
+    routes = {}
+    for key_name, recording in _KEY_TEST_FILES.items():
+        url = httpx.URL(TESTS[key_name](defaultdict(lambda: "fixture-key"))[1])
+        routes[(url.host, url.path)] = recording
+    return routes
+
+
+KEY_TESTS = _key_test_routes()
+
+
+def _route_key_tests(request: httpx.Request) -> httpx.Response | None:
     if (name := KEY_TESTS.get((request.url.host, request.url.path))) is not None:
         return _load(name)
-    return _route_before_phase11(request)
+    return None
 
 
 # --- Phase 11 step 5: LLM gateway ---
@@ -240,10 +251,9 @@ def _route(request: httpx.Request) -> httpx.Response:
 # (llm_openrouter_stream.txt, raw SSE); every other LLM call is "not recorded".
 LLM_HOSTS = {"openrouter.ai", "api.openai.com", "api.anthropic.com", "opencode.ai", "api.deepseek.com", "api.groq.com",
              "api.mistral.ai", "api.x.ai", "api.together.xyz", "api.fireworks.ai", "generativelanguage.googleapis.com"}
-_route_before_llm = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_llm(request: httpx.Request) -> httpx.Response | None:
     url = request.url
     if url.host in ("127.0.0.1", "localhost") and url.port == 11434:
         raise httpx.ConnectError("fixture mode: nothing listens on the Ollama port", request=request)
@@ -264,7 +274,7 @@ def _route(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, content=rec.read_bytes(), headers={"content-type": "text/event-stream"})
     if url.host in LLM_HOSTS and (url.host, url.path) not in KEY_TESTS:
         return httpx.Response(404, text="not recorded")
-    return _route_before_llm(request)
+    return None
 
 # --- Phase 12: BT (10-year daily bars, recorded 2026-10-19 by scripts/record_phase12.py) ---
 ROUTES.update({
@@ -285,7 +295,6 @@ YAHOO_RESEARCH = {
     ("SPY", "topHoldings,fundProfile,quoteType"): "yahoo_summary_spy_fund",
 }
 _YAHOO_RESEARCH_MODULES = {m for _, m in YAHOO_RESEARCH}
-_route_before_phase13 = _route
 
 
 def _route_phase13(request: httpx.Request) -> httpx.Response | None:
@@ -327,10 +336,6 @@ def _route_phase13(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase13(request) or _route_before_phase13(request)
-
-
 # --- Phase 13 step 6: keyed sources (doc-shaped fixtures, labelled in each file; only AAPL and the market feed) ---
 # A request without the key header is answered 401 like the real services do.
 KEYED_ROUTES = {
@@ -341,10 +346,9 @@ KEYED_ROUTES = {
     ("data.alpaca.markets", "/v1beta1/news", "AAPL"): "alpaca_news_aapl",
     ("data.alpaca.markets", "/v1beta1/news", None): "alpaca_news_all",
 }
-_route_before_keyed = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_keyed(request: httpx.Request) -> httpx.Response | None:
     host, p, q = request.url.host, request.url.path, request.url.params
     if (host == "finnhub.io" and p != "/api/v1/quote") or host == "data.alpaca.markets":
         authed = request.headers.get("x-finnhub-token") if host == "finnhub.io" else request.headers.get("apca-api-key-id")
@@ -354,13 +358,12 @@ def _route(request: httpx.Request) -> httpx.Response:
         if name:
             return _load(name)
         return httpx.Response(200, json=[] if host == "finnhub.io" else {"news": [], "next_page_token": None})
-    return _route_before_keyed(request)
+    return None
 
 # --- Phase 14: options, rates, futures (recorded 2026-10-18 by scripts/record_phase14.py) ---
 # yahoo_options_aapl_<expiry epoch>: the eight expiries pick_expiries chooses, strikes trimmed to 65%..135% of spot. Any other symbol
 # or expiry is a 404 (never invented). Tradier fixtures are DOC-SHAPED (marked in each file): no sandbox token was available.
 OPTION_NEAREST = "1792368000"
-_route_before_phase14 = _route
 
 
 def _route_phase14(request: httpx.Request) -> httpx.Response | None:
@@ -383,15 +386,10 @@ def _route_phase14(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase14(request) or _route_before_phase14(request)
-
-
 # --- Phase 14 step 5: Deribit (BTC only; four expiries kept in deribit_book_btc, any other currency is a 400 like the real API) ---
-_route_before_deribit = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_deribit(request: httpx.Request) -> httpx.Response | None:
     host, p, q = request.url.host, request.url.path, request.url.params
     if host == "www.deribit.com":
         if p.endswith("/get_book_summary_by_currency") and q.get("currency") == "BTC":
@@ -399,14 +397,13 @@ def _route(request: httpx.Request) -> httpx.Response:
         if p.endswith("/get_index_price") and q.get("index_name") == "btc_usd":
             return _load("deribit_index_btc")
         return httpx.Response(400, json={"error": {"message": "Invalid params", "code": -32602}})
-    return _route_before_deribit(request)
+    return None
 
 
 # --- Phase 14 step 6: rates views (ECB, BoE, BoC, MoF, TreasuryDirect; FRED OAS goes through the fred_csv_<ID> route above) ---
-_route_before_rates = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_rates(request: httpx.Request) -> httpx.Response | None:
     host, p, q = request.url.host, request.url.path, request.url.params
     if host == "data-api.ecb.europa.eu":
         return _load("ecb_yc_spot") if p.startswith("/service/data/YC/") and "SR_10Y" in p else httpx.Response(404, text="not recorded")
@@ -423,17 +420,16 @@ def _route(request: httpx.Request) -> httpx.Response:
         if p.endswith("/securities/upcoming"):
             return _load("treasurydirect_upcoming")
         return httpx.Response(404, text="not recorded")
-    return _route_before_rates(request)
+    return None
 
 
 # --- Phase 14 step 7: futures contracts (CT, WIRP), CFTC COT, FOMC calendar ---
 # yahoo_chart_fut_<symbol>: one recorded v8/chart per contract (a contract that was not recorded is a 404, like Yahoo's). cftc_legacy_<tag>:
 # four markets by contract code. cftc_markets answers the distinct-name query. fomc_calendar: the recorded federalreserve.gov page.
 _COT_TAGS = {"13874A": "es", "067651": "cl", "088691": "gc", "043602": "zn"}
-_route_before_futures = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_futures(request: httpx.Request) -> httpx.Response | None:
     host, p, q = request.url.host, request.url.path, request.url.params
     if p.startswith("/v8/finance/chart/") and (FIXTURES / f"yahoo_chart_fut_{p.rsplit('/', 1)[-1].replace('.', '_')}.json").exists():
         return _load(f"yahoo_chart_fut_{p.rsplit('/', 1)[-1].replace('.', '_')}")
@@ -444,7 +440,7 @@ def _route(request: httpx.Request) -> httpx.Response:
         return _load(f"cftc_legacy_{_COT_TAGS[code]}") if code else httpx.Response(200, json=[])
     if host == "www.federalreserve.gov" and p.endswith("/fomccalendars.htm"):
         return _load("fomc_calendar")
-    return _route_before_futures(request)
+    return None
 
 
 # --- Phase 15 step 3: 20y daily charts (RISK stress windows) and the SPDR sector ETFs (PORT ATTR) ---
@@ -457,7 +453,6 @@ ROUTES.update({
        for e in ("xlk", "xlf", "xlv", "xly", "xlp", "xle", "xli", "xlb", "xlu", "xlre", "xlc")},
 })
 _SLICE_DAYS = {"1y": 366, "2y": 731, "3y": 1096, "5y": 1827, "10y": 3653}
-_route_before_slice = _route
 
 
 def _sliced_chart(path: str, rng: str) -> httpx.Response | None:
@@ -483,26 +478,25 @@ def _sliced_chart(path: str, rng: str) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_slice(request: httpx.Request) -> httpx.Response | None:
     p, q = request.url.path, request.url.params
     wanted = (p, q.get("range"), "1d")
     if p.startswith("/v8/finance/chart/") and q.get("interval") == "1d" and q.get("range") in _SLICE_DAYS and not q.get("events")             and wanted not in ROUTES:
         sliced = _sliced_chart(p, q["range"])
         if sliced is not None:
             return sliced
-    return _route_before_slice(request)
+    return None
 
 
 # --- Phase 15 step 4: Ken French daily factor zips (FACT), recorded as base64 ---
 _KEN_FRENCH = {"F-F_Research_Data_5_Factors_2x3_daily_CSV.zip": "kenfrench_ff5_daily", "F-F_Momentum_Factor_daily_CSV.zip": "kenfrench_mom_daily"}
-_route_before_kenfrench = _route
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_kenfrench(request: httpx.Request) -> httpx.Response | None:
     if request.url.host == "mba.tuck.dartmouth.edu":
         name = _KEN_FRENCH.get(request.url.path.rsplit("/", 1)[-1])
         return _load(name) if name else httpx.Response(404, text="not recorded")
-    return _route_before_kenfrench(request)
+    return None
 
 
 # --- Phase 15 steps 6-7: Zerodha Kite Connect (READ-ONLY). Fixtures are DOC-SHAPED, labelled NOT A RECORDING in each file. ---
@@ -510,7 +504,6 @@ def _route(request: httpx.Request) -> httpx.Response:
 # InputException. With env OPENTERM_KITE_EXPIRED=1 every authenticated call answers the TokenException fixture with 403.
 KITE_KEY, KITE_SECRET, KITE_REQUEST_TOKEN = "docshape_api_key", "docshape_secret", "docshape_request_token"
 KITE_HISTORICAL = {"738561": "kite_historical_reliance_day_docshape", "9000001": "kite_historical_nifty_fut_day_oi_docshape"}
-_route_before_kite = _route
 
 
 def _kite_json(name: str, status: int | None = None) -> httpx.Response:
@@ -525,9 +518,9 @@ def _kite_error(status: int, error_type: str, message: str) -> httpx.Response:
     return httpx.Response(status, json={"status": "error", "message": message, "data": None, "error_type": error_type})
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_kite(request: httpx.Request) -> httpx.Response | None:
     if request.url.host != "api.kite.trade":
-        return _route_before_kite(request)
+        return None
     import hashlib
     from urllib.parse import parse_qs
 
@@ -559,7 +552,6 @@ def _route(request: httpx.Request) -> httpx.Response:
 
 
 # --- Phase 19 step 4: OpenFIGI mapping (openfigi_mapping.json = real answers per identifier; anything else is not recorded, never invented) ---
-_route_before_phase19 = _route
 
 
 def _route_phase19(request: httpx.Request) -> httpx.Response | None:
@@ -573,14 +565,9 @@ def _route_phase19(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase19(request) or _route_before_phase19(request)
-
-
 # --- Phase 19 step 5: World Bank, DBnomics, Nager.Date, policy rates (recordings from scripts/record_phase19.py 5) ---
 _WB_WECO = {"NY.GDP.MKTP.KD.ZG": "gdp_growth", "FP.CPI.TOTL.ZG": "inflation", "SL.UEM.TOTL.ZS": "unemployment",
             "GC.DOD.TOTL.GD.ZS": "debt_gdp", "BN.CAB.XOKA.GD.ZS": "current_account"}
-_route_before_phase19b = _route
 
 
 def _route_phase19b(request: httpx.Request) -> httpx.Response | None:
@@ -615,12 +602,7 @@ def _route_phase19b(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase19b(request) or _route_before_phase19b(request)
-
-
 # --- Phase 19 step 6: Open-Meteo, NWS alerts (recordings from scripts/record_phase19.py 6; FRED energy CSVs go through the fred_csv_<ID> route) ---
-_route_before_phase19c = _route
 _NWS_POINTS = {(29.76, -95.37): "nws_alerts_houston", (34.1471, -98.5971): "nws_alerts_point"}  # matched within 0.01 degrees
 
 
@@ -644,12 +626,7 @@ def _route_phase19c(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase19c(request) or _route_before_phase19c(request)
-
-
 # --- Phase 19 step 8: Polymarket and Kalshi (recordings from scripts/record_phase19.py 8; one market and its history each, anything else is not recorded) ---
-_route_before_phase19e = _route
 _POLY_ID, _POLY_TOKEN_OF = "665374", "polymarket_market_665374"
 _KALSHI_TICKER = "KXOAIANTH-40-ANTH"
 
@@ -676,13 +653,8 @@ def _route_phase19e(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase19e(request) or _route_before_phase19e(request)
-
-
 # --- Phase 19 step 9: NSE bhavcopy day files and AMFI NAVAll.txt (recordings from scripts/record_phase19.py 9). A day with no recording answers
 # the recorded 404 (so it reads as a holiday: fixture mode never invents a day file). NAVAll.txt answers 302 first, as the real host does. ---
-_route_before_phase19f = _route
 
 
 def _route_phase19f(request: httpx.Request) -> httpx.Response | None:
@@ -698,13 +670,8 @@ def _route_phase19f(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase19f(request) or _route_before_phase19f(request)
-
-
 # --- Phase 19 step 7: Binance depth / premium / funding info, OKX v5 public, DefiLlama stablecoins + yields (recordings from scripts/record_phase19.py 7).
 # BTCUSDT / BTC-USDT only; OKX single-instrument answers are the matching row of the recorded all-instrument answer. `fapi/v1/fundingRate` keeps its Phase 12 route. ---
-_route_before_phase19h = _route
 _BINANCE_19H = {("/api/v3/depth", "BTCUSDT"): "binance_depth_btcusdt", ("/fapi/v1/premiumIndex", "BTCUSDT"): "binance_premium_btcusdt",
                 ("/fapi/v1/premiumIndex", ""): "binance_premium_all", ("/fapi/v1/fundingInfo", ""): "binance_funding_info"}
 _OKX_ALL = {"/api/v5/public/funding-rate": "okx_funding_any", "/api/v5/public/mark-price": "okx_mark_swap", "/api/v5/market/index-tickers": "okx_index_usdt"}
@@ -746,12 +713,7 @@ def _route_phase19h(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_phase19h(request) or _route_before_phase19h(request)
-
-
 # --- SHIP: IMF PortWatch chokepoints (recorded 2026-11-05 from the real ArcGIS layer; where= is ignored, one page of 868 rows) ---
-_route_before_portwatch = _route
 
 
 def _route_portwatch(request: httpx.Request) -> httpx.Response | None:
@@ -765,16 +727,11 @@ def _route_portwatch(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_portwatch(request) or _route_before_portwatch(request)
-
-
 # --- Trade + US macro family (UN Comtrade, BLS, BEA, Census): doc-shaped, EXCEPT the BEA data tables and the Comtrade India-USA answer, which are
 # real recordings made with the owner's keys on 2026-11-05 (`bea_real_*`, `comtrade_real_*`). ---
 # Every file is marked `doc_shaped` and its numbers are invented. A request without a key gets the 401 (or in-body error) the real
 # service gives; the key value "invalid-fixture-key" gets the "wrong key" answer. Unrecorded combinations are 404 / 204 / empty.
 _BAD_KEY = "invalid-fixture-key"
-_route_before_tradeus = _route
 
 
 def _route_tradeus(request: httpx.Request) -> httpx.Response | None:
@@ -830,10 +787,6 @@ def _route_tradeus(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_tradeus(request) or _route_before_tradeus(request)
-
-
 # --- Frankfurter (real recording), Companies House, Marketaux, Etherscan (doc-shaped, marked in each file) ---
 # Fixture mode accepts only keys that start with "docshape" for the three keyed hosts and answers every other key with that service's
 # invalid-key answer (Etherscan's is a real recording, Marketaux's status is real, Companies House's is a placeholder).
@@ -842,7 +795,6 @@ _ETHERSCAN = {("account", "balance"): "etherscan_balance_docshape", ("account", 
               ("gastracker", "gasoracle"): "etherscan_gasoracle_docshape"}
 _CH_PATHS = {"/search/companies": "companies_house_search_docshape", "/company/09999999": "companies_house_profile_docshape",
              "/company/09999999/officers": "companies_house_officers_docshape", "/company/09999999/filing-history": "companies_house_filings_docshape"}
-_route_before_freesrc = _route
 
 
 def _ch_user(request: httpx.Request) -> str:
@@ -856,7 +808,7 @@ def _ch_user(request: httpx.Request) -> str:
         return ""
 
 
-def _route(request: httpx.Request) -> httpx.Response:
+def _route_freesrc(request: httpx.Request) -> httpx.Response | None:
     host, p, q = request.url.host, request.url.path, request.url.params
     if host == "api.frankfurter.dev":
         if p == "/v2/rates" and q.get("base") == "EUR" and q.get("providers") == "ecb":
@@ -882,13 +834,12 @@ def _route(request: httpx.Request) -> httpx.Response:
             return _load("keytest_companies_house_401")
         name = _CH_PATHS.get(p)
         return _load(name) if name else httpx.Response(404, json={"errors": [{"type": "ch:service", "error": "company-profile-not-found"}]})
-    return _route_before_freesrc(request)
+    return None
 
 
 # --- DBSRCH: DBnomics dataset and series search (REAL recordings from scripts/record_dbsearch.py) ---
 # Recorded: datasets for "france inflation" / "OECD unemployment" / a no-match word, and the series of BDF/ICP and OECD/DSD_TAXBEN_NRR@DF_NRR
 # (first page only). Every other search, other page or other dataset answers 404 "not recorded", like the rest of this file.
-_route_before_dbsearch = _route
 _DBS_DATASETS = {"france inflation": "dbnomics_search_france_inflation", "oecd unemployment": "dbnomics_search_oecd_unemployment",
                  "zzqxjw": "dbnomics_search_nomatch"}
 _DBS_SERIES = {("BDF", "ICP", "france inflation"): "dbnomics_series_bdf_icp_france_inflation",
@@ -912,15 +863,10 @@ def _route_dbsearch(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_dbsearch(request) or _route_before_dbsearch(request)
-
-
 # --- PORTS: IMF PortWatch daily port activity (recorded 2026-11-05 from the real ArcGIS layers) ---
 # Daily_Ports_Data: the max(date) answer, the 25-busiest-ports sum, and the daily rows of those 25 ports (the route filters them by the
 # ids and the date in the request, as the real service would). PortWatch_ports_database: only ROTTERDAM and BELGIUM were recorded; any
 # other words answer with no ports, which is what a search that matches nothing gets.
-_route_before_ports = _route
 
 
 def _route_ports(request: httpx.Request) -> httpx.Response | None:
@@ -948,12 +894,7 @@ def _route_ports(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_ports(request) or _route_before_ports(request)
-
-
 # --- MAP: ports list by ids (the 25 ports of the PORTS fixture), USGS M4.5+ week feed, NASA EONET open events without wildfires (all real recordings, 2026-11-05) ---
-_route_before_map = _route
 
 
 def _route_map(request: httpx.Request) -> httpx.Response | None:
@@ -969,15 +910,10 @@ def _route_map(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_map(request) or _route_before_map(request)
-
-
 # --- MF: MFapi.in Indian mutual funds (recorded 2026-11-05 from the real service; see world/mfund.py for the shapes) ---
 # /mf/search: the recorded "parag parikh" answer (15 real schemes) filtered by every word of the request, as the real service matches (all words, any
 # order, case-insensitive); other words match nothing. /mf/<code>: only scheme 122639 was recorded (its history trimmed to the newest 30 points);
 # every other code answers the recorded "unknown scheme" shape (HTTP 200, empty meta, no rows). An empty q is the real service's HTTP 400.
-_route_before_mf = _route
 
 
 def _route_mf(request: httpx.Request) -> httpx.Response | None:
@@ -998,10 +934,6 @@ def _route_mf(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_mf(request) or _route_before_mf(request)
-
-
 # --- Kraken + Coinbase Exchange (keyless second crypto exchanges; recorded 2026-11-05 from the real public APIs) ---
 # Kraken: the USD board Ticker (22 coins), BTC-USD daily (last 400 of 721 rows) and hourly (last 200), BTC-USDT daily (last 200), the BTC-USD and
 # BTC-USDT order books (100 levels). Coinbase: BTC-USD daily (298 rows) and hourly (265), BTC-USDT daily, both books cut to 100 levels, and the 24h
@@ -1012,7 +944,6 @@ _KRAKEN_DEPTH = {"XBTUSD": "kraken_depth_xbtusd", "XBTUSDT": "kraken_depth_xbtus
 _COINBASE_CANDLES = {("BTC-USD", "86400"): "coinbase_candles_btcusd_86400", ("BTC-USD", "3600"): "coinbase_candles_btcusd_3600",
                      ("BTC-USDT", "86400"): "coinbase_candles_btcusdt_86400"}
 _COINBASE_BOOK = {"BTC-USD": "coinbase_book_btcusd", "BTC-USDT": "coinbase_book_btcusdt"}
-_route_before_cryptoex = _route
 
 
 def _route_cryptoex(request: httpx.Request) -> httpx.Response | None:
@@ -1043,15 +974,10 @@ def _route_cryptoex(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_cryptoex(request) or _route_before_cryptoex(request)
-
-
 # --- FLT: OpenSky aircraft. DOC-SHAPED, NOT A RECORDING (OpenSky refused every connection from the build machine on 2026-11-05) ---
 # `states/all` returns the invented aircraft of opensky_docshape_states.json that lie inside the requested lamin/lomin/lamax/lomax box (all of them with no box,
 # as the real service does), `states: null` when none do, and the remaining-credits header the docs describe. The token endpoint accepts any client except one whose
 # secret is "wrong-secret-value" (HTTP 401, the OAuth2 answer for a bad client). A bearer token other than the fixture's is a 401.
-_route_before_opensky = _route
 _OPENSKY_TOKEN = "fixture-token-0123456789abcdef"
 
 
@@ -1076,15 +1002,10 @@ def _route_opensky(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
-def _route(request: httpx.Request) -> httpx.Response:
-    return _route_opensky(request) or _route_before_opensky(request)
-
-
 # --- US government data: USASP, FEDREG (REAL recordings, scripts/record_usgov.py) and FEC, CONGRESS (DOC-SHAPED, invented numbers, NOT A RECORDING) ---
 # USASpending: the recorded "lockheed martin" answers for any keyword containing "lockheed", the recorded empty answer for every other keyword. Federal Register: the
 # recorded "semiconductor" answers (all types, or rules only), the recorded newest-of-all answer for an empty search, the recorded empty answer for other words.
 # api.data.gov hosts: only keys starting with "docshape" get data; no key and any other key get the REAL gateway answers (HTTP 403 API_KEY_MISSING / API_KEY_INVALID).
-_route_before_usgov = _route
 _FEC_DOC = {"/v1/candidates/search/": "fec_candidates_search_docshape", "/v1/committees/": "fec_committees_docshape",
             "/v1/candidate/H0ZZ00001/": "fec_candidate_entity_docshape", "/v1/candidate/H0ZZ00001/totals/": "fec_candidate_totals_docshape",
             "/v1/committee/C00000001/": "fec_committee_entity_docshape", "/v1/committee/C00000001/totals/": "fec_committee_totals_docshape"}
@@ -1125,5 +1046,54 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
+
+
+# --- The route table: THE ONE place that says which checker answers first ---
+# Every checker above takes a request and returns a response, or None for "not mine, ask the next one". They are tried in this
+# order and the first answer wins, so ORDER IS PRECEDENCE: a checker higher up shadows the ones below it (for example the LLM
+# checker sits above the key-test one, so an LLM host that is not a key test is a 404 before the key-test table is asked).
+# Newest first, as the old chain of redefined `_route` functions behaved; to add a source, add its checker above `_route_base`
+# (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
+# so it must stay last.
+ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
+    _route_usgov,       # US government data: USASpending, Federal Register, OpenFEC, Congress.gov
+    _route_opensky,     # FLT: OpenSky aircraft
+    _route_cryptoex,    # Kraken and Coinbase Exchange
+    _route_mf,          # MFapi.in mutual funds
+    _route_map,         # MAP: USGS quakes, NASA EONET events, PortWatch port list by ids
+    _route_ports,       # PORTS: PortWatch daily port activity
+    _route_dbsearch,    # DBSRCH: DBnomics dataset and series search
+    _route_freesrc,     # Frankfurter, Etherscan, Marketaux, Companies House
+    _route_tradeus,     # Comtrade, BLS, BEA, Census
+    _route_portwatch,   # SHIP: PortWatch chokepoints
+    _route_phase19h,    # Binance depth / premium, OKX, DefiLlama
+    _route_phase19f,    # NSE bhavcopy, AMFI NAV
+    _route_phase19e,    # Polymarket, Kalshi
+    _route_phase19c,    # Open-Meteo, NWS alerts
+    _route_phase19b,    # World Bank, DBnomics series, Nager.Date, policy rates
+    _route_phase19,     # OpenFIGI mapping
+    _route_kite,        # Zerodha Kite Connect
+    _route_kenfrench,   # Ken French factor zips
+    _route_slice,       # shorter daily Yahoo charts cut from a longer recording
+    _route_futures,     # futures contract charts, CFTC COT, FOMC calendar
+    _route_rates,       # ECB, BoE, BoC, MoF, TreasuryDirect
+    _route_deribit,     # Deribit options
+    _route_phase14,     # Yahoo and Tradier options
+    _route_keyed,       # Finnhub and Alpaca news (keyed, doc-shaped)
+    _route_phase13,     # research: quoteSummary modules, Nasdaq extras, SEC archives, FINRA, dividend events
+    _route_llm,         # LLM gateway hosts and the Ollama port
+    _route_key_tests,   # APIKEYS key tests
+    _route_phase7,      # macro: FRED, Treasury, Nasdaq earnings, BLS / BEA calendars
+    _news_table_feed,   # curated news feeds that have no recording (hand-made, labelled FIXTURE)
+    _route_phase6,      # SEC EDGAR, Yahoo ownership
+    _route_base,        # Yahoo, Nasdaq, news, Binance, CoinGecko; the catch-all
+)
+
+
 def _route(request: httpx.Request) -> httpx.Response:
-    return _route_usgov(request) or _route_before_usgov(request)
+    """Answers one request: asks each checker in ROUTE_TABLE order and returns the first answer."""
+    for checker in ROUTE_TABLE:
+        response = checker(request)
+        if response is not None:
+            return response
+    raise AssertionError("fixture route table: the last checker must always answer")

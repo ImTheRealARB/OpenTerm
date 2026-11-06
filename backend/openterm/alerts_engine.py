@@ -26,6 +26,7 @@ from collections.abc import Awaitable, Callable
 from .delivery import format as dfmt
 from .news_alerts import NewsAlerts
 from .portfolio import Alerts
+from .streaming.tick import ALERT_NAMES
 
 log = logging.getLogger("openterm.alerts")
 
@@ -33,8 +34,8 @@ STALE_S = 120.0  # a tick older than this is not "now": no alert on it
 NEWS_POLL_S = 120.0  # how often active news alerts look at the headlines (same as the old browser poll)
 FIRST_NEWS_POLL_S = 10.0  # first look shortly after start (not at once: startup stays free of network calls)
 STALE_NEWS_RETRY_S = 5.0  # the news cache lives about as long as the poll gap, so a "stale" answer is retried once after this
-# Source codes on a Tick (see streaming/tick.py) -> words used in the message sent out.
-SOURCE_NAMES = {"y": "yahoo stream", "p": "yahoo poll", "a": "alpaca iex", "k": "kite", "s": "synthetic"}
+# Source codes on a Tick -> words used in the message sent out. The table lives in one place: streaming/tick.py `SOURCES`.
+SOURCE_NAMES = ALERT_NAMES
 
 
 def tick_pct(price: float, pct: float | None, change: float | None) -> float | None:

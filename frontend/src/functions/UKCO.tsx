@@ -7,11 +7,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type UkcoFiling, type UkcoOfficer, type UkcoPayload, type UkcoSearchRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { UkcoFiling, UkcoOfficer, UkcoPayload, UkcoSearchRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { dueText, readable, statusClass, ukcoQuery, yesNo } from "./ukcoArgs";
@@ -58,7 +61,7 @@ export default function UKCO({ panelId, args }: FunctionProps) {
 }
 
 function UkcoView({ panelId, query }: { panelId: number; query: string }) {
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.ukco(query, fresh), query.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(query.toLowerCase(), (fresh) => worldApi.ukco(query, fresh));
   const [view, setView] = useState<"OFFICERS" | "FILINGS">("OFFICERS");
   const grid = useRef<GridHandle>(null);
   const d: UkcoPayload | undefined = env?.data;
@@ -73,6 +76,7 @@ function UkcoView({ panelId, query }: { panelId: number; query: string }) {
     return view === "OFFICERS" ? gridCsv(`UKCO_${company.number}_OFFICERS`, OFFICERS, officers) : gridCsv(`UKCO_${company.number}_FILINGS`, FILINGS, filings);
   });
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -81,10 +85,6 @@ function UkcoView({ panelId, query }: { panelId: number; query: string }) {
         const g = grid.current;
         const n = cur.search ? cur.search.length : cur.view === "OFFICERS" ? cur.officers.length : cur.filings.length;
         if (navKey(e, g, n)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if ((e.key === "v" || e.key === "V") && !cur.search) {
           setView((v) => (v === "OFFICERS" ? "FILINGS" : "OFFICERS"));
           return true;
@@ -96,7 +96,7 @@ function UkcoView({ panelId, query }: { panelId: number; query: string }) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const p = company?.profile;

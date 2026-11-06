@@ -10,9 +10,12 @@ import { Grid, type GridHandle } from "../components/Grid";
 import { HeatMap, type HeatHandle } from "../components/HeatMap";
 import { XYChart } from "../components/XYChart";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { researchApi, type Envelope } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { researchApi } from "../net/researchApi";
+import type { Envelope } from "../net/types";
 import { gridColumns, cellText, type TablePayload, type TableRow } from "../research/tablePayload";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { RunCtx } from "./quantRun";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
@@ -97,6 +100,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
       grid.current?.moveTo(0);
     }, [section]);
 
+    usePanelRefresh(panelId, () => { void reload(true); });
     useEffect(
       () =>
         registerPanelKeys(panelId, (e) => {
@@ -127,13 +131,9 @@ export function makeResearchPanel(opts: ResearchOptions) {
             if (url) openUrl(url);
             return true;
           }
-          if (e.key === "F5") {
-            void reload(true);
-            return true;
-          }
           return false;
         }),
-      [panelId, latest, reload, key],
+      [panelId, latest, key],
     );
 
     return (

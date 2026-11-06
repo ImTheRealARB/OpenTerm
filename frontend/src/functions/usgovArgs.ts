@@ -1,5 +1,5 @@
 /** USASP, FEDREG, FEC, CONGRESS: pure helpers shared by the four US government panels (no DOM, no network; vitest runs them). */
-import type { CongressRow, FecItem } from "../net/api";
+import type { CongressRow, FecItem } from "../net/types";
 
 /** Every word after the function code is one query: `USASP lockheed martin` -> "lockheed martin". */
 export function joinQuery(args: string[]): string {

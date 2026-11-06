@@ -11,12 +11,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type FltRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { FltRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { replaceView } from "../state/workspace";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { creditsText, fltQuery, FLT_USAGE, fmtAge, fmtFeet, fmtHeading, fmtKt, fmtLatLon, fmtVrate, quietText, stepArea } from "./fltArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -25,7 +28,7 @@ const vrateColor = (r: FltRow): CellColor => (r.vrate_fpm == null || r.vrate_fpm
 
 export default function FLT({ panelId, args }: FunctionProps) {
   const query = useMemo(() => fltQuery(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.flt(query, fresh), query);
+  const { env, error, loading, reload: load } = useEnvelope(query, (fresh) => worldApi.flt(query, fresh));
   const grid = useRef<GridHandle>(null);
   const [sel, setSel] = useState(0);
   const d = env?.data;
@@ -72,15 +75,12 @@ export default function FLT({ panelId, args }: FunctionProps) {
       : null,
   );
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         const k = e.key.toLowerCase();
         if (k === "n" || k === "p") {
           // A new area is a new view argument, so the layout saves it and the load effect refetches.

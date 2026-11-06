@@ -1,7 +1,7 @@
 """Service functions behind USASP, FEDREG, FEC and CONGRESS (`/api/world/usasp`, `/fedreg`, `/fec`, `/congress`).
 
 Each one: parse the user's words (pure parsers in `usaspending.py`, `fedreg.py`, `fec.py`, `congress.py`), ask the router for the provider that owns the
-capability, cache the answer in the shared stale-while-revalidate cache (`svc._swr`: a repeat costs the free upstream nothing) and wrap it with the label
+capability, cache the answer in the shared stale-while-revalidate cache (`svc.swr`: a repeat costs the free upstream nothing) and wrap it with the label
 that says what the data is. Without FEC_API_KEY / CONGRESS_API_KEY the provider raises `key_required` and the route answers 424
 `KEY REQUIRED: set FEC_API_KEY in APIKEYS`; nothing is invented to fill the gap.
 """
@@ -11,8 +11,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from ..errors import DataError
 from ..router import AllFailed
-from ..service import DataError
 from . import congress, fec, fedreg, usaspending
 from .usgov import UsGovError
 
@@ -37,7 +37,7 @@ async def usasp(svc: Any, q: str) -> dict[str, Any]:
             rows, failed = await svc.router.call("usaspending", lambda p: p.usasp_agency_recipients(agency, window))
             return {"data": usaspending.agency_detail_payload(agency, window, rows), "fallback_from": failed, "source": usaspending.SOURCE}
 
-        return await svc._swr(f"w:usasp:ag:{agency.upper()}:{window['end_date']}", USASP_TTL_S, fetch_detail)
+        return await svc.swr(f"w:usasp:ag:{agency.upper()}:{window['end_date']}", USASP_TTL_S, fetch_detail)
     try:
         kind, words = usaspending.norm_query(text)
     except UsGovError as e:
@@ -52,7 +52,7 @@ async def usasp(svc: Any, q: str) -> dict[str, Any]:
             data = usaspending.keyword_payload(words, window, out["recipients"], out["awards"], out["notes"])
         return {"data": data, "fallback_from": failed, "source": usaspending.SOURCE}
 
-    return await svc._swr(f"w:usasp:{kind}:{words.upper()}:{window['end_date']}", USASP_TTL_S, fetch)
+    return await svc.swr(f"w:usasp:{kind}:{words.upper()}:{window['end_date']}", USASP_TTL_S, fetch)
 
 
 async def fedreg_search(svc: Any, q: str) -> dict[str, Any]:
@@ -65,7 +65,7 @@ async def fedreg_search(svc: Any, q: str) -> dict[str, Any]:
         out, failed = await svc.router.call("federal_register", lambda p: p.fedreg_search(type_code, words))
         return {"data": out, "fallback_from": failed, "source": fedreg.SOURCE}
 
-    return await svc._swr(f"w:fedreg:{type_code}:{words.lower()}", FEDREG_TTL_S, fetch)
+    return await svc.swr(f"w:fedreg:{type_code}:{words.lower()}", FEDREG_TTL_S, fetch)
 
 
 def _source(svc: Any, name: str) -> str:
@@ -93,7 +93,7 @@ async def fec_view(svc: Any, q: str) -> dict[str, Any]:
             raise
         return {"data": data, "fallback_from": failed, "source": _source(svc, "openfec")}
 
-    return await svc._swr(f"w:fec:{kind}:{text.upper()}", FEC_TTL_S, fetch)
+    return await svc.swr(f"w:fec:{kind}:{text.upper()}", FEC_TTL_S, fetch)
 
 
 async def congress_view(svc: Any, q: str) -> dict[str, Any]:
@@ -121,4 +121,4 @@ async def congress_view(svc: Any, q: str) -> dict[str, Any]:
         return {"data": data, "fallback_from": failed, "source": _source(svc, "congressgov")}
 
     key = f"w:congress:bill:{arg}" if kind == "bill" else f"w:congress:{kind}:{' '.join(arg) if arg else ''}"
-    return await svc._swr(key, CONGRESS_TTL_S, fetch)
+    return await svc.swr(key, CONGRESS_TTL_S, fetch)

@@ -1,5 +1,5 @@
 /** Layer 3: the eight chokepoint boxes AIS listens to, drawn as rectangles. Select one and press V to load the ships inside it. */
-import type { GeoChokepoints } from "../../net/api";
+import type { GeoChokepoints } from "../../net/types";
 import { layerData, type MapLayer } from "../layer";
 import type { BoxShape, LayerData } from "../types";
 

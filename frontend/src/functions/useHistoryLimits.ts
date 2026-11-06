@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../net/api";
+import { marketApi } from "../net/marketApi";
 import type { IntradayLimits } from "./gpArgs";
 
 /**
@@ -7,14 +7,14 @@ import type { IntradayLimits } from "./gpArgs";
  *
  * It is only a hint for the candle-length dropdown: while it loads, or if the request fails, it is `undefined` and the dropdown
  * offers everything; the server's own error stays the authority. (Kept out of gpArgs.ts because that file must stay free of
- * `net/api` so vitest can import it.)
+ * `net/core` so vitest can import it.)
  */
 export function useHistoryLimits(symbol: string | undefined): IntradayLimits | undefined {
   const [limits, setLimits] = useState<{ symbol: string; days: IntradayLimits } | undefined>();
   useEffect(() => {
     if (!symbol) return;
     let alive = true;
-    api
+    marketApi
       .historyLimits(symbol)
       .then((r) => {
         if (alive) setLimits({ symbol, days: r.intraday_days });

@@ -13,14 +13,14 @@ from urllib.parse import quote
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .api import error, loopback
+from .errors import DataError
+from .http_util import error, loopback
 from .kite import KITE_LOGIN
 from .kite.client import KiteLoginFailed
 from .kite.session import KEY_REQUIRED_MESSAGE
 from .kite.symbols import to_kite
 from .redact import redact
 from .responses import Orjson, OrjsonRoute
-from .service import DataError
 
 router = APIRouter(prefix="/api/kite", route_class=OrjsonRoute)
 

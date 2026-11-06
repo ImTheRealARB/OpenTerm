@@ -9,8 +9,9 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { replaceView } from "../state/workspace";
+import { aiApi, isAbort, streamPost } from "../net/aiApi";
 import { Answer, ToolLines } from "./AI";
-import { citeSegments, parseSse } from "./aiStream";
+import { citeSegments } from "./aiStream";
 import type { FunctionProps } from "./registry";
 import { commandFor, coverageLabel, subjectSymbol, swarmArgs, type PresetInfo, type PresetsResponse } from "./swarmArgs";
 import { estimateLine, newSwarm, reduceSwarm, type RoleState, type SwarmEvent, type SwarmState } from "./swarmStream";
@@ -78,14 +79,14 @@ export default function SWARM({ panelId, args }: FunctionProps) {
   /** Loads the desks (every one the backend knows, including the user's own files) and the stored runs. Returns the desks for argument parsing. */
   const loadLists = useCallback(async (): Promise<PresetInfo[]> => {
     try {
-      const [p, r] = await Promise.all([fetch("/api/ai/swarm/presets"), fetch("/api/ai/runs?kind=swarm")]);
+      const [p, r] = await Promise.all([aiApi.swarmPresets<PresetsResponse>(), aiApi.swarmRuns<{ runs: StoredRun[] }>()]);
       let list: PresetInfo[] = [];
       if (p.ok) {
-        const body = (await p.json()) as PresetsResponse;
+        const body = p.json as PresetsResponse;
         setDesks(body);
         list = body.presets;
       }
-      if (r.ok) setStored(((await r.json()) as { runs: StoredRun[] }).runs);
+      if (r.ok) setStored((r.json as { runs: StoredRun[] }).runs);
       return list;
     } catch {
       setNote({ text: "BACKEND DOWN", cls: "err" });
@@ -115,28 +116,13 @@ export default function SWARM({ panelId, args }: FunctionProps) {
       setRun(cur);
     };
     try {
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), signal: ac.signal });
-      if (!res.ok || !res.body) {
-        const j = await res.json().catch(() => null);
-        apply({ type: "error", kind: j?.kind ?? "http", text: j?.error ?? `HTTP ${res.status}` });
-        return;
-      }
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const parsed = parseSse<SwarmEvent>(buf);
-        buf = parsed.rest;
-        parsed.events.forEach(apply);
-      }
+      // false = the server refused the run: streamPost already showed its error as an event, so there is nothing to settle.
+      if (!(await streamPost<SwarmEvent>(url, body, ac.signal, apply))) return;
       if (cur.status === "running" && !gone) setRun(incomplete());
     } catch (e) {
       if (gone) {
         /* already marked INCOMPLETE when the panel moved on */
-      } else if ((e as Error).name === "AbortError") setRun(incomplete());
+      } else if (isAbort(e)) setRun(incomplete());
       else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
     } finally {
       unwatch();
@@ -183,9 +169,8 @@ export default function SWARM({ panelId, args }: FunctionProps) {
     if (!symbol) return setNote({ text: "THE SUBJECT IS NOT A TICKER: USE THESIS ADD <SYMBOL> <TEXT>", cls: "warn" });
     const text = `SWARM ${r.preset} (MODEL OUTPUT, RUN ${r.runId}): ${r.final.answer}`.slice(0, 2000);
     try {
-      const res = await fetch("/api/theses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, text, run_ids: [r.runId] }) });
-      const j = await res.json().catch(() => null);
-      setNote(res.ok ? { text: `THESIS ${j.thesis.id} SAVED FOR ${symbol}, LINKED TO RUN ${r.runId}: THESIS ${symbol}`, cls: "up" } : { text: j?.error ?? `HTTP ${res.status}`, cls: "err" });
+      const { ok, status, json: j } = await aiApi.createThesis<{ thesis: { id: number }; error?: string }>({ symbol, text, run_ids: [r.runId] });
+      setNote(ok ? { text: `THESIS ${j!.thesis.id} SAVED FOR ${symbol}, LINKED TO RUN ${r.runId}: THESIS ${symbol}`, cls: "up" } : { text: j?.error ?? `HTTP ${status}`, cls: "err" });
     } catch {
       setNote({ text: "BACKEND DOWN", cls: "err" });
     }

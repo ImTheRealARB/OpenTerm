@@ -3,7 +3,7 @@
  * The field checks mirror backend/openterm/delivery/settings.py. The backend stays the judge (it answers 400 with a
  * message); checking here too just saves a round trip and gives the error the moment Enter is pressed.
  */
-import type { BriefSection, DeliverySettings } from "../net/api";
+import type { BriefSection, DeliverySettings } from "../net/types";
 
 const EMAIL_RE = /^[^@\s,;<>]{1,64}@[^@\s,;<>]{1,255}$/;
 const CHAT_RE = /^(-?\d{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})$/;

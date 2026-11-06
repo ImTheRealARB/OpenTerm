@@ -1,6 +1,7 @@
 /** Shared status pieces for the Phase 7 macro panels: source + age, STALE, fallback, and the error line. */
 import { fmtAge } from "../format";
-import type { ApiError, Envelope } from "../net/api";
+import type { ApiError } from "../net/core";
+import type { Envelope } from "../net/types";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 
 export function EnvStatus({ env, loading }: { env: Envelope<unknown> | null; loading: boolean }) {

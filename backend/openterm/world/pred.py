@@ -16,8 +16,8 @@ from typing import Any
 
 import orjson
 
+from ..errors import DataError
 from ..redact import redact
-from ..service import DataError
 
 LABEL = "MARKET-IMPLIED PROBABILITY, NOT A FORECAST"
 TTL_S = 120.0
@@ -250,7 +250,7 @@ async def _source_rows(svc: Any, name: str) -> dict[str, Any]:
             raise DataError("unavailable", f"{name.upper()} ANSWER NOT UNDERSTOOD", str(e)) from e
         return {"data": rows, "fallback_from": failed, "source": name}
 
-    return await svc._swr(f"w:pred:{name}", TTL_S, fetch)
+    return await svc.swr(f"w:pred:{name}", TTL_S, fetch)
 
 
 async def pred(svc: Any, q: str) -> dict[str, Any]:
@@ -325,5 +325,5 @@ async def pred_detail(svc: Any, source: str, ident: str) -> dict[str, Any]:
                 raise DataError("unavailable", "KALSHI ANSWER NOT UNDERSTOOD", str(e)) from e
         return {"data": data, "fallback_from": failed, "source": source}
 
-    env = await svc._swr(f"w:pred:d:{source}:{ident}", DETAIL_TTL_S, fetch)
+    env = await svc.swr(f"w:pred:d:{source}:{ident}", DETAIL_TTL_S, fetch)
     return env

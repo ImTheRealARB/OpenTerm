@@ -7,11 +7,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type FecCycle, type FecItem, type FecPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { FecCycle, FecItem, FecPayload } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { coverage, fecWhere, fmtUsd, joinQuery } from "./usgovArgs";
@@ -49,7 +52,7 @@ export default function FEC({ panelId, args }: FunctionProps) {
 }
 
 function FecView({ panelId, query }: { panelId: number; query: string }) {
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.fec(query, fresh), query.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(query.toLowerCase(), (fresh) => worldApi.fec(query, fresh));
   const grid = useRef<GridHandle>(null);
   const d: FecPayload | undefined = env?.data;
   const search = d?.mode === "SEARCH" ? d.items : null;
@@ -61,6 +64,7 @@ function FecView({ panelId, query }: { panelId: number; query: string }) {
     return entity ? gridCsv(`FEC_${entity.id}`, CYCLES, cycles) : null;
   });
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -68,10 +72,6 @@ function FecView({ panelId, query }: { panelId: number; query: string }) {
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.search ? cur.search.length : cur.cycles.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter" && cur.search) {
           const r = cur.search[g?.selected() ?? -1];
           if (r) navigate(panelId, { fn: "FEC", args: [r.id], security: undefined });
@@ -79,7 +79,7 @@ function FecView({ panelId, query }: { panelId: number; query: string }) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const l = entity?.latest;

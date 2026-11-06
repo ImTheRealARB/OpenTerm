@@ -5,13 +5,17 @@ import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
 import { deleteWatchlist, editWatchlist, putWatchlist, refreshWatchlists, watchlistList, watchlistVersion } from "../command/watchlists";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api, type ApiError } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { ApiError } from "../net/core";
+import { workspaceApi } from "../net/workspaceApi";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
 import { useStore } from "../state/store";
 import { settingsStore } from "../settings/runtime";
 import { navigate } from "../state/workspace";
 import { requestAsk } from "../gui/askBus";
-import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORT_PLAIN, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { liveSymbol, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORT_PLAIN, SORTS, sortRows, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -49,7 +53,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
 
   useEffect(() => {
     let alive = true;
-    api
+    workspaceApi
       .watchlist(name)
       .then((w) => {
         if (!alive) return;
@@ -78,6 +82,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   useLiveRows(rows, grid, liveSymbol);
   useCsvExport(panelId, () => gridCsv(`WL_${name}`, QUOTE_COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -113,9 +118,6 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
             setRows(sortRows(cur, next, inputs));
             return true;
           }
-          case "F5":
-            setReload((n) => n + 1);
-            return true;
         }
         return false;
       }),
@@ -180,6 +182,7 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
     void refresh();
   }, []);
 
+  usePanelRefresh(panelId, () => { void refresh(); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -215,9 +218,6 @@ function WatchlistIndex({ panelId }: { panelId: number }) {
             return true;
           case "n":
             prefillCommand("WL ");
-            return true;
-          case "F5":
-            void refresh();
             return true;
           case "Escape":
             return c !== null;

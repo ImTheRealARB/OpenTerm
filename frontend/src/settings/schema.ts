@@ -3,12 +3,14 @@
  * the wire, defaults filled in here. Invalid fields from storage fall back to their default (with a note in
  * `errors`) so a bad value never blocks cold start.
  */
+import { CHART_TYPES, type ChartType } from "../chart/chartTypes";
+import { CHART_RANGES } from "../chart/gpRanges";
 import { isFontName } from "./font";
 import { isTheme, type ThemeName } from "./themes";
 
-export const SETTINGS_VERSION = 1;
-export const CHART_RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"] as const;
-export const CHART_TYPES = ["CANDLE", "HOLLOW", "OHLC", "LINE", "AREA", "BASELINE", "HEIKIN"] as const;
+// The chart ranges and types are defined once (chart/gpRanges.ts, chart/chartTypes.ts; both are tiny and import
+// nothing) and re-exported here so settings code keeps importing them from the schema.
+export { CHART_RANGES, CHART_TYPES };
 export const THOUSANDS = [",", ".", " ", "'", ""] as const;
 export const DECIMALS = [".", ","] as const;
 /** Seconds, [min, max]. The floors keep the free providers inside their rate limits. */
@@ -52,7 +54,7 @@ export interface Settings {
   numberFormat: { thousands: (typeof THOUSANDS)[number]; decimal: (typeof DECIMALS)[number] };
   /** "LOCAL", "UTC" or an IANA zone such as "America/New_York". */
   clocks: string[];
-  chart: { range: (typeof CHART_RANGES)[number]; type: (typeof CHART_TYPES)[number] };
+  chart: { range: (typeof CHART_RANGES)[number]; type: ChartType };
   poll: Record<PollKey, number>;
   /** Keybinding overrides: action -> chords (replaces that action's defaults). */
   keys: Record<string, string[]>;

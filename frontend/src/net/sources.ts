@@ -1,6 +1,7 @@
 import { gauges } from "../perf/metrics";
 import { createStore } from "../state/store";
-import { api, type SourcesPayload } from "./api";
+import { systemApi } from "./systemApi";
+import type { SourcesPayload } from "./types";
 
 /** Provider health for the status bar, polled slowly; the SOURCES screen polls faster on its own. */
 export const sources = createStore<SourcesPayload | null>(null);
@@ -8,7 +9,7 @@ export const sources = createStore<SourcesPayload | null>(null);
 export function pollSources(intervalMs = 10_000): void {
   const tick = async () => {
     try {
-      const s = await api.sources();
+      const s = await systemApi.sources();
       sources.set(() => s);
       if (s.cache.hit_pct != null) gauges.set("cache.hitPct", s.cache.hit_pct);
       for (const p of s.providers) {

@@ -1,6 +1,6 @@
 /** Backend side of settings: reconcile once after the first paint, then store each edit (debounced). */
 import { info } from "../command/status";
-import { settingsApi } from "../net/api";
+import { settingsApi } from "../net/settingsApi";
 import { adoptRemote, markSynced, mirrorState, setLocalChangeListener } from "./runtime";
 import { reconcile } from "./schema";
 

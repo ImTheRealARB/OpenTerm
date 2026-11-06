@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from ..service import DataError
+from ..errors import DataError
 from . import geo, ports
 
 QUAKES_TTL_S = 120.0  # USGS rebuilds the feed every minute and asks not to be polled faster than that
@@ -36,7 +36,7 @@ async def quakes(svc: Any) -> dict[str, Any]:
             raise DataError("unavailable", str(e), "") from e
         return {"data": {**data, "note": QUAKES_NOTE}, "source": QUAKES_SOURCE, "fallback_from": failed}
 
-    return await svc._swr("w:geo:quakes", QUAKES_TTL_S, fetch)
+    return await svc.swr("w:geo:quakes", QUAKES_TTL_S, fetch)
 
 
 async def events(svc: Any) -> dict[str, Any]:
@@ -48,7 +48,7 @@ async def events(svc: Any) -> dict[str, Any]:
             raise DataError("unavailable", str(e), "") from e
         return {"data": {**data, "note": EVENTS_NOTE}, "source": EVENTS_SOURCE, "fallback_from": failed}
 
-    return await svc._swr("w:geo:events", EVENTS_TTL_S, fetch)
+    return await svc.swr("w:geo:events", EVENTS_TTL_S, fetch)
 
 
 async def ports_map(svc: Any) -> dict[str, Any]:
@@ -62,11 +62,11 @@ async def ports_map(svc: Any) -> dict[str, Any]:
             raise DataError("unavailable", str(e), "") from e
         return {"data": {**data, "note": PORTS_NOTE}, "source": PORTS_SOURCE, "fallback_from": failed}
 
-    return await svc._swr("w:geo:ports", PORTS_TTL_S, fetch)
+    return await svc.swr("w:geo:ports", PORTS_TTL_S, fetch)
 
 
 async def chokepoints(svc: Any) -> dict[str, Any]:
     async def fetch() -> dict:
         return {"data": {"rows": geo.chokepoints(), "note": CHOKE_NOTE}, "source": CHOKE_SOURCE, "fallback_from": []}
 
-    return await svc._swr("w:geo:choke", 3600.0, fetch)
+    return await svc.swr("w:geo:choke", 3600.0, fetch)

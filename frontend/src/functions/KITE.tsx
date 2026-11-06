@@ -4,7 +4,10 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { kiteApi, type ApiError, type KiteStatus } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { ApiError } from "../net/core";
+import { kiteApi } from "../net/kiteApi";
+import type { KiteStatus } from "../net/types";
 import { kite, refreshKite } from "../net/kite";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
@@ -62,6 +65,10 @@ export default function KITE({ panelId, args }: FunctionProps) {
     }
   }, [action, panelId, refresh, login, logout]);
 
+  usePanelRefresh(panelId, () => {
+    setMsg(null);
+    void refresh();
+  });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -74,7 +81,6 @@ export default function KITE({ panelId, args }: FunctionProps) {
             void logout();
             return true;
           case "r":
-          case "F5":
             setMsg(null);
             void refresh();
             return true;

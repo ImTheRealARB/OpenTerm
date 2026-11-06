@@ -13,7 +13,11 @@ import { alerts as alertStore } from "../command/alerts";
 import { createPriceAlert } from "../command/priceAlert";
 import { fail } from "../command/status";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, worldApi, type ChartEvents, type Envelope } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { chartApi } from "../net/chartApi";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { ChartEvents, Envelope } from "../net/types";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
@@ -22,7 +26,7 @@ import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { KEY_RANGES, MAX_CUSTOM, depthLimitFromError, formulaInd, libraryInd, limitText, longestRangeWithin, parseGpArgs, serializeGp, type GpParsed } from "./gpArgs";
 import { fallbackText } from "./fallbackText";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 
 export { parseGpArgs };
@@ -127,8 +131,8 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   useEffect(() => {
     let alive = true;
     setState((s) => ({ ...s, loading: true }));
-    const main = api.history(symbol, p.range, p.interval);
-    const cmp = Promise.all(p.compare.map((c) => api.history(c, p.range, p.interval).catch((e: ApiError) => e)));
+    const main = marketApi.history(symbol, p.range, p.interval);
+    const cmp = Promise.all(p.compare.map((c) => marketApi.history(c, p.range, p.interval).catch((e: ApiError) => e)));
     Promise.all([main, cmp])
       .then(([env, cs]) => {
         if (!alive) return;
@@ -175,14 +179,14 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [drawNote, setDrawNote] = useState<string | null>(null);
   // One saver per panel: it saves to the symbol the loaded list belongs to, so a symbol switch in place cannot mis-address a save.
-  const saver = useMemo(() => createDrawSaver((sym, list) => worldApi.saveDrawings(sym, list), setDrawNote), []);
+  const saver = useMemo(() => createDrawSaver((sym, list) => chartApi.saveDrawings(sym, list), setDrawNote), []);
   useEffect(() => {
     let alive = true;
     saver.reset();
     setDrawings([]);
     setSelected(null);
     setMode(null);
-    worldApi
+    chartApi
       .drawings(symbol)
       .then((r) => {
         if (!alive) return;
@@ -209,7 +213,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       return;
     }
     let alive = true;
-    worldApi
+    chartApi
       .events(symbol, reload > 0)
       .then((env) => alive && setEvents({ env }))
       .catch((e: ApiError) => alive && setEvents({ error: `${e.message}${e.detail ? ` (${e.detail})` : ""}` }));
@@ -251,6 +255,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   useEffect(() => setArmed(false), [symbol, panelId]);
   const live = useLatest({ drawings, selected, mode, bars: L?.bars, armed, placeAlert, overlayOn });
 
+  usePanelRefresh(panelId, () => { setReload((r) => r + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -382,9 +387,6 @@ export default function GP({ panelId, security, args }: FunctionProps) {
             return true;
           case "-":
             chart.current?.zoom(1.25);
-            return true;
-          case "F5":
-            setReload((r) => r + 1);
             return true;
         }
         return false;

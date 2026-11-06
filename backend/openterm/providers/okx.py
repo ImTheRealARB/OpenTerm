@@ -35,8 +35,8 @@ class OkxProvider(Provider):
     timeout = 8.0
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm", "Accept": "application/json"}
 
-    def __init__(self, http, source: str | None = None):
-        super().__init__(http, source)
+    def __init__(self, http, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
         self._inst: dict[str, tuple[float, tuple[float, bool]]] = {}
 
     async def _json(self, path: str, params: dict[str, Any], what: str) -> Any:

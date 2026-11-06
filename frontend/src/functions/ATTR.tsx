@@ -1,4 +1,4 @@
-import type { Envelope } from "../net/api";
+import type { Envelope } from "../net/types";
 import type { TablePayload } from "../research/tablePayload";
 import { attrArgs } from "./quantArgs";
 import { addValuation, deleteValuation, runQuant } from "./quantRun";

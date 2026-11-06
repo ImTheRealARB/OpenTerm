@@ -1,9 +1,13 @@
 /**
  * Phase 15: runs a quant job (`POST /api/quant/{fn}`) and waits for its table payload. The job is adopted into the jobs store so its
  * J frames show in JOBS; progress is reported while it runs. `GET /api/jobs/{id}` is polled every 500 ms, so a missing J frame
- * (or a job that finished before the socket said so) still ends. Needs the browser (net/api): not unit-tested.
+ * (or a job that finished before the socket said so) still ends. Needs the browser (net/core): not unit-tested.
  */
-import { ApiError, api, quantApi, type Envelope, type ValRow } from "../net/api";
+import { ApiError } from "../net/core";
+import { jobsApi } from "../net/jobsApi";
+import { portfolioApi } from "../net/portfolioApi";
+import { quantApi } from "../net/quantApi";
+import type { Envelope, ValRow } from "../net/types";
 import { isFinished } from "../net/jobFrames";
 import type { JobRec } from "../net/jobFrames";
 import { adoptJob, jobsStore } from "../net/jobs";
@@ -34,7 +38,7 @@ function envelopeOf(job: JobRec): Envelope<TablePayload> {
 const progressText = (j: JobRec) => `${Math.round((j.progress ?? 0) * 100)}%${j.msg ? ` ${j.msg}` : ""}`;
 
 export async function runQuant(fn: string, params: Record<string, string | string[]>, ctx: RunCtx): Promise<Envelope<TablePayload>> {
-  const fetchFull = () => api.job(id).then((j) => adoptJob({ ...j, id }));
+  const fetchFull = () => jobsApi.job(id).then((j) => adoptJob({ ...j, id }));
   const posted = await quantApi.run(fn, quantBody(fn, params));
   const id = posted.id;
   adoptJob(posted);
@@ -56,17 +60,17 @@ export async function runQuant(fn: string, params: Record<string, string | strin
 
 /** Merges one valuation (PORT ATTR ADD) into the stored table: the same date is replaced; the rows stay sorted by date. */
 export async function addValuation(name: string, row: ValRow): Promise<number> {
-  const { rows } = await quantApi.vals(name);
+  const { rows } = await portfolioApi.vals(name);
   const next = [...rows.filter((r) => r.date !== row.date), row].sort((a, b) => a.date.localeCompare(b.date));
-  await quantApi.putVals(name, next);
+  await portfolioApi.putVals(name, next);
   return next.length;
 }
 
 /** PORT ATTR DEL: removes the valuation of that date. */
 export async function deleteValuation(name: string, date: string): Promise<boolean> {
-  const { rows } = await quantApi.vals(name);
+  const { rows } = await portfolioApi.vals(name);
   const next = rows.filter((r) => r.date !== date);
   if (next.length === rows.length) return false;
-  await quantApi.putVals(name, next);
+  await portfolioApi.putVals(name, next);
   return true;
 }

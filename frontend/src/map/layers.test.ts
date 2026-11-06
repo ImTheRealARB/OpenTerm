@@ -7,7 +7,7 @@ import { radius as portRadius, toShapes as portShapes } from "./layers/ports";
 import { radius as quakeRadius, toShapes as quakeShapes, tone as quakeTone } from "./layers/quakes";
 import { toShapes as vesselShapes } from "./layers/vessels";
 import { FLT_AREAS } from "../functions/fltArgs";
-import type { AisRow, FltPayload, FltRow, GeoEvents, GeoPorts, GeoQuakes } from "../net/api";
+import type { AisRow, FltPayload, FltRow, GeoEvents, GeoPorts, GeoQuakes } from "../net/types";
 
 const ship = (over: Partial<AisRow>): AisRow => ({
   mmsi: 1, name: "TEST", imo: null, type: "Tanker", type_code: 80, sog: 12, cog: 90, heading: null, nav: 0, nav_name: "UNDER WAY USING ENGINE",

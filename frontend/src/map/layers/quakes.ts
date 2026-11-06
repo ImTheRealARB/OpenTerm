@@ -1,6 +1,6 @@
 /** Layer 4: earthquakes of magnitude 4.5 and above in the past 7 days (USGS, keyless). */
 import { fmtAge } from "../../functions/aisArgs";
-import type { GeoQuakes } from "../../net/api";
+import type { GeoQuakes } from "../../net/types";
 import { layerData, type MapLayer } from "../layer";
 import type { LayerData, PointShape, Tone } from "../types";
 

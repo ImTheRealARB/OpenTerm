@@ -10,7 +10,7 @@ from ..models import Bars, Mover, Movers, Profile, Quote
 from ..ranges import range_days
 from ..symbols import is_us_plain
 from .base import HISTORY, MOVERS, PROFILE, QUOTES, Provider, ProviderError
-from .yahoo import UA
+from .http import UA
 
 BASE = "https://api.nasdaq.com/api/quote"
 NY = ZoneInfo("America/New_York")

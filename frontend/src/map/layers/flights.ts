@@ -7,7 +7,7 @@
  */
 import { fmtAge, fmtDegrees, fmtKnots, fmtLatLon } from "../../functions/aisArgs";
 import { FLT_AREAS } from "../../functions/fltArgs";
-import type { FltPayload } from "../../net/api";
+import type { FltPayload } from "../../net/types";
 import { layerData, type MapLayer } from "../layer";
 import type { Box, LayerData, PointShape } from "../types";
 import { inBox } from "./vessels";

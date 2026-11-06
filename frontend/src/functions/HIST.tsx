@@ -3,11 +3,15 @@ import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api9, type BarsAdj } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { marketApi } from "../net/marketApi";
+import type { BarsAdj } from "../net/types";
 import { navigate } from "../state/workspace";
 import { dayKey } from "./corrMath";
 import { fallbackText } from "./fallbackText";
-import { dirColor, navKey, useLatest } from "./quoteRows";
+import { dirColor } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { histArgs, histRows, type HistRow } from "./returns";
 import { useEnvelope } from "./secPanel";
@@ -23,7 +27,7 @@ export default function HIST({ panelId, security, args }: FunctionProps) {
 
   // useEnvelope drops an answer for an old symbol/range that lands after a re-key.
   const { env, error, loading, reload: load } = useEnvelope<BarsAdj>(`${symbol}|${range}|${interval}`, (fresh) =>
-    api9.history(symbol, range, INTERVALS[interval], fresh),
+    marketApi.history(symbol, range, INTERVALS[interval], fresh),
   );
 
   const tz = env?.data.tz ?? null;
@@ -49,6 +53,7 @@ export default function HIST({ panelId, security, args }: FunctionProps) {
 
   useCsvExport(panelId, () => (rows.length ? gridCsv(`HIST_${symbol}_${range}_${interval}`, columns, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -57,13 +62,10 @@ export default function HIST({ panelId, security, args }: FunctionProps) {
           case "Enter":
             navigate(panelId, { fn: "GP", security: { symbol }, args: [range, ...(interval === "D" ? [] : [interval])] });
             return true;
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load, symbol, range, interval],
+    [panelId, latest, symbol, range, interval],
   );
 
   return (

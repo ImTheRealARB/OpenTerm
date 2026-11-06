@@ -3,9 +3,11 @@
  * Order is free. `VS` takes up to three symbols; with `PANE` each gets its own pane, without it the first one is overlaid (rebased to %).
  */
 import { CHART_TYPES, type ChartType } from "../chart/chartTypes";
+import { GP_RANGES } from "../chart/gpRanges";
 import { INDICATORS, type IndicatorName } from "../chart/indicators";
 
-export const RANGES = ["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"];
+/** The shared range list (chart/gpRanges.ts; startup code imports it from there, never from this file). */
+export const RANGES = GP_RANGES;
 /** Number keys 1..8 jump to these. */
 export const KEY_RANGES = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"];
 const INTERVAL_WORDS = new Set(["1MIN", "2MIN", "5MIN", "15MIN", "30MIN", "60MIN", "90MIN", "1H", "D", "1D", "DAILY", "W", "1W", "1WK", "WEEKLY", "MO", "1MO", "MONTHLY"]);

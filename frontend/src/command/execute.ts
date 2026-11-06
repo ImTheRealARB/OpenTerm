@@ -1,6 +1,7 @@
+import { TWINS } from "../functions/aliases";
 import { FUNCTIONS, isFunction } from "../functions/registry";
 import { commandStart } from "../perf/metrics";
-import { currentView, navigate, split, workspace } from "../state/workspace";
+import { currentView, navigate, splitOrSay, workspace } from "../state/workspace";
 import { bareSecurityFn } from "./bareSecurity";
 import { history } from "./history";
 import { layoutCommand } from "./layouts";
@@ -36,7 +37,8 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   // An alias (WCRS, MOST ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
   if (parsed.fn) parsed.fn = FUNCTIONS.get(parsed.fn)?.code ?? parsed.fn;
 
-  if (parsed.fn === "LAYOUT" || parsed.fn === "MONITOR") {
+  // LAYOUT and its twin (MONITOR, see TWINS) share the layout command handling.
+  if (parsed.fn && (TWINS[parsed.fn] ?? parsed.fn) === "LAYOUT") {
     statusMsg.set(() => null);
     const done = layoutCommand(parsed.args);
     if (done !== null) return done;
@@ -114,8 +116,8 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   let panelId = parsed.target ?? s.focus;
   if (parsed.target && !s.panels[parsed.target]) return fail(`NO PANEL ${parsed.target}`);
   if (opts.newPanel && !parsed.target) {
-    const id = split("v");
-    if (id === null) return fail("PANEL LIMIT (9) REACHED");
+    const id = splitOrSay("v", fail);
+    if (id === null) return false;
     panelId = id;
   }
 

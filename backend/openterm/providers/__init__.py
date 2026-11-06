@@ -1,29 +1,136 @@
-"""Provider catalog. Keyless adapters are always on; keyed ones appear on SOURCES with their status."""
+"""Provider catalog. Keyless adapters are always on; keyed ones appear on SOURCES with their status.
+
+`ADAPTERS` is the list of every source the app can build (name -> class). Which of them answers first for a given kind of data
+is a different question, answered in one place: `providers/hierarchy.py` (`DEFAULT_ORDER`). To add a source, write the adapter,
+import it here, add it to `ADAPTERS`, and name it in `DEFAULT_ORDER` for each capability it serves.
+"""
 
 import httpx
 
 from ..config import Settings
+from ..keys import KEY_SPECS
+from .aisstream import AisStreamProvider
+from .alpaca import AlpacaProvider
+from .amfi import AmfiProvider
 from .base import Provider
+from .binance_deriv import BinanceDerivProvider
+from .boc import BocProvider
+from .boe import BoeProvider
+from .coinbase import CoinbaseProvider
+from .companies_house import CompaniesHouseProvider
 from .crypto import BinanceKlinesProvider, BinanceProvider, CoinGeckoProvider
+from .defillama import DefiLlamaProvider
+from .deribit import DeribitProvider
+from .ecb import EcbProvider
+from .etherscan import EtherscanProvider
+from .finnhub import FinnhubProvider
+from .finra import FinraProvider
 from .fixtures import fixture_transport
+from .frankfurter import FrankfurterProvider
+from .fred_oas import FredOasProvider
+from .futures import CftcProvider, FomcProvider, YahooFuturesProvider
+from .geo import EonetProvider, UsgsProvider
+from .kalshi import KalshiMarketsProvider
+from .kenfrench import KenFrenchProvider
+from .kite import KiteProvider
+from .kraken import KrakenProvider
+from .macro import (
+    AgencyCalendarProvider,
+    FredApiProvider,
+    FredCsvProvider,
+    NasdaqEarningsProvider,
+    TreasuryProvider,
+)
+from .marketaux import MarketauxProvider
+from .mfapi import MfapiProvider
+from .mof import MofProvider
+from .nager import NagerProvider
 from .nasdaq import NasdaqProvider
 from .news import GdeltProvider, RssProvider, YahooRssProvider
+from .nse_archive import NseArchiveProvider
+from .nws import NwsProvider
+from .okx import OkxProvider
+from .openfigi import OpenFigiProvider
+from .openmeteo import OpenMeteoProvider
+from .opensky import OpenSkyProvider
+from .options_yahoo import YahooOptionsProvider
+from .ownership import YahooOwnProvider
+from .policy_rates import PolicyRatesProvider
+from .polymarket import PolymarketProvider
+from .portwatch import PortWatchProvider
+from .research_nasdaq import NasdaqResearchProvider
+from .research_yahoo import YahooResearchProvider
+from .screener import NasdaqScreenerProvider, YahooPeersProvider
+from .sec import SecProvider
+from .sec_funds import Sec13fProvider, SecNportProvider
 from .synthetic import SyntheticProvider
+from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
+from .tradier import TradierProvider
+from .treasurydirect import TreasuryDirectProvider
+from .usgov import CongressProvider, FederalRegisterProvider, OpenFecProvider, UsaSpendingProvider
+from .worldstats import DbnomicsProvider, WorldBankProvider
 from .yahoo import YahooProvider
 
+# Every source the app can build. The ORDER of this dict is the order of the rows on SOURCES, so keep it stable.
 ADAPTERS: dict[str, type[Provider]] = {
+    # Core market data, news and crypto
     "yahoo": YahooProvider, "nasdaq": NasdaqProvider, "rss": RssProvider, "yahoo_rss": YahooRssProvider,
     "gdelt": GdeltProvider, "coingecko": CoinGeckoProvider, "binance": BinanceProvider,
     "binance_klines": BinanceKlinesProvider,
+    # SEC EDGAR filings and Yahoo ownership
+    "sec": SecProvider, "yahoo_own": YahooOwnProvider,
+    # Macro: FRED (official API needs a key, CSV is keyless), Treasury curve, earnings and release calendars
+    "fred": FredApiProvider, "fred_csv": FredCsvProvider, "treasury": TreasuryProvider,
+    "nasdaq_earnings": NasdaqEarningsProvider, "agency_ics": AgencyCalendarProvider,
+    # Screener (EQS) and peers (COMP)
+    "nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider,
+    # Research functions: Yahoo quoteSummary modules, Nasdaq calendars, FINRA short volume, SEC funds (N-PORT, 13F)
+    "yahoo_research": YahooResearchProvider, "nasdaq_research": NasdaqResearchProvider, "finra": FinraProvider,
+    "sec_nport": SecNportProvider, "sec_13f": Sec13fProvider,
+    # Keyed (APIKEYS): inert without a key (supports() is false), so they are always built and appear on SOURCES
+    "finnhub": FinnhubProvider, "alpaca": AlpacaProvider,
+    # Options chains (Yahoo; Tradier is a keyed fallback) and crypto options (Deribit)
+    "yahoo_options": YahooOptionsProvider, "tradier": TradierProvider, "deribit": DeribitProvider,
+    # Rates views (public data, no key)
+    "ecb": EcbProvider, "boe": BoeProvider, "boc": BocProvider, "mof": MofProvider, "fred_oas": FredOasProvider,
+    "treasurydirect": TreasuryDirectProvider,
+    # Futures, COT and FOMC dates; Fama-French factors
+    "yahoo_futures": YahooFuturesProvider, "cftc": CftcProvider, "fomc": FomcProvider, "kenfrench": KenFrenchProvider,
+    # Zerodha Kite Connect bars (read-only; inert until a key is set and a login is made)
+    "kite": KiteProvider,
+    # SECF identifier mapping, holidays, world statistics, policy rates, weather
+    "openfigi": OpenFigiProvider, "nager": NagerProvider, "worldbank": WorldBankProvider, "dbnomics": DbnomicsProvider,
+    "policy_rates": PolicyRatesProvider, "openmeteo": OpenMeteoProvider, "nws": NwsProvider,
+    # PRED: prediction markets (read only)
+    "polymarket": PolymarketProvider, "kalshi": KalshiMarketsProvider,
+    # Non-US zero-key data: NSE archive end-of-day bars, AMFI mutual fund NAV
+    "nse_archive": NseArchiveProvider, "amfi": AmfiProvider,
+    # Crypto depth, funding, liquidations, stablecoins, yields (Binance first, OKX when Binance answers 451)
+    "binance_deriv": BinanceDerivProvider, "okx": OkxProvider, "defillama": DefiLlamaProvider,
+    # Trade + US macro family (free keys, read only): TRADE and USMAC. The key is read per call, so nothing to wire in main.on_key_change
+    "comtrade": ComtradeProvider, "bls": BlsProvider, "bea": BeaProvider, "census": CensusProvider,
+    # SHIP and PORTS: IMF PortWatch (keyless); MF: MFapi.in Indian mutual fund NAV (keyless community service)
+    "portwatch": PortWatchProvider, "mfapi": MfapiProvider,
+    # More free read-only sources: Frankfurter (ECB FX fixes, keyless), UK Companies House, Marketaux news, Etherscan (free keys; inert until set)
+    "frankfurter": FrankfurterProvider, "companies_house": CompaniesHouseProvider,
+    "marketaux": MarketauxProvider, "etherscan": EtherscanProvider,
+    # AIS: live ship positions (AISstream, free key). `websockets` is imported only when a listen starts
+    "aisstream": AisStreamProvider,
+    # MAP: keyless geo feeds (USGS earthquakes, NASA EONET events)
+    "usgs": UsgsProvider, "eonet": EonetProvider,
+    # Second crypto exchanges, keyless: Kraken and Coinbase Exchange (board, candles, order book) for when Binance is blocked or down
+    "kraken": KrakenProvider, "coinbase": CoinbaseProvider,
+    # US government data: USASP (USASpending) and FEDREG (Federal Register) keyless; FEC (OpenFEC) and CONGRESS (Congress.gov) with a free api.data.gov key
+    "usaspending": UsaSpendingProvider, "federalregister": FederalRegisterProvider, "openfec": OpenFecProvider, "congressgov": CongressProvider,
+    # FLT: live aircraft from the OpenSky Network (works with no key; an optional free account raises the daily credits)
+    "opensky": OpenSkyProvider,
 }
 
-# Keyed providers planned for later phases: name -> (settings attribute, phase, purpose).
+# Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a
+# key in the key store (KEY_SPECS: finnhub, fmp, fred, ...) are listed from there instead, so none of them belongs here.
 KEYED = {
-    "finnhub": ("finnhub_api_key", 3, "Streaming quotes, news, earnings calendar"),
     "twelvedata": ("twelvedata_api_key", 3, "Quotes/history fallback incl. some non-US"),
     "alphavantage": ("alphavantage_api_key", 6, "Fundamentals fallback"),
-    "fred": ("fred_api_key", 7, "Macro series, rates"),
-    "fmp": ("fmp_api_key", 6, "Fundamentals, screener universe"),
     "polygon": ("polygon_api_key", 3, "US quotes/history fallback"),
 }
 
@@ -40,7 +147,7 @@ def build(
     if fixtures:
         # Offline replay of recorded responses for tests and the bench. Tagged so the UI shows it.
         fx = httpx.AsyncClient(transport=fixture_transport())
-        out: dict[str, Provider] = {name: cls(fx, source=f"{name}:fixture") for name, cls in ADAPTERS.items()}
+        out: dict[str, Provider] = {name: cls(fx, source=f"{name}:fixture", fixture=True) for name, cls in ADAPTERS.items()}
     else:
         out = {name: cls(http) for name, cls in ADAPTERS.items()}
     if synthetic:
@@ -48,69 +155,9 @@ def build(
     return out
 
 
-def keyed_status(settings: Settings) -> list[dict]:
-    out = [
-        {
-            "name": name,
-            "status": "NOT BUILT" if getattr(settings, attr) else "KEY REQUIRED",
-            "note": f"{purpose}. Phase {phase}." + ("" if getattr(settings, attr) else f" Set {attr.upper()} in .env."),
-        }
-        for name, (attr, phase, purpose) in KEYED.items()
-    ]
-    out += [{"name": n, "status": "RETIRED", "note": why} for n, why in RETIRED.items()]
-    return out
-
-
-# --- Phase 6: SEC EDGAR + Yahoo ownership ---
-from .ownership import YahooOwnProvider
-from .sec import SecProvider
-
-ADAPTERS["sec"] = SecProvider
-ADAPTERS["yahoo_own"] = YahooOwnProvider
-
-# --- Phase 7: macro (FRED, Treasury curve, earnings and release calendars) ---
-from .macro import (
-    AgencyCalendarProvider,
-    FredApiProvider,
-    FredCsvProvider,
-    NasdaqEarningsProvider,
-    TreasuryProvider,
-)
-
-ADAPTERS.update({
-    "fred": FredApiProvider, "fred_csv": FredCsvProvider, "treasury": TreasuryProvider,
-    "nasdaq_earnings": NasdaqEarningsProvider, "agency_ics": AgencyCalendarProvider,
-})
-# FRED is built now: a real adapter (inactive without FRED_API_KEY), no longer a planned keyed entry.
-KEYED.pop("fred", None)
-_keyed_status_before_phase7 = keyed_status
-
-
-def keyed_status(settings: Settings) -> list[dict]:
-    out = _keyed_status_before_phase7(settings)
-    if not settings.fred_api_key:
-        out.insert(0, {
-            "name": "fred", "status": "KEY REQUIRED",
-            "note": "FRED API: series titles/units, MACRO search, ECO fallback. Values work keyless via fred_csv. "
-            "Set FRED_API_KEY in .env (free).",
-        })
-    return out
-
-# --- Phase 9: screener (EQS) and peers (COMP) ---
-from .screener import NasdaqScreenerProvider, YahooPeersProvider
-
-ADAPTERS.update({"nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider})
-
-# --- Phase 11: keyed rows come from the key store (APIKEYS) ---
-from ..keys import KEY_SPECS
-
-for _name in KEY_SPECS:
-    KEYED.pop(_name, None)
-_keyed_status_before_phase11 = _keyed_status_before_phase7
-
-
 def keyed_status(settings: Settings, keys=None) -> list[dict]:
-    """One row per KEY_SPECS provider (state from the key store, never the value), then planned and retired ones."""
+    """The SOURCES rows for keyed and retired providers, in this order: one row per KEY_SPECS provider (state from the key
+    store, never the value), then the planned ones with no adapter yet, then the retired ones."""
     rows = []
     for st in keys.statuses() if keys is not None else []:
         spec = KEY_SPECS[st["name"]]
@@ -120,141 +167,12 @@ def keyed_status(settings: Settings, keys=None) -> list[dict]:
         else:
             rows.append({"name": spec.name, "status": "KEY REQUIRED",
                          "note": f"{spec.purpose}. Phase {spec.phase}. Set {spec.label} in APIKEYS."})
-    return rows + _keyed_status_before_phase11(settings)
-
-# --- Phase 13: research (Yahoo quoteSummary modules for EE, EEO, ANR, MGMT, ETF info; dividend/split events) ---
-from .research_yahoo import YahooResearchProvider
-
-ADAPTERS["yahoo_research"] = YahooResearchProvider
-from .finra import FinraProvider
-from .research_nasdaq import NasdaqResearchProvider
-
-ADAPTERS.update({"nasdaq_research": NasdaqResearchProvider, "finra": FinraProvider})
-from .sec_funds import Sec13fProvider, SecNportProvider
-
-ADAPTERS.update({"sec_nport": SecNportProvider, "sec_13f": Sec13fProvider})
-# Keyed (APIKEYS): inert without a key (supports() is false), so they are always built and appear on SOURCES.
-from .alpaca import AlpacaProvider
-from .finnhub import FinnhubProvider
-
-ADAPTERS.update({"finnhub": FinnhubProvider, "alpaca": AlpacaProvider})
-
-# --- Phase 14: options (Yahoo chains; Tradier sandbox is a keyed fallback, inert without a token) ---
-from .options_yahoo import YahooOptionsProvider
-from .tradier import TradierProvider
-
-ADAPTERS.update({"yahoo_options": YahooOptionsProvider, "tradier": TradierProvider})
-
-# --- Phase 14 step 5: crypto options (Deribit public API, no key) ---
-from .deribit import DeribitProvider
-
-ADAPTERS["deribit"] = DeribitProvider
-
-# --- Phase 14 step 6: rates views (public data, no key) ---
-from .boc import BocProvider
-from .boe import BoeProvider
-from .ecb import EcbProvider
-from .fred_oas import FredOasProvider
-from .mof import MofProvider
-from .treasurydirect import TreasuryDirectProvider
-
-ADAPTERS.update({"ecb": EcbProvider, "boe": BoeProvider, "boc": BocProvider, "mof": MofProvider, "fred_oas": FredOasProvider,
-                 "treasurydirect": TreasuryDirectProvider})
-
-# --- Phase 14 step 7: futures, COT and FOMC dates (public data, no key) ---
-from .futures import CftcProvider, FomcProvider, YahooFuturesProvider
-
-ADAPTERS.update({"yahoo_futures": YahooFuturesProvider, "cftc": CftcProvider, "fomc": FomcProvider})
-
-# --- Phase 15 step 4: Fama-French factors for FACT (Ken French library, no key) ---
-from .kenfrench import KenFrenchProvider
-
-ADAPTERS["kenfrench"] = KenFrenchProvider
-
-# --- Phase 15 steps 6-7: Zerodha Kite Connect bars (read-only; inert until a key is set and a login is made) ---
-from .kite import KiteProvider
-
-ADAPTERS["kite"] = KiteProvider
-
-# --- Phase 19 (keyless): SECF identifier mapping ---
-from .openfigi import OpenFigiProvider
-
-ADAPTERS["openfigi"] = OpenFigiProvider
-from .nager import NagerProvider
-from .policy_rates import PolicyRatesProvider
-from .worldstats import DbnomicsProvider, WorldBankProvider
-
-ADAPTERS.update({"nager": NagerProvider, "worldbank": WorldBankProvider, "dbnomics": DbnomicsProvider, "policy_rates": PolicyRatesProvider})
-from .nws import NwsProvider
-from .openmeteo import OpenMeteoProvider
-
-ADAPTERS.update({"openmeteo": OpenMeteoProvider, "nws": NwsProvider})
-
-# --- Phase 19 step 8: PRED (prediction markets, read only) ---
-from .kalshi import KalshiMarketsProvider
-from .polymarket import PolymarketProvider
-
-ADAPTERS.update({"polymarket": PolymarketProvider, "kalshi": KalshiMarketsProvider})
-
-# --- Phase 19 step 9: non-US zero-key data (NSE archive end-of-day bars, AMFI mutual fund NAV) ---
-from .amfi import AmfiProvider
-from .nse_archive import NseArchiveProvider
-
-ADAPTERS.update({"nse_archive": NseArchiveProvider, "amfi": AmfiProvider})
-
-# --- Phase 19 step 7: crypto depth, funding, liquidations, stablecoins, yields (Binance first, OKX when Binance answers 451) ---
-from .binance_deriv import BinanceDerivProvider
-from .defillama import DefiLlamaProvider
-from .okx import OkxProvider
-
-ADAPTERS.update({"binance_deriv": BinanceDerivProvider, "okx": OkxProvider, "defillama": DefiLlamaProvider})
-
-# --- Trade + US macro family (free keys, read only): TRADE and USMAC. The key is read per call, so nothing to wire in main.on_key_change ---
-from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
-
-ADAPTERS.update({"comtrade": ComtradeProvider, "bls": BlsProvider, "bea": BeaProvider, "census": CensusProvider})
-
-# --- SHIP: IMF PortWatch (keyless) ---
-from .portwatch import PortWatchProvider
-
-ADAPTERS.update({"portwatch": PortWatchProvider})
-
-# --- MF: MFapi.in Indian mutual fund NAV history (keyless community service) ---
-from .mfapi import MfapiProvider
-
-ADAPTERS.update({"mfapi": MfapiProvider})
-
-# --- More free read-only sources: Frankfurter (ECB FX fixes, keyless), UK Companies House, Marketaux news, Etherscan (free keys; inert until set) ---
-from .companies_house import CompaniesHouseProvider
-from .etherscan import EtherscanProvider
-from .frankfurter import FrankfurterProvider
-from .marketaux import MarketauxProvider
-
-ADAPTERS.update({"frankfurter": FrankfurterProvider, "companies_house": CompaniesHouseProvider,
-                 "marketaux": MarketauxProvider, "etherscan": EtherscanProvider})
-
-# --- AIS: live ship positions (AISstream, free key). Module import is light: `websockets` is imported only when a listen starts ---
-from .aisstream import AisStreamProvider
-
-ADAPTERS["aisstream"] = AisStreamProvider
-
-# --- MAP: keyless geo feeds (USGS earthquakes, NASA EONET events) ---
-from .geo import EonetProvider, UsgsProvider
-
-ADAPTERS.update({"usgs": UsgsProvider, "eonet": EonetProvider})
-
-# --- Second crypto exchanges, keyless: Kraken and Coinbase Exchange (board, candles, order book) for when Binance is blocked or down ---
-from .coinbase import CoinbaseProvider
-from .kraken import KrakenProvider
-
-ADAPTERS.update({"kraken": KrakenProvider, "coinbase": CoinbaseProvider})
-
-# --- US government data: USASP (USASpending) and FEDREG (Federal Register) keyless; FEC (OpenFEC) and CONGRESS (Congress.gov) with a free api.data.gov key ---
-from .usgov import CongressProvider, FederalRegisterProvider, OpenFecProvider, UsaSpendingProvider
-
-ADAPTERS.update({"usaspending": UsaSpendingProvider, "federalregister": FederalRegisterProvider, "openfec": OpenFecProvider, "congressgov": CongressProvider})
-
-# --- FLT: live aircraft from the OpenSky Network (works with no key; an optional free account raises the daily credits) ---
-from .opensky import OpenSkyProvider
-
-ADAPTERS["opensky"] = OpenSkyProvider
+    for name, (attr, phase, purpose) in KEYED.items():
+        has_key = bool(getattr(settings, attr))
+        rows.append({
+            "name": name,
+            "status": "NOT BUILT" if has_key else "KEY REQUIRED",
+            "note": f"{purpose}. Phase {phase}." + ("" if has_key else f" Set {attr.upper()} in .env."),
+        })
+    rows += [{"name": n, "status": "RETIRED", "note": why} for n, why in RETIRED.items()]
+    return rows

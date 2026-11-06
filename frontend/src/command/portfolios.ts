@@ -1,9 +1,12 @@
 /** Portfolios (`PORT`): stored in SQLite by the backend. Actions report through the status line. */
-import { api8, type ApiError, type PortfolioInfo, type PositionIn } from "../net/api";
+import type { ApiError } from "../net/core";
+import { portfolioApi } from "../net/portfolioApi";
+import type { PortfolioInfo, PositionIn } from "../net/types";
 import { createStore } from "../state/store";
 import type { SecurityRef } from "./markets";
 import { parsePort } from "./portfolioArgs";
 import { fail, info, statusMsg } from "./status";
+import { errMessage } from "../net/errText";
 
 export { parsePort, type PortAction } from "./portfolioArgs";
 
@@ -13,12 +16,11 @@ export const portfolioList = createStore<PortfolioInfo[] | null>(null);
 export const portfolioVersion = createStore(0);
 
 export async function refreshPortfolios(): Promise<PortfolioInfo[]> {
-  const { portfolios } = await api8.portfolios();
+  const { portfolios } = await portfolioApi.portfolios();
   portfolioList.set(() => portfolios);
   return portfolios;
 }
 
-const errText = (e: unknown) => (e as ApiError).message ?? String(e);
 
 function changed(): void {
   portfolioVersion.set((n) => n + 1);
@@ -30,7 +32,7 @@ async function run(what: string, call: () => Promise<unknown>, ok: string): Prom
     await call();
   } catch (e) {
     changed();
-    return fail(`${what}: ${errText(e)}`);
+    return fail(`${what}: ${errMessage(e)}`);
   }
   info(ok);
   changed();
@@ -40,30 +42,30 @@ async function run(what: string, call: () => Promise<unknown>, ok: string): Prom
 const fmtQty = (n: number) => String(Math.round(n * 1e6) / 1e6);
 
 export const addPosition = (name: string, p: PositionIn) =>
-  run(`PORT ${name} NOT CHANGED`, () => api8.editPortfolio(name, { add: [p] }),
+  run(`PORT ${name} NOT CHANGED`, () => portfolioApi.editPortfolio(name, { add: [p] }),
     `PORT ${name}: ${p.qty > 0 ? "ADDED" : "SOLD"} ${fmtQty(Math.abs(p.qty))} ${p.symbol}${p.cost != null ? ` @ ${p.cost}` : ""}`);
 
 export const removePositions = (name: string, symbols: string[], note?: string) =>
-  run(`PORT ${name} NOT CHANGED`, () => api8.editPortfolio(name, { remove: symbols }), note ?? `REMOVED ${symbols.join(" ")} FROM ${name}`);
+  run(`PORT ${name} NOT CHANGED`, () => portfolioApi.editPortfolio(name, { remove: symbols }), note ?? `REMOVED ${symbols.join(" ")} FROM ${name}`);
 
 export const setBase = (name: string, base: string) =>
-  run(`PORT ${name} NOT CHANGED`, () => api8.editPortfolio(name, { base }), `PORT ${name}: BASE CURRENCY ${base}`);
+  run(`PORT ${name} NOT CHANGED`, () => portfolioApi.editPortfolio(name, { base }), `PORT ${name}: BASE CURRENCY ${base}`);
 
 /** Import: MERGE upserts the imported symbols, REPLACE swaps every position. */
 export const importInto = (name: string, positions: PositionIn[], mode: "merge" | "replace") =>
   run(`PORT ${name} IMPORT FAILED`,
-    () => (mode === "replace" ? api8.putPortfolio(name, positions) : api8.editPortfolio(name, { set: positions })),
+    () => (mode === "replace" ? portfolioApi.putPortfolio(name, positions) : portfolioApi.editPortfolio(name, { set: positions })),
     `PORT ${name}: IMPORTED ${positions.length} ROWS (${mode.toUpperCase()})`);
 
 /** Undo of a removal restores the exact list. */
 export const restorePortfolio = (name: string, positions: PositionIn[]) =>
-  run(`PORT ${name} NOT RESTORED`, () => api8.putPortfolio(name, positions), `PORT ${name}: RESTORED`);
+  run(`PORT ${name} NOT RESTORED`, () => portfolioApi.putPortfolio(name, positions), `PORT ${name}: RESTORED`);
 
 export async function deletePortfolio(name: string): Promise<boolean> {
   try {
-    await api8.deletePortfolio(name);
+    await portfolioApi.deletePortfolio(name);
   } catch (e) {
-    return fail((e as ApiError).status === 404 ? `NO PORTFOLIO ${name}` : `PORT ${name} NOT DELETED: ${errText(e)}`);
+    return fail((e as ApiError).status === 404 ? `NO PORTFOLIO ${name}` : `PORT ${name} NOT DELETED: ${errMessage(e)}`);
   }
   info(`PORTFOLIO ${name} DELETED`);
   changed();

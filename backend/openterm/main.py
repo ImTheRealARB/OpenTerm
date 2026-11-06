@@ -22,7 +22,7 @@ from .delivery.routes import router as delivery_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
 from .origin import OriginGuardMiddleware
-from .providers.hierarchy import HIERARCHY, order_for
+from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
 from .responses import Orjson, OrjsonRoute
 from .router import Router
@@ -34,66 +34,7 @@ from .userdata import UserData
 from .world_routes import router as world_router
 
 STARTED = time.time()
-DEFAULT_ORDER = {
-    "quotes": ["yahoo", "nasdaq"], "history": ["binance_klines", "yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
-    "news_top": ["rss"], "news_symbol": ["yahoo_rss", "gdelt"], "news_keyword": ["gdelt"],
-    "movers": ["nasdaq"], "crypto": ["coingecko", "binance", "kraken", "coinbase"],
-}
-# --- Phase 9 ---
-DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]})
 MAX_SUBS_PER_CLIENT = 2000
-# --- Phase 19 (capabilities fill in step by step; all keyless) ---
-DEFAULT_ORDER["figi"] = ["openfigi"]
-DEFAULT_ORDER |= {"comtrade": ["comtrade"], "bls": ["bls"], "bea": ["bea"], "census": ["census"]}  # trade + US macro family (keyed)
-DEFAULT_ORDER |= {"holidays": ["nager"], "worldstats": ["worldbank", "dbnomics"], "worldstats_latest": ["worldbank"],
-                  "worldstats_countries": ["worldbank"], "worldstats_dbn": ["dbnomics"], "policy_rates": ["policy_rates"]}
-DEFAULT_ORDER["worldstats_search"] = ["dbnomics"]  # DBSRCH: find DBnomics datasets and series by words
-DEFAULT_ORDER |= {"weather_geocode": ["openmeteo"], "weather_forecast": ["openmeteo"], "nws_alerts": ["nws"]}
-DEFAULT_ORDER["shipping_chokepoints"] = ["portwatch"]
-DEFAULT_ORDER |= {"mf_search": ["mfapi"], "mf_nav": ["mfapi"]}  # MF: MFapi.in scheme search and NAV history
-DEFAULT_ORDER["ports_activity"] = ["portwatch"]  # PORTS: same keyless IMF PortWatch provider, daily port calls
-DEFAULT_ORDER |= {"geo_quakes": ["usgs"], "geo_events": ["eonet"]}  # MAP layers (keyless)
-# Step 9: the NSE archive is the LAST history source (Yahoo answers first; it only serves `.NS` at `1d`); AMFI NAV for the SECF fund rows
-DEFAULT_ORDER["history"] = [*DEFAULT_ORDER["history"], "nse_archive"]
-DEFAULT_ORDER["mfnav"] = ["amfi"]
-# --- Phase 13: research functions (capability -> providers, keyless first) ---
-DEFAULT_ORDER |= {
-    "estimates": ["yahoo_research"], "ratings": ["yahoo_research"], "officers": ["yahoo_research"],
-    "keystats": ["yahoo_research"], "fund_info": ["yahoo_research"], "corp_events": ["yahoo_research"],
-    "dividends": ["nasdaq_research", "yahoo_research"], "splits": ["yahoo_research"], "ipo": ["nasdaq_research"],
-    "short_interest": ["nasdaq_research", "yahoo_research"], "short_volume": ["finra"],
-    "etf_holdings": ["sec_nport"], "manager_13f": ["sec_13f"],
-}
-# --- Phase 13 step 6: keyed sources sit after the keyless ones; inert without a key ---
-DEFAULT_ORDER["ratings"] = ["yahoo_research", "finnhub"]
-DEFAULT_ORDER["surprises"] = ["yahoo_research", "finnhub"]
-DEFAULT_ORDER["news_top"] = ["rss", "finnhub", "alpaca", "marketaux"]
-DEFAULT_ORDER["news_pool"] = ["rss"]  # the curated feed table (providers/news_feeds.py)
-DEFAULT_ORDER["news_symbol"] = ["yahoo_rss", "finnhub", "alpaca", "marketaux", "gdelt"]
-# UKCO (Companies House) and ADDR (Etherscan): one keyed source each; no key = KEY REQUIRED, never fake data
-DEFAULT_ORDER |= {"companies_house": ["companies_house"], "chain": ["etherscan"], "ais": ["aisstream"], "flights": ["opensky"]}
-# USASP / FEDREG (keyless) and FEC / CONGRESS (free api.data.gov keys; no key = KEY REQUIRED, never fake data)
-DEFAULT_ORDER |= {"usaspending": ["usaspending"], "federal_register": ["federalregister"], "openfec": ["openfec"], "congress_gov": ["congressgov"]}
-# --- Phase 14: option chains (Yahoo first; Tradier is a keyed fallback) ---
-DEFAULT_ORDER["option_chain"] = ["yahoo_options", "tradier"]
-DEFAULT_ORDER["crypto_options"] = ["deribit"]
-# --- Phase 14 step 6: RATES views ---
-DEFAULT_ORDER |= {"curve_eur": ["ecb"], "curve_gbp": ["boe"], "curve_cad": ["boc"], "curve_jpy": ["mof"],
-                  "credit_spreads": ["fred_oas"], "auctions": ["treasurydirect"]}
-# --- Phase 14 step 7: futures, COT, FOMC ---
-DEFAULT_ORDER |= {"futures_contract": ["yahoo_futures"], "cot_history": ["cftc"], "cot_markets": ["cftc"], "fomc_dates": ["fomc"]}
-# --- Phase 15: Fama-French factors (FACT) ---
-DEFAULT_ORDER["factors"] = ["kenfrench"]
-# --- Phase 19 step 8: PRED ---
-DEFAULT_ORDER |= {"pred_poly": ["polymarket"], "pred_poly_market": ["polymarket"], "pred_poly_history": ["polymarket"],
-                  "pred_kalshi": ["kalshi"], "pred_kalshi_market": ["kalshi"], "pred_kalshi_candles": ["kalshi"]}
-# --- Phase 19 step 7: crypto depth (Binance first; OKX when Binance fails, e.g. HTTP 451), liquidations (OKX only), DefiLlama ---
-DEFAULT_ORDER |= {"crypto_depth": ["binance_deriv", "okx", "kraken", "coinbase"], "crypto_funding": ["binance_deriv", "okx"], "crypto_funding_detail": ["binance_deriv", "okx"],
-                  "crypto_liq": ["okx"], "stablecoins": ["defillama"], "yields": ["defillama"]}
-# --- Phase 19: GP event markers ---
-DEFAULT_ORDER["earnings_history"] = ["nasdaq_research"]
-# --- Phase 6: SEC / ownership ---
-DEFAULT_ORDER |= {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 
 
 @asynccontextmanager
@@ -106,15 +47,9 @@ async def lifespan(app: FastAPI):
     http = httpx.AsyncClient(
         http2=True, limits=httpx.Limits(max_connections=50, max_keepalive_connections=20), timeout=6.0
     )
-    # Source hierarchy (providers/hierarchy.py): best source first per capability. A `providers:` entry in config.yaml pins that
-    # capability by hand and wins, but the log says so, because it also hides every source added to the hierarchy later.
-    pinned = cfg.get("providers") or {}
-    order = {**DEFAULT_ORDER, **{cap: order_for(cap) for cap in HIERARCHY}, **pinned}
-    for cap in HIERARCHY:
-        if cap in pinned and list(pinned[cap]) != order_for(cap):
-            logging.getLogger("openterm").warning("config.yaml pins the %s order %s: the source hierarchy %s is ignored", cap, pinned[cap], order_for(cap))
-    if settings.openterm_synthetic:
-        order = {k: [*v, "synthetic"] if k in ("quotes", "history") else v for k, v in order.items()}
+    # Capability order (providers/hierarchy.py): ONE table says which source answers first for every capability. A `providers:`
+    # entry in config.yaml pins a capability by hand and wins; build_order logs when that hides the source hierarchy.
+    order = build_order(cfg.get("providers") or {}, settings.openterm_synthetic)
     router = Router(
         providers.build(settings, http, fixtures=settings.openterm_fixtures, synthetic=settings.openterm_synthetic),
         order,
@@ -199,9 +134,7 @@ async def lifespan(app: FastAPI):
 
     def on_key_change(name: str) -> None:
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
-        if name == "fred" and "fred" in router.providers:
-            router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
-        # Every provider that has `set_keys` is refreshed, so a new keyed source cannot be forgotten here (audit D-5).
+        # Every provider that has `set_keys` is refreshed (FRED included), so a new keyed source cannot be forgotten here (audit D-5).
         # The key-per-call sources (eia, openfigi, comtrade, bls, bea, census) read the store on each request instead.
         if hasattr(router.providers.get(name), "set_keys"):
             router.providers[name].set_keys(store.get(name))
@@ -213,7 +146,7 @@ async def lifespan(app: FastAPI):
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        names = ["fred", "kite", *(n for n, p in router.providers.items() if hasattr(p, "set_keys"))]
+        names = ["kite", *(n for n, p in router.providers.items() if hasattr(p, "set_keys"))]
         for name in names:
             await asyncio.to_thread(on_key_change, name)
 
@@ -332,12 +265,6 @@ async def ws(socket: WebSocket) -> None:
             await sender
         await hub.disconnect(client)
 
-
-# --- Phase 7: macro ---
-DEFAULT_ORDER.update({
-    "fred_series": ["fred", "fred_csv"], "fred_search": ["fred"], "yield_curve": ["treasury", "fred_csv"],
-    "earnings": ["nasdaq_earnings"], "eco_calendar": ["agency_ics", "fred"],
-})
 
 # --- Phase 10: static frontend ---
 def mount_static(application: FastAPI, directory: str) -> bool:

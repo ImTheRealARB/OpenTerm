@@ -7,11 +7,14 @@ import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtNum, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type LiqEvent } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { LiqEvent } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { joinArg, span, utc } from "./cryptoArgs";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -27,25 +30,22 @@ const COLUMNS: Column<LiqEvent>[] = [
 
 export default function LIQ({ panelId, args }: FunctionProps) {
   const sym = useMemo(() => joinArg(args).toUpperCase() || "BTC", [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.liq(sym, fresh), sym, 20_000);
+  const { env, error, loading, reload: load } = useEnvelope(sym, (fresh) => worldApi.liq(sym, fresh), 20_000);
   const grid = useRef<GridHandle>(null);
   const d = env?.data;
   const rows = useMemo(() => d?.recent ?? [], [d]);
   const latest = useLatest({ rows });
   useCsvExport(panelId, () => (d ? gridCsv(`LIQ_${sym}`, COLUMNS, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from ..errors import DataError
 from ..options import chain as ch
 from ..options import tables as ot
 from ..research.table import col, head, payload, section
@@ -26,8 +27,6 @@ WHAT = {"omon": "INDIAN OPTION CHAINS WITH OPEN INTEREST", "ct": "INDIAN FUTURES
 
 
 def _error(kind: str, message: str):
-    from ..service import DataError
-
     return DataError(kind, message)
 
 

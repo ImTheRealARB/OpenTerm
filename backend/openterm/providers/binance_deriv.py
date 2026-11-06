@@ -27,8 +27,8 @@ class BinanceDerivProvider(Provider):
     timeout = 8.0
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm", "Accept": "application/json"}
 
-    def __init__(self, http, source: str | None = None):
-        super().__init__(http, source)
+    def __init__(self, http, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
         self._info: tuple[float, dict[str, float]] | None = None
 
     async def _json(self, url: str, params: dict[str, Any] | None = None) -> Any:

@@ -138,7 +138,7 @@ def test_day_store_round_trip_gaps_and_prune(tmp_path):
 
 def _provider(handler=None) -> NseArchiveProvider:
     transport = fixture_transport() if handler is None else httpx.MockTransport(handler)
-    return NseArchiveProvider(httpx.AsyncClient(transport=transport), source="nse_archive:fixture")
+    return NseArchiveProvider(httpx.AsyncClient(transport=transport), source="nse_archive:fixture", fixture=True)
 
 
 def test_archive_history_builds_from_recorded_days_and_labels_itself(tmp_path):
@@ -218,7 +218,7 @@ def test_recent_404_is_not_cached_as_a_holiday(tmp_path):
 
 
 def test_history_order_puts_the_archive_last():
-    from openterm.main import DEFAULT_ORDER
+    from openterm.providers.hierarchy import DEFAULT_ORDER
 
     assert DEFAULT_ORDER["history"][-1] == "nse_archive" and DEFAULT_ORDER["history"].index("yahoo") < DEFAULT_ORDER["history"].index("nse_archive")
     assert DEFAULT_ORDER["mfnav"] == ["amfi"]

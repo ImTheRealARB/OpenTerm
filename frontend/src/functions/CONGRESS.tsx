@@ -7,11 +7,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type CongressPayload, type CongressRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { CongressPayload, CongressRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { billCommandArgs, billLabel, joinQuery } from "./usgovArgs";
@@ -48,7 +51,7 @@ function billFields(b: Extract<CongressPayload, { mode: "BILL" }>): Field[] {
 
 export default function CONGRESS({ panelId, args }: FunctionProps) {
   const query = useMemo(() => joinQuery(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.congress(query, fresh), query.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(query.toLowerCase(), (fresh) => worldApi.congress(query, fresh));
   const grid = useRef<GridHandle>(null);
   const d: CongressPayload | undefined = env?.data;
   const list = d && d.mode !== "BILL" ? d.items : null;
@@ -57,6 +60,7 @@ export default function CONGRESS({ panelId, args }: FunctionProps) {
   const latest = useLatest({ list, fields });
   useCsvExport(panelId, () => (list ? gridCsv("CONGRESS_BILLS", BILLS, list) : bill ? gridCsv(`CONGRESS_${bill.type}${bill.number}`, FIELDS, fields) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -64,10 +68,6 @@ export default function CONGRESS({ panelId, args }: FunctionProps) {
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.list ? cur.list.length : cur.fields.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter" && cur.list) {
           const r = cur.list[g?.selected() ?? -1];
           if (r) navigate(panelId, { fn: "CONGRESS", args: billCommandArgs(r), security: undefined });
@@ -75,7 +75,7 @@ export default function CONGRESS({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

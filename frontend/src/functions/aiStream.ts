@@ -1,5 +1,5 @@
 /**
- * AI panel logic (pure, unit-tested): the SSE parser for `POST /api/ai/chat`, the reducer that turns events into one chat turn, and the
+ * AI panel logic (pure, unit-tested): the reducer that turns the events of `POST /api/ai/chat` (parsed by net/sse.ts) into one chat turn, and the
  * citation splitter. Nothing here talks to the network or the DOM.
  */
 export type AiEvent =
@@ -103,24 +103,6 @@ export function newTurn(question: string): Turn {
 /** Cuts a still-running turn short (the panel was closed or moved to another view). A finished turn is returned unchanged. */
 export function stopTurn(t: Turn, notice: string): Turn {
   return t.status === "running" ? { ...t, status: "done", label: "INCOMPLETE", notices: [...t.notices, notice] } : t;
-}
-
-/** Whole `data:` events in `buf`; whatever is left over (a partial event) comes back in `rest`. */
-export function parseSse<E = AiEvent>(buf: string): { events: E[]; rest: string } {
-  const parts = buf.replace(/\r\n/g, "\n").split("\n\n");
-  const rest = parts.pop() ?? "";
-  const events: E[] = [];
-  for (const block of parts) {
-    for (const line of block.split("\n")) {
-      if (!line.startsWith("data: ")) continue;
-      try {
-        events.push(JSON.parse(line.slice(6)) as E);
-      } catch {
-        /* a broken line is skipped, never shown as data */
-      }
-    }
-  }
-  return { events, rest };
 }
 
 export function reduceTurn(t: Turn, e: AiEvent): Turn {

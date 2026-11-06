@@ -7,10 +7,13 @@ import { PanelNote } from "../components/PanelNote";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { fmtAge, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api, type NewsItem, type NewsPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { marketApi } from "../net/marketApi";
+import type { NewsItem, NewsPayload } from "../net/types";
 import { newsEmptyHint, newsFilterLine, newsParams, newsQuery, newsTitle } from "./newsArgs";
 import { sentimentClass, sentimentText } from "./newsSentiment";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -41,7 +44,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
   const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify(query), (fresh) => {
     // A mistyped filter never reaches the network: the panel says what was wrong (below).
     if (query.kind === "error") return Promise.reject(new Error(query.message));
-    return api.news(newsParams(query), fresh).then((e) => {
+    return marketApi.news(newsParams(query), fresh).then((e) => {
       if (query.kind === "top" || query.kind === "symbol") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
       return e;
     });
@@ -65,6 +68,7 @@ export default function N({ panelId, args, security }: FunctionProps) {
   const latest = useLatest(rows);
   useCsvExport(panelId, () => gridCsv("NEWS", COLUMNS, rows, [{ title: "URL", text: (r) => r.url }]));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -77,13 +81,10 @@ export default function N({ panelId, args, security }: FunctionProps) {
             if (r) openArticle(r.url);
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const title = newsTitle(query);

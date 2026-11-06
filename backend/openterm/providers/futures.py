@@ -8,7 +8,7 @@ from typing import ClassVar
 
 from ..derivs import fut_parse as fp
 from .base import Provider, ProviderError
-from .yahoo import BASE, UA
+from .http import BASE, UA
 
 FUTURES_CONTRACT = "futures_contract"
 COT_HISTORY = "cot_history"

@@ -7,9 +7,10 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..errors import DataError
 from ..kite.symbols import derivative_root
 from ..router import AllFailed
-from ..service import DataError, envelope
+from ..service import envelope
 from . import freshness
 from . import fut_parse as fp
 from . import fut_tables as ft
@@ -35,7 +36,7 @@ class FuturesMixin:
             return {"data": out, "fallback_from": failed}
 
         try:
-            env = await self.svc._swr(f"d:fut:{symbol}", self.fttl("contract"), fetch)
+            env = await self.svc.swr(f"d:fut:{symbol}", self.fttl("contract"), fetch)
             freshness.note(env)
             return env["data"]
         except (DataError, AllFailed):
@@ -72,7 +73,7 @@ class FuturesMixin:
             out, failed = await self.svc.router.call("fomc_dates", lambda p: p.fomc_dates())
             return {"data": out, "fallback_from": failed}
 
-        env = await self.svc._swr("d:fomc", self.fttl("fomc"), fetch)
+        env = await self.svc.swr("d:fomc", self.fttl("fomc"), fetch)
         freshness.note(env)
         return env["data"]
 
@@ -112,7 +113,7 @@ class FuturesMixin:
             out, failed = await self.svc.router.call("cot_markets", lambda p: p.cot_markets())
             return {"data": out, "fallback_from": failed}
 
-        env = await self.svc._swr("d:cot_markets", self.fttl("cot_markets"), fetch)
+        env = await self.svc.swr("d:cot_markets", self.fttl("cot_markets"), fetch)
         freshness.note(env)
         return env["data"]
 
@@ -147,7 +148,7 @@ class FuturesMixin:
             out, failed = await self.svc.router.call("cot_history", one, code)
             return {"data": out, "source": src[-1], "fallback_from": failed}
 
-        env = await self.svc._swr(f"d:cot:{code}", self.fttl("cot"), fetch)
+        env = await self.svc.swr(f"d:cot:{code}", self.fttl("cot"), fetch)
         rows = [fp.cot_row(r) for r in env["data"]]
         source = env.get("source") or "cftc"
         data = ft.cot_payload(rows, others, source)

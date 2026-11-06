@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { PanelState } from "../state/workspace";
 import { menuItems, menuKey, viewLabel, type FnInfo, type MenuState } from "./windowMenu";
 
-const info: FnInfo = { isBuilt: (c) => c !== "OMON", title: (c) => `${c} title` };
+// The real lists come from the registry's `related` ranks; the test supplies the same shape.
+const info: FnInfo = {
+  isBuilt: (c) => c !== "OMON",
+  title: (c) => `${c} title`,
+  related: (withSecurity) => (withSecurity ? ["DES", "GP", "QR", "OMON"] : ["WEI", "MOV", "FX"]),
+};
 const panel: PanelState = {
   id: 1,
   pos: 1,

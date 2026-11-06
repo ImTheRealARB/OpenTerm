@@ -1,7 +1,7 @@
 /**
  * Settings in the running app. Cold start applies the localStorage mirror synchronously (before the first
  * render, so the theme never flashes); `settings/sync.ts` reconciles with the backend after the first paint,
- * the same way the live workspace works. No `net/api` import here: Grid and charts read `displayVersion`.
+ * the same way the live workspace works. No `net/core` (request layer) import here: Grid and charts read `displayVersion`.
  */
 import { setNumberFormat } from "../format";
 import { setKeyOverrides } from "../keys/keys";

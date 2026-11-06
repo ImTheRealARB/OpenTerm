@@ -156,7 +156,7 @@ def test_bucket_matches_the_reference_on_ordered_unordered_and_volumeless_ticks(
 
 # --- world payload error text goes through redact() ---------------------------------------------------------------------
 def test_pred_reason_text_is_redacted():
-    from openterm.service import DataError
+    from openterm.errors import DataError
     from openterm.world.pred import _reason
 
     e = DataError("unavailable", "FAILED", "GET https://example.test/m?apikey=abcdef123456 returned HTML")

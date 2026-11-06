@@ -5,10 +5,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api9, type BarsAdj, type Envelope } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { BarsAdj, Envelope } from "../net/types";
 import { navigate } from "../state/workspace";
 import { correlationMatrix, corrBand, parseCorrArgs, type CloseSeries } from "./corrMath";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
 
@@ -32,7 +35,7 @@ export default function CORR({ panelId, args }: FunctionProps) {
     (fresh: boolean) => {
       if (usage) return Promise.resolve();
       setLoading(true);
-      return Promise.allSettled(symbols.map((s) => api9.history(s, range, "1d", fresh))).then((res) => {
+      return Promise.allSettled(symbols.map((s) => marketApi.history(s, range, "1d", fresh))).then((res) => {
         const series: CloseSeries[] = [];
         const failed: string[] = [];
         const envs: Envelope<BarsAdj>[] = [];
@@ -72,11 +75,12 @@ export default function CORR({ panelId, args }: FunctionProps) {
       : null,
   );
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         const n = symsRef.current.length;
-        if (!n) return e.key === "F5" ? (void load(true), true) : false;
+        if (!n) return false;
         const move = (dr: number, dc: number) =>
           setCur((p) => ({ r: Math.max(0, Math.min(n - 1, p.r + dr)), c: Math.max(0, Math.min(n - 1, p.c + dc)) }));
         switch (e.key) {
@@ -99,13 +103,10 @@ export default function CORR({ panelId, args }: FunctionProps) {
             if (a) navigate(panelId, { fn: "GP", security: { symbol: a }, args: b && b !== a ? [range, "VS", b] : [range] });
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, load, range, symsRef, curRef],
+    [panelId, range, symsRef, curRef],
   );
 
   const sel = result && cur.r < syms.length && cur.c < syms.length ? cur : { r: 0, c: 0 };

@@ -6,8 +6,10 @@ import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
 import { refreshWatchlists, watchlistList } from "../command/watchlists";
-import { FUNCTION_LIST, loadModule } from "../functions/registry";
-import { api, prefetch, type SearchHit } from "../net/api";
+import { TWINS } from "../functions/aliases";
+import { FUNCTION_LIST, FUNCTIONS, loadModule } from "../functions/registry";
+import { marketApi, prefetch } from "../net/marketApi";
+import type { SearchHit } from "../net/types";
 import { keyDown, keyEchoed } from "../perf/metrics";
 import type { VimMode, VimState } from "../command/vim";
 import { settingsStore } from "../settings/runtime";
@@ -37,8 +39,10 @@ export function prefillCommand(text: string): void {
   prefillRef.current?.(text);
 }
 
+/** LAYOUT and its twins (MONITOR): the words that take a saved-layout name. Built from `TWINS` so a new twin needs no edit here. */
+const LAYOUT_WORDS = ["LAYOUT", ...Object.keys(TWINS).filter((t) => TWINS[t] === "LAYOUT")].join("|");
 /** `LAYOUT [SAVE|LOAD|DEL] <name>` (or MONITOR): the partial name, else null. */
-const LAYOUT_ARG = /^\s*(?:[1-9]\s*:\s*)?(?:LAYOUT|MONITOR)\s+(?:(?:SAVE|LOAD|DEL|DELETE)\s+)?(\S*)$/i;
+const LAYOUT_ARG = new RegExp(String.raw`^\s*(?:[1-9]\s*:\s*)?(?:${LAYOUT_WORDS})\s+(?:(?:SAVE|LOAD|DEL|DELETE)\s+)?(\S*)$`, "i");
 
 function layoutSuggestions(token: string): Suggestion[] {
   const names = layoutList.get() ?? [];
@@ -137,7 +141,7 @@ export function CommandLine() {
     const seq = ++searchSeq.current;
     if (!/^[A-Za-z0-9.^=-]{1,20}$/.test(token)) return;
     searchTimer.current = window.setTimeout(() => {
-      api
+      marketApi
         .search(token)
         .then((env) => {
           // Drop replies for text the user has already changed.
@@ -256,10 +260,10 @@ export function CommandLine() {
   };
 
   const suggest = (v: string) => {
-    // Intent-based prefetch: the chart chunk is skipped at idle (it is big), so fetch it the
-    // moment GP (or BT, which draws its equity curve with the same chart) appears in the command line, not after Enter.
-    const intent = /(?:^|\s)(GP|BT)(?:\s|$)/i.exec(v);
-    if (intent) void loadModule(intent[1].toUpperCase()).catch(() => {});
+    // Intent-based prefetch: a heavy chunk that is skipped at idle (GP's chart, BT's equity curve) is fetched the moment its code
+    // appears in the command line, not after Enter. Which codes do this is the registry's `prefetchOnType` flag; only the first match loads.
+    const typed = v.split(/\s+/).find((w) => FUNCTIONS.get(w.toUpperCase())?.prefetchOnType);
+    if (typed) void loadModule(typed.toUpperCase()).catch(() => {});
     const layoutArg = LAYOUT_ARG.exec(v);
     const wlArg = layoutArg ? null : WL_ARG.exec(v);
     if (layoutArg || wlArg) {

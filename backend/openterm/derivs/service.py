@@ -14,6 +14,7 @@ import time
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..errors import DataError
 from ..kite.symbols import derivative_root
 from ..options import chain as ch
 from ..options import ivstore
@@ -25,7 +26,7 @@ from ..options import tables as ot
 from ..redact import redact
 from ..research import corp_parse as cp
 from ..router import AllFailed
-from ..service import DataError, envelope
+from ..service import envelope
 from ..symbols import resolve
 from . import freshness
 from .calc_service import CalcMixin
@@ -90,7 +91,7 @@ class Derivs(FuturesMixin, CalcMixin):
             out, failed = await self.svc.router.call("option_chain", lambda p: p.option_chain(symbol, epoch), symbol)
             return {"data": out, "fallback_from": failed}
 
-        env = await self.svc._swr(f"d:chain:{symbol}:{epoch or 0}", self.ttl("chain"), fetch)
+        env = await self.svc.swr(f"d:chain:{symbol}:{epoch or 0}", self.ttl("chain"), fetch)
         freshness.note(env)
         return env
 
@@ -342,7 +343,7 @@ class Derivs(FuturesMixin, CalcMixin):
             self._smile_inputs[key] = freshness.summarize(inputs)
             return {"data": data, "fallback_from": []}
 
-        env = await self.svc._swr(key, self.ttl("surface"), fetch)
+        env = await self.svc.swr(key, self.ttl("surface"), fetch)
         freshness.note(env)
         freshness.note(self._smile_inputs.get(key))
         return env

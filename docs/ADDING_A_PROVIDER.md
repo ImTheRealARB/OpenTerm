@@ -47,8 +47,12 @@ Rules:
   and maps 404/429/5xx/timeouts to `ProviderError` kinds. Slow or one-slot-per-few-seconds sources
   raise the class attributes `timeout` (default 6 s) and `max_wait` (GDELT: 20 s and 6 s).
 - Non-quote capabilities (`news_top`, `news_symbol`, `news_keyword`, `movers`, `crypto`) have their own
-  fallback order under `providers:` in `config.yaml`. Text fixtures are recorded as
-  `{"status", "content_type", "text"}`; unrecorded paths on a new host must answer 404 in `fixtures.py`.
+  fallback order in `DEFAULT_ORDER` in `backend/openterm/providers/hierarchy.py` (the one place every capability's
+  order lives; `config.yaml` `providers:` is only for pinning an order by hand). Text fixtures are recorded as
+  `{"status", "content_type", "text"}`; unrecorded paths on a new host must answer 404 in `fixtures.py` (add one
+  `_route_<name>` checker that returns a response or `None` and list it in `ROUTE_TABLE`, newest first).
+- A provider that needs an API key subclasses `KeyedProvider` (`providers/keyed.py`): it owns the key, `set_keys`,
+  `supports` and the authenticated request, so the adapter only says where the key goes (header, query or basic auth).
 - Raise `not_found` for unknown symbols. It does not count against provider health. Everything else does.
 - Never fill gaps with estimates. Missing fields stay `None`; the UI shows them as blank.
 - Do not work around bot checks, captchas or terms of service.

@@ -12,7 +12,7 @@ import orjson
 from ..models import Bars, Coin
 from ..ranges import _RANGE_DAYS
 from .base import CRYPTO, HISTORY, Provider, ProviderError
-from .yahoo import UA
+from .http import UA
 
 # Quote currencies offered on CRYP (CoinGecko supports more; CRYP keeps to common ones).
 VS = {"USD", "EUR", "GBP", "JPY", "INR", "AUD", "CAD", "CHF", "CNY", "HKD", "SGD", "KRW", "BRL", "BTC", "ETH"}

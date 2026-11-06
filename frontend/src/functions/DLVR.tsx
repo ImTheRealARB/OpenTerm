@@ -12,10 +12,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { deliveryApi, type DeliveryChannel, type DeliveryPatch, type DeliveryPayload, type DeliveryRow, type TelegramPairStart } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { deliveryApi } from "../net/deliveryApi";
+import type { DeliveryChannel, DeliveryPatch, DeliveryPayload, DeliveryRow, TelegramPairStart } from "../net/types";
 import { PanelNote } from "../components/PanelNote";
 import { editStart, fieldError, fieldPatch, fieldValue, isRecipientField, type FieldId } from "./dlvrFields";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 
 /**
@@ -88,6 +90,12 @@ export default function DLVR({ panelId }: FunctionProps) {
   // The key handler is registered once, so it reads the latest state through a ref (see CLAUDE.md: useLatest).
   const latest = useLatest({ data, cur, edit, view, pair });
 
+  // F5 / the Refresh button. Not while the inline editor is open (it has focus and owns its keys, as before).
+  usePanelRefresh(panelId, () => {
+    if (latest.current.edit) return false;
+    void load();
+    if (latest.current.view === "log") void loadLog();
+  });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -108,10 +116,6 @@ export default function DLVR({ panelId }: FunctionProps) {
           case "L":
             setView(v === "log" ? "settings" : "log");
             if (v !== "log") void loadLog();
-            return true;
-          case "F5":
-            void load();
-            if (v === "log") void loadLog();
             return true;
           case " ": {
             if (!d || v !== "settings") return true;

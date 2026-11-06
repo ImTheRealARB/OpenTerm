@@ -1,5 +1,5 @@
 /** Price alert from the chart (GP key A / Alt+click). Own module so only the lazy GP chunk carries it. */
-import { api8 } from "../net/api";
+import { priceAlertsApi } from "../net/priceAlertsApi";
 import { act, askNotifyPermission } from "./alerts";
 import { parseRule } from "./alertArgs";
 import { fail } from "./status";
@@ -13,5 +13,5 @@ export function createPriceAlert(symbol: string, op: ">" | "<", priceText: strin
   if (typeof rule === "string") return Promise.resolve(fail(rule));
   askNotifyPermission(); // synchronously, inside the keypress or click that asked
   const text = `${symbol} ${op} ${priceText}`;
-  return act(`ALERT ${text} NOT SAVED`, () => api8.createAlert({ symbol, ...rule }), `ALERT SET: ${text} (ALRT TO MANAGE)`);
+  return act(`ALERT ${text} NOT SAVED`, () => priceAlertsApi.createAlert({ symbol, ...rule }), `ALERT SET: ${text} (ALRT TO MANAGE)`);
 }

@@ -27,32 +27,12 @@ cache:
   screener_ttl_s: 900
   peers_ttl_s: 86400
 providers:
-  # Order = fallback order per capability. Stooq is retired (bot check), see docs/DATA_LIMITS.md.
-  # quotes and history are NOT pinned here: their order comes from the source hierarchy (backend/openterm/providers/hierarchy.py),
-  # best source first (depth, freshness, rate limits). Pin a list here only to override it by hand (the log then says so).
-  search: [yahoo]
-  profile: [yahoo, nasdaq]
-  news_top: [rss, finnhub, alpaca, marketaux]  # finnhub, alpaca and marketaux are inert until a key is set in APIKEYS
-  news_symbol: [yahoo_rss, finnhub, alpaca, marketaux, gdelt]
-  news_keyword: [gdelt]
-  movers: [nasdaq]
-  crypto: [coingecko, binance, kraken, coinbase]  # kraken and coinbase: keyless second exchanges for when Binance is blocked or down
-  # Phase 6
-  fundamentals: [sec]
-  filings: [sec]
-  insiders: [sec, yahoo_own]
-  holders: [yahoo_own]
-  # Phase 7. fred = official API, only active with FRED_API_KEY; fred_csv = keyless CSV.
-  fred_series: [fred, fred_csv]
-  fred_search: [fred]
-  yield_curve: [treasury, fred_csv]
-  earnings: [nasdaq_earnings]
-  eco_calendar: [agency_ics, fred]
-
-  # --- Phase 9 ---
-  screener: [nasdaq_screener]
-  peers: [yahoo_peers]
-  # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.
+  # Empty on purpose: the default order of every capability lives in ONE table, backend/openterm/providers/hierarchy.py
+  # (DEFAULT_ORDER; quotes and history are the ranked HIERARCHY with the reasons). Add an entry here only to override a
+  # capability by hand, as a list of provider names, best first. A pin wins over the table and hides every source added to it
+  # later; for quotes and history the log says so. Example:
+  # news_top: [rss, marketaux]
+  # Stooq is retired (bot check), see docs/DATA_LIMITS.md.
 news:
   # Market top-stories feeds for N. Leave unset to use the built-in list
   # (CNBC, MarketWatch, BBC Business, Economic Times markets, Mint markets). Example:

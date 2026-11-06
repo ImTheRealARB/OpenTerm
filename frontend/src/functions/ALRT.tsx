@@ -6,7 +6,8 @@ import { prefillCommand } from "../components/CommandLine";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtPct, fmtPrice, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import type { Alert, NewsAlert } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { Alert, NewsAlert } from "../net/types";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import { plainAlert } from "./alertPlain";
@@ -14,7 +15,9 @@ import { engineView } from "./alertEngineText";
 import { requestAsk } from "../gui/askBus";
 import { PanelNote } from "../components/PanelNote";
 import { settingsStore } from "../settings/runtime";
-import { dirColor, lastColor, lastFlash, navKey, pct, price, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { dirColor, lastColor, lastFlash, pct, price, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -99,6 +102,7 @@ export default function ALRT({ panelId }: FunctionProps) {
   const latest = useLatest({ rows, confirm });
   useCsvExport(panelId, () => gridCsv("ALRT", COLS, rows));
 
+  usePanelRefresh(panelId, () => { void refreshAlerts().catch(() => {}); void refreshNewsAlerts().catch(() => {}); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -134,10 +138,6 @@ export default function ALRT({ panelId }: FunctionProps) {
               setConfirm(null);
               void clearAlerts();
             } else setConfirm("CLEAR");
-            return true;
-          case "F5":
-            void refreshAlerts().catch(() => {});
-            void refreshNewsAlerts().catch(() => {});
             return true;
           case "Escape":
             return c !== null;

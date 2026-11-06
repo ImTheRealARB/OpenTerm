@@ -27,17 +27,17 @@ from typing import Any, ClassVar
 import httpx
 import orjson
 
-from ..ratelimit import RateLimited
 from ..redact import redact
 from . import marketaux_parse as mp
-from .base import NEWS_SYMBOL, NEWS_TOP, Provider, ProviderError
+from .base import NEWS_SYMBOL, NEWS_TOP, ProviderError
+from .keyed import KeyedProvider
 
 URL = "https://api.marketaux.com/v1/news/all"
 DAILY_BUDGET = 90
 CACHE_S = 900.0
 
 
-class MarketauxProvider(Provider):
+class MarketauxProvider(KeyedProvider):
     name = "marketaux"
     label = "Marketaux (free tier, key)"
     capabilities = frozenset({NEWS_SYMBOL, NEWS_TOP})
@@ -49,24 +49,21 @@ class MarketauxProvider(Provider):
     key_name = "MARKETAUX_KEY"
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm", "Accept": "application/json"}
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
-        self.source = "marketaux (doc-shaped fixture, NOT A RECORDING)" if self.fixtures else "marketaux"
-        self._key = ""
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self.source = "marketaux (doc-shaped fixture, NOT A RECORDING)" if self.fixture else "marketaux"
         self._cache: dict[str, tuple[float, list]] = {}
         self._day = ""  # the UTC date the request counter belongs to
         self.requests_today = 0
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
+    def auth_params(self) -> dict[str, str]:
+        return {"api_token": self._key}  # the only way the docs describe; the key is registered with redact.py
 
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get("MARKETAUX_KEY", "")
+    def _before_send(self) -> None:
+        self._spend()  # counted after the key check and before the rate-limit wait, as before
 
-    def supports(self, capability: str, symbol: str | None = None) -> bool:
-        return self.has_key and capability in self.capabilities
+    def _check_status(self, r: httpx.Response) -> None:
+        """No-op: Marketaux's errors are read from the body together with the status (`mp.error_of` in `_api`)."""
 
     def _spend(self) -> None:
         """Counts one request against today's budget, or refuses when the budget is used up."""
@@ -78,19 +75,7 @@ class MarketauxProvider(Provider):
         self.requests_today += 1
 
     async def _api(self, params: dict[str, Any]) -> Any:
-        if not self._key:
-            raise ProviderError("key_required", "MARKETAUX_KEY is not set")
-        self._spend()
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        try:
-            r = await self.http.get(URL, params={**params, "api_token": self._key}, headers=self.headers, timeout=self.timeout)
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e  # never str(e): it can carry the URL with the token
+        r = await self._request(URL, params, None)
         try:
             body = orjson.loads(r.content)
         except orjson.JSONDecodeError:

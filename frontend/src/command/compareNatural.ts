@@ -7,6 +7,7 @@
  *   if (r.command) execute(r.command); else show(r.error);
  * A phrase the resolver cannot map is an error naming it; nothing is guessed.
  */
+import { GP_RANGES } from "../chart/gpRanges";
 
 export interface CompareParse {
   /** First company phrase (as typed, lowercase, filler words removed). */
@@ -27,7 +28,7 @@ export interface CompareResult {
   parse?: CompareParse;
 }
 
-const GP_RANGES = new Set(["1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX"]);
+const GP_RANGE_SET = new Set<string>(GP_RANGES);
 const MAX_VS = 3;
 const LEAD = /^(?:please\s+|can you\s+|show me\s+|show\s+|chart\s+|plot\s+|graph\s+|draw\s+)*(?:compare|comparing|comparison of|comparison)?\s*/;
 const HAS_COMPARE_LEAD = /^(?:please\s+|can you\s+|show me\s+|show\s+|chart\s+|plot\s+|graph\s+|draw\s+)*(?:compare|comparing|comparison)\b/;
@@ -68,7 +69,7 @@ export function parseCompare(input: string): CompareParse | null {
   const take = (m: RegExpExecArray) => {
     const word = m[3] ? WORD_RANGE[m[3]] : null;
     const r = word ?? rangeFrom(Number(m[1]), m[2]);
-    if (r && GP_RANGES.has(r)) range = r;
+    if (r && GP_RANGE_SET.has(r)) range = r;
     else badRange = m[0].trim().toUpperCase();
     t = (t.slice(0, m.index) + " " + t.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim();
   };

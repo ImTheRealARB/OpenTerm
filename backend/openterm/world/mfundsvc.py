@@ -1,7 +1,7 @@
 """Service function behind MF (`/api/world/mf`): Indian mutual fund search and NAV history from MFapi.in.
 
 `q` is either a scheme code (4 to 7 digits: the fund, with its NAV history and returns) or words (a search of scheme names). Parsing and return
-maths are in `mfund.py`; fetching is in `providers/mfapi.py`. Both answers go through the shared stale-while-revalidate cache (`svc._swr`), so a
+maths are in `mfund.py`; fetching is in `providers/mfapi.py`. Both answers go through the shared stale-while-revalidate cache (`svc.swr`), so a
 repeated keystroke, a panel reload or a second panel costs no call to the free upstream. The 40,000-scheme list is never downloaded.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..service import DataError
+from ..errors import DataError
 from . import mfund
 
 SEARCH_TTL_S = 3600.0  # scheme names almost never change
@@ -31,10 +31,10 @@ async def mf(svc: Any, q: str) -> dict[str, Any]:
                 raise DataError("not_found", f"NO FUND WITH SCHEME CODE {text}: SEARCH BY NAME WITH MF <WORDS>", "")
             return {"data": mfund.fund_payload(fund), "source": mfund.SOURCE, "fallback_from": failed}
 
-        return await svc._swr(f"w:mf:fund:{text}", FUND_TTL_S, fetch_fund)
+        return await svc.swr(f"w:mf:fund:{text}", FUND_TTL_S, fetch_fund)
 
     async def fetch_search() -> dict:
         items, failed = await svc.router.call("mf_search", lambda p: p.mf_search(text))
         return {"data": mfund.search_payload(text, items), "source": mfund.SOURCE, "fallback_from": failed}
 
-    return await svc._swr(f"w:mf:search:{text.lower()}", SEARCH_TTL_S, fetch_search)
+    return await svc.swr(f"w:mf:search:{text.lower()}", SEARCH_TTL_S, fetch_search)
