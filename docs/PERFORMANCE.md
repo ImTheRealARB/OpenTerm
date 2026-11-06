@@ -822,3 +822,31 @@ Update after the server-side alert engine and delivery retry were added (hub tic
 Full gate: ALL PASS in 138 s (pytest 2803, ruff, tsc, vitest, e2e 350). The first run had 6 e2e failures: 2 were real (`phase10` compares the saved settings exactly and the e2e seed now saves `startup: "layout"`; fixed in the spec) and 4 passed alone (known e2e flake).
 Bench: **37 pass, 0 fail** on the first run (cold start 96.9 ms of 1500, layout load 49.1 ms of 100, 50k-bar pan 16.7 ms of 20, tick to pixel 36.6 ms of 50, BT 10-year 190 ms of 300).
 Initial JS+CSS bundle: **123.3 KB gz** (121.7 KB after GUI pass 2): +1.6 KB for the `startup` setting, the tape hook in `App.tsx` / `main.tsx` and the Phase 20 settings. HOME, the tape bar and the ticker tape are lazy chunks. Under the 400 KB budget, above the informal 120 KB goal.
+
+## Audit fixes (2026-11-06, Windows 11, 20 threads, branch `claude/audit-fixes-resume-bbe676`, 8 commits on `main` 2b4396f)
+**E-1 (every router returns through orjson, no `jsonable_encoder`)**, in-process TestClient, realistically sized payloads, median of 15:
+
+| Route | Payload | Before | After |
+|---|---|---|---|
+| `/api/history` 10Y daily | 2,520 bars, 124 KB | 10.6 ms | 1.0 ms |
+| `/api/history` deep intraday | 50,000 bars, 2.4 MB | 203.4 ms | 10.4 ms |
+| `/api/screener` | 7,000 rows, 492 KB | 45.6 ms | 1.7 ms |
+
+**G-3:** two new bench budgets, read from each answer's `server-timing` header: `/api/history` 10Y daily (real AAPL recording, 268 KB) 1.2-2.2 ms of 20,
+`/api/screener` (476-row fixture) 0.6-1.0 ms of 20. The bench now has 39 budgets.
+
+**Bench, like for like** (each after a 60 s rest and no full gate first; benching right after a full gate also failed the streaming and 50k-pan lines,
+on this branch only because only this branch was benched that way):
+
+| Line | `main` 2b4396f | branch 02ba643 | Budget |
+|---|---|---|---|
+| BT 10-year daily rule run p95 | 197.5 ms | **517.4 ms FAIL** | 300 |
+| Layout load to paint p95 | 54.5 ms | **119.8 ms FAIL** | 100 |
+| Job J frame received to paint p95 | pass | **56.8 ms FAIL** | 50 |
+| Tick to pixel, streaming load | 37.5 ms | 42.5 ms | 50 |
+| Frame time, 50k-bar pan | 16.7 ms | 16.8 ms | 20 |
+| AI request to first SSE event | 24.7 ms | 24.6 ms | 60 |
+| Total | 37/37 | 36/39 | |
+
+**OPEN REGRESSION:** BT runs, layout load and job frames are slower on the branch. Not yet bisected; see HANDOFF.md "RESUME HERE: audit fixes".
+Full gate on 02ba643: pytest 2881, ruff, tsc, eslint, vitest pass; e2e 351/352, the failure (`phase17` DLVR) also fails 1 in 6 on `main` (pre-existing race).
