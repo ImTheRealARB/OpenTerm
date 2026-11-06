@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { compute, type IndicatorName, type Series } from "./indicators";
+import { computeEach, type IndicatorName, type Series } from "./indicators";
 import { handleLibrary, isLibraryMsg } from "./libraryWorker";
 
 interface Req {
@@ -16,7 +16,8 @@ self.onmessage = (ev: MessageEvent<Req>) => {
   }
   const { id, series, which } = ev.data;
   const t0 = performance.now();
-  const results = compute(series, which);
-  const buffers = Object.values(results).map((a) => a.buffer);
-  (self as unknown as Worker).postMessage({ id, results, ms: performance.now() - t0 }, buffers);
+  // One group of outputs per requested indicator, so the page can draw each one on its own.
+  const parts = computeEach(series, which);
+  const buffers = Object.values(parts).flatMap((g) => Object.values(g ?? {}).map((a) => a.buffer));
+  (self as unknown as Worker).postMessage({ id, parts, ms: performance.now() - t0 }, buffers);
 };

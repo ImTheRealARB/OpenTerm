@@ -15,6 +15,7 @@ import type { FunctionProps } from "./registry";
 import { commandFor, coverageLabel, subjectSymbol, swarmArgs, type PresetInfo, type PresetsResponse } from "./swarmArgs";
 import { estimateLine, newSwarm, reduceSwarm, type RoleState, type SwarmEvent, type SwarmState } from "./swarmStream";
 import { watchPanelGone } from "./panelGoneWatch";
+import { usePanelMemory } from "./usePanelMemory";
 
 interface StoredRun {
   id: string;
@@ -63,7 +64,8 @@ function RoleView({ r }: { r: RoleState }) {
 
 export default function SWARM({ panelId, args }: FunctionProps) {
   const ai = useStore(settingsStore, (s) => s.ai);
-  const [run, setRun] = useState<SwarmState | null>(null);
+  // The run lives in per-panel memory, not useState: a typed command (`SWARM ...`) remounts the panel.
+  const [run, setRun] = usePanelMemory<SwarmState | null>("SWARM", panelId, "run", null);
   const [desks, setDesks] = useState<PresetsResponse | null>(null);
   const [stored, setStored] = useState<StoredRun[]>([]);
   const [note, setNote] = useState<{ text: string; cls: string } | null>(null);
@@ -94,11 +96,21 @@ export default function SWARM({ panelId, args }: FunctionProps) {
   const stream = useCallback(async (url: string, body: unknown) => {
     const ac = new AbortController();
     abort.current = ac;
-    // Stop the (paid) run if this panel is closed. A maximize remount does not count as closing.
-    const unwatch = watchPanelGone(panelId, () => ac.abort());
     let cur = newSwarm();
+    // `gone` = the panel closed or moved on to another view: this run's late writes go inert, so
+    // they cannot overwrite the run the panel shows now.
+    let gone = false;
+    const incomplete = (): SwarmState => ({ ...cur, status: "done", final: { answer: "", unsourced: [], grounded: false, label: "INCOMPLETE", failed: [] } });
+    // Stop the (paid) run if this panel is closed or its view is replaced (a new command, a history
+    // step). A maximize remount keeps the same view, so it does not count.
+    const unwatch = watchPanelGone(panelId, () => {
+      setRun(incomplete());
+      gone = true;
+      ac.abort();
+    });
     setRun(cur);
     const apply = (e: SwarmEvent) => {
+      if (gone) return;
       cur = reduceSwarm(cur, e);
       setRun(cur);
     };
@@ -120,16 +132,18 @@ export default function SWARM({ panelId, args }: FunctionProps) {
         buf = parsed.rest;
         parsed.events.forEach(apply);
       }
-      if (cur.status === "running") setRun({ ...cur, status: "done", final: { answer: "", unsourced: [], grounded: false, label: "INCOMPLETE", failed: [] } });
+      if (cur.status === "running" && !gone) setRun(incomplete());
     } catch (e) {
-      if ((e as Error).name === "AbortError") setRun({ ...cur, status: "done", final: { answer: "", unsourced: [], grounded: false, label: "INCOMPLETE", failed: [] } });
+      if (gone) {
+        /* already marked INCOMPLETE when the panel moved on */
+      } else if ((e as Error).name === "AbortError") setRun(incomplete());
       else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
     } finally {
       unwatch();
       abort.current = null;
       void loadLists();
     }
-  }, [loadLists, panelId]);
+  }, [loadLists, panelId, setRun]);
 
   const asked = useRef(false);
   useEffect(() => {

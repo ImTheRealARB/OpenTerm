@@ -18,11 +18,14 @@ import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { replaceView } from "../state/workspace";
 import { aiArgs } from "./aiArgs";
-import { citeSegments, newTurn, parseSse, reduceTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
+import { citeSegments, newTurn, parseSse, reduceTurn, stopTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
 import type { FunctionProps } from "./registry";
 import { watchPanelGone } from "./panelGoneWatch";
+import { usePanelMemory } from "./usePanelMemory";
 
 const MAX_TURNS = 30;
+// Stable starting value for the per-panel memory (a fresh [] each render would look like a change).
+const NO_TURNS: Turn[] = [];
 interface DocCard {
   id: string;
   name: string;
@@ -142,10 +145,12 @@ function TurnView({ t }: { t: Turn }) {
 
 export default function AI({ panelId, args }: FunctionProps) {
   const ai = useStore(settingsStore, (s) => s.ai);
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // The chat and the loaded document live in per-panel memory, not in useState: a typed command
+  // (`AI what drove margins?`) remounts the panel, and component state would be wiped with it.
+  const [turns, setTurns] = usePanelMemory<Turn[]>("AI", panelId, "turns", NO_TURNS);
   const [input, setInput] = useState("");
   const [spend, setSpend] = useState<{ today: number; cap: number } | null>(null);
-  const [doc, setDoc] = useState<DocCard | null>(null);
+  const [doc, setDoc] = usePanelMemory<DocCard | null>("AI", panelId, "doc", null);
   const [note, setNote] = useState<{ text: string; cls: string } | null>(null);
   const state = useRef({ turns, ai, doc });
   state.current = { turns, ai, doc };
@@ -181,11 +186,23 @@ export default function AI({ panelId, args }: FunctionProps) {
       const history = mode !== "ask" ? [] : cur.filter((t) => t.status === "done" && t.answer).flatMap((t) => [{ role: "user", content: t.question }, { role: "assistant", content: t.answer }]);
       const idx = cur.length;
       setTurns((ts) => [...ts, newTurn(shown)].slice(-MAX_TURNS));
-      const apply = (e: AiEvent) => setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? reduceTurn(t, e) : t)));
+      // `gone` = the panel closed or moved on to another view: this stream's late writes go inert,
+      // so they cannot touch the turns of whatever the panel shows now.
+      let gone = false;
+      const apply = (e: AiEvent) => {
+        if (!gone) setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? reduceTurn(t, e) : t)));
+      };
       const ac = new AbortController();
       abort.current = ac;
-      // Stop the (paid) stream if this panel is closed. A maximize remount does not count as closing.
-      const unwatch = watchPanelGone(panelId, () => ac.abort());
+      // Stop the (paid) stream if this panel is closed or its view is replaced (a new command, a
+      // history step). A maximize remount keeps the same view, so it does not count. The turn is
+      // marked INCOMPLETE right here, not after the abort rejects, so the new instance's
+      // "an answer is running" guard never sees a stale running turn.
+      const unwatch = watchPanelGone(panelId, () => {
+        setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? stopTurn(t, "CANCELLED (PANEL CLOSED OR REPLACED)") : t)));
+        gone = true;
+        ac.abort();
+      });
       const t0 = performance.now();
       let sawEvent = false;
       let sawToken = false;
@@ -236,9 +253,11 @@ export default function AI({ panelId, args }: FunctionProps) {
           }
         }
         // The stream ended without done or error (server stopped): do not leave the turn spinning.
-        setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) && t.status === "running" ? { ...t, status: "done", label: "INCOMPLETE" } : t)));
+        if (!gone) setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) && t.status === "running" ? { ...t, status: "done", label: "INCOMPLETE" } : t)));
       } catch (e) {
-        if ((e as Error).name === "AbortError") {
+        if (gone) {
+          /* already marked INCOMPLETE when the panel moved on */
+        } else if ((e as Error).name === "AbortError") {
           setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? { ...t, status: "done", label: "INCOMPLETE", notices: [...t.notices, "CANCELLED (ESC)"] } : t)));
         } else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
       } finally {
@@ -247,7 +266,7 @@ export default function AI({ panelId, args }: FunctionProps) {
         void refreshSpend();
       }
     },
-    [refreshSpend, panelId],
+    [refreshSpend, panelId, setTurns],
   );
 
   const sendInput = useCallback(() => {
@@ -290,6 +309,10 @@ export default function AI({ panelId, args }: FunctionProps) {
     void refreshSpend();
     if (asked.current || !args.length) return;
     const a = aiArgs(args);
+    if (a.mode === "ask" && !a.text) return; // nothing to do, leave the args as typed
+    // Clear the args FIRST: this rewrites the panel's view object, and a stream's panel-gone watch
+    // (started inside send) must not see that rewrite as the user moving on.
+    replaceView(panelId, (v) => ({ ...v, args: [] }));
     if (a.mode === "doc") {
       setNote({ text: "PRESS U TO PICK A FILE (TXT CSV HTML DOCX XLSX PDF), OR: AI DOC FILING <SYMBOL> [FORM]", cls: "dim" });
     } else if (a.mode === "docoff") {
@@ -305,8 +328,7 @@ export default function AI({ panelId, args }: FunctionProps) {
     } else if (a.mode !== "ask" || a.text) {
       asked.current = true;
       void send(a.text, a.mode);
-    } else return;
-    replaceView(panelId, (v) => ({ ...v, args: [] }));
+    }
   }, [args, panelId, send, refreshSpend]);
 
   useEffect(() => {

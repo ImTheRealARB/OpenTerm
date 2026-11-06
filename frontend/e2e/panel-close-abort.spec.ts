@@ -59,3 +59,19 @@ test("maximize keeps a running SWARM stream, closing the panel aborts it", async
   await page.keyboard.press("Alt+w");
   await expect.poll(async () => (await counts(page)).aborts).toBe(1);
 });
+
+test("a second SWARM command in the same panel aborts the first run (view replaced, same function)", async ({ page }) => {
+  await setup(page);
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("SWARM COMMITTEE AAPL");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("swarm-panel")).toBeVisible();
+  await expect.poll(async () => (await counts(page)).ai).toBe(1);
+  expect((await counts(page)).aborts).toBe(0); // the panel clearing its own args must not look like leaving
+
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("SWARM COMMITTEE MSFT");
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => (await counts(page)).ai).toBe(2);
+  await expect.poll(async () => (await counts(page)).aborts).toBe(1); // only the first run was cut
+});

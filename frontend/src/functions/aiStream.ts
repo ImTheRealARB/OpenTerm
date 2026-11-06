@@ -100,6 +100,11 @@ export function newTurn(question: string): Turn {
   return { question, answer: "", tools: [], notices: [], status: "running", model: "", provider: "", started: "", fixtures: false, cost: 0, label: null, unsourced: [] };
 }
 
+/** Cuts a still-running turn short (the panel was closed or moved to another view). A finished turn is returned unchanged. */
+export function stopTurn(t: Turn, notice: string): Turn {
+  return t.status === "running" ? { ...t, status: "done", label: "INCOMPLETE", notices: [...t.notices, notice] } : t;
+}
+
 /** Whole `data:` events in `buf`; whatever is left over (a partial event) comes back in `rest`. */
 export function parseSse<E = AiEvent>(buf: string): { events: E[]; rest: string } {
   const parts = buf.replace(/\r\n/g, "\n").split("\n\n");
