@@ -64,8 +64,11 @@ test("a second SWARM command in the same panel aborts the first run (view replac
   await setup(page);
   await page.keyboard.press("Control+k");
   await page.keyboard.type("SWARM COMMITTEE AAPL");
+  // On a slow CI runner the panel once failed to show within 5 s: check the typed command first (a lost key fails here,
+  // with a clear message), then give the lazily loaded SWARM module more time to arrive.
+  await expect(page.locator("#cmdline")).toHaveValue("SWARM COMMITTEE AAPL");
   await page.keyboard.press("Enter");
-  await expect(page.getByTestId("swarm-panel")).toBeVisible();
+  await expect(page.getByTestId("swarm-panel")).toBeVisible({ timeout: 10_000 });
   await expect.poll(async () => (await counts(page)).ai).toBe(1);
   expect((await counts(page)).aborts).toBe(0); // the panel clearing its own args must not look like leaving
 

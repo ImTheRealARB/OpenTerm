@@ -93,11 +93,14 @@ test("presets: save sends the picked list, load lists and applies it", async ({ 
   expect(saved[0].name).toBe("My set");
   expect(saved[0].body).toEqual({ items: [{ id: "MACD", params: [], label: "" }, { id: "RSI", params: [21], label: "" }] });
 
+  // Retry only until `l` registers (the list switches to presets at once, before the fetch answers). Waiting for "My set"
+  // inside the loop failed on a slow CI runner: the fetch took over 300 ms, so every retry's Escape left load mode again.
   await expect(async () => {
     await page.keyboard.press("Escape");
     await page.keyboard.press("l");
-    await expect(page.getByTestId("ind-list")).toContainText("My set", { timeout: 300 });
+    await expect(page.getByTestId("ind-list")).toContainText(/LOADING PRESETS|My set/, { timeout: 500 });
   }).toPass();
+  await expect(page.getByTestId("ind-list")).toContainText("My set");
   await expect(page.getByTestId("ind-list")).toContainText("MACD, RSI(21)");
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("ind-msg")).toHaveText("OPEN A CHART (GP) FIRST"); // nothing answered the bus
