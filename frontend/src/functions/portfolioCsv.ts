@@ -3,6 +3,7 @@
  * Import never drops a row silently: each data row ends up in `rows` or in `errors` (with its line number).
  */
 import { isSymbolToken } from "../command/markets";
+import { csvField } from "../csvText";
 
 /** Splits CSV text into records. Handles a BOM, CRLF / LF / CR, quoted fields with commas, quotes and newlines. */
 export function parseCsv(text: string, delimiter?: string): string[][] {
@@ -58,13 +59,16 @@ function sniffDelimiter(s: string): string {
   return best[1] > 0 ? best[0] : ",";
 }
 
-const needsQuotes = (v: string) => /[",\r\n]/.test(v) || v !== v.trim();
-const esc = (v: string) => (needsQuotes(v) ? `"${v.replace(/"/g, '""')}"` : v);
-
-/** CRLF line endings (RFC 4180; Excel and every spreadsheet read them). */
+/**
+ * CRLF line endings (RFC 4180; Excel and every spreadsheet read them). Goes through `csvField`, the one place that also
+ * neutralizes spreadsheet formulas (a note like "=HYPERLINK(...)" would otherwise run when the file is opened in Excel).
+ */
 export function serializeCsv(rows: string[][]): string {
-  return rows.map((r) => r.map(esc).join(",")).join("\r\n") + "\r\n";
+  return rows.map((r) => r.map(csvField).join(",")).join("\r\n") + "\r\n";
 }
+
+/** Undo `neutralize` on a text cell we exported ourselves ("'=x" back to "=x"), so a notes round trip is lossless. */
+const unneutralize = (s: string) => (/^'(?:[=@\t\r]|[+-](?![\d.]))/.test(s) ? s.slice(1) : s);
 
 // --- positions --------------------------------------------------------------------------------
 export interface ImportRow {
@@ -199,7 +203,7 @@ export function importPositions(text: string): ImportResult {
       continue;
     }
     const currency = ccyRaw ? (ccyRaw === "GBp" || ccyRaw === "ZAc" ? ccyRaw : ccyRaw.toUpperCase()) : null;
-    const notes = cell(r, "notes").slice(0, 200) || null;
+    const notes = unneutralize(cell(r, "notes")).slice(0, 200) || null;
     res.rows.push({ line, symbol, qty, cost, currency, notes });
     seen.set(symbol, [...(seen.get(symbol) ?? []), line]);
   }

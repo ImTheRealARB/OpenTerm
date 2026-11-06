@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ipaddress
+import os
 from urllib.parse import urlparse
 
 import httpx
@@ -9,16 +11,40 @@ import httpx
 from . import DeliveryError, RetryableError
 
 LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+APP_PORT = 8000  # this app's own port: a webhook must never point back at it
+ALLOW_LOCAL_ENV = "OPENTERM_ALLOW_LOCAL_WEBHOOK"
+
+
+def _private_host(host: str) -> bool:
+    """A name or address that points inside this machine or its network (audit D-4: server-side request forgery,
+    where the backend is tricked into calling a service the outside world cannot reach). Checks address literals
+    and well-known names only; a public DNS name that secretly resolves to a private address is not caught, because
+    resolving names here would add network calls to a pure check."""
+    if host == "localhost" or host.endswith((".localhost", ".internal", ".local")):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return not ip.is_global  # loopback, 10/8, 172.16/12, 192.168/16, 169.254/16 (cloud metadata), unspecified, reserved
 
 
 def check_url(url: str) -> str:
-    """https only; plain http is allowed just for this machine (a local test receiver)."""
+    """https to a public host only. A receiver on this machine (http://127.0.0.1:<port>) needs OPENTERM_ALLOW_LOCAL_WEBHOOK=1
+    and is never allowed to be this app's own port."""
     u = urlparse(url)
-    if u.scheme == "https" and u.hostname:
-        return url
-    if u.scheme == "http" and u.hostname in LOOPBACK_HOSTS:
-        return url
-    raise DeliveryError("WEBHOOK URL MUST BE https (http ONLY FOR LOOPBACK)")
+    host = (u.hostname or "").lower()
+    if not host or u.scheme not in ("http", "https"):
+        raise DeliveryError("WEBHOOK URL MUST BE https")
+    if _private_host(host):
+        if u.scheme == "http" and host in LOOPBACK_HOSTS and os.environ.get(ALLOW_LOCAL_ENV) == "1":
+            if (u.port or 80) == APP_PORT:
+                raise DeliveryError(f"WEBHOOK MUST NOT POINT AT OPENTERM ITSELF (PORT {APP_PORT})")
+            return url
+        raise DeliveryError(f"WEBHOOK MUST BE A PUBLIC https HOST (local receivers need {ALLOW_LOCAL_ENV}=1)")
+    if u.scheme != "https":
+        raise DeliveryError("WEBHOOK URL MUST BE https")
+    return url
 
 
 async def send(app, values: dict, cfg: dict, subject: str, text: str, extra: dict) -> None:

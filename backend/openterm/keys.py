@@ -219,7 +219,7 @@ class KeyStore:
         self._checks: dict[str, tuple[str, float, str | None]] = {}
         dot = read_dotenv(self.dotenv)
         for spec in KEY_SPECS.values():  # env and .env are cheap: register their secrets now, the keyring lazily
-            redact.register([v for f in spec.secrets if (v := self.env.get(f) or dot.get(f))])
+            redact.register([v for f in (*spec.secrets, *spec.hidden_secret) if (v := self.env.get(f) or dot.get(f))])
 
     def _spec(self, name: str) -> KeySpec:
         if name not in KEY_SPECS:

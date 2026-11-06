@@ -21,6 +21,7 @@ from .db import open_db
 from .delivery.routes import router as delivery_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
+from .origin import OriginGuardMiddleware
 from .providers.hierarchy import HIERARCHY, order_for
 from .quant_routes import router as quant_router
 from .responses import Orjson
@@ -200,7 +201,9 @@ async def lifespan(app: FastAPI):
         # Providers built at startup read their key from Settings; a key set in APIKEYS is applied here.
         if name == "fred" and "fred" in router.providers:
             router.providers["fred"]._key = (store.get("fred") or {}).get("FRED_API_KEY") or ""
-        if name in ("finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov") and name in router.providers:  # keyed sources
+        # Every provider that has `set_keys` is refreshed, so a new keyed source cannot be forgotten here (audit D-5).
+        # The key-per-call sources (eia, openfigi, comtrade, bls, bea, census) read the store on each request instead.
+        if hasattr(router.providers.get(name), "set_keys"):
             router.providers[name].set_keys(store.get(name))
         if name == "kite":  # Phase 15: a new key or secret drops the login; the session re-reads the store
             kite.session.reload()
@@ -210,7 +213,8 @@ async def lifespan(app: FastAPI):
     async def apply_stored_keys() -> None:
         # Keyring-stored keys load after startup so cold start never imports or waits on the keyring.
         await asyncio.sleep(2.0)
-        for name in ("fred", "finnhub", "alpaca", "tradier", "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov"):
+        names = ["fred", "kite", *(n for n, p in router.providers.items() if hasattr(p, "set_keys"))]
+        for name in names:
             await asyncio.to_thread(on_key_change, name)
 
     key_loader = asyncio.create_task(apply_stored_keys())
@@ -258,6 +262,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson, lifespan=lifespan)
 app.add_middleware(perf.TimingMiddleware)
+app.add_middleware(OriginGuardMiddleware)  # outermost: a foreign browser Origin never reaches a route (audit D-2)
 app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)

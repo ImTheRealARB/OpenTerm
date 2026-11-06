@@ -235,11 +235,23 @@ def test_telegram_http_error_is_failed_and_redacted(client):
     assert r["status"] == "failed" and "401" in r["detail"]
 
 
-def test_webhook_url_rules():
+def test_webhook_url_rules(monkeypatch):
+    monkeypatch.delenv(webhook.ALLOW_LOCAL_ENV, raising=False)
     assert webhook.check_url("https://hooks.example.com/x")
+    for bad in ("http://hooks.example.com/x", "ftp://x.example/a", "hooks.example.com", "https://",
+                # audit D-4: nothing inside this machine or its network, with or without the local-receiver switch
+                "http://127.0.0.1:9000/x", "http://localhost/x", "https://localhost/x", "https://127.0.0.1/x",
+                "https://192.168.1.10/x", "https://10.0.0.5/x", "https://172.16.3.4/x", "https://[::1]/x",
+                "https://169.254.169.254/latest/meta-data", "https://printer.local/x", "https://0.0.0.0/x"):
+        with pytest.raises(delivery.DeliveryError):
+            webhook.check_url(bad)
+
+
+def test_webhook_local_receiver_needs_the_switch_and_never_this_app(monkeypatch):
+    monkeypatch.setenv(webhook.ALLOW_LOCAL_ENV, "1")
     assert webhook.check_url("http://127.0.0.1:9000/x")
-    assert webhook.check_url("http://localhost/x")
-    for bad in ("http://hooks.example.com/x", "ftp://x.example/a", "hooks.example.com", "https://"):
+    assert webhook.check_url("http://localhost:5678/hook")
+    for bad in ("http://127.0.0.1:8000/api/delivery/test", "http://localhost:8000/x", "https://192.168.1.10/x"):
         with pytest.raises(delivery.DeliveryError):
             webhook.check_url(bad)
 

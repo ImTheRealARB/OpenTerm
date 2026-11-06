@@ -17,11 +17,20 @@ TRADE_FIELDS = ("symbol", "direction", "entry_time", "exit_time", "entry_price",
                 "commission", "holding_bars", "exit_reason")
 
 
+def neutralize(v):
+    """Spreadsheet formula guard (audit D-3; the same rule as frontend/src/csvText.ts): a text cell that starts with
+    = @ TAB CR, or with + / - not followed by a number, gets a leading apostrophe so Excel shows it instead of running it.
+    Numbers (floats, ints) are never touched."""
+    if isinstance(v, str) and (v[:1] in ("=", "@", "\t", "\r") or (v[:1] in ("+", "-") and not v[1:2].isdigit() and v[1:2] != ".")):
+        return "'" + v
+    return v
+
+
 def _csv(header: list[str], rows: list[list]) -> str:
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
     w.writerow(header)
-    w.writerows([["" if v is None else v for v in r] for r in rows])
+    w.writerows([["" if v is None else neutralize(v) for v in r] for r in rows])
     return out.getvalue()
 
 

@@ -64,6 +64,8 @@ def sse(event: dict) -> bytes:
 async def _body(request: Request) -> dict | Response:
     if not api_mod.loopback(request):
         return _err(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
+    if not api_mod.is_json_type(request):
+        return _err(400, "bad_request", "CONTENT-TYPE MUST BE application/json")
     try:
         body = orjson.loads(await request.body())
     except orjson.JSONDecodeError:

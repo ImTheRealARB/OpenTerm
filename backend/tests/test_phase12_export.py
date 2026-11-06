@@ -82,3 +82,16 @@ def test_compare_unknown_run_is_404_and_diff_is_b_minus_a(client):
     assert r["a"]["equity"] and r["b"]["trades"]
     assert r["diff"]["trade_count"] == r["b"]["metrics"]["trade_count"] - r["a"]["metrics"]["trade_count"]
     assert "unfilled_plan_rejections" not in r["diff"] or isinstance(r["diff"]["unfilled_plan_rejections"], int | float)
+
+
+def test_csv_cells_cannot_run_as_spreadsheet_formulas():
+    """Audit D-3: a trade's symbol or exit reason that starts like a formula is exported as text."""
+    from openterm.bt.export import neutralize, run_csv
+
+    assert neutralize("=CMD|' /c calc'!A0") == "'=CMD|' /c calc'!A0"
+    assert neutralize("@SUM(1)") == "'@SUM(1)"
+    assert neutralize("-evil") == "'-evil" and neutralize("+evil") == "'+evil"
+    assert neutralize("-1.5") == "-1.5" and neutralize(-1.5) == -1.5 and neutralize("sma cross") == "sma cross"
+    run = {"trades": [{"symbol": "AAPL", "exit_reason": "=1+1", "pnl": -3.2}], "equity": [], "metrics": {}}
+    text = run_csv(run, "trades")
+    assert "'=1+1" in text and ",-3.2," in text
