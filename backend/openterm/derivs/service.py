@@ -450,7 +450,8 @@ class Derivs(FuturesMixin, CalcMixin):
             bars = bars_env["data"]
         except (DataError, AllFailed) as e:
             bars_error = redact(str(e))
-        notes = [*notes, "RV: CLOSE-TO-CLOSE AND PARKINSON, ANNUALISED WITH SQRT(252); VRP = IV30 - RV30 (A SPREAD, NOT A FORECAST)",
+        days = "365 (CRYPTO TRADES EVERY DAY)" if sm["kind"] == "crypto" else "252"
+        notes = [*notes, f"RV: CLOSE-TO-CLOSE AND PARKINSON, ANNUALISED WITH SQRT({days}); VRP = IV30 - RV30 (A SPREAD, NOT A FORECAST)",
                  "IV RANK / PERCENTILE USE ONLY THIS MACHINE'S DAILY IV30 SNAPSHOTS (NO FREE SOURCE HAS IV HISTORY)"]
         data = st.hivg_payload(sym, sm, rows, bars, bars_error, iv30, iv30_note, history, notes,
                                [] if sm["kind"] == "crypto" else self.tradier_missing())

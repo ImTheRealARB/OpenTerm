@@ -60,7 +60,8 @@ def _returns(params: dict, data: dict, title: str, labels: dict):
     if days.size < 2:
         return None, None, "NO DAYS COMMON TO ALL HOLDINGS"
     fx = data.get("fx") or {}
-    mv = np.array([p["qty"] * cols[p["symbol"]][1][-1] * fx.get(p.get("ccy") or "", 1.0) for p in pos])
+    # value every holding on the last day all series share (as RISK does), not each series' own last close (audit B-1)
+    mv = np.array([p["qty"] * px[-1, i] * fx.get(p.get("ccy") or "", 1.0) for i, p in enumerate(pos)])
     value = float(mv.sum())
     if not value > 0:
         return None, None, "NET PORTFOLIO VALUE IS NOT POSITIVE"

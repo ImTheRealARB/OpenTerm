@@ -3,14 +3,16 @@ import { optArgs } from "./quantArgs";
 import { runQuant } from "./quantRun";
 import { makeResearchPanel } from "./ResearchPanel";
 
-/** Rows of the TRADES section -> the proposed portfolio: qty = now + trade, cost = price at proposal, closed names dropped. */
+/** Rows of the TRADES section -> the proposed portfolio: qty = now + trade, cost = price at proposal, closed names dropped.
+ *  Each row carries the holding's currency (`ccy`, typed or read from its bars), kept so a rupee holding stays rupees (audit B-1). */
 function proposal(rows: Record<string, unknown>[]): PositionIn[] {
   const out: PositionIn[] = [];
   for (const r of rows) {
     const qty = Number(r.qty_now ?? 0) + Number(r.shares ?? 0);
     const price = Number(r.price);
     if (typeof r.symbol !== "string" || !Number.isFinite(qty) || qty <= 0) continue;
-    out.push({ symbol: r.symbol, qty, cost: Number.isFinite(price) ? price : null });
+    const currency = typeof r.ccy === "string" && r.ccy ? r.ccy : null;
+    out.push({ symbol: r.symbol, qty, cost: Number.isFinite(price) ? price : null, currency });
   }
   return out;
 }
@@ -38,8 +40,10 @@ export default makeResearchPanel({
     const target = `${name.replace(/\.OPT$/, "")}.OPT`;
     const positions = proposal(trades.rows as Record<string, unknown>[]);
     say(`SAVING ${target}…`);
+    // copy the original's base currency: without it the server would create <NAME>.OPT in USD (audit B-1)
     api8
-      .putPortfolio(target, positions)
+      .portfolio(name)
+      .then((src) => api8.putPortfolio(target, positions, src.base))
       .then(() => say(`SAVED ${target} · ${positions.length} POSITIONS · COST = PRICE AT PROPOSAL · ${name} NOT CHANGED`))
       .catch((err: { message?: string }) => say(`NOT SAVED: ${err.message ?? "ERROR"}`));
     return true;

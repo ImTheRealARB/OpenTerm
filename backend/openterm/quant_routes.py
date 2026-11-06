@@ -129,12 +129,25 @@ def _labels(request: Request, envs: dict[str, dict]) -> dict:
             "fixtures": bool(request.app.state.settings.openterm_fixtures)}
 
 
-async def _positions(request: Request, pf: dict) -> tuple[list[dict], dict, bool, str | None]:
-    """(positions [{symbol, qty, ccy}], fx rates by currency, mixed currencies, NOT RUNNABLE reason). Decision C: values at the last FX rate."""
-    base = pf["base"].upper()
+def _holdings(pf: dict) -> tuple[list[dict], str | None]:
+    """(positions [{symbol, qty, ccy}], NOT RUNNABLE reason). `ccy` is the typed currency; `_fx` fills the gaps from the bars."""
     pos = [{"symbol": p["symbol"], "qty": p["qty"], "ccy": p.get("currency")} for p in pf["positions"]]
-    if not pos:
-        return pos, {}, False, "NOT RUNNABLE: THE PORTFOLIO HAS NO POSITIONS"
+    return pos, None if pos else "NOT RUNNABLE: THE PORTFOLIO HAS NO POSITIONS"
+
+
+async def _fx(request: Request, pf: dict, pos: list[dict], envs: dict[str, dict]) -> tuple[dict, bool, str | None]:
+    """(fx rates by currency, mixed currencies, NOT RUNNABLE reason). Decision C: values at the last FX rate.
+
+    A holding added without a currency (`PORT MAIN ADD RELIANCE.NS 10 1300`) takes the currency its price bars are quoted in,
+    as the PORT panel does with the quote; before audit B-1 such a holding was valued as if it were in the base currency
+    (a rupee price read as dollars). Mutates `pos` so the job sees the resolved currency. A source that names no currency
+    (None, or SYNTHETIC's ISO "XXX" = no currency) still counts as the base currency, as before.
+    """
+    for p in pos:
+        if not p["ccy"]:
+            bar_ccy = ((envs.get(p["symbol"]) or {}).get("data") or {}).get("currency")
+            p["ccy"] = bar_ccy if bar_ccy and bar_ccy != "XXX" else None
+    base = pf["base"].upper()
     fx: dict[str, float] = {}
     mixed = False
     for ccy in sorted({p["ccy"] for p in pos if p["ccy"]}):
@@ -151,9 +164,9 @@ async def _positions(request: Request, pf: dict) -> tuple[list[dict], dict, bool
         except DataError:
             closes = []
         if not closes:
-            return pos, {}, True, f"NOT RUNNABLE: NO FX RATE {major} TO {base} ({pair}) TO VALUE THE {ccy} POSITIONS"
+            return {}, True, f"NOT RUNNABLE: NO FX RATE {major} TO {base} ({pair}) TO VALUE THE {ccy} POSITIONS"
         fx[ccy] = float(closes[-1]) * scale
-    return pos, fx, mixed, None
+    return fx, mixed, None
 
 
 async def _submit(request: Request, kind: str, params: dict) -> Orjson:
@@ -178,11 +191,14 @@ async def build_risk(request: Request, body: dict) -> dict:
     pf, why = await _pick(request, body)
     if pf is None:
         return {"not_runnable": why}
-    pos, fx, mixed, why = await _positions(request, pf)
+    pos, why = _holdings(pf)
     if why:
         return {"not_runnable": why}
     syms = [p["symbol"] for p in pos]
     envs, _ = await _bars(request, syms, range_)
+    fx, mixed, why = await _fx(request, pf, pos, envs)
+    if why:
+        return {"not_runnable": why}
     stress = envs if range_ == "20Y" else (await _bars(request, syms, "20Y", tolerate=True))[0]
     bench_env = (await _bars(request, [bench], range_, tolerate=True))[0] if bench else {}
     payload = {"bars": {s: _slim(e) for s, e in envs.items()}, "stress": {s: _slim(e) for s, e in stress.items()},
@@ -205,12 +221,15 @@ async def build_opt(request: Request, body: dict) -> dict:
     pf, why = await _pick(request, body)
     if pf is None:
         return {"not_runnable": why}
-    pos, fx, mixed, why = await _positions(request, pf)
+    pos, why = _holdings(pf)
     if why:
         return {"not_runnable": why}
     if cap is not None and cap * len(pos) < 1.0 - 1e-9:
         raise _bad(f"CAP MUST BE AT LEAST 1/N ({1 / len(pos):.4f}) FOR {len(pos)} HOLDINGS")
     envs, _ = await _bars(request, [p["symbol"] for p in pos], range_)
+    fx, mixed, why = await _fx(request, pf, pos, envs)
+    if why:
+        return {"not_runnable": why}
     sha, path = await _stored(request, {"bars": {s: _slim(e) for s, e in envs.items()}, "fx": fx})
     return {"name": pf["name"], "base": pf["base"], "positions": pos, "method": method, "cap": cap, "lookback": lookback, "rf": rf, "tc": tc,
             "range": range_, "mixed_ccy": mixed, "data_path": path, "data_sha": sha, "labels": _labels(request, envs)}
@@ -259,7 +278,7 @@ async def build_attr(request: Request, body: dict) -> dict:
     pf, why = await _pick(request, body)
     if pf is None:
         return {"not_runnable": why}
-    pos, fx, mixed, why = await _positions(request, pf)
+    pos, why = _holdings(pf)
     if why:
         return {"not_runnable": why}
     syms = [p["symbol"] for p in pos]
@@ -268,6 +287,9 @@ async def build_attr(request: Request, body: dict) -> dict:
     held = set((sector_of or {}).values())
     need = sorted((held | set(bench_w or {})) & set(sx.SPDR))
     envs, _ = await _bars(request, syms, range_)
+    fx, mixed, why = await _fx(request, pf, pos, envs)
+    if why:
+        return {"not_runnable": why}
     etf, _ = await _bars(request, [sx.SPDR[k] for k in need], range_, tolerate=True)
     by_sec = {k: etf[sx.SPDR[k]] for k in need if sx.SPDR[k] in etf}
     vals = await _read_vals(request, pf["name"])
@@ -319,11 +341,14 @@ async def build_fact(request: Request, body: dict) -> dict:
         else:
             sym = resolve(raw.strip().upper())
     if pf is not None:
-        pos, fx, mixed, why = await _positions(request, pf)
+        pos, why = _holdings(pf)
         if why:
             return {"not_runnable": why}
         syms = [p["symbol"] for p in pos]
         envs, _ = await _bars(request, syms, range_)
+        fx, mixed, why = await _fx(request, pf, pos, envs)
+        if why:
+            return {"not_runnable": why}
         non_us = any("." in x for x in syms) or any(p["ccy"] not in (None, "", "USD") for p in pos)
         who: dict = {"name": pf["name"], "base": pf["base"], "positions": pos, "mixed_ccy": mixed}
     else:

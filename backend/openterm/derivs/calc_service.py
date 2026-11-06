@@ -46,6 +46,8 @@ class CalcMixin:
             yld = None if yld is None else yld / 100.0
             if face <= 0:
                 raise cc.CalcError("FACE MUST BE POSITIVE")
+            if yld is not None and yld <= -0.5:  # the solver searches -50%..500%; below -100% per period the discount base is <= 0
+                raise cc.CalcError("YLD MUST BE ABOVE -50%")
             if px is not None and yld is not None:
                 raise cc.CalcError("TYPE PX OR YLD, NOT BOTH")
             if px is not None and px <= 0:

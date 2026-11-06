@@ -40,8 +40,8 @@ def _inputs(params: dict):
     equity = pd.Series([float(v) for _, v in params["equity"]],
                        index=pd.to_datetime([int(t) for t, _ in params["equity"]], unit="s"))
     trades = [TradeRecord(
-        symbol=t["symbol"], direction=int(t["direction"]), entry_price=float(t["entry_price"]),
-        exit_price=float(t["exit_price"]), entry_time=pd.Timestamp(t["entry_time"]), exit_time=pd.Timestamp(t["exit_time"]),
+        symbol=t["symbol"], direction=int(t["direction"]), entry_price=float(t["entry_price"] or 0.0),
+        exit_price=float(t["exit_price"] or 0.0), entry_time=pd.Timestamp(t["entry_time"]), exit_time=pd.Timestamp(t["exit_time"]),
         size=float(t["size"]), leverage=1.0, pnl=float(t["pnl"] or 0.0), pnl_pct=float(t["pnl_pct"] or 0.0),
         exit_reason=t["exit_reason"], holding_bars=float(t["holding_bars"] or 0.0), commission=float(t["commission"] or 0.0),
     ) for t in params["trades"]]

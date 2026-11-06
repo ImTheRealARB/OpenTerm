@@ -300,7 +300,9 @@ def _eval(node, df, cache: dict):
     off = ~above & valid & was_valid_prev & prev
     state = on.astype(float).where(on | off)
     state = state.where(~off, 0.0).ffill()
-    return (state == 1.0) & valid, valid & state.notna()
+    # Before the first cross the condition is simply False, not "unknown": the inputs are valid, nothing has crossed yet.
+    # (Treating it as unknown silenced the other branch of an OR until the first cross, audit B-4.)
+    return (state == 1.0) & valid, valid
 
 
 def signals(node, data_map: dict, short: bool = False) -> dict:

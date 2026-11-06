@@ -112,7 +112,8 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     df = pd.DataFrame(win, columns=syms)
     n = len(syms)
     fx = data.get("fx") or {}
-    price = np.array([cols[s][1][-1] for s in syms])
+    # value every holding on the last day all series share (as RISK does), not each series' own last close (audit B-1)
+    price = px[-1].astype(float)
     rate = np.array([fx.get(p.get("ccy") or "", 1.0) for p in pos])
     mv = np.array([p["qty"] for p in pos]) * price * rate
     total = float(mv.sum())
@@ -169,7 +170,8 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     delta = w - w_now
     shares = [round(delta[i] * total / (price[i] * rate[i])) for i in range(n)]
     trade_rows = [{"symbol": s, "qty_now": pos[i]["qty"], "w_now": float(w_now[i]), "w_target": float(w[i]), "w_delta": float(delta[i]),
-                   "shares": shares[i], "cash": float(shares[i] * price[i]), "price": float(price[i])} for i, s in enumerate(syms)]
+                   "shares": shares[i], "cash": float(shares[i] * price[i]), "price": float(price[i]),
+                   "ccy": pos[i].get("ccy")} for i, s in enumerate(syms)]  # ccy is not a column: A (save .OPT) keeps it
     trade_rows.sort(key=lambda r: -abs(r["w_delta"]))
     trades = section("trades", "PROPOSED TRADES", [
         col("symbol", "SYMBOL", "text", 12), col("qty_now", "QTY NOW", "num"), col("w_now", "WEIGHT NOW", "pct"), col("w_target", "TARGET", "pct"),
