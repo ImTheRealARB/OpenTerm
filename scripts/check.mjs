@@ -13,7 +13,7 @@
 //     Playwright runs a spec when it was changed, imports a changed helper, or names a function code (CENB ...) whose panel the change
 //     reaches; a change that reaches the app shell (App.tsx, main.tsx) runs every spec. Backend-only changes skip Playwright (mocked).
 //   config files (pyproject, lockfiles, tsconfig, vite config, conftest) run everything of that side.
-// Stages: ruff + tsc side by side and fail fast; then pytest + vitest side by side; then Playwright (needs ports 4173 and 8000 free).
+// Stages: ruff + tsc + eslint side by side and fail fast; then pytest + vitest side by side; then Playwright (needs ports 4173 and 8000 free).
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join, posix, relative } from "node:path";
@@ -65,6 +65,20 @@ const modOf = (f) => {
 };
 const fileOfMod = new Map(pyFiles.map((f) => [modOf(f), f]));
 const modSet = new Set(fileOfMod.keys());
+
+/** URL stems a route module serves: `router = APIRouter(prefix="/api/world")` + `@router.get("/geo/{kind}")` -> "/api/world/geo/".
+ *  Stems no longer than "/api/" are dropped: they would match every route test. */
+function routeStems(text) {
+  const prefix = new Map();
+  for (const m of text.matchAll(/^(\w+)\s*=\s*APIRouter\(([^)]*)\)/gm)) prefix.set(m[1], /prefix\s*=\s*"([^"]*)"/.exec(m[2])?.[1] ?? "");
+  const out = new Set();
+  for (const m of text.matchAll(/^@(\w+)\.(?:get|post|put|patch|delete|websocket|api_route)\(\s*"([^"]*)"/gm)) {
+    if (!prefix.has(m[1])) continue;
+    const stem = (prefix.get(m[1]) + m[2]).split("{")[0];
+    if (stem.length > "/api/".length) out.add(stem);
+  }
+  return out;
+}
 
 function pyImports(text, self, isPkg) {
   const code = text.replace(/#.*$/gm, "");
@@ -130,6 +144,19 @@ function backendPlan(changed, allBackend) {
     if (leaves.some((l) => stem.includes(l))) plan.tests.add(t);
     for (const d of pyImports(read(t), "tests." + stem, false)) if (affected.has(d)) plan.tests.add(t);
   }
+  // Route tests reach their routes over HTTP (the `client` fixture), never by importing the route module, and the import walk
+  // stops at openterm.main, so a route change used to select no route test at all (audit G-1). For every affected module that
+  // declares routes, add each test whose text names one of its paths (router prefix + decorator path, cut at the first "{").
+  const routeCovered = new Set(); // affected route modules with at least one test naming their paths
+  for (const m of affected) {
+    const f = fileOfMod.get(m);
+    if (!f) continue;
+    for (const stem of routeStems(read(f))) {
+      for (const t of tests) {
+        if (read(t).includes(stem)) (plan.tests.add(t), routeCovered.add(f));
+      }
+    }
+  }
   const want = (name) => tests.find((t) => basename(t) === name);
   const addNamed = (...names) => names.map(want).filter(Boolean).forEach((t) => plan.tests.add(t));
   if (reachesMain) addNamed("test_app.py", "test_api.py");
@@ -144,6 +171,7 @@ function backendPlan(changed, allBackend) {
     else addNamed("test_adapters.py", "test_api.py");
   }
   const untested = src.filter((f) => {
+    if (routeCovered.has(f)) return false;
     const m = modOf(f);
     const stem = basename(f, ".py");
     return ![...plan.tests].some((t) => basename(t, ".py").includes(stem) || pyImports(read(t), "tests." + basename(t, ".py"), false).has(m));
@@ -240,6 +268,10 @@ const gates = { stage1: [], stage2: [], stage3: [] };
 if (ALL) gates.stage1.push({ id: "ruff", cwd: "backend", cmd: "uv", args: ["run", "ruff", "check", "."] });
 else if (be.ruff.length) gates.stage1.push({ id: "ruff", cwd: "backend", cmd: "uv", args: ["run", "ruff", "check", ...be.ruff] });
 if (fe.tsc) gates.stage1.push({ id: "tsc", cwd: "frontend", cmd: npx, args: ["tsc", "--noEmit"] });
+// React hooks lint (audit G-2) on the changed frontend sources only; everything when --all
+const lintFiles = changed.filter((f) => /^frontend\/src\/.*\.tsx?$/.test(f) && existsSync(join(root, f))).map((f) => f.slice("frontend/".length));
+if (ALL) gates.stage1.push({ id: "eslint", cwd: "frontend", cmd: npx, args: ["eslint", "."] });
+else if (lintFiles.length) gates.stage1.push({ id: "eslint", cwd: "frontend", cmd: npx, args: ["eslint", ...lintFiles] });
 if (be.tests.size) {
   const files = be.all ? [] : rel(be.tests, "backend");
   gates.stage2.push({ id: "pytest", cwd: "backend", cmd: "uv", args: ["run", "pytest", "-q", ...(files.length && files.length <= 2 ? ["-n", "0"] : []), ...files] });

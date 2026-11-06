@@ -252,6 +252,9 @@ export function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  // numberSelectStep is re-created every render but reads only a ref and module stores (never stale state);
+  // re-registering the global key listener on every render would be pure churn.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- numberSelectStep touches only a ref and stores
   }, [cheatsheet]);
 
   return (

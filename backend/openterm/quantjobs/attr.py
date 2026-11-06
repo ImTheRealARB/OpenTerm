@@ -173,9 +173,13 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
         problem = f"NOT RUNNABLE: NO DAILY BARS FOR {', '.join(short)}"
     else:
         fx = data.get("fx") or {}
-        last = [cm.series(data["bars"][s])[1][-1] for s in syms]
-        mv = np.array([p["qty"] * last[i] * fx.get(p.get("ccy") or "", 1.0) for i, p in enumerate(pos)])
-        if not mv.sum() > 0:
+        # value every holding on the last day all series share (as RISK does), not each series' own last close (audit B-1)
+        common, px = cm.align({s: cm.series(data["bars"][s]) for s in syms})
+        mv = (np.array([p["qty"] * px[-1, i] * fx.get(p.get("ccy") or "", 1.0) for i, p in enumerate(pos)])
+              if common.size else np.zeros(0))
+        if not common.size:
+            problem = "NOT RUNNABLE: NO DAYS COMMON TO ALL HOLDINGS"
+        elif not mv.sum() > 0:
             problem = "NOT RUNNABLE: NET PORTFOLIO VALUE IS NOT POSITIVE"
         else:
             b_rows, nums, problem = _brinson(params, data, mv / mv.sum(), syms, notes)

@@ -167,3 +167,22 @@ describe("portfolio math", () => {
     expect(weight(b, t)).toBeCloseTo(45);
   });
 });
+
+describe("CSV formula injection (audit D-3)", () => {
+  it("neutralizes text cells that start like a formula, and the export reads back unchanged", () => {
+    const text = exportPositions([
+      { symbol: "AAPL", qty: 1, cost: 10, currency: "USD", notes: "=HYPERLINK(\"http://x\")" },
+      { symbol: "MSFT", qty: 2, cost: 5, currency: null, notes: "-SUM(A1)" },
+      { symbol: "GOOG", qty: 3, cost: 4, currency: null, notes: "plain note" },
+    ]);
+    expect(text).toContain("'=HYPERLINK");
+    expect(text).toContain("'-SUM(A1)");
+    expect(text).not.toMatch(/,=HYPERLINK/);
+    const back = importPositions(text);
+    expect(back.rows.map((r) => r.notes)).toEqual(['=HYPERLINK("http://x")', "-SUM(A1)", "plain note"]);
+  });
+
+  it("leaves negative numbers alone", () => {
+    expect(serializeCsv([["a", "-12.5", "+3"]])).toBe("a,-12.5,+3\r\n");
+  });
+});

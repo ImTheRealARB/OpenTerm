@@ -27,8 +27,10 @@ async function sweep(page: Page): Promise<Set<string>> {
   const seen = new Set<string>();
   for (let x = 4; x < Math.min(box.width, 900); x += 8) {
     await page.mouse.move(box.x + x, box.y + 6);
-    const tip = page.getByTestId("gl-tip");
-    if (await tip.count()) seen.add(((await tip.first().getAttribute("role")) === "tooltip" ? "" : "NOROLE ") + ((await tip.first().textContent()) ?? ""));
+    // One snapshot of the tip (count, role, text together): reading them in separate steps hung until the test timeout
+    // on CI when the tip vanished between the count and getAttribute (Playwright then waits for it to come back).
+    const tips = await page.getByTestId("gl-tip").evaluateAll((els) => els.map((e) => ({ role: e.getAttribute("role"), text: e.textContent ?? "" })));
+    if (tips.length) seen.add((tips[0].role === "tooltip" ? "" : "NOROLE ") + tips[0].text);
   }
   return seen;
 }

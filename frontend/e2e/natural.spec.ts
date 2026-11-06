@@ -95,8 +95,19 @@ for (const mode of ["terminal", "gui"] as const) {
       await expect(ac).toContainText("ZAC GP 1Y");
       await expect(ac).toContainText("ZBC GP 1Y");
       await expect(page.locator(".msg.info")).toContainText("DID YOU MEAN");
-      await page.keyboard.press("ArrowDown");
-      const picked = (await page.locator(".ac .on span").first().textContent())!; // e.g. "ZBC GP 1Y"
+      // On a slow CI runner the list above can still be the previous keystroke's (suggestions re-render after each key);
+      // an ArrowDown that lands while it is briefly empty steps command history instead and nothing is highlighted.
+      // So retry the whole type + ArrowDown until a row is highlighted, then read it.
+      await expect(async () => {
+        await page.keyboard.press("ArrowDown");
+        if (await page.locator(".ac .on").count()) return;
+        await page.locator("#cmdline").fill("");
+        await page.keyboard.type("zeta 1 year chart");
+        await expect(ac).toContainText("ZBC GP 1Y", { timeout: 1000 });
+        await page.keyboard.press("ArrowDown");
+        await expect(page.locator(".ac .on")).toHaveCount(1, { timeout: 1000 });
+      }).toPass({ timeout: 10_000 });
+      const picked = (await page.locator(".ac .on span").first().textContent({ timeout: 2000 }))!; // e.g. "ZBC GP 1Y"
       await page.keyboard.press("Enter");
       await expect(title(page)).toContainText(`${picked.split(" ")[0]} | GP`);
       await expect(page.locator("#cmdline")).toHaveValue("");

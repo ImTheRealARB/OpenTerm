@@ -8,17 +8,10 @@ import { setKeyOverrides } from "../keys/keys";
 import { createStore, loadJSON, saveJSON } from "../state/store";
 import { DEFAULTS, diffFromDefaults, normalize, type Mode, type PollKey, type Settings } from "./schema";
 import { applyFont } from "./font";
+import { parseMirror, sameMirror, type Mirror } from "./mirror";
 import { applyTheme } from "./themes";
 
 const MIRROR = "openterm.settings";
-
-interface Mirror {
-  settings: Partial<Settings>;
-  /** Backend `updated_at` of the copy we hold, or local time of an unsynced edit (epoch seconds). */
-  updatedAt: number;
-  /** Changed locally and not yet stored by the backend. */
-  dirty: boolean;
-}
 
 const saved = loadJSON<Partial<Mirror> | null>(MIRROR, null);
 const mirror: Mirror = {
@@ -65,6 +58,12 @@ export function initSettings(): void {
   // A bundled font downloads the first time something draws with it. DOM text swaps by itself, but canvas grids and charts
   // already drew with the fallback, so redraw them when any font finishes loading.
   if (typeof document !== "undefined" && document.fonts) document.fonts.addEventListener("loadingdone", () => displayVersion.set((v) => v + 1));
+  // Another OpenTerm tab saved settings: take them, or this tab's next edit would overwrite them with its stale copy.
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (e) => {
+      if (e.key === MIRROR && e.storageArea === window.localStorage) adoptFromOtherTab(e.newValue);
+    });
+  }
 }
 
 export const getSettings = (): Settings => settingsStore.get();
@@ -115,6 +114,20 @@ export function adoptRemote(raw: unknown, updatedAt: number): void {
   mirror.dirty = false;
   persist();
   settingsStore.set(() => next);
+}
+
+/**
+ * Another tab wrote the mirror (the browser's `storage` event only fires in the OTHER tabs). Take its settings, time and dirty flag
+ * as they are. No echo: nothing is written back to localStorage (the value is already there, and a write would fire the event in
+ * the other tab again) and no server push is scheduled (the tab that made the edit pushes it).
+ */
+export function adoptFromOtherTab(raw: string | null): void {
+  const other = parseMirror(raw);
+  if (!other || sameMirror(mirror, other)) return;
+  mirror.settings = other.settings;
+  mirror.updatedAt = other.updatedAt;
+  mirror.dirty = other.dirty;
+  settingsStore.set(() => normalize(other.settings).settings);
 }
 
 /** The backend stored our copy. Edits made while the request was in flight stay dirty. */

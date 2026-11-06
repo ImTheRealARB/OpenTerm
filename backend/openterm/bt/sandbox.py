@@ -1,13 +1,27 @@
-"""Strategy sandbox (spec decision E): an allowlist, not a denylist. Defence in depth, not a kernel sandbox: strategies
-only ever come from this machine (loopback), and run in a job worker with a time limit, a memory cap and no network.
+"""Strategy sandbox (spec decision E): an allowlist for imports, a denylist for attributes, plus a runtime guard.
+Defence in depth, not a kernel sandbox: strategies run in a job worker with a time limit, a memory cap and no network.
 
-`check(code)` is pure (the server calls it before saving or running). `load(code)` runs in the worker: restricted
-builtins, a guarded `__import__`, and sockets disabled for the life of the worker.
+Three layers (audit D-1 found that the first one alone can be walked around: `dataclasses.sys.modules["os"]` is just
+attribute access on an allowed module):
+1. `check(code)` is pure (the server calls it before saving or running): imports must be on an allowlist and attribute
+   names that lead to the operating system (`sys`, `os`, `builtins`, `modules`, `compat`, `popen`, ...) are refused.
+2. `load(code)` runs in the worker: restricted builtins, a guarded `__import__`, sockets disabled for the worker's life.
+3. A Python audit hook (`sys.addaudithook`: the interpreter reports every file open, process start, socket and so on
+   to the hook, which may veto it). While strategy code runs (`strict()`), it vetoes anything that touches the machine,
+   even if layers 1 and 2 were somehow bypassed. A hook can never be removed once added, so it only acts while
+   `strict()` is active: the job's own file reads and the rest of the worker are unaffected.
+
+A separate "no subscript on module objects" rule (the audit's idea) is not needed: indexing a module is only dangerous
+after reaching `sys.modules`, and the `sys` / `modules` attribute names are refused in layer 1. A blanket rule would
+also break `np.r_[...]` and `typing.Dict[...]`.
 """
 
 from __future__ import annotations
 
 import ast
+import contextlib
+import os
+import threading
 
 ALLOWED_MODULES = {"numpy", "pandas", "math", "statistics", "typing", "dataclasses", "functools", "itertools",
                    "collections", "collections.abc", "datetime"}
@@ -21,6 +35,16 @@ BLOCKED_ATTRS = {"to_csv", "to_pickle", "to_parquet", "to_json", "to_excel", "to
                  "DataSource", "ctypeslib", "eval", "query", "system", "f2py", "testing", "show_config", "io",
                  "HDFStore", "ExcelWriter", "ExcelFile", "lib", "frombuffer", "fromregex", "options", "set_option",
                  "api", "plotting", "plot", "format", "format_map"}
+# Audit D-1: the dangerous builtins again as attributes (`builtins.exec`), and every name that reaches the operating
+# system through an allowed module (`dataclasses.sys`, `typing.sys`, `pandas.compat.os`, `sys.modules[...]`).
+# Left out on purpose because honest strategies use them as ordinary names: `.open` (the OHLC column: `bar.open`),
+# `.replace`, `.rename`, `.remove`, `.signal`, `.code`, `.types`, `.input`.
+BLOCKED_ATTRS |= {"exec", "eval", "compile", "getattr", "setattr", "delattr", "globals", "locals", "vars",
+                  "breakpoint", "memoryview"}
+BLOCKED_ATTRS |= {"sys", "os", "builtins", "compat", "subprocess", "modules", "popen", "environ", "listdir", "scandir",
+                  "unlink", "rmdir", "mkdir", "makedirs", "startfile", "spawn", "execv", "fork", "socket", "ctypes",
+                  "importlib", "inspect", "pickle", "shutil", "pathlib", "tempfile", "threading", "multiprocessing",
+                  "marshal", "pty", "winreg", "msvcrt", "webbrowser", "urllib"}
 MAX_CODE = 100_000
 
 
@@ -121,8 +145,100 @@ def disable_network() -> None:
             setattr(socket, name, refuse)
 
 
+# --- layer 3: the runtime guard ------------------------------------------------------------------------------------
+
+_state = threading.local()  # .strict = how many strict() blocks this thread is inside; .busy = the hook is working
+_hook_installed = False
+_read_roots: tuple[str, ...] = ()
+
+# Audit events strategy code never needs. Matched by prefix ("os.exec" covers os.execv, os.execve, ...).
+REFUSED_EVENTS = ("subprocess.", "os.system", "os.exec", "os.spawn", "os.posix_spawn", "os.fork", "os.forkpty",
+                  "os.startfile", "os.kill", "os.killpg", "os.remove", "os.rename", "os.mkdir", "os.rmdir", "os.chmod",
+                  "os.chown", "os.truncate", "os.link", "os.symlink", "os.utime", "os.chdir", "os.putenv",
+                  "os.unsetenv", "os.mkfifo", "os.mknod", "shutil.", "socket.", "ctypes.", "winreg.", "msvcrt.",
+                  "webbrowser.", "urllib.", "http.client.", "ftplib.", "smtplib.", "pty.", "sys.addaudithook")
+
+
+def _norm(path: str) -> str:
+    return os.path.normcase(os.path.realpath(path))
+
+
+def _compute_read_roots() -> tuple[str, ...]:
+    """Where pandas / numpy may legitimately read inside strategy code (lazy imports, time-zone data): the Python
+    install and its packages. Never the project folder or the user's folders (`.env`, the database)."""
+    import site
+    import sys
+
+    roots = {sys.prefix, sys.base_prefix, sys.exec_prefix, sys.base_exec_prefix}
+    with contextlib.suppress(Exception):
+        roots.update(site.getsitepackages())
+    return tuple(sorted({_norm(r) for r in roots if r}))
+
+
+def _under_read_roots(path) -> bool:
+    if isinstance(path, bytes):
+        path = os.fsdecode(path)
+    if not isinstance(path, str):  # an open file descriptor or None: nothing in a strategy needs one
+        return False
+    full = _norm(path)
+    return any(full == r or full.startswith(r + os.sep) for r in _read_roots)
+
+
+def _write_intent(mode, flags) -> bool:
+    if isinstance(mode, str):
+        return any(c in mode for c in "wax+")
+    if isinstance(flags, int):
+        return bool(flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_APPEND | os.O_TRUNC))
+    return False
+
+
+def _audit(event: str, args: tuple) -> None:
+    if not getattr(_state, "strict", 0) or getattr(_state, "busy", False):
+        return
+    if event == "open" or event in ("os.listdir", "os.scandir"):
+        _state.busy = True  # the path checks below must not trigger this hook again
+        try:
+            if event == "open" and _write_intent(args[1] if len(args) > 1 else None, args[2] if len(args) > 2 else None):
+                raise PermissionError("WRITING FILES IS NOT ALLOWED IN STRATEGIES")
+            if not _under_read_roots(args[0] if args else None):
+                raise PermissionError(f"{event.upper()} IS NOT ALLOWED IN STRATEGIES")
+        finally:
+            _state.busy = False
+        return
+    if event.startswith(REFUSED_EVENTS):
+        raise PermissionError(f"{event.upper()} IS NOT ALLOWED IN STRATEGIES")
+
+
+@contextlib.contextmanager
+def strict():
+    """While active, the audit hook vetoes file, process and network access (layer 3). Re-entrant, per thread."""
+    import sys
+
+    global _hook_installed, _read_roots
+    if not _hook_installed:
+        _read_roots = _compute_read_roots()
+        sys.addaudithook(_audit)
+        _hook_installed = True
+    _state.strict = getattr(_state, "strict", 0) + 1
+    try:
+        yield
+    finally:
+        _state.strict -= 1
+
+
+class Guarded:
+    """What `load` returns: the strategy's SignalEngine, whose `generate` always runs under `strict()`."""
+
+    def __init__(self, engine) -> None:
+        self._engine = engine
+
+    def generate(self, data_map):
+        with strict():
+            return self._engine.generate(data_map)
+
+
 def load(code: str):
-    """-> a SignalEngine instance. Call `check` first; this repeats it so the worker never trusts the caller."""
+    """-> a Guarded SignalEngine. Call `check` first; this repeats it so the worker never trusts the caller."""
     import builtins
 
     check(code)
@@ -137,5 +253,6 @@ def load(code: str):
     safe = {k: getattr(builtins, k) for k in SAFE_BUILTINS if hasattr(builtins, k)}
     safe["__import__"] = guarded_import
     env = {"__builtins__": safe, "__name__": "strategy"}
-    exec(compile(code, "<strategy>", "exec"), env)  # noqa: S102 - checked above, restricted builtins
-    return env["SignalEngine"]()
+    with strict():  # module-level code and __init__ are strategy code too
+        exec(compile(code, "<strategy>", "exec"), env)  # noqa: S102 - checked above, restricted builtins
+        return Guarded(env["SignalEngine"]())

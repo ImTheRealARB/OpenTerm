@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citeSegments, newTurn, parseSse, reduceTurn, turnLine, type AiEvent } from "./aiStream";
+import { citeSegments, newTurn, parseSse, reduceTurn, stopTurn, turnLine, type AiEvent } from "./aiStream";
 
 const ev = (e: AiEvent) => `data: ${JSON.stringify(e)}\n\n`;
 
@@ -111,5 +111,18 @@ describe("AI FILING events", () => {
     expect("type" in (t.filing as object)).toBe(false); // the event tag is not kept
     expect(t.passages?.[0].id).toBe("P1");
     expect(t.quotes?.map((q) => q.verified)).toEqual([true, false]);
+  });
+});
+
+describe("stopTurn", () => {
+  it("cuts a running turn short and says why", () => {
+    const t = stopTurn(newTurn("q"), "CANCELLED");
+    expect(t.status).toBe("done");
+    expect(t.label).toBe("INCOMPLETE");
+    expect(t.notices).toEqual(["CANCELLED"]);
+  });
+  it("leaves a finished turn alone", () => {
+    const done = { ...newTurn("q"), status: "done" as const };
+    expect(stopTurn(done, "CANCELLED")).toBe(done);
   });
 });

@@ -148,6 +148,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const extra = useRef<ISeriesApi<SeriesType>[]>([]);
   const last = useRef<{ t: number; o: number; h: number; l: number; c: number; v: number } | null>(null);
   const cross = useRef({ on: false, idx: -1 });
+  const hovering = useRef(false); // the mouse crosshair is over the chart
   const fmt = useRef(formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400, (INTERVAL_S[data.interval] ?? 86400) < 60));
   const worker = useRef<Worker | null>(null);
   const reqId = useRef(0);
@@ -156,7 +157,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const markersApi = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   // Indicators drawn so far, by name: their series and pattern marks. A toggle touches only its own entry.
   const ind = useRef(new Map<IndicatorName, { series: ISeriesApi<SeriesType>[]; marks: SeriesMarker<Time>[] }>());
-  const indReq = useRef(new Map<number, IndicatorName>());
+  // Worker request id -> the indicators asked for in that one message.
+  const indReq = useRef(new Map<number, IndicatorName[]>());
   const indWant = useRef(new Set<IndicatorName>());
   // Library / formula indicators, by key; same lifecycle as `ind` (own requests to the same worker).
   const lib = useRef(new Map<string, ISeriesApi<SeriesType>[]>());
@@ -169,7 +171,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   errCb.current = onCustomErrors;
   const onLibResult = useRef<(m: LibraryRes) => void>(() => {});
   const basePanes = useRef(1);
-  const onIndResult = useRef<(id: number, r: Record<string, Float64Array>) => void>(() => {});
+  const onIndResult = useRef<(id: number, parts: Partial<Record<IndicatorName, Record<string, Float64Array>>>) => void>(() => {});
   const eventsRef = useRef<ChartMarkerEvent[] | undefined>(events);
   eventsRef.current = events;
   const drawRef = useRef<DrawState | undefined>(draw);
@@ -193,16 +195,20 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   const writeReadout = (i: number) => {
     const el = readout.current;
     if (!el || i < 0 || i >= data.c.length) return;
-    const prev = i > 0 ? data.c[i - 1] : NaN;
-    const chg = Number.isFinite(prev) ? ((data.c[i] - prev) / prev) * 100 : NaN;
+    // The newest bar follows live ticks: `last` holds its running values (`data` is the history snapshot).
+    // A new intraday bucket (last.t is later than the final history bar) is measured against that final bar's close.
+    const lv = !compare && i === data.c.length - 1 ? last.current : null;
+    const bar = lv ?? { t: data.t[i], o: data.o[i], h: data.h[i], l: data.l[i], c: data.c[i], v: data.v[i] };
+    const prev = lv && lv.t !== data.t[i] ? data.c[i] : i > 0 ? data.c[i - 1] : NaN;
+    const chg = Number.isFinite(prev) ? ((bar.c - prev) / prev) * 100 : NaN;
     if (readoutLabel) {
-      el.textContent = `${fmt.current.full(toTime(data.t[i]))}  ${readoutLabel} ${fmtPrice(data.c[i])}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "");
+      el.textContent = `${fmt.current.full(toTime(bar.t))}  ${readoutLabel} ${fmtPrice(bar.c)}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "");
       el.className = "line " + (chg > 0 ? "up" : chg < 0 ? "down" : "");
       return;
     }
     el.textContent =
-      `${fmt.current.full(toTime(data.t[i]))}  O ${fmtPrice(data.o[i])}  H ${fmtPrice(data.h[i])}  L ${fmtPrice(data.l[i])}  ` +
-      `C ${fmtPrice(data.c[i])}  V ${fmtBig(data.v[i])}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "") +
+      `${fmt.current.full(toTime(bar.t))}  O ${fmtPrice(bar.o)}  H ${fmtPrice(bar.h)}  L ${fmtPrice(bar.l)}  ` +
+      `C ${fmtPrice(bar.c)}  V ${fmtBig(bar.v)}` + (Number.isFinite(chg) ? `  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%` : "") +
       eventText(i);
     el.className = "line " + (chg > 0 ? "up" : chg < 0 ? "down" : "");
   };
@@ -227,6 +233,7 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       localization: { timeFormatter: (t: Time) => fmt.current.full(t) },
     });
     chart.subscribeCrosshairMove((p) => {
+      hovering.current = p.logical != null; // a live tick must not pull the readout off the bar under the mouse
       if (p.logical == null) return;
       writeRef.current(Math.round(p.logical as number));
     });
@@ -256,6 +263,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       chart.remove();
       chartRef.current = null;
     };
+  // Created once per panel. data.interval only seeds timeVisible here; the data effect re-applies it on interval change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chart is created once; later interval changes are applied via applyOptions in the data effect
   }, []);
 
   useEffect(() => {
@@ -371,6 +380,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     basePanes.current = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
     gauges.set("chart.rebuilds", (gauges.get("chart.rebuilds") ?? 0) + 1);
     publish();
+  // Rebuilding the chart is expensive: it must happen only for these inputs, never because writeReadout is a new function each render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only on data/compare/type/log/panes/theme; writeReadout is re-created every render
   }, [data, compare, type, log, lowerPane, comparePanes, ver]);
 
   // Alert lines: dashed "ALRT" price lines on the price series. Re-created after a rebuild (the series is new); a level change
@@ -433,7 +444,11 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
         for (const s of ind.current.get(name)?.series ?? []) ch.removeSeries(s);
         ind.current.delete(name);
         indWant.current.delete(name);
-        for (const [id, nm] of indReq.current) if (nm === name) indReq.current.delete(id);
+        for (const [id, names] of indReq.current) {
+          const rest = names.filter((n) => n !== name);
+          if (rest.length) indReq.current.set(id, rest);
+          else indReq.current.delete(id);
+        }
       }
       if (remove.length) {
         layoutPanes(ch);
@@ -444,22 +459,21 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     if (add.length && data.c.length) {
       // Started on the first indicator request: line-only charts (FRED, BT) never pay for the worker.
       ensureWorker();
-      for (const name of add) {
-        const id = ++reqId.current;
-        indReq.current.set(id, name);
-        indWant.current.add(name);
-        // Copies: the worker gets its own buffers so `data` stays usable here.
-        ensureWorker().postMessage({ id, which: [name], series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
-      }
+      // ONE message for the whole batch: the six bar arrays are copied once, not once per indicator.
+      const id = ++reqId.current;
+      indReq.current.set(id, add);
+      for (const name of add) indWant.current.add(name);
+      // Copies: the worker gets its own buffers so `data` stays usable here.
+      ensureWorker().postMessage({ id, which: add, series: { t: data.t.slice(), o: data.o.slice(), h: data.h.slice(), l: data.l.slice(), c: data.c.slice(), v: data.v.slice() } });
     }
   }, [indicators, data, compare, type, log, lowerPane, comparePanes, ver]);
 
   function ensureWorker() {
     if (worker.current) return worker.current;
     const w = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
-    w.onmessage = (ev: MessageEvent<{ type?: string; id: number; results: Record<string, Float64Array> }>) => {
+    w.onmessage = (ev: MessageEvent<{ type?: string; id: number; parts: Partial<Record<IndicatorName, Record<string, Float64Array>>> }>) => {
       if (ev.data.type === "library") onLibResult.current(ev.data as unknown as LibraryRes);
-      else onIndResult.current(ev.data.id, ev.data.results);
+      else onIndResult.current(ev.data.id, ev.data.parts);
     };
     worker.current = w;
     return w;
@@ -541,13 +555,17 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     if (errChanged) errCb.current?.(Object.fromEntries(libErr.current));
   };
 
-  onIndResult.current = (id, r) => {
-    const name = indReq.current.get(id);
+  onIndResult.current = (id, parts) => {
+    const names = indReq.current.get(id);
     const ch = chartRef.current;
-    if (name === undefined || !ch) return;
+    if (names === undefined || !ch) return;
     indReq.current.delete(id);
     keepRange(() => {
-      drawIndicator(ch, name, r);
+      // Draw each indicator from its own group of outputs, then lay out panes / marks / publish ONCE.
+      for (const name of names) {
+        const r = parts[name];
+        if (r && indWant.current.has(name)) drawIndicator(ch, name, r);
+      }
       layoutPanes(ch);
       applyMarkers();
       publish();
@@ -690,6 +708,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   useEffect(() => {
     applyMarkers();
     writeReadout(cross.current.on ? cross.current.idx : data.c.length - 1);
+  // writeReadout is this render's closure, so it sees fresh data; re-running only on events is the point (markers + readout refresh).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when events change; writeReadout/data are read fresh from this render
   }, [events]);
 
   // The drawings overlay: repainted on pan / zoom / resize / crosshair move (rAF-coalesced) and when its inputs change.
@@ -854,6 +874,12 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       const time = toTime(b.t);
       if (isOhlcType(type)) s.update({ time, open: b.o, high: b.h, low: b.l, close: b.c });
       else s.update({ time, value: b.c });
+      // The volume bar under the candle follows too (same up / down colour rule as at build time).
+      // A new intraday bucket gets its own bar; its volume is 0 until the next history load.
+      const cols = colors.current;
+      vol.current?.update({ time, value: Number.isFinite(b.v) ? b.v : 0, color: b.c >= b.o ? cols.up : cols.down });
+      // Keep the readout current, unless a crosshair (keyboard or mouse) is parked on a bar: that bar's values must not jump.
+      if (!cross.current.on && !hovering.current) writeRef.current(dataRef.current.c.length - 1);
     },
   }));
 

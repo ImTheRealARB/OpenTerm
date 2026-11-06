@@ -7,14 +7,15 @@ from fastapi.responses import Response
 
 from . import keys as keystore
 from . import logbuf
+from .origin import LOOPBACK
 from .providers import keyed_status
 from .redact import redact
-from .responses import Orjson
+from .responses import Orjson, OrjsonRoute
 from .service import DataError, DataService
 from .symbols import resolve
 from .userdata import UserData, UserDataError
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", route_class=OrjsonRoute)
 
 STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503, "key_required": 424,
           "login_required": 401, "login_expired": 403}  # Phase 15: Kite
@@ -31,10 +32,23 @@ def user(request: Request) -> UserData:
 MAX_BODY = 4_000_000  # the biggest honest body (a PORT import, a job's params) is well under this
 
 
+def is_json_type(request: Request) -> bool:
+    """True for `Content-Type: application/json` (with or without a charset). A cross-site page can send `text/plain`
+    without the browser asking permission first; sending `application/json` makes the browser ask (CORS preflight), so
+    insisting on it is a second wall behind the Origin check (audit D-2)."""
+    return request.headers.get("content-type", "").split(";")[0].strip().lower() == "application/json"
+
+
+def require_json_type(request: Request) -> None:
+    if not is_json_type(request):
+        raise UserDataError("bad_request", "CONTENT-TYPE MUST BE application/json")
+
+
 async def json_object(request: Request) -> dict:
     declared = request.headers.get("content-length", "")
     if declared.isdigit() and int(declared) > MAX_BODY:  # refuse before buffering it
         raise UserDataError("too_large", f"BODY OVER {MAX_BODY // 1_000_000} MB")
+    require_json_type(request)
     raw = await request.body()
     if len(raw) > MAX_BODY:
         raise UserDataError("too_large", f"BODY OVER {MAX_BODY // 1_000_000} MB")
@@ -677,7 +691,6 @@ async def ind_presets_delete(request: Request, name: str):
 
 # --- Phase 11: key store (APIKEYS). Values go in, never out. ---
 KEY_STATUS = {"unknown_provider": 404, "bad_request": 400, "env_locked": 409, "forbidden": 403}
-LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 
 
 def key_error(kind: str, message: str) -> Response:
@@ -716,6 +729,8 @@ async def keys_put(request: Request, name: str):
         return key_error("forbidden", "KEYS CAN ONLY BE CHANGED FROM THIS MACHINE")
     if name not in keystore.KEY_SPECS:
         return key_error("unknown_provider", f"UNKNOWN PROVIDER {name.upper()}")
+    if not is_json_type(request):
+        return key_error("bad_request", "CONTENT-TYPE MUST BE application/json")
     try:
         body = orjson.loads(await request.body())
     except orjson.JSONDecodeError:
@@ -1031,7 +1046,7 @@ async def bt_run(request: Request):
         return error(e)
     jobs, store = jobs_of(request), bt_of(request)
     if not await store.has_run(params["run_id"]):  # a deleted or trimmed run must not come back from the job cache
-        await jobs.store.forget(jobs.hash_for("bt.run", params))
+        await jobs.forget(jobs.hash_for("bt.run", params))
     # run_id is known before the job runs. A cached answer also carries the stored run, so opening it costs no
     # second request.
     job = {**await jobs.submit("bt.run", params, internal=True), "run_id": params["run_id"]}
@@ -1196,7 +1211,7 @@ async def bt_run_delete(request: Request, run_id: str):
     except BtError as e:
         return bt_error(e)
     if h:
-        await jobs_of(request).store.forget(h)
+        await jobs_of(request).forget(h)
     return {"deleted": run_id}
 
 

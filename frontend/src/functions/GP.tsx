@@ -165,7 +165,9 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       unsub();
       off();
     };
-  }, [resolved, state.loaded]);
+    // Only the symbol matters: the callback reads `chart` (a ref) and the live store, so a history reload
+    // (range / candle change, refresh) must not unsubscribe and resubscribe the same symbol.
+  }, [resolved]);
 
   // --- drawings: stored per symbol on the server, saved 0.4 s after the last change ---
   const [drawings, setDrawings] = useState<Drawing[]>([]);

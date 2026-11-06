@@ -59,3 +59,35 @@ test("maximize keeps a running SWARM stream, closing the panel aborts it", async
   await page.keyboard.press("Alt+w");
   await expect.poll(async () => (await counts(page)).aborts).toBe(1);
 });
+
+test("a second SWARM command in the same panel aborts the first run (view replaced, same function)", async ({ page }) => {
+  await setup(page);
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("SWARM COMMITTEE AAPL");
+  // On a slow CI runner the panel once failed to show within 5 s: check the typed command first (a lost key fails here,
+  // with a clear message), then give the lazily loaded SWARM module more time to arrive.
+  await expect(page.locator("#cmdline")).toHaveValue("SWARM COMMITTEE AAPL");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("swarm-panel")).toBeVisible({ timeout: 10_000 });
+  await expect.poll(async () => (await counts(page)).ai).toBe(1);
+  expect((await counts(page)).aborts).toBe(0); // the panel clearing its own args must not look like leaving
+
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("SWARM COMMITTEE MSFT");
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => (await counts(page)).ai).toBe(2);
+  await expect.poll(async () => (await counts(page)).aborts).toBe(1); // only the first run was cut
+});
+
+test("past the 50-entry history cap, a new SWARM command still runs (and still aborts the one before)", async ({ page }) => {
+  // At the cap navigate() keeps pos at 49, so the panel no longer remounts: the same instance must read each new command.
+  test.setTimeout(90_000);
+  await setup(page);
+  for (let i = 1; i <= 52; i++) {
+    await page.keyboard.press("Control+k");
+    await page.keyboard.type(`SWARM COMMITTEE SYN${String(i).padStart(4, "0")}`);
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await counts(page)).ai).toBe(i);
+  }
+  await expect.poll(async () => (await counts(page)).aborts).toBe(51);
+});

@@ -66,10 +66,11 @@ def hivg_payload(symbol: str, sm: dict, rows: list[dict], bars: dict | None, bar
     rv_rows: list[dict] = []
     rets: list[float | None] = []
     rv30 = None
+    td = hv.CRYPTO_TRADING_DAYS if sm.get("kind") == "crypto" else hv.TRADING_DAYS  # crypto trades 365 days a year
     if bars:
         rets = hv.log_returns(bars["c"])
         for n in hv.WINDOWS:
-            rv_rows.append({"window": n, "cc_vol": hv.cc_vol(rets, n), "parkinson": hv.parkinson_vol(bars["h"], bars["l"], n)})
+            rv_rows.append({"window": n, "cc_vol": hv.cc_vol(rets, n, td), "parkinson": hv.parkinson_vol(bars["h"], bars["l"], n, td)})
         rv30 = next((r["cc_vol"] for r in rv_rows if r["window"] == 30), None)
     iv_rows = [{"expiry": r["date"], "days": r["T"] * 365.0, "atm_iv": r["fit"].a} for r in rows]
     vrp = iv30 - rv30 if iv30 is not None and rv30 is not None else None
@@ -86,7 +87,7 @@ def hivg_payload(symbol: str, sm: dict, rows: list[dict], bars: dict | None, bar
     ]
     charts = []
     if bars and rets:
-        roll = hv.rolling_cc(rets, 20)[-252:]
+        roll = hv.rolling_cc(rets, 20, td)[-252:]
         pts = [[float(i - len(roll) + 1), v] for i, v in enumerate(roll)]
         series = [{"name": "RV20", "points": pts}]
         if iv30 is not None:

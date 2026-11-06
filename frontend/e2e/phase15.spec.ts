@@ -97,10 +97,10 @@ test.describe("Phase 15", () => {
         puts.push({ url: new URL(r.request().url()).pathname, body: r.request().postDataJSON() });
         return r.fulfill({ json: { name: "T.OPT", positions: [], base: null, updated_at: now() } });
       }
-      return r.fulfill({ json: { name: "T", positions: [{ symbol: "SYN0001", qty: 100, cost: 100, currency: null, notes: null }], base: null, updated_at: now() } });
+      return r.fulfill({ json: { name: "T", positions: [{ symbol: "SYN0001", qty: 100, cost: 100, currency: null, notes: null }], base: "INR", updated_at: now() } });
     });
     const trades = { id: "trades", title: "TRADES", note: null, columns: [c("symbol", "SYMBOL"), c("qty_now", "QTY NOW", "int"), c("w_now", "NOW", "pct"), c("w_target", "TARGET", "pct"), c("shares", "TRADE SH", "int"), c("price", "PRICE", "price")], rows: [
-      { symbol: "SYN0001", qty_now: 100, w_now: 0.5, w_target: 0.4, shares: -20, price: 101.5 }, { symbol: "SYN0002", qty_now: 100, w_now: 0.5, w_target: 0.6, shares: 15, price: 98.25 }] };
+      { symbol: "SYN0001", qty_now: 100, w_now: 0.5, w_target: 0.4, shares: -20, price: 101.5, ccy: "INR" }, { symbol: "SYN0002", qty_now: 100, w_now: 0.5, w_target: 0.6, shares: 15, price: 98.25, ccy: null }] };
     await mockQuant(page, "opt", () => job(env(payload("PORT OPT T RP", [trades, { id: "compare", title: "BEFORE / AFTER", note: null, columns: [c("metric", "METRIC"), c("before", "BEFORE", "num"), c("after", "AFTER", "num")], rows: [{ metric: "VOL", before: 0.2, after: 0.18 }] }],
       [{ label: "METHOD", value: "RISK PARITY" }, { label: "NOTE", value: "ESTIMATED FROM 120 DAYS OF HISTORY, NOT A FORECAST" }]))));
     await run(page, "PORT OPT T METHOD=RP CAP=0.6 LOOKBACK=120");
@@ -110,9 +110,10 @@ test.describe("Phase 15", () => {
     await page.keyboard.press("a");
     await expect.poll(() => puts.length).toBe(1);
     expect(puts[0].url).toBe("/api/portfolios/T.OPT");
-    expect((puts[0].body as { positions: unknown[] }).positions).toEqual([
-      { symbol: "SYN0001", qty: 80, cost: 101.5 }, { symbol: "SYN0002", qty: 115, cost: 98.25 },
-    ]);
+    // the original's base and each holding's currency are kept (audit B-1)
+    expect(puts[0].body).toEqual({ base: "INR", positions: [
+      { symbol: "SYN0001", qty: 80, cost: 101.5, currency: "INR" }, { symbol: "SYN0002", qty: 115, cost: 98.25, currency: null },
+    ] });
     await expect(panel(page)).toContainText("SAVED T.OPT");
   });
 

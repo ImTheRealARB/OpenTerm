@@ -87,10 +87,13 @@ test("DLVR: lists channels, Space toggles EMAIL and PUTs, L shows the log", asyn
   await expect(p.locator(".sr")).toContainText("EMAIL OFF");
 
   // Panel keys register after the module loads: retry the key until the PUT happens (CLAUDE.md gotcha).
+  // The PUT is sent asynchronously after the keypress, so give each press up to 1 s to land before pressing again:
+  // checking at once made a press that DID register look lost, and the retry's second Space toggled EMAIL back off.
   await expect(async () => {
     await page.keyboard.press("Space");
-    expect(puts.length).toBeGreaterThan(0);
+    await expect.poll(() => puts.length, { timeout: 1000 }).toBeGreaterThan(0);
   }).toPass({ timeout: 5000 });
+  expect(puts).toHaveLength(1);
   await expect.poll(() => puts[0]).toEqual({ channels: { email: true } });
   await expect(p.locator('[data-testid="dlvr-row-email"]')).toContainText("KEY REQUIRED: set SMTP in APIKEYS");
 

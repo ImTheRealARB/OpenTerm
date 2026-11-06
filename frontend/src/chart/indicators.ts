@@ -123,6 +123,17 @@ export interface Series {
   v: Float64Array;
 }
 
+/**
+ * Same as `compute`, but the outputs stay grouped by the indicator that made them. ChartView asks the
+ * worker for a whole batch in ONE message and then draws each indicator from its own group
+ * (a merged result could not say which output belongs to which indicator).
+ */
+export function computeEach(s: Series, which: IndicatorName[]): Partial<Record<IndicatorName, Record<string, Float64Array>>> {
+  const out: Partial<Record<IndicatorName, Record<string, Float64Array>>> = {};
+  for (const w of which) out[w] = compute(s, [w]);
+  return out;
+}
+
 /** Computes the requested indicators; every output is a Float64Array aligned with the input bars. */
 export function compute(s: Series, which: IndicatorName[]): Record<string, Float64Array> {
   const out: Record<string, Float64Array> = {};

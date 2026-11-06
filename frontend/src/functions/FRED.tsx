@@ -1,5 +1,5 @@
 /** FRED series plot: any FRED series by id, drawn with the shared chart component (line / area, log scale). */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { ApiError, macroApi, type Envelope, type FredSeries } from "../net/api";
@@ -56,7 +56,8 @@ export default function FRED({ panelId, args }: FunctionProps) {
   const cur = env && env.data.id === p.id && env.data.range === p.range ? env : null;
   const bars = useMemo(() => (cur ? toSeriesBars(cur.data) : null), [cur]);
 
-  const setRange = (range: string) => replaceView(panelId, (v) => ({ ...v, args: [pRef.current.id ?? "", range].filter(Boolean) }));
+  // useCallback: it depends only on panelId (pRef is a ref), so the key handler below can list it without re-registering every render.
+  const setRange = useCallback((range: string) => replaceView(panelId, (v) => ({ ...v, args: [pRef.current.id ?? "", range].filter(Boolean) })), [panelId]);
   const latest = useRef({ cur, crossOn });
   useCsvExport(panelId, () => cur && { name: `FRED_${cur.data.id}`, header: ["date", cur.data.id], rows: cur.data.t.map((t, i) => [new Date(t * 1000).toISOString().slice(0, 10), cur.data.v[i] == null ? "" : String(cur.data.v[i])]) });
   latest.current = { cur, crossOn };
@@ -106,7 +107,7 @@ export default function FRED({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId],
+    [panelId, setRange],
   );
 
   if (!p.id) {

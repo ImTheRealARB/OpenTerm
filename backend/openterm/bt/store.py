@@ -49,6 +49,7 @@ def strategy_name(name: str) -> str:
 class BtStore:
     def __init__(self, db: aiosqlite.Connection, data_dir: Path):
         self.db = db
+        self._indexed = False
         self.data_dir = Path(data_dir)
         self._swept = 0.0
 
@@ -110,8 +111,19 @@ class BtStore:
             raise BtError("not_found", f"NO STRATEGY {n}")
 
     # --- runs ---
+    async def _index(self) -> None:
+        """Covering index for the run list and the keep-200 trim, created on first use (no migration), like jobs_recent.
+
+        SQLite stores a row's columns in order and `created_at` / `meta` come after the equity and trade blobs, so without
+        it both queries walked every stored run's blob overflow pages (audit E-2).
+        """
+        if not self._indexed:
+            await self.db.execute("CREATE INDEX IF NOT EXISTS bt_runs_recent ON bt_runs (created_at DESC, id, metrics, meta)")
+            self._indexed = True
+
     async def save_run(self, result: dict, meta: dict, config: dict, data_sha: str, job_hash: str) -> None:
         equity = {"equity": result["equity"], "benchmark": result.get("benchmark") or []}
+        await self._index()
         await self.db.execute(
             "INSERT OR REPLACE INTO bt_runs (id, strategy, config, data_fingerprint, metrics, equity, trades, created_at,"
             " job_hash, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -135,6 +147,7 @@ class BtStore:
                 "metrics": {k: m.get(k) for k in CARD_METRICS if k in m}}
 
     async def runs(self, limit: int = KEEP_RUNS) -> list[dict]:
+        await self._index()
         async with self.db.execute("SELECT id, metrics, meta, created_at FROM bt_runs ORDER BY created_at DESC LIMIT ?",
                                    (limit,)) as cur:
             return [self._card(*r) for r in await cur.fetchall()]

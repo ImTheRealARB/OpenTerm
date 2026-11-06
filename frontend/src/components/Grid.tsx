@@ -98,6 +98,9 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   const ROW_H_NOW = () => st.current.theme?.rowH ?? DEFAULT_ROW_H;
   const data = useRef({ columns, rows, band });
   data.current = { columns, rows, band };
+  // The mount-once effect below keeps the first render's moveTo alive, so a changed onSelect prop must be read through a ref.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   // Rows currently painted with the one-frame highlight, as a bitset (`bits`); `end` = 1 + highest row that may be set.
   const flash = useRef({ bits: new Uint32Array(0) as Uint32Array, end: 0, scheduled: false });
@@ -243,7 +246,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       drawRow(next, -1);
     }
     describe();
-    onSelect?.(next);
+    onSelectRef.current?.(next);
   };
 
   useImperativeHandle(ref, () => ({
@@ -338,6 +341,9 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       cv.removeEventListener("wheel", onWheel);
       cv.removeEventListener("mousedown", onDown);
     };
+  // Mount-once setup (canvas, observers, listeners). The helpers it calls read only refs, so the first render's copies stay correct;
+  // the one prop they use (onSelect) is read through onSelectRef (see top).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-once setup; helpers read only refs
   }, []);
 
   // GUI mode: Shift+T steps through the columns that have a glossary line and shows each one's tip (Esc hides it).
@@ -368,6 +374,8 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
         clampTop();
         redraw();
       }),
+    // Subscribe once; layout/clampTop/redraw read only refs, so the first render's copies stay correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers read only refs; subscribe once per mount
     [],
   );
 
@@ -379,6 +387,8 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     clampTop();
     redraw();
     describe();
+  // layout/clampTop/redraw are re-created every render but read only refs (st, data): never stale, and re-running per render would repaint the canvas.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers read only refs; effect must run only when rows/columns change
   }, [rows, columns]);
 
   return (

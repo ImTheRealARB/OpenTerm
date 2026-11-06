@@ -8,12 +8,13 @@ import time
 from fastapi import APIRouter, Query, Request
 
 from .api import error, svc
+from .responses import OrjsonRoute
 from .service import DataError
 from .symbols import resolve
 from .userdata import SYMBOL_RE, UserDataError
 from .world.tickbuf import BARS, SOURCE_LABEL, bucket
 
-router = APIRouter(prefix="/api/world")
+router = APIRouter(prefix="/api/world", route_class=OrjsonRoute)
 
 STALE_TICKS_S = 300
 

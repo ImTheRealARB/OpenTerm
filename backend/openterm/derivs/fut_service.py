@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from ..kite.symbols import derivative_root
 from ..router import AllFailed
 from ..service import DataError, envelope
+from . import freshness
 from . import fut_parse as fp
 from . import fut_tables as ft
 
@@ -34,7 +35,9 @@ class FuturesMixin:
             return {"data": out, "fallback_from": failed}
 
         try:
-            return (await self.svc._swr(f"d:fut:{symbol}", self.fttl("contract"), fetch))["data"]
+            env = await self.svc._swr(f"d:fut:{symbol}", self.fttl("contract"), fetch)
+            freshness.note(env)
+            return env["data"]
         except (DataError, AllFailed):
             return None
 
@@ -69,11 +72,15 @@ class FuturesMixin:
             out, failed = await self.svc.router.call("fomc_dates", lambda p: p.fomc_dates())
             return {"data": out, "fallback_from": failed}
 
-        return (await self.svc._swr("d:fomc", self.fttl("fomc"), fetch))["data"]
+        env = await self.svc._swr("d:fomc", self.fttl("fomc"), fetch)
+        freshness.note(env)
+        return env["data"]
 
     async def _fred_last(self, sid: str) -> dict | None:
         try:
-            d = (await self.svc.fred_series(sid, "1Y"))["data"]
+            env = await self.svc.fred_series(sid, "1Y")
+            freshness.note(env)
+            d = env["data"]
         except (DataError, AllFailed):
             return None
         return {"value": float(d["last_value"]), "date": str(d["last_date"])}
@@ -105,7 +112,9 @@ class FuturesMixin:
             out, failed = await self.svc.router.call("cot_markets", lambda p: p.cot_markets())
             return {"data": out, "fallback_from": failed}
 
-        return (await self.svc._swr("d:cot_markets", self.fttl("cot_markets"), fetch))["data"]
+        env = await self.svc._swr("d:cot_markets", self.fttl("cot_markets"), fetch)
+        freshness.note(env)
+        return env["data"]
 
     async def resolve_cot(self, market: str) -> tuple[str, list[str]]:
         """(CFTC contract market code, other matching market names). Curated aliases first, then a substring search of the names."""

@@ -70,6 +70,8 @@ class JobRunner:
         self.size = workers or default_workers()
         self.jobs: dict[str, dict] = {}  # queued + running (finished ones live in the store)
         self._done: dict[str, dict] = {}  # finished, until the store write lands
+        self._persisting: dict[str, asyncio.Task] = {}  # job id -> its in-flight store write (audit C-2)
+        self._bg: set[asyncio.Task] = set()  # on_done hooks and store writes, awaited at shutdown (audit C-1)
         self.queue: deque[str] = deque()
         self.workers: list[Worker] = []
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -156,9 +158,13 @@ class JobRunner:
             self._frame(job)
             return
         w.job = None
+        # The worker is finished with this job: its TIME LIMIT / hard-cancel timers must not fire while an async on_done
+        # hook is still storing the result (audit C-2); _finish would only cancel them after the hook returns.
+        for h in self._timers.pop(job_id, []):
+            h.cancel()
         if kind == "done" and job["kind"] in self.on_done:
             job["msg"] = "STORING"
-            self.loop.create_task(self._finish_hooked(job, payload[0]))
+            self._spawn(self._finish_hooked(job, payload[0]))
         elif kind == "done":
             self._finish(job, "done", result=payload[0])
         elif kind == "error":
@@ -252,7 +258,7 @@ class JobRunner:
         self._done[jid] = job
         self._frame(job, force=True)
         self._last_frame.pop(jid, None)
-        self.loop.create_task(self._persist(job))
+        self._persisting[jid] = self._spawn(self._persist(job))
 
     async def _persist(self, job: dict) -> None:
         try:
@@ -262,6 +268,14 @@ class JobRunner:
             log.exception("could not store job %s", job["id"])
         finally:
             self._done.pop(job["id"], None)
+            self._persisting.pop(job["id"], None)
+
+    def _spawn(self, coro) -> asyncio.Task:
+        """A background task the runner keeps a reference to, so shutdown can wait for it (audit C-1)."""
+        t = self.loop.create_task(coro)
+        self._bg.add(t)
+        t.add_done_callback(self._bg.discard)
+        return t
 
     # --- public API ------------------------------------------------------------------------------------------
     @staticmethod
@@ -333,8 +347,38 @@ class JobRunner:
         stored = [self.public(self._from_store(r)) for r in await self.store.recent(50) if r["id"] not in ids]
         return sorted(live, key=lambda j: -j["created_at"]) + done + stored
 
+    async def _settle(self, ids: "list[str]") -> None:  # quoted: the class defines its own list() method
+        """Waits until these jobs' background store writes have landed, so a DELETE that follows cannot be undone by them."""
+        tasks = [self._persisting[j] for j in ids if j in self._persisting]
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        for j in ids:
+            self._done.pop(j, None)
+
     async def clear_finished(self) -> int:
+        await self._settle(list(self._done))
         return await self.store.clear()
+
+    async def forget(self, h: str) -> None:
+        """Drops finished jobs with this hash (memory and store), so the next identical submit runs again (audit C-2)."""
+        await self._settle([j for j, job in self._done.items() if job["hash"] == h])
+        await self.store.forget(h)
+
+    async def aclose(self) -> None:
+        """Shutdown: stop timers and pending frames, wait for in-flight store writes, then stop the workers (audit C-1).
+
+        Must run before the database closes: _finish_hooked and _persist write to it.
+        """
+        for hs in self._timers.values():
+            for h in hs:
+                h.cancel()
+        self._timers.clear()
+        for h in self._pending_frame.values():
+            h.cancel()
+        self._pending_frame.clear()
+        if self._bg:
+            await asyncio.wait(list(self._bg), timeout=5.0)
+        await asyncio.to_thread(self.close)
 
     @staticmethod
     def public(job: dict) -> dict:

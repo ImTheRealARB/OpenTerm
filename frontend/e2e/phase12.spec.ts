@@ -435,8 +435,12 @@ test("BT EDIT: the server's reason for refusing code is shown on its line and no
   await expect(panel(page).locator(".grid .sr")).toContainText("SMA CROSSOVER");
   await page.keyboard.press("Enter");
   await expect(box(page)).toContainText("class SignalEngine");
-  await page.keyboard.press("Control+Enter");
-  await expect(panel(page)).toContainText("NOT SAVED: STRATEGY REJECTED: LINE 2: IMPORT OF os IS NOT ALLOWED");
+  // The editor's keys can register a moment after its text appears (CLAUDE.md gotcha; lost once on a loaded CI runner):
+  // retry Ctrl+Enter until the refusal shows. A repeat is harmless, the save is refused every time.
+  await expect(async () => {
+    await page.keyboard.press("Control+Enter");
+    await expect(panel(page)).toContainText("NOT SAVED: STRATEGY REJECTED: LINE 2: IMPORT OF os IS NOT ALLOWED", { timeout: 1000 });
+  }).toPass({ timeout: 8000 });
   // the same reason, drawn inline under line 2 and in the DOM line under the editor
   await expect(panel(page).locator(".cm-sbx-msg")).toHaveText("IMPORT OF os IS NOT ALLOWED");
   await expect(panel(page).locator(".cm-sbx-errline")).toHaveCount(1);

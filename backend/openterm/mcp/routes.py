@@ -15,19 +15,14 @@ from fastapi.responses import JSONResponse
 
 from .. import api as api_mod
 from ..ai import tools as toolbox
+from ..origin import origin_ok
 from ..redact import redact
+from ..responses import OrjsonRoute
 from . import server
 
-router = APIRouter()
+router = APIRouter(route_class=OrjsonRoute)
 
-ALLOWED_ORIGINS = ("http://localhost", "http://127.0.0.1", "http://[::1]")
-
-
-def _origin_ok(origin: str | None) -> bool:
-    if origin is None:
-        return True
-    # "http://localhost" itself or followed by a port / path; "http://localhost.evil.com" must not pass.
-    return any(origin == p or origin.startswith((p + ":", p + "/")) for p in ALLOWED_ORIGINS)
+_origin_ok = origin_ok  # the one allowlist lives in openterm/origin.py (the whole app uses it, not just /mcp)
 
 
 @router.get("/mcp")

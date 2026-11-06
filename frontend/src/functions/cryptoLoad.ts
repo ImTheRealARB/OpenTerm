@@ -19,6 +19,8 @@ export function useEnvLoad<T>(fetcher: (fresh: boolean) => Promise<Envelope<T>>,
         .catch((e: ApiError) => setError(e))
         .finally(() => setLoading(false));
     },
+    // Callers pass an inline fetcher (new function every render); depending on it would reload on every render, forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key names what fetcher reads; a new key is the only reason to reload
     [key],
   );
 

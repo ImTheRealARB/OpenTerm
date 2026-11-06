@@ -5,14 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, Request
 
 from ..api import error, json_object, loopback, user
-from ..responses import Orjson
+from ..responses import Orjson, OrjsonRoute
 from ..userdata import UserDataError
 from . import NEEDS, dispatch, pairing
 from . import format as fmt
 from . import log as dlog
 from . import settings as dsettings
 
-router = APIRouter(prefix="/api/delivery")
+router = APIRouter(prefix="/api/delivery", route_class=OrjsonRoute)
 
 
 def _forbidden() -> Orjson:

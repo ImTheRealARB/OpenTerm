@@ -1,7 +1,7 @@
 import { gauges, series } from "../perf/metrics";
 import { createStore } from "../state/store";
 import { symCount, symId, symName } from "../state/symbols";
-import { ingest } from "../state/ticks";
+import { ingest, setStreamUp } from "../state/ticks";
 import { heartbeatDead, heartbeatMissed } from "./heartbeat";
 import { ingestJobFrame } from "./jobs";
 
@@ -97,6 +97,7 @@ export function connect(): void {
       clearInterval(pingTimer);
       if (socket === ws) socket = null;
       link.set((s) => ({ ...s, status: "DOWN" }));
+      setStreamUp(false); // stored ticks are history now: rows fall back to their REST snapshot and its STALE label
       setTimeout(open, backoff);
       backoff = Math.min(backoff * 2, 15000);
     };

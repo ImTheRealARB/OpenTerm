@@ -92,6 +92,7 @@ class AlertsEngine:
         self._rules: dict[str, list[dict]] = {}  # symbol -> active price rules
         self._firing: set[tuple[str, int]] = set()  # (kind, id) being fired right now: never twice
         self._tasks: set[asyncio.Task] = set()
+        self._stopping = False  # set by stop(): fire tasks finishing during shutdown skip the database (audit C-1)
         self._news_task: asyncio.Task | None = None
         self._skipped: dict[str, dict] = {}  # "price:3" -> matches we refused to act on, with the reason
         self.last_tick_at: float | None = None
@@ -101,18 +102,21 @@ class AlertsEngine:
     # ------------------------------------------------------------ lifecycle
     async def start(self) -> None:
         self.running = True
+        self._stopping = False
         self.hub.tick_listeners.append(self.on_tick)
         await self.sync()
         self._news_task = asyncio.create_task(self._news_loop())
 
     async def stop(self) -> None:
         self.running = False
+        self._stopping = True
         if self.on_tick in self.hub.tick_listeners:
             self.hub.tick_listeners.remove(self.on_tick)
-        if self._news_task:
-            self._news_task.cancel()
-        for t in list(self._tasks):
+        tasks = [*self._tasks, *([self._news_task] if self._news_task else [])]
+        for t in tasks:
             t.cancel()
+        if tasks:  # wait for them, so none touches the database after shutdown closes it (audit C-1)
+            await asyncio.gather(*tasks, return_exceptions=True)
         await self.hub.unsubscribe(self._seat, list(self._seat.symbols))
 
     async def sync(self) -> None:
@@ -204,7 +208,8 @@ class AlertsEngine:
         finally:
             self._firing.discard(("price", a["id"]))
             try:
-                await self.sync()  # it is triggered now: drop it from the rules and maybe from the subscription
+                if not self._stopping:  # at shutdown the database is about to close: nothing left to resubscribe (audit C-1)
+                    await self.sync()  # it is triggered now: drop it from the rules and maybe from the subscription
             except Exception:  # e.g. the database closing at shutdown
                 log.exception("alert engine sync failed")
 
@@ -231,18 +236,23 @@ class AlertsEngine:
         active = [a for a in await self.news.all() if a["status"] == "active"]
         self.last_news_poll_at = self.now()
         fired = 0
-        for symbol in {a["symbol"] for a in active}:
+        symbols = list(dict.fromkeys(a["symbol"] for a in active))
+        # All symbols are fetched at the same time (audit C-3): the news cache lives as long as the poll gap, so most answers
+        # are "stale" and _fetch_news waits STALE_NEWS_RETRY_S once; one after another, that was 5 s per watched symbol.
+        got = [] if self.fixtures else await asyncio.gather(*(self._fetch_news(s) for s in symbols), return_exceptions=True)
+        for n, symbol in enumerate(symbols):
             watching = [a for a in active if a["symbol"] == symbol]
             if self.fixtures:
                 for a in watching:
                     self._skip(f"news:{a['id']}", self._news_label(a), "FIXTURE MODE")
                 continue
-            try:
-                env = await self._fetch_news(symbol)
-            except Exception as e:  # noqa: BLE001 - a news outage: the alert waits for the next poll and ALRT says why
+            env = got[n]
+            if isinstance(env, Exception):  # a news outage: the alert waits for the next poll and ALRT says why
                 for a in watching:
-                    self._skip(f"news:{a['id']}", self._news_label(a), f"NEWS UNAVAILABLE: {type(e).__name__}")
+                    self._skip(f"news:{a['id']}", self._news_label(a), f"NEWS UNAVAILABLE: {type(env).__name__}")
                 continue
+            if isinstance(env, BaseException):  # cancellation: let it through
+                raise env
             items = (env.get("data") or {}).get("items") or []
             for a in watching:
                 # only headlines published AFTER the alert was created or rearmed count, so old news never fires

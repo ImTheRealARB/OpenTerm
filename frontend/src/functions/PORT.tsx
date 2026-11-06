@@ -227,6 +227,8 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
     const act = takeRequest(name);
     if (act === "export") doExport();
     if (act === "import") setImp({ stage: "paste" });
+  // doExport reads everything through latest; this effect must fire only when a new command-line request arrives.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- doExport reads only refs; must not re-run on every render
   }, [request, pf, name]);
 
   useEffect(() => {
@@ -321,6 +323,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
         return false;
       }),
     // apply/doExport read everything through `latest`
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply/doExport read everything through latest; name is listed so apply is re-captured on a portfolio change
     [panelId, name, latest],
   );
 

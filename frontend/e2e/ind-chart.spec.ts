@@ -34,7 +34,16 @@ test("IND adds a library indicator and a formula to the GP chart without touchin
   await page.keyboard.press("+");
   for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowLeft");
   await expect.poll(async () => (await range(page)).to - (await range(page)).from).toBeLessThan((before.to! - before.from!) * 0.85);
-  const zoomed = await range(page);
+  // lightweight-charts applies each key's zoom on its next paint: on a loaded machine the last ArrowLeft can land after the
+  // poll above passed. Take the reference only once the range is the same across two frames.
+  let zoomed = await range(page);
+  await expect(async () => {
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
+    const now = await range(page);
+    const settled = now.from === zoomed.from && now.to === zoomed.to;
+    zoomed = now;
+    expect(settled).toBe(true);
+  }).toPass({ timeout: 5000 });
   const same = async () => {
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
     const r = await range(page);

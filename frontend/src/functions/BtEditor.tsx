@@ -93,7 +93,6 @@ function Saved({ panelId }: { panelId: number }) {
         return false;
       }),
     // everything is read through `latest`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [panelId, latest],
   );
 
@@ -259,7 +258,6 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
       live = false;
     };
     // loadTemplates only uses setters
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, valid]);
 
   const isRule = saved !== null && saved !== "new" && saved.kind === "rule";

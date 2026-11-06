@@ -52,9 +52,11 @@ export function makeResearchPanel(opts: ResearchOptions) {
     const alive = useRef({ mounted: true, key });
     alive.current.key = key;
     useEffect(() => {
-      alive.current.mounted = true;
+      // `alive.current` is one object for the panel's whole life (never reassigned), so copying it is exactly equivalent.
+      const flag = alive.current;
+      flag.mounted = true;
       return () => {
-        alive.current.mounted = false;
+        flag.mounted = false;
       };
     }, []);
     const { env, error, loading, reload } = useEnvelope<TablePayload>(key, (fresh) => {

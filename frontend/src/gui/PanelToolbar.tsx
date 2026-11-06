@@ -37,7 +37,10 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
   const input = useRef<HTMLInputElement>(null);
   const buttons = buttonsFor(fn, args).filter((b) => !b.bandHidden); // bandHidden ones live in the help drawer only
   // GP: the range that is on now, so its button shows as the active choice (blue fill). Empty for every other function.
-  const activeRange = fn === "GP" ? parseGpArgs([...args], settingsStore.get().chart).range.toUpperCase() : "";
+  // Parsed ONCE per render and shared by the range highlight, the type and the candle-length dropdowns. The SETTINGS chart
+  // defaults are passed so a range the user did not type falls back to their default, not to a hardcoded 1Y.
+  const gp = fn === "GP" ? parseGpArgs([...args], settingsStore.get().chart) : null;
+  const activeRange = gp ? gp.range.toUpperCase() : "";
   // Only the GP candle-length dropdown uses this; other panels pass no symbol to fetch for.
   const limits = useHistoryLimits(fn === "GP" ? symbol : undefined);
 
@@ -195,14 +198,14 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
           </button>
         );
       })}
-      {fn === "GP" && (
+      {gp && (
         // Chart type (candles, line, ...). Same path as typing "GP LINE"; the C key still cycles through them.
         <select
           className="pt-b pt-sel"
           data-testid="gp-type"
           title="Chart type"
           aria-label="Chart type"
-          value={parseGpArgs([...args], settingsStore.get().chart).type}
+          value={gp.type}
           onChange={(e) => {
             const v = e.target.value as ChartType;
             const d = settingsStore.get().chart;
@@ -217,14 +220,14 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
           ))}
         </select>
       )}
-      {fn === "GP" && (
+      {gp && (
         // Candle length. Changing it rewrites the panel's args (same path as typing "GP 5D 15MIN"); the range buttons keep it.
         <select
           className="pt-b pt-sel"
           data-testid="gp-interval"
           title="Candle length (Auto = chosen by the range). Minute candles only reach back days or weeks."
           aria-label="Candle length"
-          value={INTERVAL_CHOICES.some(([, t]) => t === parseGpArgs([...args]).interval) ? parseGpArgs([...args]).interval : ""}
+          value={INTERVAL_CHOICES.some(([, t]) => t === gp.interval) ? gp.interval : ""}
           onChange={(e) => {
             const v = e.target.value;
             const d = settingsStore.get().chart;
@@ -236,7 +239,7 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
             // Minute candles only reach back so far, and how far depends on which source answers for this symbol (the backend
             // reports it): say how far, and grey out what the current range cannot use.
             const days = token ? limits?.[intervalToken(token)] : undefined;
-            const fits = !token || intervalFits(parseGpArgs([...args]).range, token, limits);
+            const fits = !token || intervalFits(gp.range, token, limits);
             return (
               <option key={label} value={token} disabled={!fits}>
                 {days !== undefined ? `${label} (${limitText(days)})` : label}

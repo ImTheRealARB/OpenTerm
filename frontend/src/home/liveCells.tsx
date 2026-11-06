@@ -10,9 +10,9 @@
  */
 import { useEffect, useRef } from "react";
 import { fmtAge, fmtPct, fmtPrice, sign } from "../format";
-import { rowId, type QRow } from "../functions/quoteRows";
+import { rowId, rowLive, type QRow } from "../functions/quoteRows";
 import { symId } from "../state/symbols";
-import { hasLive, live, onTicks, SRC_SYNTHETIC } from "../state/ticks";
+import { hasLive, live, onTicks, SRC_SYNTHETIC, tickFrame } from "../state/ticks";
 
 export type CellKind = "last" | "pct";
 interface Cell {
@@ -58,7 +58,9 @@ export function bindCell(symbol: string, kind: CellKind, el: HTMLElement): () =>
   if (!set) cells.set(id, (set = new Set()));
   set.add(cell);
   listen();
-  paint(cell, id); // a tick may have arrived between the render and this effect
+  // A tick may have arrived between the render and this effect. Only a tick of the last frame or two counts: an old stored
+  // tick must not repaint over a newer REST snapshot that React just rendered (audit A-1).
+  if (hasLive(id) && live.frame[id] + 1 >= tickFrame()) paint(cell, id);
   return () => {
     set.delete(cell);
     if (!set.size) cells.delete(id);
@@ -72,7 +74,7 @@ export function bindCell(symbol: string, kind: CellKind, el: HTMLElement): () =>
 /** The value a row shows: the live tick if there is one, else the REST snapshot (same rule as the grids). */
 function liveOr(r: QRow, which: "price" | "pct"): number | null {
   const id = rowId(r);
-  if (hasLive(id)) {
+  if (rowLive(r, id)) {
     const v = live[which][id];
     if (v === v) return v;
   }
@@ -103,7 +105,7 @@ export function quoteFlag(r: QRow | undefined): { text: string; cls: "err" | "wa
   if (!r) return null;
   if (r.error) return { text: "ERR", cls: "err" };
   const id = rowId(r);
-  if (hasLive(id) && live.src[id] === SRC_SYNTHETIC) return { text: "SYNTHETIC", cls: "warn" };
+  if (rowLive(r, id) && live.src[id] === SRC_SYNTHETIC) return { text: "SYNTHETIC", cls: "warn" };
   if (r.stale) return { text: `STALE ${fmtAge(r.ageAtFetch + (Date.now() - r.fetchedAt) / 1000)}`, cls: "warn" };
   return null;
 }
