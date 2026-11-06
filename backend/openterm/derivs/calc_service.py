@@ -11,6 +11,7 @@ from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
 from . import calc as cc
+from . import freshness
 
 if TYPE_CHECKING:
     from ..service import DataService
@@ -87,6 +88,7 @@ class CalcMixin:
                 basis, source = "typed: flat continuously compounded zero rate", "typed inputs"
             elif spec == "TSY":
                 env = await self.svc.rates()
+                freshness.note(env)
                 c = env["data"]
                 par = {y: v / 100.0 for y, v in zip(c["years"], c["yields"], strict=True) if v is not None and y > 0}
                 try:
@@ -144,6 +146,7 @@ class CalcMixin:
         try:
             if ccy == "USD":
                 env = await self.svc.rates()
+                freshness.note(env)
                 c = env["data"]
                 pts = [(y, v) for y, v in zip(c["years"], c["yields"], strict=True) if v is not None and y <= 1.0]
                 basis, date = "US Treasury bill/par curve up to 1Y", c.get("date")

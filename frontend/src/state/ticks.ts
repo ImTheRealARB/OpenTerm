@@ -66,6 +66,22 @@ export const live = {
 let liveBits: Uint32Array = new Uint32Array(0);
 export const hasLive = (id: number): boolean => bitHas(liveBits, id);
 
+/** False while the WebSocket is down: the stored ticks are then history, not a live feed (set by net/socket.ts). */
+let streamUp = true;
+export const setStreamUp = (up: boolean): void => {
+  streamUp = up;
+};
+
+/**
+ * Should a row show the stream's last tick instead of its REST snapshot? Yes only when the stream is up AND the tick is at
+ * least as new as the snapshot's own trade time (`restMs`, epoch ms; null = the snapshot has no time). Without this check one
+ * old tick overrode every later REST quote, and kept the green STREAM label after the stream dropped (audit A-1).
+ */
+export function liveWins(id: number, restMs: number | null | undefined): boolean {
+  if (!streamUp || !bitHas(liveBits, id)) return false;
+  return restMs == null || live.t[id] >= restMs;
+}
+
 /**
  * The per-frame batch: the symbols that ticked since the last flush, deduplicated.
  * `ids[0..count)` lists them in arrival order; `bits` is the same set as a bitset so `has(id)` is O(1).
@@ -159,6 +175,8 @@ let rawListeners: RawTickListener[] = [];
 let oldestRecv = 0;
 let scheduled = false;
 let frame = 0;
+/** The number of the frame being (or last) flushed; `live.frame[id] === tickFrame()` means "ticked in this frame". */
+export const tickFrame = (): number => frame;
 let ticksSinceGauge = 0;
 let gaugeAt = performance.now();
 
@@ -167,6 +185,7 @@ let gaugeAt = performance.now();
  * that turns a symbol string into an id (one Map lookup per tick); after this line everything uses the id.
  */
 export function ingest(rows: Row[], recvAt: number): void {
+  streamUp = true; // a tick arrived, so the stream is up whatever the link store last said
   const n = rows.length;
   raw.reserve(n);
   // Hoist the typed arrays into locals once: reading `pend.price` (a property) per tick costs more than the work itself.

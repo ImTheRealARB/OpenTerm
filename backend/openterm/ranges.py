@@ -1,5 +1,7 @@
 """User-facing ranges/intervals (1D, 5D, 1M, 6M, YTD, 1Y, 5Y, MAX; 1m..1mo) and validation."""
 
+import datetime as dt
+
 RANGES = {
     "1D": "1d", "5D": "5d", "1M": "1mo", "3M": "3mo", "6M": "6mo", "YTD": "ytd",
     "1Y": "1y", "2Y": "2y", "3Y": "3y", "5Y": "5y", "10Y": "10y", "20Y": "20y", "MAX": "max",
@@ -37,5 +39,10 @@ def normalize(range_: str | None, interval: str | None) -> tuple[str, str]:
     return r, i
 
 
-def range_days(r: str) -> int:
+def range_days(r: str, today: dt.date | None = None) -> int:
+    """Calendar days a range looks back. YTD is year to date: from 1 January of this year (audit A-4; it used to be a
+    flat 366, which made YTD a one-year chart on every source that builds its own window)."""
+    if r == "ytd":
+        now = today or dt.date.today()
+        return (now - dt.date(now.year, 1, 1)).days + 1
     return _RANGE_DAYS[r]

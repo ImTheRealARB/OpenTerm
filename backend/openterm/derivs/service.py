@@ -27,6 +27,7 @@ from ..research import corp_parse as cp
 from ..router import AllFailed
 from ..service import DataError, envelope
 from ..symbols import resolve
+from . import freshness
 from .calc_service import CalcMixin
 from .fut_service import FuturesMixin
 
@@ -46,6 +47,7 @@ class Derivs(FuturesMixin, CalcMixin):
     def __init__(self, svc: DataService, fixtures: bool = False, db: Any = None):
         self.svc = svc
         self.fixtures = fixtures
+        self._smile_inputs: dict[str, dict | None] = {}  # smiles cache key -> freshness of the inputs it was computed from
         self.db = db   # local IV30 snapshots (HIVG); None in unit tests that never touch SQLite
 
     # --- clock ----------------------------------------------------------------------------------
@@ -70,7 +72,9 @@ class Derivs(FuturesMixin, CalcMixin):
         method = getattr(self, f"fn_{fn}", None)
         if method is None:
             raise DataError("not_found", f"NO DERIVATIVES FUNCTION {fn.upper()}")
-        return await method(**params)
+        with freshness.collect() as notes:
+            result = await method(**params)
+        return freshness.stamp(result, notes)  # the oldest input sets as_of, any stale input makes the answer stale (audit B-2)
 
     @staticmethod
     def _need(params: dict[str, Any], what: str) -> str:
@@ -86,7 +90,9 @@ class Derivs(FuturesMixin, CalcMixin):
             out, failed = await self.svc.router.call("option_chain", lambda p: p.option_chain(symbol, epoch), symbol)
             return {"data": out, "fallback_from": failed}
 
-        return await self.svc._swr(f"d:chain:{symbol}:{epoch or 0}", self.ttl("chain"), fetch)
+        env = await self.svc._swr(f"d:chain:{symbol}:{epoch or 0}", self.ttl("chain"), fetch)
+        freshness.note(env)
+        return env
 
     async def chains(self, symbol: str) -> tuple[dict, list[dict], int]:
         """(base chain, the picked expiries' chains in date order, number planned). An expiry that fails is left out."""
@@ -108,6 +114,7 @@ class Derivs(FuturesMixin, CalcMixin):
     async def rate_and_yield(self, symbol: str, years: float, q_typed: float | None) -> tuple[float, float | None, str | None, float | None, str | None]:
         """(r, UST par yield %, curve date, q, note about q)."""
         env = await self.svc.rates()
+        freshness.note(env)
         curve = env["data"]
         r, par = mk.treasury_rate(curve, years)
         q, note = q_typed, None
@@ -180,6 +187,7 @@ class Derivs(FuturesMixin, CalcMixin):
             r = await self.svc.quotes([sym])
         except (DataError, AllFailed) as e:
             raise DataError("not_found", f"NO QUOTE FOR {sym}") from e
+        freshness.note(r.get(sym))
         d = (r.get(sym) or {}).get("data") or {}
         if d.get("price") is None:
             raise DataError("not_found", f"NO QUOTE FOR {sym}")
@@ -325,13 +333,19 @@ class Derivs(FuturesMixin, CalcMixin):
         """Out-of-the-money (k, iv) points per expiry, cached. Equity: solved from the bid/ask mid of the picked chains. Crypto: Deribit's
         mark IV. `k = ln(K / F)`, F the expiry's forward."""
         cur = self.crypto_currency(sym)
+        key = f"d:smiles:{cur or sym}"
 
         async def fetch() -> dict:
-            if cur:
-                return {"data": await self._crypto_smiles(cur), "fallback_from": []}
-            return {"data": await self._equity_smiles(sym), "fallback_from": []}
+            # The smiles are computed from chains and a curve that may themselves have been stale: keep that with the cached value.
+            with freshness.collect() as inputs:
+                data = await (self._crypto_smiles(cur) if cur else self._equity_smiles(sym))
+            self._smile_inputs[key] = freshness.summarize(inputs)
+            return {"data": data, "fallback_from": []}
 
-        return await self.svc._swr(f"d:smiles:{cur or sym}", self.ttl("surface"), fetch)
+        env = await self.svc._swr(key, self.ttl("surface"), fetch)
+        freshness.note(env)
+        freshness.note(self._smile_inputs.get(key))
+        return env
 
     async def _equity_smiles(self, sym: str) -> dict:
         base, chains, planned = await self.chains(sym)
@@ -431,7 +445,9 @@ class Derivs(FuturesMixin, CalcMixin):
         bars_sym = f"{self.crypto_currency(sym)}-USD" if sm["kind"] == "crypto" else sym
         bars = bars_error = None
         try:
-            bars = (await self.svc.history(bars_sym, "1y", "1d"))["data"]
+            bars_env = await self.svc.history(bars_sym, "1y", "1d")
+            freshness.note(bars_env)
+            bars = bars_env["data"]
         except (DataError, AllFailed) as e:
             bars_error = redact(str(e))
         notes = [*notes, "RV: CLOSE-TO-CLOSE AND PARKINSON, ANNUALISED WITH SQRT(252); VRP = IV30 - RV30 (A SPREAD, NOT A FORECAST)",

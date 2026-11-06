@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice, fmtTime } from "../format";
-import { chg, high, low, pct, price, quoteTime, vol, type QRow, useQuotes } from "../functions/quoteRows";
+import { chg, high, low, pct, price, quoteTime, rowLive, vol, type QRow, useQuotes } from "../functions/quoteRows";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
-import { hasLive, live, onTicks, srcLabel } from "../state/ticks";
+import { live, onTicks, srcLabel } from "../state/ticks";
 
 /**
  * GUI-only "quote line" under a panel's button row: the security, its price and change, and the day's range, in one line.
@@ -41,7 +41,7 @@ export function QuoteStrip({ symbol }: { symbol: string }) {
     const paint = () => {
       const q = row.q;
       const id = symId(symbol);
-      const isLive = hasLive(id);
+      const isLive = rowLive(row, id);
       if (row.error || !q) {
         // The failure is shown as it is: the server's message, never a substitute number.
         text("px", "");

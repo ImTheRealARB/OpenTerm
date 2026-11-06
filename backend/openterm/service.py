@@ -64,6 +64,7 @@ class DataService:
             "news": 120.0, "movers": 60.0, "crypto": 60.0, **(ttl or {}),
         }
         self._inflight: dict[str, asyncio.Future] = {}
+        self.rest_at: dict[str, float] = {}  # quote key -> when its REST snapshot was fetched (ticks refresh the price, not this)
         self._bg: set[asyncio.Task] = set()
         self.fresh_hits = 0
         self.stale_hits = 0
@@ -144,7 +145,8 @@ class DataService:
 
         # A Kite login changes who answers Indian symbols, so the cache key names the key-gated sources that
         # are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
-        gated = "".join(f":{p.name[0]}" for p in self.router.candidates("history", symbol) if p.name in ("kite",))
+        # Only a source that can really answer counts: an expired login must not share a cache key with a valid one (audit A-3).
+        gated = "".join(f":{p.name[0]}" for p in self.router.candidates("history", symbol) if p.name in ("kite",) and p.why_down() is None)
         return await self._swr(f"h:{symbol}:{r}:{i}{gated}", ttl, fetch)
 
     async def profile(self, raw_symbol: str) -> dict:
@@ -260,6 +262,13 @@ class DataService:
 
         return await self._swr(f"c:{vs}", self.ttl["crypto"], fetch)
 
+    # Tick source code (see streaming/tick.py) -> the name shown as the quote's source. "p" is the REST poller: its tick
+    # is built from a REST quote, so the quote already carries the right source.
+    TICK_SOURCES: ClassVar[dict[str, str]] = {"y": "yahoo:stream", "a": "alpaca:iex", "k": "kite:ticker", "s": "synthetic"}
+    # A streamed symbol keeps a fresh price, but a tick often has no volume or day range (Alpaca IEX never does), so the
+    # full REST quote is re-fetched in the background at least this often to renew volume, high, low and previous close.
+    REST_REFRESH_S = 60.0
+
     def apply_tick(self, tick) -> None:
         """Fold a streamed tick into the cached quote so REST snapshots match the stream."""
         key = f"q:{tick.symbol}"
@@ -273,11 +282,17 @@ class DataService:
                      ("high", tick.high), ("low", tick.low)):
             if v is not None:
                 q[k] = v
+        # A tick that brings no day range must still not leave the price outside the stored range.
+        if tick.high is None and isinstance(q.get("high"), int | float) and tick.price > q["high"]:
+            q["high"] = tick.price
+        if tick.low is None and isinstance(q.get("low"), int | float) and tick.price < q["low"]:
+            q["low"] = tick.price
         q["market_time"] = tick.time_ms // 1000
         q["as_of"] = time.time()
-        if tick.source == "y":
-            q["source"] = "yahoo:stream"
-        self.cache.mem[key] = (value, time.time())
+        name = self.TICK_SOURCES.get(tick.source)
+        if name:
+            q["source"] = name
+        self.cache.mem[key] = (value, time.time())  # the price is fresh; `rest_at` remembers when the rest was fetched
 
     async def search(self, query: str) -> dict:
         q = query.strip().upper()
@@ -318,12 +333,15 @@ class DataService:
                 need.append(s)
                 continue
             value, stored_at = entry
-            is_stale = time.time() - stored_at >= self.ttl["quote"]
+            now = time.time()
+            is_stale = now - stored_at >= self.ttl["quote"]
             if is_stale:
                 self.stale_hits += 1
                 stale.append(s)
             else:
                 self.fresh_hits += 1
+                if now - self.rest_at.get(f"q:{s}", stored_at) >= self.REST_REFRESH_S:
+                    stale.append(s)  # streamed price is fresh; renew volume / high / low / previous close in the background
             out[raw] = envelope(value, stored_at, is_stale)
         if stale:
             self._background(self._fetch_quotes(stale, quiet=True))
@@ -363,6 +381,7 @@ class DataService:
                         q, failed = found[s]
                         value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
                         self.cache.put(f"q:{s}", value)
+                        self.rest_at[f"q:{s}"] = time.time()
                         fut.set_result(value)
                     else:
                         fut.set_exception(errors[s])

@@ -58,12 +58,15 @@ class AllFailed(Exception):
         self.errors = errors
         self.key: str | None = None
         kinds = {e.kind for _, e in errors}
+        # An expired login (Kite) is a reason shown beside the fallback, not an outage: when the sources that DO answer say
+        # "no such symbol" or "too shallow", the user gets that real answer instead of PROVIDER DOWN (audit A-3).
+        kinds_ex_login = kinds - {"login_expired"}
         if not errors:
             self.kind, msg = "unsupported", "NO PROVIDER SUPPORTS THIS SYMBOL"
-        elif "depth" in kinds and kinds <= {"not_found", "unsupported", "depth"}:
+        elif "depth" in kinds_ex_login and kinds_ex_login <= {"not_found", "unsupported", "depth"}:
             # Every source that has the symbol is too shallow for this interval + range: a request problem, not missing data.
             self.kind, msg = "bad_request", next(str(e) for _, e in errors if e.kind == "depth")
-        elif kinds <= {"not_found", "unsupported"}:
+        elif kinds_ex_login and kinds_ex_login <= {"not_found", "unsupported"}:
             self.kind, msg = "not_found", "NO DATA FOR SYMBOL"
         elif "key_required" in kinds and kinds <= {"not_found", "unsupported", "key_required"}:
             # Phase 11: no keyless provider could answer, so the missing key is the reason.
@@ -154,6 +157,8 @@ class Router:
         """
         best: dict[str, tuple[int, str]] = {}
         for p in self.candidates("history", symbol):
+            if p.why_down() is not None:  # e.g. an expired Kite login: its depth is not on offer right now (audit A-3)
+                continue
             for interval, days in (p.intraday_days or {}).items():
                 if interval not in best or days > best[interval][0]:
                     best[interval] = (days, p.name)

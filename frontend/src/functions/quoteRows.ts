@@ -8,7 +8,7 @@ import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice, fmtTime, sign } from "../form
 import { ApiError, api, type Quote, type QuoteResult } from "../net/api";
 import { subscribe } from "../net/socket";
 import { NO_SYM, symId } from "../state/symbols";
-import { hasLive, live, onTicks, SRC_SYNTHETIC, srcLabel } from "../state/ticks";
+import { live, liveWins, onTicks, SRC_SYNTHETIC, srcLabel } from "../state/ticks";
 import { buildRowIndex, markHits, rowIds, startAgeRedraw, subscriptionKey, symbolLayout } from "./liveRowsCore";
 
 export interface QRow {
@@ -35,31 +35,40 @@ export function rowId(r: QRow): number {
   return r.sid ?? (r.sid = r.symbol ? symId(r.symbol) : NO_SYM);
 }
 
-/** `column[id]` as number-or-null when the symbol has live data (NaN means "the tick did not carry this field"). */
-function liveNum(column: Float64Array, id: number): number | null {
-  if (!hasLive(id)) return null;
+/**
+ * Does this row show the stream's tick (true) or its REST snapshot (false)? The tick wins only while the stream is up and the tick
+ * is not older than the snapshot's trade time (audit A-1; the rule lives in `liveWins`).
+ */
+export function rowLive(r: QRow, id: number = rowId(r)): boolean {
+  return liveWins(id, r.q?.market_time ? r.q.market_time * 1000 : null);
+}
+
+/** `column[id]` as number-or-null when the row shows live data (NaN means "the tick did not carry this field"). */
+function liveNum(r: QRow, column: Float64Array): number | null {
+  const id = rowId(r);
+  if (!rowLive(r, id)) return null;
   const v = column[id];
   return v === v ? v : null;
 }
 
 export const price = (r: QRow) => {
   const id = rowId(r);
-  return hasLive(id) ? live.price[id] : (r.q?.price ?? null);
+  return rowLive(r, id) ? live.price[id] : (r.q?.price ?? null);
 };
-export const pct = (r: QRow) => liveNum(live.pct, rowId(r)) ?? r.q?.change_pct ?? null;
-export const chg = (r: QRow) => liveNum(live.change, rowId(r)) ?? r.q?.change ?? null;
-export const vol = (r: QRow) => liveNum(live.volume, rowId(r)) ?? r.q?.volume ?? null;
-export const high = (r: QRow) => liveNum(live.high, rowId(r)) ?? r.q?.high ?? null;
-export const low = (r: QRow) => liveNum(live.low, rowId(r)) ?? r.q?.low ?? null;
+export const pct = (r: QRow) => liveNum(r, live.pct) ?? r.q?.change_pct ?? null;
+export const chg = (r: QRow) => liveNum(r, live.change) ?? r.q?.change ?? null;
+export const vol = (r: QRow) => liveNum(r, live.volume) ?? r.q?.volume ?? null;
+export const high = (r: QRow) => liveNum(r, live.high) ?? r.q?.high ?? null;
+export const low = (r: QRow) => liveNum(r, live.low) ?? r.q?.low ?? null;
 export const dirColor = (v: number | null): CellColor => (sign(v) > 0 ? "up" : sign(v) < 0 ? "down" : "val");
 export const quoteTime = (r: QRow) => {
   const id = rowId(r);
-  return hasLive(id) ? live.t[id] : r.q?.market_time ? r.q.market_time * 1000 : null;
+  return rowLive(r, id) ? live.t[id] : r.q?.market_time ? r.q.market_time * 1000 : null;
 };
 
 export function srcText(r: QRow): string {
   const id = rowId(r);
-  if (hasLive(id)) return srcLabel(live.src[id]);
+  if (rowLive(r, id)) return srcLabel(live.src[id]);
   if (r.error || !r.q) return "";
   const age = r.ageAtFetch + (Date.now() - r.fetchedAt) / 1000;
   return r.stale ? `STALE ${fmtAge(age)}` : (r.q.source ?? "").toUpperCase();
@@ -67,17 +76,17 @@ export function srcText(r: QRow): string {
 
 export function srcColor(r: QRow): CellColor {
   const id = rowId(r);
-  if (hasLive(id)) return live.src[id] === SRC_SYNTHETIC ? "warn" : "up";
+  if (rowLive(r, id)) return live.src[id] === SRC_SYNTHETIC ? "warn" : "up";
   return r.stale ? "warn" : "dim";
 }
 
 export const lastColor = (r: QRow): CellColor => {
   const id = rowId(r);
-  return hasLive(id) ? dirColor(live.dir[id]) : "val";
+  return rowLive(r, id) ? dirColor(live.dir[id]) : "val";
 };
 export const lastFlash = (r: QRow, f: number): CellColor | null => {
   const id = rowId(r);
-  if (!hasLive(id) || live.frame[id] !== f) return null;
+  if (!rowLive(r, id) || live.frame[id] !== f) return null;
   const d = live.dir[id];
   return d > 0 ? "up" : d < 0 ? "down" : null;
 };
