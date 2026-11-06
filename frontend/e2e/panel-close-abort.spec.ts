@@ -75,3 +75,16 @@ test("a second SWARM command in the same panel aborts the first run (view replac
   await expect.poll(async () => (await counts(page)).ai).toBe(2);
   await expect.poll(async () => (await counts(page)).aborts).toBe(1); // only the first run was cut
 });
+
+test("past the 50-entry history cap, a new SWARM command still runs (and still aborts the one before)", async ({ page }) => {
+  // At the cap navigate() keeps pos at 49, so the panel no longer remounts: the same instance must read each new command.
+  test.setTimeout(90_000);
+  await setup(page);
+  for (let i = 1; i <= 52; i++) {
+    await page.keyboard.press("Control+k");
+    await page.keyboard.type(`SWARM COMMITTEE SYN${String(i).padStart(4, "0")}`);
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await counts(page)).ai).toBe(i);
+  }
+  await expect.poll(async () => (await counts(page)).aborts).toBe(51);
+});

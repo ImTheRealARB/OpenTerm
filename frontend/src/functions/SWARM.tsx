@@ -145,16 +145,18 @@ export default function SWARM({ panelId, args }: FunctionProps) {
     }
   }, [loadLists, panelId, setRun]);
 
-  const asked = useRef(false);
+  // The args array this instance already acted on. A boolean "asked once" flag ignored every later command typed into the
+  // same instance, which happens once the panel's history reaches its 50-entry cap (pos stops changing, so no remount).
+  // Args are cleared right after they are read, so a new non-empty array is always a new command (audit F-1).
+  const consumed = useRef<readonly string[] | null>(null);
   useEffect(() => {
     const loaded = loadLists();
-    if (asked.current || !args.length) return;
-    asked.current = true;
+    if (consumed.current === args || !args.length) return;
+    consumed.current = args;
     // The desks must be known before the arguments are read: `SWARM MYDESK TARGET=AAPL` only means something once we know MYDESK has a TARGET.
     void loaded.then((list) => {
       const a = swarmArgs(args, list);
       if (a.mode === "bad") {
-        asked.current = false;
         setNote({ text: a.error, cls: "err" });
       } else if (a.mode === "run") {
         lastRun.current = { preset: a.preset, subject: a.subject, variables: a.variables };
@@ -164,7 +166,7 @@ export default function SWARM({ panelId, args }: FunctionProps) {
         void stream("/api/ai/swarm", body);
       } else if (a.mode === "replay") {
         void stream(`/api/ai/runs/${a.runId}/replay`, undefined);
-      } else asked.current = false;
+      }
     });
     replaceView(panelId, (v) => ({ ...v, args: [] }));
   }, [args, panelId, stream, loadLists]);

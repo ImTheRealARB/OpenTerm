@@ -304,12 +304,16 @@ export default function AI({ panelId, args }: FunctionProps) {
     }
   };
 
-  const asked = useRef(false);
+  // The args array this instance already acted on. A boolean "asked once" flag ignored every later command typed into the
+  // same instance, which happens once the panel's history reaches its 50-entry cap (pos stops changing, so no remount).
+  // Args are cleared right after they are read, so a new non-empty array is always a new command (audit F-1).
+  const consumed = useRef<readonly string[] | null>(null);
   useEffect(() => {
     void refreshSpend();
-    if (asked.current || !args.length) return;
+    if (consumed.current === args || !args.length) return;
     const a = aiArgs(args);
     if (a.mode === "ask" && !a.text) return; // nothing to do, leave the args as typed
+    consumed.current = args;
     // Clear the args FIRST: this rewrites the panel's view object, and a stream's panel-gone watch
     // (started inside send) must not see that rewrite as the user moving on.
     replaceView(panelId, (v) => ({ ...v, args: [] }));
@@ -321,12 +325,10 @@ export default function AI({ panelId, args }: FunctionProps) {
     } else if (a.mode === "docfiling") {
       void loadFiling(a.symbol, a.form);
     } else if (a.mode === "filing") {
-      asked.current = true;
       void send(a.text, "filing", { symbol: a.symbol, form: a.form, drivers: a.drivers });
     } else if (a.mode === "bad") {
       setTurns([reduceTurn(newTurn("AI " + args.join(" ")), { type: "error", kind: "usage", text: a.error })]);
     } else if (a.mode !== "ask" || a.text) {
-      asked.current = true;
       void send(a.text, a.mode);
     }
   }, [args, panelId, send, refreshSpend]);
