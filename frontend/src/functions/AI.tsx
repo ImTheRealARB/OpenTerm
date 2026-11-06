@@ -331,7 +331,9 @@ export default function AI({ panelId, args }: FunctionProps) {
     } else if (a.mode !== "ask" || a.text) {
       void send(a.text, a.mode);
     }
-  }, [args, panelId, send, refreshSpend]);
+  // loadFiling is re-created every render but only calls setNote/setDoc (stable); listing it would re-run this effect (a spend fetch) each render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadFiling only touches stable setters; re-running would refetch spend every render
+  }, [args, panelId, send, refreshSpend, setDoc, setTurns]);
 
   useEffect(() => {
     const el = log.current;
@@ -366,7 +368,7 @@ export default function AI({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId],
+    [panelId, setTurns],
   );
 
   const lite = ai.model.endsWith(":free");

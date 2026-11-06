@@ -141,7 +141,6 @@ export default function HOME({ panelId }: FunctionProps) {
       aliveRef.current = false;
       clearInterval(t);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh only closes over stable things (the setter and the ref)
   }, []);
 
   // How many selectable rows each block has right now (for the cursor).
@@ -190,7 +189,6 @@ export default function HOME({ panelId }: FunctionProps) {
         setPos(next);
         return true;
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `live` is a ref; `refresh` only closes over stable things
     [panelId, live],
   );
 

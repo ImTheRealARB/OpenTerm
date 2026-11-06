@@ -86,6 +86,25 @@ async function backendP95(path = "/api/health") {
   return { server, client: p95(lat) };
 }
 
+/** Server-side p95 from each answer's own `server-timing` header (set by perf.TimingMiddleware when the response starts, so
+ *  it includes building the JSON body). Unlike /api/perf it does not pool every request to the same path, so a 10Y probe is
+ *  not averaged with the 1Y one above (audit G-3). */
+async function serverTimingP95(path, n = 60) {
+  const ms = [];
+  let kb = 0;
+  for (let i = 0; i < 5; i++) await (await fetch(`${BACKEND}${path}`)).arrayBuffer(); // warm the cache
+  for (let i = 0; i < n; i++) {
+    const r = await fetch(`${BACKEND}${path}`);
+    const bytes = (await r.arrayBuffer()).byteLength;
+    if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+    const dur = /app;dur=([\d.]+)/.exec(r.headers.get("server-timing") ?? "")?.[1];
+    if (dur == null) throw new Error(`${path}: no server-timing header`);
+    ms.push(Number(dur));
+    if (i === 0) kb = bytes / 1024;
+  }
+  return { p95: p95(ms), kb };
+}
+
 /** Phase 11: first job starts the worker pool (cold, reported); then identical submits return the cached result. */
 async function jobsBench() {
   const post = async () => (await fetch(`${BACKEND}/api/jobs`, {
@@ -309,7 +328,7 @@ async function browserBench() {
     }
 
     // Same cold start in GUI mode (what a brand-new user sees: menu bar, sidebar, welcome card). No seed, so the
-    // app starts in its default GUI shell. Reported as INFO, not a budget: the 37 budgets stay on the terminal shell.
+    // app starts in its default GUI shell. Reported as INFO, not a budget: the budgets stay on the terminal shell.
     const coldGui = [];
     for (let i = 0; i < 5; i++) {
       const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
@@ -520,6 +539,12 @@ async function main() {
     const be = await backendP95(path);
     add(`Backend p95, cached ${path.split("?")[0]}`, be.server, 20, "ms", `server-side; node client ${be.client.toFixed(1)} ms`);
   }
+  // The expensive payloads (audit G-3): a 10-year daily chart (real AAPL recording, ~2,500 bars) and the screener
+  // (fixture = the real answer trimmed to 476 of ~7,000 rows, so the real one is ~15x bigger).
+  const h10 = await serverTimingP95("/api/history?symbol=AAPL&range=10Y&interval=1d");
+  add("Backend p95, cached /api/history 10Y daily", h10.p95, 20, "ms", `server-side, ${h10.kb.toFixed(0)} KB`);
+  const scr = await serverTimingP95("/api/screener");
+  add("Backend p95, cached /api/screener", scr.p95, 20, "ms", `server-side, ${scr.kb.toFixed(0)} KB fixture (476 rows)`);
 
   const jobs = await jobsBench(); // warms the worker pool before the browser section G
   const bt = await btBench(); // caches the runs section H opens

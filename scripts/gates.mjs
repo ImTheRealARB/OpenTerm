@@ -1,13 +1,13 @@
-// Runs the five gates (ruff, tsc, pytest, vitest, playwright) and prints one PASS/FAIL line each with its time.
-//   Stage 1, cheap and fail fast: ruff + tsc run side by side (a few seconds). If either fails, the heavy suites are skipped.
+// Runs the six gates (ruff, tsc, eslint, pytest, vitest, playwright) and prints one PASS/FAIL line each with its time.
+//   Stage 1, cheap and fail fast: ruff + tsc + eslint (React hooks rules only) run side by side (a few seconds). If either fails, the heavy suites are skipped.
 //   Stage 2, heavy: pytest + vitest run side by side, then Playwright once they finish (default since 2026-11-05: run all three at
 //   once and 1-2 random e2e tests flaked per run on the user's laptop; --parallel restores that, about 10 s faster). Playwright needs ports 4173 (preview) and 8000 (unmocked requests) free: that is
 //   checked first, and a busy port fails the e2e gate instead of silently testing another worktree's build.
 // Usage: node scripts/gates.mjs [--skip=e2e,pytest] [--keep-going] [--parallel] [--list]
-//   --keep-going  run the heavy suites even when ruff or tsc failed
+//   --keep-going  run the heavy suites even when ruff, tsc or eslint failed
 //   --parallel    start Playwright together with pytest and vitest (faster; flaky on a loaded machine). --e2e-last = the default, kept for old commands
 //   --list        print the plan and exit (nothing runs)
-// Exit code: 0 all gates pass, 1 any gate failed. Output: one line per gate (in the order pytest, ruff, tsc, vitest, e2e), the last
+// Exit code: 0 all gates pass, 1 any gate failed. Output: one line per gate (in the order pytest, ruff, tsc, eslint, vitest, e2e), the last
 // 40 lines of each failed gate, then `ALL GATES PASS in N s` or `GATES FAILED in N s`, with per-gate wall-clock times.
 import { busyPorts, failureTail, npx, refused, root, run, summaryLine, timings } from "./lib/proc.mjs";
 
@@ -21,6 +21,8 @@ const ALL = [
   { id: "pytest", stage: 2, cwd: "backend", cmd: "uv", args: ["run", "pytest", "-q"] },
   { id: "ruff", stage: 1, cwd: "backend", cmd: "uv", args: ["run", "ruff", "check", "."] },
   { id: "tsc", stage: 1, cwd: "frontend", cmd: npx, args: ["tsc", "--noEmit"] },
+  // React hooks rules only (frontend/eslint.config.js), audit G-2: a few seconds, so it is a fail-fast stage-1 check
+  { id: "eslint", stage: 1, cwd: "frontend", cmd: npx, args: ["eslint", "."] },
   { id: "vitest", stage: 2, cwd: "frontend", cmd: npx, args: ["vitest", "run"] },
   { id: "e2e", stage: 2, cwd: "frontend", cmd: npx, args: ["playwright", "test"], env: { CI: "1" }, ports: [4173, 8000] },
 ];

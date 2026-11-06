@@ -21,7 +21,9 @@ interface Row {
 
 export default function FXC({ panelId, args }: FunctionProps) {
   const parsed = useMemo(() => parseCurrencies(args), [args]);
-  const list = parsed.ok ? parsed.list : [];
+  // useMemo keeps `list` the same array between renders: a bare `[]` on the error path was a new array each render,
+  // which re-ran every memo and the quote subscription below that depends on it.
+  const list = useMemo(() => (parsed.ok ? parsed.list : []), [parsed]);
   const legs = useMemo(() => list.map(usdLeg).filter((s): s is string => !!s), [list]);
   const [reload, setReload] = useState(0);
   const { rows: quotes, loading } = useQuotes(legs, reload);
@@ -38,6 +40,8 @@ export default function FXC({ panelId, args }: FunctionProps) {
   const legState = useLatest(rate);
 
   // New row objects per snapshot so the grid repaints and re-describes the selected row.
+  // quotes is not read inside, but a new snapshot must produce new row objects (that is what makes the grid repaint).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- quotes is a deliberate re-run trigger, not a value read
   const rows = useMemo<Row[]>(() => list.map((ccy) => ({ ccy })), [list, quotes]);
   const cols = useMemo<Column<Row>[]>(() => {
     const now: Record<string, number | null> = {};

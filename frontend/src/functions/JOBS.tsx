@@ -180,7 +180,6 @@ export default function JOBS({ panelId, args }: FunctionProps) {
         return false;
       }),
     // everything is read through `latest`; the handlers only set state and call the api
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [panelId, latest],
   );
 

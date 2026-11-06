@@ -210,7 +210,7 @@ export default function SWARM({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, saveThesis],
+    [panelId, saveThesis, setRun],
   );
 
   const running = run?.status === "running";

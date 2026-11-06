@@ -263,6 +263,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
       chart.remove();
       chartRef.current = null;
     };
+  // Created once per panel. data.interval only seeds timeVisible here; the data effect re-applies it on interval change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chart is created once; later interval changes are applied via applyOptions in the data effect
   }, []);
 
   useEffect(() => {
@@ -378,6 +380,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
     basePanes.current = 1 + (comparePanes?.length ?? 0) + (lowerPane ? 1 : 0);
     gauges.set("chart.rebuilds", (gauges.get("chart.rebuilds") ?? 0) + 1);
     publish();
+  // Rebuilding the chart is expensive: it must happen only for these inputs, never because writeReadout is a new function each render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only on data/compare/type/log/panes/theme; writeReadout is re-created every render
   }, [data, compare, type, log, lowerPane, comparePanes, ver]);
 
   // Alert lines: dashed "ALRT" price lines on the price series. Re-created after a rebuild (the series is new); a level change
@@ -704,6 +708,8 @@ function ChartViewInner({ data, compare, type, log, indicators, readoutLabel, lo
   useEffect(() => {
     applyMarkers();
     writeReadout(cross.current.on ? cross.current.idx : data.c.length - 1);
+  // writeReadout is this render's closure, so it sees fresh data; re-running only on events is the point (markers + readout refresh).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when events change; writeReadout/data are read fresh from this render
   }, [events]);
 
   // The drawings overlay: repainted on pan / zoom / resize / crosshair move (rAF-coalesced) and when its inputs change.

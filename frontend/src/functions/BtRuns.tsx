@@ -106,9 +106,11 @@ export default function BtRuns({ panelId }: { panelId: number }) {
       });
   };
 
+  // Put the cursor back on the first row when we switch between the run list and a comparison, or change view.
+  const noCmp = cmp === null;
   useEffect(() => {
     grid.current?.moveTo(0);
-  }, [cmp === null, view]);
+  }, [noCmp, view]);
 
   useCsvExport(panelId, (): CsvTable | null => {
     const { rows: r, cmp: c, diffRows: d } = latest.current;
@@ -161,7 +163,6 @@ export default function BtRuns({ panelId }: { panelId: number }) {
         return false;
       }),
     // everything is read through `latest`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [panelId, latest],
   );
 

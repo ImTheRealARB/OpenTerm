@@ -35,6 +35,7 @@ export default function AIS({ panelId, args }: FunctionProps) {
   const rows = useMemo(() => d?.rows ?? [], [d]);
   const latest = useLatest({ rows, query });
   // "Seen N ago" is measured against the clock when the panel last got data, so the column does not change by itself.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- env is a deliberate re-run trigger (new data = new clock reading), not a value read
   const nowSec = useMemo(() => Date.now() / 1000, [env]);
 
   const columns = useMemo<Column<AisRow>[]>(
