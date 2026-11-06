@@ -24,7 +24,7 @@ from .mcp.routes import router as mcp_router
 from .origin import OriginGuardMiddleware
 from .providers.hierarchy import HIERARCHY, order_for
 from .quant_routes import router as quant_router
-from .responses import Orjson
+from .responses import Orjson, OrjsonRoute
 from .router import Router
 from .service import DataService
 from .streaming.hub import Client, Hub
@@ -268,6 +268,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson, lifespan=lifespan)
+app.router.route_class = OrjsonRoute  # the app's own routes (/api/health, /api/perf) skip jsonable_encoder too (audit E-1)
 app.add_middleware(perf.TimingMiddleware)
 app.add_middleware(OriginGuardMiddleware)  # outermost: a foreign browser Origin never reaches a route (audit D-2)
 app.include_router(api_router)

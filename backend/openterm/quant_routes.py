@@ -18,12 +18,12 @@ from .api import bt_of, error, jobs_of, json_object, portfolios, svc, user
 from .jobs.kinds import BadParams
 from .quantjobs import sectors as sx
 from .ranges import normalize
-from .responses import Orjson
+from .responses import Orjson, OrjsonRoute
 from .service import DataError
 from .symbols import SYNTHETIC_RE, resolve
 from .userdata import UserDataError
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", route_class=OrjsonRoute)
 
 LIVE = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")
 KNOWN = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")

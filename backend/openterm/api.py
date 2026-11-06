@@ -10,12 +10,12 @@ from . import logbuf
 from .origin import LOOPBACK
 from .providers import keyed_status
 from .redact import redact
-from .responses import Orjson
+from .responses import Orjson, OrjsonRoute
 from .service import DataError, DataService
 from .symbols import resolve
 from .userdata import UserData, UserDataError
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", route_class=OrjsonRoute)
 
 STATUS = {"bad_request": 400, "not_found": 404, "too_large": 413, "unavailable": 503, "key_required": 424,
           "login_required": 401, "login_expired": 403}  # Phase 15: Kite

@@ -6,9 +6,9 @@ from fastapi import APIRouter, Query, Request
 
 from . import brief
 from .api import loopback
-from .responses import Orjson
+from .responses import Orjson, OrjsonRoute
 
-router = APIRouter(prefix="/api/brief")
+router = APIRouter(prefix="/api/brief", route_class=OrjsonRoute)
 
 
 @router.get("")

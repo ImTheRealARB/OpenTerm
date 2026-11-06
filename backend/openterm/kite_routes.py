@@ -19,10 +19,10 @@ from .kite.client import KiteLoginFailed
 from .kite.session import KEY_REQUIRED_MESSAGE
 from .kite.symbols import to_kite
 from .redact import redact
-from .responses import Orjson
+from .responses import Orjson, OrjsonRoute
 from .service import DataError
 
-router = APIRouter(prefix="/api/kite")
+router = APIRouter(prefix="/api/kite", route_class=OrjsonRoute)
 
 PAGE = ("<!doctype html><meta charset=utf-8><title>OpenTerm KITE</title>"
         "<body style='background:#000;color:#ffb000;font:16px monospace;padding:2em'><h2>{head}</h2><p>{body}</p>")

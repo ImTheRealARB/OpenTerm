@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
 from .. import api as api_mod
+from ..responses import OrjsonRoute
 from . import agent, tools
 from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, audit, router
 
@@ -228,7 +229,7 @@ async def run_replay(request: Request, run_id: str):
 
 
 # --- THESIS ------------------------------------------------------------------------------------------------------------------------
-theses_router = APIRouter(prefix="/api/theses")
+theses_router = APIRouter(prefix="/api/theses", route_class=OrjsonRoute)
 
 
 @theses_router.get("")

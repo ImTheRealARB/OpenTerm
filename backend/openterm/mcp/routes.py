@@ -17,9 +17,10 @@ from .. import api as api_mod
 from ..ai import tools as toolbox
 from ..origin import origin_ok
 from ..redact import redact
+from ..responses import OrjsonRoute
 from . import server
 
-router = APIRouter()
+router = APIRouter(route_class=OrjsonRoute)
 
 _origin_ok = origin_ok  # the one allowlist lives in openterm/origin.py (the whole app uses it, not just /mcp)
 

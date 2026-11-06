@@ -19,11 +19,11 @@ from fastapi.responses import Response, StreamingResponse
 from .. import api as api_mod
 from .. import perf
 from ..redact import redact
-from ..responses import Orjson
+from ..responses import Orjson, OrjsonRoute
 from . import agent, tools
 from .audit import audit_of, audited, manifest
 
-router = APIRouter(prefix="/api/ai")
+router = APIRouter(prefix="/api/ai", route_class=OrjsonRoute)
 MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}$")
 MAX_QUESTION = 2000
 MAX_IMAGE = 4_000_000  # characters of data URL (about 3 MB of PNG)
