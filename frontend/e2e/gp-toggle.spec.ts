@@ -24,6 +24,15 @@ test("GP: toggling indicators keeps zoom, scroll and the loaded bars", async ({ 
   for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowLeft");
   await expect.poll(async () => (await range(page)).to - (await range(page)).from).toBeLessThan((before.to! - before.from!) * 0.8);
   await expect.poll(async () => (await range(page)).to).toBeLessThan(before.to! - 20);
+  // Take the reference only once the range has settled: on a slow CI runner the last ArrowLeft was still being painted,
+  // so the "zoomed" range moved 10 bars after it was read (same race as ind-chart).
+  const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
+  await expect.poll(async () => {
+    const a = await range(page);
+    await frames();
+    const b = await range(page);
+    return a.from === b.from && a.to === b.to;
+  }).toBe(true);
   const zoomed = await range(page);
 
   const same = async () => {
