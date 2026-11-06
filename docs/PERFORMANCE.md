@@ -848,5 +848,24 @@ on this branch only because only this branch was benched that way):
 | AI request to first SSE event | 24.7 ms | 24.6 ms | 60 |
 | Total | 37/37 | 36/39 | |
 
-**OPEN REGRESSION:** BT runs, layout load and job frames are slower on the branch. Not yet bisected; see HANDOFF.md "RESUME HERE: audit fixes".
-Full gate on 02ba643: pytest 2881, ruff, tsc, eslint, vitest pass; e2e 351/352, the failure (`phase17` DLVR) also fails 1 in 6 on `main` (pre-existing race).
+**Regression ruled out by bisect (2026-11-06 evening).** The 02ba643 column above was a slow machine, not slow code. Each commit was
+checked out and benched back to back, 60 s rest before each, no gate first, OPENROUTER_API_KEY unset:
+
+| Commit | BT 10-year run p95 | Layout load p95 | J frame to paint p95 | Total |
+|---|---|---|---|---|
+| `main` 2b4396f | 198.4 ms | 62.1 ms | **54.6 ms FAIL** | 35/37 |
+| ffe3a25 D-1..D-5 | 177.6 ms | 52.3 ms | 33.2 ms | 37/37 |
+| 9d3a86c A-1..A-4, B-2 | 173.7 ms | 54.6 ms | 29.2 ms | 37/37 |
+| 848470a B-1, B-3..B-5 | 178.8 ms | 52.9 ms | 29.5 ms | 37/37 |
+| c409e49 C-1..C-3 | 174.4 ms | 53.2 ms | 32.7 ms | 37/37 |
+| 7f3a374 F-1..F-4, E-3, E-4 | 171.1 ms | 51.4 ms | 33.0 ms | 37/37 |
+| e3c2570 F-1 follow-up | 176.5 ms | 55.5 ms | 30.7 ms | 37/37 |
+| aabf64a E-1, E-2 | 175.2 ms | 54.1 ms | 36.9 ms | 37/37 |
+| 02ba643 G-1..G-4 | 171.8 ms | 52.8 ms | 33.9 ms | 39/39 |
+
+No commit moves any of the three lines. `main` (the first bench of the sequence) itself missed J frame (54.6 ms) and SEAS (28.1 ms of 15) once.
+The 517 / 120 / 56.8 ms numbers were the machine (see CLAUDE.md "Bench throttling"), not the code.
+**Final (02ba643 code + the DLVR test fix):** full gate ALL PASS (pytest 2881, ruff, tsc, eslint, vitest, e2e 352/352), then 60 s rest and bench
+**39/39**: BT 10-year run 180.0 ms, layout load 52.5 ms, J frame to paint 27.6 ms, 50k-bar pan 16.8 ms, AI first SSE event 32.5 ms.
+The DLVR e2e race (`phase17.spec.ts`, ~1 in 6 on `main`) is fixed: each Space press now waits up to 1 s for its PUT before retrying, so a press that
+registered is never repeated (24/24 with `--repeat-each=6`).
