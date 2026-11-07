@@ -4,10 +4,10 @@ import { buildRows, filterRows, shortPurpose, type DirEntry } from "./funcDirect
 import { FUNCTIONS, FUNCTION_LIST } from "./registry";
 
 const list: DirEntry[] = [
-  { code: "GP", title: "Price chart", needsSecurity: true, ready: true },
-  { code: "FXC", title: "Currency cross matrix", needsSecurity: false, ready: true },
-  { code: "FA", title: "Financial analysis (statements: IS BS CF)", needsSecurity: true, ready: true },
-  { code: "NEW", title: "Future thing", needsSecurity: false, ready: false },
+  { code: "GP", title: "Price chart", needsSecurity: true },
+  { code: "FXC", title: "Currency cross matrix", needsSecurity: false },
+  { code: "FA", title: "Financial analysis (statements: IS BS CF)", needsSecurity: true },
+  { code: "NEW", title: "Future thing", needsSecurity: false },
 ];
 
 describe("function directory", () => {
@@ -16,11 +16,10 @@ describe("function directory", () => {
     expect(shortPurpose("Options: IV and Greeks")).toBe("OPTIONS");
     expect(shortPurpose("Price chart")).toBe("PRICE CHART");
   });
-  it("builds sorted rows with aliases and not-built marks", () => {
+  it("builds sorted rows with aliases", () => {
     const rows = buildRows(list, { WCRS: "FXC", BAD: "NOPE" }, (c) => (c === "GP" ? "Charts" : undefined));
     expect(rows.map((r) => r.code)).toEqual(["FA", "FXC", "GP", "NEW", "WCRS"]); // BAD points nowhere: dropped
     expect(rows.find((r) => r.code === "WCRS")).toMatchObject({ aliasOf: "FXC", purpose: "SAME AS FXC: CURRENCY CROSS MATRIX" });
-    expect(rows.find((r) => r.code === "NEW")?.purpose).toContain("NOT BUILT YET");
     expect(rows.find((r) => r.code === "GP")).toMatchObject({ takes: "SEC", category: "Charts" });
   });
   it("filters: code prefix first, then contains", () => {

@@ -16,7 +16,7 @@ import { shortTitle } from "./titleText";
 
 /** One row of a menu: a function, or one of the extra GUI rows under Settings (status bar, font, switch mode, tour, welcome card). */
 type Entry =
-  | { kind: "fn"; code: string; title: string; built: boolean; run?: string }
+  | { kind: "fn"; code: string; title: string; run?: string }
   | { kind: "status" }
   | { kind: "font" }
   | { kind: "terminal" }
@@ -26,7 +26,7 @@ type Entry =
 /** A group's rows: its functions, then the GUI-only rows that belong with them (keyed by the subgroup names in categories.ts). */
 function extrasFor(group: string): Entry[] {
   if (group === SUB_HELP) return [{ kind: "tour" }, { kind: "welcome" }];
-  if (group === SUB_LOOK) return [...TEMPLATE_INFO.map((t) => ({ kind: "fn" as const, code: "TMPL", title: "Template: " + t.label, built: true, run: "TMPL " + t.id })), { kind: "status" }, { kind: "font" }, { kind: "terminal" }];
+  if (group === SUB_LOOK) return [...TEMPLATE_INFO.map((t) => ({ kind: "fn" as const, code: "TMPL", title: "Template: " + t.label, run: "TMPL " + t.id })), { kind: "status" }, { kind: "font" }, { kind: "terminal" }];
   return [];
 }
 
@@ -63,7 +63,7 @@ export function MenuBar() {
   const tabsOn = useTabsOn();
 
   const entries = (c: Category, group: string): Entry[] => [
-    ...(menus.get(c)!.find((g) => g.name === group)?.items ?? []).map((f): Entry => ({ kind: "fn", code: f.code, title: shortTitle(f.title), built: !!f.load })),
+    ...(menus.get(c)!.find((g) => g.name === group)?.items ?? []).map((f): Entry => ({ kind: "fn", code: f.code, title: shortTitle(f.title) })),
     ...extrasFor(group),
   ];
 
@@ -194,7 +194,7 @@ export function MenuBar() {
         <span>{en.kind === "terminal" ? "Switch to Terminal mode" : en.kind === "tour" ? "Take the tour" : "Show welcome card"}</span>
       </button>
     ) : (
-      <button key={en.run ?? en.code} type="button" role="menuitem" className={"gm-item" + (en.built ? "" : " dim")} data-template={en.run?.slice(5)} onClick={() => pick(en)}>
+      <button key={en.run ?? en.code} type="button" role="menuitem" className={"gm-item"} data-template={en.run?.slice(5)} onClick={() => pick(en)}>
         <span className="gm-code">{en.code}</span>
         <span>{en.title}</span>
       </button>

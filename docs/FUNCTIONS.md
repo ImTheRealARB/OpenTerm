@@ -79,107 +79,149 @@ Each function shows its own keys in the first (red) line of the panel.
 Type the code on the command line. "Security" = needs a ticker (or uses the panel's sticky one).
 Arguments in `[brackets]` are optional; `A|B` means one of them.
 
-### Charts and quotes
+### Markets: Stocks and funds
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
-| `DES` | Security description | yes |  | `AAPL DES` |
 | `Q` | Quote monitor (live) |  | `[SYM...]` | `Q` |
 | `QR` | Quote recap (live) | yes |  | `AAPL QR` |
-| `GIP` | Intraday tick chart (candles built from the live ticks seen since the session began) | yes | `[1S\|5S\|15S\|1M]` | `AAPL GIP` |
-| `SEAS` | Seasonality (average return by month, weekday, day of month, ISO week) | yes | `[MONTH\|WEEKDAY\|DOM\|WOY]` | `AAPL SEAS` |
-
-### Markets, news and watchlists
-
-| Code | What it does | Security | Arguments | Example |
-|---|---|---|---|---|
-| `N` | News |  | `[TOP \| keywords]` | `N` |
 | `WL` | Watchlists |  | `[NAME] [ADD\|RM SYM...] \| DEL NAME` | `WL` |
 | `WEI` | World equity indices |  |  | `WEI` |
 | `MOV` | Top movers |  | `[GAINERS\|LOSERS\|ACTIVE\|DOLLAR\|NDX100]` | `MOV` |
-| `FX` | Currency rates |  |  | `FX` |
-| `FXC` | Currency cross matrix |  | `[CCY ...]` | `FXC` |
-| `CRYP` | Crypto board |  | `[USD\|INR\|EUR ...]` | `CRYP` |
-| `CMDTY` | Commodities |  |  | `CMDTY` |
-
-### Company fundamentals and filings
-
-| Code | What it does | Security | Arguments | Example |
-|---|---|---|---|---|
-| `FA` | Financial analysis | yes | `[A\|Q] [IS\|BS\|CF]` | `AAPL FA` |
-| `FIL` | SEC filings | yes | `[FORM]` | `AAPL FIL` |
-| `SEC` | SEC filings (alias of FIL) | yes | `[FORM]` | `AAPL SEC` |
-| `HDS` | Holders (13F) | yes |  | `AAPL HDS` |
-| `OWN` | Ownership / insiders | yes |  | `AAPL OWN` |
-
-### Company research: estimates, events, valuation
-
-| Code | What it does | Security | Arguments | Example |
-|---|---|---|---|---|
-| `EE` | Analyst estimates: EPS and revenue consensus by period | yes |  | `AAPL EE` |
-| `CN` | Company news from every source, keyword-scored (not a model) | yes |  | `AAPL CN` |
-| `EEO` | Estimate revisions and EPS surprises | yes |  | `AAPL EEO` |
-| `ANR` | Analyst ratings, price targets and rating changes | yes |  | `AAPL ANR` |
-| `MGMT` | Officers, governance scores and proxy statements | yes |  | `AAPL MGMT` |
-| `DVD` | Dividend history with declaration, record and pay dates | yes |  | `AAPL DVD` |
-| `SPLT` | Stock split history | yes |  | `AAPL SPLT` |
-| `CACS` | Corporate actions: dividends and splits by date | yes |  | `AAPL CACS` |
-| `IPO` | IPO calendar: upcoming, priced, filed, withdrawn |  | `[YYYY-MM]` | `IPO` |
-| `SI` | Short interest (FINRA) and daily short sale volume | yes |  | `AAPL SI` |
-| `EVTS` | Company events: SEC 8-K filings by item | yes |  | `AAPL EVTS` |
-| `DCF` | Discounted cash flow (Vibe engine): NOT RUNNABLE until every input is given | yes | `ERP=5.5 G=2.5 EXITX=14 GROWTH=5 BASIS=CURRENT\|TARGET CONV=MID\|END TV=PERP\|EXIT OTHER=0 [KD= RF= BETA= TAX= YEARS= EW=]` | `AAPL DCF` |
-| `WACC` | Weighted average cost of capital (Vibe engine) | yes | `ERP=5.5 BASIS=CURRENT\|TARGET [EW= KD= RF= BETA= TAX=]` | `AAPL WACC` |
-| `RV` | Relative valuation: peer multiples from SEC filings (Vibe comps engine) | yes | `[PEERS=SYM,SYM]` | `AAPL RV` |
-| `ETF` | ETF profile, full N-PORT holdings and sector weights | yes |  | `AAPL ETF` |
-| `MEMB` | Index members and weights via the proxy ETF's N-PORT |  | `SPX\|NDX\|DJI\|RUT\|MID\|<ETF>` | `MEMB` |
-| `MGR` | Manager 13F positions with quarter-over-quarter changes |  | `<NAME\|CIK>` | `MGR` |
-
-### Screening and comparison
-
-| Code | What it does | Security | Arguments | Example |
-|---|---|---|---|---|
 | `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]` | `EQS` |
-| `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]` | `IMAP` |
 | `SECF` | Security finder (fuzzy name or ticker search; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI) |  | `<text \| ISIN \| CUSIP \| SEDOL \| FIGI:id ...>` | `SECF` |
-| `CORR` | Correlation matrix |  | `SYM SYM... [1M..MAX]` | `CORR` |
-| `COMP` | Peer comparison | yes |  | `AAPL COMP` |
-| `HIST` | Historical price table | yes | `[1M..MAX] [D\|W\|MO]` | `AAPL HIST` |
+| `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
 
-### Macro and calendars
+### Markets: Calendars
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
 | `ECO` | Economic calendar |  | `[1-62] [MAJOR] [YYYY-MM-DD]` | `ECO` |
-| `MACRO` | FRED series browser |  | `[query]` | `MACRO` |
-| `FRED` | Plot a FRED series |  | `SERIES_ID [1Y\|2Y\|5Y\|10Y\|20Y\|MAX]` | `FRED` |
-| `RATES` | Yield curve |  | `[EUR\|GBP\|CAD\|JPY\|SPRD\|AUCT\|NS <ccy>]` | `RATES` |
 | `ERN` | Earnings calendar |  | `[TODAY\|TOMORROW\|+N\|-N\|YYYY-MM-DD]` | `ERN` |
-| `ECST` | World statistics: one indicator for one country (World Bank, DBnomics IMF) |  | `<COUNTRY> <GDP\|GDPG\|GDPPC\|CPI\|UNEMP\|POP\|DEBT\|CA\|TRADE> \| DBN:<provider>/<dataset>/<series>` | `ECST` |
-| `WECO` | World economies: G20 growth, inflation, unemployment, debt, current account (each cell with its data year) |  |  | `WECO` |
+| `IPO` | IPO calendar: upcoming, priced, filed, withdrawn |  | `[YYYY-MM]` | `IPO` |
 | `CENB` | Central bank calendar: policy rates and rate-decision dates (Fed, ECB, BoE, BoJ, BoC, RBA, RBI, SNB) |  |  | `CENB` |
 
-### Commodities, energy and weather
+### Markets: Currencies
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `NRG` | Energy board: crude, natural gas, refined products, retail fuel (FRED CSV, prices only) |  | `[WTI\|BRENT\|HH\|GASNY\|GASGC\|ULSD\|HEAT\|JET\|PROPANE\|GASRET\|DIESELRET]` | `NRG` |
-| `WETR` | Weather for commodities: degree-day basket, place forecast, NWS alerts (Open-Meteo) |  | `[<place> \| <lat,lon>]` | `WETR` |
+| `FX` | Currency rates |  |  | `FX` |
+| `FXC` | Currency cross matrix |  | `[CCY ...]` | `FXC` |
+| `FXFA` | FX forward estimate by covered interest parity (not a dealer quote) |  | `<PAIR> [1W,1M,3M,6M,1Y] [R1= R2=]` | `FXFA` |
 
-### Crypto, DeFi and prediction markets
+### Markets: Crypto
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `PRED` | Prediction markets: Polymarket and Kalshi odds (MARKET-IMPLIED PROBABILITY, NOT A FORECAST; read only) |  | `[TEXT ...] [SRC=POLY\|KALSHI\|ALL]` | `PRED` |
+| `CRYP` | Crypto board |  | `[USD\|INR\|EUR ...]` | `CRYP` |
 | `CDEP` | Crypto order book depth: cumulative bids / asks, spread, imbalance (Binance spot, OKX, Kraken, Coinbase fallbacks) |  | `[PAIR] [LEVELS]` | `CDEP` |
 | `FUND` | Perpetual funding rates (annualised) and basis, quarterly basis; one coin's funding history |  | `[COIN]` | `FUND` |
 | `LIQ` | Crypto liquidations: latest filled liquidation orders of a USDT perpetual (OKX) |  | `[COIN]` | `LIQ` |
 | `STBL` | Stablecoin supply by coin and chain (DefiLlama) |  | `[CHAIN]` | `STBL` |
 | `DEFI` | DeFi yield pools over US$1M TVL by chain or project (DefiLlama) |  | `[CHAIN\|PROJECT]` | `DEFI` |
-| `UNLK` | Token unlocks: not built, DefiLlama's emissions API is paid (HTTP 402) and there is no keyless source **(not built yet)** |  |  | `UNLK` |
-| `DBSRCH` | Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST |  | `<WORDS> \| DS:<PROVIDER>/<DATASET> [WORDS]` | `DBSRCH` |
+| `ADDR` | EVM address balance, recent transactions and gas price on Ethereum or L2s (Etherscan, free key ETHERSCAN_KEY; read only) |  | `[0xADDRESS\|GAS] [ETH\|ARB\|OP\|BASE\|POLY\|BSC]` | `ADDR` |
 
-### Derivatives, rates and credit
+### Markets: Commodities and energy
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `CMDTY` | Commodities |  |  | `CMDTY` |
+| `NRG` | Energy board: crude, natural gas, refined products, retail fuel (FRED CSV, prices only) |  | `[WTI\|BRENT\|HH\|GASNY\|GASGC\|ULSD\|HEAT\|JET\|PROPANE\|GASRET\|DIESELRET]` | `NRG` |
+| `WETR` | Weather for commodities: degree-day basket, place forecast, NWS alerts (Open-Meteo) |  | `[<place> \| <lat,lon>]` | `WETR` |
+| `CT` | Futures term structure: contango/backwardation, spread to front, roll yield (month spacing) |  | `<ROOT: CL NG GC ES ZN ZQ ...>` | `CT` |
+| `COT` | CFTC Commitments of Traders: positions, weekly change, 3-year net history and percentile |  | `<MARKET: ES CL GC ZN EUR ... or name>` | `COT` |
+
+### Markets: Rates and bonds
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `RATES` | Yield curve |  | `[EUR\|GBP\|CAD\|JPY\|SPRD\|AUCT\|NS <ccy>]` | `RATES` |
+| `WIRP` | Implied fed funds path across FOMC meetings from ZQ futures (not a probability forecast) |  |  | `WIRP` |
+| `YAS` | Bond yield analysis from terms: price/yield, accrued, duration, convexity, DV01, key-rate durations |  | `CPN= MAT= PX=\|YLD= [FREQ= SETTLE= DAYS= FACE=]` | `YAS` |
+| `SWPM` | Vanilla swap valuation on the Treasury par curve (discount proxy, not SOFR) or a flat curve |  | `N= FIXED= TENOR= DIR=PAY\|REC [FREQ= CURVE=TSY\|FLAT:4.2]` | `SWPM` |
+| `CDSW` | CDS valuation, flat hazard (credit triangle), user inputs only |  | `SPREAD= REC= TENOR= RF= COUPON= N= [FREQ=]` | `CDSW` |
+
+### Markets: Economy
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `MACRO` | FRED series browser |  | `[query]` | `MACRO` |
+| `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
+| `WECO` | World economies: G20 growth, inflation, unemployment, debt, current account (each cell with its data year) |  |  | `WECO` |
+| `ECST` | World statistics: one indicator for one country (World Bank, DBnomics IMF) |  | `<COUNTRY> <GDP\|GDPG\|GDPPC\|CPI\|UNEMP\|POP\|DEBT\|CA\|TRADE> \| DBN:<provider>/<dataset>/<series>` | `ECST` |
+| `DBSRCH` | Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST |  | `<WORDS> \| DS:<PROVIDER>/<DATASET> [WORDS]` | `DBSRCH` |
+| `TRADE` | Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY) |  | `<REPORTER> [<PARTNER>\|WORLD] [TOTAL\|<HS 2/4/6 digits>] [<N>Y]` | `TRADE` |
+| `PRED` | Prediction markets: Polymarket and Kalshi odds (MARKET-IMPLIED PROBABILITY, NOT A FORECAST; read only) |  | `[TEXT ...] [SRC=POLY\|KALSHI\|ALL]` | `PRED` |
+
+### Markets: Ships, flights and maps
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `MAP` | World map: ships, ports, chokepoints, earthquakes, natural events and aircraft as layers |  | `[VESSELS\|PORTS\|CHOKEPOINTS\|QUAKES\|EVENTS\|FLIGHTS] [AREA]` | `MAP` |
+| `SHIP` | Ship traffic at sea chokepoints (IMF PortWatch) |  |  | `SHIP` |
+| `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
+| `AIS` | Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships) |  | `<SUEZ\|PANAMA\|HORMUZ\|MALACCA\|BABEL\|BOSPHORUS\|GIBRALTAR\|DOVER\|BOX S W N E>` | `AIS` |
+| `FLT` | Live aircraft over a city or box from the OpenSky Network (free; optional account for more credits; positions as reported by transponders) |  | `<LONDON\|NYC\|DUBAI\|SINGAPORE\|MUMBAI\|BENGALURU\|FRANKFURT\|BOX S W N E\|CALLSIGN PREFIX>` | `FLT` |
+
+### Charts
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
+| `IND` | Indicator library, formulas and presets for GP |  | `[search]` | `IND` |
+| `GIP` | Intraday tick chart (candles built from the live ticks seen since the session began) | yes | `[1S\|5S\|15S\|1M]` | `AAPL GIP` |
+| `HIST` | Historical price table | yes | `[1M..MAX] [D\|W\|MO]` | `AAPL HIST` |
+| `SEAS` | Seasonality (average return by month, weekday, day of month, ISO week) | yes | `[MONTH\|WEEKDAY\|DOM\|WOY]` | `AAPL SEAS` |
+| `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]` | `IMAP` |
+| `FRED` | Plot a FRED series |  | `SERIES_ID [1Y\|2Y\|5Y\|10Y\|20Y\|MAX]` | `FRED` |
+
+### News
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `HOME` | Home page: market numbers and headlines, with a scrolling ticker tape |  |  | `HOME` |
+| `N` | News |  | `[TOP \| keywords]` | `N` |
+| `CN` | Company news from every source, keyword-scored (not a model) | yes |  | `AAPL CN` |
+| `EVTS` | Company events: SEC 8-K filings by item | yes |  | `AAPL EVTS` |
+| `BRIEF` | Daily brief |  |  | `BRIEF` |
+
+### Research: Company
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `DES` | Security description | yes |  | `AAPL DES` |
+| `FA` | Financial analysis | yes | `[A\|Q] [IS\|BS\|CF]` | `AAPL FA` |
+| `COMP` | Peer comparison | yes |  | `AAPL COMP` |
+| `MGMT` | Officers, governance scores and proxy statements | yes |  | `AAPL MGMT` |
+| `DVD` | Dividend history with declaration, record and pay dates | yes |  | `AAPL DVD` |
+| `SPLT` | Stock split history | yes |  | `AAPL SPLT` |
+| `CACS` | Corporate actions: dividends and splits by date | yes |  | `AAPL CACS` |
+
+### Research: Analysts and valuation
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `ANR` | Analyst ratings, price targets and rating changes | yes |  | `AAPL ANR` |
+| `EE` | Analyst estimates: EPS and revenue consensus by period | yes |  | `AAPL EE` |
+| `EEO` | Estimate revisions and EPS surprises | yes |  | `AAPL EEO` |
+| `DCF` | Discounted cash flow (Vibe engine): NOT RUNNABLE until every input is given | yes | `ERP=5.5 G=2.5 EXITX=14 GROWTH=5 BASIS=CURRENT\|TARGET CONV=MID\|END TV=PERP\|EXIT OTHER=0 [KD= RF= BETA= TAX= YEARS= EW=]` | `AAPL DCF` |
+| `WACC` | Weighted average cost of capital (Vibe engine) | yes | `ERP=5.5 BASIS=CURRENT\|TARGET [EW= KD= RF= BETA= TAX=]` | `AAPL WACC` |
+| `RV` | Relative valuation: peer multiples from SEC filings (Vibe comps engine) | yes | `[PEERS=SYM,SYM]` | `AAPL RV` |
+
+### Research: Filings and owners
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `FIL` | SEC filings | yes | `[FORM]` | `AAPL FIL` |
+| `SEC` | SEC filings (alias of FIL) | yes | `[FORM]` | `AAPL SEC` |
+| `OWN` | Ownership / insiders | yes |  | `AAPL OWN` |
+| `HDS` | Holders (13F) | yes |  | `AAPL HDS` |
+| `MGR` | Manager 13F positions with quarter-over-quarter changes |  | `<NAME\|CIK>` | `MGR` |
+| `SI` | Short interest (FINRA) and daily short sale volume | yes |  | `AAPL SI` |
+| `ETF` | ETF profile, full N-PORT holdings and sector weights | yes |  | `AAPL ETF` |
+| `MEMB` | Index members and weights via the proxy ETF's N-PORT |  | `SPX\|NDX\|DJI\|RUT\|MID\|<ETF>` | `MEMB` |
+
+### Research: Options
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
@@ -190,42 +232,18 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `OVDV` | Implied-vol surface: expiry x moneyness heat map and fitted smiles (equity from the chain, crypto from Deribit) | yes |  | `AAPL OVDV` |
 | `SKEW` | Skew by expiry: ATM IV, 25-delta risk reversal and butterfly, slope, term structure | yes |  | `AAPL SKEW` |
 | `HIVG` | Realized vs implied vol, variance risk premium, rolling RV, local IV rank | yes |  | `AAPL HIVG` |
-| `CT` | Futures term structure: contango/backwardation, spread to front, roll yield (month spacing) |  | `<ROOT: CL NG GC ES ZN ZQ ...>` | `CT` |
-| `WIRP` | Implied fed funds path across FOMC meetings from ZQ futures (not a probability forecast) |  |  | `WIRP` |
-| `COT` | CFTC Commitments of Traders: positions, weekly change, 3-year net history and percentile |  | `<MARKET: ES CL GC ZN EUR ... or name>` | `COT` |
-| `FXFA` | FX forward estimate by covered interest parity (not a dealer quote) |  | `<PAIR> [1W,1M,3M,6M,1Y] [R1= R2=]` | `FXFA` |
-| `YAS` | Bond yield analysis from terms: price/yield, accrued, duration, convexity, DV01, key-rate durations |  | `CPN= MAT= PX=\|YLD= [FREQ= SETTLE= DAYS= FACE=]` | `YAS` |
-| `SWPM` | Vanilla swap valuation on the Treasury par curve (discount proxy, not SOFR) or a flat curve |  | `N= FIXED= TENOR= DIR=PAY\|REC [FREQ= CURVE=TSY\|FLAT:4.2]` | `SWPM` |
-| `CDSW` | CDS valuation, flat hazard (credit triangle), user inputs only |  | `SPREAD= REC= TENOR= RF= COUPON= N= [FREQ=]` | `CDSW` |
 
-### Portfolio and alerts
+### Research: Statistics
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `PORT` | Portfolio (live P&L, CSV import/export) |  | `[NAME] [ADD SYM QTY [COST] [CCY] \| RM SYM... \| EXPORT \| IMPORT \| BASE CCY] \| DEL NAME` | `PORT` |
-| `ALRT` | Price / percent alerts |  | `[SYM > PRICE \| SYM < PRICE \| SYM +PCT% \| SYM -PCT% \| DEL ID \| REARM ID \| CLEAR]` | `ALRT` |
-
-### Risk and quant
-
-| Code | What it does | Security | Arguments | Example |
-|---|---|---|---|---|
-| `RISK` | Portfolio risk: VaR (historical, normal, EVT), expected shortfall, contributions, stress replays, VaR backtest (historical simulation, not a forecast) |  | `[PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` | `RISK` |
-| `OPT` | Portfolio optimizer preview (PORT OPT): trades, before/after, risk contributions; A saves <NAME>.OPT, never orders |  | `[PORTFOLIO] [METHOD=EQVOL\|RP\|MV\|MAXDIV\|HRP\|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` | `OPT` |
-| `ATTR` | Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations |  | `[PORTFOLIO] [BENCH=SPY] [RANGE=1y] \| <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] \| <PORTFOLIO> DEL <DATE>` | `ATTR` |
+| `CORR` | Correlation matrix |  | `SYM SYM... [1M..MAX]` | `CORR` |
+| `REGIME` | Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list |  | `[WL:<NAME>\|LIST:A,B,C] [WIN=60] [EDGE=0.5]` | `REGIME` |
 | `FACT` | Factor regression (Fama-French / momentum / quality) of a symbol or portfolio; the factor data end date is shown |  | `<SYM\|PORTFOLIO> [RANGE=3y]` | `FACT` |
 | `QL` | Quant calculators on bars: GARCH OU COINT HEDGE COPULA ROLL AMIHUD KYLE VPIN EVENT DSR ADF HVAR |  | `<GARCH\|OU\|COINT\|HEDGE\|COPULA\|ROLL\|AMIHUD\|KYLE\|VPIN\|EVENT\|DSR\|ADF\|HVAR> [SYMBOLS] [KEY=VALUE]` | `QL` |
 | `ALPHA` | Alpha factor zoo: IC / IR / decay of Alpha101 and Qlib158 style factors over a universe (historical, not a forecast; SYN is synthetic) |  | `[UNIVERSE=TOP100\|SYN\|WL:<NAME>\|LIST:A,B,C] [RANGE=2y] [FAMILY=...] [H=1,5,10,20]` | `ALPHA` |
-| `REGIME` | Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list |  | `[WL:<NAME>\|LIST:A,B,C] [WIN=60] [EDGE=0.5]` | `REGIME` |
-| `KITE` | Kite Connect (read-only data source): login state, LOGIN opens Kite in a new tab, LOGOUT clears the token; no orders |  | `[LOGIN\|STATUS\|LOGOUT]` | `KITE` |
 
-### Backtesting
-
-| Code | What it does | Security | Arguments | Example |
-|---|---|---|---|---|
-| `BT` | Backtest a rule on historical bars (historical simulation, not a forecast) |  | `<SYMS> <RULE\|@NAME> [1D\|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [MKT=engine]` | `BT` |
-| `IMPORT` | Import your own daily bars (CSV) as a data source, labelled LOCAL DATA |  | `[SYMBOL \| LIST \| DEL SYMBOL]` | `IMPORT` |
-
-### AI (needs an OpenRouter key in APIKEYS)
+### Research: AI research
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
@@ -234,47 +252,68 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `THESIS` | Investment thesis notes per ticker: status, invalidation rule, linked SWARM runs (stored locally) |  | `[SYMBOL \| ADD <SYMBOL> <text> \| INVALID <id> <rule>]` | `THESIS` |
 | `AUDIT` | Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes only) |  |  | `AUDIT` |
 
-### App, workspace and settings
+### Research: Public records
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `FEDREG` | US Federal Register: rules, proposed rules, notices and presidential documents, newest first (no key) |  | `[RULE\|PROPOSED\|NOTICE\|PRESDOC] [<WORDS>]` | `FEDREG` |
+| `CONGRESS` | US Congress bills: latest updated, title filter, one bill with its sponsor (Congress.gov API, free key CONGRESS_API_KEY) |  | `[<WORDS> \| HR 1234]` | `CONGRESS` |
+| `FEC` | US campaign finance: candidate and committee search, receipts and disbursements by cycle (OpenFEC, free key FEC_API_KEY) |  | `<NAME> \| <FEC ID>` | `FEC` |
+| `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
+| `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
+
+### Portfolio
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `PORT` | Portfolio (live P&L, CSV import/export) |  | `[NAME] [ADD SYM QTY [COST] [CCY] \| RM SYM... \| EXPORT \| IMPORT \| BASE CCY] \| DEL NAME` | `PORT` |
+| `ALRT` | Price / percent alerts |  | `[SYM > PRICE \| SYM < PRICE \| SYM +PCT% \| SYM -PCT% \| DEL ID \| REARM ID \| CLEAR]` | `ALRT` |
+| `RISK` | Portfolio risk: VaR (historical, normal, EVT), expected shortfall, contributions, stress replays, VaR backtest (historical simulation, not a forecast) |  | `[PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` | `RISK` |
+| `OPT` | Portfolio optimizer preview (PORT OPT): trades, before/after, risk contributions; A saves <NAME>.OPT, never orders |  | `[PORTFOLIO] [METHOD=EQVOL\|RP\|MV\|MAXDIV\|HRP\|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` | `OPT` |
+| `ATTR` | Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations |  | `[PORTFOLIO] [BENCH=SPY] [RANGE=1y] \| <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] \| <PORTFOLIO> DEL <DATE>` | `ATTR` |
+
+### Backtest
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `BT` | Backtest a rule on historical bars (historical simulation, not a forecast) |  | `<SYMS> <RULE\|@NAME> [1D\|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [MKT=engine]` | `BT` |
+| `IMPORT` | Import your own daily bars (CSV) as a data source, labelled LOCAL DATA |  | `[SYMBOL \| LIST \| DEL SYMBOL]` | `IMPORT` |
+
+### Settings: Help
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
 | `HELP` | Function list / help for one function |  | `[CODE]` | `HELP` |
-| `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
+| `FUNC` | Function directory: type to filter, Enter opens |  |  | `FUNC` |
 | `SHORTCUTS` | Keyboard shortcuts |  |  | `SHORTCUTS` |
-| `LAYOUT` | Save / load named workspaces |  | `[SAVE\|LOAD\|DEL] name` | `LAYOUT` |
-| `MONITOR` | Alias of LAYOUT |  | `[SAVE\|LOAD\|DEL] name` | `MONITOR` |
-| `SETTINGS` | Settings: theme, vim mode, shortcuts, number format, clocks |  | `[MODE\|THEME\|VIM\|CLOCKS\|CHART\|THOUSANDS\|DECIMAL\|POLL\|KEYS\|RESET ...]` | `SETTINGS` |
-| `THEME` | Colour theme |  | `[AMBER\|GREEN\|WHITE\|LIGHT]` | `THEME` |
-| `JOBS` | Background jobs: progress, cancel, results |  | `[TEST [steps] [ms]]` | `JOBS` |
-| `APIKEYS` | API keys: set, test, remove (optional, zero keys works) |  | `[PROVIDER]` | `APIKEYS` |
-| `SOURCES` | Data sources: health, latency, quota |  |  | `SOURCES` |
-| `LOG` | Backend log |  |  | `LOG` |
 
-### Other
+### Settings: Look and layout
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `HOME` | Home page: market numbers and headlines, with a scrolling ticker tape |  |  | `HOME` |
+| `SETTINGS` | Settings: theme, vim mode, shortcuts, number format, clocks |  | `[MODE\|THEME\|VIM\|CLOCKS\|CHART\|THOUSANDS\|DECIMAL\|POLL\|KEYS\|RESET ...]` | `SETTINGS` |
+| `THEME` | Colour theme |  | `[AMBER\|GREEN\|WHITE\|LIGHT]` | `THEME` |
 | `TAPE` | Ticker tape settings |  | `[ADD SYM \| DEL SYM \| RESET \| ON \| OFF]` | `TAPE` |
-| `DLVR` | Alert delivery |  |  | `DLVR` |
-| `BRIEF` | Daily brief |  |  | `BRIEF` |
+| `LAYOUT` | Save / load named workspaces |  | `[SAVE\|LOAD\|DEL] name` | `LAYOUT` |
+| `MONITOR` | Alias of LAYOUT |  | `[SAVE\|LOAD\|DEL] name` | `MONITOR` |
 | `TMPL` | Workspace templates: Long-term, Day trader, Macro, India |  | `[LONGTERM\|DAY\|MACRO\|INDIA]` | `TMPL` |
-| `IND` | Indicator library, formulas and presets for GP |  | `[search]` | `IND` |
-| `FUNC` | Function directory: type to filter, Enter opens |  |  | `FUNC` |
-| `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
-| `ADDR` | EVM address balance, recent transactions and gas price on Ethereum or L2s (Etherscan, free key ETHERSCAN_KEY; read only) |  | `[0xADDRESS\|GAS] [ETH\|ARB\|OP\|BASE\|POLY\|BSC]` | `ADDR` |
-| `SHIP` | Ship traffic at sea chokepoints (IMF PortWatch) |  |  | `SHIP` |
-| `TRADE` | Trade flows between two countries by HS product (UN Comtrade, needs UN_COMTRADE_KEY) |  | `<REPORTER> [<PARTNER>\|WORLD] [TOTAL\|<HS 2/4/6 digits>] [<N>Y]` | `TRADE` |
-| `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
-| `PORTS` | Port activity: daily port calls and trade estimates (IMF PortWatch) |  | `[PORT\|COUNTRY]` | `PORTS` |
-| `FLT` | Live aircraft over a city or box from the OpenSky Network (free; optional account for more credits; positions as reported by transponders) |  | `<LONDON\|NYC\|DUBAI\|SINGAPORE\|MUMBAI\|BENGALURU\|FRANKFURT\|BOX S W N E\|CALLSIGN PREFIX>` | `FLT` |
-| `AIS` | Live ship positions in a chokepoint or box (AISstream, free key AISSTREAM_API_KEY; positions as reported by ships) |  | `<SUEZ\|PANAMA\|HORMUZ\|MALACCA\|BABEL\|BOSPHORUS\|GIBRALTAR\|DOVER\|BOX S W N E>` | `AIS` |
-| `MAP` | World map: ships, ports, chokepoints, earthquakes, natural events and aircraft as layers |  | `[VESSELS\|PORTS\|CHOKEPOINTS\|QUAKES\|EVENTS\|FLIGHTS] [AREA]` | `MAP` |
-| `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
-| `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
-| `FEDREG` | US Federal Register: rules, proposed rules, notices and presidential documents, newest first (no key) |  | `[RULE\|PROPOSED\|NOTICE\|PRESDOC] [<WORDS>]` | `FEDREG` |
-| `FEC` | US campaign finance: candidate and committee search, receipts and disbursements by cycle (OpenFEC, free key FEC_API_KEY) |  | `<NAME> \| <FEC ID>` | `FEC` |
-| `CONGRESS` | US Congress bills: latest updated, title filter, one bill with its sponsor (Congress.gov API, free key CONGRESS_API_KEY) |  | `[<WORDS> \| HR 1234]` | `CONGRESS` |
+
+### Settings: Keys and connections
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `APIKEYS` | API keys: set, test, remove (optional, zero keys works) |  | `[PROVIDER]` | `APIKEYS` |
+| `SOURCES` | Data sources: health, latency, quota |  |  | `SOURCES` |
+| `KITE` | Kite Connect (read-only data source): login state, LOGIN opens Kite in a new tab, LOGOUT clears the token; no orders |  | `[LOGIN\|STATUS\|LOGOUT]` | `KITE` |
+| `DLVR` | Alert delivery |  |  | `DLVR` |
+
+### Settings: System
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `JOBS` | Background jobs: progress, cancel, results |  | `[TEST [steps] [ms]]` | `JOBS` |
+| `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
+| `LOG` | Backend log |  |  | `LOG` |
 
 ## Global keyboard shortcuts
 

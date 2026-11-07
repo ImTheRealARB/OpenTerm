@@ -254,11 +254,11 @@ test("CRYP: CoinGecko board with source and age; Enter charts the USD pair", asy
   expect(seen[0]).toBe("?vs=USD");
 });
 
-test("every Phase 5 function is listed as ready in HELP", async ({ page }) => {
+test("every Phase 5 function is listed in HELP", async ({ page }) => {
   await setup(page);
   await run(page, "HELP");
   for (const code of ["N", "WL", "WEI", "MOV", "FX", "FXC", "CRYP", "CMDTY"]) {
     const row = panel(page).locator("tr").filter({ has: page.locator("td.acc", { hasText: new RegExp(`^${code}$`) }) });
-    await expect(row).toContainText("READY");
+    await expect(row).toHaveCount(1); // one row per registered function
   }
 });

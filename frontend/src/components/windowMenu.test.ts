@@ -4,9 +4,8 @@ import { menuItems, menuKey, viewLabel, type FnInfo, type MenuState } from "./wi
 
 // The real lists come from the registry's `related` ranks; the test supplies the same shape.
 const info: FnInfo = {
-  isBuilt: (c) => c !== "OMON",
   title: (c) => `${c} title`,
-  related: (withSecurity) => (withSecurity ? ["DES", "GP", "QR", "OMON"] : ["WEI", "MOV", "FX"]),
+  related: (withSecurity) => (withSecurity ? ["DES", "GP", "QR"] : ["WEI", "MOV", "FX"]),
 };
 const panel: PanelState = {
   id: 1,
@@ -21,11 +20,10 @@ describe("window menu items", () => {
     expect(items.map((i) => i.kind === "history" && i.current)).toEqual([false, true, false]);
   });
 
-  it("RELATED offers built security functions, minus the current one", () => {
+  it("RELATED offers the security functions, minus the current one", () => {
     const fns = menuItems(1, panel, info).map((i) => (i.kind === "fn" ? i.fn : ""));
     expect(fns[0]).toBe("DES");
     expect(fns).not.toContain("GP");
-    expect(fns).not.toContain("OMON");
   });
 
   it("RELATED falls back to market functions without a security", () => {

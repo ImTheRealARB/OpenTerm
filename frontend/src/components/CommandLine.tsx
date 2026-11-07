@@ -70,7 +70,7 @@ function lastToken(text: string): { token: string; securitySlot: boolean } {
 function functionSuggestions(token: string): Suggestion[] {
   return fuzzyRank(token, FUNCTION_LIST, (f) => `${f.code} ${f.title}`, 8).map((f) => ({
     value: f.code,
-    label: f.title + (f.load ? "" : ` (P${f.phase})`),
+    label: f.title,
     kind: "FUNC",
   }));
 }

@@ -83,7 +83,7 @@ function SidebarPanel() {
   };
 
   const row = (f: Def) => (
-    <button key={f.code} type="button" className={"gs-item" + (f.load ? "" : " dim")} title={f.title} data-code={f.code} onClick={() => run(f.code)}>
+    <button key={f.code} type="button" className={"gs-item"} title={f.title} data-code={f.code} onClick={() => run(f.code)}>
       <span className="gs-code">{f.code}</span>
       <span className="gs-title">{shortTitle(f.title)}</span>
     </button>

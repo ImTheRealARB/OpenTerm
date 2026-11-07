@@ -7,7 +7,6 @@ export interface DirEntry {
   title: string;
   needsSecurity: boolean;
   argsSchema?: string;
-  ready: boolean;
 }
 
 export interface DirRow {
@@ -37,7 +36,7 @@ export function buildRows(
 ): DirRow[] {
   const rows: DirRow[] = list.map((f) => ({
     code: f.code,
-    purpose: f.ready ? shortPurpose(f.title) : `${shortPurpose(f.title)} (NOT BUILT YET)`,
+    purpose: shortPurpose(f.title),
     takes: f.needsSecurity ? "SEC" : "",
     category: categoryOf(f.code) ?? "",
     aliasOf: "",

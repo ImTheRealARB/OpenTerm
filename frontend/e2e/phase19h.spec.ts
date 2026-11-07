@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { env, panel, run, setup } from "./p19util";
 
-// Phase 19 step 7 end-to-end tests (mocked routes only): CDEP, FUND, LIQ, STBL, DEFI and the not-built UNLK. Numbers are made-up test data.
+// Phase 19 step 7 end-to-end tests (mocked routes only): CDEP, FUND, LIQ, STBL and DEFI. Numbers are made-up test data.
 
 const T = Date.UTC(2026, 9, 18, 12, 0, 0);
 const lv = (px: number, qty: number, cq: number) => [px, qty, cq, cq * px];
@@ -133,7 +133,7 @@ test("STBL: coins with peg deviation, C switches to chains, Enter opens one chai
   expect(errors).toEqual([]);
 });
 
-test("DEFI: pools by chain, highest APY first, with the TVL cut; UNLK says it is not built", async ({ page }) => {
+test("DEFI: pools by chain, highest APY first, with the TVL cut", async ({ page }) => {
   const { errors } = await setup(page);
   await page.route("**/api/world/defi?**", (r) => r.fulfill({ json: env(DEFI, { source: "defillama" }) }));
   await run(page, "DEFI ETHEREUM");
@@ -142,7 +142,5 @@ test("DEFI: pools by chain, highest APY first, with the TVL cut; UNLK says it is
   await expect(p.getByTestId("defi-summary")).toContainText("2 POOLS MATCH OF 360 WITH TVL OVER $1.00M");
   await expect(p.locator(".sr")).toContainText("uniswap-v3");
   await expect(p.locator(".sr")).toContainText("12.50%");
-  await run(page, "UNLK");
-  await expect(p).toContainText("EMISSIONS API IS PAID");
   expect(errors).toEqual([]);
 });

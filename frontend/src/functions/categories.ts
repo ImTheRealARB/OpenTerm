@@ -37,7 +37,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "SECF", "MF"] },
     { name: "Calendars", codes: ["ECO", "ERN", "IPO", "CENB"] },
     { name: "Currencies", codes: ["FX", "FXC", "FXFA"] },
-    { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "UNLK", "ADDR"] },
+    { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "ADDR"] },
     { name: "Commodities and energy", codes: ["CMDTY", "NRG", "WETR", "CT", "COT"] },
     { name: "Rates and bonds", codes: ["RATES", "WIRP", "YAS", "SWPM", "CDSW"] },
     { name: "Economy", codes: ["MACRO", "USMAC", "WECO", "ECST", "DBSRCH", "TRADE", "PRED"] },

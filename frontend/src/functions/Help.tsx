@@ -16,7 +16,6 @@ export default function Help({ args }: FunctionProps) {
           {def.code} — {def.title.toUpperCase()}
         </h2>
         <div>USAGE: {def.needsSecurity ? "<SECURITY> " : ""}{def.code} {def.argsSchema ?? ""}</div>
-        <div className="dim">{def.load ? "AVAILABLE" : `NOT BUILT YET (PHASE ${def.phase})`}</div>
       </div>
     );
   }
@@ -34,14 +33,12 @@ export default function Help({ args }: FunctionProps) {
         <colgroup>
           <col style={{ width: 80 }} />
           <col />
-          <col style={{ width: 90 }} />
         </colgroup>
         <tbody>
           {FUNCTION_LIST.map((f) => (
             <tr key={f.code}>
               <td className="acc">{f.code}</td>
               <td>{f.title.toUpperCase()}</td>
-              <td className={f.load ? "up" : "dim"}>{f.load ? "READY" : `PHASE ${f.phase}`}</td>
             </tr>
           ))}
         </tbody>

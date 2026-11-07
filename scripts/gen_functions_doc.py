@@ -20,34 +20,41 @@ BINDINGS = ROOT / "frontend/src/keys/keybindings.json"
 KEYS_TS = ROOT / "frontend/src/keys/actionLabels.ts"
 OUT = ROOT / "docs/FUNCTIONS.md"
 
-# Section per build phase; Phase 19 is split by topic per function.
-PHASE_SECTION = {
-    1: "App, workspace and settings", 2: "App, workspace and settings", 4: "App, workspace and settings",
-    10: "App, workspace and settings", 11: "App, workspace and settings",
-    3: "Charts and quotes",
-    5: "Markets, news and watchlists",
-    6: "Company fundamentals and filings",
-    7: "Macro and calendars",
-    8: "Portfolio and alerts",
-    9: "Screening and comparison",
-    12: "Backtesting",
-    13: "Company research: estimates, events, valuation",
-    14: "Derivatives, rates and credit",
-    15: "Risk and quant",
-    16: "AI (needs an OpenRouter key in APIKEYS)",
-}
-P19 = {
-    "GIP": "Charts and quotes", "SEAS": "Charts and quotes", "IMAP": "Screening and comparison", "SECF": "Screening and comparison",
-    "ECST": "Macro and calendars", "WECO": "Macro and calendars", "CENB": "Macro and calendars",
-    "NRG": "Commodities, energy and weather", "WETR": "Commodities, energy and weather",
-}
-SECTION_ORDER = [
-    "Charts and quotes", "Markets, news and watchlists", "Company fundamentals and filings",
-    "Company research: estimates, events, valuation", "Screening and comparison", "Macro and calendars",
-    "Commodities, energy and weather", "Crypto, DeFi and prediction markets", "Derivatives, rates and credit",
-    "Portfolio and alerts", "Risk and quant", "Backtesting", "AI (needs an OpenRouter key in APIKEYS)",
-    "App, workspace and settings", "Other",
-]
+# Sections come from the GUI menu (functions/categories.ts `MENU`: category > subgroup > codes), the one place that says where a
+# function lives, so the doc and the menus never disagree. A twin (functions/aliases.ts `TWINS`, e.g. SEC) sits right after its
+# original. A registry code that MENU does not place lands in "Other" (the vitest in categories.test.ts fails for that case).
+CATEGORIES_TS = ROOT / "frontend/src/functions/categories.ts"
+ALIASES_TS = ROOT / "frontend/src/functions/aliases.ts"
+OTHER = "Other"
+
+
+def menu_sections() -> list[tuple[str, list[str]]]:
+    """[(section title, [codes])] in MENU order. A category with one subgroup is titled by the category alone."""
+    src = CATEGORIES_TS.read_text(encoding="utf-8")
+    names = dict(re.findall(r'export const (SUB_\w+) = "([^"]*)"', src))  # `name: SUB_HELP` stands for a constant
+    body = src[src.index("export const MENU") :]
+    body = body[: body.index("\n};")]  # MENU ends at the first closing "};" at the start of a line
+    cats: list[tuple[str, list[tuple[str, list[str]]]]] = []
+    for line in body.splitlines():
+        head = re.match(r"^  (\w+): \[", line)
+        if head:
+            cats.append((head.group(1), []))
+        for g in re.finditer(r'\{ name: (?:"([^"]*)"|(SUB_\w+)), codes: \[([^\]]*)\] \}', line):
+            cats[-1][1].append((g.group(1) or names[g.group(2)], re.findall(r'"(\w+)"', g.group(3))))
+    out = []
+    for cat, groups in cats:
+        for sub, codes in groups:
+            out.append((cat if len(groups) == 1 else f"{cat}: {sub}", codes))
+    return out
+
+
+def twins() -> dict[str, str]:
+    """twin code -> original code, read from the TWINS block of aliases.ts."""
+    src = ALIASES_TS.read_text(encoding="utf-8")
+    block = src[src.index("export const TWINS") :]
+    block = block[: block.index("});")]
+    return dict(re.findall(r'^\s+(\w+): "(\w+)"', block, re.MULTILINE))
+
 
 DEF_RE = re.compile(r'\{ code: "(\w+)", title: "((?:[^"\\]|\\.)*)", needsSecurity: (true|false)(.*?)\},?\s*$', re.MULTILINE)
 
@@ -58,20 +65,28 @@ def cell(s: str) -> str:
 
 def functions() -> dict[str, list[str]]:
     src = REGISTRY.read_text(encoding="utf-8")
-    sections: dict[str, list[str]] = {s: [] for s in SECTION_ORDER}
-    seen: set[str] = set()
+    rows: dict[str, str] = {}
     for m in DEF_RE.finditer(src):
         code, title, needs, rest = m.group(1), m.group(2), m.group(3) == "true", m.group(4)
-        if code in seen:
+        if code in rows:
             continue
-        seen.add(code)
-        phase = int(re.search(r"phase: (\d+)", rest).group(1))
         args = re.search(r'argsSchema: "((?:[^"\\]|\\.)*)"', rest)
-        section = P19.get(code, "Crypto, DeFi and prediction markets") if phase == 19 else PHASE_SECTION.get(phase, "Other")
         example = f"`AAPL {code}`" if needs else f"`{code}`"
-        status = "" if "load:" in rest else " **(not built yet)**"
         usage = f"`{cell(args.group(1))}`" if args and args.group(1) else ""
-        sections[section].append(f"| `{code}` | {cell(title)}{status} | {'yes' if needs else ''} | {usage} | {example} |")
+        rows[code] = f"| `{code}` | {cell(title)} | {'yes' if needs else ''} | {usage} | {example} |"
+    twin_of = twins()
+    sections: dict[str, list[str]] = {}
+    placed: set[str] = set()
+    for title, codes in menu_sections():
+        out = []
+        for code in codes:
+            if code in rows and code not in placed:
+                out.append(rows[code])
+                placed.add(code)
+                out += [rows[t] for t, original in twin_of.items() if original == code and t in rows and t not in placed]
+                placed.update(t for t, original in twin_of.items() if original == code)
+        sections[title] = out
+    sections[OTHER] = [r for code, r in rows.items() if code not in placed]
     return sections
 
 
