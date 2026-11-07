@@ -98,8 +98,8 @@ async def lifespan(app: FastAPI):
     from .streaming.iex import IexPoller
 
     def prev_close(symbol: str) -> float | None:
-        entry = service.cache.mem.get(f"q:{symbol}")
-        return ((entry[0].get("data") or {}).get("prev_close")) if entry else None
+        quote = service.cached_quote(symbol)  # the cache key lives in cachekeys.py; main.py does not build it
+        return quote.get("prev_close") if quote is not None else None
 
     alpaca = router.providers.get("alpaca")
     iex = IexPoller(emit, alpaca, prev_close) if alpaca is not None and not settings.openterm_fixtures else None

@@ -18,6 +18,7 @@ from fastapi.responses import Response, StreamingResponse
 
 from .. import api as api_mod
 from .. import http_util, perf
+from ..idents import AI_SYMBOL_RE
 from ..redact import redact
 from ..responses import OrjsonRoute
 from . import agent, tools
@@ -223,7 +224,6 @@ async def chart(request: Request):
 
 # --- AI DOC ------------------------------------------------------------------------------------------------------------------------
 NAME_RE = re.compile(r"^[\w.\- ()]{1,100}$")
-SYMBOL_RE = re.compile(r"^[A-Za-z0-9.^=\-]{1,12}$")
 DOC_SYSTEM = """You answer questions about ONE document: "{name}" ({kind}, {chunks} chunks). Today is {today}.
 Rules:
 - Find passages with the doc_search tool (try different words if the first search finds nothing). Chunks come back labelled C1, C2...
@@ -280,7 +280,7 @@ async def doc_filing(request: Request):
     if isinstance(body, Response):
         return body
     symbol, form = str(body.get("symbol") or ""), str(body.get("form") or "10-K").upper()
-    if not SYMBOL_RE.match(symbol) or not re.match(r"^[A-Z0-9/\-]{1,12}$", form):
+    if not AI_SYMBOL_RE.match(symbol) or not re.match(r"^[A-Z0-9/\-]{1,12}$", form):
         return http_util.error_response(400, "bad_request", "SYMBOL OR FORM IS NOT VALID")
     sec = http_util.svc(request).router.providers["sec"]
     try:

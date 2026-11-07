@@ -10,8 +10,9 @@ import time
 import aiosqlite
 import orjson
 
+from .idents import STORED_SYMBOL_RE
 from .symbols import resolve
-from .userdata import SYMBOL_RE, UserDataError
+from .userdata import UserDataError
 
 MAX_DRAWINGS = 200
 POINTS = {"TREND": 2, "HLINE": 1, "FIB": 2}
@@ -57,7 +58,7 @@ def validate(raw) -> list[dict]:
 
 def key_of(raw_symbol: str) -> str:
     symbol = resolve(raw_symbol)
-    if not SYMBOL_RE.match(symbol):
+    if not STORED_SYMBOL_RE.match(symbol):
         raise _bad(f"BAD SYMBOL: {raw_symbol[:24]}")
     return symbol
 

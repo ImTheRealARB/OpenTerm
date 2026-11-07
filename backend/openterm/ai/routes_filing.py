@@ -17,6 +17,7 @@ from fastapi.responses import Response
 
 from .. import api as api_mod
 from .. import http_util
+from ..idents import AI_SYMBOL_RE
 from ..providers.base import ProviderError
 from ..providers.sec import UA_HINT, US_ONLY, sec_ticker
 from ..redact import redact
@@ -26,7 +27,6 @@ from . import (  # both are light (stdlib sqlite3 and html parsing); nothing hea
 )
 from .routes import (
     MAX_QUESTION,
-    SYMBOL_RE,
     _body,
     _models,
     _stream,
@@ -83,7 +83,7 @@ async def ai_filing(request: Request):
     drivers = body.get("mode") == "drivers"
     question = filings.DRIVERS_QUESTION if drivers else body.get("question")
     form = str(body["form"]).upper() if body.get("form") else None
-    if not SYMBOL_RE.match(symbol) or (form is not None and form not in filings.FORMS):
+    if not AI_SYMBOL_RE.match(symbol) or (form is not None and form not in filings.FORMS):
         return http_util.error_response(400, "bad_request", f"SYMBOL MUST BE A TICKER AND FORM ONE OF {', '.join(filings.FORMS)}")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION:
         return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS (OR mode \"drivers\")")

@@ -11,6 +11,7 @@ from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
 from typing import Any, ClassVar
 
+from . import cachekeys as ck
 from . import errkinds as K
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
@@ -144,8 +145,8 @@ class DataService:
         # A Kite login changes who answers Indian symbols, so the cache key names the key-gated sources that
         # are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
         # Only a source that can really answer counts: an expired login must not share a cache key with a valid one (audit A-3).
-        gated = "".join(f":{p.name[0]}" for p in self.router.candidates("history", symbol) if p.name in ("kite",) and p.why_down() is None)
-        return await self.swr(f"h:{symbol}:{r}:{i}{gated}", ttl, fetch)
+        gated = [p.name for p in self.router.candidates("history", symbol) if p.name in ("kite",) and p.why_down() is None]
+        return await self.swr(ck.history(symbol, r, i, gated), ttl, fetch)
 
     async def profile(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)
@@ -267,9 +268,17 @@ class DataService:
     # full REST quote is re-fetched in the background at least this often to renew volume, high, low and previous close.
     REST_REFRESH_S = 60.0
 
+    def cached_quote(self, symbol: str) -> dict | None:
+        """The quote data held in memory for a resolved symbol (with streamed ticks folded in), or None. No network, no SQLite.
+
+        The one reader of the quote cache outside this class (the IEX poller's previous-close lookup in main.py uses it).
+        """
+        entry = self.cache.mem.get(ck.quote(symbol))
+        return None if entry is None else entry[0].get("data") or {}
+
     def apply_tick(self, tick) -> None:
         """Fold a streamed tick into the cached quote so REST snapshots match the stream."""
-        key = f"q:{tick.symbol}"
+        key = ck.quote(tick.symbol)
         entry = self.cache.mem.get(key)
         if entry is None:
             return
@@ -323,9 +332,9 @@ class DataService:
         out: dict[str, dict] = {}
         need: list[str] = []
         stale: list[str] = []
-        found = await self.cache.get_many([f"q:{s}" for s in symbols.values()])  # one SQLite query for every memory miss
+        found = await self.cache.get_many([ck.quote(s) for s in symbols.values()])  # one SQLite query for every memory miss
         for raw, s in symbols.items():
-            entry = found.get(f"q:{s}")
+            entry = found.get(ck.quote(s))
             if entry is None:
                 self.misses += 1
                 need.append(s)
@@ -338,7 +347,7 @@ class DataService:
                 stale.append(s)
             else:
                 self.fresh_hits += 1
-                if now - self.rest_at.get(f"q:{s}", stored_at) >= self.REST_REFRESH_S:
+                if now - self.rest_at.get(ck.quote(s), stored_at) >= self.REST_REFRESH_S:
                     stale.append(s)  # streamed price is fresh; renew volume / high / low / previous close in the background
             out[raw] = envelope(value, stored_at, is_stale)
         if stale:
@@ -350,7 +359,7 @@ class DataService:
                     continue
                 r = results.get(s)
                 if isinstance(r, dict):
-                    entry = self.cache.mem.get(f"q:{s}")
+                    entry = self.cache.mem.get(ck.quote(s))
                     out[raw] = envelope(r, entry[1] if entry else time.time(), stale=False)
                 else:
                     kind = getattr(r, "kind", "unavailable")
@@ -363,7 +372,7 @@ class DataService:
         mine: list[str] = []
         loop = asyncio.get_running_loop()
         for s in symbols:
-            key = f"q:{s}"
+            key = ck.quote(s)
             if key in self._inflight:
                 futures[s] = self._inflight[key]
             else:
@@ -378,8 +387,8 @@ class DataService:
                     if s in found:
                         q, failed = found[s]
                         value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
-                        self.cache.put(f"q:{s}", value)
-                        self.rest_at[f"q:{s}"] = time.time()
+                        self.cache.put(ck.quote(s), value)
+                        self.rest_at[ck.quote(s)] = time.time()
                         fut.set_result(value)
                     else:
                         fut.set_exception(errors[s])
@@ -393,7 +402,7 @@ class DataService:
                     raise
             finally:
                 for s in mine:
-                    self._inflight.pop(f"q:{s}", None)
+                    self._inflight.pop(ck.quote(s), None)
         results = await asyncio.gather(*(asyncio.shield(f) for f in futures.values()), return_exceptions=True)
         return dict(zip(futures.keys(), results))
 

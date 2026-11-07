@@ -1,15 +1,13 @@
 """User data in SQLite: named workspace layouts, command line history and watchlists."""
 
-import re
 import time
 
 import aiosqlite
 import orjson
 
+from .idents import STORED_NAME_RE, STORED_SYMBOL_RE
 from .symbols import resolve
 
-NAME_RE = re.compile(r"^[A-Z0-9][A-Z0-9_.-]{0,31}\Z")
-SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9^=.&-]{0,23}\Z")
 MAX_STATE_BYTES = 64_000
 HISTORY_MAX = 500
 MAX_CMD_LEN = 500
@@ -24,7 +22,7 @@ class UserDataError(Exception):
 
 def layout_name(raw: str, what: str = "LAYOUT") -> str:
     name = raw.strip().upper()
-    if not NAME_RE.match(name):
+    if not STORED_NAME_RE.match(name):
         raise UserDataError("bad_request", f"{what} NAME: 1-32 OF A-Z 0-9 _ . -")
     return name
 
@@ -38,7 +36,7 @@ def check_symbols(raw) -> list[str]:
     if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
         raise UserDataError("bad_request", "SYMBOLS MUST BE A LIST OF STRINGS")
     out = list(dict.fromkeys(resolve(x) for x in raw if x.strip()))
-    bad = [x for x in out if not SYMBOL_RE.match(x)]
+    bad = [x for x in out if not STORED_SYMBOL_RE.match(x)]
     if bad:
         raise UserDataError("bad_request", f"BAD SYMBOL: {bad[0][:24]}")
     if len(out) > MAX_WATCHLIST:

@@ -23,7 +23,7 @@ import re
 import time
 from collections.abc import Awaitable, Callable
 
-from .delivery import format as dfmt
+from .alert_fired import announce
 from .news_alerts import NewsAlerts
 from .portfolio import Alerts
 from .streaming.tick import ALERT_NAMES
@@ -197,12 +197,11 @@ class AlertsEngine:
             # Same store call (and so the same DB write) as POST /api/alerts/{id}/trigger. `changed` is False when the
             # alert was already triggered (a second path got there first): then nothing is sent, so nothing repeats.
             res = await self.alerts.trigger(a["id"], tick.price, self.now())
-            if res["changed"]:
-                self.hub.broadcast(["A", "price", a["id"]])  # open tabs refresh their list from this
-                age = max(0.0, self.now() - tick.time_ms / 1000)
-                where = f"by the OpenTerm server (source {SOURCE_NAMES.get(tick.source, tick.source)}, {age:.0f} s old)"
-                subject, text = dfmt.alert_message(res["alert"], checked=where)
-                self._deliver("alert", a["id"], subject, text, {"kind": "alert", "symbol": a["symbol"]}, res["alert"]["channels"])
+            age = max(0.0, self.now() - tick.time_ms / 1000)
+            where = f"by the OpenTerm server (source {SOURCE_NAMES.get(tick.source, tick.source)}, {age:.0f} s old)"
+            # One shared fired path (alert_fired.py). The engine is the caller that broadcasts the `A` frame (open tabs refresh
+            # from it) and says it was the server that checked; the HTTP routes do neither.
+            announce("alert", res, self._deliver, broadcast=self.hub.broadcast, checked=where)
         except Exception as e:  # shown in ALRT and the log; the next tick is not blocked
             log.exception("price alert %s could not be fired", a["id"])  # the log filter redacts secrets
             self._skip(f"price:{a['id']}", describe(a), f"FIRE FAILED: {type(e).__name__}")
@@ -267,11 +266,8 @@ class AlertsEngine:
                     continue
                 self._skipped.pop(f"news:{a['id']}", None)
                 res = await self.news.trigger(a["id"], hit.get("title"), hit.get("url"), self.now())
-                if res["changed"]:
+                if announce("news", res, self._deliver, broadcast=self.hub.broadcast):
                     fired += 1
-                    self.hub.broadcast(["A", "news", a["id"]])
-                    subject, text = dfmt.news_alert_message(res["alert"])
-                    self._deliver("news", a["id"], subject, text, {"kind": "news", "word": a["word"]}, res["alert"]["channels"])
         await self.sync()  # triggered news alerts leave the skip list
         return fired
 

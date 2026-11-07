@@ -6,16 +6,15 @@ full text), so a replay shows exactly what the run produced, labelled as a repla
 
 from __future__ import annotations
 
-import re
 import secrets
 import time
 
 import aiosqlite
 import orjson
 
+from ..idents import AI_SYMBOL_RE, RUN_ID_RE
+
 STATUSES = ("open", "confirmed", "invalidated", "closed")
-SYMBOL_RE = re.compile(r"^[A-Za-z0-9.^=\-]{1,12}$")
-RUN_ID_RE = re.compile(r"^[0-9a-f]{12}$")
 MAX_TEXT = 2000
 MAX_RUNS_PER_THESIS = 10
 KEEP_RUNS = 200
@@ -89,7 +88,7 @@ class AiStore:
 
     async def add_thesis(self, body: dict) -> dict:
         symbol = str(body.get("symbol") or "").strip().upper()
-        if not SYMBOL_RE.match(symbol):
+        if not AI_SYMBOL_RE.match(symbol):
             raise StoreError("bad_request", "SYMBOL IS NOT VALID")
         text = self._text(body.get("text"), "TEXT", True)
         invalidation = self._text(body.get("invalidation"), "INVALIDATION", False)

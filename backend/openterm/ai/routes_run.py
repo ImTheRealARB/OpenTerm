@@ -13,6 +13,7 @@ from fastapi.responses import Response
 
 from .. import api as api_mod
 from .. import http_util
+from ..idents import AI_SYMBOL_RE
 from ..responses import OrjsonRoute
 from . import agent, tools
 from .routes import MAX_QUESTION, _body, _models, _stream, ai_settings, audit, router
@@ -21,7 +22,6 @@ log = logging.getLogger("openterm.ai")
 AUTO_TOOLS = ["history", "quote", "profile", "skill", "skills", "strategy_check", "backtest_run", "backtest_get"]
 RUN_ID_IN_TEXT = re.compile(r'"run_id"\s*:\s*"([0-9a-f]{8,32})"')  # BT run ids are 16 hex characters
 SUBJECT_SYMBOL = re.compile(r"^[A-Za-z][A-Za-z0-9.\-^=]{0,11}$")
-SYMBOL_ARG = re.compile(r"^[A-Za-z0-9.^=\-]{1,12}$")
 AUTO_SYSTEM = """You test a market hypothesis with evidence for OpenTerm. Today is {today}.
 Method: (1) restate the hypothesis as one testable rule; (2) look at the symbol with the history tool; (3) check the rule with strategy_check and fix it until it is valid;
 (4) run it with backtest_run (rule grammar: terms CLOSE OPEN HIGH LOW VOLUME, SMA<n> EMA<n> RSI<n> HIGH<n> LOW<n> RET<n>; operators > < >= <= CROSS> CROSS<; AND OR;
@@ -235,7 +235,7 @@ theses_router = APIRouter(prefix="/api/theses", route_class=OrjsonRoute)
 
 @theses_router.get("")
 async def theses_list(request: Request, symbol: str | None = None):
-    return {"theses": await _store(request).theses(symbol if symbol and SYMBOL_ARG.match(symbol) else None)}
+    return {"theses": await _store(request).theses(symbol if symbol and AI_SYMBOL_RE.match(symbol) else None)}
 
 
 @theses_router.post("")
