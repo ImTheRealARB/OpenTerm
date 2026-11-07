@@ -7,6 +7,7 @@ from fastapi.responses import Response
 
 from . import keys as keystore
 from . import logbuf
+from .alert_fired import announce, route_deliver
 from .errors import DataError
 from .http_util import (
     bt_error,
@@ -420,14 +421,10 @@ async def trigger_alert(request: Request, alert_id: int):
         await engine_of(request).sync()
         # Phase 20: the server engine fires real data itself. This route is used by a browser only for labelled test data
         # (SYNTHETIC ticks, fixture mode), which must never be pushed to a phone: the browser says so with `synthetic`.
-        if result["changed"] and not body.get("synthetic"):  # exactly once per firing: push it to email/Telegram/webhook in the background
-            from .alert_channels import spawn
-            from .delivery import format as dfmt
-
-            subject, text = dfmt.alert_message(result["alert"])
-            # `channels` = the alert's VIA list (None = every enabled channel, the old behaviour)
-            spawn(request.app, "alert", alert_id, subject, text, {"kind": "alert", "symbol": result["alert"]["symbol"]},
-                  channels=result["alert"]["channels"])
+        # Exactly once per firing (`changed`), pushed to email/Telegram/webhook in the background by the shared fired path.
+        # No `broadcast` here: the calling browser already knows; only the engine pushes an `A` frame.
+        if not body.get("synthetic"):
+            announce("alert", result, route_deliver(request.app))
         return result
     except UserDataError as e:
         return error(e)
@@ -483,13 +480,7 @@ async def trigger_news_alert(request: Request, alert_id: int):
     try:
         body = await json_object(request)
         result = await news_alerts_store(request).trigger(alert_id, body.get("headline"), body.get("url"), body.get("at"))
-        if result["changed"]:
-            from .alert_channels import spawn
-            from .delivery import format as dfmt
-
-            subject, text = dfmt.news_alert_message(result["alert"])
-            spawn(request.app, "news", alert_id, subject, text, {"kind": "news", "word": result["alert"]["word"]},
-                  channels=result["alert"]["channels"])
+        announce("news", result, route_deliver(request.app))  # same fired path as the engine, minus its `A` frame
         return result
     except UserDataError as e:
         return error(e)

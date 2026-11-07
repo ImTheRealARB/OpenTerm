@@ -12,8 +12,9 @@ import aiosqlite
 import orjson
 
 from . import alert_channels
+from .idents import STORED_SYMBOL_RE
 from .symbols import resolve
-from .userdata import SYMBOL_RE, UserDataError, layout_name
+from .userdata import UserDataError, layout_name
 
 MAX_POSITIONS = 500
 MAX_ALERTS = 200
@@ -54,7 +55,7 @@ def check_position(raw) -> dict:
     if not isinstance(sym, str) or not sym.strip():
         raise UserDataError("bad_request", "POSITION NEEDS symbol")
     symbol = resolve(sym)
-    if not SYMBOL_RE.match(symbol):
+    if not STORED_SYMBOL_RE.match(symbol):
         raise UserDataError("bad_request", f"BAD SYMBOL: {symbol[:24]}")
     qty = _number(raw.get("qty"), f"{symbol} QTY")
     if abs(qty) < EPS:
@@ -118,7 +119,7 @@ def check_alert(body: dict) -> tuple[str, str, str, float]:
     if not isinstance(sym, str) or not sym.strip():
         raise UserDataError("bad_request", "ALERT NEEDS symbol")
     symbol = resolve(sym)
-    if not SYMBOL_RE.match(symbol):
+    if not STORED_SYMBOL_RE.match(symbol):
         raise UserDataError("bad_request", f"BAD SYMBOL: {symbol[:24]}")
     op, unit = body.get("op"), body.get("unit", "price")
     if op not in OPS:

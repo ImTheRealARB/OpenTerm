@@ -9,8 +9,9 @@ import time
 import aiosqlite
 
 from . import alert_channels
+from .idents import STORED_SYMBOL_RE
 from .symbols import resolve
-from .userdata import SYMBOL_RE, UserDataError
+from .userdata import UserDataError
 
 MAX_NEWS_ALERTS = 50
 WORD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .&'/-]{0,38}[A-Za-z0-9.]\Z|^[A-Za-z0-9]{2}\Z")
@@ -31,7 +32,7 @@ def check(body: dict) -> tuple[str, str | None]:
     if symbol in (None, ""):
         return word.upper(), None
     symbol = str(symbol).strip().upper()
-    if not SYMBOL_RE.match(symbol):
+    if not STORED_SYMBOL_RE.match(symbol):
         raise UserDataError("bad_request", f"BAD SYMBOL: {symbol}")
     return word.upper(), resolve(symbol)
 

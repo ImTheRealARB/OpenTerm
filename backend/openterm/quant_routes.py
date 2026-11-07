@@ -14,14 +14,16 @@ from datetime import date
 import orjson
 from fastapi import APIRouter, Request
 
+from . import cachekeys as ck
 from .api import bt_of, portfolios
+from .barfetch import fetch_bars
 from .errors import DataError
 from .http_util import error, jobs_of, json_object, svc, user
 from .jobs.kinds import BadParams
 from .quantjobs import sectors as sx
 from .ranges import normalize
 from .responses import Orjson, OrjsonRoute
-from .symbols import SYNTHETIC_RE, resolve
+from .symbols import resolve
 from .userdata import UserDataError
 
 router = APIRouter(prefix="/api", route_class=OrjsonRoute)
@@ -84,36 +86,11 @@ async def _pick(request: Request, body: dict) -> tuple[dict | None, str | None]:
 
 
 async def _bars(request: Request, symbols: list[str], range_: str, tolerate: bool = False) -> tuple[dict, dict]:
-    """(envelopes by symbol, DataErrors by symbol). Without `tolerate` the first failure is raised, named."""
-    gate = asyncio.Semaphore(4)  # Yahoo's bucket is 4 requests/s: a wider burst trips its breaker, so a rate-limited call waits and retries
+    """(envelopes by symbol, DataErrors by symbol). Without `tolerate` the first failure is raised, named.
 
-    async def one(sym: str, i: int) -> dict:
-        if not SYNTHETIC_RE.match(sym):  # synthetic bars never touch the network: no pacing
-            await asyncio.sleep(max(0, i - 5) * 0.26)  # past the burst of 8, stay under 4 requests/s (a 429 opens the breaker for 5 s)
-        async with gate:
-            for attempt in range(4):
-                try:
-                    return await svc(request).history(sym, range_, "1d")
-                except DataError as e:
-                    if e.kind != "unavailable" or attempt == 3:
-                        raise
-                    await asyncio.sleep(0.6)
-            raise AssertionError("unreachable")
-
-    res = await asyncio.gather(*(one(s, i) for i, s in enumerate(symbols)), return_exceptions=True)
-    ok: dict = {}
-    bad: dict = {}
-    for sym, r in zip(symbols, res, strict=True):
-        if isinstance(r, DataError):
-            bad[sym] = r
-        elif isinstance(r, BaseException):
-            raise r
-        else:
-            ok[sym] = r
-    if bad and not tolerate:
-        sym, e = next(iter(bad.items()))
-        raise DataError(e.kind, f"{sym}: {e}", getattr(e, "detail", None))
-    return ok, bad
+    The pacing (Yahoo's burst limit, retry and pause) lives in `barfetch.py`, shared by every multi-symbol route.
+    """
+    return await fetch_bars(svc(request), symbols, range_, tolerate)
 
 
 def _slim(env: dict) -> dict:
@@ -257,7 +234,7 @@ async def _bench_weights(request: Request, bench: str) -> tuple[dict[str, float]
         return {"data": {"sectors": fund_facts(summary)["sectors"]}, "fallback_from": failed, "source": "yahoo_research"}
 
     try:
-        env = await s.swr(f"q:fundsectors:{bench}", 3600.0, fetch)
+        env = await s.swr(ck.quant("fundsectors", bench), 3600.0, fetch)
     except DataError:
         return None, {}
     return sx.bench_weights(env["data"]["sectors"]), env
@@ -313,7 +290,7 @@ async def _factors(request: Request) -> dict:
         return {"data": {"dates": out["dates"], "cols": out["cols"]}, "source": out["source"], "fallback_from": failed}
 
     try:
-        return await s.swr("q:kenfrench", FACTOR_TTL, fetch)
+        return await s.swr(ck.quant("kenfrench"), FACTOR_TTL, fetch)
     except DataError as e:
         raise DataError(e.kind, f"FACTOR DATA (KEN FRENCH): {e}", getattr(e, "detail", None)) from None
 

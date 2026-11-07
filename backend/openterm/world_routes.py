@@ -8,9 +8,10 @@ import time
 from fastapi import APIRouter, Query, Request
 
 from .http_util import data_errors, error, svc
+from .idents import STORED_SYMBOL_RE
 from .responses import OrjsonRoute
 from .symbols import resolve
-from .userdata import SYMBOL_RE, UserDataError
+from .userdata import UserDataError
 from .world.tickbuf import BARS, SOURCE_LABEL, bucket
 
 router = APIRouter(prefix="/api/world", route_class=OrjsonRoute)
@@ -147,7 +148,7 @@ async def ticks(request: Request, symbol: str, bar: str = Query("5s", max_length
     """GIP: time-bucketed bars built from the live ticks this server has seen for the symbol (nothing is invented: no ticks = empty)."""
     try:
         sym = resolve(symbol)
-        if not SYMBOL_RE.match(sym):
+        if not STORED_SYMBOL_RE.match(sym):
             raise UserDataError("bad_request", f"BAD SYMBOL: {symbol[:24]}")
         if bar not in BARS:
             raise UserDataError("bad_request", f"BAR MUST BE ONE OF {' '.join(BARS)}")
