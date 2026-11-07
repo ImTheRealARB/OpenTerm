@@ -178,3 +178,21 @@ def test_opencodego_sends_a_stable_session_id_and_our_user_agent():
     # other providers are unchanged: no session header, no User-Agent override
     _, h4, _ = openai_compat.request("openai", "k" * 20, opening, "gpt-x", None, 100, 0.1)
     assert "x-opencode-session" not in h4 and "User-Agent" not in h4
+
+
+def test_flat_fee_providers_are_priced_zero_and_a_config_price_still_wins():
+    # 2026-11-07: a real OpenCode Go run was refused "PRICE UNKNOWN"; a subscription costs nothing per call.
+    import asyncio
+
+    from openterm.llm import spend
+    from openterm.llm.client import FLAT_FEE, Gateway
+
+    assert "opencodego" in FLAT_FEE
+    gw = Gateway.__new__(Gateway)  # price() only reads self.prices; no DB or network needed
+    gw.prices = {}
+    p = asyncio.run(gw.price("opencodego", "deepseek-v4.1-flash"))
+    assert p == {"input": 0.0, "output": 0.0} and spend.check(0.0, 1.0, 4000, p, local=False) is None
+    gw.prices = {"opencodego": {"deepseek-v4.1-flash": {"input": 1.0, "output": 2.0}}}
+    assert asyncio.run(gw.price("opencodego", "deepseek-v4.1-flash")) == {"input": 1.0, "output": 2.0}
+    gw.prices = {}
+    assert asyncio.run(gw.price("openai", "gpt-x")) is None  # per-token providers still need a price
