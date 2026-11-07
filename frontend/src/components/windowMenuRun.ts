@@ -10,7 +10,6 @@ import { menuItems, menuKey, type FnInfo, type MenuIndex, type MenuItem, type Me
 export const windowMenu = createStore<MenuState | null>(null);
 
 export const FN_INFO: FnInfo = {
-  isBuilt: (code) => !!FUNCTIONS.get(code)?.load,
   title: (code) => FUNCTIONS.get(code)?.title ?? code,
   related: relatedCodes,
 };

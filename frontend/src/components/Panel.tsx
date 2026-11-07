@@ -32,15 +32,6 @@ function Painted({ panelId, children }: { panelId: number; children: ReactNode }
   return <>{children}</>;
 }
 
-function NotBuilt({ code }: { code: string }) {
-  const def = FUNCTIONS.get(code)!;
-  return (
-    <div>
-      <span className="warn">{code}</span> {def.title.toUpperCase()}: <span className="warn">NOT BUILT YET (PHASE {def.phase})</span>
-    </div>
-  );
-}
-
 function Empty() {
   return <div className="dim">EMPTY PANEL. TYPE A COMMAND, E.G. AAPL GP</div>;
 }
@@ -58,10 +49,11 @@ function FunctionView({ panelId, view }: { panelId: number; view: ReturnType<typ
   const [error, setError] = useReducer((_: string | null, e: string | null) => e, null);
 
   useEffect(() => {
-    if (def?.load && !Mod) loadModule(code).then(rerender, (e: Error) => setError(`CANNOT LOAD ${code}: ${e.message}`));
+    if (def && !Mod) loadModule(code).then(rerender, (e: Error) => setError(`CANNOT LOAD ${code}: ${e.message}`));
   }, [code, def, Mod]);
 
-  if (!def?.load) return <NotBuilt code={code} />;
+  // Not reachable from a command or a saved layout (both drop unknown codes first); a plain error beats a crash if it ever happens.
+  if (!def) return <div className="err">UNKNOWN FUNCTION: {code}</div>;
   if (error) return <div className="err">{error}</div>;
   if (!Mod) return <div className="dim">LOADING {code}…</div>;
   return (

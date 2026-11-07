@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isFunction } from "../functions/registry";
 import { LAYOUT_NAME_RE, parseLayout, snapshot } from "./layoutState";
 import type { WorkspaceState } from "./workspace";
 
@@ -53,6 +54,21 @@ describe("parseLayout", () => {
     expect(Object.keys(s.panels)).toEqual(["2", "3"]);
     expect(s.focus).toBe(2);
     expect(s.maximized).toBe(3);
+  });
+});
+
+describe("saved layouts and the real registry", () => {
+  // A function that is not in the registry (a removed stub such as UNLK, or a typo) is just an unknown command. A layout that
+  // still names it keeps the panel (and its security) but loses the function, so the panel opens empty instead of crashing.
+  it("drops a function the registry does not know and keeps the panel", () => {
+    expect(isFunction("UNLK")).toBe(false);
+    const raw = {
+      layout: { t: "leaf", id: 1 },
+      panels: { 1: { views: [{ fn: "UNLK", security: { symbol: "AAPL" }, args: [] }], pos: 0 } },
+      focus: 1,
+    };
+    const s = parseLayout(raw, isFunction)!;
+    expect(s.panels[1].views[0]).toEqual({ security: { symbol: "AAPL" }, args: [] });
   });
 });
 

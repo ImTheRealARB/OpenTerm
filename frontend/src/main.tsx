@@ -41,7 +41,7 @@ afterPaint(() => {
   const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
   // A few chunks per idle slot, not all ~88 at once, so the first keystrokes and the first quote fetch are not starved.
   idlePreload(
-    FUNCTION_LIST.filter((f) => f.idlePreload !== false && f.load).map((f) => f.code),
+    FUNCTION_LIST.filter((f) => f.idlePreload !== false).map((f) => f.code),
     loadModule,
     idle,
   );

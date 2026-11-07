@@ -177,3 +177,25 @@ test("Ctrl+Shift+Arrows resize the focused panel without a mouse", async ({ page
   for (let i = 0; i < 30; i++) await page.keyboard.press("Control+Shift+ArrowRight");
   expect(await w(3)).toBeGreaterThan(50);
 });
+
+test("a saved layout naming a function that no longer exists loads it as an empty panel, not a crash", async ({ page }) => {
+  const be = await fakeBackend(page);
+  // UNLK used to be a registry stub and is gone; a layout saved back then still names it. Panel 2 is a normal function.
+  be.layouts.set("OLD", {
+    updated_at: 1,
+    state: {
+      layout: { t: "split", dir: "v", ratio: 0.5, a: { t: "leaf", id: 1 }, b: { t: "leaf", id: 2 } },
+      panels: {
+        1: { id: 1, views: [{ fn: "UNLK", args: [] }], pos: 0 },
+        2: { id: 2, views: [{ fn: "Q", args: ["AAPL"] }], pos: 0 },
+      },
+      focus: 1,
+    },
+  });
+  await openApp(page);
+  await cmd(page, "LAYOUT OLD");
+  await expect(msg(page)).toHaveText("LAYOUT OLD LOADED");
+  await expect(panels(page)).toHaveCount(2);
+  await expect(panel(page, 1)).toContainText("EMPTY PANEL"); // the unknown function was dropped, the panel stays
+  await expect(panel(page, 2).locator(".ph")).toContainText("Q");
+});

@@ -86,7 +86,6 @@ export function HelpDrawer() {
           {/* 1. what the panel is for, in one sentence */}
           <p className="hd-purpose" data-testid="help-purpose">{purposeOf(def.code, def.title)}</p>
           <div className="dim">Category: {categoryOf(def.code)}</div>
-          {!def.load && <div className="warn">Not built yet (phase {def.phase})</div>}
           {/* 2. its buttons (the row under the title bar) */}
           {buttons.length > 0 && (
             <>

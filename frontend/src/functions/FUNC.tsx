@@ -27,7 +27,7 @@ export default function FUNC({ panelId }: { panelId: number }) {
   const all = useMemo(
     () =>
       buildRows(
-        FUNCTION_LIST.map((f) => ({ ...f, ready: !!f.load })),
+        FUNCTION_LIST,
         ALIASES,
         (c) => CATEGORY_OF[c],
       ),

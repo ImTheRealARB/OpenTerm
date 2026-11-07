@@ -27,7 +27,6 @@ export const viewLabel = (v: View): string => [v.security?.symbol, v.fn ?? "EMPT
 
 /** Lookups the caller supplies, so this module stays free of the function registry. */
 export interface FnInfo {
-  isBuilt(code: string): boolean;
   title(code: string): string;
   /** Codes offered by RELATED, in order: the security list when the panel has a security, else the market list (the registry's `related` ranks). */
   related(withSecurity: boolean): readonly string[];
@@ -43,7 +42,7 @@ export function menuItems(menu: MenuIndex, panel: PanelState, info: FnInfo): Men
     const view = panel.views[panel.pos];
     const list = info.related(!!view?.security);
     return list
-      .filter((code) => code !== view?.fn && info.isBuilt(code))
+      .filter((code) => code !== view?.fn)
       .map((fn) => ({ kind: "fn", fn, label: `${fn.padEnd(6)} ${info.title(fn).toUpperCase()}` }));
   }
   return OPTIONS.map((o) => ({ kind: "action", ...o }));

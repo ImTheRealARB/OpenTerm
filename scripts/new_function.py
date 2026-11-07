@@ -1,7 +1,7 @@
 """Scaffolds a new function (panel): the panel file, the registry entry, a vitest stub, then regenerates docs/FUNCTIONS.md.
 
     python scripts/new_function.py FOO
-    python scripts/new_function.py FOO --title "What it does" --security --args "[1Y|5Y]" --phase 19
+    python scripts/new_function.py FOO --title "What it does" --security --args "[1Y|5Y]"
     python scripts/new_function.py FOO --dry-run        # print the plan, write nothing
 
 It refuses to overwrite: if the code is in the registry, or `frontend/src/functions/<NAME>.tsx` or
@@ -58,7 +58,7 @@ def lf(text: str) -> bytes:
     return text.replace("\r\n", "\n").encode("utf-8")
 
 
-def plan(name: str, title: str, security: bool, args: str, phase: int) -> dict[Path, bytes]:
+def plan(name: str, title: str, security: bool, args: str) -> dict[Path, bytes]:
     parts = ""
     if security:
         parts += " for {security?.symbol ?? \"(no security)\"}"
@@ -70,11 +70,11 @@ def plan(name: str, title: str, security: bool, args: str, phase: int) -> dict[P
     }
 
 
-def registry_line(name: str, title: str, security: bool, args: str, phase: int) -> str:
+def registry_line(name: str, title: str, security: bool, args: str) -> str:
     bits = [f"code: {json.dumps(name)}", f"title: {json.dumps(title, ensure_ascii=False)}", f"needsSecurity: {str(security).lower()}"]
     if args:
         bits.append(f"argsSchema: {json.dumps(args, ensure_ascii=False)}")
-    bits += [f"phase: {phase}", f'load: () => import("./{name}")']
+    bits.append(f'load: () => import("./{name}")')
     return "  { " + ", ".join(bits) + " },"
 
 
@@ -84,7 +84,6 @@ def main() -> int:
     ap.add_argument("--title", default=None, help="one-line description shown in HELP (default: the code)")
     ap.add_argument("--security", action="store_true", help="needsSecurity: true (falls back to the panel's sticky security)")
     ap.add_argument("--args", default="", help='argsSchema text shown in HELP, e.g. "[1Y|5Y]"')
-    ap.add_argument("--phase", type=int, default=None, help="build phase (default: the highest phase in the registry)")
     ap.add_argument("--dry-run", action="store_true", help="print the plan and write nothing")
     ns = ap.parse_args()
 
@@ -100,15 +99,14 @@ def main() -> int:
         print(f"REFUSED: {name} is already in registry.ts", file=sys.stderr)
         return 1
     title = ns.title or name
-    phase = ns.phase if ns.phase is not None else max(int(p) for p in re.findall(r"phase: (\d+)", src))
-    files = plan(name, title, ns.security, ns.args, phase)
+    files = plan(name, title, ns.security, ns.args)
     existing = {p.name.lower() for p in FUNCS.iterdir()}
     clash = [p for p in files if p.name.lower() in existing]
     if clash:
         print("REFUSED: would overwrite " + ", ".join(str(p.relative_to(ROOT)) for p in clash), file=sys.stderr)
         return 1
 
-    line = registry_line(name, title, ns.security, ns.args, phase)
+    line = registry_line(name, title, ns.security, ns.args)
     print(("DRY RUN: would write" if ns.dry_run else "Writing") + ":")
     for p in files:
         print(f"  create {p.relative_to(ROOT)}")
