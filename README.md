@@ -217,7 +217,7 @@ anywhere except their own provider.
 | FRED, EIA, BLS, BEA, Census | Series titles and search, energy, US jobs, prices, GDP and trade |
 | Kite Connect (paid) | The first source for Indian markets; the login lasts one trading day, then Yahoo takes over |
 | UN Comtrade, Companies House, Etherscan, AISstream, Marketaux | Trade flows, UK companies, Ethereum, live ships, news sentiment (all free) |
-| An AI provider (OpenRouter, Anthropic, OpenAI and others) | The optional AI panels, billed by that provider |
+| An AI provider (OpenRouter, Anthropic, OpenAI, an OpenCode Go subscription and others) | The optional AI panels, billed by that provider (OpenCode Go: your flat subscription) |
 | Telegram, email or a webhook | Alerts and a daily brief sent to you (off by default) |
 
 For `FA`, `FIL` and `OWN`, the SEC asks every program to say who is calling: set
