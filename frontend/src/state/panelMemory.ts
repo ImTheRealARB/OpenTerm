@@ -17,6 +17,8 @@ interface Entry {
   fn: string;
   id: number;
   value: unknown;
+  /** What a fresh panel starts with; `memResetAll` puts this back. */
+  initial: unknown;
   listeners: Set<() => void>;
 }
 
@@ -28,7 +30,7 @@ export function memGet<T>(fn: string, id: number, slot: string, initial: T): T {
   const k = keyOf(fn, id, slot);
   let e = entries.get(k);
   if (!e) {
-    e = { fn, id, value: initial, listeners: new Set() };
+    e = { fn, id, value: initial, initial, listeners: new Set() };
     entries.set(k, e);
   }
   return e.value as T;
@@ -65,6 +67,22 @@ export function pruneMemory(s: { panels: Record<number, PanelState> }): void {
   for (const [k, e] of entries) {
     const p = s.panels[e.id];
     if (!p || !p.views.some((v) => v.fn === e.fn)) entries.delete(k);
+  }
+}
+
+/**
+ * Puts every entry back to its initial value and tells the mounted readers.
+ * A layout load replaces the whole workspace, so no panel may inherit a conversation, document
+ * or run from whatever held its id before. `pruneMemory` is not enough: when the old and the new
+ * layout both have an AI panel under the same id, the function is still "in its history" and the
+ * old chat would survive. The entries are kept (not deleted) so panels that stay mounted through
+ * the load keep their subscription and show the empty state.
+ */
+export function memResetAll(): void {
+  for (const e of entries.values()) {
+    if (Object.is(e.value, e.initial)) continue;
+    e.value = e.initial;
+    [...e.listeners].forEach((l) => l());
   }
 }
 

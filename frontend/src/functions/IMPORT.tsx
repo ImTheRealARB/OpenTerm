@@ -60,8 +60,7 @@ function Stored({ panelId, del }: { panelId: number; del?: string }) {
     if (del === undefined) return void reload();
     if (!del) setMsg("USAGE: IMPORT DEL <SYMBOL>");
     else void remove(del).then(reload);
-    // runs once per command
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per command
   }, [del]);
 
   useEffect(
@@ -81,8 +80,7 @@ function Stored({ panelId, del }: { panelId: number; del?: string }) {
         }
         return false;
       }),
-    // everything is read through `latest`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- everything is read through `latest`
     [panelId, latest],
   );
 

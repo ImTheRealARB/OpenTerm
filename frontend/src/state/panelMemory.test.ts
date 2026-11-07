@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { memClear, memGet, memSet, memSubscribe, pruneMemory } from "./panelMemory";
+import { memClear, memGet, memResetAll, memSet, memSubscribe, pruneMemory } from "./panelMemory";
 import type { PanelState } from "./workspace";
 
 const panels = (spec: Record<number, string[]>): { panels: Record<number, PanelState> } => ({
@@ -80,5 +80,19 @@ describe("panel memory", () => {
     memGet("AI", 1, "turns", ["chat"]);
     pruneMemory(panels({ 1: ["AI", "GP"] }));
     expect(memGet("AI", 1, "turns", [] as string[])).toEqual(["chat"]);
+  });
+
+  it("memResetAll (layout load) wipes a chat even when the same id still has that function", () => {
+    memGet("AI", 1, "turns", [] as string[]);
+    memSet("AI", 1, "turns", ["old chat"]);
+    const l = vi.fn();
+    memSubscribe("AI", 1, "turns", [] as string[], l);
+    memResetAll();
+    // pruneMemory would keep this (panel 1 still has AI); the reset must not.
+    pruneMemory(panels({ 1: ["AI"] }));
+    expect(memGet("AI", 1, "turns", ["x"])).toEqual([]);
+    expect(l).toHaveBeenCalledTimes(1); // a mounted panel is told, and stays subscribed
+    memSet("AI", 1, "turns", ["new chat"]);
+    expect(l).toHaveBeenCalledTimes(2);
   });
 });

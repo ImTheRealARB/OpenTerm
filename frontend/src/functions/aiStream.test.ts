@@ -105,4 +105,10 @@ describe("stopTurn", () => {
     const done = { ...newTurn("q"), status: "done" as const };
     expect(stopTurn(done, "CANCELLED")).toBe(done);
   });
+  it("Esc after the answer finished shows no CANCELLED (ESC) and keeps the label", () => {
+    const done = { ...newTurn("q"), status: "done" as const, label: "GROUNDED" };
+    const after = stopTurn(done, "CANCELLED (ESC)");
+    expect(after.notices).not.toContain("CANCELLED (ESC)");
+    expect(after.label).toBe("GROUNDED");
+  });
 });

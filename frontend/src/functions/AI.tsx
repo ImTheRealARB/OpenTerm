@@ -240,7 +240,10 @@ export default function AI({ panelId, args }: FunctionProps) {
         if (gone) {
           /* already marked INCOMPLETE when the panel moved on */
         } else if (isAbort(e)) {
-          setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? { ...t, status: "done", label: "INCOMPLETE", notices: [...t.notices, "CANCELLED (ESC)"] } : t)));
+          // stopTurn only touches a turn that is still running: if the answer had already finished
+          // when the abort landed (Esc pressed in the last moment), nothing was cancelled, so the
+          // finished turn must not be relabelled INCOMPLETE or told "CANCELLED (ESC)".
+          setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? stopTurn(t, "CANCELLED (ESC)") : t)));
         } else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
       } finally {
         unwatch();

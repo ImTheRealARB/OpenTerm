@@ -82,8 +82,7 @@ export default function JOBS({ panelId, args }: FunctionProps) {
         setMsg({ text: `SUBMITTED ${j.id}${j.cached ? " (CACHED RESULT)" : ""}`, cls: "up" });
       })
       .catch((e) => setMsg({ text: errText(e), cls: "err" }));
-    // mount only: the args are consumed here
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only: the args are consumed here
   }, []);
 
   // Keep the cursor on the same job while rows come and go (newest first, so inserts shift the indexes).

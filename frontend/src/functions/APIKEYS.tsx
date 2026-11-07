@@ -249,8 +249,7 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    // everything is read through `latest`; save/test/remove only set state and call the api
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- everything is read through `latest`; save/test/remove only set state and call the api
     [panelId, latest],
   );
 
