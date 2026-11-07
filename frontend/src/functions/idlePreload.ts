@@ -13,7 +13,7 @@ export function idlePreload(
   const step = () => {
     const mine = codes.slice(next, next + batch);
     next += batch;
-    // Wait for this batch to settle (a failed download is ignored), then ask for the next idle slot.
+    // Wait for this batch to settle (a failed download is ignored on purpose: idle prefetch only, opening the panel loads it again and reports), then ask for the next idle slot.
     void Promise.all(mine.map((c) => load(c).catch(() => {}))).then(() => {
       if (next < codes.length) schedule(step);
     });

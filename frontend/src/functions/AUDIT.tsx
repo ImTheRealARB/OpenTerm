@@ -57,7 +57,6 @@ export default function AUDIT({ panelId }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         const k = e.key.toLowerCase();
         if (k === "r") void load();
         else if (k === "arrowdown" || k === "j") setSel((s) => Math.min(count.current - 1, s + 1));

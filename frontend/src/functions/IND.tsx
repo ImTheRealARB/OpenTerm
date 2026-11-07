@@ -161,7 +161,6 @@ export default function IND({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const m = latest.current.mode;
         switch (e.key) {
           case "ArrowDown": case "j": case "J": move(1); return true;

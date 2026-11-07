@@ -18,14 +18,13 @@ import type { MfFund, MfReturnRow, MfSearchRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { fmtNav, fmtPct, isoOfEpoch, MF_USAGE, NAV_NORMAL_AGE_DAYS, navAgeDays, navAgeText, parseMfArgs, searchHeadline } from "./mfArgs";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
-const NO_INDICATORS: never[] = [];
 
 const SEARCH_COLS: Column<MfSearchRow>[] = [
   { title: "CODE", width: 9, text: (r) => String(r.code), color: () => "acc" },
@@ -87,7 +86,6 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         if (navKey(e, grid.current, cur.rowCount)) return true;
         switch (e.key) {
@@ -172,7 +170,7 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
             <div className="vis" data-testid="mf-chart">
               <div className="line dim">NAV PER UNIT, DAILY{crossOn ? " · CROSSHAIR (←/→, X TO EXIT)" : ""}</div>
               <div className="xychart">
-                <ChartView key={fund.code} ref={chart} data={bars} type={type} log={false} indicators={NO_INDICATORS} readoutLabel="NAV" />
+                <ChartView key={fund.code} ref={chart} data={bars} type={type} log={false} readoutLabel="NAV" />
               </div>
             </div>
           )}

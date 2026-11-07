@@ -12,7 +12,7 @@ import type { FecCycle, FecItem, FecPayload } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -68,7 +68,6 @@ function FecView({ panelId, query }: { panelId: number; query: string }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.search ? cur.search.length : cur.cycles.length)) return true;

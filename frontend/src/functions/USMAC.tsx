@@ -13,7 +13,7 @@ import { usePanelRefresh } from "./panelRefresh";
 import { ApiError } from "../net/core";
 import type { Envelope, UsMacroPayload, UsSeries } from "../net/types";
 import { worldApi } from "../net/worldApi";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -110,7 +110,6 @@ export default function USMAC({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         if (navKey(e, grid.current, cur.count)) return true;
         if (e.key === "Enter" && !cur.open) {

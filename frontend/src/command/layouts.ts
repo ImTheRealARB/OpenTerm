@@ -40,6 +40,8 @@ export async function saveLayout(raw: string): Promise<boolean> {
   }
   setLayoutName(name);
   info(`LAYOUT ${name} SAVED (${Object.keys(snap.panels).length} PANELS)`);
+  // Ignored on purpose: this only refreshes the layout NAMES used for autocomplete, after the save/delete above already
+  // succeeded and said so. A real use of the list (typing LAYOUT ...) refetches and reports a failure then.
   void refreshLayouts().catch(() => {});
   return true;
 }
@@ -72,6 +74,8 @@ export async function deleteLayout(raw: string): Promise<boolean> {
   }
   if (workspace.get().name === name) setLayoutName(undefined);
   info(`LAYOUT ${name} DELETED`);
+  // Ignored on purpose: this only refreshes the layout NAMES used for autocomplete, after the save/delete above already
+  // succeeded and said so. A real use of the list (typing LAYOUT ...) refetches and reports a failure then.
   void refreshLayouts().catch(() => {});
   return true;
 }

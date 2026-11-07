@@ -9,7 +9,7 @@ import { macroApi } from "../net/macroApi";
 import type { Earning, EarningsPayload, Envelope } from "../net/types";
 import { navigate, replaceView } from "../state/workspace";
 import { addDays, dayLabel, isWeekend, nyToday, parseErnArgs } from "./macroArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";

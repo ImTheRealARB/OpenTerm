@@ -379,7 +379,6 @@ export default function BT({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
         const { state: s, view: v, views: vs, run: r, metricRows: m, parsed: p, job: j, valJob: vj, valRun: vr, mc: mcr, wf: wfr } = latest.current;
         // Tab is the global next-panel key and never reaches a panel: V / Shift+V cycle the views, 1-4 pick one.
@@ -500,7 +499,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           </div>
           {shown === "CHART" && chartBits && chartFor !== run.id && <div className="dim">DRAWING CHART…</div>}
           {shown === "CHART" && chartBits && chartFor === run.id && (
-            <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
+            <ChartView key={run.id} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} readoutLabel="EQUITY" lowerPane={chartBits.drawdown} />
           )}
           {shown === "METRICS" && <Grid ref={grid} columns={METRIC_COLS} rows={metricRows} />}
           {shown === "TRADES" && (trades.length ? <Grid ref={grid} columns={TRADE_COLS} rows={trades} /> : <PanelNote kind="empty" hint="The rule never fired in this window. Try a longer range or a looser rule, e.g. BT AAPL SMA20>SMA50 1D 10Y.">NO TRADES IN THIS RUN</PanelNote>)}
@@ -518,7 +517,6 @@ export default function BT({ panelId, args }: FunctionProps) {
   );
 }
 
-const NO_INDICATORS: never[] = [];
 const HIST_BINS = 20;
 
 function McView({ mc }: { mc: BtMcResult }) {

@@ -147,7 +147,6 @@ export default function JOBS({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         const { jobs: cur, view: v } = latest.current;
         if (e.key === "Escape" && v) {

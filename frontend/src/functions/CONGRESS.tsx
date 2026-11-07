@@ -12,7 +12,7 @@ import type { CongressPayload, CongressRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -64,7 +64,6 @@ export default function CONGRESS({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.list ? cur.list.length : cur.fields.length)) return true;

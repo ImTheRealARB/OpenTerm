@@ -8,12 +8,11 @@ import { macroApi } from "../net/macroApi";
 import type { Envelope, FredSeries } from "../net/types";
 import { navigate, replaceView } from "../state/workspace";
 import { FRED_RANGES, fmtSeriesChange, fmtSeriesValue, parseFredArgs } from "./macroArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
 
 const INTERVAL: Record<string, string> = { Daily: "1d", Weekly: "1wk" };
-const NO_INDICATORS: never[] = [];
 
 /** Observations as chart bars (open = high = low = close). Missing observations are skipped, not interpolated. */
 function toSeriesBars(s: FredSeries): BarData {
@@ -149,7 +148,7 @@ export default function FRED({ panelId, args }: FunctionProps) {
       {error?.kind === "not_found" && <div className="dim">TRY MACRO FOR A LIST OF COMMON SERIES.</div>}
       {!bars && !error && <div className="dim">LOADING {p.id} {p.range}…</div>}
       {bars && d && (
-        <ChartView key={`${d.id}:${p.range}`} ref={chart} data={bars} type={type} log={log} indicators={NO_INDICATORS} readoutLabel={d.units ? d.units.split(" ").slice(0, 2).join(" ").toUpperCase() : d.id} />
+        <ChartView key={`${d.id}:${p.range}`} ref={chart} data={bars} type={type} log={log} readoutLabel={d.units ? d.units.split(" ").slice(0, 2).join(" ").toUpperCase() : d.id} />
       )}
     </div>
   );

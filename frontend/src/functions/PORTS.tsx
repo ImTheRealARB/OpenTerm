@@ -15,7 +15,7 @@ import { mapArgsFor, openMap } from "../map/jump";
 import { ApiError } from "../net/core";
 import type { Envelope, PortRow, PortsPayload } from "../net/types";
 import { worldApi } from "../net/worldApi";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { fmtTons, headline, portLabel, queryArg } from "./portsFormat";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
@@ -89,7 +89,6 @@ export default function PORTS({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
         if (e.key === "m") {
           openMap(panelId, mapArgsFor("PORTS")!); // M = the busiest ports on the map

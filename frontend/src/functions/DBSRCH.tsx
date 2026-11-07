@@ -18,7 +18,7 @@ import { worldApi } from "../net/worldApi";
 import { navigate, replaceView } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
 import { buildDbsrchArgs, count, DATASET_PAGE, DBSRCH_USAGE, hasNext, pageText, parseDbsrchArgs, prevOffset, SERIES_PAGE } from "./dbsrchArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -77,7 +77,6 @@ function DbsrchView({ panelId, q, dataset, offset }: { panelId: number; q: strin
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.rows)) return true;

@@ -8,7 +8,7 @@ import { macroApi } from "../net/macroApi";
 import type { MacroPayload, MacroRow } from "../net/types";
 import { navigate } from "../state/workspace";
 import { fmtSeriesChange, fmtSeriesValue, parseMacroArgs } from "./macroArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { dirColor } from "./quoteRows";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";

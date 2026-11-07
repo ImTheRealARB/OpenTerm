@@ -16,7 +16,7 @@ import { worldApi } from "../net/worldApi";
 import { replaceView } from "../state/workspace";
 import { fmtAge, fmtDegrees, fmtEta, fmtFrom, fmtKnots, fmtLatLon, aisQuery, listeningText, memoryNote, quietText, stepArea } from "./aisArgs";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -85,7 +85,6 @@ export default function AIS({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
         const k = e.key.toLowerCase();
         if (k === "m") {

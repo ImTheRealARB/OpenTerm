@@ -12,7 +12,7 @@ import type { AddrTx } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { agoText, addrQuery, fmtCoin, fmtGwei, shortHex, txTime } from "./addrArgs";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -64,7 +64,6 @@ export default function ADDR({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         if (navKey(e, g, latest.current.txs.length)) return true;
         if (e.key === "Enter") {

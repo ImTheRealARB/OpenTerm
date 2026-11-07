@@ -12,7 +12,7 @@ import { usePanelRefresh } from "./panelRefresh";
 import { ApiError } from "../net/core";
 import type { Envelope, TradePayload, TradeRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -68,7 +68,6 @@ export default function TRADE({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
         return false;
       }),

@@ -179,7 +179,6 @@ export default function SWARM({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         if (e.key === "Escape" && abort.current) {
           abort.current.abort();
           return true;

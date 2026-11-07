@@ -169,7 +169,6 @@ export default function SECF({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         const cur = latest.current;
         if (navKey(e, g, cur.showFunds ? cur.fundRows.length : cur.idents ? cur.rows.length : cur.hits.length)) return true;

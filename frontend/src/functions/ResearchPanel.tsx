@@ -18,7 +18,8 @@ import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { RunCtx } from "./quantRun";
 import type { FunctionProps } from "./registry";
-import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
+import { ErrorLine } from "./panelStatus";
+import { Header, openUrl, useEnvelope } from "./secPanel";
 import { KeyNeeded } from "./KeyRequiredLine";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -104,7 +105,6 @@ export function makeResearchPanel(opts: ResearchOptions) {
     useEffect(
       () =>
         registerPanelKeys(panelId, (e) => {
-          if (e.ctrlKey || e.altKey || e.metaKey) return false;
           if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
           const { rows: cur, count, visuals: nvis, heat: heatShown, d: data, props: pp } = latest.current;
           if (opts.onKey?.(e, pp, data, setFlash, cur[grid.current?.selected() ?? -1])) return true;

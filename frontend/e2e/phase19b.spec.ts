@@ -113,7 +113,7 @@ test("GIP: bars from the tick buffer, labelled with since-when, S cycles the bar
   await expect(p).toContainText("TICKS · YAHOO STREAM");
   await expect(p).toContainText("NOT FROM THE EXCHANGE");
   await expect(p).toContainText("NO TICK VOLUME FROM THIS SOURCE");
-  await expect.poll(() => gauge(page, "chart.drawSegs")).toBeDefined();
+  await expect.poll(() => gauge(page, "chart.rebuilds")).toBeDefined();
   await page.keyboard.press("s");
   await expect(p).toContainText("GIP AAA 15S TICK BARS");
   expect(asked).toEqual(["5s", "15s"]);

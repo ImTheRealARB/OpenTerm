@@ -95,7 +95,6 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         switch (e.key) {
           case "s":
           case "S":
@@ -155,7 +154,7 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
       {d && d.ticks === 0 && (
         <div className="warn">NO TICKS SINCE OPEN: NOTHING HAS TRADED ON {symbol} SINCE THIS SERVER STARTED LISTENING (MARKET CLOSED, OR THE FIRST TICK HAS NOT ARRIVED). WAITING…</div>
       )}
-      {data && <ChartView ref={chart} data={data} type="CANDLE" log={false} indicators={[]} />}
+      {data && <ChartView ref={chart} data={data} type="CANDLE" log={false} />}
     </div>
   );
 }

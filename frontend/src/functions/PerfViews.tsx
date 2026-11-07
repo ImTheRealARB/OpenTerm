@@ -100,11 +100,12 @@ export function TestChart({ panelId, bars }: { panelId: number; bars: number }) 
       }),
     [panelId],
   );
-  const indicators = useMemo(() => [] as never[], []);
+  // PERF CHART runs the GP layer (with no indicators) so the load tests exercise the same code path as GP.
+  const gp = useMemo(() => ({ indicators: [] as never[] }), []);
   return (
     <div className="fn">
       <div className="line warn">PERF CHART: {bars.toLocaleString("en-US")} BARS OF GENERATED TEST DATA · ←/→ PAN · +/- ZOOM</div>
-      <ChartView ref={chart} data={data} type="CANDLE" log={false} indicators={indicators} />
+      <ChartView ref={chart} data={data} type="CANDLE" log={false} gp={gp} />
     </div>
   );
 }

@@ -69,7 +69,6 @@ function Saved({ panelId }: { panelId: number }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         const { rows: r, confirm: c } = latest.current;
         if (!r) return false;
         if (navKey(e, grid.current, r.length)) return true;
@@ -339,7 +338,6 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         const l = latest.current;
         if (l.view === "choose") {
           const list = l.templates;

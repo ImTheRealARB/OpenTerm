@@ -156,6 +156,7 @@ export default function DES({ panelId, security }: FunctionProps) {
     void import("../gui/suggestData")
       .then((m) => m.closest(symbol))
       .then((hits) => alive && setNear(hits.map((h) => ({ label: `Try ${h.symbol}`, onClick: () => void runCommand(h.symbol) }))))
+      // Ignored on purpose: the "Try <ticker>" buttons are extra help; the panel above already shows the real error.
       .catch(() => {});
     return () => {
       alive = false;

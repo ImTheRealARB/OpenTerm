@@ -24,6 +24,7 @@ export async function refreshPortfolios(): Promise<PortfolioInfo[]> {
 
 function changed(): void {
   portfolioVersion.set((n) => n + 1);
+  // Ignored on purpose: only the portfolio NAMES for autocomplete; the change itself already succeeded and said so.
   void refreshPortfolios().catch(() => {});
 }
 

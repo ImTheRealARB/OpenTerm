@@ -10,7 +10,7 @@ import { usePanelRefresh } from "./panelRefresh";
 import type { FedregItem } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -39,7 +39,6 @@ export default function FEDREG({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         const rows = latest.current.items;
         if (navKey(e, g, rows.length)) return true;

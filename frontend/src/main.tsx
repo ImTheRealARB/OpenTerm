@@ -45,5 +45,7 @@ afterPaint(() => {
     loadModule,
     idle,
   );
-  idle(() => void preloadSettingsCommands().catch(() => {})); // THEME / SETTINGS parser chunk (see command/execute.ts)
+  // THEME / SETTINGS parser chunk (see command/execute.ts). A failed idle prefetch is ignored on purpose: the first THEME or
+  // SETTINGS command loads the chunk again and reports a failure then.
+  idle(() => void preloadSettingsCommands().catch(() => {}));
 });

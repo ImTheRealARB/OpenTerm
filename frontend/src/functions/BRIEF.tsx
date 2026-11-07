@@ -50,7 +50,6 @@ export default function BRIEF({ panelId }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (e.key === "r" || e.key === "R") {
           void run(false);
           return true;

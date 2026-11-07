@@ -12,7 +12,7 @@ import type { UkcoFiling, UkcoOfficer, UkcoPayload, UkcoSearchRow } from "../net
 import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -80,7 +80,6 @@ function UkcoView({ panelId, query }: { panelId: number; query: string }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         const g = grid.current;
         const n = cur.search ? cur.search.length : cur.view === "OFFICERS" ? cur.officers.length : cur.filings.length;

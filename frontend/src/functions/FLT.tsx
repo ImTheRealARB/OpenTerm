@@ -17,7 +17,7 @@ import { worldApi } from "../net/worldApi";
 import { replaceView } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
 import { creditsText, fltQuery, FLT_USAGE, fmtAge, fmtFeet, fmtHeading, fmtKt, fmtLatLon, fmtVrate, quietText, stepArea } from "./fltArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -79,7 +79,6 @@ export default function FLT({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
         const k = e.key.toLowerCase();
         if (k === "n" || k === "p") {

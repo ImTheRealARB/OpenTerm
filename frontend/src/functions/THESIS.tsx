@@ -112,7 +112,6 @@ export default function THESIS({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         const k = e.key.toLowerCase();
         if (k !== "d") armed.current = null;
         if (k === "arrowdown" || k === "j") setSel((s) => Math.min(state.current.rows.length - 1, s + 1));

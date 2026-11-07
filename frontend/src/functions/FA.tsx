@@ -11,7 +11,8 @@ import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { isKeyRequired } from "./KeyRequiredLine";
-import { ErrorLine, Header, SEC_UA_HINT, SEC_UA_RE, US_ONLY, useEnvelope } from "./secPanel";
+import { ErrorLine, SEC_UA_HINT, SEC_UA_RE, US_ONLY } from "./panelStatus";
+import { Header, useEnvelope } from "./secPanel";
 import { STATEMENT_TABS, faArgs, faRows, unitNote, type FaGridRow, type FaPayload, type FaPeriod, type StatementTab } from "./secTables";
 import { useCsvExport } from "./tableExport";
 
@@ -98,7 +99,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
   const newest = cols[0];
   const anyDerived = cols.some((p) => p.derived);
   // A plain failure with nothing to show yet gets the shared error note. Key-required and "US filers only" are not
-  // failures (they have their own wording), and when older data is on screen ErrorLine says "SHOWING THE LAST DATA".
+  // failures (they have their own wording), and when older data is on screen ErrorLine says "SHOWING STALE DATA".
   const failedNote = !!error && !env && !isKeyRequired(error) && error.message !== US_ONLY;
   return (
     <div className="fn fa">

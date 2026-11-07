@@ -1,6 +1,6 @@
 /**
  * Phase 11: the shared KEY REQUIRED line. Amber (a missing key is a setup state, not a failure). While it shows,
- * Enter in the focused panel opens APIKEYS on that provider. Used by every shared error line (secPanel, macroUi).
+ * Enter in the focused panel opens APIKEYS on that provider. Used by every shared error line (panelStatus.tsx).
  */
 import { useEffect } from "react";
 import { PanelNote } from "../components/PanelNote";

@@ -8,7 +8,7 @@ import { macroApi } from "../net/macroApi";
 import type { Envelope, YieldCurve } from "../net/types";
 import { navigate } from "../state/workspace";
 import { bpChange, curveShape, fmtBp, fredIdForTenor, nyToday, spreadBp, yieldBar } from "./macroArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";

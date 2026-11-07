@@ -65,7 +65,6 @@ export default function SEAS({ panelId, security, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const n = rowsRef.current.length;
         switch (e.key) {
           case "j":

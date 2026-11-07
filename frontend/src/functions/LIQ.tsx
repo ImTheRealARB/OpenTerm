@@ -12,7 +12,7 @@ import type { LiqEvent } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { joinArg, span, utc } from "./cryptoArgs";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -41,7 +41,6 @@ export default function LIQ({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
         return false;
       }),

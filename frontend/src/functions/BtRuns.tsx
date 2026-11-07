@@ -20,7 +20,6 @@ import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
 import { errText } from "../net/errText";
 
 const signColor = (v: number | null | undefined): CellColor => (v == null || v === 0 ? "fg" : v > 0 ? "up" : "down");
-const NO_INDICATORS: never[] = [];
 const label = (r: BtRunCard) => r.rule ?? (r.strategy ? `STRATEGY ${r.strategy}` : "PYTHON STRATEGY");
 
 interface Row extends BtRunCard {
@@ -120,7 +119,6 @@ export default function BtRuns({ panelId }: { panelId: number }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
         const { rows: r, marks: m, cmp: c, view: v, diffRows: d } = latest.current;
         const k = e.key.toLowerCase();
         if (c) {
@@ -205,7 +203,7 @@ export default function BtRuns({ panelId }: { panelId: number }) {
         {view === "METRICS" ? (
           <Grid ref={grid} columns={DIFF_COLS} rows={diffRows} />
         ) : (
-          chartBits && <ChartView key={`${cmp.a.id}-${cmp.b.id}`} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel="A" />
+          chartBits && <ChartView key={`${cmp.a.id}-${cmp.b.id}`} ref={chart} data={chartBits.data} compare={chartBits.compare} type="LINE" log={false} readoutLabel="A" />
         )}
         {msg && <div className="dim">{msg}</div>}
       </div>

@@ -17,6 +17,8 @@ export function BtRuleLazy({ onRun }: { onRun: (rule: string, symbol: string) =>
         cached = m.default;
         if (alive) setComp(() => m.default);
       })
+      // Ignored on purpose: the GUI rule builder is an optional helper; the BT text command works without it and a later
+      // visit to this panel tries the download again.
       .catch(() => {});
     return () => {
       alive = false;

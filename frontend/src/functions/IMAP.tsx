@@ -125,7 +125,6 @@ export default function IMAP({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const st = live.current;
         if (!st.layout) return false;
         const dirs: Record<string, Dir> = { ArrowLeft: "left", h: "left", ArrowRight: "right", l: "right", ArrowUp: "up", k: "up", ArrowDown: "down", j: "down" };
