@@ -242,6 +242,10 @@ export function CommandLine() {
       e.preventDefault();
       const dir = e.key === "ArrowDown" ? 1 : -1;
       if (items.length && (sel >= 0 || dir === 1) && el.value) {
+        // The user is picking from the list they see: a typing preview that answers after this would replace the list and
+        // reset the highlight, so Enter would run nothing picked (CI run 42317373717, natural.spec "ambiguous name").
+        // No extras chunk yet means no preview can be pending, so there is nothing to cancel and nothing to load.
+        extrasMod?.cancelPreview();
         setSel((i) => Math.min(items.length - 1, Math.max(-1, i + dir)));
       } else {
         const h = history.step(dir === 1 ? 1 : -1);

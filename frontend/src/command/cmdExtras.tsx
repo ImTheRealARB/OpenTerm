@@ -69,8 +69,11 @@ export function runNl(command: string, typed: string, newPanel: boolean, keepFn:
   info(`${typed.trim().toUpperCase()} -> ${command}`);
 }
 
-/** Drops any typing preview that is still waiting (debounce) or in flight, so its answer can no longer touch the list. */
-function cancelPreview(): void {
+/**
+ * Drops any typing preview that is still waiting (debounce) or in flight, so its answer can no longer touch the list.
+ * Called on Enter (below) and when the user moves the highlight with UP/DOWN (CommandLine): both mean "I am acting on this list".
+ */
+export function cancelPreview(): void {
   clearTimeout(timer);
   seq++;
 }
