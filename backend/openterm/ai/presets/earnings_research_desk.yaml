@@ -9,7 +9,7 @@ description: 'Earnings-focused research team: fundamental analyst + earnings rev
 coverage: PARTIAL
 variables:
 - name: target
-  description: Target stock (e.g., AAPL.US, NVDA.US, 700.HK, 600519.SH)
+  description: Target stock (e.g., AAPL, NVDA, RELIANCE.NS)
   required: true
 agents:
 - id: fundamental_analyst
@@ -54,6 +54,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -103,6 +104,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - calendar
   - research
   - news
@@ -167,6 +169,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - options_chain
   - history
   - quote
@@ -220,6 +223,7 @@ agents:
     Use skill for strategy generation and risk analysis.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

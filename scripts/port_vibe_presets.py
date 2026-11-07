@@ -57,9 +57,47 @@ CODES = {
 BUILT_IN = set(swarm.PRESETS)
 OVERRIDES: dict[str, tuple[str, str]] = {}  # code -> (coverage, reason). Empty: the rules decide.
 
+# --- variable examples ------------------------------------------------------------------------------------------------------------------
+# Vibe's variable descriptions give China A-share examples ("600519.SH Kweichow Moutai", "A-shares, Hong Kong"). OpenTerm's owner works in US and Indian
+# markets, so the examples shown in the SWARM variable form are swapped for AAPL, RELIANCE.NS and "US equities, Indian equities". Plain ordered
+# find-and-replace on the DESCRIPTION text only (never a role prompt, never a variable name): most specific phrase first, so a long phrase is replaced
+# before the shorter one inside it. Descriptions about a China-only subject (China bond market, A-share convertible bonds) are left alone on purpose:
+# those desks are about China and the example is the subject, not a default.
+EXAMPLE_SWAPS: tuple[tuple[str, str], ...] = (
+    ("A-shares, Hong Kong, global multi-asset, crypto", "US equities, Indian equities, global multi-asset, crypto"),
+    ("A-shares, Hong Kong, global multi-asset", "US equities, Indian equities, global multi-asset"),
+    ("A-shares, Hong Kong, US equities", "US equities, Indian equities"),
+    ("A-shares, Hong Kong, US, crypto", "US equities, Indian equities, crypto"),
+    ("A-shares, Hong Kong, US", "US equities, Indian equities"),
+    ("A-shares, Hong Kong/US equities", "US equities, Indian equities"),
+    ("A-shares, Hong Kong, crypto", "US equities, Indian equities, crypto"),
+    ("A-shares, Hong Kong, Crypto", "US equities, Indian equities, crypto"),
+    ("A-shares / Hong Kong / US equities / Chinese ADRs", "US equities / Indian equities"),
+    ("A-shares / HK / US / crypto / CSI 300", "US equities / Indian equities / crypto / S&P 500 / Nifty 50"),
+    ("default A-shares; can specify HK/US", "default US equities; can specify Indian equities"),
+    ("default: A-shares; options: global multi-asset, HK/US equities, A-shares + HK",
+     "default: US equities; options: global multi-asset, Indian equities, US + Indian equities"),
+    ("AAPL.US, NVDA.US, 700.HK, 600519.SH", "AAPL, NVDA, RELIANCE.NS"),
+    ("600519.SH Kweichow Moutai, BTC-USDT, AAPL", "AAPL, RELIANCE.NS, BTC-USDT"),
+    ("stock code or name, e.g.: 600519 Kweichow Moutai", "ticker or name, e.g.: AAPL, RELIANCE.NS"),
+    ("Tencent, NVDA, Moutai", "AAPL, RELIANCE.NS"),
+    ("BTC, CSI 300 ETF, AAPL", "BTC, AAPL, RELIANCE.NS"),
+    ("A-share tech", "Indian tech"),
+    ("CSI 300", "Nifty 50"),
+    ("quant hedge / QDII", "quant hedge / international"),
+)
+
+
+def neutral_examples(description: str) -> str:
+    """A variable description with its China-market examples replaced by US / Indian ones (deterministic; text with no match is unchanged)."""
+    for old, new in EXAMPLE_SWAPS:
+        description = description.replace(old, new)
+    return description
+
+
 # --- tools ------------------------------------------------------------------------------------------------------------------------------------
 TOOL_MAP = {  # Vibe tool -> OpenTerm tools
-    "load_skill": ["skill"],
+    "load_skill": ["skill", "skills"],  # a role that may open a playbook may also search the library for one
     "get_market_data": ["history", "quote", "indicators"],
     "factor_analysis": ["quant"], "quantlib_call": ["quant"],
     "backtest": ["backtest_run", "strategy_check"],
@@ -127,7 +165,7 @@ WEB_REPLACEMENTS = [  # (pattern over the role's title + prompt, tools to add): 
     (r"\bsec\b|10-k|10-q|filing|prospectus|regulat", ["filings"]),
 ]
 MAX_TOOLS = 12
-DATA_TOOLS = set(toolbox.REGISTRY) - {"skill", "quant", "backtest_run", "backtest_get", "strategy_check", "rigor", "doc_search"}
+DATA_TOOLS = set(toolbox.REGISTRY) - {"skill", "skills", "quant", "backtest_run", "backtest_get", "strategy_check", "rigor", "doc_search"}
 STUB = {"code": "(not available here: no code execution. Use the `quant` tool where it covers it; otherwise say it is unavailable.)",
         "calc": "(not available here: there is no valuation calculator. Show the arithmetic as plain steps and label assumptions.)",
         "web": "(not available here: no web access. Say what could not be sourced.)",
@@ -342,7 +380,7 @@ def port_one(path: Path, known_skills: set[str]) -> tuple[OrderedDict, dict]:
         limits = [reason] + limits
     doc = OrderedDict(
         name=src["name"], code=code, title=src["title"], description=src["description"], coverage=coverage,
-        variables=[OrderedDict(name=v["name"], description=v.get("description", ""), required=bool(v.get("required", True))) for v in src["variables"]],
+        variables=[OrderedDict(name=v["name"], description=neutral_examples(v.get("description", "")), required=bool(v.get("required", True))) for v in src["variables"]],
         agents=agents, tasks=tasks)
     if limits:
         doc["limits"] = limits

@@ -6,10 +6,12 @@ the first delta, the JSON arguments split across later ones); they are emitted w
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable, Iterator
 
 import orjson
 
+from .. import APP_NAME, __version__
 from .events import Event
 
 BASES = {
@@ -118,4 +120,21 @@ def request(provider: str, key: str | None, messages: list[dict], model: str, to
     headers = {"Accept": "text/event-stream"}
     if key:
         headers["Authorization"] = f"Bearer {key}"
+    if provider == "opencodego":
+        headers.update(opencode_headers(messages))
     return f"{base or BASES[provider]}/chat/completions", headers, body
+
+
+def opencode_headers(messages: list[dict]) -> dict[str, str]:
+    """Headers OpenCode Go asks every client for (https://opencode.ai/v2/docs/console/go/, read 2026-11-07).
+
+    Without `x-opencode-session` Go answers HTTP 400 `MissingSessionID`. The doc asks for "a stable session ID ... for each
+    conversation" (it routes and caches prompts by it) and for the client's own User-Agent, so we say who we are: OpenTerm.
+    The ID is a hash of the conversation's opening messages (the system prompt and the first question). Every round of
+    one conversation (the agent loop resends the same opening plus tool results) gets the same ID; another conversation
+    gets another one. No ID has to be threaded through the agent, swarm and filing code, and nothing random is involved.
+    The hash goes only to OpenCode, which receives those messages anyway.
+    """
+    opening = orjson.dumps(messages[:2], option=orjson.OPT_SORT_KEYS)
+    session = hashlib.sha256(opening).hexdigest()[:32]
+    return {"x-opencode-session": session, "User-Agent": f"{APP_NAME}/{__version__}"}

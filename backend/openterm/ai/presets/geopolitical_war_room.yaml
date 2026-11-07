@@ -12,7 +12,7 @@ variables:
   description: Crisis narrative (e.g., Taiwan Strait escalation, Hormuz blockade, full Red Sea Houthi disruption)
   required: true
 - name: market
-  description: Focus market (e.g., A-shares, Hong Kong, global multi-asset)
+  description: Focus market (e.g., US equities, Indian equities, global multi-asset)
   required: true
 agents:
 - id: geopolitical_analyst
@@ -60,6 +60,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -120,6 +121,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - rates
   - macro
@@ -183,6 +185,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - news
   - energy
   max_iterations: 8
@@ -246,6 +249,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120

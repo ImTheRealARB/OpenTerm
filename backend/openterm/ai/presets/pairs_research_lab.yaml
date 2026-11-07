@@ -9,7 +9,7 @@ description: Correlation scan and cointegration testing in parallel → converge
 coverage: PARTIAL
 variables:
 - name: market
-  description: Target market (e.g. A-shares, Hong Kong, US, crypto)
+  description: Target market (e.g. US equities, Indian equities, crypto)
   required: true
 - name: sector
   description: Sector filter (e.g. banks, consumer, semis); empty = full market
@@ -70,6 +70,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - history
   - quote
@@ -149,6 +150,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - history
   - quote
@@ -214,6 +216,7 @@ agents:
     Use backtest with costs, dynamic hedge, multi-pair rebalancing.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8
@@ -278,6 +281,7 @@ agents:
     Use skill("market-microstructure"), skill("execution-model").
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

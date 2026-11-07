@@ -74,8 +74,36 @@ def _iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, UTC).strftime("%Y-%m-%d")
 
 
+# Most bars the `history` tool returns when the model asks for `bars`. Each bar costs ~65 characters as JSON (a date, four prices, a volume),
+# and a tool result is cut to RESULT_LIMIT (6000) characters, so 250 bars (~16,000 characters) would be chopped in the middle. 80 bars (~5,200
+# characters) is the largest round number that fits whole. Ask for a longer window and `capped` says the answer was cut short.
+HISTORY_BARS_CAP = 80
+
+
+def _px(x: float | None) -> float | None:
+    """Round a price to 4 decimals: Yahoo sends floats like 187.4400024414062, which waste ~10 characters of the result budget each."""
+    return None if x is None else round(x, 4)
+
+
+def _history_bars(env: dict, d: dict, want: int) -> dict:
+    """The last `want` bars as columns (t = ISO dates, o h l c v), labelled with the source and age of the data."""
+    t, c = d.get("t") or [], d.get("c") or []
+    # Keep only bars that have a close; o/h/l/v fall back to None when the provider sent no such column.
+    cols = {k: (d.get(k) or [None] * len(c)) for k in ("o", "h", "l", "v")}
+    rows = [(ts, cols["o"][i], cols["h"][i], cols["l"][i], cl, cols["v"][i]) for i, (ts, cl) in enumerate(zip(t, c, strict=False)) if cl is not None]
+    n = min(want, HISTORY_BARS_CAP)
+    tail = rows[-n:] if rows else []
+    return {"symbol": d.get("symbol"), "range": d.get("range"), "interval": d.get("interval"), "currency": d.get("currency"),
+            "source": env.get("source"), "age_s": env.get("age_s"),
+            "n_bars_total": len(rows), "n_bars": len(tail), "capped": want > HISTORY_BARS_CAP,
+            "t": [_iso(r[0]) for r in tail], "o": [_px(r[1]) for r in tail], "h": [_px(r[2]) for r in tail], "l": [_px(r[3]) for r in tail],
+            "c": [_px(r[4]) for r in tail], "v": [r[5] for r in tail]}
+
+
 def shape_history(env: dict, args: dict) -> dict:
     d = env["data"]
+    if (args.get("bars") or 0) > 0:  # bar-level mode; the default (0) keeps the summary below unchanged
+        return _history_bars(env, d, int(args["bars"]))  # int(): JSON clients may send 5.0
     t, c = d.get("t") or [], d.get("c") or []
     bars = [(ts, cl, h, lo, v) for ts, cl, h, lo, v in zip(t, c, d.get("h") or c, d.get("l") or c, d.get("v") or [0] * len(c), strict=False) if cl is not None]
     if not bars:
@@ -326,8 +354,11 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
          obj({"query": S, "k": {"type": "integer"}}, ["query"]), "local:doc_search", local=_doc_search, doc_only=True),
     Tool("quote", "Latest quote for one or more tickers (comma separated, up to 10): price, change, volume, market cap.",
          obj({"symbols": S}, ["symbols"]), "/api/quote", shape=shape_quote),
-    Tool("history", "Daily price history summary for one ticker: first and last close, period return, high, low, average volume, last 10 closes.",
-         obj({"symbol": S, "range": {"type": "string", "description": "1M 3M 6M 1Y 2Y 5Y 10Y"}}, ["symbol"]), "/api/history", shape=shape_history),
+    Tool("history", "Daily price history for one ticker. By default a summary: first and last close, period return, high, low, average volume, last 10 closes. "
+                    f"Set bars (up to {HISTORY_BARS_CAP}) for the last N daily bars instead: columns t (dates), o, h, l, c, v, with the source and age of the data.",
+         obj({"symbol": S, "range": {"type": "string", "description": "1M 3M 6M 1Y 2Y 5Y 10Y"},
+              "bars": {"type": "integer", "description": f"0 or left out = the summary; N = the last N bars, at most {HISTORY_BARS_CAP}"}}, ["symbol"]),
+         "/api/history", build=lambda a: {"params": {k: v for k, v in a.items() if k != "bars"}}, shape=shape_history),
     Tool("profile", "Company profile: sector, industry, country, employees, business description.", obj({"symbol": S}, ["symbol"]), "/api/profile", shape=shape_slim),
     Tool("fa", "Financial statements (income statement, balance sheet, cash flow) from SEC filings. period A = annual, Q = quarterly.",
          obj({"symbol": S, "period": {"type": "string", "enum": ["A", "Q"]}}, ["symbol"]), "/api/fa", shape=shape_slim),

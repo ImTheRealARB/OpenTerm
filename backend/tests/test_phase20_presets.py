@@ -315,7 +315,7 @@ def test_coverage_is_computed_from_what_was_cut(port, tmp_path):
     src.write_text(yaml.safe_dump(doc), encoding="utf-8")
     d, info = port.port_one(src, {"risk"})
     assert info["coverage"] == "PARTIAL" and d["limits"][0].startswith("NO CODE EXECUTION") and "(roles: a)" in d["limits"][0]
-    assert "quant" in d["agents"][0]["tools"] and "bash" not in d["agents"][0]["tools"] and d["agents"][1]["tools"] == ["skill"]
+    assert "quant" in d["agents"][0]["tools"] and "bash" not in d["agents"][0]["tools"] and d["agents"][1]["tools"] == ["skill", "skills"]
     doc["agents"][0]["system_prompt"] = "Study {target}."  # nothing cut and nothing missing: FULL
     doc["agents"][0]["tools"] = ["load_skill", "get_market_data"]
     src.write_text(yaml.safe_dump(doc), encoding="utf-8")
@@ -324,3 +324,27 @@ def test_coverage_is_computed_from_what_was_cut(port, tmp_path):
     src.write_text(yaml.safe_dump(doc), encoding="utf-8")
     d, info = port.port_one(src, {"risk"})
     assert info["coverage"] == "UNAVAILABLE" and any("NO DATA SOURCE" in x for x in d["limits"])
+
+
+# --- skills tool for roles, neutral variable examples --------------------------------------------------------------------------------------
+def test_every_role_that_can_open_a_playbook_can_also_search_for_one():
+    # Built-in desks and ported desks: "skill" (open a playbook by name) always travels with "skills" (find the name by topic).
+    roles = [r for p in swarm.PRESETS.values() for r in p.roles]
+    roles += [a for f in FILES for a in raw(f)["agents"]]
+    with_skill = [r for r in roles if "skill" in (r.tools if hasattr(r, "tools") else r["tools"])]
+    assert with_skill
+    for r in with_skill:
+        tools = r.tools if hasattr(r, "tools") else r["tools"]
+        assert "skills" in tools, tools
+
+
+@pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
+def test_variable_examples_are_us_and_indian_not_china_a_shares(path):
+    # The generator swaps China A-share examples for AAPL / RELIANCE.NS / "US equities, Indian equities" in variable descriptions only.
+    # Two desks are about China bonds on purpose and keep their subject as the example.
+    china_subject = {"credit_research_team.yaml", "convertible_bond_team.yaml"}
+    for v in raw(path)["variables"]:
+        d = v["description"]
+        assert not re.search(r"Moutai|600519|CSI 300|Chinese ADR|QDII|700\.HK|\.US\b", d), d
+        if path.name not in china_subject:
+            assert "A-share" not in d, d

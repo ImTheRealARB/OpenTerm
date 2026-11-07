@@ -9,7 +9,7 @@ description: Twitter, Telegram, and Reddit analyzed in parallel → Alpha synthe
 coverage: PARTIAL
 variables:
 - name: target
-  description: Focus name or market (e.g. BTC, Tesla, A-share tech, Nasdaq)
+  description: Focus name or market (e.g. BTC, Tesla, Indian tech, Nasdaq)
   required: true
 - name: timeframe
   description: Horizon (real-time / daily / weekly)
@@ -69,6 +69,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -137,6 +138,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -203,6 +205,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - news
   - crypto_funding
   max_iterations: 8
@@ -266,6 +269,7 @@ agents:
     Use quant (fn fact) for factor stats.
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120

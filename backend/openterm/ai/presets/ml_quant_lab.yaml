@@ -9,7 +9,7 @@ description: Feature engineering and model design in parallel; flows into the ba
 coverage: PARTIAL
 variables:
 - name: market
-  description: Target market (e.g., A-shares, Hong Kong/US equities)
+  description: Target market (e.g., US equities, Indian equities)
   required: true
 - name: target_variable
   description: Prediction target (return / direction / volatility)
@@ -49,6 +49,7 @@ agents:
     Use quant (fn fact) for IC (information coefficient) analysis on candidates.
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120
@@ -85,6 +86,7 @@ agents:
     - You have no data tool for this study. Say in two lines that it is unavailable here and why; do not write it from memory.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 - id: backtest_engineer
@@ -120,6 +122,7 @@ agents:
     Use **backtest** for execution; strictly separate OOS data.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

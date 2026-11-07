@@ -110,3 +110,71 @@ def test_each_routed_tool_reaches_a_route_and_its_shaper_accepts_the_answer(clie
     shaped = t.shape(r.json(), ARGS[name])
     assert shaped not in (None, {}, []), name
     assert len(str(shaped)) < 20_000  # shaped small enough for the model's context budget (the runner truncates further)
+
+
+# --- history tool: optional bar-level mode (`bars`) ------------------------------------------------------------------------------------
+def _hist_env(n: int = 300) -> dict:
+    """A fake /api/history envelope with n daily bars (columnar, like the real route)."""
+    return {"data": {"symbol": "AAPL", "range": "1Y", "interval": "1d", "currency": "USD",
+                     "t": list(range(1_700_000_000, 1_700_000_000 + 86400 * n, 86400)), "o": [99.5 + i for i in range(n)],
+                     "h": [101.0 + i for i in range(n)], "l": [99.0 + i for i in range(n)], "c": [100.25 + i for i in range(n)], "v": [1_234_567] * n},
+            "source": "yahoo:fixture", "age_s": 2.5, "stale": False}
+
+
+def test_history_default_is_still_the_summary():
+    from openterm.ai import tools
+
+    out = tools.REGISTRY["history"].shape(_hist_env(), {"symbol": "AAPL"})
+    assert out["n_bars"] == 300 and len(out["recent"]) == 10 and "t" not in out
+    assert tools.REGISTRY["history"].shape(_hist_env(), {"symbol": "AAPL", "bars": 0}) == out  # 0 = the same summary
+
+
+def test_history_bars_returns_last_n_columnar_with_source_and_age():
+    from openterm.ai import tools
+
+    out = tools.REGISTRY["history"].shape(_hist_env(), {"symbol": "AAPL", "bars": 5})
+    assert out["n_bars"] == 5 and out["n_bars_total"] == 300 and out["capped"] is False
+    assert out["c"] == [100.25 + i for i in range(295, 300)] and len(out["t"]) == len(out["o"]) == len(out["v"]) == 5
+    assert out["source"] == "yahoo:fixture" and out["age_s"] == 2.5 and out["currency"] == "USD"
+    assert len(out["t"][0]) == 10  # ISO date
+
+
+def test_history_bars_is_capped_and_fits_the_result_limit():
+    import json
+
+    from openterm.ai import tools
+    from openterm.ai.context import RESULT_LIMIT
+
+    env = _hist_env()
+    env["data"]["c"] = [187.4400024414062 + i for i in range(300)]  # long Yahoo-style floats: the worst case for size
+    out = tools.REGISTRY["history"].shape(env, {"symbol": "AAPL", "bars": 10000})
+    assert out["n_bars"] == tools.HISTORY_BARS_CAP and out["capped"] is True
+    assert len(json.dumps(out, separators=(",", ":"))) < RESULT_LIMIT  # a full-size answer is never truncated mid-way
+
+
+def test_history_bars_is_not_sent_to_the_route_and_validates():
+    from openterm.ai import tools
+
+    assert tools.REGISTRY["history"].build({"symbol": "AAPL", "range": "1Y", "bars": 5}) == {"params": {"symbol": "AAPL", "range": "1Y"}}
+    assert tools.validate("history", {"symbol": "AAPL", "bars": 5}) is None
+    assert "bars" in tools.validate("history", {"symbol": "AAPL", "bars": "five"})
+
+
+# --- OpenCode Go headers (2026-11-07 real-model check: Go answers 400 MissingSessionID without x-opencode-session) ---
+
+def test_opencodego_sends_a_stable_session_id_and_our_user_agent():
+    from openterm import APP_NAME
+    from openterm.llm import openai_compat
+
+    opening = [{"role": "system", "content": "be brief"}, {"role": "user", "content": "AAPL risks?"}]
+    _, h1, _ = openai_compat.request("opencodego", "k" * 20, opening, "deepseek-v4.1-flash", None, 100, 0.1)
+    # a later round of the same conversation (tool result appended) keeps the same session id
+    later = [*opening, {"role": "assistant", "content": "x"}, {"role": "tool", "content": "y"}]
+    _, h2, _ = openai_compat.request("opencodego", "k" * 20, later, "deepseek-v4.1-flash", None, 100, 0.1)
+    other = [opening[0], {"role": "user", "content": "MSFT risks?"}]
+    _, h3, _ = openai_compat.request("opencodego", "k" * 20, other, "deepseek-v4.1-flash", None, 100, 0.1)
+    assert h1["x-opencode-session"] == h2["x-opencode-session"] != h3["x-opencode-session"]
+    assert len(h1["x-opencode-session"]) == 32 and h1["User-Agent"].startswith(APP_NAME + "/")
+    # other providers are unchanged: no session header, no User-Agent override
+    _, h4, _ = openai_compat.request("openai", "k" * 20, opening, "gpt-x", None, 100, 0.1)
+    assert "x-opencode-session" not in h4 and "User-Agent" not in h4

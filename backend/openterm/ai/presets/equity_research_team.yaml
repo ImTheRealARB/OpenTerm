@@ -9,7 +9,7 @@ description: Macro → sector → stock three-tier deep research → research ed
 coverage: PARTIAL
 variables:
 - name: market
-  description: 'Target market (e.g.: A-shares, Hong Kong, Crypto)'
+  description: 'Target market (e.g.: US equities, Indian equities, crypto)'
   required: true
 - name: goal
   description: 'Research focus (e.g.: Q2 2026 outlook, opportunities in the new energy sector)'
@@ -39,6 +39,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -69,6 +70,7 @@ agents:
     Use the quant (fn fact) tool for factor-based analysis to support judgments.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -97,6 +99,7 @@ agents:
     Use the backtest tool to validate the historical performance of stock selection logic.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -132,6 +135,7 @@ agents:
     unavailable, carry that through instead of filling the gap.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

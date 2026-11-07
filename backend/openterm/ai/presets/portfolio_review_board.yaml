@@ -9,7 +9,7 @@ description: Performance attribution, risk review, and execution quality in para
 coverage: PARTIAL
 variables:
 - name: portfolio
-  description: Portfolio name or description (e.g., value-growth blend, CSI 300 enhanced)
+  description: Portfolio name or description (e.g., value-growth blend, Nifty 50 enhanced)
   required: true
 - name: review_period
   description: Review cadence (monthly / quarterly)
@@ -66,6 +66,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - history
   - quote
@@ -115,6 +116,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -166,6 +168,7 @@ agents:
     - There is no trade journal or blotter. Report execution quality as not assessable instead of inventing fills.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -206,6 +209,7 @@ agents:
     Use skill("asset-allocation") for allocation decisions, skill("risk-analysis") for risk budgeting.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

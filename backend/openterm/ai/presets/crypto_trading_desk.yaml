@@ -52,6 +52,7 @@ agents:
     Use skill for funding rate analysis patterns and OKX data interfaces.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -97,6 +98,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - calendar
   - research
   - news
@@ -138,6 +140,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - news
   - holders
   - crypto_funding
@@ -198,6 +201,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators

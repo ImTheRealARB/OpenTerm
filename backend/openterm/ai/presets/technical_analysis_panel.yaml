@@ -9,7 +9,7 @@ description: Classic TA + Ichimoku + harmonic patterns + Elliott Wave + SMC run 
 coverage: PARTIAL
 variables:
 - name: target
-  description: Symbol (e.g. 600519.SH Kweichow Moutai, BTC-USDT, AAPL)
+  description: Symbol (e.g. AAPL, RELIANCE.NS, BTC-USDT)
   required: true
 - name: timeframe
   description: Interval (e.g. daily, weekly, monthly, 4H)
@@ -83,6 +83,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -140,6 +141,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -190,6 +192,7 @@ agents:
     - You have no data tool for this study. Say in two lines that it is unavailable here and why; do not write it from memory.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 - id: wave_analyst
@@ -243,6 +246,7 @@ agents:
     - You have no data tool for this study. Say in two lines that it is unavailable here and why; do not write it from memory.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 - id: smc_analyst
@@ -291,6 +295,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators

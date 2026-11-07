@@ -9,7 +9,7 @@ description: 'Event scanning → deep impact analysis → strategy construction:
 coverage: PARTIAL
 variables:
 - name: market
-  description: 'Target market, e.g.: A-shares / Hong Kong / US equities / Chinese ADRs'
+  description: 'Target market, e.g.: US equities / Indian equities'
   required: true
 - name: event_type
   description: 'Event type filter, e.g.: M&A / insider trading / earnings / policy / litigation / management change; enter ''all types'' for no filter'
@@ -49,6 +49,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - news
   - insiders
   - filings
@@ -122,6 +123,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - history
   - quote
@@ -162,6 +164,7 @@ agents:
     Always use the backtest tool for historical event strategy validation; fabricating performance data is strictly prohibited.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

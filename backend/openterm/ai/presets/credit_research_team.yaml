@@ -65,6 +65,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - fa
   - profile
@@ -124,6 +125,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -182,6 +184,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - macro
   - calendar
   - news
@@ -238,6 +241,7 @@ agents:
     Use the backtest tool to run historical backtests validating strategy performance across different rate / credit environments.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

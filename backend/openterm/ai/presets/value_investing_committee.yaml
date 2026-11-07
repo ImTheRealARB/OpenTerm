@@ -9,10 +9,10 @@ description: Four adversarial master perspectives — Buffett (moat & price), Mu
 coverage: PARTIAL
 variables:
 - name: company
-  description: 'Target company name or ticker (e.g.: Tencent, NVDA, Moutai)'
+  description: 'Target company name or ticker (e.g.: AAPL, RELIANCE.NS)'
   required: true
 - name: market
-  description: 'Market (e.g.: A-shares, Hong Kong, US)'
+  description: 'Market (e.g.: US equities, Indian equities)'
   required: true
 agents:
 - id: buffett
@@ -45,6 +45,7 @@ agents:
     - There is no DCF or scenario calculator. Show any valuation arithmetic as plain steps from sourced inputs, and label assumed inputs as assumptions.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -86,6 +87,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -126,6 +128,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -168,6 +171,7 @@ agents:
     - There is no DCF or scenario calculator. Show any valuation arithmetic as plain steps from sourced inputs, and label assumed inputs as assumptions.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -208,6 +212,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - rigor
   - quant
   max_iterations: 8

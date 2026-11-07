@@ -74,6 +74,7 @@ agents:
     6. **On-Chain Composite Directional Signal** — Explicitly give a "{timeframe} bullish / bearish / neutral" on-chain signal with confidence level
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -126,6 +127,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -193,6 +195,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -250,6 +253,7 @@ agents:
     6. **Risk Scenarios and Contingency Plans** — The 2 most probable downside risk scenarios and response strategies (position reduction triggers and target levels)
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

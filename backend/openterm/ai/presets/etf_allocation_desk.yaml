@@ -12,7 +12,7 @@ variables:
   description: Risk profile (conservative / balanced / aggressive)
   required: true
 - name: market
-  description: 'Target market (default: A-shares; options: global multi-asset, HK/US equities, A-shares + HK)'
+  description: 'Target market (default: US equities; options: global multi-asset, Indian equities, US + Indian equities)'
   required: false
 agents:
 - id: etf_screener
@@ -79,6 +79,7 @@ agents:
     Use the quant (fn fact) tool for ETF tracking error and factor exposure analysis.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -142,6 +143,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -215,6 +217,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -272,6 +275,7 @@ agents:
     Use the backtest tool to execute a complete ETF portfolio historical backtest including transaction costs and rebalancing.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

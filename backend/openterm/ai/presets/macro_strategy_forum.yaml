@@ -9,7 +9,7 @@ description: Global + domestic + policy perspectives run in parallel; chief stra
 coverage: PARTIAL
 variables:
 - name: market
-  description: Focus market (e.g., A-shares, Hong Kong, global multi-asset, crypto)
+  description: Focus market (e.g., US equities, Indian equities, global multi-asset, crypto)
   required: true
 - name: horizon
   description: Horizon (e.g., monthly, quarterly, annual)
@@ -60,6 +60,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - rates
   - macro
   - calendar
@@ -118,6 +119,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -177,6 +179,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - news
   - energy
   - filings
@@ -224,6 +227,7 @@ agents:
     Use explicit numbers and dates; avoid vague “maybe”; attach confidence to each major call.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

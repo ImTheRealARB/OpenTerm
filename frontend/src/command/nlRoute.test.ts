@@ -43,6 +43,11 @@ describe("routeNatural", () => {
     expect(routeNatural("apple stock price chart", ctx)).toMatchObject({ kind: "command", command: "AAPL GP" });
     expect(routeNatural("tesla news", ctx).kind).toBe("command");
   });
+  it("news + one section word opens that news section (any case); news + a company stays the company's news", () => {
+    expect(routeNatural("news tech", ctx)).toMatchObject({ kind: "command", command: "N TECH" });
+    expect(routeNatural("NEWS India", ctx)).toMatchObject({ kind: "command", command: "N INDIA" });
+    expect(routeNatural("news apple", ctx)).toMatchObject({ kind: "command", command: "AAPL N" });
+  });
   it("nothing understood", () => {
     expect(routeNatural("zzzqqq xxyyzz", ctx).kind).toBe("none");
   });
