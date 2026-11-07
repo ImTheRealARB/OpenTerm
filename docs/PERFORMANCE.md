@@ -869,3 +869,11 @@ The 517 / 120 / 56.8 ms numbers were the machine (see CLAUDE.md "Bench throttlin
 **39/39**: BT 10-year run 180.0 ms, layout load 52.5 ms, J frame to paint 27.6 ms, 50k-bar pan 16.8 ms, AI first SSE event 32.5 ms.
 The DLVR e2e race (`phase17.spec.ts`, ~1 in 6 on `main`) is fixed: each Space press now waits up to 1 s for its PUT before retrying, so a press that
 registered is never repeated (24/24 with `--repeat-each=6`).
+
+## Unattended run 2026-11-07: untangle merge, backend and frontend dedupe (Windows 11, 20 threads)
+
+**Before (PR #30 head and `main` 9931531, same sitting, 07:30 IST):** 33/39 and 32/39. The same lines missed on both
+(streaming frame p95 33.3 ms, 50k-bar pan 33.4 ms, BT 10-year run 700-785 ms): the machine was throttled, not the code.
+**After (branch `claude/p2-frontend-dedupe` 99d5db7: one panelStatus, one chord guard, catch audit, ChartView GP layer
+`chart/gpLayer.ts`), 60 s rest:** **39/39**: tick to pixel 36.7 ms, streaming frame 16.7 ms, keystroke echo 9.8 ms,
+layout load 48.7 ms, 50k-bar pan 16.7 ms, BT 10-year run 163.8 ms, initial bundle 123.6 KB gz (entry chunk 120.62 KB).
