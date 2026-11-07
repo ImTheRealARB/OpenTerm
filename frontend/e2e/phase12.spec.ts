@@ -482,6 +482,18 @@ test("BT EDIT: Ctrl+K pressed inside the editor still opens the command line", a
   await expect(box(page)).toContainText("class SignalEngine");
 });
 
+test("BT EDIT: Ctrl+K right after the editor appears is not undone by the editor's delayed focus retry", async ({ page }) => {
+  // The editor focuses itself when it is ready and retries 80 ms later (the command line can take focus back first).
+  // A Ctrl+K inside that window is the user's own choice: the retry must not pull focus back into the editor.
+  // This hits the window on purpose; the test above only hit it on a loaded machine (it failed about 1 run in 4).
+  await setup(page);
+  await cmd(page, "BT EDIT mysma");
+  await expect(box(page)).toContainText("class SignalEngine");
+  await page.keyboard.press("Control+k");
+  await page.waitForTimeout(250); // longer than the 80 ms retry: by now the retry has run (or was cancelled)
+  await expect(page.locator("#cmdline")).toBeFocused();
+});
+
 test("BT EDIT: Ctrl+Enter saves and runs the strategy with the RUN line", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "BT EDIT mysma");

@@ -181,16 +181,32 @@ function CodeBox(p: {
     else p.handle.current?.setError(null);
   }, [p.error, state, p.handle]);
 
-  // Focus when the box becomes usable. The command line hands focus back after Esc, so try again a moment later,
-  // unless the user has pressed Esc in the box since (on a busy machine the retry can land after that Esc).
+  // Focus when the box becomes usable. The command line hands focus back after Esc, so try again a moment later.
+  // The retry only undoes the APP taking focus away. If the USER pressed any key or clicked in the meantime (Esc in the
+  // box, Ctrl+K to open the command line, a click elsewhere), the retry is cancelled: otherwise, on a busy machine, it
+  // lands after the user's own action and pulls focus back into the box (this was the phase12 "Ctrl+K" e2e flake).
+  // The listeners use the capture phase so they see the key before any handler can stop it from bubbling.
   useEffect(() => {
     if (state !== "ready" || !p.active) return;
     leftBox.current = false;
     p.handle.current?.focus();
+    const userActed = () => {
+      leftBox.current = true;
+    };
+    const stopWatching = () => {
+      window.removeEventListener("keydown", userActed, true);
+      window.removeEventListener("pointerdown", userActed, true);
+    };
+    window.addEventListener("keydown", userActed, true);
+    window.addEventListener("pointerdown", userActed, true);
     const t = setTimeout(() => {
+      stopWatching(); // only the 80 ms window matters
       if (!leftBox.current) p.handle.current?.focus();
     }, 80);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      stopWatching();
+    };
   }, [state, p.active, p.handle]);
 
   return (
