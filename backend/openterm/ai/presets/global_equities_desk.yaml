@@ -54,6 +54,7 @@ agents:
     Use quant (fn fact) tool for quantitative factor scoring.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -107,6 +108,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -153,6 +155,7 @@ agents:
     Use skill for OKX market data, funding rate analysis, and stablecoin flow indicators.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -198,6 +201,7 @@ agents:
     You may use backtest to validate historical performance of the proposed allocation.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

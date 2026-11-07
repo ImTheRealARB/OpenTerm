@@ -9,7 +9,7 @@ description: 'Factor mining + factor validation running in parallel → factor c
 coverage: PARTIAL
 variables:
 - name: market
-  description: 'Target market (e.g.: A-shares, Hong Kong, US equities)'
+  description: 'Target market (e.g.: US equities, Indian equities)'
   required: true
 - name: factor_type
   description: Factor type (value / momentum / quality / growth / alternative)
@@ -59,6 +59,7 @@ agents:
     6. **Mining Frontier Assessment** — Which factors are already overcrowded and which still have room
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120
@@ -107,6 +108,7 @@ agents:
     6. **Overfitting Risk Warning** — Flag factors whose statistics look "too good to be true" and may suffer from data mining bias
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120
@@ -155,6 +157,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - backtest_run
   - strategy_check
@@ -207,6 +210,7 @@ agents:
     6. **Live Deployment Recommendation** — Explicitly state "Recommend deployment / Deploy after improvement / Do not deploy"; list specific improvement directions and capacity upper bound recommendation
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

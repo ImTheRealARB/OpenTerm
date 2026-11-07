@@ -341,3 +341,19 @@ def test_route_picks_the_newest_10k_or_10q_unless_a_form_is_asked(client, sec):
     asked = next(e for e in sse(client.post("/api/ai/filing", json={"symbol": "AAPL", "form": "10-K", "question": "supplier risk"})) if e["type"] == "filing")
     assert (asked["form"], asked["accession"]) == ("10-K", "0000320193-24-000123")
     assert len(sec.seen) == 2 and "000032019324000123" in sec.seen[1]
+
+
+def test_a_reply_cut_off_by_the_token_budget_says_so_not_bad_json(client, sec):
+    # 2026-11-07 real run: a reasoning model spent the whole budget thinking and sent no text. The error must name the budget.
+    from openterm.ai import routes_filing
+    from openterm.llm.events import Event
+
+    cut = [Event("usage", prompt_tokens=1555, completion_tokens=routes_filing.MAX_OUTPUT_TOKENS, cost=0.0), Event("done")]
+    client.app.state.llm = FakeGateway(cut)
+    ev = sse(client.post("/api/ai/filing", json={"symbol": "aapl", "form": "10-K", "question": "What supply chain risks does the company have?"}))
+    err = next(e for e in ev if e["type"] == "error")
+    assert err["kind"] == "bad_model_output" and f"ALL {routes_filing.MAX_OUTPUT_TOKENS} OUTPUT TOKENS" in err["text"]
+    # a short reply that is simply not JSON keeps the old message
+    client.app.state.llm = FakeGateway(text("no json here"))
+    ev = sse(client.post("/api/ai/filing", json={"symbol": "aapl", "form": "10-K", "question": "What supply chain risks does the company have?"}))
+    assert "STRUCTURED ANSWER (JSON)" in next(e for e in ev if e["type"] == "error")["text"]

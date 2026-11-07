@@ -347,7 +347,7 @@ strategy-generate (14), sentiment-analysis (8), fundamental-filter (6), sector-r
 
 | Vibe tool | OpenTerm tool(s) |
 |---|---|
-| load_skill | skill |
+| load_skill | skill, skills |
 | get_market_data | history, quote, indicators |
 | factor_analysis | quant |
 | quantlib_call | quant |

@@ -9,10 +9,10 @@ description: 'Long–short debate → risk review → PM final call: buy-side fu
 coverage: PARTIAL
 variables:
 - name: target
-  description: Security (e.g., 600519.SH Kweichow Moutai, BTC-USDT, AAPL)
+  description: Security (e.g., AAPL, RELIANCE.NS, BTC-USDT)
   required: true
 - name: market
-  description: Market (e.g., A-shares, Hong Kong, US, crypto)
+  description: Market (e.g., US equities, Indian equities, crypto)
   required: true
 agents:
 - id: bull_advocate
@@ -61,6 +61,7 @@ agents:
     - There are no tools for fund flows, northbound flows, margin balances or broker research reports. Say they are unavailable; do not estimate them.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -125,6 +126,7 @@ agents:
     - There are no tools for fund flows, northbound flows, margin balances or broker research reports. Say they are unavailable; do not estimate them.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -198,6 +200,7 @@ agents:
     - There are no tools for fund flows, northbound flows, margin balances or broker research reports. Say they are unavailable; do not estimate them.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -252,6 +255,7 @@ agents:
     Decisions must be executable; reject vague “it depends.” Every key number must be explicit.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

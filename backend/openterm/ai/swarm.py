@@ -115,7 +115,7 @@ def _chair(brief: str, tools: tuple[str, ...] = ("quote",)) -> Role:
 
 PRESETS: dict[str, Preset] = {p.code: p for p in [
     Preset("COMMITTEE", "Investment committee", (
-        Role("fundamental", "Fundamental analyst", "Value the business: size, growth, margins, balance sheet, the profile.", ("quote", "profile", "fa", "research", "skill")),
+        Role("fundamental", "Fundamental analyst", "Value the business: size, growth, margins, balance sheet, the profile.", ("quote", "profile", "fa", "research", "skill", "skills")),
         Role("technical", "Technical analyst", "Describe the price trend, range and (if listed) options positioning.", ("history", "quote", "options_chain")),
         Role("risk", "Risk analyst", "Find what could go wrong: news, filings, drawdowns.", ("news", "filings", "history")),
         _chair("Give the committee's view on the subject: a balanced case, not a recommendation to trade.")), "Subject: one ticker, e.g. AAPL."),
@@ -125,17 +125,17 @@ PRESETS: dict[str, Preset] = {p.code: p for p in [
         Role("headlines", "News analyst", "Find news relevant to the largest positions.", ("news", "portfolio")),
         _chair("Summarise the portfolio's risk: concentration, VaR and drawdown, and headline risks.")), "Subject: a portfolio name, e.g. MAIN."),
     Preset("EARNINGS", "Earnings desk", (
-        Role("estimates", "Estimates analyst", "Report earnings estimates, revisions and the last results.", ("research", "quote", "skill")),
+        Role("estimates", "Estimates analyst", "Report earnings estimates, revisions and the last results.", ("research", "quote", "skill", "skills")),
         Role("reports", "Filings analyst", "Read the latest filings and statements for what changed.", ("filings", "fa", "news")),
         _chair("Say what to watch at the next earnings report and how the estimates compare with the filed numbers.")), "Subject: one ticker."),
     Preset("MACRO", "Macro desk", (
-        Role("rates", "Rates analyst", "Describe the yield curve and what it implies.", ("rates", "macro", "skill")),
+        Role("rates", "Rates analyst", "Describe the yield curve and what it implies.", ("rates", "macro", "skill", "skills")),
         Role("series", "Economic-data analyst", "Find the macro series relevant to the question.", ("macro", "news")),
         _chair("Summarise the macro picture and the main uncertainties.")), "Subject: a theme, e.g. INFLATION.", needs_subject=False),
     Preset("QUANT", "Quant desk", (
         Role("trend", "Trend analyst", "Describe the price history of the subject (returns, volatility, range).", ("history", "quote")),
         Role("tester", "Backtest analyst", "Test one simple rule on the subject with backtest_run (validate it with strategy_check first) and report the metrics.",
-             ("history", "strategy_check", "backtest_run", "skill")),
+             ("history", "strategy_check", "backtest_run", "skill", "skills")),
         _chair("Summarise the evidence. A backtest is a historical simulation, not a forecast.")), "Subject: a ticker."),
 ]}
 

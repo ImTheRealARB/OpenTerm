@@ -48,6 +48,14 @@ def _cache(request: Request) -> OrderedDict:
     return st
 
 
+# Output budget for one filing answer. It was 1,800: on 2026-11-07 a real run with deepseek-v4.1-flash (a reasoning model)
+# spent all 1,800 tokens thinking and returned no answer at all. Reasoning models (the default deepseek-v4-pro is one too)
+# count their thinking in this budget. 4,000 leaves room for both; the daily spend cap still checks the worst case
+# (MAX_OUTPUT_TOKENS x the model's output price) before the call is made.
+MAX_OUTPUT_TOKENS = 4000
+OUT_OF_TOKENS = (f"THE MODEL USED ALL {MAX_OUTPUT_TOKENS} OUTPUT TOKENS (A REASONING MODEL THINKS IN THEM TOO) BEFORE IT ANSWERED: "
+                 "ASK A NARROWER QUESTION OR PICK A NON-REASONING MODEL")
+
 async def load_filing(request: Request, symbol: str, form: str | None) -> filings.ParsedFiling:
     """Newest 10-K / 10-Q (or the asked form) with a document, parsed. Raises ProviderError (SEC trouble) or FilingsError (unreadable filing)."""
     sec = http_util.svc(request).router.providers["sec"]
@@ -131,12 +139,14 @@ async def ai_filing(request: Request):
         messages = filings.build_messages(filing.symbol, filing.form, filing.filed, ask, hits, time.strftime("%Y-%m-%d", now))
         parts: list[str] = []
         cost = 0.0
+        used = 0  # output tokens the provider reports: tells "ran out of budget" apart from "answered badly"
         # Tokens are NOT forwarded: the reply is JSON for us to check, and showing half a JSON object is noise. The user sees the checked answer.
-        async for ev in gateway.chat(messages, model, provider, None, 1800, 0.1):
+        async for ev in gateway.chat(messages, model, provider, None, MAX_OUTPUT_TOKENS, 0.1):
             if ev.type == "token":
                 parts.append(ev.text)
             elif ev.type == "usage":
                 cost += ev.cost or 0.0
+                used = max(used, ev.completion_tokens or 0)
                 yield {"type": "usage", "prompt_tokens": ev.prompt_tokens, "completion_tokens": ev.completion_tokens, "cost": ev.cost}
             elif ev.type == "error":
                 yield {"type": "error", "kind": ev.kind, "text": redact(ev.text)}
@@ -144,7 +154,10 @@ async def ai_filing(request: Request):
         try:
             points = filings.parse_points("".join(parts))
         except filings.FilingsError as e:
-            yield {"type": "error", "kind": "bad_model_output", "text": str(e)}
+            if used >= MAX_OUTPUT_TOKENS:  # the budget ran out first (a reasoning model thinks in these tokens too): say so, not "bad JSON"
+                yield {"type": "error", "kind": "bad_model_output", "text": OUT_OF_TOKENS}
+            else:
+                yield {"type": "error", "kind": "bad_model_output", "text": str(e)}
             return
         checked = filings.verify_points(points, filing.full_norm, filing.sections)
         for c in checked:  # a claim is model output: mask any key it might echo, as every error text is masked

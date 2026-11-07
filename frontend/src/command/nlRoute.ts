@@ -6,6 +6,7 @@
  * Exact function codes never get here (nlRun.needsNatural).
  */
 import { interpretScreener, looksLikeEnglish } from "../functions/eqsNatural";
+import { NEWS_SECTIONS } from "../functions/newsArgs";
 import { compareCommand, parseCompare, type CompareParse } from "./compareNatural";
 import { fxPair } from "./nlAliases";
 import { extractRange } from "./nlRange";
@@ -22,7 +23,21 @@ const STOCK_WORDS = /\b(?:stocks|shares|companies|equities)\b/;
 
 const symbolOf = (command: string): string => command.split(" ")[0];
 
+/**
+ * "news tech" -> `N TECH`: the word "news" plus exactly one section word is a news-section request, not a company name.
+ * Why a rule here and not a blanket alias "news" -> N in functions/aliases.ts: an alias would also turn "news apple" into
+ * `N APPLE` (a keyword search), but "news apple" must stay "AAPL N" (Apple's headlines), which the company + intent
+ * path below already does. So we only step in when the second word is a real section.
+ * The list is imported from newsArgs.ts (its single home), never copied, so a new section works here automatically.
+ */
+function newsSection(body: string): string | null {
+  const words = body.trim().toUpperCase().split(/\s+/);
+  return words.length === 2 && words[0] === "NEWS" && NEWS_SECTIONS.includes(words[1]) ? words[1] : null;
+}
+
 function route(body: string, ctx: NlContext): RouteResult {
+  const section = newsSection(body);
+  if (section) return { kind: "command", command: `N ${section}`, why: "N SECTION" };
   const cmp = parseCompare(body);
   if (cmp && !isCurrencyPair(cmp)) return routeCompare(body, ctx);
   if (STOCK_WORDS.test(body.toLowerCase()) && looksLikeEnglish(body) && interpretScreener(body).args.length) {

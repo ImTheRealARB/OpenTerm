@@ -9,10 +9,10 @@ description: Pair scanning and microstructure analysis in parallel → converge 
 coverage: PARTIAL
 variables:
 - name: market
-  description: Target market (e.g. A-shares, Hong Kong, crypto)
+  description: Target market (e.g. US equities, Indian equities, crypto)
   required: true
 - name: goal
-  description: Research focus (e.g. CSI 300 pair book, crypto arb ideas)
+  description: Research focus (e.g. Nifty 50 pair book, crypto arb ideas)
   required: true
 - name: sector
   description: Sector filter (e.g. banks, consumer); empty = full market
@@ -64,6 +64,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - history
   - quote
@@ -113,6 +114,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -164,6 +166,7 @@ agents:
     Use backtest with realistic costs.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8
@@ -219,6 +222,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators

@@ -9,7 +9,7 @@ description: 'Volatility analysis → strategy design → Greeks risk management
 coverage: PARTIAL
 variables:
 - name: target
-  description: 'Underlying (e.g.: BTC, CSI 300 ETF, AAPL)'
+  description: 'Underlying (e.g.: BTC, AAPL, RELIANCE.NS)'
   required: true
 - name: view
   description: Market view (bullish / bearish / neutral / long volatility / short volatility)
@@ -85,6 +85,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - option_price
   - options_chain
   - history
@@ -154,6 +155,7 @@ agents:
     6. **Strategy Applicability and Failure Scenarios** — Under what conditions the strategy is effective; under what conditions it fails (requiring prompt adjustment)
   tools:
   - skill
+  - skills
   - option_price
   - options_chain
   - history
@@ -222,6 +224,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - option_price
   - options_chain
   - history

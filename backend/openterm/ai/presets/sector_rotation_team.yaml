@@ -9,7 +9,7 @@ description: Economic cycle + prosperity + capital flows in parallel → rotatio
 coverage: PARTIAL
 variables:
 - name: market
-  description: Target market (default A-shares; can specify HK/US)
+  description: Target market (default US equities; can specify Indian equities)
   required: true
 - name: goal
   description: Focus theme (e.g. new energy, tech growth, high dividend, exporters)
@@ -68,6 +68,7 @@ agents:
     - You have no data tool for this study. Say in two lines that it is unavailable here and why; do not write it from memory.
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 - id: prosperity_analyst
@@ -120,6 +121,7 @@ agents:
     Must output a quantitative score table.
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120
@@ -172,6 +174,7 @@ agents:
     Prefer last 20 trading days; emphasize freshness.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -219,6 +222,7 @@ agents:
     Must include backtest numbers via backtest—no qualitative-only.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

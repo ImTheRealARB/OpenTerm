@@ -9,10 +9,10 @@ description: Financial / valuation / quality three-dimensional parallel analysis
 coverage: PARTIAL
 variables:
 - name: target
-  description: 'Research subject (stock code or name, e.g.: 600519 Kweichow Moutai)'
+  description: 'Research subject (ticker or name, e.g.: AAPL, RELIANCE.NS)'
   required: true
 - name: market
-  description: 'Market (e.g.: A-shares, Hong Kong, US equities)'
+  description: 'Market (e.g.: US equities, Indian equities)'
   required: true
 agents:
 - id: financial_analyst
@@ -58,6 +58,7 @@ agents:
     - There is no DCF or scenario calculator. Show any valuation arithmetic as plain steps from sourced inputs, and label assumed inputs as assumptions.
   tools:
   - skill
+  - skills
   - fa
   - profile
   - rigor
@@ -128,6 +129,7 @@ agents:
     - There is no DCF or scenario calculator. Show any valuation arithmetic as plain steps from sourced inputs, and label assumed inputs as assumptions.
   tools:
   - skill
+  - skills
   - fa
   - profile
   - rigor
@@ -180,6 +182,7 @@ agents:
     - You have no web access (no search, no page reading). Anything that would have come from a web page is unavailable: say so; do not guess it.
   tools:
   - skill
+  - skills
   - calendar
   - research
   - news
@@ -219,6 +222,7 @@ agents:
     7. **Catalysts and Time Windows** — Potential positive/negative catalysts in the next 3–6 months to help identify optimal entry timing
   tools:
   - skill
+  - skills
   max_iterations: 8
   timeout_seconds: 120
 tasks:

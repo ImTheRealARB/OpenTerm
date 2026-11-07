@@ -57,7 +57,7 @@ def test_committee_runs_every_role_with_its_own_tools_and_the_chair_sees_the_not
     assert [m[0] for m in made] == ["fundamental", "technical", "risk", "chair"]
     assert all(e["role"] for e in ev if e["type"] in ("token", "tool_call", "tool_result", "usage", "role_done"))
     offered = [[t["function"]["name"] for t in (c["tools"] or [])] for c in gw.calls]
-    assert sorted(offered[0]) == sorted(["quote", "profile", "fa", "research", "skill"]) and sorted(offered[2]) == sorted(["history", "quote", "options_chain"])
+    assert sorted(offered[0]) == sorted(["quote", "profile", "fa", "research", "skill", "skills"]) and sorted(offered[2]) == sorted(["history", "quote", "options_chain"])
     sent = next(c for c in gw.calls if "Analyst notes" in json.dumps(c["messages"]))
     user = sent["messages"][-1]["content"]
     assert "Subject: AAPL" in user and "Price 123.45 [T1]." in user and "Trend is up." in user and "Headlines are quiet." in user

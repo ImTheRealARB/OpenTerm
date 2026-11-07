@@ -20,6 +20,7 @@ SHORTCUTS             all keyboard shortcuts (or ?)
 apple stock price chart          -> AAPL GP (the command it understood is shown, so you learn the codes)
 apple vs microsoft 1 year        -> AAPL chart over 1 year compared with MSFT (% change)
 tech stocks under 50 dollars     -> EQS with sector and price filters (words it did not understand are listed)
+news tech                        -> N TECH (news + a section: MARKETS ECONOMY COMPANIES COMMODITIES CRYPTO TECH INDIA WORLD ALL)
 TMPL                             ready-made workspaces; TMPL DAY / LONGTERM / MACRO / INDIA apply one (asks before replacing panels)
 IND                              indicator library: search 109 indicators, F = your own formula, S / L = save / load a preset
 AAPL GP ATR(14)                  library indicator on the chart; GP args also take LIB:CMF and F:<formula>

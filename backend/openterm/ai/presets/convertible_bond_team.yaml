@@ -50,6 +50,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - history
   - quote
   - indicators
@@ -87,6 +88,7 @@ agents:
     Use the quant (fn fact) tool for factor exposure analysis of underlying equities.
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120
@@ -116,6 +118,7 @@ agents:
     Use the option_price tool for precise option pricing calculations.
   tools:
   - skill
+  - skills
   - option_price
   max_iterations: 8
   timeout_seconds: 120
@@ -147,6 +150,7 @@ agents:
     Use the backtest tool to run historical backtests validating strategy robustness across different market environments.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8

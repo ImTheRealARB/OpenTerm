@@ -9,7 +9,7 @@ description: Multi-dimensional quantitative screening → Brinson performance at
 coverage: PARTIAL
 variables:
 - name: fund_type
-  description: 'Fund type, e.g.: equity / bond / balanced / index-enhanced / quant hedge / QDII'
+  description: 'Fund type, e.g.: equity / bond / balanced / index-enhanced / quant hedge / international'
   required: true
 - name: goal
   description: 'Investment objective, e.g.: build a steady FOF portfolio with annualized return >10% and max drawdown <15%'
@@ -44,6 +44,7 @@ agents:
     Use the quant (fn fact) tool for factor-based analysis of fund historical performance.
   tools:
   - skill
+  - skills
   - quant
   max_iterations: 8
   timeout_seconds: 120
@@ -107,6 +108,7 @@ agents:
     - You cannot run code or read files. Where a step asked for your own computation, use the `quant` tool if it covers the quantity (fn risk, fact, ql, alpha, regime); otherwise state that the figure is unavailable. Never compute a statistic from memory.
   tools:
   - skill
+  - skills
   - quant
   - etf
   - history
@@ -164,6 +166,7 @@ agents:
     Always use the backtest tool to verify historical portfolio performance; do not fabricate data.
   tools:
   - skill
+  - skills
   - backtest_run
   - strategy_check
   max_iterations: 8
