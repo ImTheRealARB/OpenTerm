@@ -50,5 +50,6 @@ llm:
   # prices:
   #   openai:    {"<model id>": {input: 0.0, output: 0.0}}
   #   anthropic: {"<model id>": {input: 0.0, output: 0.0}}
-  #   deepseek, groq, mistral, xai, together, fireworks, gemini, opencodego: same shape (all priced here, like openai)
+  #   deepseek, groq, mistral, xai, together, fireworks, gemini: same shape (all priced here, like openai)
+  #   opencodego is a flat subscription: priced 0 per call unless you set a price here (llm/client.py FLAT_FEE)
   # ollama_url: http://127.0.0.1:11434

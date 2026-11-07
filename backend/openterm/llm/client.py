@@ -24,6 +24,10 @@ PROVIDERS = (*KEYED, "ollama")
 OLLAMA = "http://127.0.0.1:11434"
 TIMEOUT = httpx.Timeout(60.0, connect=5.0)  # read: 60 s between chunks
 MODELS_TTL = 3600.0
+# Providers paid by a flat subscription, not per token: a call costs US$0, so they count as priced at 0/0 and the daily
+# spend cap never refuses them for "PRICE UNKNOWN" (owner decision 2026-11-07, after a real OpenCode Go run was refused).
+# A price set in config.yaml llm.prices still wins, e.g. to make SWARM's estimate show a notional cost.
+FLAT_FEE = ("opencodego",)
 OLLAMA_TTL = 10.0
 
 
@@ -69,13 +73,15 @@ class Gateway:
         return self._or_prices
 
     async def price(self, provider: str, model: str) -> dict | None:
-        """US$ per million tokens {input, output}; None = unknown. Ollama is local and free."""
+        """US$ per million tokens {input, output}; None = unknown. Ollama is local and free; FLAT_FEE providers cost 0 per call."""
         if provider == "ollama":
             return {"input": 0.0, "output": 0.0}
         if model.endswith(":free") and provider == "openrouter":
             return {"input": 0.0, "output": 0.0}
         if (p := (self.prices.get(provider) or {}).get(model)) is not None:
             return {"input": float(p.get("input", 0.0)), "output": float(p.get("output", 0.0))}
+        if provider in FLAT_FEE:
+            return {"input": 0.0, "output": 0.0}
         if provider == "openrouter":
             return (await self._openrouter_prices()).get(model)
         return None
