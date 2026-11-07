@@ -67,7 +67,6 @@ function Stored({ panelId, del }: { panelId: number; del?: string }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
         const { rows: r, confirm: c } = latest.current;
         if (!r) return false;
         if (navKey(e, grid.current, r.length)) return true;

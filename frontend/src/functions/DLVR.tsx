@@ -100,8 +100,8 @@ export default function DLVR({ panelId }: FunctionProps) {
     () =>
       registerPanelKeys(panelId, (e) => {
         const { data: d, cur: c, edit: ed, view: v, pair: pr } = latest.current;
-        // While the inline editor is open it has focus and handles its own keys; chords and bare modifiers pass.
-        if (ed || e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift") return false;
+        // While the inline editor is open it has focus and handles its own keys.
+        if (ed) return false;
         const row = ROWS[c];
         switch (e.key) {
           case "ArrowDown":

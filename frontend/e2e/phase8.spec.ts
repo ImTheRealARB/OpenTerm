@@ -41,6 +41,9 @@ async function setup(page: Page) {
     const syms = new URL(r.request().url()).searchParams.get("symbols")!.split(",");
     return r.fulfill({ json: { results: Object.fromEntries(syms.map((s, i) => [s, env(quote(s, PRICES[s] ?? 100 + i))])) } });
   });
+  // News keyword alerts: none exist in these tests. Without this mock the list and "clear triggered" calls fail (HTTP 500
+  // from the unmocked dev backend), and ALRT now says so ("NEWS ALERTS NOT CLEARED", "STALE: NEWS ALERTS ...").
+  await page.route("**/api/newsalerts**", (r) => r.fulfill({ json: r.request().method() === "DELETE" ? { deleted: 0 } : { alerts: [] } }));
   await page.route("**/api/portfolios**", (r) => {
     const req = r.request();
     const name = decodeURIComponent(new URL(req.url()).pathname.split("/api/portfolios")[1].replace(/^\//, ""));

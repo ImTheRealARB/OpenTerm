@@ -7,7 +7,7 @@ import { macroApi } from "../net/macroApi";
 import type { EcoEvent, EcoPayload } from "../net/types";
 import { replaceView } from "../state/workspace";
 import { ECO_WINDOWS, addDays, dayLabel, nyToday, parseEcoArgs } from "./macroArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";

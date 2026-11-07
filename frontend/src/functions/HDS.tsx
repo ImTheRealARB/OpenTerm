@@ -8,7 +8,8 @@ import { secApi } from "../net/secApi";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
-import { ErrorLine, Header, useEnvelope } from "./secPanel";
+import { ErrorLine } from "./panelStatus";
+import { Header, useEnvelope } from "./secPanel";
 import { fmtFrac, fmtShares, holderRows, type HolderRow, type HoldersPayload } from "./secTables";
 import { gridCsv, useCsvExport } from "./tableExport";
 

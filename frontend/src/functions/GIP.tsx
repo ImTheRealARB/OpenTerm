@@ -95,7 +95,6 @@ export default function GIP({ panelId, security, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         switch (e.key) {
           case "s":
           case "S":

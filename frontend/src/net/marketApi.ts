@@ -26,6 +26,7 @@ export const marketApi = {
 
 /** Warm the most likely next call for a highlighted security: its quote and 1Y daily bars. */
 export function prefetch(symbol: string): void {
+  // Both ignored on purpose: this only warms the cache; the panel's own request repeats the call and shows any failure.
   void marketApi.quotes([symbol]).catch(() => {});
   void marketApi.history(symbol, "1Y").catch(() => {});
 }

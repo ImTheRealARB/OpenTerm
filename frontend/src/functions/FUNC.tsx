@@ -46,7 +46,6 @@ export default function FUNC({ panelId }: { panelId: number }) {
       registerPanelKeys(panelId, (e) => {
         const g = grid.current;
         const { rows: cur, filter: f } = latest.current;
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         switch (e.key) {
           case "ArrowDown":
             g?.move(1);

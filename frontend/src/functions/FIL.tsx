@@ -7,7 +7,8 @@ import { secApi } from "../net/secApi";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
-import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
+import { ErrorLine } from "./panelStatus";
+import { Header, openUrl, useEnvelope } from "./secPanel";
 import { filingForm, type Filing, type FilingsPayload } from "./secTables";
 import { gridCsv, useCsvExport } from "./tableExport";
 

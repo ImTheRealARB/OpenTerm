@@ -28,6 +28,14 @@ import { errMessage } from "../net/errText";
 
 export const alerts = createStore<Alert[] | null>(null);
 export const alertsError = createStore<string | null>(null);
+/** Same for the news keyword alerts list (ALRT shows it next to alertsError). */
+export const newsAlertsError = createStore<string | null>(null);
+/**
+ * Passed to `.catch` after `refreshAlerts()` / `refreshNewsAlerts()`. Ignoring the rejection is correct HERE because each
+ * refresh has already stored its failure (alertsError / newsAlertsError) and ALRT shows it as "STALE: <why>"; the list on
+ * screen stays the last good one and is labelled as such. Anything else that fails must not use this.
+ */
+export const failureIsRecorded = (): void => {};
 /** The last alert that fired, for the status bar flash. */
 export const lastFired = createStore<{ text: string; at: number } | null>(null);
 
@@ -169,10 +177,16 @@ export const NEWS_POLL_MS = 120_000;
 
 /** Loads the news alerts. A failure throws and leaves the list as it was: an outage already shows through `refreshAlerts`. */
 export async function refreshNewsAlerts(): Promise<NewsAlert[]> {
-  const { alerts: list } = await newsAlertsApi.list();
-  const local = new Map((newsAlerts.get() ?? []).map((a) => [a.id, a]));
-  newsAlerts.set(() => list.map((a) => (a.status === "active" && newsFiring.has(a.id) && local.get(a.id) ? local.get(a.id)! : a)));
-  return list;
+  try {
+    const { alerts: list } = await newsAlertsApi.list();
+    const local = new Map((newsAlerts.get() ?? []).map((a) => [a.id, a]));
+    newsAlerts.set(() => list.map((a) => (a.status === "active" && newsFiring.has(a.id) && local.get(a.id) ? local.get(a.id)! : a)));
+    newsAlertsError.set(() => null);
+    return list;
+  } catch (e) {
+    newsAlertsError.set(() => `NEWS ALERTS: ${errMessage(e)}`);
+    throw e;
+  }
 }
 
 function fireNews(a: NewsAlert, item: NewsItem): void {
@@ -240,18 +254,18 @@ export function startAlerts(): void {
       void refreshNewsAlerts().then((list) => {
         const n = list.find((x) => x.id === id);
         if (n?.status === "triggered") announceNews(n, n.headline ?? "");
-      }, () => {});
+      }, failureIsRecorded);
     } else {
       void refreshAlerts().then((list) => {
         const a = list.find((x) => x.id === id);
         if (a?.status === "triggered") announcePrice(a, a.trigger_price ?? NaN, false);
-      }, () => {});
+      }, failureIsRecorded);
     }
   });
-  void refreshAlerts().catch(() => {});
-  void refreshNewsAlerts().then(() => pollNewsAlerts()).catch(() => {});
-  setInterval(() => void refreshAlerts().catch(() => {}), 60_000);
-  setInterval(() => void refreshNewsAlerts().catch(() => {}), 60_000);
+  void refreshAlerts().catch(failureIsRecorded);
+  void refreshNewsAlerts().then(() => pollNewsAlerts()).catch(failureIsRecorded);
+  setInterval(() => void refreshAlerts().catch(failureIsRecorded), 60_000);
+  setInterval(() => void refreshNewsAlerts().catch(failureIsRecorded), 60_000);
   setInterval(() => void pollNewsAlerts(), NEWS_POLL_MS);
 }
 
@@ -259,11 +273,11 @@ export async function act(what: string, call: () => Promise<unknown>, ok: string
   try {
     await call();
   } catch (e) {
-    void refreshAlerts().catch(() => {});
+    void refreshAlerts().catch(failureIsRecorded);
     return fail(`${what}: ${errMessage(e)}`);
   }
   info(ok);
-  await refreshAlerts().catch(() => {});
+  await refreshAlerts().catch(failureIsRecorded);
   return true;
 }
 
@@ -274,18 +288,18 @@ export const rearmAlert = (id: number) => {
 };
 export const clearAlerts = () =>
   act("ALERTS NOT CLEARED", () => priceAlertsApi.clearAlerts(), "TRIGGERED ALERTS CLEARED").then(async (ok) => {
-    // Triggered news keyword alerts go with them; that list failing to clear is not worth failing the command for.
-    if (ok) await newsAlertsApi.clear().catch(() => {});
-    void refreshNewsAlerts().catch(() => {});
+    // Triggered news keyword alerts go with them. If that call fails, say so (the price alerts above did clear).
+    if (ok) await newsAlertsApi.clear().catch((e) => void fail(`NEWS ALERTS NOT CLEARED: ${errMessage(e)}`));
+    void refreshNewsAlerts().catch(failureIsRecorded);
     return ok;
   });
 
 /** News keyword alerts (ids shown as N<id>). */
 export const deleteNewsAlert = (id: number) =>
-  act(`NEWS ALERT N${id} NOT DELETED`, () => newsAlertsApi.delete(id), `NEWS ALERT N${id} DELETED`).then((ok) => (void refreshNewsAlerts().catch(() => {}), ok));
+  act(`NEWS ALERT N${id} NOT DELETED`, () => newsAlertsApi.delete(id), `NEWS ALERT N${id} DELETED`).then((ok) => (void refreshNewsAlerts().catch(failureIsRecorded), ok));
 export const rearmNewsAlert = (id: number) => {
   newsFiring.delete(id);
-  return act(`NEWS ALERT N${id} NOT REARMED`, () => newsAlertsApi.rearm(id), `NEWS ALERT N${id} REARMED`).then((ok) => (void refreshNewsAlerts().catch(() => {}), ok));
+  return act(`NEWS ALERT N${id} NOT REARMED`, () => newsAlertsApi.rearm(id), `NEWS ALERT N${id} REARMED`).then((ok) => (void refreshNewsAlerts().catch(failureIsRecorded), ok));
 };
 
 /** Runs an `ALRT ...` command. true/false = finished here; string[] = show `ALRT <args>`. */
@@ -310,7 +324,7 @@ export function alrtCommand(args: string[], security?: SecurityRef): boolean | s
         `NEWS ALERT ${where} "${a.word}" NOT SAVED`,
         () => newsAlertsApi.create({ word: a.word, symbol: a.symbol, ...(a.channels ? { channels: a.channels } : {}) }),
         `NEWS ALERT SET: ${where} HEADLINE CONTAINS "${a.word}"${a.channels ? ` ${viaText(a.channels)}` : ""} (CHECKED EVERY 2 MIN BY THE OPENTERM SERVER)`,
-      ).then(() => refreshNewsAlerts().catch(() => {}));
+      ).then(() => refreshNewsAlerts().catch(failureIsRecorded));
       return [];
     }
     case "clear":

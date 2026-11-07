@@ -379,7 +379,6 @@ export default function BT({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
         const { state: s, view: v, views: vs, run: r, metricRows: m, parsed: p, job: j, valJob: vj, valRun: vr, mc: mcr, wf: wfr } = latest.current;
         // Tab is the global next-panel key and never reaches a panel: V / Shift+V cycle the views, 1-4 pick one.

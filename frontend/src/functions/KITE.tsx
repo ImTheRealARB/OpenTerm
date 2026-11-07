@@ -72,7 +72,6 @@ export default function KITE({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         switch (e.key) {
           case "l":
             login();

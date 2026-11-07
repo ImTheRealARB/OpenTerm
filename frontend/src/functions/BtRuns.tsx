@@ -120,7 +120,6 @@ export default function BtRuns({ panelId }: { panelId: number }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey || e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
         const { rows: r, marks: m, cmp: c, view: v, diffRows: d } = latest.current;
         const k = e.key.toLowerCase();
         if (c) {

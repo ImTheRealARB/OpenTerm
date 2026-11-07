@@ -35,7 +35,6 @@ export default function TMPL({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const { sel: i, confirm: c } = state.current;
         if (c) {
           if (e.key === "Enter" || e.key === "y" || e.key === "Y") {

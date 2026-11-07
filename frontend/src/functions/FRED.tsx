@@ -8,7 +8,7 @@ import { macroApi } from "../net/macroApi";
 import type { Envelope, FredSeries } from "../net/types";
 import { navigate, replaceView } from "../state/workspace";
 import { FRED_RANGES, fmtSeriesChange, fmtSeriesValue, parseFredArgs } from "./macroArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
 

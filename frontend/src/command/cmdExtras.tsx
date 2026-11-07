@@ -54,6 +54,7 @@ export function previewNl(v: string, ui: Ui): void {
         ui.setItems(ui.nl.current);
         ui.setSel(-1);
       })
+      // Ignored on purpose: this is only the as-you-type preview. Enter resolves the text again and reports any failure then.
       .catch(() => {});
   }, NL_DEBOUNCE_MS);
 }

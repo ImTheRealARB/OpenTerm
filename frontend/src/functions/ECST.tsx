@@ -9,7 +9,7 @@ import { usePanelRefresh } from "./panelRefresh";
 import { ApiError } from "../net/core";
 import type { Envelope, WorldSeries } from "../net/types";
 import { worldApi } from "../net/worldApi";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
 import { fmtStat, parseEcstArgs } from "./worldArgs";
@@ -61,7 +61,6 @@ export default function ECST({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         switch (e.key) {
           case "c":
             setType((t) => (t === "LINE" ? "AREA" : "LINE"));

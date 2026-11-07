@@ -1,6 +1,6 @@
 /** Alerts: every saved price / percent alert with its live price and state (Phase 8). The backend engine fires them (Phase 20); command/alerts.ts shows the result app-wide. */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { alerts, alertsError, alertText, clearAlerts, deleteAlert, deleteNewsAlert, engineState, newsAlerts, notifyState, rearmAlert, rearmNewsAlert, refreshAlerts, refreshEngine, refreshNewsAlerts, refreshNotifyState, type NotifyState } from "../command/alerts";
+import { alerts, alertsError, alertText, failureIsRecorded, newsAlertsError, clearAlerts, deleteAlert, deleteNewsAlert, engineState, newsAlerts, notifyState, rearmAlert, rearmNewsAlert, refreshAlerts, refreshEngine, refreshNewsAlerts, refreshNotifyState, type NotifyState } from "../command/alerts";
 import { viaText } from "../command/alertArgs";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
@@ -71,7 +71,10 @@ const COLUMNS_GUI: Column<ARow>[] = [
 export default function ALRT({ panelId }: FunctionProps) {
   const list = useStore(alerts, (l) => l);
   const nlist = useStore(newsAlerts, (l) => l);
-  const err = useStore(alertsError, (e) => e);
+  // Either list can fail on its own; both reasons are shown (price alerts first).
+  const priceErr = useStore(alertsError, (e) => e);
+  const newsErr = useStore(newsAlertsError, (e) => e);
+  const err = [priceErr, newsErr].filter(Boolean).join(" · ") || null;
   const notify = useStore(notifyState, (n) => n);
   const engine = useStore(engineState, (s) => s);
   const gui = useStore(settingsStore, (st) => st.mode === "gui");
@@ -81,8 +84,8 @@ export default function ALRT({ panelId }: FunctionProps) {
 
   useEffect(() => {
     refreshNotifyState();
-    void refreshAlerts().catch(() => {});
-    void refreshNewsAlerts().catch(() => {});
+    void refreshAlerts().catch(failureIsRecorded);
+    void refreshNewsAlerts().catch(failureIsRecorded);
     // "last tick N s ago" and the refused-match list change while the panel is open: look every 5 s (one small GET)
     const t = setInterval(() => void refreshEngine(), 5000);
     return () => clearInterval(t);
@@ -102,7 +105,7 @@ export default function ALRT({ panelId }: FunctionProps) {
   const latest = useLatest({ rows, confirm });
   useCsvExport(panelId, () => gridCsv("ALRT", COLS, rows));
 
-  usePanelRefresh(panelId, () => { void refreshAlerts().catch(() => {}); void refreshNewsAlerts().catch(() => {}); });
+  usePanelRefresh(panelId, () => { void refreshAlerts().catch(failureIsRecorded); void refreshNewsAlerts().catch(failureIsRecorded); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {

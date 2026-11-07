@@ -11,7 +11,7 @@ import { usePanelRefresh } from "./panelRefresh";
 import { ApiError } from "../net/core";
 import type { Envelope, PredDetail, PredPayload, PredRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { filterSrc, fmtOutcome, fmtProb, fmtVolume, parsePredArgs, PRED_LABEL, PRED_USAGE, predBars, sourceTag } from "./predArgs";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
@@ -102,7 +102,6 @@ export default function PRED({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         const cur = latest.current;
         if (navKey(e, g, cur.rows.length)) return true;

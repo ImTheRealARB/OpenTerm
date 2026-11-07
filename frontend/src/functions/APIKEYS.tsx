@@ -196,7 +196,6 @@ export default function APIKEYS({ panelId, args }: FunctionProps) {
       registerPanelKeys(panelId, (e) => {
         const g = grid.current;
         const { rows: cur, edit: ed, confirm: c, capEdit: ce } = latest.current;
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (ce) {
           if (e.key === "Escape") setCapEdit(false);
           return e.key === "Escape";

@@ -11,7 +11,7 @@ import { ApiError } from "../net/core";
 import type { Envelope, WecoPayload, WecoRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -67,7 +67,6 @@ export default function WECO({ panelId }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const g = grid.current;
         const cur = latest.current;
         if (navKey(e, g, cur.rows.length)) return true;

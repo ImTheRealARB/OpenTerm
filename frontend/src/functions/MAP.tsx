@@ -501,7 +501,6 @@ export default function MAP({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const { w, h } = size.current;
         const cur = view.current;
         const L = latest.current;

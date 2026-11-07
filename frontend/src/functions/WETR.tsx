@@ -11,7 +11,7 @@ import { ApiError } from "../net/core";
 import type { Envelope, WetrPayload, WxBasketRow, WxDay } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { alertColor, alertLine, fmtDd, fmtTemp, placeArg } from "./energyArgs";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -79,7 +79,6 @@ export default function WETR({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.n)) return true;
         if (e.key === "b" || e.key === "B") {
           setBasketView((v) => !v);

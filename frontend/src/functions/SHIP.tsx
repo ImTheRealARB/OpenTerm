@@ -12,7 +12,7 @@ import { mapArgsFor, openMap } from "../map/jump";
 import { ApiError } from "../net/core";
 import type { Envelope, ShipPayload, ShipRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -62,7 +62,6 @@ export default function SHIP({ panelId }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
         if (e.key === "m") {
           openMap(panelId, mapArgsFor("SHIP")!); // M = the chokepoint boxes on the map

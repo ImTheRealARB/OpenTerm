@@ -14,7 +14,7 @@ import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { countdown, joinArg, sPct, signClass, utc } from "./cryptoArgs";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -54,7 +54,6 @@ export default function FUND({ panelId, args }: FunctionProps) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         const g = grid.current;
         if (navKey(e, g, cur.detail ? cur.prints.length : cur.rows.length)) return true;

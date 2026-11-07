@@ -18,7 +18,7 @@ import type { MfFund, MfReturnRow, MfSearchRow } from "../net/types";
 import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { useEnvelope } from "./useEnvelope";
-import { EnvStatus, ErrorLine } from "./macroUi";
+import { EnvStatus, ErrorLine } from "./panelStatus";
 import { fmtNav, fmtPct, isoOfEpoch, MF_USAGE, NAV_NORMAL_AGE_DAYS, navAgeDays, navAgeText, parseMfArgs, searchHeadline } from "./mfArgs";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
@@ -87,7 +87,6 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
-        if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const cur = latest.current;
         if (navKey(e, grid.current, cur.rowCount)) return true;
         switch (e.key) {

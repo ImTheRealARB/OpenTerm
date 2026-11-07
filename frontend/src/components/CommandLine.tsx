@@ -148,6 +148,7 @@ export function CommandLine() {
           if (seq !== searchSeq.current || input.current?.value !== text) return;
           startTransition(() => setItems([...nlItems.current, ...merge(token, true, env.data)]));
         })
+        // Ignored on purpose: only as-you-type suggestions; running the command reports any failure.
         .catch(() => {});
     }, SEARCH_DEBOUNCE_MS);
   };
@@ -263,6 +264,7 @@ export function CommandLine() {
     // Intent-based prefetch: a heavy chunk that is skipped at idle (GP's chart, BT's equity curve) is fetched the moment its code
     // appears in the command line, not after Enter. Which codes do this is the registry's `prefetchOnType` flag; only the first match loads.
     const typed = v.split(/\s+/).find((w) => FUNCTIONS.get(w.toUpperCase())?.prefetchOnType);
+    // Ignored on purpose: best-effort chunk prefetch; pressing Enter loads the chunk again and reports a failure then.
     if (typed) void loadModule(typed.toUpperCase()).catch(() => {});
     const layoutArg = LAYOUT_ARG.exec(v);
     const wlArg = layoutArg ? null : WL_ARG.exec(v);

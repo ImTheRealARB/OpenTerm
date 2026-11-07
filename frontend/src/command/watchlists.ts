@@ -26,6 +26,7 @@ export async function refreshWatchlists(maxAgeMs = 0): Promise<WatchlistInfo[]> 
 
 function changed(): void {
   watchlistVersion.set((n) => n + 1);
+  // Ignored on purpose: only the list NAMES for autocomplete; the change itself already succeeded and said so.
   void refreshWatchlists().catch(() => {});
 }
 
