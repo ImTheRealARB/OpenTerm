@@ -86,8 +86,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
     const latest = useLatest({ rows, count: d?.sections.length ?? 0, visuals: visuals.length, heat: visual?.kind === "heat", d, props });
     useEffect(() => {
       if (d) opts.onData?.(d, props);
-      // props change identity every render; the payload is what matters
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- props change identity every render; the payload is what matters
     }, [d]);
     const label = opts.fn.toUpperCase();
     useCsvExport(panelId, () => (section ? gridCsv(`${label}_${d?.symbol ?? "ALL"}_${section.id.toUpperCase()}`, columns, rows) : null));

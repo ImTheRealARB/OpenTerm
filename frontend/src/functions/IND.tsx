@@ -181,7 +181,7 @@ export default function IND({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- everything is read through `latest`; handlers only use setters, refs and `latest`
     [panelId, latest],
   );
 

@@ -29,7 +29,11 @@ async function setup(page: Page) {
     }),
   );
   await page.route("**/api/llm/health", (r) => r.fulfill({ json: { providers: [], spend: { today: 0, cap: 1 } } }));
-  await page.route("**/api/ai/swarm/presets", (r) => r.fulfill({ json: { presets: [] } }));
+  // The reply must have the real shape (GET /api/ai/swarm/presets: presets, errors, model, spend). The panel reads
+  // `desks.errors` and `desks.spend` while it draws the desk list, so a bare `{ presets: [] }` crashed it with
+  // "PANEL ERROR: Cannot convert undefined or null to object" whenever this reply landed before the first command
+  // started a run (a slow CI runner): that was the flaky "second SWARM command" failure, not a timing problem.
+  await page.route("**/api/ai/swarm/presets", (r) => r.fulfill({ json: { presets: [], errors: {}, model: "deepseek/deepseek-v4-pro", spend: { today: 0, cap: 5 } } }));
   await page.route("**/api/ai/runs?**", (r) => r.fulfill({ json: { runs: [] } }));
   await page.route("**/api/ai/swarm", () => {
     /* never answered: the stream stays open until the page aborts it */

@@ -248,8 +248,7 @@ export default function BT({ panelId, args }: FunctionProps) {
       return setState({ k: "bad", error: `BT ${parsed.sub}: UNKNOWN SUBCOMMAND` }); // EDIT / LOAD / RUNS are drawn by their own components
     }
     submit(parsed);
-    // args identity changes only when the command changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- args identity changes only when the command changes
   }, [parsed]);
 
   // Job finished: fetch the stored run (the done frame or GET /api/jobs/{id} carries its id).
@@ -269,8 +268,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           else setState({ k: "failed", error: "THE JOB FINISHED WITHOUT A RUN ID" });
         })
         .catch((e) => setState({ k: "failed", error: errText(e) }));
-    // reacts to the job record only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to the job record only
   }, [job]);
 
   const run = state.k === "done" ? state.run : null;
@@ -307,8 +305,7 @@ export default function BT({ panelId, args }: FunctionProps) {
     setWf(null);
     setValRun(null);
     if (run && isBtRun(parsed) && parsed.val) startVal(parsed.val);
-    // keyed on the run only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the run only
   }, [run?.id]);
 
   // Validation job finished: its result (the done frame carries it, else GET /api/jobs/{id}) becomes a view.
@@ -326,8 +323,7 @@ export default function BT({ panelId, args }: FunctionProps) {
         setValRun(null);
         setMsg(`ERR: ${errText(e)}`);
       });
-    // reacts to the job record only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to the job record only
   }, [valJob]);
 
   // First paint first, chart second. The labels, headline numbers and view line are cheap DOM and show the result at once.
@@ -440,8 +436,7 @@ export default function BT({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    // everything is read through `latest`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- everything is read through `latest`
     [panelId, latest],
   );
 

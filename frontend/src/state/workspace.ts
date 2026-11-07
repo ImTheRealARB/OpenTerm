@@ -1,5 +1,6 @@
 import type { SecurityRef } from "../command/markets";
 import { MAX_PANELS } from "./layoutState";
+import { memResetAll } from "./panelMemory";
 import { createStore, loadJSON, saveJSON } from "./store";
 
 export interface View {
@@ -154,8 +155,10 @@ export function resizeFocused(dir: "left" | "right" | "up" | "down", step = 0.05
   });
 }
 
-/** Replaces the whole workspace (layout load). */
+/** Replaces the whole workspace (layout load). AI/SWARM panel memory is reset first: a panel that
+ *  lands on an id which held a chat before must start empty, not show someone else's turns. */
 export function applyLayout(next: WorkspaceState): void {
+  memResetAll();
   workspace.set(() => next);
 }
 

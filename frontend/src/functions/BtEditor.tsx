@@ -171,8 +171,7 @@ function CodeBox(p: {
       ed?.destroy();
       p.handle.current = null;
     };
-    // created once per mount on purpose: everything else is read through `cb`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- created once per mount on purpose: everything else is read through `cb`
   }, []);
 
   // Show / clear the inline error marker whenever the error (or the editor's readiness) changes.
@@ -372,8 +371,7 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
         openChooser();
         return true;
       }),
-    // everything is read through `latest`; pick/openChooser only use setters, refs and `latest`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- everything is read through `latest`; pick/openChooser only use setters, refs and `latest`
     [panelId, latest],
   );
 

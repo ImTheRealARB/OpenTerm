@@ -47,7 +47,7 @@ export default function HDS({ panelId, security }: FunctionProps) {
         }
         return false;
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rows are read through `latest` and the grid through a ref; re-register only when the panel or symbol changes
     [panelId, latest, symbol],
   );
 

@@ -119,11 +119,11 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         setChartIndicators([]);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keys and cleanup are set up once per panel; handlers read current state through `pRef` and stable setters
   }, [panelId]);
   useEffect(() => {
     if (isAnswering()) setChartIndicators(customKeyStr ? customKeyStr.split("\n") : []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- customKeyStr is the re-run trigger; isAnswering reads the workspace store at call time
   }, [customKeyStr]);
 
   // --- bars (and compare symbols) ---
@@ -151,7 +151,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- p.compare is tracked through compareKey (p changes identity every render); `reload` is the manual refetch trigger
   }, [symbol, p.range, p.interval, compareKey, reload]);
 
   // Live: extend the last bar from ticks.
@@ -391,7 +391,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
         }
         return false;
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key handler reads current state through `live`; re-register only when the panel, picker or crosshair mode changes
     [panelId, picker, crossOn],
   );
 
