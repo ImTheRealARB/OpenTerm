@@ -135,6 +135,8 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
 - **LLM gateway:** no AI functions yet (Phase 16), so nothing calls a model on its own. OpenRouter reports the real cost per
   answer (usage accounting); `:free` models cost US$0 but have their own low rate limits. OpenAI and Anthropic direct
   need a price in `config.yaml` `llm.prices` (none shipped: prices change), else the call is refused (`PRICE UNKNOWN`).
+  OpenCode Go (`opencodego`) is a flat subscription: priced 0 per call (`llm/client.py` `FLAT_FEE`) unless a config price is set.
+  Reasoning models spend output tokens on thinking too: AI FILING allows 4,000 output tokens for that reason.
   Daily spend cap US$1.00 by default (APIKEYS `C`), checked before each call against the worst case (`max_tokens` at the
   output price) and reset at local midnight.
 - **Ollama** (local, free, no key): SOURCES shows `OK` with the model count if `http://127.0.0.1:11434/api/tags` answers in

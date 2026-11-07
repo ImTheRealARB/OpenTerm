@@ -89,3 +89,5 @@ the socket library stays off the startup path), and report "not tested" in fixtu
 LLM providers are not data providers: they go through the gateway in `backend/openterm/llm/` (`Gateway.chat`), which adds
 the price lookup and the daily spend cap. A new OpenAI-compatible host is one entry in `openai_compat.BASES` plus a
 `KEY_SPECS` row; its prices go in `config.yaml` `llm.prices` (unknown price = refused while a cap is set).
+A host billed by flat subscription instead of per token goes in `llm/client.py` `FLAT_FEE` (priced 0 per call).
+If the host needs extra headers (OpenCode Go needs `x-opencode-session`), add them in `openai_compat.request`.
