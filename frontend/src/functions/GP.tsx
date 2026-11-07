@@ -480,20 +480,23 @@ export default function GP({ panelId, security, args }: FunctionProps) {
           ref={chart}
           data={L.bars}
           compare={overlayCompare}
-          comparePanes={p.pane ? L.compares : undefined}
           type={p.type}
           log={p.log}
-          indicators={p.indicators}
-          custom={custom}
-          onCustomErrors={setCustomErrors}
-          draw={drawState}
-          events={markers}
-          onPick={(id) => setSelected(id)}
-          alertLevels={alertLevels}
-          pickArmed={armed}
-          onPickPrice={(px) => {
-            setArmed(false);
-            live.current.placeAlert(px);
+          // Everything only GP needs goes in one `gp` object (see chart/gpLayer.ts).
+          gp={{
+            indicators: p.indicators,
+            comparePanes: p.pane ? L.compares : undefined,
+            custom,
+            onCustomErrors: setCustomErrors,
+            draw: drawState,
+            events: markers,
+            onPick: (id) => setSelected(id),
+            alertLevels,
+            pickArmed: armed,
+            onPickPrice: (px) => {
+              setArmed(false);
+              live.current.placeAlert(px);
+            },
           }}
         />
       )}

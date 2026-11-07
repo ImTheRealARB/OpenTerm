@@ -14,7 +14,6 @@ import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
 import { fmtStat, parseEcstArgs } from "./worldArgs";
 
-const NO_INDICATORS: never[] = [];
 
 function toBars(s: WorldSeries): BarData {
   const c = Float64Array.from(s.v);
@@ -119,7 +118,7 @@ export default function ECST({ panelId, args }: FunctionProps) {
       )}
       <ErrorLine error={error} hasData={!!d} usage="ECST USA CPI" />
       {!bars && !error && <div className="dim">LOADING…</div>}
-      {bars && d && <ChartView key={`${d.country}:${d.indicator}:${d.source}`} ref={chart} data={bars} type={type} log={false} indicators={NO_INDICATORS} readoutLabel={d.indicator} />}
+      {bars && d && <ChartView key={`${d.country}:${d.indicator}:${d.source}`} ref={chart} data={bars} type={type} log={false} readoutLabel={d.indicator} />}
     </div>
   );
 }

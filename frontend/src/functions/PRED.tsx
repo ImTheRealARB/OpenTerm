@@ -18,7 +18,6 @@ import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
-const NO_INDICATORS: never[] = [];
 
 interface Open {
   source: PredRow["source"];
@@ -165,7 +164,7 @@ export default function PRED({ panelId, args }: FunctionProps) {
               {dd.history_note && <div className="warn" data-testid="pred-history-note">{dd.history_note}</div>}
               {bars && (
                 <div className="xychart">
-                  <ChartView key={`${dd.source}:${dd.id}`} data={bars} type="LINE" log={false} indicators={NO_INDICATORS} readoutLabel={`${dd.history_outcome.toUpperCase()} %`} />
+                  <ChartView key={`${dd.source}:${dd.id}`} data={bars} type="LINE" log={false} readoutLabel={`${dd.history_outcome.toUpperCase()} %`} />
                 </div>
               )}
             </>

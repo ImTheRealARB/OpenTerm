@@ -25,7 +25,6 @@ import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
-const NO_INDICATORS: never[] = [];
 
 const SEARCH_COLS: Column<MfSearchRow>[] = [
   { title: "CODE", width: 9, text: (r) => String(r.code), color: () => "acc" },
@@ -171,7 +170,7 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
             <div className="vis" data-testid="mf-chart">
               <div className="line dim">NAV PER UNIT, DAILY{crossOn ? " · CROSSHAIR (←/→, X TO EXIT)" : ""}</div>
               <div className="xychart">
-                <ChartView key={fund.code} ref={chart} data={bars} type={type} log={false} indicators={NO_INDICATORS} readoutLabel="NAV" />
+                <ChartView key={fund.code} ref={chart} data={bars} type={type} log={false} readoutLabel="NAV" />
               </div>
             </div>
           )}
