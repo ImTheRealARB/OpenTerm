@@ -10,15 +10,14 @@ from typing import Any, ClassVar
 
 import httpx
 
-from ..ratelimit import RateLimited
-from ..redact import redact
 from ..research import keyed_parse as kp
-from .base import NEWS_SYMBOL, NEWS_TOP, Provider, ProviderError
+from .base import NEWS_SYMBOL, NEWS_TOP, ProviderError
+from .keyed import KeyedProvider
 
 DATA = "https://data.alpaca.markets"
 
 
-class AlpacaProvider(Provider):
+class AlpacaProvider(KeyedProvider):
     name = "alpaca"
     label = "Alpaca market data (free keys)"
     capabilities = frozenset({NEWS_SYMBOL, NEWS_TOP})
@@ -28,47 +27,20 @@ class AlpacaProvider(Provider):
     max_wait = 2.0
     timeout = 8.0
     key_name = "ALPACA_KEY_ID"
+    key_fields = ("ALPACA_KEY_ID", "ALPACA_SECRET_KEY")  # two values: the adapter has a key only when both are set
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm/0.1", "Accept": "application/json"}
+    msg_rate_limited = "429 from Alpaca"
+    msg_refused = "Alpaca refused the keys ({code})"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None, key_id: str = "", secret: str = ""):
-        super().__init__(http, source)
-        self._id, self._secret = key_id, secret
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, key_id: str = "", secret: str = "", fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self._values = {"ALPACA_KEY_ID": key_id, "ALPACA_SECRET_KEY": secret}
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._id and self._secret)
-
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        v = values or {}
-        self._id, self._secret = v.get("ALPACA_KEY_ID", ""), v.get("ALPACA_SECRET_KEY", "")
-
-    def supports(self, capability: str, symbol: str | None = None) -> bool:
-        return self.has_key and capability in self.capabilities
+    def auth_headers(self) -> dict[str, str]:
+        return {"APCA-API-KEY-ID": self._values["ALPACA_KEY_ID"], "APCA-API-SECRET-KEY": self._values["ALPACA_SECRET_KEY"]}
 
     async def _api(self, path: str, params: dict[str, Any]) -> Any:
-        if not self.has_key:
-            raise ProviderError("key_required", "ALPACA_KEY_ID and ALPACA_SECRET_KEY are not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        auth = {"APCA-API-KEY-ID": self._id, "APCA-API-SECRET-KEY": self._secret}
-        try:
-            r = await self.http.get(f"{DATA}/{path}", params=params, headers={**self.headers, **auth}, timeout=self.timeout)
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
-        if r.status_code == 429:
-            raise ProviderError("rate_limited", "429 from Alpaca")
-        if r.status_code in (401, 403):
-            raise ProviderError("key_required", redact(f"Alpaca refused the keys ({r.status_code})", [self._id, self._secret]))
-        if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
-        try:
-            return r.json()
-        except ValueError as e:
-            raise ProviderError("unavailable", "non-JSON response") from e
+        return await self.get_json(f"{DATA}/{path}", params)
 
     async def _news(self, params: dict[str, Any]) -> dict:
         items = kp.alpaca_news(await self._api("v1beta1/news", {**params, "limit": 50, "sort": "desc",

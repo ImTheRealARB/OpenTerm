@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from ..options import chain as ch
 from .base import ProviderError
+from .http import BASE
 from .ownership import YahooOwnProvider
-from .yahoo import BASE
 
 OPTION_CHAIN = "option_chain"
 

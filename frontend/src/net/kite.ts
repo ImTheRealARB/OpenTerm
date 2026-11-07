@@ -1,5 +1,6 @@
 import { createStore } from "../state/store";
-import { kiteApi, type KiteStatus } from "./api";
+import { kiteApi } from "./kiteApi";
+import type { KiteStatus } from "./types";
 
 /**
  * Kite Connect login state for the status bar and the KITE panel. Fetched once at start and again after a login or logout (no polling).

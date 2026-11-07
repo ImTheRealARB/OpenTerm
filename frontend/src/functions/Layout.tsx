@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { deleteLayout, layoutList, loadLayout, refreshLayouts } from "../command/layouts";
 import { prefillCommand } from "../components/CommandLine";
 import { registerPanelKeys } from "../keys/panelKeys";
-import type { ApiError } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { ApiError } from "../net/core";
 import { useStore } from "../state/store";
 import { workspace } from "../state/workspace";
 import type { FunctionProps } from "./registry";
@@ -35,6 +36,7 @@ export default function Layout({ panelId }: FunctionProps) {
     void refresh();
   }, []);
 
+  usePanelRefresh(panelId, () => { void refresh(); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -70,9 +72,6 @@ export default function Layout({ panelId }: FunctionProps) {
             return true;
           case "s":
             prefillCommand("LAYOUT SAVE ");
-            return true;
-          case "F5":
-            void refresh();
             return true;
           case "Escape":
             return c !== null;

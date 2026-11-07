@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..errors import DataError
 from ..providers.etherscan_parse import ADDRESS, CHAINS
 from ..router import AllFailed
-from ..service import DataError
 
 TTL_S = 30.0  # blocks come every few seconds; half a minute keeps a refresh from burning the 3-calls-a-second limit
 COINS = {"ETH": "ETH", "ARB": "ETH", "OP": "ETH", "BASE": "ETH", "POLY": "POL", "BSC": "BNB"}
@@ -52,4 +52,4 @@ async def addr(svc: Any, q: str) -> dict[str, Any]:
         data.update(chain=chain, chainid=chainid, coin=COINS[chain], address=address, note=NOTE)
         return {"data": data, "fallback_from": failed, "source": source}
 
-    return await svc._swr(f"w:addr:{chainid}:{address or 'gas'}", TTL_S, fetch)
+    return await svc.swr(f"w:addr:{chainid}:{address or 'gas'}", TTL_S, fetch)

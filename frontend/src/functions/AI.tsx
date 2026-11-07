@@ -18,7 +18,9 @@ import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { replaceView } from "../state/workspace";
 import { aiArgs } from "./aiArgs";
-import { citeSegments, newTurn, parseSse, reduceTurn, stopTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
+import { aiApi, isAbort, streamPost } from "../net/aiApi";
+import type { RawReply } from "../net/core";
+import { citeSegments, newTurn, reduceTurn, stopTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
 import type { FunctionProps } from "./registry";
 import { watchPanelGone } from "./panelGoneWatch";
 import { usePanelMemory } from "./usePanelMemory";
@@ -162,9 +164,8 @@ export default function AI({ panelId, args }: FunctionProps) {
 
   const refreshSpend = useCallback(async () => {
     try {
-      const r = await fetch("/api/llm/health");
-      const j = await r.json();
-      if (j?.spend) setSpend(j.spend);
+      const { json } = await aiApi.health<{ spend?: { today: number; cap: number } }>();
+      if (json?.spend) setSpend(json.spend);
     } catch {
       /* the header just keeps its last value */
     }
@@ -220,44 +221,25 @@ export default function AI({ panelId, args }: FunctionProps) {
               : mode === "chart"
               ? { image, symbol: shot!.symbol, range: shot!.range, model: cfg.visionModel, provider: cfg.provider }
               : { question, history, model: cfg.model, provider: cfg.provider, ...(asking ? { doc_id: curDoc.id } : {}) };
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: ac.signal,
-        });
-        if (!res.ok || !res.body) {
-          const j = await res.json().catch(() => null);
-          apply({ type: "error", kind: j?.kind ?? "http", text: j?.error ?? `HTTP ${res.status}` });
-          return;
-        }
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        let buf = "";
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          const parsed = parseSse(buf);
-          buf = parsed.rest;
-          for (const e of parsed.events) {
-            if (!sawEvent) {
-              sawEvent = true;
-              gauges.set("ai.first_event_ms", performance.now() - t0);
-            }
-            if (e.type === "token" && !sawToken) {
-              sawToken = true;
-              gauges.set("ai.first_token_ms", performance.now() - t0);
-            }
-            apply(e);
+        const ended = await streamPost<AiEvent>(url, payload, ac.signal, (e) => {
+          if (!sawEvent) {
+            sawEvent = true;
+            gauges.set("ai.first_event_ms", performance.now() - t0);
           }
-        }
+          if (e.type === "token" && !sawToken) {
+            sawToken = true;
+            gauges.set("ai.first_token_ms", performance.now() - t0);
+          }
+          apply(e);
+        });
+        // The server refused the request: streamPost already showed its error as an event, so there is nothing to settle.
+        if (!ended) return;
         // The stream ended without done or error (server stopped): do not leave the turn spinning.
         if (!gone) setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) && t.status === "running" ? { ...t, status: "done", label: "INCOMPLETE" } : t)));
       } catch (e) {
         if (gone) {
           /* already marked INCOMPLETE when the panel moved on */
-        } else if ((e as Error).name === "AbortError") {
+        } else if (isAbort(e)) {
           setTurns((ts) => ts.map((t, i) => (i === Math.min(idx, ts.length - 1) ? { ...t, status: "done", label: "INCOMPLETE", notices: [...t.notices, "CANCELLED (ESC)"] } : t)));
         } else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
       } finally {
@@ -277,9 +259,10 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, [send]);
 
   // `AI <question>` from the command line sends once, then the view goes back to a plain chat so a remount does not ask again.
-  const loaded = (r: Response, j: { doc?: DocCard; error?: string; url?: string } | null) => {
-    if (!r.ok || !j?.doc) {
-      setNote({ text: j?.error ?? `HTTP ${r.status}`, cls: "err" });
+  type DocReply = { doc?: DocCard; error?: string; url?: string };
+  const loaded = ({ ok, status, json: j }: RawReply<DocReply>) => {
+    if (!ok || !j?.doc) {
+      setNote({ text: j?.error ?? `HTTP ${status}`, cls: "err" });
       return;
     }
     setDoc(j.doc);
@@ -288,8 +271,7 @@ export default function AI({ panelId, args }: FunctionProps) {
   const loadFiling = async (symbol: string, form: string) => {
     setNote({ text: `FETCHING ${symbol} ${form} FROM SEC...`, cls: "dim" });
     try {
-      const r = await fetch("/api/ai/doc/filing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, form }) });
-      loaded(r, await r.json().catch(() => null));
+      loaded(await aiApi.loadFiling<DocReply>(symbol, form));
     } catch {
       setNote({ text: "BACKEND DOWN", cls: "err" });
     }
@@ -297,8 +279,7 @@ export default function AI({ panelId, args }: FunctionProps) {
   const uploadFile = async (file: File) => {
     setNote({ text: `READING ${file.name}...`, cls: "dim" });
     try {
-      const r = await fetch(`/api/ai/doc/upload?name=${encodeURIComponent(file.name)}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file });
-      loaded(r, await r.json().catch(() => null));
+      loaded(await aiApi.uploadDoc<DocReply>(file));
     } catch {
       setNote({ text: "BACKEND DOWN", cls: "err" });
     }

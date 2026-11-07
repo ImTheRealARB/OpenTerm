@@ -2,10 +2,12 @@
  * Shared by the live quote grids (Q, WL, WEI, FX, CMDTY): REST snapshot, then WebSocket ticks
  * repaint only the rows that changed, plus the common columns and grid navigation keys.
  */
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import type { CellColor, Column, GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtChg, fmtPct, fmtPrice, fmtTime, sign } from "../format";
-import { ApiError, api, type Quote, type QuoteResult } from "../net/api";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Quote, QuoteResult } from "../net/types";
 import { subscribe } from "../net/socket";
 import { NO_SYM, symId } from "../state/symbols";
 import { live, liveWins, onTicks, SRC_SYNTHETIC, srcLabel } from "../state/ticks";
@@ -162,7 +164,7 @@ export function useQuotes(inputs: string[], reload: number) {
       return;
     }
     const chunks = Array.from({ length: Math.ceil(inputs.length / CHUNK) }, (_, i) => inputs.slice(i * CHUNK, (i + 1) * CHUNK));
-    Promise.all(chunks.map((c) => api.quotes(c)))
+    Promise.all(chunks.map((c) => marketApi.quotes(c)))
       .then((parts) => {
         if (!alive) return;
         const results = Object.assign({}, ...parts.map((p) => p.results)) as Record<string, QuoteResult>;
@@ -200,50 +202,4 @@ export function useLiveRows<R>(rows: R[], grid: RefObject<GridHandle | null>, sy
 
   // AGE/STALE text keeps counting, but not while the tab is hidden; one redraw when it comes back.
   useEffect(() => startAgeRedraw(() => grid.current?.redraw(), 5000, typeof document === "undefined" ? undefined : document), [grid]);
-}
-
-/** j/k, arrows, g/G, Home/End, PageUp/PageDown. `skip(i)` rows (section headers) are stepped over. */
-export function navKey(e: KeyboardEvent, g: GridHandle | null, count: number, skip?: (i: number) => boolean): boolean {
-  if (!g) return false;
-  const step = (d: 1 | -1) => {
-    const before = g.selected();
-    g.move(d);
-    const at = g.selected();
-    if (skip?.(at)) {
-      g.move(d);
-      if (skip(g.selected())) g.moveTo(before); // a header at the very end: stay put
-    }
-  };
-  switch (e.key) {
-    case "j":
-    case "ArrowDown":
-      step(1);
-      return true;
-    case "k":
-    case "ArrowUp":
-      step(-1);
-      return true;
-    case "g":
-    case "Home":
-      g.moveTo(skip?.(0) ? 1 : 0);
-      return true;
-    case "G":
-    case "End":
-      g.moveTo(count - 1);
-      return true;
-    case "PageDown":
-      g.page(1);
-      return true;
-    case "PageUp":
-      g.page(-1);
-      return true;
-  }
-  return false;
-}
-
-/** A ref that always holds the latest value, for key handlers registered once per mount. */
-export function useLatest<T>(value: T) {
-  const r = useRef(value);
-  r.current = value;
-  return r;
 }

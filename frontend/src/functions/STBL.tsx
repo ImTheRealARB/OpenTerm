@@ -6,12 +6,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtRate } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type StblCoin, type StblPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { StblCoin, StblPayload } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { joinArg, sPct, signClass } from "./cryptoArgs";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -38,7 +41,7 @@ const CHAINS: Column<ChainRow>[] = [
 
 export default function STBL({ panelId, args }: FunctionProps) {
   const chain = useMemo(() => joinArg(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.stbl(chain, fresh), chain.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(chain.toLowerCase(), (fresh) => worldApi.stbl(chain, fresh));
   const [view, setView] = useState<"COINS" | "CHAINS">("COINS");
   const grid = useRef<GridHandle>(null);
   const d = env?.data;
@@ -47,6 +50,7 @@ export default function STBL({ panelId, args }: FunctionProps) {
   const latest = useLatest({ coins, chains, view, chain });
   useCsvExport(panelId, () => (d ? (view === "COINS" ? gridCsv("STBL", COINS, coins) : gridCsv("STBL_CHAINS", CHAINS, chains)) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -56,10 +60,6 @@ export default function STBL({ panelId, args }: FunctionProps) {
         if (navKey(e, g, cur.view === "COINS" ? cur.coins.length : cur.chains.length)) return true;
         if (e.key === "c" || e.key === "C") {
           setView((v) => (v === "COINS" ? "CHAINS" : "COINS"));
-          return true;
-        }
-        if (e.key === "F5") {
-          void load(true);
           return true;
         }
         if (e.key === "Enter" && cur.view === "CHAINS") {
@@ -73,7 +73,7 @@ export default function STBL({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

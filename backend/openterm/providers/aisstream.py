@@ -41,7 +41,8 @@ from typing import Any
 import orjson
 
 from . import aisstream_parse as ap
-from .base import Provider, ProviderError
+from .base import ProviderError
+from .keyed import KeyedProvider
 
 CAPABILITY = "ais"
 FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "ais_stream_recording.json"
@@ -134,33 +135,25 @@ class PositionMemory:
         return out
 
 
-class AisStreamProvider(Provider):
+class AisStreamProvider(KeyedProvider):
     name = "aisstream"
     label = "AISstream (free key, beta WebSocket)"
     capabilities = frozenset({CAPABILITY})
     markets = "Live ship positions (AIS) inside a bounding box, plus destination and ETA as ships report them"
     terms = "Free key (AISSTREAM_API_KEY). BETA: no uptime promise, no replay, 3 connections per account and per IP. Positions are as reported by ships."
     key_name = "AISSTREAM_API_KEY"
+    hide_without_key = False  # supports() stays true; a missing key answers KEY REQUIRED. (It uses a WebSocket, not KeyedProvider's HTTP request.)
     url = ap.URL  # tests point this at a local server
 
-    def __init__(self, http: Any, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
-        self.source = "aisstream (REPLAY of a real recording from 2026-11-05, NOT LIVE)" if self.fixtures else "aisstream"
-        self._key = ""
+    def __init__(self, http: Any, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self.source = "aisstream (REPLAY of a real recording from 2026-11-05, NOT LIVE)" if self.fixture else "aisstream"
         self._lock = asyncio.Lock()  # one listen at a time: the account allows only 3 connections
         self._statics: OrderedDict[int, dict[str, Any]] = OrderedDict()
         # Last position per ship for 5 minutes. It lives on this provider object, and the provider is built with the app, so a new app
         # (every test builds its own) starts with an empty memory. Fixture mode never touches it (see `_assemble`).
         self.positions = PositionMemory()
         self.clock = time.time  # tests replace this with a fake clock to age the memory without sleeping
-
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
-
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get("AISSTREAM_API_KEY", "")
 
     async def ais_listen(self, box: tuple[float, float, float, float], seconds: float = 8.0, max_messages: int = 3000) -> dict[str, Any]:
         """Listens inside `box` for at most `seconds` or `max_messages` data messages, whichever comes first.
@@ -175,7 +168,7 @@ class AisStreamProvider(Provider):
         box = ap.check_box(*box)  # ValueError for a bad box, before any connection
         seconds, max_messages = min(max(seconds, 0.2), MAX_SECONDS), min(max(max_messages, 1), MAX_MESSAGES)
         async with self._lock:
-            if self.fixtures:
+            if self.fixture:
                 msgs, listened = self._fixture_messages(box), 0.1
             else:
                 msgs, listened = await self._read(box, seconds, max_messages)
@@ -259,7 +252,7 @@ class AisStreamProvider(Provider):
         # it neither stores nor recalls, so a replay stays deterministic and nothing can leak from one test or panel to the next.
         positions = {m: {**p, "remembered": False} for m, p in positions.items()}
         remembered: dict[int, dict[str, Any]] = {}
-        if not self.fixtures:
+        if not self.fixture:
             self.positions.update(positions, now)
             remembered = {m: {**p, "remembered": True} for m, p in self.positions.recall(box, set(positions), now).items()}
         positions |= remembered
@@ -272,7 +265,7 @@ class AisStreamProvider(Provider):
             "capped": len(msgs) >= cap,
             "listened_s": round(listened, 2),
             "source": self.source,
-            "replay": self.fixtures,  # True = a recording replayed in fixture mode, not the live feed
+            "replay": self.fixture,  # True = a recording replayed in fixture mode, not the live feed
         }
 
 

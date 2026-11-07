@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 
+from ..errors import DataError
 from ..ratelimit import RateLimited, TokenBucket
 from ..redact import redact
 from . import KITE_API
@@ -32,8 +33,6 @@ def checksum(api_key: str, request_token: str, api_secret: str) -> str:
 
 
 def _error(kind: str, message: str):
-    from ..service import DataError
-
     return DataError(kind, message)
 
 

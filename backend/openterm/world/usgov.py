@@ -8,9 +8,6 @@ from __future__ import annotations
 
 from typing import Any
 
-# The two api.data.gov keys (FEC, Congress.gov) come from the same signup page.
-SIGNUP = "https://api.data.gov/signup/"
-
 
 class UsGovError(Exception):
     """The user's words are unusable (`bad_request`) or the upstream answer is not the shape its documentation promises (`unavailable`)."""

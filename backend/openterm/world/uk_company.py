@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..errors import DataError
 from ..providers import companies_house_parse as chp
 from ..router import AllFailed
-from ..service import DataError
 
 COMPANY_TTL_S = 3600.0  # a register entry changes when the company files something: an hour is fresh enough
 SEARCH_TTL_S = 600.0
@@ -40,4 +40,4 @@ async def ukco(svc: Any, q: str) -> dict[str, Any]:
         return {"data": {**data, "note": NOTE}, "fallback_from": failed, "source": out["source"]}
 
     key = f"w:ukco:{number}" if number else f"w:ukco:q:{text.upper()}"
-    return await svc._swr(key, COMPANY_TTL_S if number else SEARCH_TTL_S, fetch)
+    return await svc.swr(key, COMPANY_TTL_S if number else SEARCH_TTL_S, fetch)

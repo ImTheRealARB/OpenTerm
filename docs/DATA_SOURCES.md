@@ -120,7 +120,7 @@ Symbols are the app's `BTC-USD` / `BTC-USDT` / `ETH-EUR` (dash required, so a sh
 Errors: Kraken answers every error as HTTP 200 with an `error` list (`EQuery:Unknown asset pair` = not found, `EAPI:Rate limit` = rate limited); Coinbase answers 404 `{"message":"NotFound"}` for an unknown product.
 Fixtures (`backend/tests/fixtures/kraken_*.json`, `coinbase_*.json`) are real answers, long ones trimmed to their newest rows; `coinbase_stats_usd.json` joins the 21 per-product answers into one file.
 Order: `history` `... binance_klines, yahoo, coinbase, kraken ...` (Coinbase above Kraken because it can be paged; both below Yahoo because Yahoo's BTC-USD goes back 20 years, and Yahoo does not carry USDT pairs so those fall through to them);
-`crypto` board and `crypto_depth` are pinned lists (`config.yaml` `providers: crypto:` and `main.DEFAULT_ORDER`), not in the hierarchy table, which holds only `quotes` and `history`.
+`crypto` board and `crypto_depth` are plain lists in `DEFAULT_ORDER` (`providers/hierarchy.py`), not ranked `HIERARCHY` entries, which exist only for `quotes` and `history`.
 
 Built after that (branch `claude/ports-and-official-stats`): `PORTS` (PortWatch ports) and `DBSRCH` (DBnomics series search). OECD, Eurostat, BIS and IMF series are
 reached through DBnomics (`DBSRCH`, then `ECST DBN:...`), so no separate adapters were written.

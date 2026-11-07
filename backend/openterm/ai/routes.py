@@ -17,9 +17,9 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response, StreamingResponse
 
 from .. import api as api_mod
-from .. import perf
+from .. import http_util, perf
 from ..redact import redact
-from ..responses import Orjson, OrjsonRoute
+from ..responses import OrjsonRoute
 from . import agent, tools
 from .audit import audit_of, audited, manifest
 
@@ -45,14 +45,10 @@ Read prices only where the axis labels are legible and say that they are read of
 You have no data tools: everything you say comes from the image alone."""
 
 
-def _err(status: int, kind: str, message: str) -> Response:
-    return Orjson({"error": message, "kind": kind}, status_code=status)
-
-
 async def ai_settings(request: Request) -> dict:
     from ..settings_store import SettingsStore
 
-    doc = await SettingsStore(api_mod.user(request).db).get()
+    doc = await SettingsStore(http_util.user(request).db).get()
     ai = (doc.get("settings") or {}).get("ai")
     return ai if isinstance(ai, dict) else {}
 
@@ -62,15 +58,15 @@ def sse(event: dict) -> bytes:
 
 
 async def _body(request: Request) -> dict | Response:
-    if not api_mod.loopback(request):
-        return _err(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
-    if not api_mod.is_json_type(request):
-        return _err(400, "bad_request", "CONTENT-TYPE MUST BE application/json")
+    if not http_util.loopback(request):
+        return http_util.error_response(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
+    if not http_util.is_json_type(request):
+        return http_util.error_response(400, "bad_request", "CONTENT-TYPE MUST BE application/json")
     try:
         body = orjson.loads(await request.body())
     except orjson.JSONDecodeError:
         body = None
-    return body if isinstance(body, dict) else _err(400, "bad_request", "BODY MUST BE A JSON OBJECT")
+    return body if isinstance(body, dict) else http_util.error_response(400, "bad_request", "BODY MUST BE A JSON OBJECT")
 
 
 def _models(body: dict, cfg: dict, field: str = "model", default: str = agent.DEFAULT_MODEL) -> tuple[str, str] | None:
@@ -82,7 +78,7 @@ def _models(body: dict, cfg: dict, field: str = "model", default: str = agent.DE
 
 def audit(request: Request, events: AsyncIterator[dict], kind: str, system: str, question: str, names: list[str] | None, model: str, provider: str) -> AsyncIterator[dict]:
     """Wraps an event stream so its final event writes one hash-chained ledger entry (hashes and metadata only, no text)."""
-    return audited(audit_of(request.app, api_mod.user(request).db), events, kind, manifest(system, names, model, provider), question)
+    return audited(audit_of(request.app, http_util.user(request).db), events, kind, manifest(system, names, model, provider), question)
 
 
 def _stream(request: Request, t0: float, events: AsyncIterator[dict], runner: tools.ToolRunner | None = None,
@@ -125,10 +121,10 @@ async def chat(request: Request):
         return body
     question = body.get("question")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION:
-        return _err(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS")
+        return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS")
     names = _models(body, await ai_settings(request))
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port))
     events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1]),
@@ -169,10 +165,10 @@ async def bt(request: Request):
         return body
     idea = body.get("idea")
     if not isinstance(idea, str) or not idea.strip() or len(idea) > MAX_QUESTION:
-        return _err(400, "bad_request", f"IDEA MUST BE 1-{MAX_QUESTION} CHARACTERS")
+        return http_util.error_response(400, "bad_request", f"IDEA MUST BE 1-{MAX_QUESTION} CHARACTERS")
     names = _models(body, await ai_settings(request))
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=BT_TOOLS)
     system = BT_SYSTEM.format(today=time.strftime("%Y-%m-%d", time.gmtime()))
     events = audit(request, agent.run(api_mod.llm_of(request), runner, idea.strip(), [], model=names[0], provider=names[1], tools=BT_TOOLS, system=system, max_rounds=6),
@@ -195,10 +191,10 @@ async def chart(request: Request):
         return body
     image = body.get("image")
     if not isinstance(image, str) or len(image) > MAX_IMAGE or not IMAGE_RE.match(image):
-        return _err(400, "bad_request", "IMAGE MUST BE A PNG, JPEG OR WEBP DATA URL UNDER 3 MB")
+        return http_util.error_response(400, "bad_request", "IMAGE MUST BE A PNG, JPEG OR WEBP DATA URL UNDER 3 MB")
     names = _models(body, await ai_settings(request), "visionModel", VISION_MODEL)
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     label = " ".join(str(body.get(k) or "") for k in ("symbol", "range")).strip()[:60]
     gateway = api_mod.llm_of(request)
     model, provider = names
@@ -261,17 +257,17 @@ def _ingest(name: str, fname: str, data: bytes, kind_as: str | None = None):
 async def doc_upload(request: Request, name: str = ""):
     from . import doc
 
-    if not api_mod.loopback(request):
-        return _err(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
+    if not http_util.loopback(request):
+        return http_util.error_response(403, "forbidden", "THE AI CAN ONLY BE USED FROM THIS MACHINE")
     if not NAME_RE.match(name) or ".." in name:
-        return _err(400, "bad_request", "FILE NAME MUST BE 1-100 PLAIN CHARACTERS WITH AN EXTENSION")
+        return http_util.error_response(400, "bad_request", "FILE NAME MUST BE 1-100 PLAIN CHARACTERS WITH AN EXTENSION")
     data = await request.body()
     if len(data) > doc.MAX_BYTES:
-        return _err(413, "too_large", f"FILE OVER {doc.MAX_BYTES // 1024 // 1024} MB")
+        return http_util.error_response(413, "too_large", f"FILE OVER {doc.MAX_BYTES // 1024 // 1024} MB")
     try:
         d = doc_store(request).put(await asyncio.to_thread(_ingest, name, name, data))
     except ValueError as e:
-        return _err(400, "bad_request", str(e))
+        return http_util.error_response(400, "bad_request", str(e))
     return {"doc": d.card()}
 
 
@@ -285,23 +281,23 @@ async def doc_filing(request: Request):
         return body
     symbol, form = str(body.get("symbol") or ""), str(body.get("form") or "10-K").upper()
     if not SYMBOL_RE.match(symbol) or not re.match(r"^[A-Z0-9/\-]{1,12}$", form):
-        return _err(400, "bad_request", "SYMBOL OR FORM IS NOT VALID")
-    sec = api_mod.svc(request).router.providers["sec"]
+        return http_util.error_response(400, "bad_request", "SYMBOL OR FORM IS NOT VALID")
+    sec = http_util.svc(request).router.providers["sec"]
     try:
         filings = (await sec.filings(symbol.upper())).get("filings") or []
         hit = next((f for f in filings if f.get("form") == form and f.get("doc_url")), None)
         if hit is None:
-            return _err(404, "not_found", f"NO {form} FILING WITH A DOCUMENT FOR {symbol.upper()} IN THE LATEST SEC LIST")
+            return http_util.error_response(404, "not_found", f"NO {form} FILING WITH A DOCUMENT FOR {symbol.upper()} IN THE LATEST SEC LIST")
         raw = await sec.get_bytes(hit["doc_url"])
     except ProviderError as e:
-        return _err(502, "provider", f"SEC: {str(e)[:120]}")
+        return http_util.error_response(502, "provider", f"SEC: {str(e)[:120]}")
     if len(raw) > doc.MAX_BYTES:
-        return _err(413, "too_large", "THE FILING DOCUMENT IS OVER 10 MB")
+        return http_util.error_response(413, "too_large", "THE FILING DOCUMENT IS OVER 10 MB")
     name = f"{symbol.upper()} {form} {hit.get('filed') or ''}".strip()
     try:
         d = doc_store(request).put(await asyncio.to_thread(_ingest, name, "filing.htm", raw, "filing"))
     except ValueError as e:
-        return _err(400, "bad_request", str(e))
+        return http_util.error_response(400, "bad_request", str(e))
     return {"doc": d.card(), "url": hit.get("url") or hit["doc_url"]}
 
 
@@ -313,13 +309,13 @@ async def doc_ask(request: Request):
         return body
     question = body.get("question")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION or not isinstance(body.get("doc_id"), str):
-        return _err(400, "bad_request", f"NEEDS doc_id AND A QUESTION OF 1-{MAX_QUESTION} CHARACTERS")
+        return http_util.error_response(400, "bad_request", f"NEEDS doc_id AND A QUESTION OF 1-{MAX_QUESTION} CHARACTERS")
     d = doc_store(request).get(body["doc_id"])
     if d is None:
-        return _err(404, "not_found", "THAT DOCUMENT IS NO LONGER LOADED (THE LAST 5 ARE KEPT): LOAD IT AGAIN")
+        return http_util.error_response(404, "not_found", "THAT DOCUMENT IS NO LONGER LOADED (THE LAST 5 ARE KEPT): LOAD IT AGAIN")
     names = _models(body, await ai_settings(request))
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=["doc_search"], context={"doc": d})
     system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), today=time.strftime("%Y-%m-%d", time.gmtime()))

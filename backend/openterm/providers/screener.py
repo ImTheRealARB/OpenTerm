@@ -8,8 +8,8 @@ it small: each row is [symbol, name, last, chg, pct, volume, mcap, country_i, ip
 from typing import Any, ClassVar
 
 from .base import Provider, ProviderError
+from .http import UA
 from .nasdaq import num
-from .yahoo import UA
 
 SCREENER = "screener"
 PEERS = "peers"

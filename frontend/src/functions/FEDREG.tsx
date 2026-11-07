@@ -6,10 +6,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type FedregItem } from "../net/api";
-import { useEnvLoad } from "./cryptoLoad";
+import { usePanelRefresh } from "./panelRefresh";
+import type { FedregItem } from "../net/types";
+import { worldApi } from "../net/worldApi";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { agencyShort, joinQuery } from "./usgovArgs";
@@ -24,7 +27,7 @@ const COLUMNS: Column<FedregItem>[] = [
 
 export default function FEDREG({ panelId, args }: FunctionProps) {
   const query = useMemo(() => joinQuery(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.fedreg(query, fresh), query.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(query.toLowerCase(), (fresh) => worldApi.fedreg(query, fresh));
   const [open, setOpen] = useState<string | null>(null); // document number whose abstract is shown
   const grid = useRef<GridHandle>(null);
   const d = env?.data;
@@ -32,6 +35,7 @@ export default function FEDREG({ panelId, args }: FunctionProps) {
   const latest = useLatest({ items });
   useCsvExport(panelId, () => (d ? gridCsv("FEDREG", COLUMNS, items, [{ title: "ABSTRACT", text: (r) => r.abstract ?? "" }, { title: "URL", text: (r) => r.url ?? "" }]) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -39,10 +43,6 @@ export default function FEDREG({ panelId, args }: FunctionProps) {
         const g = grid.current;
         const rows = latest.current.items;
         if (navKey(e, g, rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter") {
           const r = rows[g?.selected() ?? -1];
           if (r) setOpen((cur) => (cur === r.number ? null : r.number)); // Enter again hides it
@@ -50,7 +50,7 @@ export default function FEDREG({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const shown = open ? items.find((i) => i.number === open) : undefined;

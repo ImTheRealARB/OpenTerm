@@ -6,8 +6,10 @@ import { PanelNote, plainLine, type NoteAction } from "../components/PanelNote";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { termProps } from "../gui/term";
 import { runCommand } from "../gui/run";
-import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, type Envelope, type Quote } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, Quote } from "../net/types";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import type { FunctionProps } from "./registry";
@@ -121,11 +123,11 @@ export default function DES({ panelId, security }: FunctionProps) {
     let alive = true;
     setProf({});
     setQuote({});
-    api.profile(symbol).then(
+    marketApi.profile(symbol).then(
       (env) => alive && setProf({ env: env as Envelope<Profile> }),
       (e: ApiError) => alive && setProf({ error: e.message, keyError: isKeyRequired(e) ? e : undefined }),
     );
-    api.quotes([symbol]).then(
+    marketApi.quotes([symbol]).then(
       ({ results }) => {
         if (!alive) return;
         const r = Object.values(results)[0];
@@ -138,17 +140,7 @@ export default function DES({ panelId, security }: FunctionProps) {
     };
   }, [symbol, reload]);
 
-  useEffect(
-    () =>
-      registerPanelKeys(panelId, (e) => {
-        if (e.key === "F5") {
-          setReload((n) => n + 1);
-          return true;
-        }
-        return false;
-      }),
-    [panelId],
-  );
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
 
   // Unknown symbol (GUI mode): both requests said "no data". Offer the closest company names as one-click next steps.
   const noData = (e?: string) => !!e && /NO DATA|NOT FOUND/i.test(e);

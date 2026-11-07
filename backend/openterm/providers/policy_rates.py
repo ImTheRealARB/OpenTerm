@@ -6,7 +6,7 @@ One bank failing does not fail the others: its entry carries `error` and the pan
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, ClassVar
 
 from ..world import cenb
@@ -63,7 +63,3 @@ class PolicyRatesProvider(Provider):
 
     async def probe(self) -> None:
         await self.policy_rates()
-
-
-def today_utc() -> date:
-    return datetime.now(UTC).date()

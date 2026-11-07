@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { latestOnly } from "./keyedLoad";
+import { keyGate, latestOnly } from "./keyedLoad";
 
 describe("latestOnly (COMP: a slow answer for the old symbol must not overwrite the new one)", () => {
   it("only the most recent start is current", () => {
@@ -25,5 +25,26 @@ describe("latestOnly (COMP: a slow answer for the old symbol must not overwrite 
     };
     await Promise.all([run("OLD", 30), run("NEW", 5)]);
     expect(shown).toBe("NEW");
+  });
+});
+
+describe("keyGate (useEnvelope: an answer for an old key must not land after the key changed)", () => {
+  it("an answer asked for the old key is dropped once the key changed", () => {
+    const g = keyGate("AAPL");
+    const askedFor = "AAPL";
+    g.set("MSFT"); // the user typed a new symbol while the AAPL request was in flight
+    expect(g.isCurrent(askedFor)).toBe(false);
+    expect(g.isCurrent("MSFT")).toBe(true);
+  });
+  it("two answers for the same key both count (F5 or the auto refresh while one is still in flight)", () => {
+    const g = keyGate("BTC-USD");
+    expect(g.isCurrent("BTC-USD")).toBe(true);
+    expect(g.isCurrent("BTC-USD")).toBe(true);
+  });
+  it("switching back to an earlier key makes its answers count again", () => {
+    const g = keyGate("A");
+    g.set("B");
+    g.set("A");
+    expect(g.isCurrent("A")).toBe(true);
   });
 });

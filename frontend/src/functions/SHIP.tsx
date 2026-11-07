@@ -7,10 +7,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelRefresh } from "./panelRefresh";
 import { mapArgsFor, openMap } from "../map/jump";
-import { ApiError, worldApi, type Envelope, type ShipPayload, type ShipRow } from "../net/api";
+import { ApiError } from "../net/core";
+import type { Envelope, ShipPayload, ShipRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { chgColor, fmtPct, fmtShips, spark } from "./shipFormat";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -54,22 +58,19 @@ export default function SHIP({ panelId }: FunctionProps) {
   const latest = useLatest({ rows });
   useCsvExport(panelId, () => (d ? gridCsv("SHIP", [{ title: "ID", width: 14, text: (r: ShipRow) => r.id }, ...COLUMNS], rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "m") {
           openMap(panelId, mapArgsFor("SHIP")!); // M = the chokepoint boxes on the map
           return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const cur = rows[sel];

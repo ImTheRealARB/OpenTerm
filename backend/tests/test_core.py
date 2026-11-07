@@ -5,12 +5,13 @@ import pytest
 
 from openterm.cache import Cache
 from openterm.db import MIGRATIONS, open_db
+from openterm.errors import DataError
 from openterm.models import Bars, Quote
 from openterm.providers.base import Provider, ProviderError
 from openterm.ranges import normalize
 from openterm.ratelimit import RateLimited, TokenBucket
 from openterm.router import AllFailed, Router
-from openterm.service import DataError, DataService
+from openterm.service import DataService
 from openterm.symbols import kind, resolve
 
 

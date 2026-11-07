@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { aiApi } from "../net/aiApi";
 import { replaceView } from "../state/workspace";
 import type { FunctionProps } from "./registry";
 import { nextStatus, thesisArgs } from "./thesisArgs";
@@ -35,9 +36,9 @@ export default function THESIS({ panelId, args }: FunctionProps) {
 
   const load = useCallback(async (symbol: string | null, focusId?: number) => {
     try {
-      const r = await fetch(`/api/theses${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`);
+      const r = await aiApi.theses<{ theses: Thesis[] }>(symbol);
       if (r.ok) {
-        const list = ((await r.json()) as { theses: Thesis[] }).theses;
+        const list = r.json!.theses;
         setRows(list);
         if (focusId !== undefined) setSel(Math.max(0, list.findIndex((t) => t.id === focusId)));
       } else setNote({ text: `HTTP ${r.status}`, cls: "err" });
@@ -49,10 +50,9 @@ export default function THESIS({ panelId, args }: FunctionProps) {
 
   const call = useCallback(async (method: string, url: string, body?: unknown) => {
     try {
-      const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-      const j = await r.json().catch(() => null);
-      if (!r.ok) setNote({ text: j?.error ?? `HTTP ${r.status}`, cls: "err" });
-      return r.ok ? j : null;
+      const { ok, status, json: j } = await aiApi.thesisCall<{ thesis: Thesis; error?: string }>(method, url, body);
+      if (!ok) setNote({ text: j?.error ?? `HTTP ${status}`, cls: "err" });
+      return ok ? j : null;
     } catch {
       setNote({ text: "BACKEND DOWN", cls: "err" });
       return null;

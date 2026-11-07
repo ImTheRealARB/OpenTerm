@@ -4,6 +4,7 @@ from typing import Any, ClassVar
 import httpx
 import orjson
 
+from .. import errkinds as K
 from ..models import Bars, Coin, Movers, Profile, Quote, SearchHit
 from ..ratelimit import RateLimited, TokenBucket
 
@@ -20,13 +21,13 @@ CRYPTO = "crypto"
 
 
 class ProviderError(Exception):
-    """kind: not_found | unsupported | depth | rate_limited | unavailable | key_required
+    """kind: one of `errkinds.ProviderKind` (not_found | unsupported | depth | rate_limited | unavailable | key_required | login_expired)
 
     `depth` = the source has this symbol and interval but not that far back ("INTERVAL 5m ONLY AVAILABLE FOR THE LAST 60 DAYS").
     Like `unsupported` it is not an outage (no circuit-breaker strike); the next source in the hierarchy gets a go.
     """
 
-    def __init__(self, kind: str, message: str = ""):
+    def __init__(self, kind: K.ProviderKind, message: str = ""):
         super().__init__(message or kind)
         self.kind = kind
 
@@ -50,12 +51,14 @@ class Provider:
     sources that do not enforce a limit yet): the limits report (`Router.history_limits`) ignores them."""
     max_wait: float = 0.25
     """Longest wait for a rate-limit slot before failing over. Sources with one slot per few seconds raise it."""
-    """Seconds per upstream request. Slow but useful sources (GDELT, Nasdaq movers) raise it."""
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
         self.http = http
         self.bucket = TokenBucket(*self.rate)
         self.source = source or self.name
+        # True when this adapter replays recorded answers (fixture mode). Set by providers.build(); adapters whose
+        # behaviour differs offline (labels, clocks, sockets) read it instead of guessing from the text of `source`.
+        self.fixture = fixture
 
     def supports(self, capability: str, symbol: str | None = None) -> bool:
         return capability in self.capabilities
@@ -69,24 +72,24 @@ class Provider:
         try:
             await self.bucket.acquire(self.max_wait)
         except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
+            raise ProviderError(K.RATE_LIMITED, str(e)) from e
         try:
             if body is None:
                 r = await self.http.get(url, params=params, headers=self.headers, timeout=timeout or self.timeout)
             else:
                 r = await self.http.post(url, params=params, json=body, headers=self.headers, timeout=timeout or self.timeout)
         except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
+            raise ProviderError(K.UNAVAILABLE, "timeout") from e
         except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
+            raise ProviderError(K.UNAVAILABLE, type(e).__name__) from e
         if r.status_code == 404:
-            raise ProviderError("not_found", "404")
+            raise ProviderError(K.NOT_FOUND, "404")
         if r.status_code == 429:
-            raise ProviderError("rate_limited", "429 from upstream")
+            raise ProviderError(K.RATE_LIMITED, "429 from upstream")
         if r.status_code in (401, 403):
-            raise ProviderError("unavailable", f"{r.status_code} (blocked or needs auth)")
+            raise ProviderError(K.UNAVAILABLE, f"{r.status_code} (blocked or needs auth)")
         if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
+            raise ProviderError(K.UNAVAILABLE, f"HTTP {r.status_code}")
         return r
 
     async def get_json(self, url: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:

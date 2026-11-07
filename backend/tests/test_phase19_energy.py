@@ -96,7 +96,7 @@ def test_one_series_failing_leaves_the_others_and_names_it(client):
 
     async def pick(sid, rng=None):
         if sid == "DHOILNYH":
-            from openterm.service import DataError
+            from openterm.errors import DataError
 
             raise DataError("unavailable", "FRED DOWN")
         return await real(sid, rng)

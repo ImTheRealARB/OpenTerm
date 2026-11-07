@@ -21,8 +21,8 @@ import orjson
 
 from ..config import get_settings
 from ..models import Earning, EcoEvent, MacroSeries, YieldCurve
-from ..ratelimit import RateLimited
 from .base import Provider, ProviderError
+from .keyed import KeyedProvider
 from .nasdaq import NasdaqProvider
 
 FRED_SERIES = "fred_series"
@@ -418,7 +418,7 @@ class FredCsvProvider(Provider):
         await self.get_bytes(FRED_CSV, {"id": "DGS10", "cosd": (ny_today() - timedelta(days=10)).isoformat()})
 
 
-class FredApiProvider(Provider):
+class FredApiProvider(KeyedProvider):
     """Official FRED API. Without FRED_API_KEY it supports nothing, so the router skips it."""
 
     name = "fred"
@@ -431,33 +431,22 @@ class FredApiProvider(Provider):
     timeout = 10.0
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm/0.1", "Accept": "application/json"}
 
-    key_name = "FRED"
+    key_name = "FRED"  # user-visible label (SOURCES, KEY REQUIRED hints); the key-store field is FRED_API_KEY, so key_fields says so
+    key_fields = ("FRED_API_KEY",)
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None, api_key: str | None = None):
-        super().__init__(http, source)
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, api_key: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        # The first key comes from Settings (.env / environment); a key saved in APIKEYS later arrives through set_keys().
         self._key = get_settings().fred_api_key if api_key is None else api_key
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
+    def auth_params(self) -> dict[str, str]:
+        return {"api_key": self._key, "file_type": "json"}
 
-    def supports(self, capability: str, symbol: str | None = None) -> bool:
-        return self.has_key and capability in self.capabilities
+    def _check_status(self, r: httpx.Response) -> None:
+        """No-op: FRED's errors are mapped from the status and the body together in `_api`."""
 
     async def _api(self, path: str, params: dict[str, Any]) -> dict:
-        if not self._key:
-            raise ProviderError("key_required", "FRED_API_KEY is not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        try:
-            r = await self.http.get(f"{FRED_API}/{path}", params={**params, "api_key": self._key, "file_type": "json"},
-                                    headers=self.headers, timeout=self.timeout)
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
+        r = await self._request(f"{FRED_API}/{path}", params, None)
         try:
             body = orjson.loads(r.content)
         except orjson.JSONDecodeError:
@@ -575,8 +564,8 @@ class AgencyCalendarProvider(Provider):
     max_wait = 1.0
     timeout = 12.0
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
         # BLS answers 403 to browser UAs and to a bare product token; it serves a UA that names a contact.
         self.headers = {"User-Agent": get_settings().sec_user_agent, "Accept": "text/calendar,text/plain,*/*"}
 

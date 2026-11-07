@@ -1,5 +1,5 @@
 /** Pure helpers for NRG and WETR (no DOM, no network): series aliases, number formats, the position bar, the place argument. */
-import type { NrgRow, WxAlert } from "../net/api";
+import type { NrgRow, WxAlert } from "../net/types";
 
 /** Alias -> FRED id (mirror of backend/openterm/world/energy.py SERIES). */
 export const NRG_IDS: Record<string, string> = {

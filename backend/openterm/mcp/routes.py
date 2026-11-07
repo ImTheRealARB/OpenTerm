@@ -13,7 +13,7 @@ import json
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
-from .. import api as api_mod
+from .. import http_util
 from ..ai import tools as toolbox
 from ..origin import origin_ok
 from ..redact import redact
@@ -33,7 +33,7 @@ async def mcp_get() -> Response:
 
 @router.post("/mcp")
 async def mcp_post(request: Request) -> Response:
-    if not api_mod.loopback(request):
+    if not http_util.loopback(request):
         return JSONResponse({"error": "FORBIDDEN: MCP IS LOOPBACK ONLY"}, status_code=403)
     if not _origin_ok(request.headers.get("origin")):
         return JSONResponse({"error": "FORBIDDEN: ORIGIN NOT ALLOWED"}, status_code=403)

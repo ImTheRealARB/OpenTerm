@@ -3,11 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtChg, fmtPct, fmtPrice, fmtRate, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelRefresh } from "./panelRefresh";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import type { BoardDef } from "./boards";
-import { chg, dirColor, guiTitle, high, low, lastColor, lastFlash, navKey, pct, price, quoteTime, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { chg, dirColor, guiTitle, high, low, lastColor, lastFlash, pct, price, quoteTime, srcColor, srcText, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -79,6 +82,7 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
 
   useLiveRows(rows, grid, liveOf);
 
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -91,9 +95,6 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
             if (r && !r.section) navigate(panelId, { fn: "GP", security: { symbol: r.symbol }, args: [] });
             return true;
           }
-          case "F5":
-            setReload((n) => n + 1);
-            return true;
         }
         return false;
       }),

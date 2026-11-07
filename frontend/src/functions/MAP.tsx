@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelRefresh } from "./panelRefresh";
 import { hitTest, rankByCentre, type Item } from "../map/hit";
 import type { MapLayer } from "../map/layer";
 import { DEFAULT_ON, LAYERS } from "../map/layers";
@@ -22,11 +23,13 @@ import type { LayerData, Shape, Tone } from "../map/types";
 import { arcsInBounds, decodeArcs, type Arc } from "../map/worldMap";
 import raw from "../map/worldData.json";
 import "../map/map.css";
-import { ApiError, keyRequiredOf, worldApi, type GeoChokepoint } from "../net/api";
+import { ApiError, keyRequiredOf } from "../net/core";
+import type { GeoChokepoint } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { fmtAge, fmtLatLon } from "./aisArgs";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 
 // --- state ------------------------------------------------------------------------------------------------------------------
@@ -486,6 +489,15 @@ export default function MAP({ panelId, args }: FunctionProps) {
   }, [requestDraw, setView, latest]);
 
   // --- keys --------------------------------------------------------------------------------------------------------------------------
+  // Refresh (F5, the Refresh button): reload every layer that is switched on, per area where the layer has areas.
+  usePanelRefresh(panelId, () => {
+    for (const l of LAYERS) {
+      const st = latest.current.states[l.id];
+      if (!st.on) continue;
+      if (l.perArea) Object.keys(st.parts).forEach((a) => loadPart(l, a, true));
+      else loadPart(l, null, true);
+    }
+  });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -564,15 +576,6 @@ export default function MAP({ panelId, args }: FunctionProps) {
           setStates((s) => ({ ...s, [areaLayer.id]: { ...s[areaLayer.id], on: true } }));
           setMsg(`${areaLayer.loadKey}: LOADING ${areaLayer.loadLabel ?? areaLayer.name} FOR ${a}`);
           loadPart(areaLayer, a, true);
-          return true;
-        }
-        if (k === "F5") {
-          for (const l of LAYERS) {
-            const st = L.states[l.id];
-            if (!st.on) continue;
-            if (l.perArea) Object.keys(st.parts).forEach((a) => loadPart(l, a, true));
-            else loadPart(l, null, true);
-          }
           return true;
         }
         return false;

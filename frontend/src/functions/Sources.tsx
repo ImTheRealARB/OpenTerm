@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { ApiError, api, type SourcesPayload } from "../net/api";
+import { ApiError } from "../net/core";
+import { systemApi } from "../net/systemApi";
+import type { SourcesPayload } from "../net/types";
 import { sources } from "../net/sources";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
@@ -25,7 +27,7 @@ export default function Sources({ panelId }: FunctionProps) {
   useEffect(() => {
     let alive = true;
     const tick = () =>
-      api
+      systemApi
         .sources()
         .then((v) => {
           sources.set(() => v); // keep the status bar consistent with this screen

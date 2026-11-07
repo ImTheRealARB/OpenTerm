@@ -2,8 +2,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { secApi } from "../net/api";
-import { navKey, useLatest } from "./quoteRows";
+import { usePanelRefresh } from "./panelRefresh";
+import { secApi } from "../net/secApi";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
 import { filingForm, type Filing, type FilingsPayload } from "./secTables";
@@ -30,6 +32,7 @@ export default function FIL({ panelId, security, args }: FunctionProps) {
   const latest = useLatest({ rows, form });
   useCsvExport(panelId, () => gridCsv(`FIL_${symbol}_${label(form)}`, COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void reload(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -60,13 +63,10 @@ export default function FIL({ panelId, security, args }: FunctionProps) {
             if (r) openUrl(r.url);
             return true;
           }
-          case "F5":
-            void reload(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, reload, symbol],
+    [panelId, latest, symbol],
   );
 
   const d = env?.data;

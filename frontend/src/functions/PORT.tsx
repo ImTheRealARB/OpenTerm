@@ -8,13 +8,17 @@ import {
   restorePortfolio, takeRequest,
 } from "../command/portfolios";
 import { prefillCommand } from "../components/CommandLine";
+import { downloadText } from "../csv";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { PanelNote } from "../components/PanelNote";
 import { requestAsk } from "../gui/askBus";
 import { settingsStore } from "../settings/runtime";
 import { fmtChg, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api8, type ApiError, type Position } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { ApiError } from "../net/core";
+import { portfolioApi } from "../net/portfolioApi";
+import type { Position } from "../net/types";
 import { subscribe } from "../net/socket";
 import { LAYOUT_NAME_RE } from "../state/layoutState";
 import { termProps } from "../gui/term";
@@ -24,7 +28,9 @@ import { getLive, onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import { exportPositions, importPositions, type ImportResult } from "./portfolioCsv";
 import { calcRow, fxSymbol, totals, weight, type RowCalc, type Totals } from "./portfolioMath";
-import { chg, dirColor, lastColor, lastFlash, navKey, price, srcColor, srcText, useLatest, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { chg, dirColor, lastColor, lastFlash, price, srcColor, srcText, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 
 const when = (t: number) => {
@@ -56,16 +62,6 @@ interface PRow {
 const SORTS = ["INPUT", "SYMBOL", "MKT VAL", "DAY P&L", "UNRL P&L", "UNRL %"] as const;
 type Sort = (typeof SORTS)[number];
 
-function downloadText(filename: string, text: string): void {
-  // BOM so spreadsheet apps read UTF-8; the importer strips it.
-  const url = URL.createObjectURL(new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 type ImportState = { stage: "paste" } | { stage: "preview"; source: string; result: ImportResult } | null;
 
 function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
@@ -87,7 +83,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
 
   useEffect(() => {
     let alive = true;
-    api8
+    portfolioApi
       .portfolio(name)
       .then((p) => {
         if (!alive) return;
@@ -215,7 +211,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
       const q = latest.current.rows.find((r) => r.pos.symbol === s)?.q;
       return q ? price(q) : null;
     });
-    downloadText(`PORT_${name}_${b}.csv`, text);
+    downloadText(`PORT_${name}_${b}.csv`, text, { type: "text/csv;charset=utf-8", bom: true });
     return list.length;
   };
 
@@ -243,6 +239,7 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
     void importInto(name, list, mode);
   };
 
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -313,9 +310,6 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
             return true;
           case "v":
             setImp({ stage: "paste" });
-            return true;
-          case "F5":
-            setReload((n) => n + 1);
             return true;
           case "Escape":
             return c !== null;
@@ -478,6 +472,7 @@ function PortfolioIndex({ panelId }: { panelId: number }) {
     void refresh();
   }, []);
 
+  usePanelRefresh(panelId, () => { void refresh(); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -507,9 +502,6 @@ function PortfolioIndex({ panelId }: { panelId: number }) {
             return true;
           case "n":
             prefillCommand("PORT ");
-            return true;
-          case "F5":
-            void refresh();
             return true;
           case "Escape":
             return c !== null;

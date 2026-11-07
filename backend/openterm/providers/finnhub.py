@@ -13,10 +13,9 @@ from typing import Any, ClassVar
 import httpx
 
 from ..config import get_settings
-from ..ratelimit import RateLimited
-from ..redact import redact
 from ..research import keyed_parse as kp
-from .base import NEWS_SYMBOL, NEWS_TOP, Provider, ProviderError
+from .base import NEWS_SYMBOL, NEWS_TOP, ProviderError
+from .keyed import KeyedProvider
 
 BASE = "https://finnhub.io/api/v1"
 RATINGS = "ratings"
@@ -24,7 +23,7 @@ SURPRISES = "surprises"
 NEWS_DAYS = 7
 
 
-class FinnhubProvider(Provider):
+class FinnhubProvider(KeyedProvider):
     name = "finnhub"
     label = "Finnhub (free tier, key)"
     capabilities = frozenset({NEWS_SYMBOL, NEWS_TOP, RATINGS, SURPRISES})
@@ -35,45 +34,19 @@ class FinnhubProvider(Provider):
     timeout = 8.0
     key_name = "FINNHUB_API_KEY"
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm/0.1", "Accept": "application/json"}
+    msg_rate_limited = "429 from Finnhub"
+    msg_refused = "Finnhub refused the key ({code})"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None, api_key: str | None = None):
-        super().__init__(http, source)
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, api_key: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        # The first key comes from Settings (.env / environment); a key saved in APIKEYS later arrives through set_keys().
         self._key = get_settings().finnhub_api_key if api_key is None else api_key
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
-
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get("FINNHUB_API_KEY", "")
-
-    def supports(self, capability: str, symbol: str | None = None) -> bool:
-        return self.has_key and capability in self.capabilities
+    def auth_headers(self) -> dict[str, str]:
+        return {"X-Finnhub-Token": self._key}  # a header, never the URL
 
     async def _api(self, path: str, params: dict[str, Any]) -> Any:
-        if not self._key:
-            raise ProviderError("key_required", "FINNHUB_API_KEY is not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        try:
-            r = await self.http.get(f"{BASE}/{path}", params=params, timeout=self.timeout,
-                                    headers={**self.headers, "X-Finnhub-Token": self._key})
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
-        if r.status_code == 429:
-            raise ProviderError("rate_limited", "429 from Finnhub")
-        if r.status_code in (401, 403):
-            raise ProviderError("key_required", redact(f"Finnhub refused the key ({r.status_code})", [self._key]))
-        if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
-        try:
-            return r.json()
-        except ValueError as e:
-            raise ProviderError("unavailable", "non-JSON response") from e
+        return await self.get_json(f"{BASE}/{path}", params)
 
     async def news_symbol(self, symbol: str) -> dict:
         today = datetime.now(UTC).date()

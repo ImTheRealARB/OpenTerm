@@ -16,6 +16,7 @@ from fastapi import Request
 from fastapi.responses import Response
 
 from .. import api as api_mod
+from .. import http_util
 from ..providers.base import ProviderError
 from ..providers.sec import UA_HINT, US_ONLY, sec_ticker
 from ..redact import redact
@@ -27,7 +28,6 @@ from .routes import (
     MAX_QUESTION,
     SYMBOL_RE,
     _body,
-    _err,
     _models,
     _stream,
     ai_settings,
@@ -50,7 +50,7 @@ def _cache(request: Request) -> OrderedDict:
 
 async def load_filing(request: Request, symbol: str, form: str | None) -> filings.ParsedFiling:
     """Newest 10-K / 10-Q (or the asked form) with a document, parsed. Raises ProviderError (SEC trouble) or FilingsError (unreadable filing)."""
-    sec = api_mod.svc(request).router.providers["sec"]
+    sec = http_util.svc(request).router.providers["sec"]
     listing = (await sec.filings(symbol.upper())).get("filings") or []
     wanted = (form,) if form else filings.FORMS
     hit = next((f for f in listing if f.get("form") in wanted and f.get("doc_url")), None)
@@ -84,30 +84,30 @@ async def ai_filing(request: Request):
     question = filings.DRIVERS_QUESTION if drivers else body.get("question")
     form = str(body["form"]).upper() if body.get("form") else None
     if not SYMBOL_RE.match(symbol) or (form is not None and form not in filings.FORMS):
-        return _err(400, "bad_request", f"SYMBOL MUST BE A TICKER AND FORM ONE OF {', '.join(filings.FORMS)}")
+        return http_util.error_response(400, "bad_request", f"SYMBOL MUST BE A TICKER AND FORM ONE OF {', '.join(filings.FORMS)}")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION:
-        return _err(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS (OR mode \"drivers\")")
+        return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS (OR mode \"drivers\")")
     names = _models(body, await ai_settings(request))
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     if sec_ticker(symbol) is None:
-        return _err(400, "unsupported", f"{US_ONLY}: {symbol.upper()} IS NOT A US SEC FILER")
-    if not api_mod.svc(request).router.providers["sec"].ua_set:  # SEC may refuse an anonymous client; say how to fix it before any work is done
-        return _err(400, "key_required", f"KEY REQUIRED: SEC_USER_AGENT IS NOT SET ({UA_HINT})")
+        return http_util.error_response(400, "unsupported", f"{US_ONLY}: {symbol.upper()} IS NOT A US SEC FILER")
+    if not http_util.svc(request).router.providers["sec"].ua_set:  # SEC may refuse an anonymous client; say how to fix it before any work is done
+        return http_util.error_response(400, "key_required", f"KEY REQUIRED: SEC_USER_AGENT IS NOT SET ({UA_HINT})")
     try:
         filing = await load_filing(request, symbol, form)
     except ProviderError as e:
         status = {"not_found": 404, "unsupported": 400}.get(e.kind, 502)
-        return _err(status, "provider" if status == 502 else e.kind, redact(f"SEC: {str(e)[:160]}"))
+        return http_util.error_response(status, "provider" if status == 502 else e.kind, redact(f"SEC: {str(e)[:160]}"))
     except filings.FilingsError as e:
-        return _err(422, "bad_filing", str(e))
+        return http_util.error_response(422, "bad_filing", str(e))
     questions = list(filings.DRIVERS_THEMES.values()) if drivers else [question.strip()]
     try:
         hits = await asyncio.to_thread(filings.retrieve, filing.passages, questions,
                                        filings.DRIVERS_PER_THEME if drivers else filings.MAX_HITS,
                                        filings.DRIVERS_PER_THEME * len(questions) if drivers else filings.MAX_HITS)
     except filings.FilingsError as e:
-        return _err(500, "unavailable", str(e))
+        return http_util.error_response(500, "unavailable", str(e))
     gateway = api_mod.llm_of(request)
     model, provider = names
     ask = question.strip()

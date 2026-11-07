@@ -20,8 +20,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from ..errors import DataError
 from ..providers import aisstream_parse as ap
-from ..service import DataError
 
 LISTEN_S = 15.0  # one listen; this IS the provider's hard cap (aisstream.MAX_SECONDS). The panel text "ABOUT 15 SECONDS" must match (AIS.tsx)
 MAX_MESSAGES = 3000
@@ -102,4 +102,4 @@ async def snapshot(svc: Any, q: str) -> dict[str, Any]:
         }
         return {"data": data, "fallback_from": failed, "source": listen["source"]}
 
-    return await svc._swr(f"w:ais:{label}", TTL_S, fetch)
+    return await svc.swr(f"w:ais:{label}", TTL_S, fetch)

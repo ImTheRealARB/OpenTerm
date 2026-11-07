@@ -11,17 +11,16 @@ import { Grid, type CellColor, type Column, type GridHandle } from "../component
 import { PanelNote } from "../components/PanelNote";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, btApi, type BtCompare, type BtRunCard } from "../net/api";
+import { btApi } from "../net/btApi";
+import type { BtCompare, BtRunCard } from "../net/types";
 import { replaceView } from "../state/workspace";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
+import { errText } from "../net/errText";
 
 const signColor = (v: number | null | undefined): CellColor => (v == null || v === 0 ? "fg" : v > 0 ? "up" : "down");
 const NO_INDICATORS: never[] = [];
-const errText = (e: unknown) => {
-  const a = e as ApiError;
-  return `${a.message ?? String(e)}${a.detail ? ` (${a.detail})` : ""}`;
-};
 const label = (r: BtRunCard) => r.rule ?? (r.strategy ? `STRATEGY ${r.strategy}` : "PYTHON STRATEGY");
 
 interface Row extends BtRunCard {

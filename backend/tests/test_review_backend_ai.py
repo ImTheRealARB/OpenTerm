@@ -258,8 +258,8 @@ def test_doc_search_through_the_cached_index_gives_the_same_hits():
 
 # --- Kite ----------------------------------------------------------------------------------------------------------------------------------
 def test_kite_answer_that_is_not_a_json_object_is_a_data_error():
+    from openterm.errors import DataError
     from openterm.kite.client import KiteClient
-    from openterm.service import DataError
 
     r = httpx.Response(200, json=["not", "an", "object"])
     with pytest.raises(DataError):

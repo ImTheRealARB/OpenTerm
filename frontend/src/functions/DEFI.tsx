@@ -7,11 +7,14 @@ import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type DefiPool } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { DefiPool } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { joinArg } from "./cryptoArgs";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -31,25 +34,22 @@ const COLUMNS: Column<DefiPool>[] = [
 
 export default function DEFI({ panelId, args }: FunctionProps) {
   const q = useMemo(() => joinArg(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.defi(q, fresh), q.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(q.toLowerCase(), (fresh) => worldApi.defi(q, fresh));
   const grid = useRef<GridHandle>(null);
   const d = env?.data;
   const rows = useMemo(() => d?.rows ?? [], [d]);
   const latest = useLatest({ rows });
   useCsvExport(panelId, () => (d ? gridCsv("DEFI", COLUMNS, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

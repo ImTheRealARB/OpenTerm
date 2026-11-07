@@ -6,11 +6,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type NrgPayload, type NrgRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, NrgPayload, NrgRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { fmtPrice, fmtSigned, nrgChg, parseNrgArgs, posBar } from "./energyArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -56,6 +60,7 @@ export default function NRG({ panelId, args }: FunctionProps) {
   const latest = useLatest({ rows });
   useCsvExport(panelId, () => (d ? gridCsv("NRG", [{ title: "FRED ID", width: 14, text: (r: NrgRow) => r.id }, ...COLUMNS], rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -63,10 +68,6 @@ export default function NRG({ panelId, args }: FunctionProps) {
         const g = grid.current;
         const cur = latest.current;
         if (navKey(e, g, cur.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "Enter") {
           const r = cur.rows[g?.selected() ?? -1];
           if (r) navigate(panelId, { fn: "FRED", args: [r.id], security: undefined });
@@ -74,7 +75,7 @@ export default function NRG({ panelId, args }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   if (p.error) {

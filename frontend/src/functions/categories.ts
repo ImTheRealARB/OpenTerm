@@ -1,3 +1,5 @@
+import { TWINS } from "./aliases";
+
 /**
  * Menu categories for GUI mode (pure: no React, no registry import, so vitest can load it anywhere).
  *
@@ -7,7 +9,7 @@
  * the help drawer's "Category" line, the FUNC directory) is derived from it, so a function is placed exactly once.
  *
  * Rules the tests enforce (`categories.test.ts`):
- *  - every registry code appears in exactly one subgroup, or is listed in `ALIASES` (an alias shares its original's place);
+ *  - every registry code appears in exactly one subgroup, or is a twin in `TWINS` (a twin shares its original's place);
  *  - at most 8 subgroups per category and at most 12 functions per subgroup, so no menu needs scrolling to be understood;
  *  - no stale codes.
  * Adding a function to the registry without placing it here fails the tests, rather than silently missing from the GUI.
@@ -63,17 +65,14 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
 };
 
 /**
- * Codes that only repeat another function (same panel, second name). They work when typed and share the original's
- * category, but the menus and sidebar leave them out: two rows for one thing only make a beginner choose between them.
+ * code -> category, derived from `MENU`. Twins (aliases.ts: SEC, MONITOR) only repeat another function: they work when typed and
+ * share the original's category, but the menus and sidebar leave them out, since two rows for one thing only make a beginner choose.
  */
-export const ALIASES: Readonly<Record<string, string>> = Object.freeze({ SEC: "FIL", MONITOR: "LAYOUT" });
-
-/** code -> category, derived from `MENU` (aliases take their original's category). */
 export const CATEGORY_OF: Readonly<Record<string, Category>> = Object.freeze(
   (() => {
     const out: Record<string, Category> = {};
     for (const c of CATEGORIES) for (const g of MENU[c]) for (const code of g.codes) out[code] = c;
-    for (const [alias, original] of Object.entries(ALIASES)) out[alias] = out[original];
+    for (const [twin, original] of Object.entries(TWINS)) out[twin] = out[original];
     return out;
   })(),
 );

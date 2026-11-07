@@ -14,19 +14,18 @@ from datetime import date
 import orjson
 from fastapi import APIRouter, Request
 
-from .api import bt_of, error, jobs_of, json_object, portfolios, svc, user
+from .api import bt_of, portfolios
+from .errors import DataError
+from .http_util import error, jobs_of, json_object, svc, user
 from .jobs.kinds import BadParams
 from .quantjobs import sectors as sx
 from .ranges import normalize
 from .responses import Orjson, OrjsonRoute
-from .service import DataError
 from .symbols import SYNTHETIC_RE, resolve
 from .userdata import UserDataError
 
 router = APIRouter(prefix="/api", route_class=OrjsonRoute)
 
-LIVE = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")
-KNOWN = ("risk", "opt", "attr", "fact", "ql", "alpha", "regime")
 QL_CALCS = ("GARCH", "OU", "COINT", "HEDGE", "COPULA", "ROLL", "AMIHUD", "KYLE", "VPIN", "EVENT", "DSR", "ADF", "HVAR")
 QL_PAIR = ("COINT", "HEDGE", "COPULA")
 QL_VOLUME = ("AMIHUD", "KYLE", "VPIN")  # these need the daily volume column
@@ -258,7 +257,7 @@ async def _bench_weights(request: Request, bench: str) -> tuple[dict[str, float]
         return {"data": {"sectors": fund_facts(summary)["sectors"]}, "fallback_from": failed, "source": "yahoo_research"}
 
     try:
-        env = await s._swr(f"q:fundsectors:{bench}", 3600.0, fetch)
+        env = await s.swr(f"q:fundsectors:{bench}", 3600.0, fetch)
     except DataError:
         return None, {}
     return sx.bench_weights(env["data"]["sectors"]), env
@@ -314,7 +313,7 @@ async def _factors(request: Request) -> dict:
         return {"data": {"dates": out["dates"], "cols": out["cols"]}, "source": out["source"], "fallback_from": failed}
 
     try:
-        return await s._swr("q:kenfrench", FACTOR_TTL, fetch)
+        return await s.swr("q:kenfrench", FACTOR_TTL, fetch)
     except DataError as e:
         raise DataError(e.kind, f"FACTOR DATA (KEN FRENCH): {e}", getattr(e, "detail", None)) from None
 
@@ -572,8 +571,8 @@ BUILD = {"risk": ("risk.run", build_risk), "opt": ("opt.run", build_opt), "attr"
 
 @router.post("/quant/{fn}")
 async def quant_run(request: Request, fn: str):
-    if fn not in LIVE:
-        return error(DataError("not_found", f"NO QUANT FUNCTION {fn.upper()}" + (" YET" if fn in KNOWN else "")))
+    if fn not in BUILD:  # BUILD is the one list of quant functions that exist
+        return error(DataError("not_found", f"NO QUANT FUNCTION {fn.upper()}"))
     kind, build = BUILD[fn]
     try:
         body = await json_object(request)

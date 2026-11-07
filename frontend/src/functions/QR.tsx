@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { LivePrice } from "../components/LivePrice";
 import { fmtBig, fmtPrice } from "../format";
-import { ApiError, api, type Envelope, type Quote } from "../net/api";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, Quote } from "../net/types";
 import type { FunctionProps } from "./registry";
 
 /** Quote recap: one security, live, every quote field we have. */
@@ -12,7 +14,7 @@ export default function QR({ security }: FunctionProps) {
   useEffect(() => {
     let alive = true;
     setR({});
-    api.quotes([symbol]).then(
+    marketApi.quotes([symbol]).then(
       ({ results }) => {
         const x = Object.values(results)[0];
         if (alive) setR(x && !("error" in x) ? { env: x } : { error: x && "error" in x ? x.error : "NO DATA FOR SYMBOL" });

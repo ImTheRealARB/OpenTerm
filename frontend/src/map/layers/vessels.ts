@@ -1,6 +1,6 @@
 /** Layer 1: ships that reported a position inside a chokepoint box during one ~8 s listen (AISstream, free key AISSTREAM_API_KEY). */
 import { fmtAge, fmtDegrees, fmtKnots, fmtLatLon } from "../../functions/aisArgs";
-import type { AisPayload } from "../../net/api";
+import type { AisPayload } from "../../net/types";
 import { layerData, type MapLayer } from "../layer";
 import type { LayerData, PointShape } from "../types";
 

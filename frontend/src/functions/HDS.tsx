@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { secApi } from "../net/api";
-import { navKey, useLatest } from "./quoteRows";
+import { usePanelRefresh } from "./panelRefresh";
+import { secApi } from "../net/secApi";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, useEnvelope } from "./secPanel";
 import { fmtFrac, fmtShares, holderRows, type HolderRow, type HoldersPayload } from "./secTables";
@@ -33,6 +35,7 @@ export default function HDS({ panelId, security }: FunctionProps) {
     if (env) grid.current?.moveTo(1);
   }, [env]);
 
+  usePanelRefresh(panelId, () => { void reload(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -40,14 +43,11 @@ export default function HDS({ panelId, security }: FunctionProps) {
         const cur = latest.current.rows;
         if (navKey(e, g, cur.length, isHeader)) return true;
         switch (e.key) {
-          case "F5":
-            void reload(true);
-            return true;
         }
         return false;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [panelId, latest, reload, symbol],
+    [panelId, latest, symbol],
   );
 
   const d = env?.data;

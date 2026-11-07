@@ -20,10 +20,10 @@ from typing import Any, ClassVar
 
 import httpx
 
-from ..ratelimit import RateLimited
 from ..redact import redact
 from . import companies_house_parse as chp
-from .base import Provider, ProviderError
+from .base import ProviderError
+from .keyed import KeyedProvider
 
 BASE = "https://api.company-information.service.gov.uk"
 CAPABILITY = "companies_house"
@@ -32,7 +32,7 @@ FILINGS_PER_PAGE = 25
 SEARCH_PER_PAGE = 20
 
 
-class CompaniesHouseProvider(Provider):
+class CompaniesHouseProvider(KeyedProvider):
     name = "companies_house"
     label = "UK Companies House (free key)"
     capabilities = frozenset({CAPABILITY})
@@ -43,47 +43,21 @@ class CompaniesHouseProvider(Provider):
     timeout = 10.0
     key_name = "COMPANIES_HOUSE_KEY"
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm", "Accept": "application/json"}
+    hide_without_key = False  # supports() stays true: a missing key answers KEY REQUIRED instead of looking broken
+    msg_rate_limited = "COMPANIES HOUSE 429: 600 REQUESTS PER 5 MINUTES USED, WAIT FOR THE WINDOW TO END"
+    msg_refused = "Companies House refused the key ({code})"
+    msg_not_found = "NO SUCH COMPANY"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
-        self.source = "companies house (doc-shaped fixture, NOT A RECORDING)" if self.fixtures else "companies house"
-        self._key = ""
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self.source = "companies house (doc-shaped fixture, NOT A RECORDING)" if self.fixture else "companies house"
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
-
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get("COMPANIES_HOUSE_KEY", "")
+    def auth_headers(self) -> dict[str, str]:
+        # HTTP basic auth: the key is the user name, the password is empty.
+        return {"Authorization": "Basic " + base64.b64encode(f"{self._key}:".encode()).decode("ascii")}
 
     async def _api(self, path: str, params: dict[str, Any] | None = None) -> Any:
-        if not self._key:
-            raise ProviderError("key_required", "COMPANIES_HOUSE_KEY is not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        auth = base64.b64encode(f"{self._key}:".encode()).decode("ascii")
-        try:
-            r = await self.http.get(f"{BASE}{path}", params=params, timeout=self.timeout,
-                                    headers={**self.headers, "Authorization": f"Basic {auth}"})
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
-        if r.status_code == 404:
-            raise ProviderError("not_found", "NO SUCH COMPANY")
-        if r.status_code == 429:
-            raise ProviderError("rate_limited", "COMPANIES HOUSE 429: 600 REQUESTS PER 5 MINUTES USED, WAIT FOR THE WINDOW TO END")
-        if r.status_code in (401, 403):
-            raise ProviderError("key_required", redact(f"Companies House refused the key ({r.status_code})", [self._key]))
-        if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
-        try:
-            return r.json()
-        except ValueError as e:
-            raise ProviderError("unavailable", "non-JSON response") from e
+        return await self.get_json(f"{BASE}{path}", params)
 
     async def ch_search(self, query: str) -> dict:
         out = chp.search(await self._api("/search/companies", {"q": query, "items_per_page": SEARCH_PER_PAGE}))

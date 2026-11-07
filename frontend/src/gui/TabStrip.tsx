@@ -1,4 +1,4 @@
-import { FUNCTIONS } from "../functions/registry";
+import { showsSecurity } from "../functions/registry";
 import { MAX_PANELS } from "../state/layoutState";
 import { useStore } from "../state/store";
 import { closePanel, currentView, focusPanel, panelOrder, split, workspace, type PanelState } from "../state/workspace";
@@ -7,8 +7,7 @@ import { chromeKeyDown, focusCommandLine } from "./chrome";
 /** What a tab says: "AAPL GP" (ticker only when the function uses one, like the panel title), the function alone, or "New tab". */
 function tabLabel(p: PanelState): string {
   const v = currentView(p);
-  const uses = (v.fn && FUNCTIONS.get(v.fn)?.needsSecurity) || (v.fn === "N" && v.args.length === 0);
-  const parts = [uses ? v.security?.symbol : undefined, v.fn].filter(Boolean);
+  const parts = [showsSecurity(v) ? v.security?.symbol : undefined, v.fn].filter(Boolean);
   return parts.length ? parts.join(" ") : "New tab";
 }
 

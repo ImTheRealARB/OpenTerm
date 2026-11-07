@@ -3,11 +3,15 @@ import { useEffect, useMemo, useRef } from "react";
 import { prefillCommand } from "../components/CommandLine";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { macroApi, type MacroPayload, type MacroRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { macroApi } from "../net/macroApi";
+import type { MacroPayload, MacroRow } from "../net/types";
 import { navigate } from "../state/workspace";
 import { fmtSeriesChange, fmtSeriesValue, parseMacroArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { dirColor, navKey, useLatest } from "./quoteRows";
+import { dirColor } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -39,6 +43,7 @@ export default function MACRO({ panelId, args }: FunctionProps) {
   const latest = useLatest(rows);
   useCsvExport(panelId, () => gridCsv("MACRO", COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -55,13 +60,10 @@ export default function MACRO({ panelId, args }: FunctionProps) {
           case "/":
             prefillCommand("MACRO ");
             return true;
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const d = env?.data;

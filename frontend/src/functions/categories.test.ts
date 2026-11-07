@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ALIASES, CATEGORIES, CATEGORY_OF, MENU, categoryOf, flyoutPosition, menuOf } from "./categories";
+import { TWINS } from "./aliases";
+import { CATEGORIES, CATEGORY_OF, MENU, categoryOf, flyoutPosition, menuOf } from "./categories";
 import { FUNCTION_LIST } from "./registry";
 
 const placed = CATEGORIES.flatMap((c) => MENU[c].flatMap((g) => g.codes));
@@ -9,17 +10,17 @@ describe("GUI categories", () => {
     expect([...CATEGORIES]).toEqual(["Markets", "Charts", "News", "Research", "Portfolio", "Backtest", "Settings"]);
   });
 
-  it("places every registered function in exactly one subgroup, or lists it as an alias", () => {
+  it("places every registered function in exactly one subgroup, or lists it as a twin", () => {
     const codes = FUNCTION_LIST.map((f) => f.code);
-    expect(codes.filter((c) => !placed.includes(c) && !ALIASES[c])).toEqual([]);
+    expect(codes.filter((c) => !placed.includes(c) && !TWINS[c])).toEqual([]);
     expect(placed.length).toBe(new Set(placed).size); // no code in two subgroups
-    for (const a of Object.keys(ALIASES)) expect(placed).not.toContain(a); // an alias is never listed itself
+    for (const a of Object.keys(TWINS)) expect(placed).not.toContain(a); // a twin is never listed itself
   });
 
-  it("has no stale codes (menu entries and aliases all exist in the registry)", () => {
+  it("has no stale codes (menu entries and twins all exist in the registry)", () => {
     const codes = new Set(FUNCTION_LIST.map((f) => f.code));
     expect(placed.filter((c) => !codes.has(c))).toEqual([]);
-    expect(Object.entries(ALIASES).flat().filter((c) => !codes.has(c))).toEqual([]);
+    expect(Object.entries(TWINS).flat().filter((c) => !codes.has(c))).toEqual([]);
   });
 
   it("keeps menus short: at most 8 subgroups per category, at most 12 functions per subgroup, no empty subgroup", () => {
@@ -32,7 +33,7 @@ describe("GUI categories", () => {
     }
   });
 
-  it("gives every registered function a category (aliases share their original's)", () => {
+  it("gives every registered function a category (twins share their original's)", () => {
     expect(FUNCTION_LIST.map((f) => f.code).filter((c) => !CATEGORY_OF[c])).toEqual([]);
     expect(categoryOf("SEC")).toBe(categoryOf("FIL"));
     expect(categoryOf("MONITOR")).toBe("Settings");
@@ -47,9 +48,9 @@ describe("GUI categories", () => {
     const m = menuOf("Markets", FUNCTION_LIST);
     expect(m.map((g) => g.name)).toEqual(MENU.Markets.map((g) => g.name));
     expect(m.find((g) => g.name === "Crypto")!.items.map((f) => f.code)).toEqual([...MENU.Markets.find((g) => g.name === "Crypto")!.codes]);
-    // Every non-alias function shows up in exactly one menu.
+    // Every non-twin function shows up in exactly one menu.
     const shown = CATEGORIES.flatMap((c) => menuOf(c, FUNCTION_LIST).flatMap((g) => g.items.map((f) => f.code)));
-    expect(shown.length).toBe(FUNCTION_LIST.length - Object.keys(ALIASES).length);
+    expect(shown.length).toBe(FUNCTION_LIST.length - Object.keys(TWINS).length);
   });
 
   it("categoryOf throws loudly for an unknown code", () => {

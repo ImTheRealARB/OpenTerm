@@ -19,11 +19,11 @@ from typing import Any, ClassVar
 
 import httpx
 
-from ..ratelimit import RateLimited
 from ..redact import redact
 from ..world import congress, fec, fedreg, usaspending
 from ..world.usgov import UsGovError
 from .base import Provider, ProviderError
+from .keyed import KeyedProvider
 
 USASPENDING_BASE = "https://api.usaspending.gov/api/v2/search"
 FEDREG_URL = "https://www.federalregister.gov/api/v1/documents.json"
@@ -102,55 +102,32 @@ class FederalRegisterProvider(Provider):
             raise ProviderError("unavailable", "FEDERAL REGISTER RETURNED NO DOCUMENTS")
 
 
-class _DataGovProvider(Provider):
+class _DataGovProvider(KeyedProvider):
     """An api.data.gov keyed API: key in the `X-Api-Key` header, `key_required` before any network call when it is missing."""
 
-    key_name = ""
     base = ""
     timeout = 20.0
     rate = (2.0, 6)
     max_wait = 3.0
     headers: ClassVar[dict[str, str]] = UA
     fixture_label = ""
+    hide_without_key = False  # supports() stays true: a missing key answers KEY REQUIRED instead of looking broken
+    msg_refused = "api.data.gov refused the key ({code})"
+    msg_not_found = "404"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
-        self.source = f"{self.fixture_label} (doc-shaped fixture, NOT A RECORDING)" if self.fixtures else self.fixture_label
-        self._key = ""
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self.source = f"{self.fixture_label} (doc-shaped fixture, NOT A RECORDING)" if self.fixture else self.fixture_label
 
     @property
-    def has_key(self) -> bool:
-        return bool(self._key)
+    def msg_rate_limited(self) -> str:  # built from the subclass's label, so it is a property here
+        return f"{self.label}: 429 OVER_RATE_LIMIT, WAIT AND RETRY (THE LIMIT IS PER KEY PER HOUR)"
 
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get(self.key_name, "")
+    def auth_headers(self) -> dict[str, str]:
+        return {"X-Api-Key": self._key}  # a header, never the URL
 
     async def _api(self, path: str, params: dict[str, Any] | None = None) -> Any:
-        if not self._key:
-            raise ProviderError("key_required", f"{self.key_name} is not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        try:
-            r = await self.http.get(f"{self.base}{path}", params=params, timeout=self.timeout, headers={**self.headers, "X-Api-Key": self._key})
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
-        if r.status_code == 404:
-            raise ProviderError("not_found", "404")
-        if r.status_code == 429:
-            raise ProviderError("rate_limited", f"{self.label}: 429 OVER_RATE_LIMIT, WAIT AND RETRY (THE LIMIT IS PER KEY PER HOUR)")
-        if r.status_code in (401, 403):
-            raise ProviderError("key_required", redact(f"api.data.gov refused the key ({r.status_code})", [self._key]))
-        if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
-        try:
-            return r.json()
-        except ValueError as e:
-            raise ProviderError("unavailable", "non-JSON response") from e
+        return await self.get_json(f"{self.base}{path}", params)
 
 
 class OpenFecProvider(_DataGovProvider):

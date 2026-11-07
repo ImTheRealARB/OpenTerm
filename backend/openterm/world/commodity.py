@@ -7,9 +7,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from ..config import get_settings
+from ..errors import DataError
 from ..redact import redact
 from ..router import AllFailed
-from ..service import DataError
 from . import energy, weather
 
 NRG_TTL_S = 900.0
@@ -39,7 +39,7 @@ async def nrg(svc: Any) -> dict[str, Any]:
                 "note": "PRICES ONLY: EIA WEEKLY STOCKS AND PRODUCTION ARE NOT ON THE KEYLESS FRED FEED. SPOT PRICES LAG ONE TO THREE BUSINESS DAYS."}
         return {"data": data, "source": NRG_SOURCE, "fallback_from": []}
 
-    return await svc._swr("w:nrg", NRG_TTL_S, fetch)
+    return await svc.swr("w:nrg", NRG_TTL_S, fetch)
 
 
 async def _forecast(svc: Any, key: str, points: list[tuple[float, float]]) -> dict:
@@ -47,7 +47,7 @@ async def _forecast(svc: Any, key: str, points: list[tuple[float, float]]) -> di
         out, failed = await svc.router.call("weather_forecast", lambda p: p.weather_forecast(points))
         return {"data": out, "fallback_from": failed, "source": "open-meteo"}
 
-    return await svc._swr(key, WX_TTL_S, fetch)
+    return await svc.swr(key, WX_TTL_S, fetch)
 
 
 async def _geocode(svc: Any, name: str) -> dict:
@@ -56,7 +56,7 @@ async def _geocode(svc: Any, name: str) -> dict:
         return {"data": out, "fallback_from": failed, "source": "open-meteo"}
 
     try:
-        return await svc._swr(f"w:geo:{name.lower()}", 86400.0, fetch)
+        return await svc.swr(f"w:geo:{name.lower()}", 86400.0, fetch)
     except DataError as e:
         if e.kind != "not_found":
             raise
@@ -75,7 +75,7 @@ async def _alerts(svc: Any, lat: float, lon: float) -> dict[str, Any]:
         return {"data": out, "fallback_from": failed, "source": "nws"}
 
     try:
-        env = await svc._swr(f"w:nws:{lat:.4f},{lon:.4f}", ALERT_TTL_S, fetch)
+        env = await svc.swr(f"w:nws:{lat:.4f},{lon:.4f}", ALERT_TTL_S, fetch)
     except (AllFailed, DataError) as e:
         return {"status": "UNAVAILABLE", "items": [], "note": f"NWS ALERTS UNAVAILABLE: {redact(str(e))[:80].upper()}"}
     items = env["data"]

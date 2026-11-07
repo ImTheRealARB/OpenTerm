@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { WecoRow } from "../net/api";
+import type { WecoRow } from "../net/types";
 import { fmtCell, fmtStat, parseEcstArgs, sortWeco } from "./worldArgs";
 
 describe("ECST arguments", () => {

@@ -64,12 +64,11 @@ class NseArchiveProvider(Provider):
     BACKGROUND_BATCH = 6
     CONCURRENCY = 3
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
         self.store: DayStore | None = None
-        self.clock = (lambda: FIXTURE_TODAY) if self.fixtures else (lambda: datetime.now(IST).date())
-        self.background = not self.fixtures
+        self.clock = (lambda: FIXTURE_TODAY) if self.fixture else (lambda: datetime.now(IST).date())
+        self.background = not self.fixture
         self._lock = asyncio.Lock()
         self._task: asyncio.Task | None = None
         self._rest_until = 0.0

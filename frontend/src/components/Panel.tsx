@@ -1,5 +1,5 @@
 import { Component, Profiler, useEffect, useReducer, type ReactNode } from "react";
-import { FUNCTIONS, loadModule, loadedModule } from "../functions/registry";
+import { FUNCTIONS, loadModule, loadedModule, showsSecurity } from "../functions/registry";
 import { panelPainted, recordPanelRender } from "../perf/metrics";
 import { LazyPanelToolbar } from "../gui/LazyPanelToolbar";
 import { LazyQuoteStrip } from "../gui/LazyQuoteStrip";
@@ -98,15 +98,13 @@ export function Panel({ id }: { id: number }) {
   // GUI mode adds a button row under the title bar. Terminal mode renders nothing extra.
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
   const view = currentView(panel);
-  // The sticky security stays on the panel, but the tab only names it when this function uses it
-  // (bare `N` shows that security's news).
-  const usesSecurity = (view.fn && FUNCTIONS.get(view.fn)?.needsSecurity) || (view.fn === "N" && view.args.length === 0);
-  const tickerPart = usesSecurity ? view.security?.symbol : undefined;
+  // The sticky security stays on the panel, but the tab only names it when this function uses it (see `showsSecurity`).
+  const tickerPart = showsSecurity(view) ? view.security?.symbol : undefined;
   const fnPart = view.fn;
   // GUI only: the function's plain title ("Price chart") follows the code, so a beginner sees what the panel is.
   const plainTitle = gui && view.fn ? shortTitle(FUNCTIONS.get(view.fn)?.title ?? "") : "";
-  // GUI only: a one-line quote strip under the button row. DES and QR already lead with the live price, so they skip it.
-  const showStrip = gui && !!tickerPart && view.fn !== "DES" && view.fn !== "QR";
+  // GUI only: a one-line quote strip under the button row. Functions that already lead with the live price (DES, QR) skip it.
+  const showStrip = gui && !!tickerPart && !(view.fn && FUNCTIONS.get(view.fn)?.leadsWithPrice);
   // New command = new history entry = remount. In-place edits (timeframe, list) keep the instance.
   const mountKey = `${panel.pos}:${view.fn}:${view.security?.symbol}`;
   const resetKey = `${mountKey}:${view.args.join(" ")}`;

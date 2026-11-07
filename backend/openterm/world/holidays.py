@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from ..service import DataError
+from ..errors import DataError
 from . import nse_holidays as nse
 from . import nyse_holidays as nyse
 
@@ -61,4 +61,4 @@ async def calendar(svc: Any, mkt: str, year: int) -> dict[str, Any]:
         return {"data": {"mkt": mkt, "year": year, "basis": "public", "label": NAGER_LABEL, "holidays": parse_nager(rows), "early": [],
                          "source": "nager"}, "fallback_from": failed, "source": "nager"}
 
-    return await svc._swr(f"w:hol:{mkt}:{year}", TTL_S, fetch)
+    return await svc.swr(f"w:hol:{mkt}:{year}", TTL_S, fetch)

@@ -43,8 +43,6 @@ export function registerCsv(panelId: number, get: CsvGetter): () => void {
   };
 }
 
-export const hasCsv = (panelId: number) => (getters.get(panelId)?.length ?? 0) > 0;
-
 /** Exports the panel's current table. Returns false (and says so) when the panel has no table to export. */
 export function exportPanelCsv(panelId: number): boolean {
   const list = getters.get(panelId);

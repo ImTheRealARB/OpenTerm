@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PredRow } from "../net/api";
+import type { PredRow } from "../net/types";
 import { PRED_LABEL, filterSrc, fmtOutcome, fmtPct, fmtProb, fmtVolume, parsePredArgs, predBars } from "./predArgs";
 
 const row = (source: PredRow["source"], prob: number, outcome = "Yes"): PredRow => ({

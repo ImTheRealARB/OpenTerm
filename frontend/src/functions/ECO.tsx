@@ -2,11 +2,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { macroApi, type EcoEvent, type EcoPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { macroApi } from "../net/macroApi";
+import type { EcoEvent, EcoPayload } from "../net/types";
 import { replaceView } from "../state/workspace";
 import { ECO_WINDOWS, addDays, dayLabel, nyToday, parseEcoArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
 import { useCsvExport } from "./tableExport";
@@ -47,6 +50,7 @@ export default function ECO({ panelId, args }: FunctionProps) {
   const latest = useLatest(rows);
   useCsvExport(panelId, () => ({ name: "ECO", header: COLUMNS.map((c) => c.title), rows: rows.map((r) => [r.date, r.time ?? "", r.major ? "MAJOR" : "", r.name, r.agency]) }));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -75,13 +79,10 @@ export default function ECO({ panelId, args }: FunctionProps) {
           case "m":
             set({ major: !pRef.current.major });
             return true;
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const d = env?.data;

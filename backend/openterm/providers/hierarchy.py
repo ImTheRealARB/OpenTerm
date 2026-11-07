@@ -15,11 +15,13 @@ time on the SOURCES screen; a slow source is demoted by the circuit breaker, not
 
 Each entry records its reasons next to its position, and `tests/test_hierarchy.py` insists every entry has them. To add a
 source: write the adapter, register it in providers/__init__.py, add one `Rank` here at the position it earns.
+Every OTHER capability's default order is the `DEFAULT_ORDER` table further down (quotes and history point back at the ranks).
 `config.yaml` `providers:` can still pin a capability's order by hand; that wins over this table (and says so in the log).
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 
@@ -77,6 +79,146 @@ HIERARCHY: dict[str, tuple[Rank, ...]] = {
 def order_for(capability: str) -> list[str]:
     """Provider names for a capability, best first."""
     return [r.provider for r in HIERARCHY[capability]]
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# The default order for EVERY capability: capability name -> provider names, best first. The router walks each list from the
+# top (see the module docstring). This is the one place to read or change an order:
+#   - `quotes` and `history` are the two ranked capabilities above (HIERARCHY holds the reasons for their positions);
+#   - every other capability is a plain literal list here, grouped by what it serves, with its reason in the comment.
+# `config.yaml` `providers:` can still pin a capability by hand (see `build_order`), but the file no longer repeats these.
+# A provider named here must exist in `providers.ADAPTERS` and declare the capability: `tests/test_hierarchy.py` checks both.
+# ---------------------------------------------------------------------------------------------------------------------
+DEFAULT_ORDER: dict[str, list[str]] = {
+    # Market data. quotes/history: ranked above, with reasons.
+    "quotes": order_for("quotes"),
+    "history": order_for("history"),
+    "search": ["yahoo"],
+    "profile": ["yahoo", "nasdaq"],
+    "movers": ["nasdaq"],
+    "screener": ["nasdaq_screener"],
+    "peers": ["yahoo_peers"],
+    "figi": ["openfigi"],  # SECF identifier mapping
+    "mfnav": ["amfi"],  # AMFI NAV for the SECF fund rows
+    # News. The keyed sources (finnhub, alpaca, marketaux) sit after the keyless ones and are inert until a key is set in APIKEYS.
+    "news_top": ["rss", "finnhub", "alpaca", "marketaux"],
+    "news_symbol": ["yahoo_rss", "finnhub", "alpaca", "marketaux", "gdelt"],
+    "news_keyword": ["gdelt"],
+    "news_pool": ["rss"],  # the curated feed table (providers/news_feeds.py)
+    # Crypto. kraken and coinbase: keyless second exchanges for when Binance is blocked or down.
+    "crypto": ["coingecko", "binance", "kraken", "coinbase"],
+    "crypto_options": ["deribit"],
+    # Crypto depth (Binance first; OKX when Binance fails, e.g. HTTP 451), funding, liquidations (OKX only), DefiLlama
+    "crypto_depth": ["binance_deriv", "okx", "kraken", "coinbase"],
+    "crypto_funding": ["binance_deriv", "okx"],
+    "crypto_funding_detail": ["binance_deriv", "okx"],
+    "crypto_liq": ["okx"],
+    "stablecoins": ["defillama"],
+    "yields": ["defillama"],
+    "chain": ["etherscan"],  # ADDR: one keyed source; no key = KEY REQUIRED, never fake data
+    # SEC / ownership
+    "fundamentals": ["sec"],
+    "filings": ["sec"],
+    "insiders": ["sec", "yahoo_own"],
+    "holders": ["yahoo_own"],
+    # Research functions (keyless first; finnhub is keyed and inert without a key)
+    "estimates": ["yahoo_research"],
+    "ratings": ["yahoo_research", "finnhub"],
+    "surprises": ["yahoo_research", "finnhub"],
+    "officers": ["yahoo_research"],
+    "keystats": ["yahoo_research"],
+    "fund_info": ["yahoo_research"],
+    "corp_events": ["yahoo_research"],
+    "dividends": ["nasdaq_research", "yahoo_research"],
+    "splits": ["yahoo_research"],
+    "ipo": ["nasdaq_research"],
+    "short_interest": ["nasdaq_research", "yahoo_research"],
+    "short_volume": ["finra"],
+    "etf_holdings": ["sec_nport"],
+    "manager_13f": ["sec_13f"],
+    "earnings_history": ["nasdaq_research"],  # GP event markers
+    # Macro. fred = official API, only active with FRED_API_KEY; fred_csv = keyless CSV.
+    "fred_series": ["fred", "fred_csv"],
+    "fred_search": ["fred"],
+    "yield_curve": ["treasury", "fred_csv"],
+    "earnings": ["nasdaq_earnings"],
+    "eco_calendar": ["agency_ics", "fred"],
+    # Options and rates views
+    "option_chain": ["yahoo_options", "tradier"],  # Tradier is a keyed fallback
+    "curve_eur": ["ecb"],
+    "curve_gbp": ["boe"],
+    "curve_cad": ["boc"],
+    "curve_jpy": ["mof"],
+    "credit_spreads": ["fred_oas"],
+    "auctions": ["treasurydirect"],
+    # Futures, COT, FOMC, Fama-French factors
+    "futures_contract": ["yahoo_futures"],
+    "cot_history": ["cftc"],
+    "cot_markets": ["cftc"],
+    "fomc_dates": ["fomc"],
+    "factors": ["kenfrench"],
+    # Trade + US macro family (free keys)
+    "comtrade": ["comtrade"],
+    "bls": ["bls"],
+    "bea": ["bea"],
+    "census": ["census"],
+    # World statistics, holidays, policy rates
+    "holidays": ["nager"],
+    "worldstats": ["worldbank", "dbnomics"],
+    "worldstats_latest": ["worldbank"],
+    "worldstats_countries": ["worldbank"],
+    "worldstats_dbn": ["dbnomics"],
+    "worldstats_search": ["dbnomics"],  # DBSRCH: find DBnomics datasets and series by words
+    "policy_rates": ["policy_rates"],
+    # Weather
+    "weather_geocode": ["openmeteo"],
+    "weather_forecast": ["openmeteo"],
+    "nws_alerts": ["nws"],
+    # Shipping, ports, maps, live positions
+    "shipping_chokepoints": ["portwatch"],
+    "ports_activity": ["portwatch"],  # PORTS: same keyless IMF PortWatch provider, daily port calls
+    "geo_quakes": ["usgs"],  # MAP layers (keyless)
+    "geo_events": ["eonet"],
+    "ais": ["aisstream"],
+    "flights": ["opensky"],
+    # Mutual funds (MFapi.in)
+    "mf_search": ["mfapi"],
+    "mf_nav": ["mfapi"],
+    # UK Companies House: one keyed source; no key = KEY REQUIRED
+    "companies_house": ["companies_house"],
+    # US government: USASP / FEDREG (keyless) and FEC / CONGRESS (free api.data.gov keys; no key = KEY REQUIRED, never fake data)
+    "usaspending": ["usaspending"],
+    "federal_register": ["federalregister"],
+    "openfec": ["openfec"],
+    "congress_gov": ["congressgov"],
+    # Prediction markets (PRED)
+    "pred_poly": ["polymarket"],
+    "pred_poly_market": ["polymarket"],
+    "pred_poly_history": ["polymarket"],
+    "pred_kalshi": ["kalshi"],
+    "pred_kalshi_market": ["kalshi"],
+    "pred_kalshi_candles": ["kalshi"],
+}
+
+# Test data: with OPENTERM_SYNTHETIC=1 the SYN0000-SYN9999 provider answers for these two capabilities (last in line, so real
+# sources still answer real tickers). Must equal SyntheticProvider.capabilities; a test checks it.
+SYNTHETIC_CAPABILITIES = ("quotes", "history")
+
+
+def build_order(pinned: dict, synthetic: bool) -> dict[str, list[str]]:
+    """The order the router uses: DEFAULT_ORDER, then any hand-pinned `providers:` entries from config.yaml (they win).
+
+    A pin on a ranked capability (quotes, history) is logged, because it also hides every source added to HIERARCHY later.
+    A pin that names an unknown provider is not repaired: the router finds no such source and the panel shows the failure.
+    """
+    order = {**DEFAULT_ORDER, **pinned}
+    for cap in HIERARCHY:
+        if cap in pinned and list(pinned[cap]) != order_for(cap):
+            logging.getLogger("openterm").warning(
+                "config.yaml pins the %s order %s: the source hierarchy %s is ignored", cap, pinned[cap], order_for(cap))
+    if synthetic:
+        order = {k: [*v, "synthetic"] if k in SYNTHETIC_CAPABILITIES else v for k, v in order.items()}
+    return order
 
 
 def rank_of(provider: str) -> dict[str, dict]:

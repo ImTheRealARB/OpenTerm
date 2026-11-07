@@ -1,6 +1,6 @@
 /**
  * Pure helpers for TRADE (UN Comtrade) and USMAC (BLS, BEA, Census): argument parsing and number formats. No DOM, no network, so
- * vitest can run them (anything importing net/api cannot be unit-tested).
+ * vitest can run them (anything importing net/core cannot be unit-tested).
  */
 
 export interface TradeArgs {
@@ -67,8 +67,8 @@ export function fmtSigned(v: number | null, digits = 2): string {
   return v == null ? "" : (v > 0 ? "+" : "") + fmtNum(v, digits);
 }
 
-/** The kind of a USMAC series (mirrors `UsSeries["kind"]` in net/api.ts; redeclared here because this file must stay free of
- *  `net/api`, which vitest cannot import). */
+/** The kind of a USMAC series (mirrors `UsSeries["kind"]` in net/types.ts; redeclared here because this file must stay free of
+ *  `net/core`, which vitest cannot import; a type-only import from net/types would also do). */
 export type SeriesKind = "level" | "rate" | "unknown";
 
 /**

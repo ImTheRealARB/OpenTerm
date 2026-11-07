@@ -1,4 +1,4 @@
-import type { Alert, NewsAlert } from "../net/api";
+import type { Alert, NewsAlert } from "../net/types";
 
 /**
  * GUI wording for one alert, a plain sentence instead of command syntax (pure, unit-tested):

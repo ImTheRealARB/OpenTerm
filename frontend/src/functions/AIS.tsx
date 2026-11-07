@@ -9,13 +9,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelRefresh } from "./panelRefresh";
 import { mapArgsFor, openMap } from "../map/jump";
-import { worldApi, type AisRow } from "../net/api";
+import type { AisRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { replaceView } from "../state/workspace";
 import { fmtAge, fmtDegrees, fmtEta, fmtFrom, fmtKnots, fmtLatLon, aisQuery, listeningText, memoryNote, quietText, stepArea } from "./aisArgs";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -28,7 +31,7 @@ const aged = (r: AisRow, normal: CellColor): CellColor => (r.remembered ? "dim" 
 
 export default function AIS({ panelId, args }: FunctionProps) {
   const query = useMemo(() => aisQuery(args), [args]);
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.ais(query, fresh), query);
+  const { env, error, loading, reload: load } = useEnvelope(query, (fresh) => worldApi.ais(query, fresh));
   const grid = useRef<GridHandle>(null);
   const [sel, setSel] = useState(0);
   const d = env?.data;
@@ -78,15 +81,12 @@ export default function AIS({ panelId, args }: FunctionProps) {
       : null,
   );
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         const k = e.key.toLowerCase();
         if (k === "m") {
           // M = show this area on the map (a custom BOX has no map area, so M does nothing there)

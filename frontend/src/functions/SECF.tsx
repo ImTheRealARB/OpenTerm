@@ -7,9 +7,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api, api9, worldApi, type Envelope, type FigiItem, type FigiListing, type FigiResult, type MfItem, type MfNavPayload, type ScreenerPayload, type SearchHit } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, FigiItem, FigiListing, FigiResult, MfItem, MfNavPayload, ScreenerPayload, SearchHit } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { identsOf, yahooSymbol } from "./secfIds";
 import { candidatesFromUniverse, mergeSearch, rank, type Hit } from "./secfScore";
@@ -80,11 +85,11 @@ export default function SECF({ panelId, args }: FunctionProps) {
         .finally(() => live && setLoading(false));
     } else {
       setFigi(null);
-      const u = api9.screener(fresh).then((e) => live && setUni(e)).catch((e) => {
+      const u = marketApi.screener(fresh).then((e) => live && setUni(e)).catch((e) => {
         if (live) setUni(null);
         fail("EQS UNIVERSE")(e);
       });
-      const s = api.search(query).then((e) => live && setSearch(e)).catch((e) => {
+      const s = marketApi.search(query).then((e) => live && setSearch(e)).catch((e) => {
         if (live) setSearch(null);
         fail("YAHOO SEARCH")(e);
       });
@@ -160,6 +165,7 @@ export default function SECF({ panelId, args }: FunctionProps) {
     (symbol: string) => navigate(panelId, { fn: "DES", security: { symbol }, args: [] }),
     [panelId],
   );
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -169,10 +175,6 @@ export default function SECF({ panelId, args }: FunctionProps) {
         if (navKey(e, g, cur.showFunds ? cur.fundRows.length : cur.idents ? cur.rows.length : cur.hits.length)) return true;
         if ((e.key === "m" || e.key === "M") && !cur.idents) {
           setFunds((f) => !f);
-          return true;
-        }
-        if (e.key === "F5") {
-          setReload((n) => n + 1);
           return true;
         }
         if (e.key !== "Enter") return false;

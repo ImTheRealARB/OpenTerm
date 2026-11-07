@@ -1,6 +1,6 @@
 /**
  * Phase 6 payload types and pure table shaping for FA, FIL, OWN and HDS.
- * No imports from net/api or perf/metrics, so vitest can run it in Node.
+ * No imports from net/core or perf/metrics, so vitest can run it in Node.
  */
 
 export type StatementTab = "IS" | "BS" | "CF";

@@ -68,8 +68,17 @@ export function runNl(command: string, typed: string, newPanel: boolean, keepFn:
   info(`${typed.trim().toUpperCase()} -> ${command}`);
 }
 
+/** Drops any typing preview that is still waiting (debounce) or in flight, so its answer can no longer touch the list. */
+function cancelPreview(): void {
+  clearTimeout(timer);
+  seq++;
+}
+
 /** Enter on text that may be plain English; falls back to running it as typed (normal error path). */
 export async function viaNatural(text: string, newPanel: boolean, keepFn: boolean, ui: Ui, finish: () => void): Promise<void> {
+  // Enter supersedes the typing preview. Without this, a preview still waiting on its debounce (or on the name lookup)
+  // answers AFTER the choices below are shown and resets the list's highlight (`setSel(-1)`), losing the user's UP/DOWN pick.
+  cancelPreview();
   const r = await resolveNatural(text).catch(() => ({ kind: "asis" }) as const);
   if (ui.value() !== text) return; // the user kept typing
   if (r.kind === "command") runNl(r.command, text, newPanel, keepFn, finish);

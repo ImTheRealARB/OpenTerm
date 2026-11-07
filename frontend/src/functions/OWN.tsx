@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { secApi } from "../net/api";
-import { navKey, useLatest } from "./quoteRows";
+import { usePanelRefresh } from "./panelRefresh";
+import { secApi } from "../net/secApi";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { ErrorLine, Header, openUrl, useEnvelope } from "./secPanel";
 import { fmtShares, insiderTotals, type InsiderTrade, type InsidersPayload } from "./secTables";
@@ -35,6 +37,7 @@ export default function OWN({ panelId, security }: FunctionProps) {
   const latest = useLatest({ rows });
   useCsvExport(panelId, () => gridCsv(`OWN_${symbol}`, COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void reload(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -51,13 +54,10 @@ export default function OWN({ panelId, security }: FunctionProps) {
             if (r?.url) openUrl(r.url);
             return true;
           }
-          case "F5":
-            void reload(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, reload, symbol],
+    [panelId, latest, symbol],
   );
 
   const d = env?.data;

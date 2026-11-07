@@ -12,12 +12,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type DbsDatasetRow, type DbsSeriesRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { DbsDatasetRow, DbsSeriesRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate, replaceView } from "../state/workspace";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { buildDbsrchArgs, count, DATASET_PAGE, DBSRCH_USAGE, hasNext, pageText, parseDbsrchArgs, prevOffset, SERIES_PAGE } from "./dbsrchArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -52,7 +55,7 @@ export default function DBSRCH({ panelId, args }: FunctionProps) {
 }
 
 function DbsrchView({ panelId, q, dataset, offset }: { panelId: number; q: string; dataset: string; offset: number }) {
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.dbsearch(q, dataset, offset, fresh), `${q.toLowerCase()}|${dataset}|${offset}`);
+  const { env, error, loading, reload: load } = useEnvelope(`${q.toLowerCase()}|${dataset}|${offset}`, (fresh) => worldApi.dbsearch(q, dataset, offset, fresh));
   const [notice, setNotice] = useState("");
   const grid = useRef<GridHandle>(null);
   const d = env?.data;
@@ -70,6 +73,7 @@ function DbsrchView({ panelId, q, dataset, offset }: { panelId: number; q: strin
     setNotice("");
   }, [q, dataset, offset]);
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -79,9 +83,6 @@ function DbsrchView({ panelId, q, dataset, offset }: { panelId: number; q: strin
         if (navKey(e, g, cur.rows)) return true;
         const toPage = (to: number) => replaceView(panelId, (v) => ({ ...v, args: buildDbsrchArgs({ q: cur.q, dataset: cur.dataset, offset: to }) }));
         switch (e.key) {
-          case "F5":
-            void load(true);
-            return true;
           case "n":
           case "N":
             if (hasNext(cur.offset, cur.rows, cur.total)) toPage(cur.offset + cur.page);
@@ -113,7 +114,7 @@ function DbsrchView({ panelId, q, dataset, offset }: { panelId: number; q: strin
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const total = d?.total ?? 0;

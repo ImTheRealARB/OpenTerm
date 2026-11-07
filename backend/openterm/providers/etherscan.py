@@ -20,17 +20,17 @@ from typing import Any, ClassVar
 import httpx
 import orjson
 
-from ..ratelimit import RateLimited
 from ..redact import redact
 from . import etherscan_parse as ep
-from .base import Provider, ProviderError
+from .base import ProviderError
+from .keyed import KeyedProvider
 
 URL = "https://api.etherscan.io/v2/api"
 CAPABILITY = "chain"
 TX_COUNT = 20
 
 
-class EtherscanProvider(Provider):
+class EtherscanProvider(KeyedProvider):
     name = "etherscan"
     label = "Etherscan V2 (free key)"
     capabilities = frozenset({CAPABILITY})
@@ -41,40 +41,20 @@ class EtherscanProvider(Provider):
     timeout = 10.0
     key_name = "ETHERSCAN_KEY"
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm", "Accept": "application/json"}
+    hide_without_key = False  # supports() stays true: a missing key answers KEY REQUIRED instead of looking broken
+    msg_rate_limited = "Etherscan 429"
+    msg_refused = "Etherscan refused the key ({code})"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
-        self.source = "etherscan (doc-shaped fixture, NOT A RECORDING)" if self.fixtures else "etherscan"
-        self._key = ""
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        self.source = "etherscan (doc-shaped fixture, NOT A RECORDING)" if self.fixture else "etherscan"
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
-
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get("ETHERSCAN_KEY", "")
+    def auth_params(self) -> dict[str, str]:
+        return {"apikey": self._key}  # the only way the docs describe; the key is registered with redact.py
 
     async def _api(self, chainid: int, module: str, action: str, **extra: Any) -> Any:
-        if not self._key:
-            raise ProviderError("key_required", "ETHERSCAN_KEY is not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        params = {"chainid": str(chainid), "module": module, "action": action, **extra, "apikey": self._key}
-        try:
-            r = await self.http.get(URL, params=params, headers=self.headers, timeout=self.timeout)
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e  # never str(e): it can carry the URL with the key
-        if r.status_code == 429:
-            raise ProviderError("rate_limited", "Etherscan 429")
-        if r.status_code in (401, 403):
-            raise ProviderError("key_required", redact(f"Etherscan refused the key ({r.status_code})", [self._key]))
-        if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
+        params = {"chainid": str(chainid), "module": module, "action": action, **extra}
+        r = await self._request(URL, params, None)
         try:
             body = orjson.loads(r.content)
         except orjson.JSONDecodeError as e:

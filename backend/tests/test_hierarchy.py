@@ -141,3 +141,55 @@ def test_http_sources_lists_where_each_provider_sits_in_the_hierarchy(client):
     rows = {p["name"]: p for p in client.get("/api/sources").json()["providers"]}
     assert rows["kite"]["hierarchy"]["history"]["rank"] == 1 and rows["yahoo"]["hierarchy"]["quotes"]["rank"] == 2
     assert rows["gdelt"]["hierarchy"] == {}
+
+
+# --- the one capability-order table (DEFAULT_ORDER) ---------------------------------------------------------------------------
+def test_every_provider_in_the_default_order_exists_and_declares_the_capability():
+    from openterm.providers.hierarchy import DEFAULT_ORDER
+
+    problems = []
+    for cap, names in DEFAULT_ORDER.items():
+        for name in names:
+            cls = providers.ADAPTERS.get(name)
+            if cls is None:
+                problems.append(f"{cap}: {name} is not in ADAPTERS")
+            elif cap not in cls.capabilities:
+                problems.append(f"{cap}: {name} does not declare that capability")
+    assert not problems, problems
+
+
+def test_quotes_and_history_in_the_default_order_are_the_ranked_hierarchy():
+    from openterm.providers.hierarchy import DEFAULT_ORDER
+
+    for cap in HIERARCHY:
+        assert DEFAULT_ORDER[cap] == order_for(cap)
+
+
+def test_synthetic_goes_last_for_exactly_the_capabilities_it_declares():
+    from openterm.providers.hierarchy import SYNTHETIC_CAPABILITIES, build_order
+    from openterm.providers.synthetic import SyntheticProvider
+
+    assert set(SYNTHETIC_CAPABILITIES) == set(SyntheticProvider.capabilities)
+    plain, with_syn = build_order({}, False), build_order({}, True)
+    assert "synthetic" not in {n for names in plain.values() for n in names}
+    for cap, names in with_syn.items():
+        assert names == ([*plain[cap], "synthetic"] if cap in SYNTHETIC_CAPABILITIES else plain[cap])
+
+
+def test_a_config_pin_wins_and_a_pin_on_a_ranked_capability_is_logged(caplog):
+    from openterm.providers.hierarchy import DEFAULT_ORDER, build_order
+
+    with caplog.at_level("WARNING", logger="openterm"):
+        order = build_order({"quotes": ["nasdaq"], "news_top": ["rss"]}, False)
+    assert order["quotes"] == ["nasdaq"] and order["news_top"] == ["rss"]
+    assert order["search"] == DEFAULT_ORDER["search"]  # everything else keeps the default
+    assert "pins the quotes order" in caplog.text and "news_top" not in caplog.text
+
+
+def test_planned_keyed_rows_have_no_adapter_and_no_key_store_entry():
+    # KEYED = SOURCES rows for providers that are planned but not built; anything built or in APIKEYS is listed from elsewhere.
+    from openterm.keys import KEY_SPECS
+
+    assert providers.KEYED
+    for name in providers.KEYED:
+        assert name not in providers.ADAPTERS and name not in KEY_SPECS

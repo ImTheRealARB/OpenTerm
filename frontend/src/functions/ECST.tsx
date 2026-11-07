@@ -5,7 +5,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type WorldSeries } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, WorldSeries } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import type { FunctionProps } from "./registry";
 import { useCsvExport } from "./tableExport";
@@ -54,6 +57,7 @@ export default function ECST({ panelId, args }: FunctionProps) {
   const bars = useMemo(() => (d ? toBars(d) : null), [d]);
   useCsvExport(panelId, () => d ? { name: `ECST_${d.country}_${d.indicator}`, header: ["period", d.indicator], rows: d.periods.map((per, i) => [per, String(d.v[i])]) } : null);
 
+  usePanelRefresh(panelId, () => { setReload((r) => r + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -82,9 +86,6 @@ export default function ECST({ panelId, args }: FunctionProps) {
             return true;
           case "-":
             chart.current?.zoom(1.25);
-            return true;
-          case "F5":
-            setReload((r) => r + 1);
             return true;
         }
         return false;

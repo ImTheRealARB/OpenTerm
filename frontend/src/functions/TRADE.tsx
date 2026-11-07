@@ -8,9 +8,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type TradePayload, type TradeRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, TradePayload, TradeRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { fmtUsd, parseTradeArgs, signColor } from "./usArgs";
@@ -60,18 +64,15 @@ export default function TRADE({ panelId, args }: FunctionProps) {
   const latest = useLatest({ rows });
   useCsvExport(panelId, () => (d ? gridCsv(`TRADE_${d.reporter.iso}_${d.partner.iso}_${d.cmd}`, COLUMNS, rows) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   if (p.error) {

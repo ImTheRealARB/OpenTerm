@@ -15,3 +15,21 @@ export function latestOnly() {
     },
   };
 }
+
+/**
+ * Key guard for loaders that fetch one thing per key (a symbol, a query, a page). `set(key)` records the key the panel
+ * shows NOW; `isCurrent(k)` says whether an answer that was asked for key `k` is still wanted. An answer for an old key
+ * that lands after the key changed is dropped. (Unlike `latestOnly`, two answers for the SAME key both count, which is
+ * what F5 and the auto refresh need.) Pure, so it is unit-tested in Node.
+ */
+export function keyGate(initial: string) {
+  let current = initial;
+  return {
+    set(key: string): void {
+      current = key;
+    },
+    isCurrent(key: string): boolean {
+      return current === key;
+    },
+  };
+}

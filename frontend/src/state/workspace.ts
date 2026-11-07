@@ -88,6 +88,17 @@ export function split(dir: "v" | "h"): number | null {
   return newId;
 }
 
+/**
+ * `split`, but at the panel cap it also tells the user (through `say`, e.g. the status bar's `info` or `fail`) instead of
+ * failing silently. Every place that splits (keys, menus, the command line) goes through this, so the wording and the
+ * limit come from MAX_PANELS in one spot. Returns the new panel id, or null at the cap.
+ */
+export function splitOrSay(dir: "v" | "h", say: (text: string) => void): number | null {
+  const id = split(dir);
+  if (id === null) say(`PANEL LIMIT (${MAX_PANELS}) REACHED`);
+  return id;
+}
+
 export function closePanel(id = workspace.get().focus): void {
   workspace.set((s) => {
     const order = panelOrder(s);

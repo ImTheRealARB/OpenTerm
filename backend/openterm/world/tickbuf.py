@@ -10,13 +10,13 @@ from array import array
 from itertools import islice
 from operator import le
 
-from ..streaming.tick import Tick
+from ..streaming.tick import TICK_LABELS, Tick
 
 CAP = 20_000
 MAX_SYMBOLS = 100
 SESSION_GAP_MS = 4 * 3600 * 1000
 BARS = {"1s": 1, "5s": 5, "15s": 15, "1m": 60}
-SOURCE_LABEL = {"y": "YAHOO STREAM", "p": "YAHOO POLL", "s": "SYNTHETIC", "a": "RT IEX", "k": "RT KITE"}
+SOURCE_LABEL = TICK_LABELS  # the table lives in one place: streaming/tick.py `SOURCES`
 
 
 class TickRing:

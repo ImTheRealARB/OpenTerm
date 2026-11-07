@@ -6,10 +6,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type WecoPayload, type WecoRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, WecoPayload, WecoRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { fmtCell, sortWeco } from "./worldArgs";
@@ -59,6 +63,7 @@ export default function WECO({ panelId }: FunctionProps) {
       ...aliases.map((a): Column<WecoRow> => ({ title: `${a} YEAR`, width: 5, text: (r) => String(r.cells[a]?.year ?? "") }))], rows) : null,
   );
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -66,10 +71,6 @@ export default function WECO({ panelId }: FunctionProps) {
         const g = grid.current;
         const cur = latest.current;
         if (navKey(e, g, cur.rows.length)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "0" || (e.key >= "1" && e.key <= "5" && Number(e.key) <= cur.aliases.length)) {
           const col: number | "name" = e.key === "0" ? "name" : Number(e.key) - 1;
           setSort((s) => ({ col, desc: s.col === col ? !s.desc : col !== "name" }));
@@ -82,7 +83,7 @@ export default function WECO({ panelId }: FunctionProps) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   return (

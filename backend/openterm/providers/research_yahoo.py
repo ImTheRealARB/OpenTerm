@@ -10,8 +10,8 @@ from typing import Any
 from ..research import corp_parse as cp
 from ..research import yahoo_parse as yp
 from .base import ProviderError
+from .http import BASE
 from .ownership import YahooOwnProvider
-from .yahoo import BASE
 
 ESTIMATES = "estimates"
 RATINGS = "ratings"

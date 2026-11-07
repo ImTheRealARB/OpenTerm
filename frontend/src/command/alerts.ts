@@ -12,7 +12,10 @@
  * once: marked triggered locally at once, then on the backend with the trigger price and time.
  */
 import { fmtPrice } from "../format";
-import { api, api8, newsAlertsApi, type Alert, type AlertEngineState, type ApiError, type NewsAlert, type NewsItem } from "../net/api";
+import { marketApi } from "../net/marketApi";
+import { newsAlertsApi } from "../net/newsAlertsApi";
+import { priceAlertsApi } from "../net/priceAlertsApi";
+import type { Alert, AlertEngineState, NewsAlert, NewsItem } from "../net/types";
 import { onAlertFrame, subscribe } from "../net/socket";
 import { createStore } from "../state/store";
 import { symName } from "../state/symbols";
@@ -21,6 +24,7 @@ import { sendWithRetry } from "./triggerRetry";
 import { alertMet, browserFires, describeRule, newsMatch, parseAlrt, viaText } from "./alertArgs";
 import type { SecurityRef } from "./markets";
 import { fail, info, statusMsg } from "./status";
+import { errMessage } from "../net/errText";
 
 export const alerts = createStore<Alert[] | null>(null);
 export const alertsError = createStore<string | null>(null);
@@ -30,7 +34,7 @@ export const lastFired = createStore<{ text: string; at: number } | null>(null);
 /** The backend alert engine's state (running, watched symbols, last tick age, refused matches with reasons). null = not known. */
 export const engineState = createStore<AlertEngineState | null>(null);
 export const refreshEngine = (): Promise<void> =>
-  api8.alertEngine().then(
+  priceAlertsApi.alertEngine().then(
     (s) => engineState.set(() => s),
     () => engineState.set(() => null), // an unreachable backend shows as "ENGINE STATE UNKNOWN" in ALRT; it is not guessed
   );
@@ -42,7 +46,6 @@ export const notifyState = createStore<NotifyState>(readNotify());
 /** The user may change the permission in the browser at any time: re-read it when the ALRT panel opens. */
 export const refreshNotifyState = () => notifyState.set(() => readNotify());
 
-const errText = (e: unknown) => (e as ApiError).message ?? String(e);
 export const alertText = (a: Pick<Alert, "symbol" | "op" | "unit" | "value">) => `${a.symbol} ${describeRule(a)}`;
 
 /** Alerts this tab fired whose backend update is pending (or failed): never fire twice. */
@@ -69,7 +72,7 @@ function setAlerts(list: Alert[]): void {
 export async function refreshAlerts(): Promise<Alert[]> {
   void refreshEngine(); // independent of the list: ALRT shows the engine even when the list call fails
   try {
-    const { alerts: list } = await api8.alerts();
+    const { alerts: list } = await priceAlertsApi.alerts();
     // An alert this tab already fired stays triggered even if the backend has not stored it yet.
     const local = new Map((alerts.get() ?? []).map((a) => [a.id, a]));
     const merged = list.map((a) => (a.status === "active" && local.get(a.id)?.status === "triggered" && firing.has(a.id) ? local.get(a.id)! : a));
@@ -77,7 +80,7 @@ export async function refreshAlerts(): Promise<Alert[]> {
     alertsError.set(() => null);
     return merged;
   } catch (e) {
-    alertsError.set(() => errText(e));
+    alertsError.set(() => errMessage(e));
     throw e;
   }
 }
@@ -127,11 +130,11 @@ function fire(a: Alert, price: number, src: string): void {
   announcePrice(a, price, src === "s");
   // The id stays in `firing` until the backend accepts the report, so the tick check cannot fire it twice; a failed POST
   // is retried with backoff while the alert is still firing and still exists (re-arm or delete ends the retries).
-  sendWithRetry(() => api8.triggerAlert(a.id, price, at, src === "s"), {
+  sendWithRetry(() => priceAlertsApi.triggerAlert(a.id, price, at, src === "s"), {
     stillWanted: () => firing.has(a.id) && (alerts.get() ?? []).some((x) => x.id === a.id),
     onDone: () => firing.delete(a.id),
     onFail: (e, n) => {
-      if (n === 1) fail(`ALERT ${a.id} FIRED BUT NOT SAVED, RETRYING: ${errText(e)}`);
+      if (n === 1) fail(`ALERT ${a.id} FIRED BUT NOT SAVED, RETRYING: ${errMessage(e)}`);
     },
   });
 }
@@ -184,7 +187,7 @@ function fireNews(a: NewsAlert, item: NewsItem): void {
     stillWanted: () => newsFiring.has(a.id) && (newsAlerts.get() ?? []).some((x) => x.id === a.id),
     onDone: () => newsFiring.delete(a.id),
     onFail: (e, n) => {
-      if (n === 1) fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED, RETRYING: ${errText(e)}`);
+      if (n === 1) fail(`NEWS ALERT N${a.id} FIRED BUT NOT SAVED, RETRYING: ${errMessage(e)}`);
     },
   });
 }
@@ -212,7 +215,7 @@ export async function pollNewsAlerts(): Promise<void> {
   try {
     for (const symbol of [...new Set(active.map((a) => a.symbol))]) {
       try {
-        const env = await api.news(symbol ? { symbol } : {});
+        const env = await marketApi.news(symbol ? { symbol } : {});
         checkNewsItems(symbol, env.data.items);
       } catch {
         /* a news outage is shown by N; the alert simply waits for the next poll */
@@ -257,20 +260,20 @@ export async function act(what: string, call: () => Promise<unknown>, ok: string
     await call();
   } catch (e) {
     void refreshAlerts().catch(() => {});
-    return fail(`${what}: ${errText(e)}`);
+    return fail(`${what}: ${errMessage(e)}`);
   }
   info(ok);
   await refreshAlerts().catch(() => {});
   return true;
 }
 
-export const deleteAlert = (id: number) => act(`ALERT ${id} NOT DELETED`, () => api8.deleteAlert(id), `ALERT ${id} DELETED`);
+export const deleteAlert = (id: number) => act(`ALERT ${id} NOT DELETED`, () => priceAlertsApi.deleteAlert(id), `ALERT ${id} DELETED`);
 export const rearmAlert = (id: number) => {
   firing.delete(id);
-  return act(`ALERT ${id} NOT REARMED`, () => api8.rearmAlert(id), `ALERT ${id} REARMED`);
+  return act(`ALERT ${id} NOT REARMED`, () => priceAlertsApi.rearmAlert(id), `ALERT ${id} REARMED`);
 };
 export const clearAlerts = () =>
-  act("ALERTS NOT CLEARED", () => api8.clearAlerts(), "TRIGGERED ALERTS CLEARED").then(async (ok) => {
+  act("ALERTS NOT CLEARED", () => priceAlertsApi.clearAlerts(), "TRIGGERED ALERTS CLEARED").then(async (ok) => {
     // Triggered news keyword alerts go with them; that list failing to clear is not worth failing the command for.
     if (ok) await newsAlertsApi.clear().catch(() => {});
     void refreshNewsAlerts().catch(() => {});
@@ -316,7 +319,7 @@ export function alrtCommand(args: string[], security?: SecurityRef): boolean | s
     case "create": {
       askNotifyPermission(); // synchronously, inside the keypress that ran the command
       const text = alertText({ symbol: a.symbol, ...a.rule });
-      void act(`ALERT ${text} NOT SAVED`, () => api8.createAlert({ symbol: a.symbol, ...a.rule, ...(a.channels ? { channels: a.channels } : {}) }), `ALERT SET: ${text}${a.channels ? ` ${viaText(a.channels)}` : ""}`);
+      void act(`ALERT ${text} NOT SAVED`, () => priceAlertsApi.createAlert({ symbol: a.symbol, ...a.rule, ...(a.channels ? { channels: a.channels } : {}) }), `ALERT SET: ${text}${a.channels ? ` ${viaText(a.channels)}` : ""}`);
       return [];
     }
   }

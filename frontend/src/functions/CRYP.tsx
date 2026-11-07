@@ -4,9 +4,13 @@ import { useEffect, useMemo, useRef } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtBig, fmtPct, fmtPrice, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { api, type Coin } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { marketApi } from "../net/marketApi";
+import type { Coin } from "../net/types";
 import { navigate } from "../state/workspace";
-import { dirColor, navKey, useLatest } from "./quoteRows";
+import { dirColor } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
 import { gridCsv, useCsvExport } from "./tableExport";
@@ -31,7 +35,7 @@ export default function CRYP({ panelId, args }: FunctionProps) {
   const vs = (args[0] ?? "USD").toUpperCase();
   const grid = useRef<GridHandle>(null);
 
-  const { env, error, loading, reload: load } = useEnvelope<{ vs: string; coins: Coin[] }>(vs, (fresh) => api.crypto(vs, fresh));
+  const { env, error, loading, reload: load } = useEnvelope<{ vs: string; coins: Coin[] }>(vs, (fresh) => marketApi.crypto(vs, fresh));
 
   useEffect(() => {
     const t = setInterval(() => void load(false), pollMs("crypto"));
@@ -42,6 +46,7 @@ export default function CRYP({ panelId, args }: FunctionProps) {
   const latest = useLatest(rows);
   useCsvExport(panelId, () => gridCsv(`CRYP_${vs}`, COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -55,13 +60,10 @@ export default function CRYP({ panelId, args }: FunctionProps) {
             if (r) navigate(panelId, { fn: "GP", security: { symbol: `${r.symbol}-USD` }, args: [] });
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load, vs],
+    [panelId, latest, vs],
   );
 
   const quote = rows[0]?.quote ?? vs;

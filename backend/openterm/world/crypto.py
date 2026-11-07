@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..service import DataError
+from ..errors import DataError
 from . import cryptodepth as cd
 
 DEPTH_TTL_S = 4.0
@@ -37,7 +37,7 @@ async def cdep(svc: Any, pair: str) -> dict[str, Any]:
         out, failed = await svc.router.call("crypto_depth", lambda p: p.crypto_depth(base, quote), f"{base}{quote}")
         return {"data": {**out, "base": base}, "fallback_from": failed, "source": _src(out["venue"])}
 
-    return await svc._swr(f"w:cdep:{base}{quote}", DEPTH_TTL_S, fetch)
+    return await svc.swr(f"w:cdep:{base}{quote}", DEPTH_TTL_S, fetch)
 
 
 async def fund(svc: Any, sym: str) -> dict[str, Any]:
@@ -51,14 +51,14 @@ async def fund(svc: Any, sym: str) -> dict[str, Any]:
             return {"data": {"mode": "BOARD", "rows": rows, "detail": None, "venue": rows[0]["source"].upper() if rows else None, "majors": list(cd.MAJORS)},
                     "fallback_from": failed, "source": _src(rows[0]["source"]) if rows else "binance_deriv"}
 
-        return await svc._swr("w:fund:board", FUND_TTL_S, board)
+        return await svc.swr("w:fund:board", FUND_TTL_S, board)
 
     async def one() -> dict:
         out, failed = await svc.router.call("crypto_funding_detail", lambda p: p.crypto_funding_detail(base), base)
         return {"data": {"mode": "DETAIL", "rows": [out["row"]], "detail": out["history"], "venue": out["row"]["source"].upper(), "majors": list(cd.MAJORS)},
                 "fallback_from": failed, "source": _src(out["row"]["source"])}
 
-    return await svc._swr(f"w:fund:{base}", FUND_TTL_S, one)
+    return await svc.swr(f"w:fund:{base}", FUND_TTL_S, one)
 
 
 async def liq(svc: Any, sym: str) -> dict[str, Any]:
@@ -74,7 +74,7 @@ async def liq(svc: Any, sym: str) -> dict[str, Any]:
                          "note": "OKX RETURNS ONLY THE LATEST FILLED LIQUIDATION ORDERS (ABOUT 100), NOT A FIXED WINDOW. BINANCE PUBLISHES NO LIQUIDATION HISTORY OVER REST."},
                 "fallback_from": failed, "source": "okx"}
 
-    return await svc._swr(f"w:liq:{base}", LIQ_TTL_S, fetch)
+    return await svc.swr(f"w:liq:{base}", LIQ_TTL_S, fetch)
 
 
 async def stbl(svc: Any, chain: str) -> dict[str, Any]:
@@ -86,7 +86,7 @@ async def stbl(svc: Any, chain: str) -> dict[str, Any]:
         out, failed = await svc.router.call("stablecoins", lambda p: p.stablecoins(key))
         return {"data": out, "fallback_from": failed, "source": "defillama"}
 
-    return await svc._swr(f"w:stbl:{key.lower()}", LLAMA_TTL_S, fetch)
+    return await svc.swr(f"w:stbl:{key.lower()}", LLAMA_TTL_S, fetch)
 
 
 async def defi(svc: Any, q: str) -> dict[str, Any]:
@@ -98,7 +98,7 @@ async def defi(svc: Any, q: str) -> dict[str, Any]:
         out, failed = await svc.router.call("yields", lambda p: p.yields())
         return {"data": out, "fallback_from": failed, "source": "defillama"}
 
-    env = await svc._swr("w:defi:pools", LLAMA_TTL_S, pools)  # the filtered list is cached once; the raw 11 MB answer is gone by now
+    env = await svc.swr("w:defi:pools", LLAMA_TTL_S, pools)  # the filtered list is cached once; the raw 11 MB answer is gone by now
     try:
         sel = cd.select_pools(env["data"], key)
     except Exception as e:  # ProviderError(not_found) from the selection

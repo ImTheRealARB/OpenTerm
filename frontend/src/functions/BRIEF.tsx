@@ -7,7 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 import { PanelNote } from "../components/PanelNote";
 import { fmtAge } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { briefApi, type Brief } from "../net/api";
+import { briefApi } from "../net/briefApi";
+import type { Brief } from "../net/types";
 import { briefStamp, sectionMeta } from "./dlvrFields";
 import type { FunctionProps } from "./registry";
 

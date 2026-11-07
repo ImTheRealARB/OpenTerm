@@ -160,7 +160,7 @@ def test_congress_parsers_on_doc_shaped_fixtures():
 # --- providers: the key rules ----------------------------------------------------------------------------------------------------
 
 def make(cls, handler):
-    p = cls(mock(handler), source=f"{cls.name}:fixture")
+    p = cls(mock(handler), source=f"{cls.name}:fixture", fixture=True)
     p.bucket.tokens = 100  # no waiting in tests
     return p
 

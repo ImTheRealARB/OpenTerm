@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import Any
 
 from ..providers.base import ProviderError
@@ -19,7 +19,6 @@ QUOTES =("USDT", "USDC", "USD", "EUR", "BTC", "ETH")
 USD_QUOTES = {"USDT", "USDC", "USD"}
 MAJORS = ("BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "LINK", "LTC", "DOT", "TRX", "BCH", "ATOM", "NEAR")
 BANDS_PCT = (0.1, 0.5, 1.0)
-LADDER_LEVELS = 25
 MIN_TVL = 1_000_000
 YIELD_ROWS = 100
 _BASE = re.compile(r"^[A-Z0-9]{2,12}$")
@@ -354,7 +353,3 @@ def select_pools(pools: list[dict[str, Any]], q: str, rows: int = YIELD_ROWS) ->
             raise ProviderError("not_found", f"NO POOL FOR CHAIN OR PROJECT {q.upper()[:30]}")
     pick = sorted(pick, key=lambda p: -p["apy"])
     return {"rows": pick[:rows], "matched": len(pick), "mode": mode, "query": q.strip() or None, "pools_over_tvl": len(pools), "min_tvl": MIN_TVL}
-
-
-def ms_iso(ms: int | None) -> str | None:
-    return None if ms is None else datetime.fromtimestamp(ms / 1000, UTC).strftime("%Y-%m-%d %H:%M:%S")

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type LogRecord } from "../net/api";
+import { systemApi } from "../net/systemApi";
+import type { LogRecord } from "../net/types";
 
 const MAX = 500;
 const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
@@ -15,7 +16,7 @@ export default function Log() {
     let alive = true;
     const tick = async () => {
       try {
-        const { records } = await api.log(last.current);
+        const { records } = await systemApi.log(last.current);
         if (!alive) return;
         setDown(false);
         if (records.length) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AlertEngineState } from "../net/api";
+import type { AlertEngineState } from "../net/types";
 import { browserFires, SYNTHETIC_SRC } from "../command/alertArgs";
 import { engineView, fmtAge } from "./alertEngineText";
 

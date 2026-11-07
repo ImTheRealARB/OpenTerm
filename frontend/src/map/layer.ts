@@ -2,10 +2,11 @@
  * What a MAP layer is. Adding a layer = one file in `map/layers/` that exports a `MapLayer`, plus one line in `map/layers/index.ts`.
  * The panel does everything else (toggle, list, loading / error / stale labels, drawing, picking, details).
  *
- * Layer files import only TYPES from net/api (`import type`), and get the API object through `LoadCtx`, so vitest can run
+ * Layer files import only TYPES from net/types and net/worldApi (`import type`), and get the API object through `LoadCtx`, so vitest can run
  * their pure `toShapes` conversion without a browser.
  */
-import type { Envelope, worldApi } from "../net/api";
+import type { Envelope } from "../net/types";
+import type { worldApi } from "../net/worldApi";
 import type { LayerData, Shape } from "./types";
 
 export interface LoadCtx {

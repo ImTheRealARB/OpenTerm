@@ -14,11 +14,6 @@ export type MenuItem =
   | { kind: "fn"; fn: string; label: string }
   | { kind: "action"; action: OptionAction; label: string };
 
-/** Functions offered for a security, in this order (only the built ones are listed). */
-export const SECURITY_RELATED = ["DES", "GP", "QR", "FA", "N", "HDS", "OWN", "COMP", "DVD", "EE", "ANR", "OMON"];
-/** Functions offered when the panel has no security. */
-export const MARKET_RELATED = ["WEI", "MOV", "FX", "CMDTY", "CRYP", "RATES", "ECO", "N"];
-
 export const OPTIONS: { action: OptionAction; label: string }[] = [
   { action: "maximize", label: "MAXIMIZE / RESTORE" },
   { action: "splitVertical", label: "SPLIT VERTICAL" },
@@ -34,6 +29,8 @@ export const viewLabel = (v: View): string => [v.security?.symbol, v.fn ?? "EMPT
 export interface FnInfo {
   isBuilt(code: string): boolean;
   title(code: string): string;
+  /** Codes offered by RELATED, in order: the security list when the panel has a security, else the market list (the registry's `related` ranks). */
+  related(withSecurity: boolean): readonly string[];
 }
 
 export function menuItems(menu: MenuIndex, panel: PanelState, info: FnInfo): MenuItem[] {
@@ -44,7 +41,7 @@ export function menuItems(menu: MenuIndex, panel: PanelState, info: FnInfo): Men
   }
   if (menu === 1) {
     const view = panel.views[panel.pos];
-    const list = view?.security ? SECURITY_RELATED : MARKET_RELATED;
+    const list = info.related(!!view?.security);
     return list
       .filter((code) => code !== view?.fn && info.isBuilt(code))
       .map((fn) => ({ kind: "fn", fn, label: `${fn.padEnd(6)} ${info.title(fn).toUpperCase()}` }));

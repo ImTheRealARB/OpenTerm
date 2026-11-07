@@ -3,9 +3,12 @@ import { commandInputRef } from "../components/CommandLine";
 import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { usePanelRefresh } from "./panelRefresh";
 import { navigate, replaceView } from "../state/workspace";
 import { rowsFallbackText } from "./fallbackText";
-import { liveSymbol, navKey, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORT_PLAIN, SORTS, sortRows, useLatest, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { liveSymbol, QUOTE_COLUMNS, QUOTE_COLUMNS_GUI, SORT_PLAIN, SORTS, sortRows, useLiveRows, useQuotes, type Sort } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import { QuoteErrors } from "./QuoteErrors";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
@@ -35,6 +38,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   const fallbackLine = rowsFallbackText(rows);
   useCsvExport(panelId, () => gridCsv(`Q_${rows.map((r) => r.symbol).join("_").slice(0, 60)}`, QUOTE_COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -68,9 +72,6 @@ export default function Q({ panelId, args, security }: FunctionProps) {
             setRows(sortRows(cur, next, inputs));
             return true;
           }
-          case "F5":
-            setReload((n) => n + 1);
-            return true;
         }
         return false;
       }),

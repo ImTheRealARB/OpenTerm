@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, Request
 
 from . import brief
-from .api import loopback
+from .http_util import loopback
 from .responses import Orjson, OrjsonRoute
 
 router = APIRouter(prefix="/api/brief", route_class=OrjsonRoute)

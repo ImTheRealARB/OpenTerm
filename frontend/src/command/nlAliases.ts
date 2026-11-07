@@ -169,9 +169,6 @@ export function closestAliases(word: string, limit = 3): Alias[] {
   return found.sort((x, y) => x.d - y.d).slice(0, limit).map((f) => f.a);
 }
 
-/** The longest alias phrase has this many words (lets callers skip runs that are too long to be an alias). */
-export const MAX_ALIAS_WORDS = Math.max(...[...BY_NAME.keys()].map((k) => k.split(" ").length));
-
 /** Exact alias for a word run, or null. */
 export const lookupAlias = (run: string): Alias | null => BY_NAME.get(aliasKey(run)) ?? null;
 

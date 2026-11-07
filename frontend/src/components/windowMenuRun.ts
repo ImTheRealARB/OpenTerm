@@ -1,10 +1,10 @@
 /** Open/close state of the window-frame menu and the code that carries out a picked item. */
 import { info } from "../command/status";
-import { FUNCTIONS } from "../functions/registry";
+import { FUNCTIONS, relatedCodes } from "../functions/registry";
+import { refreshPanelOrSay } from "../functions/panelRefresh";
 import { exportPanelCsv } from "../functions/tableExport";
-import { dispatchPanelKey } from "../keys/panelKeys";
 import { createStore } from "../state/store";
-import { closePanel, currentView, focusPanel, historyGo, navigate, split, toggleMaximize, workspace } from "../state/workspace";
+import { closePanel, currentView, focusPanel, historyGo, navigate, splitOrSay, toggleMaximize, workspace } from "../state/workspace";
 import { menuItems, menuKey, type FnInfo, type MenuIndex, type MenuItem, type MenuState } from "./windowMenu";
 
 export const windowMenu = createStore<MenuState | null>(null);
@@ -12,6 +12,7 @@ export const windowMenu = createStore<MenuState | null>(null);
 export const FN_INFO: FnInfo = {
   isBuilt: (code) => !!FUNCTIONS.get(code)?.load,
   title: (code) => FUNCTIONS.get(code)?.title ?? code,
+  related: relatedCodes,
 };
 
 export function openWindowMenu(panel = workspace.get().focus, menu: MenuIndex = 0): void {
@@ -39,10 +40,10 @@ export function runItem(panel: number, item: MenuItem): void {
       return toggleMaximize();
     case "splitVertical":
     case "splitHorizontal":
-      if (split(item.action === "splitVertical" ? "v" : "h") === null) info("PANEL LIMIT (9) REACHED");
+      splitOrSay(item.action === "splitVertical" ? "v" : "h", info);
       return;
     case "refresh":
-      if (!dispatchPanelKey(panel, new KeyboardEvent("keydown", { key: "F5" }))) info("NOTHING TO REFRESH IN THIS PANEL");
+      refreshPanelOrSay(panel);
       return;
     case "exportCsv":
       exportPanelCsv(panel);

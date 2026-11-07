@@ -5,8 +5,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from ..errors import DataError
 from ..secf.ids import classify, split_query
-from ..service import DataError
 
 MAX_IDS = 25
 TTL_S = 86400.0
@@ -33,7 +33,7 @@ async def lookup(svc: Any, q: str) -> dict[str, Any]:
             out, failed = await svc.router.call("figi", lambda p: p.figi(good))
             return {"data": out, "fallback_from": failed, "source": out["source"]}
 
-        env = await svc._swr("w:figi:" + ",".join(f"{i.kind}:{i.value}" for i in good), TTL_S, fetch)
+        env = await svc.swr("w:figi:" + ",".join(f"{i.kind}:{i.value}" for i in good), TTL_S, fetch)
         mapped = {(it["kind"], it["id"]): it for it in env["data"]["items"]}
     items = [
         mapped.get((i.kind, i.value)) if i.valid

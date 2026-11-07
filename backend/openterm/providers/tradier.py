@@ -14,15 +14,14 @@ import httpx
 
 from ..config import get_settings
 from ..options import chain as ch
-from ..ratelimit import RateLimited
-from ..redact import redact
-from .base import Provider, ProviderError
+from .base import ProviderError
+from .keyed import KeyedProvider
 from .options_yahoo import OPTION_CHAIN
 
 BASE = "https://sandbox.tradier.com/v1"
 
 
-class TradierProvider(Provider):
+class TradierProvider(KeyedProvider):
     name = "tradier"
     label = "Tradier sandbox (free token, key)"
     capabilities = frozenset({OPTION_CHAIN})
@@ -33,47 +32,20 @@ class TradierProvider(Provider):
     timeout = 8.0
     key_name = "TRADIER_TOKEN"
     headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm/0.1", "Accept": "application/json"}
+    msg_rate_limited = "429 from Tradier"
+    msg_refused = "Tradier refused the token ({code})"
+    msg_not_found = "404"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None, token: str | None = None):
-        super().__init__(http, source)
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, token: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
+        # The first token comes from Settings (.env / environment); one saved in APIKEYS later arrives through set_keys().
         self._key = get_settings().tradier_token if token is None else token
 
-    @property
-    def has_key(self) -> bool:
-        return bool(self._key)
-
-    def set_keys(self, values: dict[str, str] | None) -> None:
-        self._key = (values or {}).get("TRADIER_TOKEN", "")
-
-    def supports(self, capability: str, symbol: str | None = None) -> bool:
-        return self.has_key and capability in self.capabilities
+    def auth_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self._key}"}
 
     async def _api(self, path: str, params: dict[str, Any]) -> Any:
-        if not self._key:
-            raise ProviderError("key_required", "TRADIER_TOKEN is not set")
-        try:
-            await self.bucket.acquire(self.max_wait)
-        except RateLimited as e:
-            raise ProviderError("rate_limited", str(e)) from e
-        try:
-            r = await self.http.get(f"{BASE}/{path}", params=params, timeout=self.timeout,
-                                    headers={**self.headers, "Authorization": f"Bearer {self._key}"})
-        except httpx.TimeoutException as e:
-            raise ProviderError("unavailable", "timeout") from e
-        except httpx.HTTPError as e:
-            raise ProviderError("unavailable", type(e).__name__) from e
-        if r.status_code == 429:
-            raise ProviderError("rate_limited", "429 from Tradier")
-        if r.status_code in (401, 403):
-            raise ProviderError("key_required", redact(f"Tradier refused the token ({r.status_code})", [self._key]))
-        if r.status_code == 404:
-            raise ProviderError("not_found", "404")
-        if r.status_code >= 400:
-            raise ProviderError("unavailable", f"HTTP {r.status_code}")
-        try:
-            return r.json()
-        except ValueError as e:
-            raise ProviderError("unavailable", "non-JSON response") from e
+        return await self.get_json(f"{BASE}/{path}", params)
 
     async def option_chain(self, symbol: str, expiry: int | None = None) -> dict:
         exp = await self._api("markets/options/expirations", {"symbol": symbol, "includeAllRoots": "true"})

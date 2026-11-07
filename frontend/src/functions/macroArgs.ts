@@ -1,6 +1,6 @@
 /**
  * Pure helpers for the Phase 7 macro functions (FRED, MACRO, RATES, ERN, ECO): argument parsing, date math and the
- * curve spreads. No imports from net/api or perf/metrics, so vitest can run it in Node.
+ * curve spreads. No imports from net/core or perf/metrics, so vitest can run it in Node.
  */
 
 export const FRED_RANGES = ["1Y", "2Y", "5Y", "10Y", "20Y", "MAX"] as const;

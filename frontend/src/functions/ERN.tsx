@@ -3,11 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtNum, fmtPct } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, macroApi, type Earning, type EarningsPayload, type Envelope } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { macroApi } from "../net/macroApi";
+import type { Earning, EarningsPayload, Envelope } from "../net/types";
 import { navigate, replaceView } from "../state/workspace";
 import { addDays, dayLabel, isWeekend, nyToday, parseErnArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -69,6 +73,7 @@ export default function ERN({ panelId, args }: FunctionProps) {
   const latest = useLatest({ rows, date });
   useCsvExport(panelId, () => gridCsv(`ERN_${date ?? ""}`, COLUMNS, rows));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -91,13 +96,10 @@ export default function ERN({ panelId, args }: FunctionProps) {
             if (row) navigate(panelId, { fn: "DES", security: { symbol: row.symbol }, args: [] });
             return true;
           }
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const reported = rows.filter((r) => r.eps != null).length;

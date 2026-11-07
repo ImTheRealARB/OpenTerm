@@ -13,8 +13,8 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from ..errors import DataError
 from ..redact import redact
-from ..service import DataError
 from . import bea, bls, census, comtrade
 from .seriesboard import KeyRejected, NoData, NotUnderstood
 
@@ -56,7 +56,7 @@ async def _cached(svc: Any, cache_key: str, ttl: float, fetch: Callable[[], Any]
         data, failed = await fetch()
         return {"data": data, "fallback_from": failed, "source": data["source"]}
 
-    return await svc._swr(cache_key, ttl, inner)
+    return await svc.swr(cache_key, ttl, inner)
 
 
 # --- TRADE: UN Comtrade ---

@@ -1,5 +1,5 @@
 /** Layer 2: the busiest ports (IMF PortWatch, satellite ship signals, weekly). Dot size = average port calls per day. */
-import type { GeoPorts } from "../../net/api";
+import type { GeoPorts } from "../../net/types";
 import { layerData, type MapLayer } from "../layer";
 import type { LayerData, PointShape } from "../types";
 

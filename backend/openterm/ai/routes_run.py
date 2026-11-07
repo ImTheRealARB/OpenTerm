@@ -12,9 +12,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
 from .. import api as api_mod
+from .. import http_util
 from ..responses import OrjsonRoute
 from . import agent, tools
-from .routes import MAX_QUESTION, _body, _err, _models, _stream, ai_settings, audit, router
+from .routes import MAX_QUESTION, _body, _models, _stream, ai_settings, audit, router
 
 log = logging.getLogger("openterm.ai")
 AUTO_TOOLS = ["history", "quote", "profile", "skill", "skills", "strategy_check", "backtest_run", "backtest_get"]
@@ -33,7 +34,7 @@ Plain text, at most 18 lines, no tables. Never claim a result you did not get fr
 def _store(request: Request):
     from .store import AiStore
 
-    return AiStore(api_mod.user(request).db)
+    return AiStore(http_util.user(request).db)
 
 
 async def save_events(request: Request, events: AsyncIterator[dict], kind: str, title: str, symbol: str | None, final: str) -> AsyncIterator[dict]:
@@ -93,7 +94,7 @@ async def check_cost(request: Request, preset, subject: str, names: tuple[str, s
     left = spend["cap"] - spend["today"]
     est["cap_left"] = round(left, 4)
     if est["usd"] is not None and est["usd"] > left and not force:
-        return _err(402, "spend_cap", f"{preset.code} WORST CASE US${est['usd']:.2f} IS OVER THE US${left:.2f} LEFT OF TODAY'S CAP. "
+        return http_util.error_response(402, "spend_cap", f"{preset.code} WORST CASE US${est['usd']:.2f} IS OVER THE US${left:.2f} LEFT OF TODAY'S CAP. "
                                       "RAISE THE CAP IN SETTINGS, OR SEND force:true TO RUN ANYWAY (THE CAP STILL STOPS A RUN THAT REACHES IT)")
     return est
 
@@ -110,17 +111,17 @@ async def swarm_run(request: Request):
     preset = presets.get(str(body.get("preset") or "").upper())
     subject = body.get("subject") if isinstance(body.get("subject"), str) else ""
     if preset is None:
-        return _err(400, "bad_request", f"PRESET MUST BE ONE OF {', '.join(presets)}")
+        return http_util.error_response(400, "bad_request", f"PRESET MUST BE ONE OF {', '.join(presets)}")
     if preset.coverage == "UNAVAILABLE":
-        return _err(400, "unavailable", f"{preset.code} IS UNAVAILABLE: {'; '.join(preset.limits)}")
+        return http_util.error_response(400, "unavailable", f"{preset.code} IS UNAVAILABLE: {'; '.join(preset.limits)}")
     given = body.get("variables")
     if given is not None and not (isinstance(given, dict) and all(isinstance(k, str) and isinstance(v, str) and len(v) <= 300 for k, v in given.items())):
-        return _err(400, "bad_request", "variables MUST BE AN OBJECT OF SHORT STRINGS")
+        return http_util.error_response(400, "bad_request", "variables MUST BE AN OBJECT OF SHORT STRINGS")
     if len(subject) > 300 or (preset.needs_subject and not subject.strip() and not given):
-        return _err(400, "bad_request", "SUBJECT IS REQUIRED (UP TO 300 CHARACTERS) FOR THIS PRESET. " + (preset.note or "SEND variables, E.G. {\"target\": \"AAPL\"}"))
+        return http_util.error_response(400, "bad_request", "SUBJECT IS REQUIRED (UP TO 300 CHARACTERS) FOR THIS PRESET. " + (preset.note or "SEND variables, E.G. {\"target\": \"AAPL\"}"))
     names = _models(body, await ai_settings(request))
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     est = await check_cost(request, preset, subject, names, bool(body.get("force")))
     if isinstance(est, Response):
         return est
@@ -158,10 +159,10 @@ async def auto(request: Request):
         return body
     hypothesis = body.get("hypothesis")
     if not isinstance(hypothesis, str) or not hypothesis.strip() or len(hypothesis) > MAX_QUESTION:
-        return _err(400, "bad_request", f"HYPOTHESIS MUST BE 1-{MAX_QUESTION} CHARACTERS")
+        return http_util.error_response(400, "bad_request", f"HYPOTHESIS MUST BE 1-{MAX_QUESTION} CHARACTERS")
     names = _models(body, await ai_settings(request))
     if names is None:
-        return _err(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=AUTO_TOOLS)
     runs: list[str] = []
 
@@ -191,14 +192,14 @@ async def auto(request: Request):
 async def ledger_list(request: Request, limit: int = 50):
     from .audit import audit_of
 
-    return {"entries": await audit_of(request.app, api_mod.user(request).db).entries(limit)}
+    return {"entries": await audit_of(request.app, http_util.user(request).db).entries(limit)}
 
 
 @router.get("/ledger/verify")
 async def ledger_verify(request: Request):
     from .audit import audit_of
 
-    return await audit_of(request.app, api_mod.user(request).db).verify()
+    return await audit_of(request.app, http_util.user(request).db).verify()
 
 
 @router.get("/runs")
@@ -209,7 +210,7 @@ async def runs_list(request: Request, kind: str | None = None):
 @router.get("/runs/{run_id}")
 async def run_get(request: Request, run_id: str):
     run = await _store(request).run(run_id)
-    return run if run is not None else _err(404, "not_found", f"NO STORED RUN {run_id[:20]}")
+    return run if run is not None else http_util.error_response(404, "not_found", f"NO STORED RUN {run_id[:20]}")
 
 
 @router.post("/runs/{run_id}/replay")
@@ -218,7 +219,7 @@ async def run_replay(request: Request, run_id: str):
     t0 = time.perf_counter()
     run = await _store(request).run(run_id)
     if run is None:
-        return _err(404, "not_found", f"NO STORED RUN {run_id[:20]}")
+        return http_util.error_response(404, "not_found", f"NO STORED RUN {run_id[:20]}")
 
     async def events() -> AsyncIterator[dict]:
         yield {"type": "replay", "run_id": run["id"], "kind": run["kind"], "title": run["title"], "created_at": run["created_at"]}
@@ -247,7 +248,7 @@ async def thesis_add(request: Request):
     try:
         return {"thesis": await _store(request).add_thesis(body)}
     except StoreError as e:
-        return _err(400, e.kind, str(e))
+        return http_util.error_response(400, e.kind, str(e))
 
 
 @theses_router.patch("/{tid}")
@@ -260,12 +261,12 @@ async def thesis_update(request: Request, tid: int):
     try:
         t = await _store(request).update_thesis(tid, body)
     except StoreError as e:
-        return _err(400, e.kind, str(e))
-    return {"thesis": t} if t is not None else _err(404, "not_found", f"NO THESIS {tid}")
+        return http_util.error_response(400, e.kind, str(e))
+    return {"thesis": t} if t is not None else http_util.error_response(404, "not_found", f"NO THESIS {tid}")
 
 
 @theses_router.delete("/{tid}")
 async def thesis_delete(request: Request, tid: int):
-    if not api_mod.loopback(request):
-        return _err(403, "forbidden", "THESES CAN ONLY BE CHANGED FROM THIS MACHINE")
-    return {"deleted": tid} if await _store(request).delete_thesis(tid) else _err(404, "not_found", f"NO THESIS {tid}")
+    if not http_util.loopback(request):
+        return http_util.error_response(403, "forbidden", "THESES CAN ONLY BE CHANGED FROM THIS MACHINE")
+    return {"deleted": tid} if await _store(request).delete_thesis(tid) else http_util.error_response(404, "not_found", f"NO THESIS {tid}")

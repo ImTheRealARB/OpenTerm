@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NrgRow, WxAlert } from "../net/api";
+import type { NrgRow, WxAlert } from "../net/types";
 import { alertColor, alertLine, fmtDd, fmtPrice, fmtSigned, fmtTemp, nrgChg, parseNrgArgs, placeArg, posBar } from "./energyArgs";
 
 describe("parseNrgArgs", () => {

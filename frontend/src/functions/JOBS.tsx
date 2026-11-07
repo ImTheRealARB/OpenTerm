@@ -6,18 +6,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Grid, type CellColor, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import type { ApiError } from "../net/api";
+import type { ApiError } from "../net/core";
 import { elapsedSec, fmtElapsed, isActive, isFinished, progressText, summarizeJob, type JobRec } from "../net/jobFrames";
 import { cancelJob, clearFinished, fetchJob, loadJobs, submitJob, useJobs } from "../net/jobs";
 import { replaceView } from "../state/workspace";
 import { parseJobsArgs } from "./jobsArgs";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
+import { errText as netErrText } from "../net/errText";
 
 const STATE_COLOR: Record<string, CellColor> = { queued: "dim", running: "acc", done: "up", error: "err", cancelled: "warn" };
 
-const errText = (e: unknown) => `ERR: ${(e as ApiError).message ?? String(e)}${(e as ApiError).detail ? ` (${(e as ApiError).detail})` : ""}`;
+
+/** JOBS messages start with "ERR: ". */
+const errText = (e: unknown) => `ERR: ${netErrText(e)}`;
 
 const COLUMNS: Column<JobRec>[] = [
   { title: "ID", width: 9, text: (j) => j.id, color: () => "dim" },

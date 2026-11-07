@@ -3,12 +3,12 @@ import { getChartIndicators, onChartIndicators, requestIndicator, requestKey, ty
 import { CATALOG, resolveParams } from "../chart/library/catalog";
 import { validateFormula, MAX_FORMULA_LENGTH } from "../chart/formula";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { type IndicatorPreset, type PresetItem } from "../net/api";
+import type { IndicatorPreset, PresetItem } from "../net/types";
 import { presetsApi } from "../net/presetsApi";
 import "./ind.css";
 import { filterIndicators, parseQuery } from "./indFilter";
 import type { FunctionProps } from "./registry";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 
 /**
  * IND: indicator library. Search ~100 indicators (name, plain-English line), Enter adds one to the current chart through

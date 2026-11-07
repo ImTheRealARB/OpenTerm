@@ -1,5 +1,6 @@
-/** Indicator presets (IND panel only), kept out of api.ts so the startup bundle does not carry them. */
-import { send, type IndicatorPreset, type PresetItem } from "./api";
+/** Indicator presets (IND panel only), kept in its own file so the startup bundle does not carry them. */
+import { send } from "./core";
+import type { IndicatorPreset, PresetItem } from "./types";
 
 export const presetsApi = {
   list: () => send<{ presets: IndicatorPreset[] }>("GET", "/api/indicator-presets"),

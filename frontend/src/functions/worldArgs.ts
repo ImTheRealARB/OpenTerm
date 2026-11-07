@@ -1,5 +1,5 @@
 /** Pure helpers for ECST / WECO / CENB (no DOM, no network): argument parsing, WECO sorting and cell formatting. */
-import type { WecoCell, WecoRow } from "../net/api";
+import type { WecoCell, WecoRow } from "../net/types";
 
 /** Indicator aliases the server knows (backend/openterm/world/stats.py INDICATORS). */
 export const ECST_INDICATORS = ["GDP", "GDPG", "GDPPC", "CPI", "UNEMP", "POP", "DEBT", "CA", "TRADE", "GDPGROWTH", "INFLATION", "UNEMPLOYMENT"] as const;

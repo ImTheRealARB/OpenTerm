@@ -6,9 +6,10 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
+from ..errors import DataError
 from ..redact import redact
 from ..router import AllFailed
-from ..service import DataError, envelope
+from ..service import envelope
 from ..symbols import resolve
 from . import calc as cc
 from . import freshness

@@ -5,7 +5,7 @@
  */
 import { afterPaint, gauges, series } from "../perf/metrics";
 import { createStore, useStore } from "../state/store";
-import { api } from "./api";
+import { jobsApi } from "./jobsApi";
 import { applyJob, applyJobFrames, isActive, isFinished, parseJobFrame, sortJobs, type JobFrameUpdate, type JobRec } from "./jobFrames";
 
 interface JobsState {
@@ -93,7 +93,7 @@ export function ingestJobFrame(frame: unknown): void {
 // --- REST
 /** Reads the server's list (running + last 50 finished) into the store. Local active jobs the server has not listed yet stay. */
 export async function loadJobs(): Promise<void> {
-  const { jobs } = await api.jobs();
+  const { jobs } = await jobsApi.jobs();
   setJobs((m) => {
     const fromServer = new Set(jobs.map((j) => j.id));
     let next = new Map([...m].filter(([id, j]) => fromServer.has(id) || isActive(j.state)));
@@ -108,7 +108,7 @@ export async function submitJob(kind: string, params: unknown): Promise<JobRec> 
   for (const q of pending) if (p.t0 - q.t0 > 60_000) pending.delete(q); // jobs that never framed (cached hits)
   pending.add(p);
   try {
-    const job = await api.submitJob(kind, params);
+    const job = await jobsApi.submitJob(kind, params);
     setJobs((m) => applyJob(m, job));
     p.id = job.id;
     resolvePending(job.id);
@@ -127,20 +127,20 @@ export function adoptJob(job: JobRec): JobRec {
 
 /** Asks the backend to cancel. The job ends in `cancelled` (a frame follows); the answer is merged at once. */
 export async function cancelJob(id: string): Promise<void> {
-  const job = await api.cancelJob(id);
+  const job = await jobsApi.cancelJob(id);
   setJobs((m) => applyJob(m, { ...job, id }));
 }
 
 /** Clears the backend's finished history and drops finished jobs here. Returns how many the backend cleared. */
 export async function clearFinished(): Promise<number> {
-  const { cleared } = await api.clearFinishedJobs();
+  const { cleared } = await jobsApi.clearFinishedJobs();
   setJobs((m) => new Map([...m].filter(([, j]) => !isFinished(j.state))));
   return cleared;
 }
 
 /** Full job including `result` (GET /api/jobs/{id}); also merged into the store. */
 export async function fetchJob(id: string): Promise<JobRec> {
-  const job = await api.job(id);
+  const job = await jobsApi.job(id);
   setJobs((m) => applyJob(m, { ...job, id }));
   return jobsStore.get().jobs.get(id) ?? job;
 }

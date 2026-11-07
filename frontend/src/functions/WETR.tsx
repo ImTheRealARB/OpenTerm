@@ -6,10 +6,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, worldApi, type Envelope, type WetrPayload, type WxBasketRow, type WxDay } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import type { Envelope, WetrPayload, WxBasketRow, WxDay } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { alertColor, alertLine, fmtDd, fmtTemp, placeArg } from "./energyArgs";
 import { EnvStatus, ErrorLine } from "./macroUi";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -71,22 +75,19 @@ export default function WETR({ panelId, args }: FunctionProps) {
   const latest = useLatest({ n: showBasket ? basket.length : days.length });
   useCsvExport(panelId, () => (d ? (showBasket ? gridCsv("WETR_BASKET", BASKET_COLUMNS, basket) : gridCsv("WETR_" + (d.place?.name ?? "PLACE").replace(/\W+/g, "_"), DAY_COLUMNS, days)) : null));
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         if (navKey(e, grid.current, latest.current.n)) return true;
-        if (e.key === "F5") {
-          void load(true);
-          return true;
-        }
         if (e.key === "b" || e.key === "B") {
           setBasketView((v) => !v);
           return true;
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const alerts = d?.alerts;

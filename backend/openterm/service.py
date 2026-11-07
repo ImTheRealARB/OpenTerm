@@ -8,33 +8,28 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from datetime import date, timedelta
 from typing import Any, ClassVar
 
+from . import errkinds as K
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
+from .config import load_yaml
+from .errors import DataError
 from .news_tags import Filters, item_matches, validate
+from .providers import macro as _macro
 from .providers.base import ProviderError
 from .providers.crypto import VS
 from .providers.news import merge
 from .providers.sec import US_ONLY, sec_ticker, store_from  # Phase 6
 from .ranges import normalize
 from .router import AllFailed, Router
+from .streaming.tick import QUOTE_SOURCES
 from .symbols import resolve
 
 log = logging.getLogger("openterm.service")
 
 INTRADAY = {"1m", "2m", "5m", "15m", "30m", "60m", "90m"}
-
-
-class DataError(Exception):
-    """kind: bad_request | not_found | unavailable | key_required. `detail` names each provider's reason;
-    `key` names the missing key (key_required only)."""
-
-    def __init__(self, kind: str, message: str, detail: str | None = None, key: str | None = None):
-        super().__init__(message)
-        self.kind = kind
-        self.detail = detail
-        self.key = key
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
@@ -105,7 +100,10 @@ class DataService:
         except Exception as e:  # noqa: BLE001 - background refresh: stale data stays visible
             log.info("background refresh of %s failed: %s", key, e)
 
-    async def _swr(self, key: str, ttl: float, fetch: Callable[[], Awaitable[dict]]) -> dict:
+    async def swr(self, key: str, ttl: float, fetch: Callable[[], Awaitable[dict]]) -> dict:
+        """Stale-while-revalidate: the public way for every view service (research, derivs, rates, world/*) to cache a fetch under `key`.
+        Fresh entry (younger than `ttl`): returned at once. Stale entry: returned at once and refreshed in the background.
+        Miss: `fetch()` runs (concurrent callers share it); an AllFailed becomes a DataError."""
         entry = await self.cache.get(key)
         if entry is not None:
             value, stored_at = entry
@@ -121,7 +119,7 @@ class DataService:
             value = await self._once(key, fetch)
         except AllFailed as e:
             detail = "; ".join(f"{name}: {err.kind} ({err})" for name, err in e.errors) or None
-            raise DataError(e.kind if e.kind != "unsupported" else "not_found", str(e), detail, e.key) from e
+            raise DataError(e.kind if e.kind != K.UNSUPPORTED else K.NOT_FOUND, str(e), detail, e.key) from e
         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
 
     # --- public API ---------------------------------------------------------------------------
@@ -147,7 +145,7 @@ class DataService:
         # are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
         # Only a source that can really answer counts: an expired login must not share a cache key with a valid one (audit A-3).
         gated = "".join(f":{p.name[0]}" for p in self.router.candidates("history", symbol) if p.name in ("kite",) and p.why_down() is None)
-        return await self._swr(f"h:{symbol}:{r}:{i}{gated}", ttl, fetch)
+        return await self.swr(f"h:{symbol}:{r}:{i}{gated}", ttl, fetch)
 
     async def profile(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)
@@ -156,7 +154,7 @@ class DataService:
             prof, failed = await self.router.call("profile", lambda p: p.profile(symbol), symbol)
             return {"data": prof.model_dump(), "fallback_from": failed}
 
-        return await self._swr(f"p:{symbol}", self.ttl["profile"], fetch)
+        return await self.swr(f"p:{symbol}", self.ttl["profile"], fetch)
 
     async def news(self, symbol: str | None = None, query: str | None = None, filters: Filters | None = None, limit: int | None = None) -> dict:
         """Symbol headlines, a keyword search, or (neither) the market top stories.
@@ -190,7 +188,7 @@ class DataService:
 
         # Tech and crypto feeds move fastest, so their answers are kept 30 s; the rest 60 s.
         ttl = 30.0 if f.section in ("tech", "crypto") else 60.0
-        return await self._swr("n:pool:" + "|".join(str(v) for v in f), ttl, fetch)
+        return await self.swr("n:pool:" + "|".join(str(v) for v in f), ttl, fetch)
 
     async def _news_single(self, symbol: str | None, query: str | None) -> dict:
         if symbol and symbol.strip():
@@ -227,7 +225,7 @@ class DataService:
             }
 
         try:
-            return await self._swr(f"n:{kind}:{arg or ''}", self.ttl["news"], fetch)
+            return await self.swr(f"n:{kind}:{arg or ''}", self.ttl["news"], fetch)
         except DataError as e:
             if e.kind != "not_found":
                 raise
@@ -236,7 +234,7 @@ class DataService:
     async def _extra_news(self, provider, call) -> tuple[list, str | None]:
         """One keyed news source: (its items, None) or ([], its name when it failed)."""
         try:
-            return (await self.router._attempt(provider, call))["items"], None
+            return (await self.router.attempt(provider, call))["items"], None
         except ProviderError:
             return [], provider.name
 
@@ -245,7 +243,7 @@ class DataService:
             m, failed = await self.router.call("movers", lambda p: p.movers())
             return {"data": m.model_dump(), "fallback_from": failed}
 
-        return await self._swr("mv:us", self.ttl["movers"], fetch)
+        return await self.swr("mv:us", self.ttl["movers"], fetch)
 
     async def crypto(self, vs: str = "USD") -> dict:
         vs = vs.strip().upper()
@@ -260,11 +258,11 @@ class DataService:
                 "fallback_from": failed,
             }
 
-        return await self._swr(f"c:{vs}", self.ttl["crypto"], fetch)
+        return await self.swr(f"c:{vs}", self.ttl["crypto"], fetch)
 
     # Tick source code (see streaming/tick.py) -> the name shown as the quote's source. "p" is the REST poller: its tick
-    # is built from a REST quote, so the quote already carries the right source.
-    TICK_SOURCES: ClassVar[dict[str, str]] = {"y": "yahoo:stream", "a": "alpaca:iex", "k": "kite:ticker", "s": "synthetic"}
+    # is built from a REST quote, so the quote already carries the right source. The table lives in one place: streaming/tick.py `SOURCES`.
+    TICK_SOURCES: ClassVar[dict[str, str]] = QUOTE_SOURCES
     # A streamed symbol keeps a fresh price, but a tick often has no volume or day range (Alpaca IEX never does), so the
     # full REST quote is re-fetched in the background at least this often to renew volume, high, low and previous close.
     REST_REFRESH_S = 60.0
@@ -307,7 +305,7 @@ class DataService:
                 "fallback_from": failed,
             }
 
-        return await self._swr(f"s:{q}", self.ttl["search"], fetch)
+        return await self.swr(f"s:{q}", self.ttl["search"], fetch)
 
     def _notes(self, failed: list[str]) -> dict[str, str]:
         """{provider: reason} for the sources that were skipped for a reason worth saying ("KITE LOGIN EXPIRED: run KITE LOGIN")."""
@@ -420,7 +418,7 @@ class DataService:
             return {"data": out, "fallback_from": failed}
 
         try:
-            return await self._swr(key, self.ttl.get(ttl, self.PHASE6_TTL[ttl]), fetch)
+            return await self.swr(key, self.ttl.get(ttl, self.PHASE6_TTL[ttl]), fetch)
         except DataError as e:
             not_filer = sec_ticker(symbol) is None or "no SEC filer" in (e.detail or "")
             if e.kind == "not_found" and cap != "holders" and not_filer:
@@ -483,7 +481,7 @@ class DataService:
             return {"data": {**s.model_dump(), "range": r, "key_set": self.fred_key_set()}, "fallback_from": failed}
 
         try:
-            return await self._swr(f"fred:{sid}:{r}", self._ttl7("fred", 3600), fetch)
+            return await self.swr(f"fred:{sid}:{r}", self._ttl7("fred", 3600), fetch)
         except DataError as e:
             if e.kind != "not_found":
                 raise
@@ -503,7 +501,7 @@ class DataService:
                         "source": self.router.providers["fred"].source, "fallback_from": failed}
 
             try:
-                return await self._swr(f"macro:q:{q.upper()}", self._ttl7("fred_search", 86400), fetch)
+                return await self.swr(f"macro:q:{q.upper()}", self._ttl7("fred_search", 86400), fetch)
             except DataError as e:
                 if e.kind != "not_found":
                     raise
@@ -548,7 +546,7 @@ class DataService:
             c, failed = await self.router.call("yield_curve", lambda p: p.yield_curve())
             return {"data": c.model_dump(), "fallback_from": failed}
 
-        return await self._swr("rates:us", self._ttl7("rates", 1800), fetch)
+        return await self.swr("rates:us", self._ttl7("rates", 1800), fetch)
 
     async def earnings(self, day: str | None = None) -> dict:
         today = _macro.ny_today()
@@ -563,7 +561,7 @@ class DataService:
             out, failed = await self.router.call("earnings", lambda p: p.earnings(d))
             return {"data": out, "fallback_from": failed}
 
-        return await self._swr(f"ern:{d.isoformat()}", self._ttl7("earnings", 900), fetch)
+        return await self.swr(f"ern:{d.isoformat()}", self._ttl7("earnings", 900), fetch)
 
     async def eco(self, start: str | None = None, days: int = 14) -> dict:
         try:
@@ -591,7 +589,7 @@ class DataService:
             return {"data": {"events": events, "failed": out["failed"], "notes": notes},
                     "source": events[0]["source"] if events else None, "fallback_from": failed}
 
-        env = await self._swr("eco:us", self._ttl7("eco", 21600), fetch)
+        env = await self.swr("eco:us", self._ttl7("eco", 21600), fetch)
         lo, hi = s.isoformat(), (s + timedelta(days=days)).isoformat()
         events = env["data"]["events"]
         env["data"] = {
@@ -609,7 +607,7 @@ class DataService:
             data, failed = await self.router.call("screener", lambda p: p.screener())
             return {"data": data, "fallback_from": failed}
 
-        return await self._swr("scr:us", self.ttl.get("screener", 900.0), fetch)
+        return await self.swr("scr:us", self.ttl.get("screener", 900.0), fetch)
 
     async def peers(self, raw_symbol: str, limit: int = 10) -> dict:
         """Yahoo recommended symbols; if none, the largest same-industry names from the screener (US only)."""
@@ -661,11 +659,4 @@ class DataService:
                 "fallback_from": failed,
             }
 
-        return await self._swr(f"peers:{symbol}", self.ttl.get("peers", 86400.0), fetch)
-
-
-# --- Phase 7 imports (appended at the end so merges with other phases stay additive) ---
-from datetime import date, timedelta
-
-from .config import load_yaml
-from .providers import macro as _macro
+        return await self.swr(f"peers:{symbol}", self.ttl.get("peers", 86400.0), fetch)

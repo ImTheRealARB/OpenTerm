@@ -6,7 +6,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fmtAge, fmtBig, fmtPct } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { ApiError, api9, type Envelope, type ScreenerPayload } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import { ApiError } from "../net/core";
+import { marketApi } from "../net/marketApi";
+import type { Envelope, ScreenerPayload } from "../net/types";
 import { gauges } from "../perf/metrics";
 import { displayVersion } from "../settings/runtime";
 import { useStore } from "../state/store";
@@ -14,7 +17,7 @@ import { navigate } from "../state/workspace";
 import { parseFilter } from "./eqsFilter";
 import { buildImap, parseImapArgs } from "./imapData";
 import { BAND_ALPHA, BAND_LABELS, paintTreemap, type PaintColors } from "./imapPaint";
-import { useLatest } from "./quoteRows";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { neighbor, treemap, type Dir } from "./treemap";
@@ -39,7 +42,7 @@ export default function IMAP({ panelId, args }: FunctionProps) {
 
   const load = useCallback((fresh: boolean) => {
     setLoading(true);
-    return api9
+    return marketApi
       .screener(fresh)
       .then((e) => {
         setEnv(e);
@@ -118,12 +121,13 @@ export default function IMAP({ panelId, args }: FunctionProps) {
       : null,
   );
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
         if (e.ctrlKey || e.altKey || e.metaKey) return false;
         const st = live.current;
-        if (!st.layout) return e.key === "F5" ? (void load(true), true) : false;
+        if (!st.layout) return false;
         const dirs: Record<string, Dir> = { ArrowLeft: "left", h: "left", ArrowRight: "right", l: "right", ArrowUp: "up", k: "up", ArrowDown: "down", j: "down" };
         const dir = dirs[e.key];
         if (dir) {
@@ -149,13 +153,10 @@ export default function IMAP({ panelId, args }: FunctionProps) {
               return true;
             }
             return false;
-          case "F5":
-            void load(true);
-            return true;
         }
         return false;
       }),
-    [panelId, live, load],
+    [panelId, live],
   );
 
   const pick = (ev: React.MouseEvent) => {

@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 
 import httpx
 
+from ..errors import DataError
 from ..kite.client import INTERVALS, KiteClient
 from ..kite.instruments import Instruments
 from ..kite.session import IST, KiteSession
@@ -62,13 +63,12 @@ class KiteProvider(Provider):
     rate = (3.0, 3)
     key_name = "KITE_API_KEY"
 
-    def __init__(self, http: httpx.AsyncClient, source: str | None = None):
-        super().__init__(http, source)
-        self.fixtures = (source or "").endswith(":fixture")
+    def __init__(self, http: httpx.AsyncClient, source: str | None = None, fixture: bool = False):
+        super().__init__(http, source, fixture)
         self.session: KiteSession | None = None
         self.client: KiteClient | None = None
         self.instruments: Instruments | None = None
-        self.source = "kite (doc-shaped fixture, NOT A RECORDING)" if self.fixtures else "kite"
+        self.source = "kite (doc-shaped fixture, NOT A RECORDING)" if self.fixture else "kite"
 
     def attach(self, session: KiteSession, db=None) -> None:
         """Called by the lifespan once the key store exists: nothing works before this."""
@@ -97,8 +97,6 @@ class KiteProvider(Provider):
 
     async def quotes(self, symbols: list[str]) -> list[Quote]:
         """One `GET /quote` call for the whole batch (up to 500). Kite's `ohlc.close` is the previous close."""
-        from ..service import DataError
-
         self._check_login()
         keys = {s: to_kite(s) for s in symbols}
         keys = {s: k for s, k in keys.items() if k}
@@ -131,8 +129,6 @@ class KiteProvider(Provider):
         return out
 
     async def history(self, symbol: str, range_: str, interval: str) -> Bars:
-        from ..service import DataError
-
         self._check_login()
         key = to_kite(symbol)
         kite_interval = INTERVALS.get(interval)

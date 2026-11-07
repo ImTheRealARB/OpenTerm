@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     twelvedata_api_key: str = ""
     alphavantage_api_key: str = ""
     fred_api_key: str = ""
-    fmp_api_key: str = ""
     polygon_api_key: str = ""
 
     # --- Phase 10 ---

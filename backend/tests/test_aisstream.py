@@ -238,7 +238,7 @@ def test_the_panel_says_the_same_listen_time_as_the_backend_and_it_is_the_provid
 
 
 def test_args_pick_a_preset_or_a_custom_box():
-    from openterm.service import DataError
+    from openterm.errors import DataError
     from openterm.world import ais
 
     assert ais.parse_args("suez") == ("SUEZ", ais.PRESETS["SUEZ"])
@@ -446,7 +446,7 @@ async def test_remembered_ships_are_filtered_by_the_box_asked_about_at_answer_ti
 
 
 async def test_fixture_mode_neither_stores_nor_recalls_positions():
-    p = AisStreamProvider(None, "aisstream:fixture")
+    p = AisStreamProvider(None, "aisstream:fixture", fixture=True)
     p.set_keys({"AISSTREAM_API_KEY": KEY})
     gib = (35.8, -5.8, 36.2, -5.2)
     first = await p.ais_listen(gib)

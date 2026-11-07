@@ -1,7 +1,10 @@
 /** Watchlists (`WL`): stored in SQLite by the backend. Actions report through the status line. */
-import { api, type ApiError, type WatchlistInfo } from "../net/api";
+import type { ApiError } from "../net/core";
+import type { WatchlistInfo } from "../net/types";
+import { workspaceApi } from "../net/workspaceApi";
 import { createStore } from "../state/store";
 import { fail, info } from "./status";
+import { errMessage } from "../net/errText";
 
 export { parseWl, type WlAction } from "./watchlistArgs";
 
@@ -14,13 +17,12 @@ let fetchedAt = 0;
 export async function refreshWatchlists(maxAgeMs = 0): Promise<WatchlistInfo[]> {
   const cur = watchlistList.get();
   if (cur && performance.now() - fetchedAt < maxAgeMs) return cur;
-  const { watchlists } = await api.watchlists();
+  const { watchlists } = await workspaceApi.watchlists();
   fetchedAt = performance.now();
   watchlistList.set(() => watchlists);
   return watchlists;
 }
 
-const errText = (e: unknown) => (e as ApiError).message ?? String(e);
 
 function changed(): void {
   watchlistVersion.set((n) => n + 1);
@@ -30,12 +32,12 @@ function changed(): void {
 /** `note` replaces the default status message (the WL panel adds its undo hint). */
 export async function editWatchlist(name: string, add: string[], remove: string[], note?: string): Promise<boolean> {
   try {
-    const wl = await api.editWatchlist(name, add.length ? { add, remove } : { remove });
+    const wl = await workspaceApi.editWatchlist(name, add.length ? { add, remove } : { remove });
     const n = `(${wl.symbols.length} SYMBOLS)`;
     info(note ?? (add.length ? `WL ${name}: ADDED ${add.length} ${n}` : `REMOVED ${remove.join(" ")} FROM ${name} ${n}`));
   } catch (e) {
     changed();
-    return fail(`WL ${name} NOT CHANGED: ${errText(e)}`);
+    return fail(`WL ${name} NOT CHANGED: ${errMessage(e)}`);
   }
   changed();
   return true;
@@ -44,9 +46,9 @@ export async function editWatchlist(name: string, add: string[], remove: string[
 /** Replaces the whole list (undo of a removal restores the exact order). */
 export async function putWatchlist(name: string, symbols: string[]): Promise<boolean> {
   try {
-    await api.putWatchlist(name, symbols);
+    await workspaceApi.putWatchlist(name, symbols);
   } catch (e) {
-    return fail(`WL ${name} NOT SAVED: ${errText(e)}`);
+    return fail(`WL ${name} NOT SAVED: ${errMessage(e)}`);
   } finally {
     changed();
   }
@@ -56,9 +58,9 @@ export async function putWatchlist(name: string, symbols: string[]): Promise<boo
 
 export async function deleteWatchlist(name: string): Promise<boolean> {
   try {
-    await api.deleteWatchlist(name);
+    await workspaceApi.deleteWatchlist(name);
   } catch (e) {
-    return fail((e as ApiError).status === 404 ? `NO WATCHLIST ${name}` : `WL ${name} NOT DELETED: ${errText(e)}`);
+    return fail((e as ApiError).status === 404 ? `NO WATCHLIST ${name}` : `WL ${name} NOT DELETED: ${errMessage(e)}`);
   }
   info(`WATCHLIST ${name} DELETED`);
   changed();

@@ -12,7 +12,7 @@ import re
 import xml.etree.ElementTree as ET
 
 from ..providers.base import ProviderError
-from ..providers.yahoo import _raw
+from ..providers.yahoo import raw_value
 from .table import col, head, payload, section
 
 # ---------------------------------------------------------------------------------------------- XML helpers
@@ -120,7 +120,7 @@ def holding_rows(holdings: list[dict]) -> list[dict]:
 
 def yahoo_top_holdings(summary: dict) -> list[dict]:
     th = summary.get("topHoldings") or {}
-    return [{"rank": i + 1, "name": h.get("holdingName"), "symbol": h.get("symbol"), "weight": _raw(h, "holdingPercent"),
+    return [{"rank": i + 1, "name": h.get("holdingName"), "symbol": h.get("symbol"), "weight": raw_value(h, "holdingPercent"),
              "value": None, "balance": None, "cusip": None, "country": None}
             for i, h in enumerate(th.get("holdings") or [])]
 
@@ -132,11 +132,11 @@ def fund_facts(summary: dict) -> dict:
     sectors = []
     for item in th.get("sectorWeightings") or []:
         for k, v in item.items():
-            sectors.append({"sector": k, "weight": _raw({"w": v}, "w")})
+            sectors.append({"sector": k, "weight": raw_value({"w": v}, "w")})
     sectors.sort(key=lambda s: s["weight"] or 0.0, reverse=True)
     return {"family": fp.get("family"), "category": fp.get("categoryName"), "legal": fp.get("legalType"),
-            "expense_ratio": _raw(fees, "annualReportExpenseRatio"), "turnover": _raw(fees, "annualHoldingsTurnover"),
-            "sectors": sectors, "stock_position": _raw(th, "stockPosition")}
+            "expense_ratio": raw_value(fees, "annualReportExpenseRatio"), "turnover": raw_value(fees, "annualHoldingsTurnover"),
+            "sectors": sectors, "stock_position": raw_value(th, "stockPosition")}
 
 
 def _pct(v: float | None, digits: int = 2) -> str | None:

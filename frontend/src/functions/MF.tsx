@@ -13,12 +13,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle, type ChartType } from "../chart/ChartView";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { registerPanelKeys } from "../keys/panelKeys";
-import { worldApi, type MfFund, type MfReturnRow, type MfSearchRow } from "../net/api";
+import { usePanelRefresh } from "./panelRefresh";
+import type { MfFund, MfReturnRow, MfSearchRow } from "../net/types";
+import { worldApi } from "../net/worldApi";
 import { navigate } from "../state/workspace";
-import { useEnvLoad } from "./cryptoLoad";
+import { useEnvelope } from "./useEnvelope";
 import { EnvStatus, ErrorLine } from "./macroUi";
 import { fmtNav, fmtPct, isoOfEpoch, MF_USAGE, NAV_NORMAL_AGE_DAYS, navAgeDays, navAgeText, parseMfArgs, searchHeadline } from "./mfArgs";
-import { navKey, useLatest } from "./quoteRows";
+import { navKey } from "../keys/gridNav";
+import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
@@ -57,7 +60,7 @@ export default function MF({ panelId, args }: FunctionProps) {
 }
 
 function MfView({ panelId, q }: { panelId: number; q: string }) {
-  const { env, error, loading, load } = useEnvLoad((fresh) => worldApi.mf(q, fresh), q.toLowerCase());
+  const { env, error, loading, reload: load } = useEnvelope(q.toLowerCase(), (fresh) => worldApi.mf(q, fresh));
   const grid = useRef<GridHandle>(null);
   const chart = useRef<ChartHandle>(null);
   const [type, setType] = useState<ChartType>("LINE");
@@ -80,6 +83,7 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
     setCrossOn(false);
   }, [q]);
 
+  usePanelRefresh(panelId, () => { void load(true); });
   useEffect(
     () =>
       registerPanelKeys(panelId, (e) => {
@@ -87,9 +91,6 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
         const cur = latest.current;
         if (navKey(e, grid.current, cur.rowCount)) return true;
         switch (e.key) {
-          case "F5":
-            void load(true);
-            return true;
           case "Enter": {
             const row = cur.search?.items[grid.current?.selected() ?? -1];
             if (row) navigate(panelId, { fn: "MF", args: [String(row.code)], security: undefined });
@@ -133,7 +134,7 @@ function MfView({ panelId, q }: { panelId: number; q: string }) {
         }
         return false;
       }),
-    [panelId, latest, load],
+    [panelId, latest],
   );
 
   const age = fund ? navAgeDays(fund.latest.date, Date.now()) : 0;

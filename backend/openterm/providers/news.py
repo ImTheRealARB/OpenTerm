@@ -23,9 +23,9 @@ from ..config import load_yaml
 from ..models import NewsItem
 from ..news_tags import feed_selected, normalize_title
 from .base import NEWS_KEYWORD, NEWS_POOL, NEWS_SYMBOL, NEWS_TOP, Provider, ProviderError
+from .http import UA
 from .news_feeds import FEEDS as FEED_TABLE
 from .news_feeds import Feed
-from .yahoo import UA
 
 log = logging.getLogger("openterm.news")
 

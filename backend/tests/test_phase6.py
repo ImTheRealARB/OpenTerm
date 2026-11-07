@@ -7,6 +7,7 @@ import pytest
 
 from openterm.cache import Cache
 from openterm.config import get_settings
+from openterm.errors import DataError
 from openterm.providers.base import ProviderError
 from openterm.providers.fixtures import FIXTURES, _route, fixture_transport
 from openterm.providers.ownership import (
@@ -23,7 +24,7 @@ from openterm.providers.sec_parse import (
     parse_form4,
 )
 from openterm.router import Router
-from openterm.service import DataError, DataService
+from openterm.service import DataService
 
 ORDER = {"fundamentals": ["sec"], "filings": ["sec"], "insiders": ["sec", "yahoo_own"], "holders": ["yahoo_own"]}
 

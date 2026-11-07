@@ -11,10 +11,11 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..errors import DataError
 from ..providers.base import ProviderError
 from ..redact import redact
 from ..router import AllFailed
-from ..service import DataError, envelope
+from ..service import envelope
 from ..symbols import resolve
 from . import cn
 from . import corp_parse as cp
@@ -59,7 +60,7 @@ class Research:
             out, failed = await self.svc.router.call(capability, call, symbol)
             return {"data": out, "fallback_from": failed}
 
-        return await self.svc._swr(f"r:{name}:{symbol}", self.ttl(name), fetch)
+        return await self.svc.swr(f"r:{name}:{symbol}", self.ttl(name), fetch)
 
     # --- EST: Yahoo quoteSummary --------------------------------------------------------------
     async def fn_ee(self, raw: str) -> dict:
@@ -91,7 +92,7 @@ class Research:
 
         async def one(p):
             try:
-                return p, (await router._attempt(p, lambda prov: prov.news_symbol(symbol)))["items"], None
+                return p, (await router.attempt(p, lambda prov: prov.news_symbol(symbol)))["items"], None
             except ProviderError as e:
                 return p, [], e
 
@@ -111,7 +112,7 @@ class Research:
             ]
             return {"data": cn.cn_payload(symbol, items, failed, missing, answered), "fallback_from": []}
 
-        return await self.svc._swr(f"r:cn:{symbol}", self.ttl("cn"), fetch)
+        return await self.svc.swr(f"r:cn:{symbol}", self.ttl("cn"), fetch)
 
     # --- CORP: Nasdaq, Yahoo chart events, FINRA, SEC filings ---------------------------------
     async def _raw_call(self, symbol: str | None, capability: str, call):
@@ -125,7 +126,7 @@ class Research:
             out, failed = await self._raw_call(symbol, "dividends", lambda p: p.dividends(symbol))
             return {"data": cp.dvd_payload(symbol, out), "fallback_from": failed}
 
-        return await self.svc._swr(f"r:dvd:{symbol}", self.ttl("dvd"), fetch)
+        return await self.svc.swr(f"r:dvd:{symbol}", self.ttl("dvd"), fetch)
 
     async def fn_splt(self, raw: str) -> dict:
         symbol = resolve(raw)
@@ -134,7 +135,7 @@ class Research:
             out, failed = await self._raw_call(symbol, "splits", lambda p: p.splits(symbol))
             return {"data": cp.splt_payload(symbol, out), "fallback_from": failed}
 
-        return await self.svc._swr(f"r:splt:{symbol}", self.ttl("splt"), fetch)
+        return await self.svc.swr(f"r:splt:{symbol}", self.ttl("splt"), fetch)
 
     async def fn_cacs(self, raw: str) -> dict:
         symbol = resolve(raw)
@@ -154,7 +155,7 @@ class Research:
             sources = [x["source"] for x in (dvd, splt) if x]
             return {"data": cp.cacs_payload(symbol, dvd, splt, missing, " + ".join(sources)), "fallback_from": []}
 
-        return await self.svc._swr(f"r:cacs:{symbol}", self.ttl("dvd"), fetch)
+        return await self.svc.swr(f"r:cacs:{symbol}", self.ttl("dvd"), fetch)
 
     async def chart_events(self, raw: str) -> dict:
         """GP `EVT` markers: dividends, splits and the last four earnings dates, each part optional (a missing part is named)."""
@@ -176,7 +177,7 @@ class Research:
                        if e is not None and e.kind != "not_found"]
             return {"data": cp.chart_events(symbol, dvd, splt, earn, missing), "fallback_from": []}
 
-        return await self.svc._swr(f"r:events:{symbol}", self.ttl("dvd"), fetch)
+        return await self.svc.swr(f"r:events:{symbol}", self.ttl("dvd"), fetch)
 
     async def fn_ipo(self, month: str | None = None) -> dict:
         try:
@@ -188,7 +189,7 @@ class Research:
             out, failed = await self._raw_call(None, "ipo", lambda p: p.ipo(m))
             return {"data": cp.ipo_payload(m, out), "fallback_from": failed}
 
-        return await self.svc._swr(f"r:ipo:{m}", self.ttl("ipo"), fetch)
+        return await self.svc.swr(f"r:ipo:{m}", self.ttl("ipo"), fetch)
 
     async def fn_si(self, raw: str) -> dict:
         symbol = resolve(raw)
@@ -216,7 +217,7 @@ class Research:
                 raise ks
             return {"data": cp.si_payload(symbol, interest, vol, note, ks), "fallback_from": failed}
 
-        return await self.svc._swr(f"r:si:{symbol}", self.ttl("si"), fetch)
+        return await self.svc.swr(f"r:si:{symbol}", self.ttl("si"), fetch)
 
     async def fn_evts(self, raw: str) -> dict:
         symbol = resolve(raw)
@@ -238,7 +239,7 @@ class Research:
             source = nport["source"] if nport else "yahoo_research"
             return {"data": fp.etf_payload(symbol, summary, nport, source, **kw), "fallback_from": failed}
 
-        return await self.svc._swr(f"r:{name}:{symbol}", self.ttl(name), fetch)
+        return await self.svc.swr(f"r:{name}:{symbol}", self.ttl(name), fetch)
 
     async def fn_etf(self, raw: str) -> dict:
         return await self._fund("etf", resolve(raw))
@@ -267,7 +268,7 @@ class Research:
             rows = fp.diff_13f(now["table"], before["table"] if before else None)
             return {"data": fp.mgr_payload(key.upper(), out["name"], now, before, rows, out["source"]), "fallback_from": failed}
 
-        return await self.svc._swr(f"r:mgr:{key.upper()}", self.ttl("mgr"), fetch)
+        return await self.svc.swr(f"r:mgr:{key.upper()}", self.ttl("mgr"), fetch)
 
     # --- VAL: DCF, WACC, RV ---------------------------------------------------------------------
     VALUATION: ClassVar[set[str]] = {"dcf", "wacc", "rv"}
