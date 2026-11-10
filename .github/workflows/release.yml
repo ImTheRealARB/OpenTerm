@@ -1,0 +1,123 @@
+# Desktop release: on a version tag (v0.1.0) build the Tauri shell for Linux, Windows and macOS and attach the bundles
+# and the update manifest (latest.json) to a DRAFT release. Nothing is published until the owner publishes the draft.
+#
+# Runs with no secrets at all: the bundles are then UNSIGNED and carry no updater (a notice is written to the job
+# summary). Optional inputs, all configured by the owner in the repository settings (docs/DESKTOP.md, "Owner steps"):
+#   secret   TAURI_SIGNING_PRIVATE_KEY (+ TAURI_SIGNING_PRIVATE_KEY_PASSWORD)  updater signature (needs the variable below)
+#   variable TAURI_UPDATER_PUBKEY                                               public half from `tauri signer generate`
+#   secrets  APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+#            macOS code signing and notarisation
+#   secrets  WINDOWS_CERTIFICATE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD   Windows Authenticode (see docs/DESKTOP.md)
+# This repository ships no Python wheel (the backend runs from source or the Docker image), so there is no wheel job.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, target: "", bundles: "appimage,deb" }
+          - { os: windows-latest, target: "", bundles: "nsis,msi" }
+          - { os: macos-latest, target: aarch64-apple-darwin, bundles: "dmg,app" }
+          - { os: macos-15-intel, target: x86_64-apple-darwin, bundles: "dmg,app" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Tag matches the app version
+        shell: bash
+        run: |
+          v="$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${v}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match tauri.conf.json version ${v}" >&2
+            exit 1
+          fi
+
+      - name: Linux system packages
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          if [ -n "${{ matrix.target }}" ]; then rustup target add "${{ matrix.target }}"; fi
+
+      - name: Optional signing inputs
+        id: signing
+        shell: bash
+        env:
+          TAURI_UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Export a variable only when it has a value: an empty APPLE_CERTIFICATE would make the bundler try to import it.
+          for n in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD \
+                   APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!n}" ]; then
+              { echo "$n<<__EOF__"; echo "${!n}"; echo "__EOF__"; } >> "$GITHUB_ENV"
+            fi
+          done
+          args=""
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && [ -n "$TAURI_UPDATER_PUBKEY" ]; then
+            # Fill the committed template with this repository's update URL and the public key.
+            node -e '
+              const fs = require("fs");
+              const p = "desktop/src-tauri/tauri.release.conf.json";
+              const c = JSON.parse(fs.readFileSync(p, "utf8"));
+              c.plugins.updater.pubkey = process.env.TAURI_UPDATER_PUBKEY;
+              c.plugins.updater.endpoints = ["https://github.com/" + process.env.GITHUB_REPOSITORY + "/releases/latest/download/latest.json"];
+              fs.writeFileSync(p, JSON.stringify(c, null, 2));
+            '
+            args="--config src-tauri/tauri.release.conf.json --features updater"
+            echo "updater=on" >> "$GITHUB_OUTPUT"
+            echo "Updater: ON (artifacts signed with the updater key, latest.json attached)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "updater=off" >> "$GITHUB_OUTPUT"
+            echo "NOTICE: no updater key pair configured. Bundles are built WITHOUT an updater and without latest.json." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "NOTICE: no Apple certificate configured. macOS bundles are UNSIGNED and not notarised." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "NOTICE: Windows bundles are UNSIGNED unless a signing command is configured (docs/DESKTOP.md)." >> "$GITHUB_STEP_SUMMARY"
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
+      - name: Install desktop CLI
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+
+      - uses: tauri-apps/tauri-action@v0.5.17
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: OpenTerm ${{ github.ref_name }}
+          releaseBody: "Draft. See docs/DESKTOP.md for what these bundles do and do not contain. Unsigned unless the job summary says otherwise."
+          releaseDraft: true
+          prerelease: false
+          uploadUpdaterJson: ${{ steps.signing.outputs.updater == 'on' }}
+          args: >-
+            ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+            --bundles ${{ matrix.bundles }}
+            ${{ steps.signing.outputs.args }}
