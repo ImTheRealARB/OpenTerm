@@ -877,3 +877,10 @@ registered is never repeated (24/24 with `--repeat-each=6`).
 **After (branch `claude/p2-frontend-dedupe` 99d5db7: one panelStatus, one chord guard, catch audit, ChartView GP layer
 `chart/gpLayer.ts`), 60 s rest:** **39/39**: tick to pixel 36.7 ms, streaming frame 16.7 ms, keystroke echo 9.8 ms,
 layout load 48.7 ms, 50k-bar pan 16.7 ms, BT 10-year run 163.8 ms, initial bundle 123.6 KB gz (entry chunk 120.62 KB).
+
+### 2026-11-10: after the 13 handoff workstreams (orders, sync, JRNL, MCP client, extensions, web tools, alpha zoo...)
+Branch `claude/admiring-archimedes-7ibeha`, Linux cloud container, `node scripts/bench.mjs` (Playwright's bundled Chromium):
+**39/39**. Tick to pixel p95 42.2 ms (the earlier 55-59 ms reruns are not reproduced), streaming frame 16.7 ms, keystroke echo
+15.0 ms (11.2 ms under load), cold start 153 ms, layout load 63.8 ms, BT 10-year run 276.4 ms (budget 300), ALPHA 29 core factors
+850.9 ms, initial bundle 125.2 KB gz. The new panels are lazy chunks; the initial bundle grew 1.6 KB. The ALPHA row measures the
+default `core` family; `FAMILY=ALL` (435 factors) on 200 names takes about 36 s as a job and is not gated.

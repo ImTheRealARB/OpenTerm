@@ -592,7 +592,7 @@ async function main() {
   add("PORT OPT HRP 20 names p95, server-side", q15.hrp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
   add("PORT OPT RP 20 names p95, server-side", q15.rp, 400, "ms", "POST /api/quant/opt + job, warm, 252-day lookback, n=12");
   add("CORR REGIME 20 names x 2 years p95, server-side", q15.regime, 300, "ms", "POST /api/quant/regime + job, warm, n=12");
-  add("ALPHA SYN 100 names x 2 years, server-side", q15.alpha, 8000, "ms", `POST /api/quant/alpha + job, all 29 factors, warm; n=${q15.alphaN} (p95 = slowest)`);
+  add("ALPHA SYN 100 names x 2 years, server-side", q15.alpha, 8000, "ms", `POST /api/quant/alpha + job, the 29 core factors (default family), warm; n=${q15.alphaN} (p95 = slowest)`);
 
   // Phase 16 (spec: decisions on the first-token budget): what this server controls. Fixture mode replays a recorded model.
   add("AI request to first SSE event p95, server-side", ai16.firstEvent, 60, "ms", `POST /api/ai/chat, recorded model, n=${ai16.n}`);
