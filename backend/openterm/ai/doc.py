@@ -8,6 +8,8 @@ from __future__ import annotations
 import io
 import math
 import re
+import shutil
+import subprocess
 import uuid
 import zipfile
 from collections import Counter, OrderedDict
@@ -114,8 +116,63 @@ def _pdf(data: bytes) -> str:
         raise ValueError(f"NOT A READABLE PDF FILE: {type(e).__name__}") from e
 
 
+OCR_LABEL = "OCR TEXT (MAY CONTAIN ERRORS)"
+OCR_MAX_PAGES = 40
+OCR_PAGE_TIMEOUT_S = 60
+OCR_SCALE = 2.0  # pypdfium2 render scale: 72 dpi x 2 = 144 dpi, enough for body text without a huge image
+OCR_NOT_INSTALLED = ("OCR NOT INSTALLED: THIS PDF IS A SCAN (IT HAS NO TEXT LAYER). INSTALL TESSERACT (https://tesseract-ocr.github.io/tessdoc/Installation.html: "
+                     "apt install tesseract-ocr, brew install tesseract, or the Windows installer), MAKE SURE `tesseract` IS ON PATH, RESTART OPENTERM AND LOAD THE FILE AGAIN")
+OCR_NEEDS_RENDERER = ("OCR NEEDS THE pypdfium2 PACKAGE (OPTIONAL, TO DRAW THE PDF PAGES FOR TESSERACT): RUN `uv sync --extra ocr` IN backend, RESTART OPENTERM AND LOAD THE FILE AGAIN")
+
+
+def ocr_available() -> bool:
+    return shutil.which("tesseract") is not None
+
+
+def _page_images(data: bytes):
+    """Yields each page of a PDF (up to OCR_MAX_PAGES) as binary PGM bytes (grey, 8 bit): a format Tesseract reads, built with no image library."""
+    try:
+        import pypdfium2 as pdfium
+    except ImportError as e:
+        raise ValueError(OCR_NEEDS_RENDERER) from e
+    try:
+        pdf = pdfium.PdfDocument(data)
+        for i in range(min(len(pdf), OCR_MAX_PAGES)):
+            arr = pdf[i].render(scale=OCR_SCALE, grayscale=True).to_numpy()
+            h, w = arr.shape[0], arr.shape[1]
+            yield b"P5\n%d %d\n255\n" % (w, h) + arr.reshape(h, w).tobytes()
+    except ValueError:
+        raise
+    except Exception as e:  # pdfium raises PdfiumError for a damaged file
+        raise ValueError(f"THE PDF PAGES COULD NOT BE DRAWN FOR OCR: {type(e).__name__}") from e
+
+
+def ocr_pdf(data: bytes) -> str:
+    """Text of a scanned PDF through the `tesseract` program (pages go to its stdin, nothing is written to disk). The result starts with OCR_LABEL.
+    Raises ValueError with a screen-ready message when Tesseract or the page renderer is missing or finds no text."""
+    exe = shutil.which("tesseract")
+    if exe is None:
+        raise ValueError(OCR_NOT_INSTALLED)
+    pages: list[str] = []
+    for n, img in enumerate(_page_images(data), 1):
+        try:
+            r = subprocess.run([exe, "stdin", "stdout", "-l", "eng"], input=img, capture_output=True, timeout=OCR_PAGE_TIMEOUT_S, check=False)
+        except subprocess.TimeoutExpired as e:
+            raise ValueError(f"OCR TIMED OUT ON PAGE {n} (OVER {OCR_PAGE_TIMEOUT_S} S)") from e
+        except OSError as e:
+            raise ValueError(f"OCR NOT INSTALLED: TESSERACT COULD NOT START ({type(e).__name__})") from e
+        if r.returncode != 0:
+            raise ValueError(f"TESSERACT FAILED ON PAGE {n}: {r.stderr.decode('utf-8', 'replace').strip()[:120] or 'EXIT ' + str(r.returncode)}")
+        t = r.stdout.decode("utf-8", errors="replace").strip()
+        if t:
+            pages.append(t)
+    if not pages:
+        raise ValueError("OCR FOUND NO TEXT IN THE PDF (TOO FAINT, OR NOT TEXT)")
+    return OCR_LABEL + "\n" + "\n".join(pages)
+
+
 def extract_text(name: str, data: bytes) -> tuple[str, str]:
-    """-> (kind, text). Raises ValueError with a message fit for the screen."""
+    """-> (kind, text). Raises ValueError with a message fit for the screen. A PDF with no text layer goes to OCR (text then starts with OCR_LABEL)."""
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     kind = KINDS.get(ext)
     if kind is None:
@@ -130,8 +187,10 @@ def extract_text(name: str, data: bytes) -> tuple[str, str]:
         text = html_to_text(data.decode("utf-8", errors="replace"))
     else:
         text = data.decode("utf-8", errors="replace")
+    if not text.strip() and kind == "pdf":
+        text = ocr_pdf(data)
     if not text.strip():
-        raise ValueError("THE FILE HAS NO TEXT (EMPTY, OR A SCANNED PDF: OCR IS NOT BUILT)")
+        raise ValueError("THE FILE HAS NO TEXT (EMPTY)")
     return kind, text[:MAX_CHARS].strip()
 
 
@@ -194,6 +253,7 @@ class Doc:
     name: str
     kind: str
     chunks: list[str] = field(default_factory=list)
+    ocr: bool = False  # the text came from OCR: it starts with OCR_LABEL and may contain errors
     _index: list[tuple[Counter, int]] | None = field(default=None, repr=False)
 
     def index(self) -> list[tuple[Counter, int]]:
@@ -206,7 +266,7 @@ class Doc:
         return sum(len(c) for c in self.chunks)
 
     def card(self) -> dict:
-        return {"id": self.id, "name": self.name, "kind": self.kind, "chunks": len(self.chunks), "chars": self.chars, "preview": self.chunks[0][:240] if self.chunks else ""}
+        return {"id": self.id, "name": self.name, "kind": self.kind, "chunks": len(self.chunks), "chars": self.chars, "ocr": self.ocr, **({"note": OCR_LABEL} if self.ocr else {}), "preview": self.chunks[0][:240] if self.chunks else ""}
 
 
 class DocStore:

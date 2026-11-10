@@ -117,9 +117,9 @@ AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}\Z")
 def _ai(raw) -> dict:
     if not isinstance(raw, dict):
         raise _bad("ai MUST BE AN OBJECT")
-    extra = sorted(set(raw) - {"model", "visionModel", "provider"})
+    extra = sorted(set(raw) - {"model", "visionModel", "provider", "storeText"})
     if extra:
-        raise _bad(f"ai KEYS: model visionModel provider (NOT {extra[0][:20]!r})")
+        raise _bad(f"ai KEYS: model visionModel provider storeText (NOT {extra[0][:20]!r})")
     out = {}
     for k in ("model", "visionModel"):
         if k in raw:
@@ -128,6 +128,10 @@ def _ai(raw) -> dict:
             out[k] = raw[k]
     if "provider" in raw:
         out["provider"] = _choice(raw["provider"], AI_PROVIDERS, "ai.provider")
+    if "storeText" in raw:
+        if not isinstance(raw["storeText"], bool):
+            raise _bad("ai.storeText MUST BE true OR false")
+        out["storeText"] = raw["storeText"]
     return out
 
 

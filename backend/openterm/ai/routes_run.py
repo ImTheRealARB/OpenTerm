@@ -202,6 +202,32 @@ async def ledger_verify(request: Request):
     return await audit_of(request.app, http_util.user(request).db).verify()
 
 
+@router.get("/ledger/{seq}/text")
+async def ledger_text(request: Request, seq: int):
+    """The stored (redacted) question and answer of one ledger entry; 404 when none is stored (the setting was off, or it was purged)."""
+    from .audit import audit_of
+
+    if not http_util.loopback(request):
+        return http_util.error_response(403, "forbidden", "STORED AI TEXT CAN ONLY BE READ FROM THIS MACHINE")
+    t = await audit_of(request.app, http_util.user(request).db).text(seq)
+    return t if t is not None else http_util.error_response(404, "not_found", f"NO STORED TEXT FOR ENTRY {seq} (ai.storeText WAS OFF, OR IT WAS PURGED)")
+
+
+@router.post("/ledger/purge-text")
+async def ledger_purge_text(request: Request):
+    """Deletes stored prompt / answer text (all of it, or {seq}). The hash chain is not touched."""
+    from .audit import audit_of
+
+    body = await _body(request)
+    if isinstance(body, Response):
+        return body
+    seq = body.get("seq")
+    if seq is not None and (not isinstance(seq, int) or isinstance(seq, bool)):
+        return http_util.error_response(400, "bad_request", "seq MUST BE AN ENTRY NUMBER")
+    n = await audit_of(request.app, http_util.user(request).db).purge_text(seq)
+    return {"purged": n}
+
+
 @router.get("/runs")
 async def runs_list(request: Request, kind: str | None = None):
     return {"runs": await _store(request).runs(kind if kind in ("swarm", "auto") else None)}

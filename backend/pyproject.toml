@@ -34,6 +34,10 @@ dependencies = [
 [project.scripts]
 openterm-mcp = "openterm.mcp.__main__:main"
 
+# `uv sync --extra ocr` adds the PDF page renderer for AI DOC OCR of scanned PDFs (Tesseract itself is a separate program on PATH).
+[project.optional-dependencies]
+ocr = ["pypdfium2>=4.30"]
+
 [dependency-groups]
 dev = [
     "pytest>=8",

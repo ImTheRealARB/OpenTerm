@@ -237,6 +237,48 @@ def shape_indicators(env: dict, args: dict) -> dict:
             "bollinger20": {"mid": _round(mid), "upper": _round(mid + 2 * sd), "lower": _round(mid - 2 * sd)} if mid is not None and sd is not None else None}
 
 
+PATTERN_KINDS = ("candles", "smc", "ichimoku", "all")
+PATTERN_RECENT = 12  # candlestick marks listed (newest last); a long window has hundreds of dojis
+
+
+def shape_patterns(env: dict, args: dict) -> dict:
+    """Rule-based candlestick, smart-money structure and Ichimoku readings over the daily bars `history` returns. The same rules the GP overlays draw
+    (see ai/patterns.py). Patterns, not signals: the note says so and the numbers are bar values, never a forecast."""
+    from . import patterns as P
+
+    d = env["data"]
+    rows = [r for r in zip(d.get("t") or [], d.get("o") or [], d.get("h") or [], d.get("l") or [], d.get("c") or [], strict=False) if None not in r]
+    if not rows:
+        return {"symbol": d.get("symbol"), "n_bars": 0}
+    t, o, h, lo, c = (list(x) for x in zip(*rows, strict=True))
+    kind = args.get("kind") or "all"
+    day = lambda i: _iso(t[i])
+    out: dict[str, Any] = {"symbol": d.get("symbol"), "interval": d.get("interval"), "n_bars": len(c), "from": day(0), "as_of": day(-1), "close": _round(c[-1]),
+                           "source": env.get("source"), "age_s": env.get("age_s"),
+                           "note": "RULE-BASED PATTERNS READ OFF PRICE, NOT SIGNALS OR FORECASTS"}
+    if kind in ("candles", "all"):
+        codes = P.candle_patterns(o, h, lo, c)
+        marks = [(i, k) for i, k in enumerate(codes) if k]
+        out["candles"] = {"total_marks": len(marks), "recent": [{"date": day(i), "pattern": P.PATTERN_INFO[k][0], "bias": {1: "BULLISH", -1: "BEARISH", 0: "NEUTRAL"}[P.PATTERN_INFO[k][1]]}
+                                                                for i, k in marks[-PATTERN_RECENT:]]}
+    if kind in ("smc", "all"):
+        m = P.smc(o, h, lo, c)
+        names = {1: "BREAK OF STRUCTURE UP", -1: "BREAK OF STRUCTURE DOWN", 2: "CHANGE OF CHARACTER UP", -2: "CHANGE OF CHARACTER DOWN"}
+        sw_hi = next(((i, h[i]) for i in range(len(c) - 1, -1, -1) if m["swing"][i] == 1), None)
+        sw_lo = next(((i, lo[i]) for i in range(len(c) - 1, -1, -1) if m["swing"][i] == -1), None)
+        open_z = [z for z in m["zones"] if not z["filled"]]
+        pick = [z for z in open_z if z["kind"] == "FVG"][-6:] + [z for z in open_z if z["kind"] == "OB"][-3:]
+        out["smc"] = {"last_swing_high": {"date": day(sw_hi[0]), "price": _round(sw_hi[1])} if sw_hi else None,
+                      "last_swing_low": {"date": day(sw_lo[0]), "price": _round(sw_lo[1])} if sw_lo else None,
+                      "structure_events": [{"date": day(i), "event": names[v]} for i, v in enumerate(m["bos"]) if v][-5:],
+                      "open_zones": [{"kind": "FAIR VALUE GAP" if z["kind"] == "FVG" else "ORDER BLOCK", "bias": "BULLISH" if z["dir"] == 1 else "BEARISH",
+                                      "since": day(z["i0"]), "top": _round(z["top"]), "bottom": _round(z["bot"])} for z in pick]}
+    if kind in ("ichimoku", "all"):
+        ich = P.ichimoku_state(h, lo, c)
+        out["ichimoku"] = {k: (_round(v) if isinstance(v, float) else v) for k, v in ich.items()} if ich else {"state": "NEEDS 79 OR MORE BARS"}
+    return out
+
+
 def _rigor(a: dict, ctx: dict) -> dict:
     """Pure arithmetic checks on numbers the model is about to quote: do the parts add up to the total, and do they look like one unit?"""
     parts = [float(x) for x in a["parts"]]
@@ -410,6 +452,11 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
          "alpha (alpha zoo scan, args {universe}), regime (correlation regime, args {list}).",
          obj({"fn": {"type": "string", "enum": list(QUANT_FNS)}, "args": {"type": "object"}}, ["fn"]), "/api/quant/{fn}", method="POST",
          build=lambda a: {"path": f"/api/quant/{a['fn']}", "json": a.get("args") or {}}, shape=shape_table_env, job=True),
+    # --- chart patterns: the rules the GP overlays draw (candlesticks, smart-money structure, Ichimoku cloud), read-only over daily bars ---
+    Tool("patterns", "Rule-based chart patterns for a ticker from daily bars, the same rules GP draws: recent candlestick patterns (doji, hammer, engulfing, stars, harami), "
+         "swing highs/lows, break of structure, fair value gaps, supply/demand blocks (OB zones) and the Ichimoku cloud state. Patterns, not signals or forecasts.",
+         obj({"symbol": S, "range": {"type": "string", "description": "3M 6M 1Y 2Y 5Y"}, "kind": {"type": "string", "enum": list(PATTERN_KINDS)}}, ["symbol"]),
+         "/api/history", build=lambda a: {"params": {k: v for k, v in a.items() if k != "kind"}}, shape=shape_patterns),
 ]}
 
 

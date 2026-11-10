@@ -71,6 +71,8 @@ MIGRATIONS: list[str | list[str]] = [
         "ALTER TABLE alerts ADD COLUMN channels TEXT",
         "ALTER TABLE news_alerts ADD COLUMN channels TEXT",
     ],
+    # 17: optional prompt / answer text of AI runs (`ai.storeText`), keyed by ledger seq. A side table: the ledger hash never covers it, so purging text keeps the chain valid
+    "CREATE TABLE ai_ledger_text (seq INTEGER PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL, stored_at REAL NOT NULL)",
 ]
 
 

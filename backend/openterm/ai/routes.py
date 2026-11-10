@@ -229,7 +229,8 @@ Rules:
 - Find passages with the doc_search tool (try different words if the first search finds nothing). Chunks come back labelled C1, C2...
 - Answer only from the chunks you retrieved. Cite the chunk in parentheses after each fact, like (C3), and the tool call as [T1].
 - If the document does not contain the answer, say so plainly. Never fill a gap with outside knowledge; figures you state must appear in a retrieved chunk.
-- Quote numbers exactly as written in the document. Be brief."""
+- Quote numbers exactly as written in the document. Be brief.{ocr_note}"""
+OCR_NOTE = "\n- This document was read by OCR (scanned pages): the text may contain recognition errors in words and digits. Say so when a figure matters and never correct a number from memory."
 
 
 def doc_store(request: Request):
@@ -248,7 +249,7 @@ def _ingest(name: str, fname: str, data: bytes, kind_as: str | None = None):
     from . import doc
 
     kind, text = doc.extract_text(fname, data)
-    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text))
+    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text), ocr=text.startswith(doc.OCR_LABEL))
     d.index()
     return d
 
@@ -318,7 +319,7 @@ async def doc_ask(request: Request):
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=["doc_search"], context={"doc": d})
-    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), today=time.strftime("%Y-%m-%d", time.gmtime()))
+    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), ocr_note=OCR_NOTE if d.ocr else "", today=time.strftime("%Y-%m-%d", time.gmtime()))
     events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], tools=["doc_search"], system=system, max_rounds=6),
                    "ai_doc", DOC_SYSTEM, question.strip(), ["doc_search"], names[0], names[1])
     return _stream(request, t0, events, runner)
