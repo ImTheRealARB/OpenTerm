@@ -2,7 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
-## Skill references in English (2026-11-10)
+## Faster ALPHA, skill references in English, roadmap of the next 25 features (2026-11-10)
+- `ALPHA FAMILY=ALL` runs about twice as fast with bit-for-bit the same numbers (all 435 factors checked on a 200-name, 2-year
+  panel: 29.9 s to 15.6 s). The rolling argmax / argmin / product steps called Python once per window; they now use numpy over
+  blocks of windows (`BASE_PATCHES` / `SPEED_PATCHES` in `scripts/port_vibe_alphas.py`, tests in `test_alpha_zoo.py`).
+- `docs/ROADMAP_NEXT.md`: 25 features a professional terminal has and OpenTerm lacks, each with a proposed code, data source,
+  effort and the order to build them in.
 - The elliott-wave, harmonic and ichimoku AI playbooks now include their reference notes, translated from Chinese: wave
   structure and Fibonacci wave ratios; XABCD patterns (Gartley, Bat, Butterfly, Crab) and trading the reversal zone; the
   Ichimoku five lines and signal system. Translations live in `scripts/vibe_skill_overrides/references/`.

@@ -19,9 +19,9 @@ session's designated branch and open a PR only when the owner asks.
   NSE's 403 from the cloud machine.
 - **What is left (owner decisions of 2026-11-10, end of session):**
   1. ~~Merge to main~~: done (PR #40).
-  2. **First release `v0.1.0`: NOT DONE YET, the owner runs it on their Windows laptop** (the one with the OpenTerm folder).
+  2. **First release `v0.1.0`: NOT DONE YET, the owner runs it on their own computer** (any machine with a clone of OpenTerm; the owner moved from the Windows laptop to a MacBook on 2026-11-10).
      A Claude cloud session cannot do this step: its git proxy only accepts pushes to the session's own branch (a tag push
-     gets HTTP 403), and its GitHub tools cannot create tags or releases. In PowerShell or Git Bash, inside the OpenTerm folder:
+     gets HTTP 403), and its GitHub tools cannot create tags or releases. In Terminal (macOS), PowerShell or Git Bash, inside the OpenTerm folder:
      ```
      git checkout main
      git pull origin main
@@ -51,7 +51,7 @@ session's designated branch and open a PR only when the owner asks.
 
 ## Pending (owner decisions, later on 2026-11-10)
 
-Branch `claude/bold-tesla-0tk2ek` (not merged yet).
+Branch `claude/bold-tesla-0tk2ek` (not merged yet): skill reference translations, the ALPHA speed-up, `docs/ROADMAP_NEXT.md`.
 
 - **Done on this branch:** the 6 Chinese `references/` files of the elliott-wave, harmonic and ichimoku skills are translated
   (`scripts/vibe_skill_overrides/references/`, mapped by `REF_TRANSLATIONS` in `scripts/port_vibe_skills.py`) and appear as
@@ -64,24 +64,25 @@ Branch `claude/bold-tesla-0tk2ek` (not merged yet).
 - **Settings sync per-field merge: explained to the owner, waiting for a yes/no.** Today `frontend/src/settings/schema.ts`
   `reconcile()` keeps the whole settings document with the newest `updated_at`, so an edit made on a second device or tab
   in the meantime is lost. A per-field merge keeps both. Only matters with more than one browser/device (remote mode, desktop + browser).
+- **Owner moved to a MacBook (2026-11-10).** The Windows laptop's Claude skills, plugins and connectors are not on the Mac. That
+  does not change the code or its checks: the rules live in this repo (`DESIGN.md`, `docs/ADDING_A_FUNCTION.md`, this file) and
+  the gates run in CI on every PR (static, pytest, sdk, vitest, e2e, bench). Keep merging through PRs so CI runs.
 - **Owner, later:** the HTML feature checklist; the OpenCode Go, OpenRouter, broker and NSE MCP live tests (item 6 above).
 
-### Feature ideas vs Bloomberg (brainstorm 2026-11-10; the owner has not picked yet)
-Checked against the code: none of these exist yet. All use free data unless noted. Check every new code against real tickers
-(alias rule in `frontend/src/functions/aliases.ts`).
-- Workflow: panel link groups (colour-linked panels follow one security); condition alerts (indicator cross, volume spike,
-  52-week high, news keyword, new 8-K, earnings soon; today ALRT is price/percent only); custom columns in Q/WL; spreadsheet
-  link (Excel / Google Sheets functions over the local API); unified calendar for a watchlist/portfolio; mobile layout for remote mode.
-- Analytics: market breadth (A/D, % above 50/200-day, highs/lows, McClellan); options gamma exposure and max pain, implied
-  earnings move vs past earnings moves, unusual option volume scanner; volatility board (VIX 9D/1M/3M/6M curve, VVIX, MOVE,
-  OVX, GVZ, India VIX); spread/ratio regression panel; sector rotation chart (RRG); money markets monitor (SOFR, EFFR, repo,
-  bills, Fed balance sheet, RRP, TGA: NY Fed + FRED); GDPNow and NY Fed nowcasts; technical criteria in EQS.
-- Research: SEC full-text search (EDGAR FTS); subsidiaries (10-K EX-21) and major customers (AI-extracted, labelled);
-  13D/13G activist tracker; insider cluster-buy screen; earnings press release (8-K EX-99.1) reader + AI summary; fundamentals
-  over time vs peers; ClinicalTrials.gov, openFDA, Senate lobbying, USPTO patents; India pack (FII/DII flows, bulk/block deals,
-  announcements, native NSE option chain, results calendar: NSE blocks cloud IPs, so fixtures here, live from home).
-- Portfolio: tax lots and realized gains (India STCG/LTCG, US wash sales); what-if risk of a trade before ORD; tracking error, active share.
-- Infrastructure: local price-history store (DuckDB/Parquet) for faster BT/ALPHA, offline use, fewer rate limits.
+### Next features: `docs/ROADMAP_NEXT.md`
+The 25 features a professional terminal has and OpenTerm lacks (checked against the code: none exist yet), each with a proposed
+code, data source, effort, speed rules and the suggested build order (wave 1: link groups, condition alerts, custom columns,
+unified calendar). The owner will build these from another laptop; start there. Proposed codes must be checked against real
+tickers first (`CAL`, `LINK`, `EPR`, `NOW` are taken).
+
+### Speed audit of the 2026-11-10 work (done in this session)
+- Backend start: importing the server takes the same time as before the workstreams (median 521 ms now vs 554 ms on `b8a274a`,
+  same machine); scipy, pandas, the PDF/XLSX writers and the alpha zoo are not imported at server start.
+- New panels (ORD, JRNL, SYNC, MCP, EXT...) are lazy chunks; the initial bundle grew 1.6 KB (125.2 KB of 400 KB).
+- Fixed: `ALPHA FAMILY=ALL` spent about half its time in rolling argmax / argmin / product calling Python once per window
+  (Vibe's base.py expects `bottleneck`, which OpenTerm does not ship). Now numpy, applied by the port script
+  (`BASE_PATCHES`, `SPEED_PATCHES` in `scripts/port_vibe_alphas.py`), all 435 factors bit-for-bit identical, 29.9 s -> 15.6 s.
+- BENCH_RESULT_PLACEHOLDER
 
 Setup: `cd backend && uv sync --extra ocr`, `cd frontend && npm ci`. Fixture UI check: `OPENTERM_FIXTURES=1 uv run uvicorn
 openterm.main:app --port 8000` + `npx vite preview --port 4180` (proxies `/api`).
