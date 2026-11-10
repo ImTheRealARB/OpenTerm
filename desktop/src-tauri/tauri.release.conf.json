@@ -1,0 +1,9 @@
+{
+  "bundle": { "createUpdaterArtifacts": true },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://example.invalid/OWNER/REPO/releases/latest/download/latest.json"],
+      "pubkey": "REPLACED-BY-THE-RELEASE-WORKFLOW"
+    }
+  }
+}

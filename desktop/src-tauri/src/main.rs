@@ -1,4 +1,4 @@
-// OpenTerm desktop shell (scaffold, not compiled on the machine that wrote it; see docs/DESKTOP.md).
+// OpenTerm desktop shell (built on Linux; see docs/DESKTOP.md).
 //
 // Starts the OpenTerm backend as a child process, waits until its port answers, opens one window on
 // http://127.0.0.1:<port>, and stops the backend when the window closes. The backend serves the built
@@ -10,6 +10,12 @@
 //   OPENTERM_BACKEND_DIR    working directory for that command, default <repo>/backend
 //   OPENTERM_STATIC_DIR     built frontend, default <repo>/frontend/dist
 //   OPENTERM_ATTACH=1       do not spawn a backend; open a window on one that is already running
+//   OPENTERM_NO_UPDATE_CHECK=1   skip the update check (release builds only, see below)
+//   OPENTERM_AUTO_UPDATE=1       install an available update instead of only logging it (release builds only)
+//
+// Updater: compiled only with `--features updater` (the release workflow). It reads a static manifest (latest.json)
+// published as a release asset, verifies the download against the public key in tauri.release.conf.json, and
+// by default only logs "update X is available". A developer build has no updater and no keys.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::{SocketAddr, TcpStream};
@@ -60,11 +66,39 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
     false
 }
 
+#[cfg(feature = "updater")]
+async fn check_for_update(app: tauri::AppHandle) {
+    use tauri_plugin_updater::UpdaterExt;
+    if std::env::var("OPENTERM_NO_UPDATE_CHECK").map(|v| v == "1").unwrap_or(false) {
+        return;
+    }
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => return eprintln!("update check unavailable: {e}"),
+    };
+    match updater.check().await {
+        Ok(Some(update)) => {
+            eprintln!("OpenTerm update {} is available (running {})", update.version, update.current_version);
+            if std::env::var("OPENTERM_AUTO_UPDATE").map(|v| v == "1").unwrap_or(false) {
+                match update.download_and_install(|_, _| {}, || {}).await {
+                    Ok(()) => eprintln!("update installed; it applies on the next start"),
+                    Err(e) => eprintln!("update failed: {e}"),
+                }
+            }
+        }
+        Ok(None) => {}
+        Err(e) => eprintln!("update check failed: {e}"),
+    }
+}
+
 fn main() {
     let port: u16 = std::env::var("OPENTERM_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(8765);
     let attach = std::env::var("OPENTERM_ATTACH").map(|v| v == "1").unwrap_or(false);
 
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(feature = "updater")]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    let app = builder
         .manage(Backend(Mutex::new(None)))
         .setup(move |app| {
             if !attach {
@@ -79,6 +113,8 @@ fn main() {
                 .title("OpenTerm")
                 .inner_size(1440.0, 900.0)
                 .build()?;
+            #[cfg(feature = "updater")]
+            tauri::async_runtime::spawn(check_for_update(app.handle().clone()));
             Ok(())
         })
         .build(tauri::generate_context!())
