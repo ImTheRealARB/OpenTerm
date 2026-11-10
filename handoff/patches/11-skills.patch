@@ -1,0 +1,692 @@
+diff --git a/scripts/vibe_skill_overrides/credit-analysis.md b/scripts/vibe_skill_overrides/credit-analysis.md
+new file mode 100644
+index 0000000..3e4a994
+--- /dev/null
++++ b/scripts/vibe_skill_overrides/credit-analysis.md
+@@ -0,0 +1,120 @@
++---
++name: credit-analysis
++description: Fixed income and credit analysis: ratings, Altman Z-score, Merton and KMV default models, bond pricing, duration and convexity, DV01, key-rate duration, immunization, ABS and MBS basics, and credit-spread analysis.
++category: analysis
++port_note: Translated from Chinese. Cut the local-government financing vehicle (LGFV) analysis, the China bond-market structure chapter, the quantlib code chapter and the China data-source table; ratings table kept for S&P and Moody's. Use `rates` for the government curve and `quant` (ql) for calculators.
++---
++# Fixed Income and Credit Analysis
++
++## When to use
++
++Bond pricing, yield to maturity, duration and convexity; issuer credit ratings and default probability; credit spread analysis and strategies; ABS and MBS credit; interest-rate risk (DV01, key-rate duration). The government curve comes from `rates`; calculators from `quant` (`ql`); issuer financials from `fa`; the user's holdings from `portfolio`.
++
++## 1. Credit analysis framework
++
++### 1.1 Ratings
++
++Issuer rating (overall ability to pay) versus issue rating (a specific bond, reflecting collateral, seniority and covenants); an issue rating can be above or below the issuer rating.
++
++| S&P | Moody's | Meaning |
++|---|---|---|
++| AAA | Aaa | Highest quality, extremely low default risk |
++| AA+/AA/AA- | Aa1/Aa2/Aa3 | High quality |
++| A+/A/A- | A1/A2/A3 | Upper medium |
++| BBB+/BBB/BBB- | Baa1/Baa2/Baa3 | Lowest investment grade (the IG and high-yield dividing line) |
++| BB+ and below | Ba1 and below | High yield, speculative |
++| D | D | Default |
++
++Read the outlook (positive, stable, negative) and watch lists together with the rating. Ratings lag the market; credit spreads often move first.
++
++### 1.2 Altman Z-score
++
++Predicts financial distress; the original model is for listed manufacturers: `Z = 1.2 X1 + 1.4 X2 + 3.3 X3 + 0.6 X4 + 1.0 X5`.
++
++| Variable | Formula | Meaning |
++|---|---|---|
++| X1 | working capital / total assets | Liquidity |
++| X2 | retained earnings / total assets | Accumulated profit |
++| X3 | EBIT / total assets | Profitability |
++| X4 | market value of equity / total liabilities | Leverage |
++| X5 | sales / total assets | Asset efficiency |
++
++Zones: Z above 2.99 safe; 1.81 to 2.99 grey; below 1.81 distress. Variants: Z' for private firms (X4 uses book equity; cut-offs 2.90 and 1.23); Z'' for non-manufacturers and emerging markets (drops X5; cut-offs 2.60 and 1.10). X4's denominator is total liabilities, not only interest-bearing debt. Limits: backward looking; not for financial firms; coefficients may need recalibration outside the original US sample. Compute with figures from `fa` and check them with `rigor`.
++
++### 1.3 Merton structural model
++
++Equity is a call option on the firm's assets with strike equal to the face value of debt D at maturity T. Asset value V follows geometric Brownian motion; default can happen only at T.
++
++```
++E = V N(d1) - D e^(-rT) N(d2)
++d1 = [ln(V/D) + (r + sigma_V^2 / 2) T] / (sigma_V sqrt(T)),  d2 = d1 - sigma_V sqrt(T)
++risk-neutral default probability = N(-d2)
++distance to default DD = [ln(V/D) + (mu - sigma_V^2 / 2) T] / (sigma_V sqrt(T))
++credit spread ~ -ln[ N(d2) + (V/D) e^(rT) N(-d1) ] / T
++```
++
++Unknowns V and sigma_V come from two equations: the equity formula above and `sigma_E E = N(d1) sigma_V V`.
++
++### 1.4 KMV and expected default frequency
++
++Commercial version of Merton. Steps: back out V and sigma_V from the equity price and volatility; default point `DP = short-term debt + 0.5 x long-term debt`; `DD = (V - DP) / (V x sigma_V)`; map DD to expected default frequency (EDF) through a historical default database (non-normal). Differences from Merton: the default point is not all debt, the mapping is empirical, and EDF is a real-world probability, not risk-neutral. Rough bands (indicative): EDF under 0.1% investment grade; 0.1% to 1% BBB to BB; 1% to 5% B; above 5% CCC and below. The bands are only an order-of-magnitude check, not calibrated default probabilities.
++
++### 1.5 Scorecards (retail credit and ABS collateral)
++
++Process: define the default label (for example 90+ days late); WOE encoding; select features by information value (keep IV above 0.02); logistic regression (or gradient boosting); convert to score `A - B ln(odds)`, usually base 600 with 20 points to double the odds. `WOE = ln(good share / bad share)`, `IV = sum (good share - bad share) x WOE`. IV under 0.02 no power; 0.02 to 0.1 weak; 0.1 to 0.3 medium; over 0.3 strong.
++
++## 2. Fixed income products
++
++### 2.1 Government curve
++
++Spot (zero) curve from bootstrapping coupon bonds; forward rate `f(T1, T2) = [ (1 + r2)^T2 / (1 + r1)^T1 ]^(1/(T2 - T1)) - 1`. Term spreads: 10Y-2Y (inversion often precedes recession), 10Y-1Y, 30Y-10Y (long-end supply and demand). Shapes: normal (expansion expected), flat (turning point), inverted (recession signal), humped (liquidity layering). Pull the curve with `rates`; compute spreads from its points.
++
++### 2.2 Bond pricing and yields
++
++- Price: `P = sum C / (1 + y)^t + F / (1 + y)^n`, with coupon C, face F, yield y.
++- Current yield: annual coupon / price.
++- Yield to maturity approximation: `YTM ~ [C + (F - P) / n] / [(F + P) / 2]`.
++- Modified duration: `MD = Macaulay duration / (1 + y / m)`; price change about `-MD x dy`.
++- Convexity: `CX = sum t (t + 1) CF_t / (1 + y)^(t + 2) / P`; price change `dP / P ~ -MD dy + 0.5 CX dy^2`.
++- Price at a coupon date is the clean price (accrued zero); between coupon dates add accrued interest for the dirty price. State the day-count convention (ACT/365, 30/360, ACT/ACT). Example check: face 100, coupon 5%, YTM 4%, 5 years, annual pay gives price about 104.45.
++
++### 2.3 Convertible bond (bond floor only)
++
++Bond floor = present value of coupons and face at the yield of a straight bond of the same rating and maturity. Conversion premium = (price - conversion value) / conversion value; bond-floor premium = (price - bond floor) / bond floor. Resetting the conversion price can dilute holders; weigh the issuer's incentive (forcing conversion versus put pressure).
++
++### 2.4 ABS and MBS
++
++Collateral quality: weighted-average coupon (WAC), weighted-average maturity (WAM), weighted-average loan-to-value, delinquency (30, 60, 90+ days), cumulative default rate. Prepayment: CPR (annualised) and SMM (monthly): `CPR = 1 - (1 - SMM)^12`, `SMM = 1 - (1 - CPR)^(1/12)`; PSA 100 is a ramp to 6% a year over 30 months, then constant. Tranches: senior (paid first, highest rating), mezzanine, junior or equity (absorbs losses first, gets excess spread). Credit enhancement = (pool - senior) / senior; excess spread = pool rate - senior funding cost - servicing fee.
++
++## 3. Interest-rate risk
++
++- Macaulay duration: `sum t CF_t / (1 + y)^t / P`, in years. Modified duration: the rate sensitivity. Effective duration for bonds with options (callables, MBS): `(P_down - P_up) / (2 P0 dy)` with repricing at shifted yields. Dollar duration `D_mod x P x face`.
++- Convexity: positive convexity gains more when rates fall and loses less when they rise; callables and MBS have negative convexity.
++- DV01 = `D_mod x P x 0.0001` per unit; portfolio DV01 is the sum of position DV01s. Hedge ratio = DV01 of the position / DV01 of the hedge instrument.
++- Key-rate duration (KRD): sensitivity to a 1 bp move of a single key tenor (1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 20Y, 30Y); the sum of KRDs about equals modified duration. Use to see curve exposure and hedge twists and butterflies.
++- Immunization: match asset duration to liability duration (`sum w_i D_i = D_liability`), or match cash flows exactly (no reinvestment risk but costly), or contingent immunization (manage actively above a floor, switch to immunized at the floor). Rebalance quarterly or monthly and after large rate moves (over about 50 bp).
++
++## 4. Credit spreads
++
++Spread = default risk premium + liquidity premium (+ tax premium in some markets). Benchmarks: G-spread (versus government), I-spread (versus swaps), Z-spread (over the zero curve), OAS (option-adjusted: price `P = sum CF_t / (1 + r_t + OAS)^t` with embedded options removed). Components can be approximated from CDS quotes, models, bid-ask spreads and turnover.
++
++Curve shapes: upward sloping (normal); flat or inverted (short-term liquidity or refinancing stress, a warning). In expansion spreads tighten; in recession or credit events they widen; in a flight to quality, government yields fall while spreads widen, which hurts high yield twice.
++
++Drivers: macro (growth, PMI, monetary policy, default waves), sector (policy, cycle, refinancing environment) and issuer (rating changes, financials, maturity wall).
++
++Strategies: spread tightening (long under-priced high-spread credit, short government to hedge duration; early recovery, easing); spread widening (short credit or buy CDS, long government; slowdown); cross-rating (long high yield and short investment grade when spreads compress, or the reverse); butterfly on the credit curve (long the middle, short the wings). Use government bond futures for duration hedges.
++
++## 5. Quick reference
++
++```
++YTM approx = [C + (F - P) / n] / [(F + P) / 2]
++dP = -D_mod x P x dy + 0.5 x CX x P x dy^2
++DV01 = D_mod x P x 0.0001 x face held
++credit spread = bond YTM - government YTM at the same maturity
++Z-score: above 2.99 safe, 1.81 to 2.99 grey, below 1.81 distress
++DD to EDF (indicative): DD above 4: under 0.1%; 2 to 4: 0.1% to 1%; 1 to 2: 1% to 5%; below 1: above 5%
++```
++
++## 6. Related playbooks
++
++`macro-analysis` and `global-macro` for rate and credit cycle inputs; `risk-analysis` for portfolio-level credit risk; `valuation-model` for equity-side financial analysis (the Altman Z-score is useful on both sides); `hedging-strategy` for hedging.
+diff --git a/scripts/vibe_skill_overrides/etf-analysis.md b/scripts/vibe_skill_overrides/etf-analysis.md
+new file mode 100644
+index 0000000..769f360
+--- /dev/null
++++ b/scripts/vibe_skill_overrides/etf-analysis.md
+@@ -0,0 +1,116 @@
++---
++name: etf-analysis
++description: ETF analysis: product screening, fee comparison, tracking error, liquidity checks, premium and discount, and strategy uses (core-satellite, sector rotation, leveraged-ETF decay).
++category: asset-class
++port_note: Translated from Chinese. Cut the China ETF tickers, Tushare code, QDII quota, China tax and index-family sections and the long code templates; US examples and OpenTerm tools substituted. The leveraged-ETF decay formula is corrected to L(L-1)/2 x variance x time (the original formula did not match its own example).
++---
++# ETF Analysis
++
++## Role
++
++ETFs are the main tool for passive investing and asset allocation. This playbook covers how to classify and compare ETFs, the metrics that matter (tracking error, premium or discount, liquidity, fees), and how ETFs are used in portfolios.
++
++## 1. Product types
++
++| Type | Examples | Notes |
++|---|---|---|
++| Broad-market | SPY, VOO, IVV, QQQ, IWM, VTI | Most liquid and cheapest; core holdings |
++| Sector | XLK, XLF, XLE, XLV | Sector rotation tool; concentrated holdings |
++| Thematic | ARKK, ICLN, BOTZ | Theme hype, often short life cycle |
++| Strategy / smart beta | VIG (dividend growth), USMV (low volatility), QUAL (quality), MTUM (momentum) | Explicit factor exposure; fees a little above broad funds |
++| Commodity | GLD, USO, DBA | Physical or futures-backed; watch roll cost on futures funds |
++| Bond | TLT, IEF, LQD, HYG, AGG | Rate sensitive; duration is the key number |
++| International | EFA, EEM, VWO, EWJ | Currency and trading-hours (premium) effects |
++| Money market / T-bill | BIL, SGOV | Cash management, not an investment |
++
++Structures: a plain ETF (in-kind creation and redemption keeps the price near NAV); an ETN (an unsecured bond of the issuer, so issuer credit risk); futures-based funds (roll cost, contango); leveraged and inverse funds (daily reset, see section 4).
++
++## 2. Core metrics
++
++### Tracking error
++
++```
++daily tracking error = std(ETF daily return - index daily return)
++annualised tracking error = daily tracking error x sqrt(252)
++```
++
++Rule of thumb for broad developed-market equity ETFs: under 0.2% excellent, 0.2% to 0.5% acceptable, over 0.5% poor. Sources: fees accrued daily, dividend reinvestment timing, trading impact at index rebalances, cash drag from creations and redemptions, suspended or illiquid holdings (full replication versus sampling), and index methodology.
++
++The information ratio of an index ETF is normally slightly negative because of fees: `IR = (ETF annual return - index annual return) / tracking error`; closer to zero is better.
++
++### Premium and discount
++
++```
++premium or discount % = (market price - NAV or intraday indicative value) / NAV x 100
++```
++
++Authorised participants arbitrage a premium (create shares, sell the ETF) or a discount (buy the ETF, redeem). Persistent or large gaps show up for international funds when the underlying market is closed, for bond ETFs in stressed markets, and for funds holding thinly traded assets. Get the price and the NAV from tools; if NAV is not available, say so rather than guess.
++
++### Liquidity
++
++| Metric | Meaning | Rough guide |
++|---|---|---|
++| Average daily dollar volume | Ease of trading | Broad funds above $100M, sector funds above $20M |
++| Bid-ask spread | Immediate cost | Under 0.05% is good |
++| Book depth | Impact of a large order | Use depth, not just the quote |
++| Underlying liquidity | What the ETF can really be traded against | ETF liquidity can exceed its holdings' |
++
++### Fees and size
++
++All-in cost is the expense ratio (management plus custody plus index licence); it excludes commissions and spread. Compounding: over N years the drag is about `1 - (1 - fee)^N`; a 0.50% fund versus a 0.15% fund costs roughly 3.5% of terminal wealth over 10 years and 6.8% over 20 years.
++
++Size: a very small fund (tens of millions) carries closure risk and weak liquidity; above about $1B it is liquid and market makers are active. Warning signs of closure: assets shrinking for several quarters.
++
++## 3. Choosing between ETFs on the same index
++
++1. Size: drop very small products.
++2. Fee: the lowest expense ratio when everything else is equal.
++3. Tracking: compare 1-year and 3-year tracking error.
++4. Liquidity: dollar volume and spread.
++5. Issuer: index-fund track record and product range.
++
++A score out of 100 (size 30, fee 25, tracking error 30, liquidity 15, each scaled linearly) can rank candidates; it is a ranking aid, not a verdict.
++
++Tools: `etf` for holdings and weights, `history` for price series (compute tracking against the index or a peer from daily closes), `profile` and `quote` for the basic facts, `quant` (`ql`) for calculators.
++
++## 4. Strategy uses
++
++### Core-satellite
++
++Core 70% to 80% in broad low-fee ETFs for market beta; satellite 20% to 30% in sector, thematic or smart-beta ETFs for tilts. Rebalance by calendar (quarterly or half-yearly) or by band (any asset more than 5 points from target).
++
++### Sector rotation with ETFs
++
++Momentum rotation: rank sector ETFs by trailing return over a lookback (for example 20 to 60 trading days, skipping the most recent days to avoid short-term reversal) and hold the top N. Macro-cycle map: recovery favours consumer discretionary, technology and small caps; overheating favours energy, materials and industrials; stagflation favours energy, utilities and staples; recession favours health care, utilities and bonds. Test any rule with `backtest_run` before relying on it. See also the `sector-rotation` playbook.
++
++### Smart-beta factor exposure
++
++Regress the ETF's daily returns on factor-return series (value, momentum, quality, low volatility, size) to see the loading (beta), t-statistic and R squared. Use `quant` (`fact`) for the factor regression of a symbol.
++
++### Leveraged and inverse ETFs
++
++A daily-reset fund with leverage L does not give L times the multi-period return. Approximate volatility decay: `L (L - 1) / 2 x sigma^2 x T`, with sigma the index volatility per year and T in years. Example: index volatility 20%, 2x fund, one year: `2 x 1 / 2 x 0.04 = 4%` of drag, before fees. Use them only as short-term tools (days to weeks); never as a long-term allocation.
++
++### Relative value
++
++Arbitrage of premium or discount needs creation and redemption rights and is institutional. At retail level, two ETFs on the same index should have a price ratio that mean-reverts; a rolling z-score of the ratio (60-day window) beyond 2 is something to study, not a trade by itself. See the `pair-trading` playbook.
++
++## 5. Building ETF portfolios
++
++Classic frameworks: 60/40 (broad equity and aggregate bond ETFs), all-weather style (equities, long and intermediate Treasuries, gold, commodities), barbell (broad core plus high-beta sector or thematic). Rebalancing cost is roughly `trade size x (commission + half spread + impact)`, about 0.05% to 0.15% for broad ETFs. Band rebalancing usually beats fixed-frequency rebalancing, and new cash or dividends can be directed to underweight assets to avoid selling.
++
++## 6. Common requests
++
++- Best ETF for an index: section 3, as a table of expense ratio, size, tracking error and spread.
++- Sector rotation signal: rank the sector ETFs by momentum, exclude any with a large recent drop, and state the rule and the window.
++- Portfolio test: `backtest_run` with the ETF weights if the tool supports it; otherwise compute return, volatility and drawdown from `history` and state the method.
++
++## 7. Cautions
++
++1. A large share of suspended or illiquid holdings makes the indicative value unreliable, so premium and discount means less.
++2. International funds trade while their underlying markets are closed: part of any gap is timing.
++3. Index reconstitution dates can create short-lived price pressure.
++4. Never hold leveraged or inverse ETFs as a long-term position.
++5. Money-market ETFs are cash tools, not investments.
++6. Split large orders in thin ETFs over several days.
++7. Distributions (dividends versus capital gains) are taxed differently; check the local tax rules.
+diff --git a/scripts/vibe_skill_overrides/financial-statement.md b/scripts/vibe_skill_overrides/financial-statement.md
+new file mode 100644
+index 0000000..99a5267
+--- /dev/null
++++ b/scripts/vibe_skill_overrides/financial-statement.md
+@@ -0,0 +1,133 @@
++---
++name: financial-statement
++description: Three-statement reading: how income statement, balance sheet and cash flow tie together, earnings quality (accruals versus cash), DuPont decomposition and a 12-point financial red-flag checklist.
++category: flow
++port_note: Translated from Chinese. China-specific lines (adjusted-net-income-to-attributable-income ratio, Tushare data source, China GAAP note) replaced with US GAAP equivalents; data read with `fa`, `filings` and `rigor`.
++---
++# Three-Statement Reading
++
++## Overview
++
++Start from how the income statement, balance sheet and cash flow statement tie together, judge earnings quality, spot signs of accounting manipulation, and use DuPont analysis to see what drives profitability. Get statements with `fa` (period A for annual, Q for quarterly) and the filing itself with `filings`; check the arithmetic with `rigor` before quoting.
++
++## The three statements
++
++### Income statement: how much was earned
++
++```
++Revenue
++ - Cost of revenue                     -> gross profit (gross margin = gross profit / revenue)
++ - SG&A + R&D                          -> operating income
++ + non-operating items                 -> pre-tax income
++ - income tax                          -> net income
++ - non-controlling interests           -> net income attributable to the parent
++```
++
++| Ratio | Formula | Healthy | Warning |
++|---|---|---|---|
++| Gross margin | gross profit / revenue | varies by industry | falling three quarters in a row |
++| Net margin | net income / revenue | above 10% is excellent | negative with no improving trend |
++| Operating expense ratio | (SG&A + R&D) / revenue | below 30% | rising year after year |
++| Core earnings share | earnings excluding one-offs / reported earnings | above 80% | below 50% means reliance on one-offs |
++
++### Balance sheet: what the company owns and owes
++
++```
++Assets = Liabilities + Shareholders' equity
++Asset side: cash (restricted? "high cash and high debt" together?), receivables (growing faster than revenue?),
++  inventory (piling up? write-downs enough?), goodwill (acquisition premium, impairment risk),
++  construction in progress (long without being placed in service?)
++Liability side: interest-bearing debt (short + long-term borrowings + bonds), payables (power over suppliers),
++  deferred revenue and contract liabilities (power over customers)
++```
++
++| Ratio | Formula | Healthy |
++|---|---|---|
++| Debt to assets | liabilities / assets | 40% to 60% (non-financial) |
++| Current ratio | current assets / current liabilities | 1.5 to 2.5 |
++| Quick ratio | (current assets - inventory) / current liabilities | above 1.0 |
++| Interest-bearing debt ratio | interest-bearing debt / total assets | below 30% |
++
++### Cash flow statement: how much cash actually arrived
++
++Operating (CFO) is cash from doing business; investing (CFI) is cash spent on or received from assets; financing (CFF) is borrowing, repaying and paying dividends. Golden rule: over time, net income should be close to CFO.
++
++| CFO | CFI | CFF | Reading |
++|---|---|---|---|
++| + | - | - | Excellent: earns, invests, repays |
++| + | - | + | Expansion: earns, invests, borrows to speed up |
++| + | + | - | Steady: earns, recovers investments, repays |
++| - | - | + | Dangerous: losing money, still investing, living on borrowing |
++| - | + | + | Distress: selling assets and borrowing to survive |
++| - | + | - | Decline: selling assets to repay debt |
++
++## How the statements tie together
++
++1. Income statement to balance sheet: net income flows into retained earnings; receivables rise by revenue minus cash collected; inventory rises by purchases minus cost sold.
++2. Income statement to cash flow: net income + depreciation - increase in working capital is about CFO. A large gap means doubtful earnings quality.
++3. Balance sheet to cash flow: ending cash = opening cash + CFO + CFI + CFF. If the cash change does not equal the sum of the three flows (beyond currency effects), the data has a problem.
++
++Checks (compute them, then verify with `rigor`):
++
++```
++accrual ratio = (net income - CFO) / total assets      # above 10% means accruals dominate, poor quality
++receivables growth vs revenue growth                    # receivables growing faster = worsening revenue quality
++```
++
++## Earnings quality
++
++High quality: CFO / net income above 1.0; receivables growing slower than revenue; operating cash flow positive year after year. Low quality: CFO / net income below 0.5; receivables to revenue rising steadily; profit relying on one-off gains (investment income, asset sales).
++
++Score card (1 to 3 points each, weighted):
++
++| Indicator | 3 points | 2 points | 1 point | Weight |
++|---|---|---|---|---|
++| CFO / net income | above 1.2 | 0.8 to 1.2 | below 0.8 | 25% |
++| Receivables growth vs revenue growth | slower | in line | faster | 20% |
++| Core earnings share | above 90% | 70% to 90% | below 70% | 20% |
++| Operating cash flow trend | rising | volatile | falling | 20% |
++| Inventory turnover | faster | stable | slower | 15% |
++
++Weighted score 2.5 or more is excellent; 1.5 to 2.5 needs attention; below 1.5 is poor quality.
++
++## Red flags (12)
++
++| # | Red flag | How to detect | Severity |
++|---|---|---|---|
++| 1 | High cash and high debt together | Both above 30% of revenue | High |
++| 2 | Receivables surge | Growth above 1.5x revenue growth for 2+ quarters | High |
++| 3 | Inventory anomaly | Inventory / revenue jumps over 50% | High |
++| 4 | Negative CFO with positive net income | Two years in a row | High |
++| 5 | High related-party share | Related-party transactions above 30% of revenue | High |
++| 6 | Frequent auditor changes | Two changes in three years | Medium |
++| 7 | Construction in progress never placed in service | Above 50% of fixed assets for 3+ years | Medium |
++| 8 | Prepayment anomaly | Prepayments / revenue jump | Medium |
++| 9 | Non-controlling interest anomaly | Share of net income swings widely | Medium |
++| 10 | Audit opinion | Qualified, adverse or disclaimer | High |
++| 11 | High capitalisation rate | Capitalised R&D above 50% of total R&D | Medium |
++| 12 | High goodwill | Goodwill above 30% of equity and acquired business under plan | Medium |
++
++Flags found: 0 to 1 is low risk; 2 to 3 is medium (investigate); 4 to 5 is high (avoid); 6 or more is very high (strongly avoid). These counts are a screening heuristic, not a probability of fraud.
++
++## DuPont analysis
++
++Three-level: `ROE = net margin x asset turnover x equity multiplier` (profitability x efficiency x leverage).
++
++Five-level: `ROE = tax burden x interest burden x operating margin x asset turnover x equity multiplier`, that is `(NI / pre-tax) x (pre-tax / EBIT) x (EBIT / revenue) x (revenue / assets) x (assets / equity)`.
++
++Template: a table of ROE, net margin, asset turnover and equity multiplier for the last two or three years, the change, and a one-line driver call (for example, "ROE rose on better margins; leverage up slightly, watch it").
++
++Typical drivers by industry: premium consumer brands, high net margin; retail, high turnover and thin margin; banks, high leverage (multiplier above 10x); technology, high margin and medium turnover; real estate, high leverage while deleveraging.
++
++## Output format
++
++Title the answer with the company and period, then: (1) a summary table (revenue, net income, CFO, debt to assets, with trend); (2) the earnings-quality score with a reason for each row; (3) the DuPont table; (4) the red-flag checklist with yes or no and the evidence; (5) a conclusion that separates facts from judgement.
++
++## Cautions
++
++1. Accounting standards differ (US GAAP versus IFRS): adjust before comparing across them.
++2. For quarterly data compare with the same quarter a year earlier, not the previous quarter; seasonality is large.
++3. Banks and insurers have different statement structures; the tie-out checks above do not apply.
++4. Asset turnover is comparable only within an industry; heavy-asset and light-asset firms differ.
++5. A change in the consolidation scope (acquisitions, disposals) breaks year-on-year comparison; use a like-for-like basis.
++6. Use `fa` for the numbers and name the period; state it when a figure is missing.
+diff --git a/scripts/vibe_skill_overrides/fund-analysis.md b/scripts/vibe_skill_overrides/fund-analysis.md
+new file mode 100644
+index 0000000..0fb2ba3
+--- /dev/null
++++ b/scripts/vibe_skill_overrides/fund-analysis.md
+@@ -0,0 +1,101 @@
++---
++name: fund-analysis
++description: Fund analysis and screening: performance and risk-adjusted metrics, style-box regression and style-drift detection, manager evaluation, fund-of-funds construction and ETF selection.
++category: asset-class
++port_note: Translated from Chinese. China mutual-fund benchmarks, style indices, fund examples and risk-free rate replaced by US equivalents (S&P 500, Russell style indices, Treasury bill yield); the closing example and the Python dependency list are cut.
++---
++# Fund Analysis and Screening
++
++## Overview
++
++Evaluate mutual funds, hedge funds and ETFs on performance, style and management skill, and build a fund-of-funds (FOF) portfolio. The aim is a sustainable source of excess return, not the fund with the best past performance.
++
++Use it for: multi-factor screening of equity and balanced funds; attributing a manager's style and detecting drift; judging how well an ETF tracks; fund-of-funds allocation and rebalancing.
++
++Data: `quote`, `history` (fund or ETF price series), `profile`, `etf` (holdings), `holders`, `rates` (risk-free rate), and `quant` for factor regressions. Fund-level data not available through a tool (manager tenure, flows) must be asked from the user or marked missing.
++
++## Performance metrics
++
++Return metrics:
++
++| Metric | Formula | Good | Meaning |
++|---|---|---|---|
++| Annualised return | (1 + total return)^(1/years) - 1 | above 10% to 15% (equity) | Absolute return |
++| Alpha (excess return) | fund return - benchmark return | above 3% to 5% a year | Versus benchmark |
++| Information ratio | alpha / tracking error | above 0.5 | Stability of alpha |
++| Hit rate | share of months beating the benchmark | above 55% | Consistency |
++
++Risk metrics:
++
++| Metric | Formula | Good (equity) | Meaning |
++|---|---|---|---|
++| Maximum drawdown | max (peak - trough) / peak | below 20% | Extreme risk |
++| Annualised volatility | std(daily return) x sqrt(252) | below 20% | Total risk |
++| Downside deviation | std of negative returns x sqrt(252) | below about 13% | Downside risk |
++| Calmar ratio | annual return / maximum drawdown | above 1.0 | Return per unit of extreme risk |
++
++Risk-adjusted metrics:
++
++| Metric | Formula | Good | Meaning |
++|---|---|---|---|
++| Sharpe | (Rp - Rf) / sigma | above 1.0 | Return per unit of risk |
++| Sortino | (Rp - Rf) / downside deviation | above 1.5 | Focuses on downside |
++| Treynor | (Rp - Rf) / beta | high | Return per unit of market risk |
++
++Risk-free rate: the Treasury bill or 1-year Treasury yield (see `rates`). Benchmark: equity funds against a broad equity index (for example the S&P 500 or the Russell index for the fund's size and style); balanced funds against a blend such as 60% equity index and 40% aggregate bond index. Evaluate at least 3 years, preferably 5 (a full bull and bear cycle).
++
++## Style-box analysis
++
++Nine boxes: large, mid, small capitalisation by value, blend, growth.
++
++Regression method (returns-based style analysis): `Ri = alpha + b1 x LargeValue + b2 x LargeGrowth + b3 x SmallValue + b4 x SmallGrowth + e`. Use style index or ETF returns as regressors (for example Russell 1000 Value and Growth, Russell 2000 Value and Growth). The largest beta is the main style. R squared above 0.85 means a clear style; below 0.70 means a blurred style or a market-timing fund.
++
++## Style-drift detection
++
++Method: rolling regression (window 60 trading days, step 20 days).
++
++1. Compute the style weights (betas) in each window.
++2. Drift if the beta change between adjacent windows exceeds 0.2 in absolute value; a switch if the dominant style changes.
++3. Watch R squared over time: a steady fall means the manager is timing or drifting from the benchmark; erratic R squared means an unstable style.
++
++Drift types: gradual (large to mid to small cap, often forced by growing assets); abrupt (value suddenly to growth, maybe a new manager); cyclical (growth in bull markets, value in bears, a timer). Stated style "large value" but regressed style "large growth" is a label that does not match holdings.
++
++## Screening framework (five steps)
++
++1. Hard filters: age 3+ years; size in a sensible range (too small means closure risk, too large slows the manager); same manager 2+ years; institutional ownership above about 20%.
++2. Performance ranking: 3-year annualised return above the category median; 3-year Sharpe in the top 30% of the category; maximum drawdown below the category median; information ratio above 0.3.
++3. Style check: actual style matches stated style (R squared above 0.8); low drift; last year's style matches the 3-year style.
++4. Manager review: 3+ years running similar funds; positive excess return in past funds; turnover reasonable (about 200% to 400% a year is normal, above 600% is high); concentration (top 10 holdings 40% to 70%).
++5. Fee check: expense ratio at or below about 1.5% for active equity (index funds far lower); no punitive redemption fees; custody fee at most 0.25%.
++
++## Manager evaluation
++
++- Excess return: alpha during tenure; compare alpha in bull and bear markets (good managers add value in bears too).
++- Risk control: maximum drawdown versus the benchmark's; downside capture below 0.8 shows downside control; upside capture above 1.0 means not lagging in rallies.
++- Selection versus timing (Treynor-Mazuy): `Ri - Rf = alpha + b (Rm - Rf) + g (Rm - Rf)^2 + e`; alpha above 0 means stock selection; g above 0 means timing. Most managers show selection at best; timing skill is rare.
++- Holdings: turnover, concentration, sector tilts against the benchmark.
++- Manager change: similar style from the same firm, little impact; a very different style, re-evaluate and watch 1 to 2 quarters; a star manager leaving, consider redeeming and follow the successor's other funds.
++
++## ETF selection
++
++Tracking error under about 2% for passive and under 4% for enhanced; expense ratio (broad index ETFs cost a few basis points up to about 0.5%, and over 10 years a 0.2% a year difference compounds); liquidity (large daily dollar volume, spread under about 0.1%, premium or discount under about 0.3%); size (above about $1B the closure risk is very low; below about $50M watch closure). See the `etf-analysis` playbook for detail.
++
++## Fund-of-funds construction
++
++1. Asset allocation: conservative 30% equity, 50% bonds, 20% cash; balanced 50% equity, 30% bonds, 10% commodities, 10% cash; aggressive 70% equity, 20% bonds, 10% commodities.
++2. Pick 2 to 3 funds per asset class to diversify manager risk: equity as a large value, a large growth and a small or mid cap fund (complementary styles); bonds as one core bond fund and one convertible or enhanced fund, controlling credit risk and not chasing yield.
++3. Rebalance: check quarterly; rebalance when any asset is more than 5 points from target. Methods: sell overweight and buy underweight (high trading cost); direct new money to underweight (fewer trades); direct distributions to underweight (best).
++4. Monitor: a fund in the bottom 30% for two quarters goes on watch; manager change means re-evaluate; style drift means replace with a stable fund; unusual swings in assets (surge or collapse) mean watch liquidity.
++
++## Output format
++
++Sections: fund overview (name, manager, tenure, size, style); performance over 3 years (return and its category rank, Sharpe, maximum drawdown, information ratio, Calmar, monthly hit rate); style analysis (regressed style with R squared, drift level, concentration, turnover); assessment (strengths, weaknesses, suggested role and weight in a portfolio). Mark each figure with its source and whether it came from a tool.
++
++## Cautions
++
++1. Survivorship bias: databases that drop closed funds overstate past average performance.
++2. Size effect: above very large asset levels a small-cap strategy is hard to execute and alpha can fall.
++3. Quarter-end window dressing: some funds buy large holdings near quarter end; cross-check with mid-quarter data.
++4. Flow impact: large subscriptions and redemptions dilute or force selling; watch share counts.
++5. Fee drag: over 10 years a 1.5% versus a 0.5% fee gap is roughly a 10% gap in cumulative return.
++6. "Enhanced index" funds with a tracking error above about 8% are really active funds.
+diff --git a/scripts/vibe_skill_overrides/sector-rotation.md b/scripts/vibe_skill_overrides/sector-rotation.md
+new file mode 100644
+index 0000000..a0620a9
+--- /dev/null
++++ b/scripts/vibe_skill_overrides/sector-rotation.md
+@@ -0,0 +1,81 @@
++---
++name: sector-rotation
++description: Sector rotation analysis: sector business-cycle scoring, sector momentum ranking, supply-chain transmission, and valuation, earnings and flow comparison, ending in overweight and underweight calls.
++category: asset-class
++port_note: Translated from Chinese. The Shenwan industry list, A-share ETF codes, northbound-flow and policy-driven notes replaced by the 11 GICS sectors and US sector ETFs; framework, scoring and signals kept.
++---
++# Sector Rotation Analysis
++
++## Overview
++
++Compare sectors on four dimensions: business-cycle strength (score), momentum, valuation and flows, then give overweight, market-weight or underweight calls. Express the view with sector ETFs (for example the SPDR sector funds) rather than single stocks to avoid stock-specific risk.
++
++## Sector map (GICS, 11 sectors)
++
++| Group | Sectors | ETF example |
++|---|---|---|
++| Upstream, cyclical | Energy, Materials | XLE, XLB |
++| Midstream, industrial | Industrials | XLI |
++| Consumer | Consumer Discretionary, Consumer Staples, Health Care | XLY, XLP, XLV |
++| Technology and communication | Information Technology, Communication Services | XLK, XLC |
++| Financial and property | Financials, Real Estate | XLF, XLRE |
++| Defensive and utilities | Utilities | XLU |
++
++| Type | Sectors | Traits | Drivers |
++|---|---|---|---|
++| Strong cycle | Energy, Materials, Industrials | Volatile earnings, tied to the macro cycle | PMI, commodity prices, capex |
++| Weak cycle | Staples, Health Care, Utilities | Stable earnings, defensive | Inflation, consumer data |
++| Growth | Technology, Communication | High PE and growth, sensitive to rates and regulation | Adoption, capex, policy |
++| Financial | Banks, insurers | Spread driven, positively linked to rates | Rates, credit, loan growth |
++
++## Cycle scoring (100 points)
++
++| Dimension | Weight | Indicator | Scoring rule |
++|---|---|---|---|
++| Earnings growth | 30% | Net income year over year | above 30% = 30; 15% to 30% = 22; 0% to 15% = 15; negative = 5 |
++| Earnings trend | 20% | Quarters of acceleration | 3+ quarters = 20; 2 = 14; slowing = -5 |
++| Cycle indicators | 20% | PMI, utilisation, prices | high and rising = 20; high and falling = 12; low = 5 |
++| Policy | 15% | Policy support | clearly favourable = 15; neutral = 8; adverse = 2 |
++| Valuation safety | 15% | PE percentile versus own history | below 30th percentile = 15; 30th to 50th = 10; above 70th = 3 |
++
++Upturn signals (overweight): sector PMI above 50 for 2 months and improving; leader orders or revenue accelerating; product prices rising; utilisation above 80% and rising; policy catalysts (subsidies, onshoring). Downturn signals (underweight): PMI below 50 for 2 months; inventory days rising; prices falling; overcapacity (utilisation below 60%); tighter regulation or procurement.
++
++## Momentum ranking
++
++Price momentum: cumulative return over a lookback (for example 60 days) skipping the latest few days (for example 5) to avoid short-term reversal, then rank sectors. Get prices with `history` for each sector ETF.
++
++Earnings momentum: change in year-on-year ROE this quarter minus last quarter; positive means accelerating (overweight signal), negative means decelerating.
++
++Composite rank: `0.4 x price momentum rank + 0.3 x earnings momentum rank + 0.3 x flow rank`; overweight the top 3 to 5 sectors and underweight the bottom 3 to 5. Test the rule with `backtest_run` before trusting it.
++
++## Supply-chain transmission
++
++Upstream (raw materials) to midstream (manufacturing) to downstream (consumer or end use). Examples: batteries (lithium to cathode material to cells to electric vehicles: a lithium price rise lifts cost and squeezes carmaker margins); semiconductors (equipment and materials to wafers to packaging to consumer electronics: phone demand drives packaging orders, then fab utilisation, then equipment capex); housing (land and financing to development to sales: easier policy lifts sales first, then starts, then land purchases).
++
++| Pattern | Meaning | Investment implication |
++|---|---|---|
++| Demand flows bottom-up | End demand drives midstream orders and upstream materials | A demand turning point shows downstream first |
++| Cost flows top-down | Upstream price rises hit midstream cost, then downstream prices | Upstream price rise helps upstream, hurts midstream |
++| Inventory cycle | Active restocking, passive restocking, active destocking, passive destocking | Passive destocking is the buying point |
++| Lead and lag | Upstream leads midstream by 1 to 2 quarters, midstream leads downstream | Position early for the next link |
++
++## Comparison framework
++
++Valuation: P/E (distorted for cyclicals; a low P/E can be a peak); P/B (better for banks, property, cyclicals); P/E percentile versus 5 years; PEG (below 1 cheap, above 2 expensive); dividend yield (high yield means defensive).
++
++Earnings: ROE, change in ROE, gross margin (competitive structure), net income growth, cash flow to net income (quality).
++
++Flows: ETF net creations (institutional allocation, use `etf` and `history`), fund and 13F positioning changes (`holders`), short interest (`research` fn `si`), options positioning (`options_chain`).
++
++## Output format
++
++Cycle ranking of the top sectors (rank, sector, score, change, core reason); allocation table (overweight, market weight, underweight with suggested weights and reasons); supply-chain opportunities; risks. State the data date and the tools behind each number.
++
++## Cautions
++
++1. Cyclical valuation trap: a low P/E can mark peak earnings; use P/B or normalised earnings.
++2. Policy and regulation can dominate: a policy turn matters more than a fundamental turn.
++3. Thematic hype (for example an AI theme) can distort sector momentum: separate theme from earnings cycle.
++4. Reported earnings lag by 1 to 2 months; high-frequency data (PMI, utilisation, prices) is timelier.
++5. Prefer sector ETFs to single stocks for sector exposure.
++6. Do not rotate too often: monthly or quarterly review is enough.
+diff --git a/scripts/vibe_skill_overrides/sentiment-analysis.md b/scripts/vibe_skill_overrides/sentiment-analysis.md
+new file mode 100644
+index 0000000..76e300b
+--- /dev/null
++++ b/scripts/vibe_skill_overrides/sentiment-analysis.md
+@@ -0,0 +1,105 @@
++---
++name: sentiment-analysis
++description: Market sentiment analysis: fear and greed indices, put-call ratio, positioning and leverage signals, funding rates, and a social-media sentiment framework, combined into a contrarian score.
++category: analysis
++port_note: Translated from Chinese. The A-share turnover, margin-balance and northbound-flow sections are cut (no data source); replaced with US equivalents (VIX, put-call ratio, margin debt, fund flows) and crypto funding rates, read through `options_chain`, `crypto_funding`, `news`, `pred`, `history`.
++---
++# Market Sentiment Analysis
++
++## Overview
++
++Turn the subjective "greed and fear" into measurable indicators. Five dimensions: fear and greed indices, option sentiment, leverage and positioning, flows, and social sentiment. Sentiment indicators are usually read as contrarian indicators and are not precise timing tools.
++
++Data you can pull: `options_chain` (put and call volume and open interest, implied volatility), `history` (price, volume, VIX or other volatility index symbols if available), `crypto_funding` (perpetual funding and open interest), `news` (headline tone), `pred` (prediction-market odds), `etf` and `quote` for flows context. State when an indicator needs data you cannot reach.
++
++## Fear and greed index
++
++### Crypto Fear and Greed Index (0 to 100)
++
++| Score | State | Historical signal |
++|---|---|---|
++| 0 to 20 | Extreme fear | Bottom area (contrarian buy) |
++| 20 to 40 | Fear | Leaning bottom |
++| 40 to 60 | Neutral | Stand aside |
++| 60 to 80 | Greed | Leaning top |
++| 80 to 100 | Extreme greed | Top area (contrarian sell) |
++
++Components: volatility (25%, BTC 30 and 90-day volatility), market momentum (25%, price versus 30 and 90-day moving averages), social media (15%), surveys (15%), BTC dominance (10%), search trends (10%). The index value itself must come from the user or a cited source; do not invent it.
++
++### Equity fear and greed proxies
++
++There is no single official index; combine: volatility index level and its term structure, put-call ratio, market breadth (advancers to decliners, share of stocks above their 200-day average), new highs versus new lows, junk-bond spread, and safe-haven demand. Define "extreme" relative to the indicator's own history.
++
++### How to use it
++
++Core idea: be careful when others are greedy, and constructive when others are fearful.
++
++1. Extreme fear (under 20): a signal to build positions in stages (3 to 5 tranches), only if fundamentals support (the fear is not caused by a company-specific blow-up).
++2. Extreme greed (over 80): a signal to reduce gradually, for example from 80% to 50% exposure. Do not short only on this: trends can run.
++3. Neutral zone: the indicator has little value; look at other factors.
++
++## Put-call ratio (PCR)
++
++`PCR = put volume / call volume`. Contrarian reading:
++
++| PCR | Meaning | Signal (contrarian) |
++|---|---|---|
++| above 1.5 | Extreme bearishness | Bullish (fear overdone) |
++| 1.0 to 1.5 | Bearish | Leaning bullish |
++| 0.7 to 1.0 | Neutral | No clear signal |
++| 0.5 to 0.7 | Bullish | Leaning bearish |
++| below 0.5 | Extreme bullishness | Bearish (greed overdone) |
++
++Reference ranges differ by market: US equity index options normally 0.7 to 1.2 (extremes below 0.5 or above 1.5); BTC options normally 0.3 to 0.8 (extremes below 0.2 or above 1.2). Single-stock PCR is noisier. Compute it from `options_chain` volume or open interest and say which one.
++
++PCR with the volatility index: high PCR and high volatility index is extreme panic (strong rebound signal); low PCR and low volatility index is extreme complacency (watch for black swans); high PCR with low volatility index is hedging demand (institutions protecting longs); low PCR with high volatility index is a mixed signal needing confirmation.
++
++## Leverage and positioning
++
++Margin debt (investor borrowing to buy stocks) is the standard leverage gauge in equities: the level matters less than its direction; month-on-month growth above about 10% suggests overheating, falling above 10% suggests panic. Rising margin debt after a bottom is confirming; accelerating at highs is overheating. Short interest (`research` fn `si`): a sharp rise shows bearish positioning; a large fall after a rise is short covering.
++
++Crypto: perpetual funding rate and open interest (`crypto_funding`). Persistently high positive funding with rising open interest means crowded longs (squeeze risk down); deeply negative funding means crowded shorts (squeeze risk up). See the `perp-funding-basis` playbook.
++
++## Flows
++
++Fund and ETF flows (net creations into broad-market ETFs versus redemptions) show institutional allocation direction. Cross-check with margin debt and options positioning. Weekly or monthly cumulative flows are more reliable than single-day swings; large single-day flows can be hedging.
++
++## Social media sentiment
++
++Sources: English (X, Reddit, Telegram, Discord) and platform-specific communities. Quantify four dimensions: attention (mention count versus baseline), tone (share of positive, negative, neutral), intensity (mean positive minus mean negative), and change from the prior period.
++
++| Indicator | Calculation | Contrarian signal |
++|---|---|---|
++| Attention index | search or mention volume versus 30-day average | a spike means overheating |
++| Bullish share | bullish posts / all posts | above 80% is extreme optimism (beware) |
++| Newcomer share | share of discussion from newly created accounts | above 50% means retail rush (top) |
++| KOL consensus | agreement among large accounts | unanimous bullishness is dangerous |
++
++Sentiment cycle: bottom (nobody talks, a few buy, debate); rise (talk grows, optimism spreads, newcomers arrive); top (everyone talks, extreme optimism, doubters are mocked); fall (debate, panic, silence, back to bottom). Bots and promotional accounts add noise: filter them. Use `news` for headlines tone; label it a headline sample, not a poll.
++
++## Composite sentiment score
++
++`composite = 0.25 x fear-greed + 0.20 x PCR + 0.20 x leverage + 0.20 x flows + 0.15 x social`, each normalised to 0 to 100 (0 to 20 extreme fear, 20 to 40 fear, 40 to 60 neutral, 60 to 80 greed, 80 to 100 extreme greed). Weights are a starting point; say so.
++
++| Composite | Exposure idea | Action idea |
++|---|---|---|
++| 0 to 20 | 80% to 100% | Contrarian buying |
++| 20 to 40 | 60% to 80% | Add gradually |
++| 40 to 60 | 40% to 60% | Standard exposure |
++| 60 to 80 | 20% to 40% | Reduce gradually |
++| 80 to 100 | 0% to 20% | Contrarian exit |
++
++These bands are an illustration of the framework, not advice for a person's account.
++
++## Output format
++
++A dashboard table (indicator, current value, percentile, signal), the composite score with its zone, a short reading of which indicators agree and which conflict, an exposure and hedging discussion, and risks. For every value name the tool or source and the date.
++
++## Cautions
++
++1. A contrarian indicator is not precise timing: sentiment can stay extreme for a long time.
++2. Combine sentiment with trend: greed in an uptrend and fear in a downtrend are normal.
++3. Thresholds differ by market (US equities, crypto, others).
++4. Some sentiment data is paid (professional terminals, on-chain providers).
++5. Social media is noisy; bots and promoters distort it.
++6. Margin and short-interest data are published with a delay.

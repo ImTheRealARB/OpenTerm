@@ -1,0 +1,1610 @@
+diff --git a/backend/openterm/brokers/__init__.py b/backend/openterm/brokers/__init__.py
+new file mode 100644
+index 0000000..6b91d0f
+--- /dev/null
++++ b/backend/openterm/brokers/__init__.py
+@@ -0,0 +1,7 @@
++"""Phase 18 step 2: READ-ONLY broker sync (Zerodha Kite holdings, Interactive Brokers Client Portal gateway) into PORT.
++
++Everything here reads: it fetches what the broker already holds and writes OpenTerm portfolio lots. There is no code path that
++sends an order, a modification or a cancellation to any broker, and a test scans this package for that. Alpaca is not part of it.
++"""
++
++FIXTURE_LABEL = "DOC-SHAPED FIXTURE, NOT A RECORDING"
+diff --git a/backend/openterm/brokers/ibkr.py b/backend/openterm/brokers/ibkr.py
+new file mode 100644
+index 0000000..e3095dc
+--- /dev/null
++++ b/backend/openterm/brokers/ibkr.py
+@@ -0,0 +1,194 @@
++"""Interactive Brokers READ-ONLY sync through the Client Portal Web API gateway (the local `clientportal.gw`, default
++`https://localhost:5000/v1/api`). Accounts, positions and the cash ledger. Nothing else: the client below has one request method,
++GET, and a fixed list of paths; there is no order, modify, cancel or what-if endpoint anywhere in OpenTerm.
++
++The gateway presents a self-signed certificate, so TLS verification is switched off for it, and ONLY for it: `validate_gateway_url`
++refuses every host except the loopback ones (`localhost`, `127.0.0.1`, `::1` and the rest of 127/8), so the unverified connection can
++never leave this machine. The client ignores proxy environment variables and does not follow redirects, for the same reason.
++"""
++
++from __future__ import annotations
++
++import ipaddress
++from urllib.parse import urlsplit
++
++import httpx
++
++from ..errors import DataError
++from ..portfolio import check_position
++from ..redact import redact
++from ..userdata import UserDataError
++
++DEFAULT_GATEWAY_URL = "https://localhost:5000/v1/api"
++API_PATH = "/v1/api"
++PAGE_SIZE = 100  # the gateway returns at most 100 positions per page
++MAX_PAGES = 30
++TIMEOUT_S = 10.0
++
++NOT_RUNNING = ("IBKR GATEWAY NOT RUNNING: start the Client Portal Gateway (bin/run.sh root/conf.yaml in the clientportal.gw folder), "
++               "open https://localhost:5000 in a browser, log in, then run SYNC IBKR again")
++NOT_LOGGED_IN = ("IBKR GATEWAY NOT LOGGED IN: open https://localhost:5000 in a browser, log in with your IBKR user "
++                 "(approve the second factor), then run SYNC IBKR again")
++
++
++class GatewayUrlError(ValueError):
++    pass
++
++
++def validate_gateway_url(raw) -> str:
++    """The normalised gateway URL, or GatewayUrlError. Loopback hosts only, no credentials, no query, path `/v1/api`."""
++    if not isinstance(raw, str) or not raw.strip() or len(raw) > 200:
++        raise GatewayUrlError("IBKR GATEWAY URL MUST BE TEXT, E.G. https://localhost:5000/v1/api")
++    text = raw.strip()
++    try:
++        u = urlsplit(text)
++        port = u.port
++        host = (u.hostname or "").lower()
++    except ValueError:
++        raise GatewayUrlError("IBKR GATEWAY URL IS NOT A VALID URL") from None
++    if u.scheme not in ("http", "https"):
++        raise GatewayUrlError("IBKR GATEWAY URL MUST START WITH https:// (OR http://)")
++    if u.username is not None or u.password is not None or "@" in u.netloc:
++        raise GatewayUrlError("IBKR GATEWAY URL MUST NOT CARRY A USER OR PASSWORD")
++    if u.query or u.fragment:
++        raise GatewayUrlError("IBKR GATEWAY URL MUST NOT HAVE A QUERY OR FRAGMENT")
++    if not _loopback(host):
++        raise GatewayUrlError("IBKR GATEWAY MUST BE ON THIS MACHINE: ONLY localhost, 127.0.0.1 AND ::1 ARE ALLOWED "
++                              "(THE GATEWAY'S SELF-SIGNED CERTIFICATE IS ACCEPTED FOR LOOPBACK ONLY)")
++    if u.path.rstrip("/") not in ("", API_PATH):
++        raise GatewayUrlError(f"IBKR GATEWAY URL PATH MUST BE {API_PATH}")
++    shown = f"[{host}]" if ":" in host else host
++    return f"{u.scheme}://{shown}:{port or 5000}{API_PATH}"
++
++
++def _loopback(host: str) -> bool:
++    if host == "localhost":
++        return True
++    try:
++        return ipaddress.ip_address(host).is_loopback
++    except ValueError:
++        return False
++
++
++class IbkrGateway:
++    """GET-only client for the gateway. `http` is injectable for tests (an httpx.AsyncClient on a mock transport)."""
++
++    def __init__(self, url: str, http: httpx.AsyncClient | None = None):
++        self.url = validate_gateway_url(url)
++        self._own = http is None
++        self.http = http or httpx.AsyncClient(verify=False, trust_env=False, follow_redirects=False, timeout=TIMEOUT_S)  # loopback only: see the module doc
++
++    async def aclose(self) -> None:
++        if self._own:
++            await self.http.aclose()
++
++    async def _get(self, path: str):
++        try:
++            r = await self.http.get(f"{self.url}{path}", headers={"Accept": "application/json", "User-Agent": "OpenTerm/0.1"})
++        except httpx.TimeoutException as e:
++            raise DataError("unavailable", "IBKR GATEWAY TIMEOUT: it is running but did not answer. Log in again at https://localhost:5000") from e
++        except httpx.HTTPError as e:
++            raise DataError("unavailable", NOT_RUNNING) from e
++        if r.status_code in (401, 403):
++            raise DataError("login_required", NOT_LOGGED_IN)
++        if 300 <= r.status_code < 400:
++            raise DataError("unavailable", f"IBKR GATEWAY ANSWERED WITH A REDIRECT (HTTP {r.status_code}): NOT FOLLOWED. {NOT_LOGGED_IN}")
++        if r.status_code >= 400:
++            raise DataError("unavailable", redact(f"IBKR GATEWAY: HTTP {r.status_code} FOR {path.split('?')[0]}"))
++        try:
++            return r.json()
++        except ValueError:
++            raise DataError("unavailable", f"IBKR GATEWAY ANSWERED HTTP {r.status_code} WITHOUT JSON FOR {path.split('?')[0]}") from None
++
++    async def check(self) -> dict:
++        """The session state. Raises the NOT RUNNING / NOT LOGGED IN DataError when it cannot be used."""
++        body = await self._get("/iserver/auth/status")
++        if not isinstance(body, dict) or not body.get("authenticated"):
++            raise DataError("login_required", NOT_LOGGED_IN)
++        return {"authenticated": True, "connected": bool(body.get("connected", True))}
++
++    async def accounts(self) -> list[str]:
++        body = await self._get("/portfolio/accounts")  # also what the gateway needs before it serves the other portfolio calls
++        ids = [str(a.get("accountId") or a.get("id")) for a in body if isinstance(a, dict) and (a.get("accountId") or a.get("id"))] \
++            if isinstance(body, list) else []
++        if not ids:
++            raise DataError("not_found", "IBKR: THE GATEWAY LISTED NO ACCOUNTS FOR THIS LOGIN")
++        return ids
++
++    async def positions(self, account: str) -> list[dict]:
++        out: list[dict] = []
++        for page in range(MAX_PAGES):
++            body = await self._get(f"/portfolio/{_acct(account)}/positions/{page}")
++            rows = [r for r in body if isinstance(r, dict)] if isinstance(body, list) else []
++            out.extend(rows)
++            if len(rows) < PAGE_SIZE:
++                break
++        return out
++
++    async def ledger(self, account: str) -> dict:
++        body = await self._get(f"/portfolio/{_acct(account)}/ledger")
++        return body if isinstance(body, dict) else {}
++
++
++def _acct(account: str) -> str:
++    if not account.replace("-", "").isalnum() or len(account) > 24:
++        raise DataError("bad_request", "IBKR ACCOUNT ID: LETTERS AND DIGITS ONLY")
++    return account
++
++
++# --- mapping (pure) ---------------------------------------------------------------------------------------------------------------------
++
++US_EXCHANGES = {"NYSE", "NASDAQ", "AMEX", "ARCA", "BATS", "ISLAND", "IEX", "NMS", "PINK", "OTCBB", "SMART", "BEX", "NYSEARCA"}
++#: IBKR listing exchange -> Yahoo-style symbol suffix
++EXCHANGE_SUFFIX = {
++    "LSE": ".L", "TSE": ".TO", "VENTURE": ".V", "SBF": ".PA", "IBIS": ".DE", "FWB": ".F", "AEB": ".AS", "SEHK": ".HK", "ASX": ".AX",
++    "NSE": ".NS", "SGX": ".SI", "EBS": ".SW", "SWX": ".SW", "BVME": ".MI", "BM": ".MC", "TSEJ": ".T", "KSE": ".KS", "OMXNO": ".OL",
++    "SFB": ".ST", "CPH": ".CO", "HEX": ".HE", "WSE": ".WA", "BVL": ".LS",
++}
++LSE_NOTE = "LSE PRICES TAKEN AS PENCE (GBp), THE UNIT IBKR QUOTES THEM IN. CHECK ONE LSE LOT AGAINST TWS"
++
++
++def map_position(row: dict) -> tuple[dict | None, str | None, str | None]:
++    """(lot, skip reason, warning) for one gateway position row. Only stocks and ETFs (assetClass STK) become lots."""
++    qty = row.get("position")
++    desc = str(row.get("contractDesc") or row.get("ticker") or row.get("conid") or "?")
++    asset = str(row.get("assetClass") or "").upper()
++    if isinstance(qty, bool) or not isinstance(qty, int | float) or qty == 0:
++        return None, None, None
++    if asset != "STK":
++        return None, f"{desc}: ASSET CLASS {asset or 'UNKNOWN'} IS NOT IMPORTED (STOCKS AND ETFS ONLY)", None
++    ticker = str(row.get("ticker") or desc.split(" ")[0]).strip().upper().replace(" ", "-")
++    exch = str(row.get("listingExchange") or "").upper()
++    ccy = str(row.get("currency") or "").upper()
++    if exch in EXCHANGE_SUFFIX:
++        symbol = ticker.replace(".", "-") + EXCHANGE_SUFFIX[exch]
++    elif exch in US_EXCHANGES or (not exch and ccy == "USD"):
++        symbol = ticker.replace(".", "-")
++    else:
++        return None, f"{desc}: LISTING EXCHANGE {exch or 'UNKNOWN'} IS NOT MAPPED", None
++    warning = None
++    if exch == "LSE" and ccy == "GBP":
++        ccy, warning = "GBp", LSE_NOTE
++    cost = row.get("avgPrice") if isinstance(row.get("avgPrice"), int | float) else row.get("avgCost")
++    cost = float(cost) if isinstance(cost, int | float) and not isinstance(cost, bool) and cost >= 0 else None
++    try:
++        lot = check_position({"symbol": symbol, "qty": float(qty), "cost": cost, "currency": ccy or None})
++    except UserDataError as e:
++        return None, f"{desc}: {e}", None
++    return lot, None, warning
++
++
++def _num(d: dict, k: str):
++    x = d.get(k)
++    return x if isinstance(x, int | float) and not isinstance(x, bool) else None
++
++
++def map_cash(ledger: dict) -> list[dict]:
++    """Per-currency cash from the ledger (`BASE` is the account total in base currency, kept under `base`)."""
++    out = []
++    for key, v in ledger.items():
++        if not isinstance(v, dict):
++            continue
++        out.append({"currency": str(v.get("currency") or key).upper(), "base": key == "BASE", "cash": _num(v, "cashbalance"),
++                    "settled": _num(v, "settledcash"), "net_liq": _num(v, "netliquidationvalue"), "unrealized": _num(v, "unrealizedpnl")})
++    return sorted(out, key=lambda c: (c["base"], c["currency"]))
+diff --git a/backend/openterm/brokers/kite_map.py b/backend/openterm/brokers/kite_map.py
+new file mode 100644
+index 0000000..4ef61cf
+--- /dev/null
++++ b/backend/openterm/brokers/kite_map.py
+@@ -0,0 +1,76 @@
++"""Kite Connect holdings and net positions -> OpenTerm lots. Pure: no network, no database.
++
++Kite answers `GET /portfolio/holdings` (a list) and `GET /portfolio/positions` (`{"net": [...], "day": [...]}`). Every Kite exchange
++quotes in rupees, so every lot is INR. A lot is `{symbol, qty, cost, currency}` with the Yahoo-style symbol the rest of OpenTerm uses
++(`INFY` on NSE is `INFY.NS`). Rows that cannot be mapped are returned in `skipped` with the reason, never dropped silently.
++"""
++
++from __future__ import annotations
++
++from ..kite.symbols import to_yahoo
++from ..portfolio import check_position
++from ..userdata import UserDataError
++
++CURRENCY = "INR"
++#: product codes whose net positions are intraday / derivative positions that holdings do not already show (CNC delivery is in holdings)
++POSITION_PRODUCTS = ("MIS", "NRML", "MTF")
++ZERO = "ZERO QUANTITY"
++
++
++def _num(x) -> float | None:
++    return float(x) if isinstance(x, int | float) and not isinstance(x, bool) else None
++
++
++def _lot(exchange: str, trading: str, qty: float | None, price: float | None) -> tuple[dict | None, str | None]:
++    if qty is None or qty == 0:
++        return None, ZERO
++    sym = to_yahoo(f"{exchange}:{trading}") if exchange and trading else None
++    if sym is None:
++        return None, f"UNMAPPED KITE INSTRUMENT {exchange}:{trading}"
++    try:
++        lot = check_position({"symbol": sym, "qty": qty, "cost": price if price is not None and price >= 0 else None,
++                              "currency": CURRENCY})
++    except UserDataError as e:
++        return None, str(e)
++    return lot, None
++
++
++def map_holdings(rows) -> tuple[list[dict], list[dict], list[str]]:
++    """(lots, skipped, warnings) for the holdings list. Quantity is Kite's `quantity` (settled plus T+1); collateral is not added."""
++    lots: list[dict] = []
++    skipped: list[dict] = []
++    warnings: list[str] = []
++    for r in rows if isinstance(rows, list) else []:
++        if not isinstance(r, dict):
++            continue
++        exchange, trading = str(r.get("exchange") or "").upper(), str(r.get("tradingsymbol") or "").upper()
++        qty = _num(r.get("quantity"))
++        if qty is None:
++            qty = (_num(r.get("realised_quantity")) or 0) + (_num(r.get("t1_quantity")) or 0)
++        lot, why = _lot(exchange, trading, qty, _num(r.get("average_price")))
++        if lot is None:
++            if why != ZERO:  # a sold-out or fully pledged holding row is not worth a line
++                skipped.append({"symbol": f"{exchange}:{trading}", "reason": why})
++            continue
++        if (_num(r.get("collateral_quantity")) or 0) > 0:
++            warnings.append(f"{lot['symbol']}: {int(r['collateral_quantity'])} SHARES ARE COLLATERAL AND NOT ADDED. CHECK AGAINST KITE")
++        lots.append(lot)
++    return lots, skipped, warnings
++
++
++def map_positions(body) -> tuple[list[dict], list[dict]]:
++    """Net MIS / NRML / MTF positions (signed quantity, average price). CNC rows are skipped: they are the holdings."""
++    lots: list[dict] = []
++    skipped: list[dict] = []
++    net = body.get("net") if isinstance(body, dict) else None
++    for r in net if isinstance(net, list) else []:
++        if not isinstance(r, dict) or str(r.get("product") or "").upper() not in POSITION_PRODUCTS:
++            continue
++        exchange, trading = str(r.get("exchange") or "").upper(), str(r.get("tradingsymbol") or "").upper()
++        lot, why = _lot(exchange, trading, _num(r.get("quantity")), _num(r.get("average_price")))
++        if lot is None:
++            if why != ZERO:
++                skipped.append({"symbol": f"{exchange}:{trading}", "reason": why})
++            continue
++        lots.append(lot)
++    return lots, skipped
+diff --git a/backend/openterm/brokers/sync.py b/backend/openterm/brokers/sync.py
+new file mode 100644
+index 0000000..5bb9b6e
+--- /dev/null
++++ b/backend/openterm/brokers/sync.py
+@@ -0,0 +1,203 @@
++"""Applies a broker's lots to a portfolio and keeps the sync log.
++
++A synced lot carries `source` ("kite" | "ibkr") and `synced_at`. A re-sync removes every lot of that source from the portfolio and writes
++the fresh ones, so it never duplicates; lots without that source (manual, or another broker's) are never touched. When a fresh lot's
++symbol is already held by a lot of another origin it is NOT merged: it is listed as a conflict and the portfolio stays as it was for it.
++Every run, good or bad, is recorded in the `kv` table (newest 20 per broker) with counts, the difference against the previous sync and
++the errors, so the SYNC panel can show the last sync and its age.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import time
++from datetime import UTC, datetime
++
++import aiosqlite
++import orjson
++
++from ..errors import DataError
++from ..portfolio import Portfolios, add_lot, portfolio_name
++from ..redact import redact
++from ..userdata import UserDataError
++from . import FIXTURE_LABEL  # noqa: F401  (re-exported so tests label their data the same way)
++
++BROKERS = ("kite", "ibkr")
++LOG_KEEP = 20
++GATEWAY_KEY = "ibkr:gateway_url"
++DEFAULT_BASE = {"kite": "INR", "ibkr": "USD"}
++DEFAULT_PORTFOLIO = {"kite": "KITE", "ibkr": "IBKR"}
++QTY_EPS = 1e-9
++
++
++def _log_key(broker: str) -> str:
++    return f"sync:log:{broker}"
++
++
++def combine(lots: list[dict]) -> tuple[list[dict], list[str]]:
++    """One lot per symbol (a broker may list a symbol twice: two accounts, holdings plus a position). Same-currency lots average the
++    cost; a lot in another currency than the first is returned as a conflict message."""
++    out: dict[str, dict] = {}
++    clashes: list[str] = []
++    for lot in lots:
++        cur = out.get(lot["symbol"])
++        try:
++            merged = add_lot(cur, lot)
++        except UserDataError:
++            clashes.append(f"{lot['symbol']}: SECOND LOT IN {lot['currency']} DIFFERS FROM {cur['currency']}, NOT IMPORTED")
++            continue
++        if merged is None:
++            out.pop(lot["symbol"], None)
++        else:
++            out[lot["symbol"]] = merged
++    return list(out.values()), clashes
++
++
++def diff(previous: dict[str, dict], fresh: dict[str, dict]) -> dict:
++    """What changed between the previous synced lots and the new ones, by symbol."""
++    added = sorted(s for s in fresh if s not in previous)
++    removed = sorted(s for s in previous if s not in fresh)
++    changed = []
++    for s in sorted(set(fresh) & set(previous)):
++        a, b = previous[s], fresh[s]
++        if abs(a["qty"] - b["qty"]) > QTY_EPS or a.get("cost") != b.get("cost"):
++            changed.append({"symbol": s, "qty_from": a["qty"], "qty_to": b["qty"], "cost_from": a.get("cost"), "cost_to": b.get("cost")})
++    return {"added": added, "removed": removed, "changed": changed}
++
++
++class BrokerSync:
++    def __init__(self, db: aiosqlite.Connection):
++        self.db = db
++        self.portfolios = Portfolios(db)
++        self.lock = asyncio.Lock()
++
++    # --- kv helpers ---
++    async def _kv_get(self, key: str):
++        async with self.db.execute("SELECT value FROM kv WHERE key=?", (key,)) as cur:
++            row = await cur.fetchone()
++        return orjson.loads(row[0]) if row else None
++
++    async def _kv_put(self, key: str, value) -> None:
++        await self.db.execute("INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
++                              (key, orjson.dumps(value)))
++        await self.db.commit()
++
++    async def gateway_url(self) -> str:
++        from .ibkr import DEFAULT_GATEWAY_URL, GatewayUrlError, validate_gateway_url
++
++        stored = await self._kv_get(GATEWAY_KEY)
++        try:
++            return validate_gateway_url(stored) if stored else DEFAULT_GATEWAY_URL
++        except GatewayUrlError:  # a bad value somehow stored (edited database): fall back, never connect to it
++            return DEFAULT_GATEWAY_URL
++
++    async def set_gateway_url(self, raw) -> str:
++        from .ibkr import GatewayUrlError, validate_gateway_url
++
++        try:
++            url = validate_gateway_url(raw)
++        except GatewayUrlError as e:
++            raise UserDataError("bad_request", str(e)) from None
++        await self._kv_put(GATEWAY_KEY, url)
++        return url
++
++    # --- log ---
++    async def log(self, broker: str) -> list[dict]:
++        return await self._kv_get(_log_key(broker)) or []
++
++    async def _record(self, broker: str, rec: dict) -> None:
++        entries = [rec, *await self.log(broker)][:LOG_KEEP]
++        await self._kv_put(_log_key(broker), entries)
++
++    async def status(self, broker: str) -> dict:
++        entries = await self.log(broker)
++        last_ok = next((e for e in entries if e["ok"]), None)
++        last = entries[0] if entries else None
++        return {"broker": broker, "last": last, "last_ok": last_ok, "last_error": last if last and not last["ok"] else None,
++                "runs": len(entries)}
++
++    # --- apply ---
++    async def apply(self, broker: str, raw_portfolio: str, lots: list[dict], *, skipped=(), warnings=(), meta=None,
++                    base: str | None = None, label: str | None = None) -> dict:
++        """Replaces the portfolio's lots of `broker` with `lots`. Returns the sync record (also logged)."""
++        name = portfolio_name(raw_portfolio)
++        now = time.time()
++        stamp = datetime.fromtimestamp(now, UTC).strftime("%Y-%m-%d %H:%M")
++        note = f"{(label or broker).upper()} SYNC {stamp}Z"
++        async with self.lock:
++            cur = await self.portfolios._get(name)
++            existing = cur["positions"] if cur else []
++            previous = {p["symbol"]: p for p in existing if p.get("source") == broker}
++            others = [p for p in existing if p.get("source") != broker]
++            held = {p["symbol"] for p in others}
++            combined, clashes = combine(lots)
++            conflicts = [f"{lot['symbol']}: HELD BY A MANUAL OR OTHER-BROKER LOT IN {name}, NOT IMPORTED" for lot in combined if lot["symbol"] in held]
++            fresh = [{**lot, "source": broker, "synced_at": now, "notes": note} for lot in combined if lot["symbol"] not in held]
++            positions = [*others, *fresh]
++            stored = await self.portfolios.put(name, positions, cur["base"] if cur else (base or DEFAULT_BASE[broker]))
++            fresh_by = {p["symbol"]: p for p in fresh}
++            rec = {
++                "broker": broker, "portfolio": name, "at": now, "ok": True, "error": None, "base": stored["base"],
++                "counts": {"fetched": len(lots), "imported": len(fresh), "skipped": len(skipped), "conflicts": len(conflicts) + len(clashes),
++                          "manual_kept": len(others), "previous": len(previous)},
++                "diff": diff(previous, fresh_by),
++                "skipped": list(skipped)[:50], "conflicts": [*conflicts, *clashes][:50], "warnings": list(warnings)[:50],
++                **(meta or {}),
++            }
++            await self._record(broker, rec)
++        return rec
++
++    async def fail(self, broker: str, raw_portfolio: str, error: Exception) -> dict:
++        """Records a failed run (nothing in the portfolio changed) and returns the record."""
++        try:
++            name = portfolio_name(raw_portfolio)
++        except UserDataError:
++            name = str(raw_portfolio)[:32]
++        rec = {"broker": broker, "portfolio": name, "at": time.time(), "ok": False, "error": redact(str(error)),
++               "kind": getattr(error, "kind", "unavailable"), "counts": None, "diff": None, "skipped": [], "conflicts": [], "warnings": []}
++        async with self.lock:
++            await self._record(broker, rec)
++        return rec
++
++
++# --- the two sources -------------------------------------------------------------------------------------------------------------------
++
++async def fetch_kite(kite, include_positions: bool) -> tuple[list[dict], list[dict], list[str], dict]:
++    """Reads Kite holdings (and optionally net positions) with the existing client and daily login. Raises DataError."""
++    from .kite_map import map_holdings, map_positions
++
++    if kite.session is None:
++        raise DataError("unavailable", "KITE IS NOT STARTED")
++    kite.session.auth()  # KEY REQUIRED / LOGGED OUT / EXPIRED say so before any call
++    holdings = await kite.client.get_json("/portfolio/holdings")
++    lots, skipped, warnings = map_holdings(holdings)
++    n_pos = 0
++    if include_positions:
++        pos_lots, pos_skipped = map_positions(await kite.client.get_json("/portfolio/positions"))
++        lots += pos_lots
++        skipped += pos_skipped
++        n_pos = len(pos_lots)
++    return lots, skipped, warnings, {"holdings": len(lots) - n_pos, "positions": n_pos, "include_positions": include_positions}
++
++
++async def fetch_ibkr(gateway, only_account: str | None) -> tuple[list[dict], list[dict], list[str], dict]:
++    from .ibkr import map_cash, map_position
++
++    await gateway.check()
++    accounts = await gateway.accounts()
++    if only_account:
++        if only_account not in accounts:
++            raise DataError("not_found", f"IBKR: NO ACCOUNT {only_account[:24]} IN THIS LOGIN")
++        accounts = [only_account]
++    lots, skipped, warnings, cash = [], [], [], []
++    for acct in accounts:
++        for row in await gateway.positions(acct):
++            lot, why, warn = map_position(row)
++            if lot:
++                lots.append(lot)
++            if why:
++                skipped.append({"symbol": why.split(":")[0], "reason": why, "account": acct})
++            if warn and warn not in warnings:
++                warnings.append(warn)
++        cash.append({"account": acct, "rows": map_cash(await gateway.ledger(acct))})
++    return lots, skipped, warnings, {"accounts": accounts, "cash": cash}
+diff --git a/backend/openterm/brokers_routes.py b/backend/openterm/brokers_routes.py
+new file mode 100644
+index 0000000..ea720ee
+--- /dev/null
++++ b/backend/openterm/brokers_routes.py
+@@ -0,0 +1,135 @@
++"""Phase 18 step 2 routes: READ-ONLY broker sync into PORT (`SYNC` panel, `PORT SYNC KITE|IBKR`).
++
++GET  /api/sync/status          last sync, counts, difference against the previous sync and the last error, per broker (no network)
++POST /api/sync/kite            {portfolio?, positions?}  reads Kite holdings (and net positions) and replaces the KITE-sourced lots
++POST /api/sync/ibkr            {portfolio?, account?}    reads the local Client Portal gateway and replaces the IBKR-sourced lots
++GET  /api/sync/ibkr/check      is the gateway up and logged in (one GET to the loopback gateway)
++GET/PUT /api/sync/ibkr/settings  {gateway_url}: loopback hosts only, anything else is refused with 400
++
++Every route that reads a broker or changes anything answers loopback clients only. No route sends an order to any broker.
++"""
++
++from __future__ import annotations
++
++from fastapi import APIRouter, Request
++
++from .brokers import sync as bs
++from .brokers.ibkr import IbkrGateway
++from .errors import DataError
++from .http_util import error, json_object, loopback
++from .portfolio import portfolio_name
++from .responses import Orjson, OrjsonRoute
++from .userdata import UserDataError
++
++router = APIRouter(prefix="/api/sync", route_class=OrjsonRoute)
++
++
++def store(request: Request) -> bs.BrokerSync:
++    db = request.app.state.userdata.db
++    s = getattr(request.app.state, "broker_sync", None)
++    if s is None or s.db is not db:  # the app (and its database) is rebuilt on every start
++        s = request.app.state.broker_sync = bs.BrokerSync(db)
++    return s
++
++
++def forbidden() -> Orjson:
++    return Orjson({"error": "BROKER SYNC CAN ONLY BE RUN FROM THIS MACHINE", "kind": "forbidden"}, status_code=403)
++
++
++def gateway_of(request: Request, url: str) -> IbkrGateway:
++    """The gateway client. Tests replace `app.state.ibkr_http` with a client on a mock transport."""
++    return IbkrGateway(url, getattr(request.app.state, "ibkr_http", None))
++
++
++def target(body: dict, broker: str) -> str:
++    raw = body.get("portfolio") or bs.DEFAULT_PORTFOLIO[broker]
++    if not isinstance(raw, str):
++        raise UserDataError("bad_request", "portfolio MUST BE A NAME")
++    return portfolio_name(raw)
++
++
++@router.get("/status")
++async def status(request: Request):
++    s = store(request)
++    kite = request.app.state.kite
++    out = {"kite": await s.status("kite"), "ibkr": await s.status("ibkr")}
++    out["kite"]["login"] = kite.session.status() if kite.session is not None else None
++    out["ibkr"]["gateway_url"] = await s.gateway_url()
++    out["default_portfolio"] = bs.DEFAULT_PORTFOLIO
++    return out
++
++
++@router.post("/kite")
++async def sync_kite(request: Request):
++    if not loopback(request):
++        return forbidden()
++    s = store(request)
++    try:
++        body = await json_object(request)
++        name = target(body, "kite")
++    except (UserDataError, DataError) as e:
++        return error(e)
++    include = body.get("positions") is True
++    try:
++        lots, skipped, warnings, meta = await bs.fetch_kite(request.app.state.kite, include)
++        rec = await s.apply("kite", name, lots, skipped=skipped, warnings=warnings, meta=meta, label="kite")
++    except (DataError, UserDataError) as e:
++        await s.fail("kite", name, e)
++        return error(e)
++    return rec
++
++
++@router.post("/ibkr")
++async def sync_ibkr(request: Request):
++    if not loopback(request):
++        return forbidden()
++    s = store(request)
++    try:
++        body = await json_object(request)
++        name = target(body, "ibkr")
++        account = body.get("account")
++        if account is not None and not isinstance(account, str):
++            raise UserDataError("bad_request", "account MUST BE AN ACCOUNT ID")
++    except (UserDataError, DataError) as e:
++        return error(e)
++    gw = gateway_of(request, await s.gateway_url())
++    try:
++        lots, skipped, warnings, meta = await bs.fetch_ibkr(gw, account.strip() if account else None)
++        rec = await s.apply("ibkr", name, lots, skipped=skipped, warnings=warnings, meta=meta, label="ibkr")
++    except (DataError, UserDataError) as e:
++        await s.fail("ibkr", name, e)
++        return error(e)
++    finally:
++        await gw.aclose()
++    return rec
++
++
++@router.get("/ibkr/check")
++async def check_ibkr(request: Request):
++    if not loopback(request):
++        return forbidden()
++    s = store(request)
++    url = await s.gateway_url()
++    gw = gateway_of(request, url)
++    try:
++        return {**await gw.check(), "gateway_url": url}
++    except DataError as e:
++        return error(e)
++    finally:
++        await gw.aclose()
++
++
++@router.get("/ibkr/settings")
++async def get_settings(request: Request):
++    return {"gateway_url": await store(request).gateway_url()}
++
++
++@router.put("/ibkr/settings")
++async def put_settings(request: Request):
++    if not loopback(request):
++        return forbidden()
++    try:
++        body = await json_object(request)
++        return {"gateway_url": await store(request).set_gateway_url(body.get("gateway_url"))}
++    except (UserDataError, DataError) as e:
++        return error(e)
+diff --git a/backend/openterm/main.py b/backend/openterm/main.py
+index bfac881..c05cdf8 100644
+--- a/backend/openterm/main.py
++++ b/backend/openterm/main.py
+@@ -14,6 +14,7 @@ from .ai import routes_filing, routes_run  # noqa: F401 - importing routes_filin
+ from .ai.routes import router as ai_router
+ from .api import router as api_router
+ from .brief_routes import router as brief_router
++from .brokers_routes import router as brokers_router
+ from .bt.localdata import LocalData
+ from .cache import Cache
+ from .config import ROOT, get_settings, load_yaml
+@@ -208,6 +209,7 @@ app.include_router(api_router)
+ app.include_router(quant_router)
+ app.include_router(world_router)
+ app.include_router(kite_router)
++app.include_router(brokers_router)
+ app.include_router(delivery_router)
+ app.include_router(brief_router)
+ app.include_router(ai_router)
+diff --git a/backend/openterm/portfolio.py b/backend/openterm/portfolio.py
+index 9f3667c..81b780f 100644
+--- a/backend/openterm/portfolio.py
++++ b/backend/openterm/portfolio.py
+@@ -69,7 +69,14 @@ def check_position(raw) -> dict:
+     if notes is not None and not isinstance(notes, str):
+         raise UserDataError("bad_request", f"{symbol} NOTES MUST BE TEXT")
+     notes = (notes or "").strip()[:MAX_NOTES] or None
+-    return {"symbol": symbol, "qty": qty, "cost": cost, "currency": check_currency(raw.get("currency")), "notes": notes}
++    out = {"symbol": symbol, "qty": qty, "cost": cost, "currency": check_currency(raw.get("currency")), "notes": notes}
++    # Phase 18 step 2: a lot written by a broker sync carries where it came from; a manual lot has neither field.
++    src, at = raw.get("source"), raw.get("synced_at")
++    if isinstance(src, str) and src.strip():
++        out["source"] = src.strip()[:24]
++        if isinstance(at, int | float) and not isinstance(at, bool) and math.isfinite(at):
++            out["synced_at"] = float(at)
++    return out
+ 
+ 
+ def add_lot(cur: dict | None, lot: dict) -> dict | None:
+diff --git a/backend/tests/fixtures/broker_ibkr_docshape.json b/backend/tests/fixtures/broker_ibkr_docshape.json
+new file mode 100644
+index 0000000..68ea617
+--- /dev/null
++++ b/backend/tests/fixtures/broker_ibkr_docshape.json
+@@ -0,0 +1,30 @@
++{
++  "_label": "DOC-SHAPED FIXTURE, NOT A RECORDING. Written from the IBKR Client Portal Web API docs (/iserver/auth/status, /portfolio/accounts, /portfolio/{id}/positions/{page}, /portfolio/{id}/ledger); invented accounts, quantities and prices.",
++  "auth": {"authenticated": true, "connected": true, "competing": false},
++  "accounts": [{"id": "U1111111", "accountId": "U1111111", "currency": "USD", "type": "INDIVIDUAL"}, {"id": "U2222222", "accountId": "U2222222", "currency": "EUR", "type": "INDIVIDUAL"}],
++  "positions": {
++    "U1111111": [
++      {"acctId": "U1111111", "conid": 265598, "contractDesc": "AAPL", "ticker": "AAPL", "position": 25.0, "mktPrice": 230.0, "currency": "USD", "avgCost": 150.5, "avgPrice": 150.5, "assetClass": "STK", "listingExchange": "NASDAQ"},
++      {"acctId": "U1111111", "conid": 76792991, "contractDesc": "BRK B", "ticker": "BRK B", "position": 3.0, "currency": "USD", "avgPrice": 400.0, "assetClass": "STK", "listingExchange": "NYSE"},
++      {"acctId": "U1111111", "conid": 4815747, "contractDesc": "VOD", "ticker": "VOD", "position": 1000.0, "currency": "GBP", "avgPrice": 72.5, "assetClass": "STK", "listingExchange": "LSE"},
++      {"acctId": "U1111111", "conid": 111, "contractDesc": "AAPL DEC2026 250 C", "ticker": "AAPL", "position": 2.0, "currency": "USD", "avgPrice": 5.0, "assetClass": "OPT", "listingExchange": "SMART"},
++      {"acctId": "U1111111", "conid": 222, "contractDesc": "XYZ", "ticker": "XYZ", "position": 5.0, "currency": "ZZZ", "avgPrice": 5.0, "assetClass": "STK", "listingExchange": "MOON"}
++    ],
++    "U2222222": [
++      {"acctId": "U2222222", "conid": 14094, "contractDesc": "SAP", "ticker": "SAP", "position": 12.0, "currency": "EUR", "avgPrice": 180.0, "assetClass": "STK", "listingExchange": "IBIS"},
++      {"acctId": "U2222222", "conid": 265598, "contractDesc": "AAPL", "ticker": "AAPL", "position": 5.0, "currency": "USD", "avgPrice": 200.0, "assetClass": "STK", "listingExchange": "NASDAQ"},
++      {"acctId": "U2222222", "conid": 333, "contractDesc": "OLD", "ticker": "OLD", "position": 0.0, "currency": "EUR", "avgPrice": 1.0, "assetClass": "STK", "listingExchange": "IBIS"}
++    ]
++  },
++  "ledger": {
++    "U1111111": {
++      "USD": {"currency": "USD", "cashbalance": 1500.25, "settledcash": 1500.25, "netliquidationvalue": 12000.0, "unrealizedpnl": 300.0},
++      "GBP": {"currency": "GBP", "cashbalance": 200.0, "settledcash": 200.0, "netliquidationvalue": 200.0, "unrealizedpnl": 0.0},
++      "BASE": {"currency": "BASE", "cashbalance": 1750.0, "settledcash": 1750.0, "netliquidationvalue": 12300.0, "unrealizedpnl": 300.0}
++    },
++    "U2222222": {
++      "EUR": {"currency": "EUR", "cashbalance": 50.0, "settledcash": 50.0, "netliquidationvalue": 2200.0, "unrealizedpnl": 10.0},
++      "BASE": {"currency": "BASE", "cashbalance": 50.0, "settledcash": 50.0, "netliquidationvalue": 2200.0, "unrealizedpnl": 10.0}
++    }
++  }
++}
+diff --git a/backend/tests/fixtures/broker_kite_docshape.json b/backend/tests/fixtures/broker_kite_docshape.json
+new file mode 100644
+index 0000000..7d7be40
+--- /dev/null
++++ b/backend/tests/fixtures/broker_kite_docshape.json
+@@ -0,0 +1,20 @@
++{
++  "_label": "DOC-SHAPED FIXTURE, NOT A RECORDING. Written from the Kite Connect docs (GET /portfolio/holdings and /portfolio/positions); invented symbols, quantities and prices.",
++  "holdings": [
++    {"tradingsymbol": "INFY", "exchange": "NSE", "isin": "INE009A01021", "product": "CNC", "quantity": 10, "t1_quantity": 0, "realised_quantity": 10, "average_price": 1400.5, "last_price": 1500.0, "collateral_quantity": 0},
++    {"tradingsymbol": "RELIANCE", "exchange": "BSE", "isin": "INE002A01018", "product": "CNC", "quantity": 4, "t1_quantity": 1, "realised_quantity": 3, "average_price": 2450.0, "last_price": 2500.0, "collateral_quantity": 2},
++    {"tradingsymbol": "M&M", "exchange": "NSE", "product": "CNC", "quantity": 3, "average_price": 0, "last_price": 3000.0},
++    {"tradingsymbol": "SOLDOUT", "exchange": "NSE", "product": "CNC", "quantity": 0, "average_price": 10.0},
++    {"tradingsymbol": "WEIRD NAME", "exchange": "NSE", "product": "CNC", "quantity": 1, "average_price": 5.0},
++    {"tradingsymbol": "ODDBALL", "exchange": "XYZ", "product": "CNC", "quantity": 1, "average_price": 5.0}
++  ],
++  "positions": {
++    "net": [
++      {"tradingsymbol": "NIFTY26NOVFUT", "exchange": "NFO", "product": "NRML", "quantity": -50, "average_price": 24500.25},
++      {"tradingsymbol": "TCS", "exchange": "NSE", "product": "MIS", "quantity": 5, "average_price": 4100.0},
++      {"tradingsymbol": "INFY", "exchange": "NSE", "product": "CNC", "quantity": 10, "average_price": 1400.5},
++      {"tradingsymbol": "HDFCBANK", "exchange": "NSE", "product": "MIS", "quantity": 0, "average_price": 1700.0}
++    ],
++    "day": []
++  }
++}
+diff --git a/backend/tests/test_phase18_sync.py b/backend/tests/test_phase18_sync.py
+new file mode 100644
+index 0000000..c0ab9c4
+--- /dev/null
++++ b/backend/tests/test_phase18_sync.py
+@@ -0,0 +1,324 @@
++"""Phase 18 step 2: READ-ONLY broker sync (Kite holdings, IBKR Client Portal gateway) into PORT.
++
++Every payload below comes from tests/fixtures/broker_*_docshape.json: DOC-SHAPED FIXTURES, NOT A RECORDING. Nothing here touches the
++network: the Kite client's `get_json` is replaced and the IBKR gateway client runs on an httpx mock transport.
++"""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++import httpx
++import pytest
++
++from openterm.brokers import kite_map
++from openterm.brokers.ibkr import (
++    DEFAULT_GATEWAY_URL,
++    GatewayUrlError,
++    IbkrGateway,
++    map_cash,
++    map_position,
++    validate_gateway_url,
++)
++
++FIX = Path(__file__).parent / "fixtures"
++KITE = json.loads((FIX / "broker_kite_docshape.json").read_bytes().decode("utf-8"))
++IBKR = json.loads((FIX / "broker_ibkr_docshape.json").read_bytes().decode("utf-8"))
++
++
++def test_fixtures_are_labelled_not_a_recording():
++    for doc in (KITE, IBKR):
++        assert "NOT A RECORDING" in doc["_label"].upper()
++
++
++# --- Kite mapping -----------------------------------------------------------------------------------------------------------------------
++
++def test_kite_holdings_map_to_inr_lots():
++    lots, skipped, warnings = kite_map.map_holdings(KITE["holdings"])
++    by = {lot["symbol"]: lot for lot in lots}
++    assert by["INFY.NS"] == {"symbol": "INFY.NS", "qty": 10.0, "cost": 1400.5, "currency": "INR", "notes": None}
++    assert by["RELIANCE.BO"]["qty"] == 4.0 and by["RELIANCE.BO"]["cost"] == 2450.0  # BSE -> .BO
++    assert by["M&M.NS"]["qty"] == 3.0 and by["M&M.NS"]["cost"] == 0.0
++    assert {lot["currency"] for lot in lots} == {"INR"}
++    assert "SOLDOUT.NS" not in by  # zero quantity is not a lot
++    assert sorted(s["symbol"] for s in skipped) == ["NSE:WEIRD NAME", "XYZ:ODDBALL"]  # reported, not dropped silently
++    assert any("COLLATERAL" in w and "RELIANCE.BO" in w for w in warnings)
++
++
++def test_kite_positions_only_intraday_and_derivative_products_with_signed_qty():
++    lots, skipped = kite_map.map_positions(KITE["positions"])
++    by = {lot["symbol"]: lot for lot in lots}
++    assert set(by) == {"NIFTY26NOVFUT.NFO", "TCS.NS"}  # CNC row is the holding, qty 0 row is closed
++    assert by["NIFTY26NOVFUT.NFO"]["qty"] == -50.0 and by["NIFTY26NOVFUT.NFO"]["currency"] == "INR"
++    assert skipped == []
++
++
++# --- IBKR mapping -----------------------------------------------------------------------------------------------------------------------
++
++def test_ibkr_positions_map_with_per_position_currency():
++    rows = IBKR["positions"]["U1111111"] + IBKR["positions"]["U2222222"][:1] + IBKR["positions"]["U2222222"][2:]  # SAP, zero row
++    out = [(r["contractDesc"], *map_position(r)) for r in rows]
++    lots = {lot["symbol"] + "/" + lot["currency"]: lot for _, lot, _, _ in out if lot}
++    assert lots["AAPL/USD"]["qty"] == 25.0 and lots["AAPL/USD"]["cost"] == 150.5
++    assert lots["BRK-B/USD"]["qty"] == 3.0  # "BRK B" -> BRK-B
++    assert lots["SAP.DE/EUR"]["qty"] == 12.0  # multi-currency: EUR stays EUR
++    assert lots["VOD.L/GBp"]["cost"] == 72.5  # LSE: pence, with a warning
++    reasons = {desc: why for desc, lot, why, _ in out if why}
++    assert "OPT" in reasons["AAPL DEC2026 250 C"] and "MOON" in reasons["XYZ"]
++    assert [w for _, _, _, w in out if w] == ["LSE PRICES TAKEN AS PENCE (GBp), THE UNIT IBKR QUOTES THEM IN. CHECK ONE LSE LOT AGAINST TWS"]
++    assert map_position(IBKR["positions"]["U2222222"][2]) == (None, None, None)  # zero position: nothing to say
++
++
++def test_ibkr_ledger_keeps_every_currency_and_marks_base():
++    cash = map_cash(IBKR["ledger"]["U1111111"])
++    assert [(c["currency"], c["base"], c["cash"]) for c in cash] == [("GBP", False, 200.0), ("USD", False, 1500.25), ("BASE", True, 1750.0)]
++
++
++# --- loopback-only gateway URL ----------------------------------------------------------------------------------------------------------
++
++@pytest.mark.parametrize("url", [
++    "https://localhost:5000/v1/api", "https://127.0.0.1:5000/v1/api/", "http://localhost:5001", "https://[::1]:5000/v1/api",
++    "https://LOCALHOST/v1/api", "https://127.0.0.5:5000/v1/api",
++])
++def test_loopback_gateway_urls_are_accepted(url):
++    assert validate_gateway_url(url).endswith("/v1/api")
++
++
++@pytest.mark.parametrize("url", [
++    "https://example.com:5000/v1/api", "https://192.168.1.5:5000/v1/api", "https://localhost.evil.com:5000/v1/api",
++    "https://127.0.0.1.evil.com/v1/api", "https://localhost@evil.com/v1/api", "https://user:pw@localhost:5000/v1/api",
++    "ftp://localhost/v1/api", "https://localhost:5000/v1/api?x=1", "https://localhost:5000/other", "https://0.0.0.0:5000/v1/api",
++    "https://10.0.0.1/v1/api", "", "localhost:5000", None, 5,
++])
++def test_non_loopback_gateway_urls_are_refused(url):
++    with pytest.raises(GatewayUrlError):
++        validate_gateway_url(url)
++    with pytest.raises(GatewayUrlError):
++        IbkrGateway(url)
++
++
++def test_settings_route_refuses_a_remote_gateway_and_keeps_the_old_one(client):
++    assert client.get("/api/sync/ibkr/settings").json() == {"gateway_url": DEFAULT_GATEWAY_URL}
++    r = client.put("/api/sync/ibkr/settings", json={"gateway_url": "https://broker.example.com/v1/api"})
++    assert r.status_code == 400 and "ON THIS MACHINE" in r.json()["error"]
++    assert client.get("/api/sync/ibkr/settings").json() == {"gateway_url": DEFAULT_GATEWAY_URL}
++    ok = client.put("/api/sync/ibkr/settings", json={"gateway_url": "https://127.0.0.1:5001/v1/api"})
++    assert ok.status_code == 200 and ok.json()["gateway_url"] == "https://127.0.0.1:5001/v1/api"
++    assert client.get("/api/sync/status").json()["ibkr"]["gateway_url"] == "https://127.0.0.1:5001/v1/api"
++
++
++def test_a_stored_remote_url_is_never_connected_to(client):
++    from openterm.brokers.sync import GATEWAY_KEY
++
++    db = client.app.state.userdata.db
++
++    async def poison():
++        await db.execute("INSERT INTO kv (key, value) VALUES (?, ?)", (GATEWAY_KEY, b'"https://evil.example.com/v1/api"'))
++        await db.commit()
++
++    client.portal.call(poison)  # run on the app's own event loop
++    assert client.get("/api/sync/ibkr/settings").json()["gateway_url"] == DEFAULT_GATEWAY_URL
++
++
++# --- helpers for the route tests ---------------------------------------------------------------------------------------------------------
++
++def fake_kite(client, holdings=None, positions=None, calls=None):
++    kite = client.app.state.kite
++    kite.session.auth = lambda: ("fake-key", "fake-token")  # a logged-in session without a key store
++
++    async def get_json(path, params=None, historical=False):
++        if calls is not None:
++            calls.append(path)
++        return {"/portfolio/holdings": holdings if holdings is not None else KITE["holdings"],
++                "/portfolio/positions": positions if positions is not None else KITE["positions"]}[path]
++
++    kite.client.get_json = get_json
++
++
++def gateway_transport(state: dict):
++    """A mock IBKR gateway. `state['up']` False raises a connect error; every request is recorded in state['requests']."""
++
++    def handler(request: httpx.Request) -> httpx.Response:
++        state.setdefault("requests", []).append((request.method, request.url.path))
++        if not state.get("up", True):
++            raise httpx.ConnectError("refused")
++        path = request.url.path.removeprefix("/v1/api")
++        if path == "/iserver/auth/status":
++            return httpx.Response(200, json=state.get("auth", IBKR["auth"]))
++        if path == "/portfolio/accounts":
++            return httpx.Response(200, json=IBKR["accounts"])
++        parts = path.split("/")  # ['', 'portfolio', ACCT, 'positions', '0'] | ['', 'portfolio', ACCT, 'ledger']
++        if parts[3] == "positions":
++            rows = state.get("positions", IBKR["positions"])[parts[2]]
++            return httpx.Response(200, json=rows if parts[4] == "0" else [])
++        if parts[3] == "ledger":
++            return httpx.Response(200, json=IBKR["ledger"][parts[2]])
++        return httpx.Response(404, json={})
++
++    return httpx.MockTransport(handler)
++
++
++def fake_ibkr(client, state):
++    client.app.state.ibkr_http = httpx.AsyncClient(transport=gateway_transport(state))
++
++
++def portfolio(client, name):
++    return client.get(f"/api/portfolios/{name}").json()
++
++
++# --- Kite sync --------------------------------------------------------------------------------------------------------------------------
++
++def test_kite_sync_writes_labelled_inr_lots_and_resync_does_not_duplicate(client):
++    fake_kite(client)
++    client.patch("/api/portfolios/KITE", json={"add": [{"symbol": "MSFT", "qty": 2, "cost": 300, "currency": "USD"}]})  # a manual lot
++    first = client.post("/api/sync/kite", json={})
++    assert first.status_code == 200
++    rec = first.json()
++    assert rec["ok"] and rec["counts"]["imported"] == 3 and rec["counts"]["manual_kept"] == 1 and rec["counts"]["skipped"] == 2
++    assert rec["diff"]["added"] == ["INFY.NS", "M&M.NS", "RELIANCE.BO"] and rec["diff"]["removed"] == []
++    pf = portfolio(client, "KITE")
++    assert pf["base"] == "USD"  # the existing portfolio keeps its base; a new KITE portfolio would be INR
++    synced = [p for p in pf["positions"] if p.get("source") == "kite"]
++    assert len(synced) == 3 and all(p["synced_at"] and p["notes"].startswith("KITE SYNC ") and p["currency"] == "INR" for p in synced)
++    assert [p["symbol"] for p in pf["positions"] if "source" not in p] == ["MSFT"]  # manual lot untouched
++
++    # Kite changed: INFY sold down, RELIANCE gone, TCS bought. Same call again.
++    changed = [dict(KITE["holdings"][0], quantity=4), {"tradingsymbol": "TCS", "exchange": "NSE", "quantity": 2, "average_price": 4000.0}]
++    fake_kite(client, holdings=changed)
++    second = client.post("/api/sync/kite", json={}).json()
++    assert second["diff"]["added"] == ["TCS.NS"] and second["diff"]["removed"] == ["M&M.NS", "RELIANCE.BO"]
++    assert second["diff"]["changed"] == [{"symbol": "INFY.NS", "qty_from": 10.0, "qty_to": 4.0, "cost_from": 1400.5, "cost_to": 1400.5}]
++    pf = portfolio(client, "KITE")
++    assert sorted(p["symbol"] for p in pf["positions"]) == ["INFY.NS", "MSFT", "TCS.NS"]  # replaced, never duplicated
++    again = client.post("/api/sync/kite", json={}).json()  # identical re-sync: no difference at all
++    assert again["diff"] == {"added": [], "removed": [], "changed": []}
++    assert len(portfolio(client, "KITE")["positions"]) == 3
++
++
++def test_kite_sync_defaults_to_a_new_inr_portfolio_and_can_include_positions(client):
++    calls: list[str] = []
++    fake_kite(client, calls=calls)
++    rec = client.post("/api/sync/kite", json={"portfolio": "zerodha", "positions": True}).json()
++    assert rec["portfolio"] == "ZERODHA" and rec["base"] == "INR"
++    assert rec["holdings"] == 3 and rec["positions"] == 2 and "/portfolio/positions" in calls
++    assert {p["symbol"] for p in portfolio(client, "ZERODHA")["positions"]} >= {"TCS.NS", "NIFTY26NOVFUT.NFO"}
++    calls.clear()
++    client.post("/api/sync/kite", json={"portfolio": "zerodha"})
++    assert calls == ["/portfolio/holdings"]  # positions are opt-in
++
++
++def test_a_synced_symbol_that_is_also_a_manual_lot_is_a_conflict_not_a_merge(client):
++    fake_kite(client)
++    client.patch("/api/portfolios/KITE", json={"add": [{"symbol": "INFY.NS", "qty": 1, "cost": 1000, "currency": "INR"}]})
++    rec = client.post("/api/sync/kite", json={}).json()
++    assert rec["counts"]["conflicts"] == 1 and "INFY.NS" in rec["conflicts"][0]
++    infy = next(p for p in portfolio(client, "KITE")["positions"] if p["symbol"] == "INFY.NS")
++    assert infy["qty"] == 1 and "source" not in infy
++
++
++def test_kite_sync_without_a_login_says_so_and_changes_nothing(client):
++    client.patch("/api/portfolios/KITE", json={"add": [{"symbol": "AAPL", "qty": 1, "cost": 1}]})
++    r = client.post("/api/sync/kite", json={})
++    assert r.status_code == 424 and r.json()["error"].startswith("KEY REQUIRED")
++    assert portfolio(client, "KITE")["positions"][0]["symbol"] == "AAPL" and len(portfolio(client, "KITE")["positions"]) == 1
++    st = client.get("/api/sync/status").json()["kite"]
++    assert st["last_ok"] is None and st["last_error"]["error"].startswith("KEY REQUIRED") and st["last_error"]["ok"] is False
++
++
++def test_kite_error_text_is_redacted(client):
++    fake_kite(client)
++
++    async def boom(path, params=None, historical=False):
++        raise __import__("openterm.errors", fromlist=["DataError"]).DataError("unavailable", "KITE: bad access_token=abcdef123456789 here")
++
++    client.app.state.kite.client.get_json = boom
++    r = client.post("/api/sync/kite", json={})
++    assert r.status_code == 503 and "abcdef123456789" not in r.text
++    assert "abcdef123456789" not in json.dumps(client.get("/api/sync/status").json())
++
++
++# --- IBKR sync --------------------------------------------------------------------------------------------------------------------------
++
++def test_ibkr_sync_merges_accounts_keeps_currencies_and_reports_cash(client):
++    state: dict = {}
++    fake_ibkr(client, state)
++    rec = client.post("/api/sync/ibkr", json={}).json()
++    assert rec["ok"] and rec["portfolio"] == "IBKR" and rec["base"] == "USD" and rec["accounts"] == ["U1111111", "U2222222"]
++    pf = portfolio(client, "IBKR")
++    by = {p["symbol"]: p for p in pf["positions"]}
++    assert set(by) == {"AAPL", "BRK-B", "VOD.L", "SAP.DE"}
++    assert by["AAPL"]["qty"] == 30.0 and by["AAPL"]["cost"] == pytest.approx((25 * 150.5 + 5 * 200.0) / 30)  # two accounts averaged
++    assert by["SAP.DE"]["currency"] == "EUR" and by["VOD.L"]["currency"] == "GBp" and by["AAPL"]["source"] == "ibkr"
++    assert {s["symbol"] for s in rec["skipped"]} >= {"AAPL DEC2026 250 C", "XYZ"}
++    assert rec["warnings"] and "LSE" in rec["warnings"][0]
++    cash = {c["account"]: {r["currency"]: r["cash"] for r in c["rows"]} for c in rec["cash"]}
++    assert cash["U1111111"]["USD"] == 1500.25 and cash["U1111111"]["GBP"] == 200.0 and cash["U2222222"]["EUR"] == 50.0
++
++
++def test_ibkr_resync_is_idempotent_and_shows_what_changed(client):
++    state: dict = {}
++    fake_ibkr(client, state)
++    client.post("/api/sync/ibkr", json={})
++    again = client.post("/api/sync/ibkr", json={}).json()
++    assert again["diff"] == {"added": [], "removed": [], "changed": []} and len(portfolio(client, "IBKR")["positions"]) == 4
++    state["positions"] = {"U1111111": [IBKR["positions"]["U1111111"][0] | {"position": 10.0}], "U2222222": []}
++    third = client.post("/api/sync/ibkr", json={"account": "U1111111"}).json()
++    assert third["diff"]["removed"] == ["BRK-B", "SAP.DE", "VOD.L"] and third["diff"]["changed"][0]["qty_to"] == 10.0
++    assert [p["symbol"] for p in portfolio(client, "IBKR")["positions"]] == ["AAPL"]
++
++
++def test_ibkr_gateway_down_says_not_running_with_the_next_step(client):
++    state = {"up": False}
++    fake_ibkr(client, state)
++    client.patch("/api/portfolios/IBKR", json={"add": [{"symbol": "AAPL", "qty": 1, "cost": 1}]})
++    r = client.post("/api/sync/ibkr", json={})
++    assert r.status_code == 503
++    err = r.json()["error"]
++    assert err.startswith("IBKR GATEWAY NOT RUNNING") and "run.sh" in err and "SYNC IBKR" in err
++    assert len(portfolio(client, "IBKR")["positions"]) == 1  # nothing changed
++    assert client.get("/api/sync/ibkr/check").json()["error"].startswith("IBKR GATEWAY NOT RUNNING")
++    st = client.get("/api/sync/status").json()["ibkr"]
++    assert st["last_error"]["error"].startswith("IBKR GATEWAY NOT RUNNING") and st["last_ok"] is None
++
++
++def test_ibkr_gateway_up_but_logged_out(client):
++    fake_ibkr(client, {"auth": {"authenticated": False, "connected": True}})
++    r = client.post("/api/sync/ibkr", json={})
++    assert r.status_code == 401 and r.json()["error"].startswith("IBKR GATEWAY NOT LOGGED IN")
++
++
++def test_ibkr_client_only_ever_sends_get_requests(client):
++    state: dict = {}
++    fake_ibkr(client, state)
++    client.post("/api/sync/ibkr", json={})
++    assert state["requests"] and {m for m, _ in state["requests"]} == {"GET"}
++    assert not [p for _, p in state["requests"] if "order" in p]
++
++
++def test_sync_routes_refuse_a_client_that_is_not_this_machine(client):
++    from fastapi.testclient import TestClient
++
++    with TestClient(client.app, client=("203.0.113.9", 50000)) as remote:
++        assert remote.post("/api/sync/kite", json={}).status_code == 403
++        assert remote.post("/api/sync/ibkr", json={}).status_code == 403
++        assert remote.put("/api/sync/ibkr/settings", json={"gateway_url": DEFAULT_GATEWAY_URL}).status_code == 403
++
++
++def test_synced_fields_survive_put_and_the_portfolio_still_reads(client):
++    fake_kite(client)
++    client.post("/api/sync/kite", json={})
++    pf = portfolio(client, "KITE")
++    back = client.put("/api/portfolios/KITE", json={"positions": pf["positions"]}).json()  # PORT undo path
++    assert [p.get("source") for p in back["positions"]] == ["kite"] * 3
++
++
++# --- no order surface -------------------------------------------------------------------------------------------------------------------
++
++def test_brokers_package_and_routes_have_no_order_surface():
++    root = Path(__file__).resolve().parents[1] / "openterm"
++    files = [*(root / "brokers").rglob("*.py"), root / "brokers_routes.py"]
++    forbidden = ("/orders", "place_order", "modify_order", "cancel_order", "/gtt", "/whatif", "client.post(", "http.post(")
++    for f in files:
++        text = f.read_text(encoding="utf-8")
++        assert not [w for w in forbidden if w in text], (f.name, [w for w in forbidden if w in text])
+diff --git a/docs/COMMANDS.md b/docs/COMMANDS.md
+index b6db103..d924289 100644
+--- a/docs/COMMANDS.md
++++ b/docs/COMMANDS.md
+@@ -259,3 +259,14 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
+ - `CDEP [PAIR] [LEVELS]` (`CDEP ETHUSDT 50`) : order book depth, spread and imbalance (Binance, OKX fallback). `FUND` : perpetual funding board (annualised) and quarterly basis; Enter or `FUND BTC` : last 30 prints, Backspace back.
+   `LIQ [COIN]` : latest OKX liquidations. `STBL [CHAIN]` : stablecoin supply (`C` coins / chains, Enter opens a chain). `DEFI [CHAIN|PROJECT]` : yield pools over US$1M TVL.
+ - `SECF axis bluechip` : also lists Indian mutual fund schemes from AMFI NAV; `M` switches to the fund rows. `RELIANCE.NS GP 1Y` : when Yahoo cannot answer, daily bars come from the NSE archive (labelled, raw prices).
++
++
++## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
++Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
++- `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.
++- `SYNC KITE [PORTFOLIO] [POS] [GO]` Zerodha Kite holdings (and with `POS` the net MIS / NRML day positions) as INR lots (`INFY.NS`, `.BO`, `.NFO` ...). Uses your existing Kite key and the daily `KITE LOGIN`; without them it says `KEY REQUIRED` / `KITE LOGGED OUT`. Default portfolio `KITE`, created in INR.
++- `SYNC IBKR [PORTFOLIO] [ACCT=U1234567] [GO]` Interactive Brokers stocks and ETFs from every account the gateway lists (or one with `ACCT=`), each lot in its own currency, plus the per-currency cash ledger on the panel. Default portfolio `IBKR`, created in USD. Options, futures, bonds and FX positions are listed as skipped, not imported.
++- `PORT SYNC KITE|IBKR ...` is the same panel. Keys on the panel: `K` sync Kite, `I` sync IBKR, `S` sync the broker on screen, `R` reload. `GO` runs the sync from the command line; without it `SYNC KITE` only shows status.
++- A re-sync replaces only the lots that broker wrote earlier (they carry `source` and the sync time in their note) and never duplicates. Manual lots are never touched; if a synced symbol is already held by a manual lot it is listed as a CONFLICT and not merged (sync into its own portfolio, then `RISK` / `OPT` it as usual). Editing a synced lot by hand turns it into a manual lot.
++- IBKR needs the Client Portal Gateway running on this machine (`clientportal.gw`, `bin/run.sh root/conf.yaml`), logged in at `https://localhost:5000`. If it is not running the panel says `IBKR GATEWAY NOT RUNNING` with the next step. The gateway URL is a setting (`PUT /api/sync/ibkr/settings`, default `https://localhost:5000/v1/api`); only `localhost`, `127.0.0.1` and `::1` are accepted, because the gateway's self-signed certificate is trusted for loopback only.
++- Unverified without a live account: Kite `quantity` is taken as the total holding (collateral shares are flagged, not added) and IBKR LSE prices are taken as pence (`GBp`). The tests use doc-shaped fixtures, labelled NOT A RECORDING.
+diff --git a/docs/FUNCTIONS.md b/docs/FUNCTIONS.md
+index 78bd8dd..16ab17e 100644
+--- a/docs/FUNCTIONS.md
++++ b/docs/FUNCTIONS.md
+@@ -271,6 +271,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
+ | `RISK` | Portfolio risk: VaR (historical, normal, EVT), expected shortfall, contributions, stress replays, VaR backtest (historical simulation, not a forecast) |  | `[PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` | `RISK` |
+ | `OPT` | Portfolio optimizer preview (PORT OPT): trades, before/after, risk contributions; A saves <NAME>.OPT, never orders |  | `[PORTFOLIO] [METHOD=EQVOL\|RP\|MV\|MAXDIV\|HRP\|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` | `OPT` |
+ | `ATTR` | Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations |  | `[PORTFOLIO] [BENCH=SPY] [RANGE=1y] \| <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] \| <PORTFOLIO> DEL <DATE>` | `ATTR` |
++| `SYNC` | Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders |  | `[KITE\|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]` | `SYNC` |
+ 
+ ### Backtest
+ 
+diff --git a/frontend/src/command/execute.ts b/frontend/src/command/execute.ts
+index f54e193..7eb96d7 100644
+--- a/frontend/src/command/execute.ts
++++ b/frontend/src/command/execute.ts
+@@ -82,7 +82,7 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
+     fnOverride = "SETTINGS";
+   }
+   // Phase 15: PORT OPT / PORT ATTR are the OPT / ATTR panels; every other PORT argument stays with the PORT panel below.
+-  if (parsed.fn === "PORT" && (args[0]?.toUpperCase() === "OPT" || args[0]?.toUpperCase() === "ATTR")) {
++  if (parsed.fn === "PORT" && (args[0]?.toUpperCase() === "OPT" || args[0]?.toUpperCase() === "ATTR" || args[0]?.toUpperCase() === "SYNC")) {
+     fnOverride = args[0].toUpperCase();
+     args = args.slice(1);
+   }
+diff --git a/frontend/src/functions/SYNC.tsx b/frontend/src/functions/SYNC.tsx
+new file mode 100644
+index 0000000..14af00e
+--- /dev/null
++++ b/frontend/src/functions/SYNC.tsx
+@@ -0,0 +1,162 @@
++/**
++ * SYNC (Phase 18 step 2): READ-ONLY broker sync into PORT. `SYNC` shows both brokers, `SYNC KITE|IBKR [PORTFOLIO]` one of them.
++ * K syncs Kite, I syncs IBKR, S syncs the broker on screen, R reloads the status. A sync replaces only the lots it wrote earlier
++ * (labelled with their source and time); manual lots are never touched. There is no order of any kind here.
++ */
++import { useCallback, useEffect, useMemo, useRef, useState } from "react";
++import { refreshPortfolios } from "../command/portfolios";
++import { registerPanelKeys } from "../keys/panelKeys";
++import type { ApiError } from "../net/core";
++import { syncApi, type Broker, type BrokerStatus, type SyncRecord, type SyncStatus } from "../net/syncApi";
++import { replaceView } from "../state/workspace";
++import { usePanelRefresh } from "./panelRefresh";
++import type { FunctionProps } from "./registry";
++import { countsLine, diffLines, headline, noDifference, parseSyncArgs, SYNC_USAGE, ageText, type SyncArgs } from "./syncModel";
++
++const NAME: Record<Broker, string> = { kite: "ZERODHA KITE", ibkr: "INTERACTIVE BROKERS" };
++
++export default function SYNC({ panelId, args }: FunctionProps) {
++  const parsed = useMemo(() => parseSyncArgs(args), [args]);
++  const [status, setStatus] = useState<SyncStatus | null>(null);
++  const [loadErr, setLoadErr] = useState<string | null>(null);
++  const [busy, setBusy] = useState<Broker | null>(null);
++  const [hint, setHint] = useState<string | null>(null);
++  const [fresh, setFresh] = useState<Partial<Record<Broker, SyncRecord>>>({});
++  const [failure, setFailure] = useState<Partial<Record<Broker, string>>>({});
++  const [now, setNow] = useState(() => Date.now() / 1000);
++  const cfg = "error" in parsed ? null : parsed;
++  const latest = useRef<{ cfg: SyncArgs | null; status: SyncStatus | null; busy: Broker | null }>({ cfg, status, busy });
++  latest.current = { cfg, status, busy };
++
++  const load = useCallback(async () => {
++    try {
++      setStatus(await syncApi.status());
++      setLoadErr(null);
++    } catch (e) {
++      setLoadErr((e as ApiError).message);
++    }
++    setNow(Date.now() / 1000);
++  }, []);
++
++  const run = useCallback(
++    async (broker: Broker) => {
++      const { cfg: c, status: st, busy: b } = latest.current;
++      if (b) return;
++      const portfolio = (c?.broker === broker ? c.portfolio : null) ?? st?.default_portfolio[broker] ?? undefined;
++      setBusy(broker);
++      setFailure((f) => ({ ...f, [broker]: undefined }));
++      try {
++        const rec = broker === "kite" ? await syncApi.kite(portfolio, c?.broker === "kite" && c.positions) : await syncApi.ibkr(portfolio, c?.broker === "ibkr" ? (c.account ?? undefined) : undefined);
++        setFresh((f) => ({ ...f, [broker]: rec }));
++        void refreshPortfolios();
++      } catch (e) {
++        setFailure((f) => ({ ...f, [broker]: (e as ApiError).message }));
++      }
++      setBusy(null);
++      await load();
++    },
++    [load],
++  );
++
++  // `SYNC KITE GO` runs once, then the view goes back to the plain status so a remount does not run it again.
++  const acted = useRef(false);
++  useEffect(() => {
++    void load();
++    if (acted.current || !cfg?.go || !cfg.broker) return;
++    acted.current = true;
++    void run(cfg.broker);
++    replaceView(panelId, (v) => ({ ...v, args: v.args.filter((a) => a.toUpperCase() !== "GO") }));
++  }, [cfg, load, run, panelId]);
++
++  usePanelRefresh(panelId, () => {
++    void load();
++  });
++  useEffect(
++    () =>
++      registerPanelKeys(panelId, (e) => {
++        const only = latest.current.cfg?.broker;
++        switch (e.key) {
++          case "k":
++            void run("kite");
++            return true;
++          case "i":
++            void run("ibkr");
++            return true;
++          case "s":
++            if (only) void run(only);
++            else setHint("S NEEDS A BROKER ON SCREEN: SYNC KITE OR SYNC IBKR (OR PRESS K / I)");
++            return true;
++          case "r":
++            void load();
++            return true;
++        }
++        return false;
++      }),
++    [panelId, run, load],
++  );
++
++  if ("error" in parsed)
++    return (
++      <div className="fn">
++        <div className="line err">{parsed.error}</div>
++        <div className="line dim">{SYNC_USAGE}</div>
++      </div>
++    );
++  const brokers: Broker[] = parsed.broker ? [parsed.broker] : ["kite", "ibkr"];
++  return (
++    <div className="fn" data-testid="sync-panel">
++      <div className="line">
++        <span className="acc">SYNC</span> READ-ONLY BROKER SYNC INTO PORT
++        <span className="dim legend"> · K KITE · I IBKR · S THIS BROKER · R RELOAD</span>
++      </div>
++      {hint && <div className="warn">{hint}</div>}
++      {loadErr && <div className="err">ERR: SYNC STATUS UNAVAILABLE ({loadErr})</div>}
++      {!status && !loadErr && <div className="dim">LOADING…</div>}
++      {status && brokers.map((b) => <BrokerBlock key={b} broker={b} st={status[b]} fresh={fresh[b]} failure={failure[b]} busy={busy === b} now={now} target={parsed.broker === b ? parsed.portfolio : null} fallback={status.default_portfolio[b]} />)}
++      <div className="dim">SYNC ONLY READS THE BROKER. LOTS IT WRITES ARE LABELLED WITH THEIR SOURCE; MANUAL LOTS ARE NEVER CHANGED. NO ORDERS.</div>
++    </div>
++  );
++}
++
++function BrokerBlock({ broker, st, fresh, failure, busy, now, target, fallback }: { broker: Broker; st: BrokerStatus; fresh?: SyncRecord; failure?: string; busy: boolean; now: number; target: string | null; fallback: string }) {
++  const rec = fresh ?? st.last_ok;
++  const h = headline(broker, rec, st.last_error, now);
++  const extra = broker === "kite" ? st.login : null;
++  return (
++    <div className="sync-block">
++      <div>
++        <span className="acc">{NAME[broker]}</span> → PORT {target ?? fallback}
++        {busy && <span className="warn"> · SYNCING…</span>}
++      </div>
++      <div className={h.cls}>{h.text}</div>
++      {broker === "kite" && extra && extra.state !== "OK" && <div className="warn">{extra.message ?? extra.state}</div>}
++      {broker === "ibkr" && st.gateway_url && <div className="dim">GATEWAY {st.gateway_url} (LOOPBACK ONLY)</div>}
++      {failure && <div className="err">ERR: {failure}</div>}
++      {!failure && st.last_error && (!rec || st.last_error.at > rec.at) && <div className="err">ERR {ageText(st.last_error.at, now)}: {st.last_error.error}</div>}
++      {rec && (
++        <>
++          <div>{countsLine(rec)}</div>
++          {rec.diff && (noDifference(rec.diff) ? <div className="dim">NO DIFFERENCE FROM THE PREVIOUS SYNC</div> : <div className="dim">DIFFERENCE FROM THE PREVIOUS SYNC</div>)}
++          {diffLines(rec.diff).map((l) => (
++            <div key={l} className={l.startsWith("+") ? "up" : l.startsWith("-") ? "err" : ""}>{l}</div>
++          ))}
++          {rec.conflicts.map((c) => (
++            <div key={c} className="warn">CONFLICT {c}</div>
++          ))}
++          {rec.warnings.map((w) => (
++            <div key={w} className="warn">NOTE {w}</div>
++          ))}
++          {rec.skipped.slice(0, 8).map((s) => (
++            <div key={s.symbol + s.reason} className="dim">SKIPPED {s.reason}</div>
++          ))}
++          {rec.skipped.length > 8 && <div className="dim">… {rec.skipped.length - 8} MORE SKIPPED</div>}
++          {rec.cash?.map((a) => (
++            <div key={a.account} className="dim">
++              CASH {a.account}: {a.rows.map((r) => `${r.base ? "TOTAL(BASE)" : r.currency} ${r.cash === null ? "-" : r.cash.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ")}
++            </div>
++          ))}
++        </>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/functions/categories.ts b/frontend/src/functions/categories.ts
+index 95cac81..a5a3d11 100644
+--- a/frontend/src/functions/categories.ts
++++ b/frontend/src/functions/categories.ts
+@@ -54,7 +54,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
+     { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT"] },
+     { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO"] },
+   ],
+-  Portfolio: [{ name: "Portfolio", codes: ["PORT", "ALRT", "RISK", "OPT", "ATTR"] }],
++  Portfolio: [{ name: "Portfolio", codes: ["PORT", "ALRT", "RISK", "OPT", "ATTR", "SYNC"] }],
+   Backtest: [{ name: "Backtest", codes: ["BT", "IMPORT"] }],
+   Settings: [
+     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
+diff --git a/frontend/src/functions/registry.ts b/frontend/src/functions/registry.ts
+index e62def0..4369366 100644
+--- a/frontend/src/functions/registry.ts
++++ b/frontend/src/functions/registry.ts
+@@ -57,6 +57,7 @@ const defs: FunctionDef[] = [
+   // SEC and MONITOR are twins (TWINS in functions/aliases.ts): own code and title, same panel module as the original.
+   { code: "SEC", title: "SEC filings (alias of FIL)", needsSecurity: true, argsSchema: "[FORM]", load: () => import("./FIL") },
+   { code: "PORT", title: "Portfolio (live P&L, CSV import/export)", needsSecurity: false, argsSchema: "[NAME] [ADD SYM QTY [COST] [CCY] | RM SYM... | EXPORT | IMPORT | BASE CCY] | DEL NAME", load: () => import("./PORT") },
++  { code: "SYNC", title: "Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders", needsSecurity: false, argsSchema: "[KITE|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]", load: () => import("./SYNC"), idlePreload: false },
+   { code: "ECO", title: "Economic calendar", needsSecurity: false, argsSchema: "[1-62] [MAJOR] [YYYY-MM-DD]", related: { market: 7 }, load: () => import("./ECO") },
+   { code: "MACRO", title: "FRED series browser", needsSecurity: false, argsSchema: "[query]", load: () => import("./MACRO") },
+   { code: "FRED", title: "Plot a FRED series", needsSecurity: false, argsSchema: "SERIES_ID [1Y|2Y|5Y|10Y|20Y|MAX]", load: () => import("./FRED"), idlePreload: false },
+diff --git a/frontend/src/functions/syncModel.test.ts b/frontend/src/functions/syncModel.test.ts
+new file mode 100644
+index 0000000..9f16ff3
+--- /dev/null
++++ b/frontend/src/functions/syncModel.test.ts
+@@ -0,0 +1,88 @@
++import { describe, expect, it } from "vitest";
++import type { SyncRecord } from "../net/syncApi";
++import { FUNCTIONS } from "./registry";
++import { ageText, countsLine, diffLines, headline, noDifference, parseSyncArgs, STALE_AFTER_S } from "./syncModel";
++
++// Records below are TEST DATA written for these tests (NOT a recording of any broker).
++const rec = (over: Partial<SyncRecord> = {}): SyncRecord => ({
++  broker: "kite", portfolio: "KITE", at: 1_000_000, ok: true, error: null, base: "INR",
++  counts: { fetched: 5, imported: 4, skipped: 1, conflicts: 0, manual_kept: 2, previous: 3 },
++  diff: { added: ["TCS.NS"], removed: ["OLD.NS"], changed: [{ symbol: "INFY.NS", qty_from: 10, qty_to: 4, cost_from: 1400.5, cost_to: 1400.5 }] },
++  skipped: [], conflicts: [], warnings: [], holdings: 4, positions: 0, ...over,
++});
++
++describe("SYNC registry entry", () => {
++  it("is registered, lazy, and takes no security", () => {
++    const f = FUNCTIONS.get("SYNC");
++    expect(f?.load).toBeTypeOf("function");
++    expect(f?.needsSecurity).toBe(false);
++  });
++});
++
++describe("parseSyncArgs", () => {
++  it("reads broker, portfolio and flags in any order", () => {
++    expect(parseSyncArgs(["kite", "main", "pos", "go"])).toEqual({ broker: "kite", portfolio: "MAIN", positions: true, account: null, go: true });
++    expect(parseSyncArgs(["IBKR", "acct=U1234567"])).toMatchObject({ broker: "ibkr", account: "U1234567", go: false });
++    expect(parseSyncArgs([])).toMatchObject({ broker: null, portfolio: null });
++  });
++  it("refuses what cannot work", () => {
++    expect(parseSyncArgs(["go"])).toHaveProperty("error");
++    expect(parseSyncArgs(["kite", "ibkr"])).toHaveProperty("error");
++    expect(parseSyncArgs(["ibkr", "pos"])).toHaveProperty("error");
++    expect(parseSyncArgs(["kite", "acct=U1234567"])).toHaveProperty("error");
++    expect(parseSyncArgs(["kite", "bad name!"])).toHaveProperty("error");
++    expect(parseSyncArgs(["ibkr", "acct=x"])).toHaveProperty("error");
++  });
++});
++
++describe("ageText", () => {
++  it("rounds down to the largest unit", () => {
++    expect(ageText(100, 130)).toBe("JUST NOW");
++    expect(ageText(0, 300)).toBe("5M AGO");
++    expect(ageText(0, 7300)).toBe("2H AGO");
++    expect(ageText(0, 3 * 86400 + 5)).toBe("3D AGO");
++  });
++});
++
++describe("diff and counts lines", () => {
++  it("lists added, removed and changed symbols", () => {
++    expect(diffLines(rec().diff)).toEqual(["+ TCS.NS", "- OLD.NS", "~ INFY.NS 10 -> 4"]);
++    expect(diffLines({ added: [], removed: [], changed: [{ symbol: "A", qty_from: 1, qty_to: 1, cost_from: 5, cost_to: null }] })).toEqual(["~ A 1 -> 1 (COST 5 -> -)"]);
++    expect(diffLines(null)).toEqual([]);
++  });
++  it("caps long diffs", () => {
++    const added = Array.from({ length: 40 }, (_, i) => `S${i}`);
++    const lines = diffLines({ added, removed: [], changed: [] }, 30);
++    expect(lines).toHaveLength(31);
++    expect(lines[30]).toBe("… 10 MORE");
++  });
++  it("knows an empty difference", () => {
++    expect(noDifference({ added: [], removed: [], changed: [] })).toBe(true);
++    expect(noDifference(rec().diff)).toBe(false);
++    expect(noDifference(null)).toBe(false);
++  });
++  it("summarises counts per broker", () => {
++    expect(countsLine(rec())).toBe("4 LOTS IMPORTED · 1 SKIPPED · 0 CONFLICTS · 2 MANUAL KEPT · 4 HOLDINGS · 0 POSITIONS");
++    expect(countsLine(rec({ broker: "ibkr", accounts: ["U1", "U2"] }))).toContain("2 ACCOUNTS");
++  });
++});
++
++describe("headline", () => {
++  const ok = rec();
++  it("shows source, portfolio and age for a fresh sync", () => {
++    const h = headline("kite", ok, null, ok.at + 120);
++    expect(h.cls).toBe("up");
++    expect(h.text).toContain("KITE → KITE");
++    expect(h.text).toContain("2M AGO");
++  });
++  it("says STALE after a day", () => {
++    expect(headline("kite", ok, null, ok.at + STALE_AFTER_S + 1)).toMatchObject({ cls: "warn" });
++    expect(headline("kite", ok, null, ok.at + STALE_AFTER_S + 1).text.startsWith("STALE")).toBe(true);
++  });
++  it("says ERR when a later try failed, and when it never worked", () => {
++    const bad = rec({ ok: false, at: ok.at + 60, error: "IBKR GATEWAY NOT RUNNING" });
++    expect(headline("kite", ok, bad, ok.at + 120).text.startsWith("ERR")).toBe(true);
++    expect(headline("ibkr", null, bad, ok.at + 120)).toMatchObject({ cls: "err" });
++    expect(headline("ibkr", null, null, 0)).toEqual({ text: "IBKR NEVER SYNCED", cls: "dim" });
++  });
++});
+diff --git a/frontend/src/functions/syncModel.ts b/frontend/src/functions/syncModel.ts
+new file mode 100644
+index 0000000..104e561
+--- /dev/null
++++ b/frontend/src/functions/syncModel.ts
+@@ -0,0 +1,91 @@
++/** Pure logic of the SYNC panel: the command words, ages and the lines that describe a sync. No React, no network. */
++import type { Broker, SyncDiff, SyncRecord } from "../net/syncApi";
++
++export const SYNC_USAGE = "USAGE: SYNC [KITE|IBKR] [PORTFOLIO] [POS] [ACCT=U1234567] [GO]   (PORT SYNC KITE|IBKR works too)";
++/** A successful sync older than this is shown as STALE: the broker may hold something else by now. */
++export const STALE_AFTER_S = 24 * 3600;
++const NAME_RE = /^[A-Z0-9][A-Z0-9_.-]{0,31}$/;
++
++export interface SyncArgs {
++  broker: Broker | null;
++  portfolio: string | null;
++  positions: boolean;
++  account: string | null;
++  go: boolean;
++}
++
++export function parseSyncArgs(args: string[]): SyncArgs | { error: string } {
++  const out: SyncArgs = { broker: null, portfolio: null, positions: false, account: null, go: false };
++  for (const raw of args) {
++    const w = raw.toUpperCase();
++    if (w === "KITE" || w === "IBKR") {
++      if (out.broker && out.broker !== w.toLowerCase()) return { error: "ONE BROKER AT A TIME: SYNC KITE OR SYNC IBKR" };
++      out.broker = w.toLowerCase() as Broker;
++    } else if (w === "GO") out.go = true;
++    else if (w === "POS" || w === "POSITIONS") out.positions = true;
++    else if (w.startsWith("ACCT=")) {
++      const a = raw.slice(5);
++      if (!/^[A-Za-z0-9]{3,24}$/.test(a)) return { error: "ACCT= TAKES AN IBKR ACCOUNT ID, E.G. ACCT=U1234567" };
++      out.account = a;
++    } else if (NAME_RE.test(w) && !out.portfolio) out.portfolio = w;
++    else return { error: `${raw.slice(0, 24).toUpperCase()}: NOT A BROKER OR PORTFOLIO NAME` };
++  }
++  if (out.go && !out.broker) return { error: "NAME THE BROKER TO RUN: SYNC KITE GO OR SYNC IBKR GO" };
++  if (out.positions && out.broker === "ibkr") return { error: "POS IS FOR KITE (DAY POSITIONS). IBKR ALWAYS SYNCS EVERY POSITION" };
++  if (out.account && out.broker === "kite") return { error: "ACCT= IS FOR IBKR" };
++  return out;
++}
++
++/** "5M AGO", "3H AGO", "2D AGO"; "JUST NOW" under a minute. */
++export function ageText(at: number, now: number): string {
++  const s = Math.max(0, Math.round(now - at));
++  if (s < 60) return "JUST NOW";
++  if (s < 3600) return `${Math.floor(s / 60)}M AGO`;
++  if (s < 86400) return `${Math.floor(s / 3600)}H AGO`;
++  return `${Math.floor(s / 86400)}D AGO`;
++}
++
++export function isStale(rec: SyncRecord | null, now: number): boolean {
++  return !!rec && now - rec.at > STALE_AFTER_S;
++}
++
++export function stamp(at: number): string {
++  const d = new Date(at * 1000);
++  const p = (n: number) => String(n).padStart(2, "0");
++  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}Z`;
++}
++
++export function countsLine(rec: SyncRecord): string {
++  const c = rec.counts;
++  if (!c) return "";
++  const parts = [`${c.imported} LOTS IMPORTED`, `${c.skipped} SKIPPED`, `${c.conflicts} CONFLICTS`, `${c.manual_kept} MANUAL KEPT`];
++  if (rec.broker === "kite" && rec.holdings !== undefined) parts.push(`${rec.holdings} HOLDINGS`, `${rec.positions ?? 0} POSITIONS`);
++  if (rec.broker === "ibkr" && rec.accounts) parts.push(`${rec.accounts.length} ACCOUNTS`);
++  return parts.join(" · ");
++}
++
++const q = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 4 });
++
++/** One line per difference against the previous sync: `+ INFY.NS`, `- TCS.NS`, `~ AAPL 10 -> 4`. */
++export function diffLines(d: SyncDiff | null, limit = 30): string[] {
++  if (!d) return [];
++  const lines = [
++    ...d.added.map((s) => `+ ${s}`),
++    ...d.removed.map((s) => `- ${s}`),
++    ...d.changed.map((c) => `~ ${c.symbol} ${q(c.qty_from)} -> ${q(c.qty_to)}${c.cost_from !== c.cost_to ? ` (COST ${c.cost_from ?? "-"} -> ${c.cost_to ?? "-"})` : ""}`),
++  ];
++  return lines.length > limit ? [...lines.slice(0, limit), `… ${lines.length - limit} MORE`] : lines;
++}
++
++export function noDifference(d: SyncDiff | null): boolean {
++  return !!d && !d.added.length && !d.removed.length && !d.changed.length;
++}
++
++/** The headline of a broker's block: last good sync with its age and source, STALE when old, or the failure. */
++export function headline(broker: Broker, lastOk: SyncRecord | null, lastErr: SyncRecord | null, now: number): { text: string; cls: "up" | "warn" | "err" | "dim" } {
++  const name = broker === "kite" ? "KITE" : "IBKR";
++  if (!lastOk) return { text: lastErr ? `${name} NEVER SYNCED · LAST TRY FAILED ${ageText(lastErr.at, now)}` : `${name} NEVER SYNCED`, cls: lastErr ? "err" : "dim" };
++  const base = `${name} → ${lastOk.portfolio} · SYNCED ${stamp(lastOk.at)} (${ageText(lastOk.at, now)})`;
++  if (lastErr && lastErr.at > lastOk.at) return { text: `ERR ${base} · LATER TRY FAILED ${ageText(lastErr.at, now)}`, cls: "err" };
++  return isStale(lastOk, now) ? { text: `STALE ${base}`, cls: "warn" } : { text: base, cls: "up" };
++}
+diff --git a/frontend/src/gui/toolbars.test.ts b/frontend/src/gui/toolbars.test.ts
+index 22c2363..aca0388 100644
+--- a/frontend/src/gui/toolbars.test.ts
++++ b/frontend/src/gui/toolbars.test.ts
+@@ -7,7 +7,7 @@ const SINGLE_KEY = /^(.|Enter|Escape|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDo
+ 
+ describe("GUI panel toolbars", () => {
+   it("covers the main panels", () => {
+-    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "FA", "GP", "N", "PORT", "Q", "WEI", "WL"]);
++    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "FA", "GP", "N", "PORT", "Q", "SYNC", "WEI", "WL"]);
+   });
+ 
+   it("only names functions that are in the registry (and built)", () => {
+diff --git a/frontend/src/gui/toolbars.ts b/frontend/src/gui/toolbars.ts
+index 5e62a86..ea16015 100644
+--- a/frontend/src/gui/toolbars.ts
++++ b/frontend/src/gui/toolbars.ts
+@@ -118,6 +118,11 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
+     { label: "Open portfolio", key: "Enter", when: "noargs", title: "Open the selected portfolio (Enter)" },
+     { label: "Delete portfolio", key: "x", when: "noargs", title: "Delete the selected portfolio: press twice to confirm (X)" },
+   ],
++  SYNC: [
++    { label: "Sync Kite", key: "k", title: "Read Zerodha Kite holdings into PORT (K)" },
++    { label: "Sync IBKR", key: "i", title: "Read Interactive Brokers positions into PORT (I)" },
++    { label: "Reload", key: "r", title: "Reload the last-sync status (R)" },
++  ],
+   BT: [
+     { label: "Run again", key: "r", title: "Run the backtest again (R)" },
+     { label: "Cancel", key: "x", title: "Cancel the running backtest (X)" },
+diff --git a/frontend/src/net/syncApi.ts b/frontend/src/net/syncApi.ts
+new file mode 100644
+index 0000000..c902f2a
+--- /dev/null
++++ b/frontend/src/net/syncApi.ts
+@@ -0,0 +1,56 @@
++/** Read-only broker sync (Phase 18 step 2): Zerodha Kite holdings and Interactive Brokers (local Client Portal gateway) into PORT. */
++import { send } from "./core";
++
++export type Broker = "kite" | "ibkr";
++
++export interface SyncDiff {
++  added: string[];
++  removed: string[];
++  changed: { symbol: string; qty_from: number; qty_to: number; cost_from: number | null; cost_to: number | null }[];
++}
++
++export interface SyncRecord {
++  broker: Broker;
++  portfolio: string;
++  /** Unix seconds. */
++  at: number;
++  ok: boolean;
++  error: string | null;
++  kind?: string;
++  base?: string;
++  counts: { fetched: number; imported: number; skipped: number; conflicts: number; manual_kept: number; previous: number } | null;
++  diff: SyncDiff | null;
++  skipped: { symbol: string; reason: string; account?: string }[];
++  conflicts: string[];
++  warnings: string[];
++  /** IBKR only. */
++  accounts?: string[];
++  cash?: { account: string; rows: { currency: string; base: boolean; cash: number | null; settled: number | null; net_liq: number | null }[] }[];
++  /** Kite only. */
++  holdings?: number;
++  positions?: number;
++}
++
++export interface BrokerStatus {
++  broker: Broker;
++  last: SyncRecord | null;
++  last_ok: SyncRecord | null;
++  last_error: SyncRecord | null;
++  runs: number;
++  login?: { state: string; message?: string | null } | null;
++  gateway_url?: string;
++}
++
++export interface SyncStatus {
++  kite: BrokerStatus;
++  ibkr: BrokerStatus;
++  default_portfolio: Record<Broker, string>;
++}
++
++export const syncApi = {
++  status: () => send<SyncStatus>("GET", "/api/sync/status"),
++  kite: (portfolio?: string, positions?: boolean) => send<SyncRecord>("POST", "/api/sync/kite", { portfolio, positions }),
++  ibkr: (portfolio?: string, account?: string) => send<SyncRecord>("POST", "/api/sync/ibkr", { portfolio, account }),
++  ibkrCheck: () => send<{ authenticated: boolean; gateway_url: string }>("GET", "/api/sync/ibkr/check"),
++  setGateway: (gateway_url: string) => send<{ gateway_url: string }>("PUT", "/api/sync/ibkr/settings", { gateway_url }),
++};
+diff --git a/frontend/src/net/types.ts b/frontend/src/net/types.ts
+index b9744d7..3582cf0 100644
+--- a/frontend/src/net/types.ts
++++ b/frontend/src/net/types.ts
+@@ -372,6 +372,9 @@ export interface Position {
+   cost: number | null;
+   currency: string | null;
+   notes: string | null;
++  /** Set on lots written by a read-only broker sync ("kite" | "ibkr"); absent on manual lots. */
++  source?: string;
++  synced_at?: number;
+ }
+ 
+ export interface PortfolioInfo {

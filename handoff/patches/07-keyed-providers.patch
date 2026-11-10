@@ -1,0 +1,3663 @@
+diff --git a/backend/openterm/providers/keyed_market.py b/backend/openterm/providers/keyed_market.py
+new file mode 100644
+index 0000000..a29a2b0
+--- /dev/null
++++ b/backend/openterm/providers/keyed_market.py
+@@ -0,0 +1,121 @@
++"""Shared helpers for the keyed market-data adapters (Twelve Data, Alpha Vantage, Polygon, FMP).
++
++Pure functions, no I/O: number parsing, the "last N sessions" cut for 1D / 5D intraday charts, the Yahoo-suffix to exchange-code maps,
++and `build_fa`, which lays vendor financial statements out in the same shape SEC EDGAR's parser gives FA (`sec_parse._statements`),
++so the FA panel needs no change when SEC cannot answer.
++"""
++
++from __future__ import annotations
++
++import math
++from collections.abc import Callable
++from typing import Any
++
++from .sec_parse import MAX_PERIODS, ROWS
++
++# Yahoo-style interval -> bars in one regular US session (used to size a request and to declare `intraday_days`).
++BARS_PER_SESSION = {"1m": 390, "2m": 195, "5m": 78, "15m": 26, "30m": 13, "60m": 7, "90m": 5}
++# Candle length in minutes.
++INTERVAL_MINUTES = {"1m": 1, "2m": 2, "5m": 5, "15m": 15, "30m": 30, "60m": 60, "90m": 90}
++SESSIONS = {"1d": 1, "5d": 5}
++"""Ranges that mean "the last N sessions": the window is fetched with a few spare days and cut to N sessions."""
++
++
++def fnum(v: Any) -> float | None:
++    """A vendor number as float: None for missing, 'None', '-', '' or anything that is not finite."""
++    if v is None or isinstance(v, bool):
++        return None
++    if isinstance(v, (int, float)):
++        return float(v) if math.isfinite(v) else None
++    s = str(v).strip().replace(",", "").rstrip("%")
++    if s in ("", "None", "-", "N/A", "NA", "null"):
++        return None
++    try:
++        f = float(s)
++    except ValueError:
++        return None
++    return f if math.isfinite(f) else None
++
++
++def inum(v: Any) -> int | None:
++    f = fnum(v)
++    return int(f) if f is not None else None
++
++
++def trim_sessions(rows: list[tuple[int, str]], n: int) -> int:
++    """Index in `rows` (oldest first, (epoch, session-date text)) where the last `n` sessions start."""
++    seen: list[str] = []
++    for _t, day in reversed(rows):
++        if day not in seen:
++            seen.append(day)
++        if len(seen) > n:
++            break
++    keep = set(seen[:n])
++    for i, (_t, day) in enumerate(rows):
++        if day in keep:
++            return i
++    return len(rows)
++
++
++def depth_days(per_session_bars: int, max_bars: int) -> int:
++    """Calendar days of a candle length that fit into `max_bars` (5 sessions of 7 days)."""
++    return int(max_bars / per_session_bars * 7 / 5)
++
++
++# Yahoo exchange suffix -> ISO 10383 market code (Twelve Data `mic_code`).
++SUFFIX_MIC = {
++    "NS": "XNSE", "BO": "XBOM", "L": "XLON", "TO": "XTSE", "V": "XTSX", "HK": "XHKG", "T": "XTKS", "DE": "XETR", "PA": "XPAR",
++    "AS": "XAMS", "MI": "XMIL", "MC": "XMAD", "SW": "XSWX", "AX": "XASX", "SI": "XSES", "ST": "XSTO", "SS": "XSHG", "SZ": "XSHE",
++    "KS": "XKRX", "TW": "XTAI",
++}
++MIC_SUFFIX = {v: k for k, v in SUFFIX_MIC.items()}
++US_MICS = {"XNAS", "XNGS", "XNMS", "XNCM", "XNYS", "ARCX", "XASE", "BATS", "IEXG", "XNDQ", "OTCM", "XOTC"}
++
++
++def build_fa(
++    reports: dict[str, list[dict]],
++    fields: dict[str, tuple[str, str | tuple[str, ...], Callable[[float], float] | None]],
++    date_key: str,
++    label: Callable[[dict], tuple[str, int | None, str | None]],
++    mode: str,
++) -> dict:
++    """Vendor statements -> {"periods": [...], "statements": {"IS": [...], "BS": [...], "CF": [...]}} like sec_parse._statements.
++
++    `reports`: {"IS": [row, ...], "BS": [...], "CF": [...]}, each row one period as the vendor sent it (strings or numbers).
++    `fields`: row key (sec_parse.ROWS key) -> (statement, vendor field, transform or None). A row with no mapping stays all None:
++    the panel shows it blank, never estimated. Free cash flow is computed (operating minus capex), flagged "c".
++    `label(income_row)` -> (column label, fiscal year, fiscal period) for the period.
++    """
++    by: dict[str, dict[str, dict]] = {s: {str(r.get(date_key)): r for r in rows if r.get(date_key)} for s, rows in reports.items()}
++    ends = sorted(set(by["IS"]) or set().union(*(set(d) for d in by.values())), reverse=True)[: MAX_PERIODS[mode]]
++    statements: dict[str, list[dict]] = {"IS": [], "BS": [], "CF": []}
++    for stmt, key, name, _kind, unit, _tags in ROWS:
++        values: list[float | None] = []
++        used: list[str | None] = []
++        spec = fields.get(key)
++        for end in ends:
++            v, tag = None, None
++            if spec is not None and spec[0] == stmt:
++                row = by[stmt].get(end) or {}
++                for field in (spec[1],) if isinstance(spec[1], str) else spec[1]:  # a tuple = first field the vendor filled
++                    raw = fnum(row.get(field))
++                    if raw is not None:
++                        v, tag = (spec[2](raw) if spec[2] else raw), field
++                        break
++            values.append(v)
++            used.append(tag)
++        statements[stmt].append({"key": key, "label": name, "unit": unit, "values": values, "flags": [""] * len(ends), "tags": used})
++    rows_by_key = {r["key"]: r for rows in statements.values() for r in rows}
++    ocf, capex = rows_by_key["operating_cf"], rows_by_key["capex"]
++    fcf: dict[str, Any] = {"key": "fcf", "label": "Free cash flow (computed)", "unit": "USD", "values": [], "flags": [], "tags": [], "computed": True}
++    for i in range(len(ends)):
++        a, b = ocf["values"][i], capex["values"][i]
++        fcf["values"].append(a - b if a is not None and b is not None else None)
++        fcf["flags"].append("c")
++        fcf["tags"].append("operating cash flow - capital expenditure")
++    statements["CF"].insert(2, fcf)
++    periods = []
++    for end in ends:
++        lbl, fy, fp = label(by["IS"].get(end) or {date_key: end})
++        periods.append({"key": end, "label": lbl, "end": end, "start": None, "fy": fy, "fp": fp, "form": None, "filed": None, "derived": False})
++    return {"periods": periods, "statements": statements}
+diff --git a/backend/openterm/providers/twelvedata.py b/backend/openterm/providers/twelvedata.py
+new file mode 100644
+index 0000000..4493fb4
+--- /dev/null
++++ b/backend/openterm/providers/twelvedata.py
+@@ -0,0 +1,212 @@
++"""Twelve Data (free key): quotes, daily and intraday history, symbol search, and some non-US exchanges.
++
++Free plan (checked 2026-11): 8 API credits a minute and 800 a day; every quote or time-series call costs 1 credit per symbol, so a quote
++for N symbols is N credits. A time series returns at most 5000 bars per call, which is where `intraday_days` comes from. The key
++travels in the `Authorization: apikey ...` header (documented, recommended), never in the URL. Errors arrive as JSON
++{"code", "message", "status": "error"} and are mapped here whatever the HTTP status is. Non-US symbols are sent as the bare ticker plus
++an ISO market code (RELIANCE.NS -> RELIANCE, mic_code XNSE). Indices, futures and crypto pairs are not requested (free-plan coverage
++differs and the keyless sources serve them); FX pairs go as EUR/USD.
++
++Fixtures: twelvedata_real_* are REAL answers recorded with Twelve Data's public `demo` key (scripts/record_providers.py).
++"""
++
++from __future__ import annotations
++
++import asyncio
++import re
++from datetime import UTC, datetime
++from typing import Any, ClassVar
++from zoneinfo import ZoneInfo
++
++import httpx
++
++from .. import errkinds as K
++from ..models import Bars, Quote, SearchHit
++from ..ranges import range_days
++from .base import HISTORY, QUOTES, SEARCH, ProviderError
++from .keyed import KeyedProvider
++from .keyed_market import (
++    BARS_PER_SESSION,
++    MIC_SUFFIX,
++    SESSIONS,
++    SUFFIX_MIC,
++    US_MICS,
++    depth_days,
++    fnum,
++    inum,
++    trim_sessions,
++)
++
++BASE = "https://api.twelvedata.com"
++MAX_BARS = 5000
++MAX_QUOTE_SYMBOLS = 8  # one credit each and 8 credits a minute on the free plan
++INTERVALS = {"1m": "1min", "5m": "5min", "15m": "15min", "30m": "30min", "60m": "1h", "1d": "1day", "1wk": "1week", "1mo": "1month"}
++_SUFFIXED = re.compile(r"^([A-Z0-9&]{1,12})\.([A-Z]{1,2})$")
++_CLASS = re.compile(r"^([A-Z]{1,4})-([A-Z])$")  # BRK-B (Yahoo) -> BRK.B (Twelve Data)
++_US = re.compile(r"^[A-Z]{1,5}$")
++_FX = re.compile(r"^([A-Z]{3})([A-Z]{3})=X$")
++
++
++def td_symbol(symbol: str) -> tuple[str, dict[str, str]] | None:
++    """OpenTerm (Yahoo-style) symbol -> (Twelve Data symbol, extra query params), or None when it is not requested from Twelve Data."""
++    s = symbol.strip().upper()
++    if m := _FX.match(s):
++        return f"{m.group(1)}/{m.group(2)}", {}
++    if m := _SUFFIXED.match(s):
++        mic = SUFFIX_MIC.get(m.group(2))
++        return (m.group(1), {"mic_code": mic}) if mic else None
++    if m := _CLASS.match(s):
++        return f"{m.group(1)}.{m.group(2)}", {}
++    return (s, {}) if _US.match(s) else None
++
++
++class TwelveDataProvider(KeyedProvider):
++    name = "twelvedata"
++    label = "Twelve Data (free key)"
++    capabilities = frozenset({QUOTES, HISTORY, SEARCH})
++    markets = "US shares and ETFs, FX pairs, and shares on NSE, BSE, LSE, TSX, HKEX, TSE, Xetra, Euronext and other non-US exchanges"
++    terms = ("Free key (TWELVEDATA_API_KEY): 8 credits a minute, 800 a day, 1 credit per symbol per call; 5000 bars per call. "
++             "Prices are as the plan delivers them (free plans can be delayed). Some data and exchanges need a paid plan.")
++    rate = (8 / 60, 8)  # 8 credits a minute
++    max_wait = 2.0
++    timeout = 10.0
++    key_name = "TWELVEDATA_API_KEY"
++    headers: ClassVar[dict[str, str]] = {"User-Agent": "OpenTerm/0.1", "Accept": "application/json"}
++    intraday_days: ClassVar[dict[str, int]] = {i: depth_days(BARS_PER_SESSION[i], MAX_BARS) for i in ("1m", "5m", "15m", "30m", "60m")}
++    msg_rate_limited = "429 from Twelve Data"
++    msg_refused = "Twelve Data refused the key ({code})"
++
++    def supports(self, capability: str, symbol: str | None = None) -> bool:
++        return super().supports(capability, symbol) and (symbol is None or capability == SEARCH or td_symbol(symbol) is not None)
++
++    def auth_headers(self) -> dict[str, str]:
++        return {"Authorization": f"apikey {self._key}"}  # a header, never the URL
++
++    def _check_status(self, r: httpx.Response) -> None:
++        try:
++            body = r.json()
++        except ValueError:
++            body = None
++        if isinstance(body, dict) and body.get("status") == "error":
++            raise self._error(int(fnum(body.get("code")) or r.status_code), str(body.get("message") or ""))
++        super()._check_status(r)
++
++    def _error(self, code: int, message: str) -> ProviderError:
++        low = message.lower()
++        if code == 401:
++            return ProviderError(K.KEY_REQUIRED, "Twelve Data refused the key (401)")
++        if code == 403:
++            return ProviderError(K.UNSUPPORTED, "KEY PLAN: this data needs a paid Twelve Data plan")
++        if code == 404 or (code == 400 and ("not found" in low or "symbol" in low)):
++            return ProviderError(K.NOT_FOUND, "Twelve Data has no such symbol")
++        if code == 429:
++            return ProviderError(K.RATE_LIMITED, "Twelve Data credit limit reached (" + ("day" if "day" in low else "minute") + ")")
++        return ProviderError(K.UNAVAILABLE, f"Twelve Data error {code}")
++
++    async def _api(self, path: str, params: dict[str, Any]) -> Any:
++        return await self.get_json(f"{BASE}/{path}", params)
++
++    # --- quotes ---------------------------------------------------------------------------------------------------------------
++    async def quotes(self, symbols: list[str]) -> list[Quote]:
++        wanted = [(s, td_symbol(s)) for s in symbols[:MAX_QUOTE_SYMBOLS]]
++        results = await asyncio.gather(*(self._quote(s, t) for s, t in wanted if t), return_exceptions=True)
++        out = [r for r in results if isinstance(r, Quote)]
++        if not out:
++            errs = [r for r in results if isinstance(r, ProviderError) and r.kind != K.NOT_FOUND]
++            if errs:
++                raise errs[0]
++            raise ProviderError(K.NOT_FOUND, "no quote")
++        return out
++
++    async def _quote(self, symbol: str, td: tuple[str, dict[str, str]]) -> Quote:
++        d = await self._api("quote", {"symbol": td[0], **td[1]})
++        price = fnum((d or {}).get("close"))
++        if not isinstance(d, dict) or price is None:
++            raise ProviderError(K.NOT_FOUND, "no quote")
++        wk = d.get("fifty_two_week") or {}
++        return Quote(
++            symbol=symbol, name=d.get("name"), currency=d.get("currency"), exchange=d.get("exchange"), price=price,
++            prev_close=fnum(d.get("previous_close")), change=fnum(d.get("change")), change_pct=fnum(d.get("percent_change")),
++            open=fnum(d.get("open")), high=fnum(d.get("high")), low=fnum(d.get("low")), volume=inum(d.get("volume")),
++            high_52w=fnum(wk.get("high")), low_52w=fnum(wk.get("low")), market_time=inum(d.get("timestamp")),
++            source=self.source, as_of=self.now(),
++        )
++
++    # --- history --------------------------------------------------------------------------------------------------------------
++    async def history(self, symbol: str, range_: str, interval: str) -> Bars:
++        td = td_symbol(symbol)
++        unit = INTERVALS.get(interval)
++        if td is None or unit is None:
++            raise ProviderError(K.UNSUPPORTED, f"twelvedata: no {interval} candles for {symbol}")
++        days = range_days(range_)
++        intraday = interval in BARS_PER_SESSION
++        if intraday:
++            limit = self.intraday_days.get(interval, 0)
++            if days > limit:
++                raise ProviderError(K.DEPTH, f"{interval} candles reach back {limit} days on Twelve Data (5000 bars per call)")
++            sessions = SESSIONS.get(range_, 0)
++            size = min(MAX_BARS, int((sessions + 2 if sessions else days * 5 / 7 + 2) * BARS_PER_SESSION[interval]) + 1)
++        else:
++            size = min(MAX_BARS, int(days * {"1d": 5 / 7, "1wk": 1 / 7, "1mo": 1 / 30}[interval]) + 5)
++        params = {"symbol": td[0], "interval": unit, "outputsize": size, "order": "desc", **td[1]}
++        if intraday:
++            params["timezone"] = "UTC"
++        body = await self._api("time_series", params)
++        rows = (body or {}).get("values") if isinstance(body, dict) else None
++        if not rows:
++            raise ProviderError(K.NOT_FOUND, "no rows")
++        meta = body.get("meta") or {}
++        tzname = meta.get("exchange_timezone") or None
++        pairs = []  # (epoch, session day, row), oldest first
++        zone = ZoneInfo(tzname) if tzname else UTC
++        for row in reversed(rows):
++            t = _epoch(row.get("datetime"), intraday)
++            if t is not None:
++                pairs.append((t, datetime.fromtimestamp(t, zone).date().isoformat() if intraday else "", row))
++        if intraday and range_ in SESSIONS:
++            pairs = pairs[trim_sessions([(t, d) for t, d, _ in pairs], SESSIONS[range_]):]
++        if not pairs:
++            raise ProviderError(K.NOT_FOUND, "no rows")
++        return Bars.model_construct(
++            symbol=symbol, range=range_, interval=interval, currency=meta.get("currency"), exchange=meta.get("exchange"), tz=tzname,
++            t=[t for t, _, _ in pairs], o=[fnum(r.get("open")) for _, _, r in pairs], h=[fnum(r.get("high")) for _, _, r in pairs],
++            l=[fnum(r.get("low")) for _, _, r in pairs], c=[fnum(r.get("close")) for _, _, r in pairs],
++            v=[inum(r.get("volume")) for _, _, r in pairs], source=self.source, as_of=self.now(),
++        )
++
++    # --- search ---------------------------------------------------------------------------------------------------------------
++    async def search(self, query: str) -> list[SearchHit]:
++        body = await self._api("symbol_search", {"symbol": query.strip(), "outputsize": 15})
++        hits = []
++        for d in (body or {}).get("data") or [] if isinstance(body, dict) else []:
++            mic, sym = d.get("mic_code") or "", d.get("symbol")
++            if not sym:
++                continue
++            if mic in US_MICS:
++                out = str(sym).replace(".", "-")
++            elif mic in MIC_SUFFIX:
++                out = f"{sym}.{MIC_SUFFIX[mic]}"
++            else:
++                continue  # an exchange OpenTerm has no Yahoo suffix for: the symbol would resolve to the wrong market
++            hits.append(SearchHit(symbol=out, name=d.get("instrument_name"), exchange=d.get("exchange"), type=d.get("instrument_type"),
++                                  source=self.source))
++        if not hits:
++            raise ProviderError(K.NOT_FOUND, "no matches")
++        return hits
++
++    async def probe(self) -> None:
++        await self._api("api_usage", {})
++
++
++def _epoch(text: Any, intraday: bool) -> int | None:
++    """'2026-11-10 15:15:00' (asked in UTC) or '2026-11-10' (midnight UTC, like the other daily sources) -> epoch seconds."""
++    if not isinstance(text, str):
++        return None
++    try:
++        dt = datetime.strptime(text, "%Y-%m-%d %H:%M:%S" if intraday else "%Y-%m-%d")
++    except ValueError:
++        try:
++            dt = datetime.strptime(text[:10], "%Y-%m-%d")
++        except ValueError:
++            return None
++    return int(dt.replace(tzinfo=UTC).timestamp())
+diff --git a/backend/tests/fixtures/alphavantage_docshape_daily_ibm.json b/backend/tests/fixtures/alphavantage_docshape_daily_ibm.json
+new file mode 100644
+index 0000000..9a27a9c
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_docshape_daily_ibm.json
+@@ -0,0 +1,20 @@
++{
++ "doc_shaped": "NOT A RECORDING. Built from the TIME_SERIES_DAILY field list in alphavantage.co/documentation (the shared demo key answers 'demo purposes only' for this call and no personal key was available). Prices are made up for the shape (IBM, five sessions, newest first, as the API sends them).",
++ "status": 200,
++ "body": {
++  "Meta Data": {
++   "1. Information": "Daily Prices (open, high, low, close) and Volumes",
++   "2. Symbol": "IBM",
++   "3. Last Refreshed": "2026-11-09",
++   "4. Output Size": "Compact",
++   "5. Time Zone": "US/Eastern"
++  },
++  "Time Series (Daily)": {
++   "2026-11-09": {"1. open": "246.0000", "2. high": "248.8100", "3. low": "245.1957", "4. close": "246.1100", "5. volume": "4629816"},
++   "2026-11-06": {"1. open": "244.1000", "2. high": "246.2000", "3. low": "243.5000", "4. close": "245.0000", "5. volume": "3900120"},
++   "2026-11-05": {"1. open": "243.0000", "2. high": "245.0000", "3. low": "241.9000", "4. close": "244.2000", "5. volume": "4100777"},
++   "2026-11-04": {"1. open": "242.5000", "2. high": "244.3000", "3. low": "241.0000", "4. close": "243.1000", "5. volume": "3555100"},
++   "2026-11-03": {"1. open": "240.0000", "2. high": "243.0000", "3. low": "239.5000", "4. close": "242.4000", "5. volume": "3801200"}
++  }
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_docshape_premium.json b/backend/tests/fixtures/alphavantage_docshape_premium.json
+new file mode 100644
+index 0000000..5a5b7ef
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_docshape_premium.json
+@@ -0,0 +1,7 @@
++{
++ "doc_shaped": "NOT A RECORDING. Built from the wording Alpha Vantage's own premium-endpoint answer is documented and widely reported to use (HTTP 200, an 'Information' text containing 'premium endpoint'); no account on a free key was available to record it. Used for TIME_SERIES_DAILY with outputsize=full and for TIME_SERIES_INTRADAY on a free key.",
++ "status": 200,
++ "body": {
++  "Information": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium endpoints"
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_balance_ibm.json b/backend/tests/fixtures/alphavantage_real_balance_ibm.json
+new file mode 100644
+index 0000000..a631eb7
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_balance_ibm.json
+@@ -0,0 +1,531 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
++ "body": {
++  "symbol": "IBM",
++  "annualReports": [
++   {
++    "fiscalDateEnding": "2025-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "151880000000",
++    "totalCurrentAssets": "35860000000",
++    "cashAndCashEquivalentsAtCarryingValue": "13641000000",
++    "cashAndShortTermInvestments": "13641000000",
++    "inventory": "1220000000",
++    "currentNetReceivables": "17639000000",
++    "totalNonCurrentAssets": "116020000000",
++    "propertyPlantEquipment": "9028000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "11391000000",
++    "intangibleAssetsExcludingGoodwill": "11391000000",
++    "goodwill": "67717000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "830000000",
++    "otherCurrentAssets": "2530000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "119140000000",
++    "totalCurrentLiabilities": "38658000000",
++    "currentAccountsPayable": "4756000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "7224000000",
++    "totalNonCurrentLiabilities": "80482000000",
++    "capitalLeaseObligations": "3347000000",
++    "longTermDebt": "54836000000",
++    "currentLongTermDebt": "6424000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "67154000000",
++    "otherCurrentLiabilities": "10577000000",
++    "otherNonCurrentLiabilities": "1068000000",
++    "totalShareholderEquity": "32648000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "155648000000",
++    "commonStock": "63318000000",
++    "commonStockSharesOutstanding": "948700000"
++   },
++   {
++    "fiscalDateEnding": "2024-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "137175000000",
++    "totalCurrentAssets": "34482000000",
++    "cashAndCashEquivalentsAtCarryingValue": "13947000000",
++    "cashAndShortTermInvestments": "13947000000",
++    "inventory": "1289000000",
++    "currentNetReceivables": "14010000000",
++    "totalNonCurrentAssets": "102694000000",
++    "propertyPlantEquipment": "8928000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "10661000000",
++    "intangibleAssetsExcludingGoodwill": "10661000000",
++    "goodwill": "60706000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "644000000",
++    "otherCurrentAssets": "4592000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "109782000000",
++    "totalCurrentLiabilities": "33142000000",
++    "currentAccountsPayable": "4032000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "5857000000",
++    "totalNonCurrentLiabilities": "76640000000",
++    "capitalLeaseObligations": "3423000000",
++    "longTermDebt": "49884000000",
++    "currentLongTermDebt": "5089000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "58396000000",
++    "otherCurrentLiabilities": "7313000000",
++    "otherNonCurrentLiabilities": "981000000",
++    "totalShareholderEquity": "27307000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "151163000000",
++    "commonStock": "61380000000",
++    "commonStockSharesOutstanding": "937200000"
++   },
++   {
++    "fiscalDateEnding": "2023-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "135241000000",
++    "totalCurrentAssets": "32908000000",
++    "cashAndCashEquivalentsAtCarryingValue": "13068000000",
++    "cashAndShortTermInvestments": "13068000000",
++    "inventory": "1161000000",
++    "currentNetReceivables": "13956000000",
++    "totalNonCurrentAssets": "102333000000",
++    "propertyPlantEquipment": "8721000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "11036000000",
++    "intangibleAssetsExcludingGoodwill": "11036000000",
++    "goodwill": "60178000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "373000000",
++    "otherCurrentAssets": "4350000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "112628000000",
++    "totalCurrentLiabilities": "34122000000",
++    "currentAccountsPayable": "4132000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "7246000000",
++    "totalNonCurrentLiabilities": "78506000000",
++    "capitalLeaseObligations": "3388000000",
++    "longTermDebt": "50121000000",
++    "currentLongTermDebt": "6426000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "59935000000",
++    "otherCurrentLiabilities": "7023000000",
++    "otherNonCurrentLiabilities": "1164000000",
++    "totalShareholderEquity": "22533000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "151276000000",
++    "commonStock": "59643000000",
++    "commonStockSharesOutstanding": "922074000"
++   },
++   {
++    "fiscalDateEnding": "2022-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "127243000000",
++    "totalCurrentAssets": "29118000000",
++    "cashAndCashEquivalentsAtCarryingValue": "7886000000",
++    "cashAndShortTermInvestments": "7886000000",
++    "inventory": "1552000000",
++    "currentNetReceivables": "7005000000",
++    "totalNonCurrentAssets": "98126000000",
++    "propertyPlantEquipment": "8212000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "11184000000",
++    "intangibleAssetsExcludingGoodwill": "11184000000",
++    "goodwill": "55949000000",
++    "investments": "None",
++    "longTermInvestments": "1617000000",
++    "shortTermInvestments": "852000000",
++    "otherCurrentAssets": "11823000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "105222000000",
++    "totalCurrentLiabilities": "31505000000",
++    "currentAccountsPayable": "4051000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "5634000000",
++    "totalNonCurrentLiabilities": "73717000000",
++    "capitalLeaseObligations": "3064000000",
++    "longTermDebt": "46189000000",
++    "currentLongTermDebt": "4760000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "54013000000",
++    "otherCurrentLiabilities": "7592000000",
++    "otherNonCurrentLiabilities": "12243000000",
++    "totalShareholderEquity": "21944000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "149825000000",
++    "commonStock": "58343000000",
++    "commonStockSharesOutstanding": "912269000"
++   },
++   {
++    "fiscalDateEnding": "2021-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "132001000000",
++    "totalCurrentAssets": "29539000000",
++    "cashAndCashEquivalentsAtCarryingValue": "6650000000",
++    "cashAndShortTermInvestments": "6650000000",
++    "inventory": "1649000000",
++    "currentNetReceivables": "14977000000",
++    "totalNonCurrentAssets": "102460000000",
++    "propertyPlantEquipment": "8916000000",
++    "accumulatedDepreciationAmortizationPPE": "-14390000000",
++    "intangibleAssets": "12511000000",
++    "intangibleAssetsExcludingGoodwill": "12511000000",
++    "goodwill": "55643000000",
++    "investments": "None",
++    "longTermInvestments": "1823000000",
++    "shortTermInvestments": "600000000",
++    "otherCurrentAssets": "5663000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "113005000000",
++    "totalCurrentLiabilities": "33619000000",
++    "currentAccountsPayable": "3955000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "7760000000",
++    "totalNonCurrentLiabilities": "79386000000",
++    "capitalLeaseObligations": "3436000000",
++    "longTermDebt": "44917000000",
++    "currentLongTermDebt": "6787000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "55139000000",
++    "otherCurrentLiabilities": "9386000000",
++    "otherNonCurrentLiabilities": "13995000000",
++    "totalShareholderEquity": "18996000000",
++    "treasuryStock": "-169392000000",
++    "retainedEarnings": "154209000000",
++    "commonStock": "57319000000",
++    "commonStockSharesOutstanding": "904641001"
++   }
++  ],
++  "quarterlyReports": [
++   {
++    "fiscalDateEnding": "2026-09-30",
++    "reportedCurrency": "USD",
++    "totalAssets": "155010000000",
++    "totalCurrentAssets": "31190000000",
++    "cashAndCashEquivalentsAtCarryingValue": "9233000000",
++    "cashAndShortTermInvestments": "9233000000",
++    "inventory": "1945000000",
++    "currentNetReceivables": "13879000000",
++    "totalNonCurrentAssets": "123820000000",
++    "propertyPlantEquipment": "None",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "13603000000",
++    "intangibleAssetsExcludingGoodwill": "13603000000",
++    "goodwill": "74916000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "1825000000",
++    "otherCurrentAssets": "4308000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "118806000000",
++    "totalCurrentLiabilities": "36486000000",
++    "currentAccountsPayable": "4491000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "7762000000",
++    "totalNonCurrentLiabilities": "82320000000",
++    "capitalLeaseObligations": "3323000000",
++    "longTermDebt": "56804000000",
++    "currentLongTermDebt": "7013000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "67140000000",
++    "otherCurrentLiabilities": "7202000000",
++    "otherNonCurrentLiabilities": "10172000000",
++    "totalShareholderEquity": "35537000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "156576000000",
++    "commonStock": "65137000000",
++    "commonStockSharesOutstanding": "953523487"
++   },
++   {
++    "fiscalDateEnding": "2026-06-30",
++    "reportedCurrency": "USD",
++    "totalAssets": "152099000000",
++    "totalCurrentAssets": "28398000000",
++    "cashAndCashEquivalentsAtCarryingValue": "7172000000",
++    "cashAndShortTermInvestments": "7172000000",
++    "inventory": "1746000000",
++    "currentNetReceivables": "14048000000",
++    "totalNonCurrentAssets": "119101000000",
++    "propertyPlantEquipment": "None",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "13955000000",
++    "intangibleAssetsExcludingGoodwill": "13955000000",
++    "goodwill": "74599000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "960000000",
++    "otherCurrentAssets": "4472000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "117558000000",
++    "totalCurrentLiabilities": "35912000000",
++    "currentAccountsPayable": "4395000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "6545000000",
++    "totalNonCurrentLiabilities": "81646000000",
++    "capitalLeaseObligations": "3285000000",
++    "longTermDebt": "56212000000",
++    "currentLongTermDebt": "5775000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "65272000000",
++    "otherCurrentLiabilities": "6789000000",
++    "otherNonCurrentLiabilities": "10044000000",
++    "totalShareholderEquity": "34452000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "155937000000",
++    "commonStock": "64600000000",
++    "commonStockSharesOutstanding": "952700000"
++   },
++   {
++    "fiscalDateEnding": "2026-03-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "156229000000",
++    "totalCurrentAssets": "31914000000",
++    "cashAndCashEquivalentsAtCarryingValue": "10819000000",
++    "cashAndShortTermInvestments": "10819000000",
++    "inventory": "1476000000",
++    "currentNetReceivables": "14245000000",
++    "totalNonCurrentAssets": "124315000000",
++    "propertyPlantEquipment": "None",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "14624000000",
++    "intangibleAssetsExcludingGoodwill": "14624000000",
++    "goodwill": "74709000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "964000000",
++    "otherCurrentAssets": "4410000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "123174000000",
++    "totalCurrentLiabilities": "40101000000",
++    "currentAccountsPayable": "4039000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "9453000000",
++    "totalNonCurrentLiabilities": "83074000000",
++    "capitalLeaseObligations": "3441000000",
++    "longTermDebt": "57706000000",
++    "currentLongTermDebt": "8655000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "69802000000",
++    "otherCurrentLiabilities": "7522000000",
++    "otherNonCurrentLiabilities": "9766000000",
++    "totalShareholderEquity": "32974000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "155327000000",
++    "commonStock": "63936000000",
++    "commonStockSharesOutstanding": "952100000"
++   },
++   {
++    "fiscalDateEnding": "2025-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "151880000000",
++    "totalCurrentAssets": "35860000000",
++    "cashAndCashEquivalentsAtCarryingValue": "13641000000",
++    "cashAndShortTermInvestments": "13641000000",
++    "inventory": "1220000000",
++    "currentNetReceivables": "17639000000",
++    "totalNonCurrentAssets": "116020000000",
++    "propertyPlantEquipment": "9028000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "11391000000",
++    "intangibleAssetsExcludingGoodwill": "11391000000",
++    "goodwill": "67717000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "830000000",
++    "otherCurrentAssets": "2530000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "119140000000",
++    "totalCurrentLiabilities": "38658000000",
++    "currentAccountsPayable": "4756000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "7224000000",
++    "totalNonCurrentLiabilities": "80482000000",
++    "capitalLeaseObligations": "3347000000",
++    "longTermDebt": "54836000000",
++    "currentLongTermDebt": "6424000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "67154000000",
++    "otherCurrentLiabilities": "8230000000",
++    "otherNonCurrentLiabilities": "1068000000",
++    "totalShareholderEquity": "32648000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "155648000000",
++    "commonStock": "63318000000",
++    "commonStockSharesOutstanding": "952400000"
++   },
++   {
++    "fiscalDateEnding": "2025-09-30",
++    "reportedCurrency": "USD",
++    "totalAssets": "146312000000",
++    "totalCurrentAssets": "32740000000",
++    "cashAndCashEquivalentsAtCarryingValue": "11569000000",
++    "cashAndShortTermInvestments": "11569000000",
++    "inventory": "1397000000",
++    "currentNetReceivables": "12607000000",
++    "totalNonCurrentAssets": "113572000000",
++    "propertyPlantEquipment": "9074000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "11729000000",
++    "intangibleAssetsExcludingGoodwill": "11729000000",
++    "goodwill": "67396000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "3286000000",
++    "otherCurrentAssets": "3881000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "118322000000",
++    "totalCurrentLiabilities": "35142000000",
++    "currentAccountsPayable": "3867000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "8749000000",
++    "totalNonCurrentLiabilities": "83180000000",
++    "capitalLeaseObligations": "3453000000",
++    "longTermDebt": "55174000000",
++    "currentLongTermDebt": "7942000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "66569000000",
++    "otherCurrentLiabilities": "6985000000",
++    "otherNonCurrentLiabilities": "11762000000",
++    "totalShareholderEquity": "27905000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "151581000000",
++    "commonStock": "62819000000",
++    "commonStockSharesOutstanding": "948900000"
++   },
++   {
++    "fiscalDateEnding": "2025-06-30",
++    "reportedCurrency": "USD",
++    "totalAssets": "148585000000",
++    "totalCurrentAssets": "34253000000",
++    "cashAndCashEquivalentsAtCarryingValue": "11943000000",
++    "cashAndShortTermInvestments": "11943000000",
++    "inventory": "1251000000",
++    "currentNetReceivables": "12747000000",
++    "totalNonCurrentAssets": "114332000000",
++    "propertyPlantEquipment": "9258000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "12254000000",
++    "intangibleAssetsExcludingGoodwill": "12254000000",
++    "goodwill": "67506000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "3504000000",
++    "otherCurrentAssets": "4808000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "120997000000",
++    "totalCurrentLiabilities": "37726000000",
++    "currentAccountsPayable": "3974000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "9765000000",
++    "totalNonCurrentLiabilities": "83271000000",
++    "capitalLeaseObligations": "3555000000",
++    "longTermDebt": "55219000000",
++    "currentLongTermDebt": "8945000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "67719000000",
++    "otherCurrentLiabilities": "7284000000",
++    "otherNonCurrentLiabilities": "11522000000",
++    "totalShareholderEquity": "27509000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "151367000000",
++    "commonStock": "62392000000",
++    "commonStockSharesOutstanding": "946700000"
++   },
++   {
++    "fiscalDateEnding": "2025-03-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "145667000000",
++    "totalCurrentAssets": "35336000000",
++    "cashAndCashEquivalentsAtCarryingValue": "11035000000",
++    "cashAndShortTermInvestments": "11035000000",
++    "inventory": "1431000000",
++    "currentNetReceivables": "11882000000",
++    "totalNonCurrentAssets": "110330000000",
++    "propertyPlantEquipment": "9065000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "12391000000",
++    "intangibleAssetsExcludingGoodwill": "12391000000",
++    "goodwill": "66065000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "6430000000",
++    "otherCurrentAssets": "4558000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "118715000000",
++    "totalCurrentLiabilities": "35106000000",
++    "currentAccountsPayable": "3585000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "7711000000",
++    "totalNonCurrentLiabilities": "83609000000",
++    "capitalLeaseObligations": "3551000000",
++    "longTermDebt": "56371000000",
++    "currentLongTermDebt": "6913000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "66835000000",
++    "otherCurrentLiabilities": "7180000000",
++    "otherNonCurrentLiabilities": "11105000000",
++    "totalShareholderEquity": "26880000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "150703000000",
++    "commonStock": "61913000000",
++    "commonStockSharesOutstanding": "945400000"
++   },
++   {
++    "fiscalDateEnding": "2024-12-31",
++    "reportedCurrency": "USD",
++    "totalAssets": "137175000000",
++    "totalCurrentAssets": "34482000000",
++    "cashAndCashEquivalentsAtCarryingValue": "13947000000",
++    "cashAndShortTermInvestments": "13947000000",
++    "inventory": "1289000000",
++    "currentNetReceivables": "14010000000",
++    "totalNonCurrentAssets": "102694000000",
++    "propertyPlantEquipment": "8928000000",
++    "accumulatedDepreciationAmortizationPPE": "None",
++    "intangibleAssets": "10661000000",
++    "intangibleAssetsExcludingGoodwill": "10661000000",
++    "goodwill": "60706000000",
++    "investments": "None",
++    "longTermInvestments": "None",
++    "shortTermInvestments": "644000000",
++    "otherCurrentAssets": "4592000000",
++    "otherNonCurrentAssets": "None",
++    "totalLiabilities": "109782000000",
++    "totalCurrentLiabilities": "33142000000",
++    "currentAccountsPayable": "4032000000",
++    "deferredRevenue": "None",
++    "currentDebt": "None",
++    "shortTermDebt": "5857000000",
++    "totalNonCurrentLiabilities": "76640000000",
++    "capitalLeaseObligations": "3423000000",
++    "longTermDebt": "49884000000",
++    "currentLongTermDebt": "5089000000",
++    "longTermDebtNoncurrent": "None",
++    "shortLongTermDebtTotal": "58396000000",
++    "otherCurrentLiabilities": "7313000000",
++    "otherNonCurrentLiabilities": "981000000",
++    "totalShareholderEquity": "27307000000",
++    "treasuryStock": "None",
++    "retainedEarnings": "151163000000",
++    "commonStock": "61380000000",
++    "commonStockSharesOutstanding": "942400000"
++   }
++  ]
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_burst_limit.json b/backend/tests/fixtures/alphavantage_real_burst_limit.json
+new file mode 100644
+index 0000000..66a1d73
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_burst_limit.json
+@@ -0,0 +1,7 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL text (made-up key, no account), captured with curl for TIME_SERIES_DAILY IBM when two calls came within one second: Alpha Vantage's 1-request-per-second burst limit.",
++ "body": {
++  "Information": "Thank you for using Alpha Vantage! Please consider spreading out your free API requests more sparingly (1 request per second). You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to lift the free key rate limit (25 requests per day), raise the per-second burst limit, and instantly unlock all premium endpoints"
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_cashflow_ibm.json b/backend/tests/fixtures/alphavantage_real_cashflow_ibm.json
+new file mode 100644
+index 0000000..decf27e
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_cashflow_ibm.json
+@@ -0,0 +1,427 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
++ "body": {
++  "symbol": "IBM",
++  "annualReports": [
++   {
++    "fiscalDateEnding": "2025-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "13193000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "5021000000",
++    "capitalExpenditures": "1091000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "70000000",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-10302000000",
++    "cashflowFromFinancing": "-3829000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "6255000000",
++    "dividendPayoutCommonStock": "6255000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-1018000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "1715000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "10571000000"
++   },
++   {
++    "fiscalDateEnding": "2024-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "13445000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "4667000000",
++    "capitalExpenditures": "1685000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "-166000000",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-4937000000",
++    "cashflowFromFinancing": "-7079000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "6147000000",
++    "dividendPayoutCommonStock": "6147000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-651000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "1311000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "6023000000"
++   },
++   {
++    "fiscalDateEnding": "2023-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "13432000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "4381000000",
++    "capitalExpenditures": "1918000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "390000000",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-7070000000",
++    "cashflowFromFinancing": "-6016000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "6016000000",
++    "dividendPayoutCommonStock": "6016000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-416000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "1091000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "6925000000"
++   },
++   {
++    "fiscalDateEnding": "2022-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "10435000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "4802000000",
++    "capitalExpenditures": "1860000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "71000000",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-4202000000",
++    "cashflowFromFinancing": "-4958000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "5948000000",
++    "dividendPayoutCommonStock": "5948000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-407000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "987000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "1639000000"
++   },
++   {
++    "fiscalDateEnding": "2021-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "12796000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "6416000000",
++    "capitalExpenditures": "2381000000",
++    "changeInReceivables": "1372000000",
++    "changeInInventory": "138000000",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-5975000000",
++    "cashflowFromFinancing": "-13354000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "5869000000",
++    "dividendPayoutCommonStock": "5869000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-319000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "982000000",
++    "changeInCashAndCashEquivalents": "-6533000000",
++    "changeInExchangeRate": "None",
++    "netIncome": "5743000000"
++   }
++  ],
++  "quarterlyReports": [
++   {
++    "fiscalDateEnding": "2026-09-30",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "4025000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1378000000",
++    "capitalExpenditures": "486000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-2570000000",
++    "cashflowFromFinancing": "607000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1596000000",
++    "dividendPayoutCommonStock": "1596000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-352000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "535000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "2190000000"
++   },
++   {
++    "fiscalDateEnding": "2026-06-30",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "2597000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1349000000",
++    "capitalExpenditures": "229000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-481000000",
++    "cashflowFromFinancing": "-5728000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1590000000",
++    "dividendPayoutCommonStock": "1590000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-115000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "498000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "2166000000"
++   },
++   {
++    "fiscalDateEnding": "2026-03-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "5169000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1274000000",
++    "capitalExpenditures": "391000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-10489000000",
++    "cashflowFromFinancing": "2719000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1576000000",
++    "dividendPayoutCommonStock": "1576000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-350000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "506000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "1216000000"
++   },
++   {
++    "fiscalDateEnding": "2025-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "4040000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1296000000",
++    "capitalExpenditures": "382000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "1417000000",
++    "cashflowFromFinancing": "-3406000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1574000000",
++    "dividendPayoutCommonStock": "1574000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-167000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "430000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "5579000000"
++   },
++   {
++    "fiscalDateEnding": "2025-09-30",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "3082000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1283000000",
++    "capitalExpenditures": "255000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-438000000",
++    "cashflowFromFinancing": "-3012000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1569000000",
++    "dividendPayoutCommonStock": "1569000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-414000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "443000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "1744000000"
++   },
++   {
++    "fiscalDateEnding": "2025-06-30",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "1701000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1265000000",
++    "capitalExpenditures": "210000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "1698000000",
++    "cashflowFromFinancing": "-2854000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1563000000",
++    "dividendPayoutCommonStock": "1563000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-153000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "441000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "2193000000"
++   },
++   {
++    "fiscalDateEnding": "2025-03-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "4370000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1177000000",
++    "capitalExpenditures": "395000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-12979000000",
++    "cashflowFromFinancing": "5443000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1549000000",
++    "dividendPayoutCommonStock": "1549000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-284000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "401000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "1054000000"
++   },
++   {
++    "fiscalDateEnding": "2024-12-31",
++    "reportedCurrency": "USD",
++    "operatingCashflow": "4330000000",
++    "paymentsForOperatingActivities": "None",
++    "proceedsFromOperatingActivities": "None",
++    "changeInOperatingLiabilities": "None",
++    "changeInOperatingAssets": "None",
++    "depreciationDepletionAndAmortization": "1113000000",
++    "capitalExpenditures": "444000000",
++    "changeInReceivables": "None",
++    "changeInInventory": "None",
++    "profitLoss": "None",
++    "cashflowFromInvestment": "-1379000000",
++    "cashflowFromFinancing": "-1676000000",
++    "proceedsFromRepaymentsOfShortTermDebt": "None",
++    "paymentsForRepurchaseOfCommonStock": "None",
++    "paymentsForRepurchaseOfEquity": "None",
++    "paymentsForRepurchaseOfPreferredStock": "None",
++    "dividendPayout": "1546000000",
++    "dividendPayoutCommonStock": "1546000000",
++    "dividendPayoutPreferredStock": "None",
++    "proceedsFromIssuanceOfCommonStock": "None",
++    "proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet": "None",
++    "proceedsFromIssuanceOfPreferredStock": "None",
++    "proceedsFromRepurchaseOfEquity": "-112000000",
++    "proceedsFromSaleOfTreasuryStock": "None",
++    "stockBasedCompensation": "345000000",
++    "changeInCashAndCashEquivalents": "None",
++    "changeInExchangeRate": "None",
++    "netIncome": "2914000000"
++   }
++  ]
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_income_ibm.json b/backend/tests/fixtures/alphavantage_real_income_ibm.json
+new file mode 100644
+index 0000000..abffecd
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_income_ibm.json
+@@ -0,0 +1,375 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
++ "body": {
++  "symbol": "IBM",
++  "annualReports": [
++   {
++    "fiscalDateEnding": "2025-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "39297000000",
++    "totalRevenue": "67536000000",
++    "costOfRevenue": "28239000000",
++    "costofGoodsAndServicesSold": "28239000000",
++    "operatingIncome": "12492000000",
++    "sellingGeneralAndAdministrative": "17012000000",
++    "researchAndDevelopment": "8316000000",
++    "operatingExpenses": "26805000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-1290000000",
++    "interestIncome": "645000000",
++    "interestExpense": "1935000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "5021000000",
++    "incomeBeforeTax": "10328000000",
++    "incomeTaxExpense": "-242000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "10571000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "12263000000",
++    "ebitda": "17284000000",
++    "netIncome": "10593000000"
++   },
++   {
++    "fiscalDateEnding": "2024-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "35551000000",
++    "totalRevenue": "62753000000",
++    "costOfRevenue": "27201000000",
++    "costofGoodsAndServicesSold": "27201000000",
++    "operatingIncome": "10074000000",
++    "sellingGeneralAndAdministrative": "16737000000",
++    "researchAndDevelopment": "7479000000",
++    "operatingExpenses": "25478000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-965000000",
++    "interestIncome": "747000000",
++    "interestExpense": "1712000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "4667000000",
++    "incomeBeforeTax": "5797000000",
++    "incomeTaxExpense": "-218000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "6015000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "7509000000",
++    "ebitda": "12176000000",
++    "netIncome": "6023000000"
++   },
++   {
++    "fiscalDateEnding": "2023-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "34300000000",
++    "totalRevenue": "61860000000",
++    "costOfRevenue": "27560000000",
++    "costofGoodsAndServicesSold": "27560000000",
++    "operatingIncome": "7514000000",
++    "sellingGeneralAndAdministrative": "17952000000",
++    "researchAndDevelopment": "6631000000",
++    "operatingExpenses": "26786000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-924000000",
++    "interestIncome": "591000000",
++    "interestExpense": "1607000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "4395000000",
++    "incomeBeforeTax": "8690000000",
++    "incomeTaxExpense": "1176000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "7099000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "7514000000",
++    "ebitda": "7514000000",
++    "netIncome": "7502000000"
++   },
++   {
++    "fiscalDateEnding": "2022-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "32687000000",
++    "totalRevenue": "60530000000",
++    "costOfRevenue": "27842000000",
++    "costofGoodsAndServicesSold": "27842000000",
++    "operatingIncome": "8174000000",
++    "sellingGeneralAndAdministrative": "16103000000",
++    "researchAndDevelopment": "6567000000",
++    "operatingExpenses": "24514000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-1216000000",
++    "interestIncome": "162000000",
++    "interestExpense": "1216000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "4802000000",
++    "incomeBeforeTax": "1156000000",
++    "incomeTaxExpense": "-626000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "1782000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "2372000000",
++    "ebitda": "7174000000",
++    "netIncome": "1640000000"
++   },
++   {
++    "fiscalDateEnding": "2021-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "31486000000",
++    "totalRevenue": "57351000000",
++    "costOfRevenue": "25865000000",
++    "costofGoodsAndServicesSold": "25865000000",
++    "operatingIncome": "6832000000",
++    "sellingGeneralAndAdministrative": "17699000000",
++    "researchAndDevelopment": "6488000000",
++    "operatingExpenses": "24654000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-1103000000",
++    "interestIncome": "52000000",
++    "interestExpense": "1155000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "-873000000",
++    "depreciation": "None",
++    "depreciationAndAmortization": "6417000000",
++    "incomeBeforeTax": "4837000000",
++    "incomeTaxExpense": "124000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "4712000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "7021000000",
++    "ebitda": "13438000000",
++    "netIncome": "5742000000"
++   }
++  ],
++  "quarterlyReports": [
++   {
++    "fiscalDateEnding": "2026-09-30",
++    "reportedCurrency": "USD",
++    "grossProfit": "9714000000",
++    "totalRevenue": "17103000000",
++    "costOfRevenue": "7389000000",
++    "costofGoodsAndServicesSold": "7389000000",
++    "operatingIncome": "2880000000",
++    "sellingGeneralAndAdministrative": "4386000000",
++    "researchAndDevelopment": "2378000000",
++    "operatingExpenses": "6834000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-404000000",
++    "interestIncome": "87000000",
++    "interestExpense": "491000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1378000000",
++    "incomeBeforeTax": "2497000000",
++    "incomeTaxExpense": "298000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "2199000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "2988000000",
++    "ebitda": "4366000000",
++    "netIncome": "2189000000"
++   },
++   {
++    "fiscalDateEnding": "2026-06-30",
++    "reportedCurrency": "USD",
++    "grossProfit": "9907000000",
++    "totalRevenue": "17162000000",
++    "costOfRevenue": "7255000000",
++    "costofGoodsAndServicesSold": "7255000000",
++    "operatingIncome": "2615000000",
++    "sellingGeneralAndAdministrative": "4981000000",
++    "researchAndDevelopment": "2311000000",
++    "operatingExpenses": "7292000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-400000000",
++    "interestIncome": "86000000",
++    "interestExpense": "486000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "-1274000000",
++    "incomeBeforeTax": "2479000000",
++    "incomeTaxExpense": "313000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "2166000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "2963000000",
++    "ebitda": "2965000000",
++    "netIncome": "2165000000"
++   },
++   {
++    "fiscalDateEnding": "2026-03-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "8950000000",
++    "totalRevenue": "15917000000",
++    "costOfRevenue": "6967000000",
++    "costofGoodsAndServicesSold": "6967000000",
++    "operatingIncome": "1360000000",
++    "sellingGeneralAndAdministrative": "5089000000",
++    "researchAndDevelopment": "2173000000",
++    "operatingExpenses": "7590000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-321000000",
++    "interestIncome": "152000000",
++    "interestExpense": "473000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1274000000",
++    "incomeBeforeTax": "1387000000",
++    "incomeTaxExpense": "172000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "1216000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "1860000000",
++    "ebitda": "3134000000",
++    "netIncome": "1216000000"
++   },
++   {
++    "fiscalDateEnding": "2025-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "11928000000",
++    "totalRevenue": "19687000000",
++    "costOfRevenue": "7758000000",
++    "costofGoodsAndServicesSold": "7758000000",
++    "operatingIncome": "4849000000",
++    "sellingGeneralAndAdministrative": "4561000000",
++    "researchAndDevelopment": "2187000000",
++    "operatingExpenses": "7080000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-346000000",
++    "interestIncome": "132000000",
++    "interestExpense": "478000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1296000000",
++    "incomeBeforeTax": "4144000000",
++    "incomeTaxExpense": "-1435000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "5579000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "4621000000",
++    "ebitda": "5917000000",
++    "netIncome": "5600000000"
++   },
++   {
++    "fiscalDateEnding": "2025-09-30",
++    "reportedCurrency": "USD",
++    "grossProfit": "9591000000",
++    "totalRevenue": "16331000000",
++    "costOfRevenue": "6740000000",
++    "costofGoodsAndServicesSold": "6740000000",
++    "operatingIncome": "2660000000",
++    "sellingGeneralAndAdministrative": "4478000000",
++    "researchAndDevelopment": "2082000000",
++    "operatingExpenses": "6931000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-342000000",
++    "interestIncome": "150000000",
++    "interestExpense": "492000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1283000000",
++    "incomeBeforeTax": "2430000000",
++    "incomeTaxExpense": "686000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "1744000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "2922000000",
++    "ebitda": "4205000000",
++    "netIncome": "1744000000"
++   },
++   {
++    "fiscalDateEnding": "2025-06-30",
++    "reportedCurrency": "USD",
++    "grossProfit": "9977000000",
++    "totalRevenue": "16977000000",
++    "costOfRevenue": "7001000000",
++    "costofGoodsAndServicesSold": "7001000000",
++    "operatingIncome": "3086000000",
++    "sellingGeneralAndAdministrative": "4322000000",
++    "researchAndDevelopment": "2097000000",
++    "operatingExpenses": "6890000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-338000000",
++    "interestIncome": "172000000",
++    "interestExpense": "510000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1265000000",
++    "incomeBeforeTax": "2597000000",
++    "incomeTaxExpense": "404000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "2193000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "3109000000",
++    "ebitda": "4374000000",
++    "netIncome": "2194000000"
++   },
++   {
++    "fiscalDateEnding": "2025-03-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "8031000000",
++    "totalRevenue": "14541000000",
++    "costOfRevenue": "6510000000",
++    "costofGoodsAndServicesSold": "6510000000",
++    "operatingIncome": "1765000000",
++    "sellingGeneralAndAdministrative": "4023000000",
++    "researchAndDevelopment": "1950000000",
++    "operatingExpenses": "6266000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-264000000",
++    "interestIncome": "191000000",
++    "interestExpense": "455000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1177000000",
++    "incomeBeforeTax": "1158000000",
++    "incomeTaxExpense": "103000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "1054000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "1613000000",
++    "ebitda": "2790000000",
++    "netIncome": "1055000000"
++   },
++   {
++    "fiscalDateEnding": "2024-12-31",
++    "reportedCurrency": "USD",
++    "grossProfit": "10439000000",
++    "totalRevenue": "17553000000",
++    "costOfRevenue": "7114000000",
++    "costofGoodsAndServicesSold": "7114000000",
++    "operatingIncome": "3901000000",
++    "sellingGeneralAndAdministrative": "4325000000",
++    "researchAndDevelopment": "1967000000",
++    "operatingExpenses": "6538000000",
++    "investmentIncomeNet": "None",
++    "netInterestIncome": "-274000000",
++    "interestIncome": "150000000",
++    "interestExpense": "424000000",
++    "nonInterestIncome": "None",
++    "otherNonOperatingIncome": "None",
++    "depreciation": "None",
++    "depreciationAndAmortization": "1113000000",
++    "incomeBeforeTax": "3306000000",
++    "incomeTaxExpense": "379000000",
++    "interestAndDebtExpense": "None",
++    "netIncomeFromContinuingOperations": "2927000000",
++    "comprehensiveIncomeNetOfTax": "None",
++    "ebit": "3730000000",
++    "ebitda": "4843000000",
++    "netIncome": "2914000000"
++   }
++  ]
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_intraday_ibm.json b/backend/tests/fixtures/alphavantage_real_intraday_ibm.json
+new file mode 100644
+index 0000000..d7a5d17
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_intraday_ibm.json
+@@ -0,0 +1,716 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
++ "body": {
++  "Meta Data": {
++   "1. Information": "Intraday (5min) open, high, low, close prices and volume",
++   "2. Symbol": "IBM",
++   "3. Last Refreshed": "2026-11-09 19:55:00",
++   "4. Interval": "5min",
++   "5. Output Size": "Compact",
++   "6. Time Zone": "US/Eastern"
++  },
++  "Time Series (5min)": {
++   "2026-11-09 19:55:00": {
++    "1. open": "247.4900",
++    "2. high": "247.7500",
++    "3. low": "246.7100",
++    "4. close": "247.4600",
++    "5. volume": "127"
++   },
++   "2026-11-09 19:50:00": {
++    "1. open": "247.0200",
++    "2. high": "247.6700",
++    "3. low": "247.0000",
++    "4. close": "247.4900",
++    "5. volume": "230"
++   },
++   "2026-11-09 19:45:00": {
++    "1. open": "247.7373",
++    "2. high": "247.7373",
++    "3. low": "247.0100",
++    "4. close": "247.0100",
++    "5. volume": "1005"
++   },
++   "2026-11-09 19:40:00": {
++    "1. open": "247.0000",
++    "2. high": "247.6600",
++    "3. low": "247.0000",
++    "4. close": "247.4000",
++    "5. volume": "122"
++   },
++   "2026-11-09 19:35:00": {
++    "1. open": "246.5000",
++    "2. high": "246.5000",
++    "3. low": "246.5000",
++    "4. close": "246.5000",
++    "5. volume": "1"
++   },
++   "2026-11-09 19:30:00": {
++    "1. open": "246.5400",
++    "2. high": "247.6781",
++    "3. low": "246.5000",
++    "4. close": "247.6781",
++    "5. volume": "87"
++   },
++   "2026-11-09 19:25:00": {
++    "1. open": "247.1700",
++    "2. high": "247.7500",
++    "3. low": "247.0000",
++    "4. close": "247.6580",
++    "5. volume": "74"
++   },
++   "2026-11-09 19:20:00": {
++    "1. open": "246.9800",
++    "2. high": "247.1700",
++    "3. low": "246.9800",
++    "4. close": "247.1700",
++    "5. volume": "115"
++   },
++   "2026-11-09 19:15:00": {
++    "1. open": "247.6581",
++    "2. high": "247.6581",
++    "3. low": "246.5000",
++    "4. close": "246.5400",
++    "5. volume": "544"
++   },
++   "2026-11-09 19:10:00": {
++    "1. open": "246.5600",
++    "2. high": "247.5900",
++    "3. low": "246.5600",
++    "4. close": "247.4200",
++    "5. volume": "168"
++   },
++   "2026-11-09 19:05:00": {
++    "1. open": "246.5600",
++    "2. high": "246.5600",
++    "3. low": "246.1100",
++    "4. close": "246.5400",
++    "5. volume": "644"
++   },
++   "2026-11-09 19:00:00": {
++    "1. open": "246.1100",
++    "2. high": "247.5625",
++    "3. low": "246.1100",
++    "4. close": "246.5312",
++    "5. volume": "1239874"
++   },
++   "2026-11-09 18:55:00": {
++    "1. open": "247.7500",
++    "2. high": "247.7500",
++    "3. low": "246.5000",
++    "4. close": "247.5506",
++    "5. volume": "18"
++   },
++   "2026-11-09 18:50:00": {
++    "1. open": "247.4700",
++    "2. high": "247.4700",
++    "3. low": "246.8000",
++    "4. close": "246.9300",
++    "5. volume": "48"
++   },
++   "2026-11-09 18:45:00": {
++    "1. open": "246.8100",
++    "2. high": "247.7675",
++    "3. low": "246.5000",
++    "4. close": "247.3300",
++    "5. volume": "108"
++   },
++   "2026-11-09 18:40:00": {
++    "1. open": "246.5375",
++    "2. high": "247.7675",
++    "3. low": "246.5001",
++    "4. close": "247.7675",
++    "5. volume": "217"
++   },
++   "2026-11-09 18:35:00": {
++    "1. open": "247.1000",
++    "2. high": "247.1825",
++    "3. low": "246.5001",
++    "4. close": "246.5001",
++    "5. volume": "33"
++   },
++   "2026-11-09 18:30:00": {
++    "1. open": "246.1100",
++    "2. high": "248.0000",
++    "3. low": "246.1100",
++    "4. close": "247.9999",
++    "5. volume": "1239809"
++   },
++   "2026-11-09 18:25:00": {
++    "1. open": "247.2100",
++    "2. high": "247.5000",
++    "3. low": "246.5000",
++    "4. close": "246.5000",
++    "5. volume": "55"
++   },
++   "2026-11-09 18:20:00": {
++    "1. open": "247.2000",
++    "2. high": "247.2100",
++    "3. low": "246.5000",
++    "4. close": "246.5000",
++    "5. volume": "71"
++   },
++   "2026-11-09 18:15:00": {
++    "1. open": "246.7400",
++    "2. high": "247.7200",
++    "3. low": "246.7000",
++    "4. close": "247.2100",
++    "5. volume": "108"
++   },
++   "2026-11-09 18:10:00": {
++    "1. open": "246.6300",
++    "2. high": "247.2500",
++    "3. low": "246.5000",
++    "4. close": "246.7000",
++    "5. volume": "328"
++   },
++   "2026-11-09 18:05:00": {
++    "1. open": "247.2000",
++    "2. high": "248.0000",
++    "3. low": "246.5100",
++    "4. close": "247.2000",
++    "5. volume": "59"
++   },
++   "2026-11-09 18:00:00": {
++    "1. open": "246.9400",
++    "2. high": "248.0000",
++    "3. low": "246.5000",
++    "4. close": "246.5000",
++    "5. volume": "287"
++   },
++   "2026-11-09 17:55:00": {
++    "1. open": "246.6600",
++    "2. high": "247.0000",
++    "3. low": "246.5100",
++    "4. close": "246.9400",
++    "5. volume": "2219"
++   },
++   "2026-11-09 17:50:00": {
++    "1. open": "246.5100",
++    "2. high": "246.9400",
++    "3. low": "246.5100",
++    "4. close": "246.5100",
++    "5. volume": "190"
++   },
++   "2026-11-09 17:45:00": {
++    "1. open": "247.0200",
++    "2. high": "247.9999",
++    "3. low": "246.5012",
++    "4. close": "246.5100",
++    "5. volume": "8"
++   },
++   "2026-11-09 17:40:00": {
++    "1. open": "246.8000",
++    "2. high": "247.0400",
++    "3. low": "246.5100",
++    "4. close": "247.0400",
++    "5. volume": "121"
++   },
++   "2026-11-09 17:35:00": {
++    "1. open": "246.9400",
++    "2. high": "247.1638",
++    "3. low": "246.5000",
++    "4. close": "246.5000",
++    "5. volume": "65"
++   },
++   "2026-11-09 17:30:00": {
++    "1. open": "246.9600",
++    "2. high": "248.0000",
++    "3. low": "246.9100",
++    "4. close": "247.2500",
++    "5. volume": "92"
++   },
++   "2026-11-09 17:25:00": {
++    "1. open": "247.1740",
++    "2. high": "247.2500",
++    "3. low": "247.0300",
++    "4. close": "247.0500",
++    "5. volume": "26"
++   },
++   "2026-11-09 17:20:00": {
++    "1. open": "246.8300",
++    "2. high": "247.0500",
++    "3. low": "246.7100",
++    "4. close": "246.7800",
++    "5. volume": "179"
++   },
++   "2026-11-09 17:15:00": {
++    "1. open": "246.7000",
++    "2. high": "247.1922",
++    "3. low": "246.7000",
++    "4. close": "246.8300",
++    "5. volume": "79"
++   },
++   "2026-11-09 17:10:00": {
++    "1. open": "246.6900",
++    "2. high": "246.7000",
++    "3. low": "246.6900",
++    "4. close": "246.7000",
++    "5. volume": "105"
++   },
++   "2026-11-09 17:05:00": {
++    "1. open": "247.0700",
++    "2. high": "247.0900",
++    "3. low": "246.6700",
++    "4. close": "246.7706",
++    "5. volume": "489"
++   },
++   "2026-11-09 17:00:00": {
++    "1. open": "246.2700",
++    "2. high": "247.0800",
++    "3. low": "246.1901",
++    "4. close": "247.0600",
++    "5. volume": "385"
++   },
++   "2026-11-09 16:55:00": {
++    "1. open": "246.5000",
++    "2. high": "247.1500",
++    "3. low": "246.2500",
++    "4. close": "247.1260",
++    "5. volume": "54"
++   },
++   "2026-11-09 16:50:00": {
++    "1. open": "247.0060",
++    "2. high": "247.0060",
++    "3. low": "246.2800",
++    "4. close": "246.8500",
++    "5. volume": "463"
++   },
++   "2026-11-09 16:45:00": {
++    "1. open": "246.3388",
++    "2. high": "249.1880",
++    "3. low": "246.1900",
++    "4. close": "246.2140",
++    "5. volume": "101"
++   },
++   "2026-11-09 16:40:00": {
++    "1. open": "247.0900",
++    "2. high": "247.1500",
++    "3. low": "246.1900",
++    "4. close": "247.1500",
++    "5. volume": "315"
++   },
++   "2026-11-09 16:35:00": {
++    "1. open": "246.7400",
++    "2. high": "247.4425",
++    "3. low": "246.5900",
++    "4. close": "247.1500",
++    "5. volume": "749"
++   },
++   "2026-11-09 16:30:00": {
++    "1. open": "246.7400",
++    "2. high": "247.2006",
++    "3. low": "246.5600",
++    "4. close": "246.7300",
++    "5. volume": "92"
++   },
++   "2026-11-09 16:25:00": {
++    "1. open": "247.0970",
++    "2. high": "247.0970",
++    "3. low": "246.3300",
++    "4. close": "246.5500",
++    "5. volume": "155"
++   },
++   "2026-11-09 16:20:00": {
++    "1. open": "246.1100",
++    "2. high": "247.1845",
++    "3. low": "246.1100",
++    "4. close": "246.5500",
++    "5. volume": "3509"
++   },
++   "2026-11-09 16:15:00": {
++    "1. open": "246.1900",
++    "2. high": "247.2100",
++    "3. low": "246.1100",
++    "4. close": "246.5900",
++    "5. volume": "173"
++   },
++   "2026-11-09 16:10:00": {
++    "1. open": "246.1100",
++    "2. high": "247.0519",
++    "3. low": "246.1100",
++    "4. close": "246.2100",
++    "5. volume": "1252953"
++   },
++   "2026-11-09 16:05:00": {
++    "1. open": "246.6000",
++    "2. high": "246.6600",
++    "3. low": "246.1100",
++    "4. close": "246.1100",
++    "5. volume": "98532"
++   },
++   "2026-11-09 16:00:00": {
++    "1. open": "246.1500",
++    "2. high": "247.0773",
++    "3. low": "245.5000",
++    "4. close": "246.1700",
++    "5. volume": "2714939"
++   },
++   "2026-11-09 15:55:00": {
++    "1. open": "247.0800",
++    "2. high": "247.0800",
++    "3. low": "246.0050",
++    "4. close": "246.1500",
++    "5. volume": "382161"
++   },
++   "2026-11-09 15:50:00": {
++    "1. open": "246.7000",
++    "2. high": "247.2600",
++    "3. low": "246.4700",
++    "4. close": "247.0000",
++    "5. volume": "110761"
++   },
++   "2026-11-09 15:45:00": {
++    "1. open": "247.3700",
++    "2. high": "247.5800",
++    "3. low": "246.6900",
++    "4. close": "246.6900",
++    "5. volume": "73030"
++   },
++   "2026-11-09 15:40:00": {
++    "1. open": "247.8800",
++    "2. high": "247.9200",
++    "3. low": "247.3300",
++    "4. close": "247.3300",
++    "5. volume": "48299"
++   },
++   "2026-11-09 15:35:00": {
++    "1. open": "247.6650",
++    "2. high": "248.0200",
++    "3. low": "247.6000",
++    "4. close": "247.9000",
++    "5. volume": "39852"
++   },
++   "2026-11-09 15:30:00": {
++    "1. open": "247.9100",
++    "2. high": "248.0350",
++    "3. low": "247.5100",
++    "4. close": "247.6900",
++    "5. volume": "62647"
++   },
++   "2026-11-09 15:25:00": {
++    "1. open": "248.6950",
++    "2. high": "248.8100",
++    "3. low": "247.9700",
++    "4. close": "248.0100",
++    "5. volume": "63064"
++   },
++   "2026-11-09 15:20:00": {
++    "1. open": "247.8850",
++    "2. high": "248.7651",
++    "3. low": "247.8850",
++    "4. close": "248.6750",
++    "5. volume": "84245"
++   },
++   "2026-11-09 15:15:00": {
++    "1. open": "247.8500",
++    "2. high": "248.0100",
++    "3. low": "247.6715",
++    "4. close": "247.8850",
++    "5. volume": "34760"
++   },
++   "2026-11-09 15:10:00": {
++    "1. open": "248.0400",
++    "2. high": "248.3200",
++    "3. low": "247.7800",
++    "4. close": "247.8650",
++    "5. volume": "53465"
++   },
++   "2026-11-09 15:05:00": {
++    "1. open": "247.7099",
++    "2. high": "248.0600",
++    "3. low": "247.6100",
++    "4. close": "248.0600",
++    "5. volume": "24572"
++   },
++   "2026-11-09 15:00:00": {
++    "1. open": "247.3250",
++    "2. high": "247.7200",
++    "3. low": "247.2500",
++    "4. close": "247.6300",
++    "5. volume": "18053"
++   },
++   "2026-11-09 14:55:00": {
++    "1. open": "247.4150",
++    "2. high": "247.8200",
++    "3. low": "247.1300",
++    "4. close": "247.3200",
++    "5. volume": "31347"
++   },
++   "2026-11-09 14:50:00": {
++    "1. open": "247.6600",
++    "2. high": "247.8950",
++    "3. low": "247.3500",
++    "4. close": "247.4300",
++    "5. volume": "25097"
++   },
++   "2026-11-09 14:45:00": {
++    "1. open": "247.8100",
++    "2. high": "248.0200",
++    "3. low": "247.6500",
++    "4. close": "247.7250",
++    "5. volume": "18302"
++   },
++   "2026-11-09 14:40:00": {
++    "1. open": "248.0700",
++    "2. high": "248.3200",
++    "3. low": "247.8400",
++    "4. close": "247.8800",
++    "5. volume": "38312"
++   },
++   "2026-11-09 14:35:00": {
++    "1. open": "247.4300",
++    "2. high": "248.4320",
++    "3. low": "247.3000",
++    "4. close": "248.1600",
++    "5. volume": "44559"
++   },
++   "2026-11-09 14:30:00": {
++    "1. open": "247.2300",
++    "2. high": "247.4504",
++    "3. low": "247.2300",
++    "4. close": "247.4000",
++    "5. volume": "29216"
++   },
++   "2026-11-09 14:25:00": {
++    "1. open": "247.5750",
++    "2. high": "247.6077",
++    "3. low": "247.1900",
++    "4. close": "247.2400",
++    "5. volume": "24454"
++   },
++   "2026-11-09 14:20:00": {
++    "1. open": "247.2800",
++    "2. high": "247.6499",
++    "3. low": "247.2800",
++    "4. close": "247.5500",
++    "5. volume": "29725"
++   },
++   "2026-11-09 14:15:00": {
++    "1. open": "247.7500",
++    "2. high": "247.8100",
++    "3. low": "247.1701",
++    "4. close": "247.3200",
++    "5. volume": "41898"
++   },
++   "2026-11-09 14:10:00": {
++    "1. open": "247.4700",
++    "2. high": "247.8800",
++    "3. low": "247.4700",
++    "4. close": "247.7800",
++    "5. volume": "25254"
++   },
++   "2026-11-09 14:05:00": {
++    "1. open": "247.5500",
++    "2. high": "247.7300",
++    "3. low": "247.4900",
++    "4. close": "247.5700",
++    "5. volume": "18474"
++   },
++   "2026-11-09 14:00:00": {
++    "1. open": "247.8400",
++    "2. high": "247.8400",
++    "3. low": "247.5100",
++    "4. close": "247.5100",
++    "5. volume": "15988"
++   },
++   "2026-11-09 13:55:00": {
++    "1. open": "247.6000",
++    "2. high": "247.9000",
++    "3. low": "247.5000",
++    "4. close": "247.8450",
++    "5. volume": "19203"
++   },
++   "2026-11-09 13:50:00": {
++    "1. open": "247.4150",
++    "2. high": "247.6800",
++    "3. low": "247.4150",
++    "4. close": "247.5900",
++    "5. volume": "23823"
++   },
++   "2026-11-09 13:45:00": {
++    "1. open": "247.4750",
++    "2. high": "247.5500",
++    "3. low": "247.2900",
++    "4. close": "247.5500",
++    "5. volume": "31643"
++   },
++   "2026-11-09 13:40:00": {
++    "1. open": "247.9250",
++    "2. high": "248.0000",
++    "3. low": "247.3900",
++    "4. close": "247.4700",
++    "5. volume": "36344"
++   },
++   "2026-11-09 13:35:00": {
++    "1. open": "247.9400",
++    "2. high": "248.1200",
++    "3. low": "247.8600",
++    "4. close": "247.8900",
++    "5. volume": "36421"
++   },
++   "2026-11-09 13:30:00": {
++    "1. open": "247.7350",
++    "2. high": "248.0800",
++    "3. low": "247.7350",
++    "4. close": "247.8900",
++    "5. volume": "43776"
++   },
++   "2026-11-09 13:25:00": {
++    "1. open": "247.3900",
++    "2. high": "247.8500",
++    "3. low": "247.3400",
++    "4. close": "247.6606",
++    "5. volume": "44959"
++   },
++   "2026-11-09 13:20:00": {
++    "1. open": "247.4350",
++    "2. high": "247.4350",
++    "3. low": "247.0600",
++    "4. close": "247.3300",
++    "5. volume": "22931"
++   },
++   "2026-11-09 13:15:00": {
++    "1. open": "247.6600",
++    "2. high": "247.7400",
++    "3. low": "247.4100",
++    "4. close": "247.4200",
++    "5. volume": "30800"
++   },
++   "2026-11-09 13:10:00": {
++    "1. open": "247.4100",
++    "2. high": "247.7076",
++    "3. low": "247.4100",
++    "4. close": "247.6450",
++    "5. volume": "18346"
++   },
++   "2026-11-09 13:05:00": {
++    "1. open": "247.4200",
++    "2. high": "247.5550",
++    "3. low": "247.3500",
++    "4. close": "247.4650",
++    "5. volume": "12185"
++   },
++   "2026-11-09 13:00:00": {
++    "1. open": "247.4900",
++    "2. high": "247.7100",
++    "3. low": "247.3500",
++    "4. close": "247.4730",
++    "5. volume": "23789"
++   },
++   "2026-11-09 12:55:00": {
++    "1. open": "247.3100",
++    "2. high": "247.6150",
++    "3. low": "247.2801",
++    "4. close": "247.4900",
++    "5. volume": "35025"
++   },
++   "2026-11-09 12:50:00": {
++    "1. open": "247.3500",
++    "2. high": "247.5400",
++    "3. low": "247.2800",
++    "4. close": "247.3114",
++    "5. volume": "15354"
++   },
++   "2026-11-09 12:45:00": {
++    "1. open": "247.5500",
++    "2. high": "247.6800",
++    "3. low": "247.1601",
++    "4. close": "247.3450",
++    "5. volume": "20282"
++   },
++   "2026-11-09 12:40:00": {
++    "1. open": "247.7900",
++    "2. high": "247.8500",
++    "3. low": "247.5000",
++    "4. close": "247.6150",
++    "5. volume": "18598"
++   },
++   "2026-11-09 12:35:00": {
++    "1. open": "248.0550",
++    "2. high": "248.0550",
++    "3. low": "247.6175",
++    "4. close": "247.6950",
++    "5. volume": "11934"
++   },
++   "2026-11-09 12:30:00": {
++    "1. open": "248.1950",
++    "2. high": "248.1950",
++    "3. low": "247.8800",
++    "4. close": "247.9300",
++    "5. volume": "26286"
++   },
++   "2026-11-09 12:25:00": {
++    "1. open": "247.9600",
++    "2. high": "248.2999",
++    "3. low": "247.8100",
++    "4. close": "248.2700",
++    "5. volume": "58703"
++   },
++   "2026-11-09 12:20:00": {
++    "1. open": "247.5900",
++    "2. high": "247.9200",
++    "3. low": "247.5300",
++    "4. close": "247.9200",
++    "5. volume": "12008"
++   },
++   "2026-11-09 12:15:00": {
++    "1. open": "247.7600",
++    "2. high": "247.9499",
++    "3. low": "247.6400",
++    "4. close": "247.7200",
++    "5. volume": "19784"
++   },
++   "2026-11-09 12:10:00": {
++    "1. open": "247.8900",
++    "2. high": "248.0000",
++    "3. low": "247.6400",
++    "4. close": "247.8300",
++    "5. volume": "16003"
++   },
++   "2026-11-09 12:05:00": {
++    "1. open": "247.6600",
++    "2. high": "248.0000",
++    "3. low": "247.6400",
++    "4. close": "247.7800",
++    "5. volume": "16978"
++   },
++   "2026-11-09 12:00:00": {
++    "1. open": "247.6360",
++    "2. high": "247.7500",
++    "3. low": "247.4600",
++    "4. close": "247.5700",
++    "5. volume": "18883"
++   },
++   "2026-11-09 11:55:00": {
++    "1. open": "247.5900",
++    "2. high": "247.8200",
++    "3. low": "247.5000",
++    "4. close": "247.7850",
++    "5. volume": "27978"
++   },
++   "2026-11-09 11:50:00": {
++    "1. open": "247.3400",
++    "2. high": "247.6600",
++    "3. low": "247.3400",
++    "4. close": "247.6150",
++    "5. volume": "20398"
++   },
++   "2026-11-09 11:45:00": {
++    "1. open": "247.1350",
++    "2. high": "247.5000",
++    "3. low": "246.9500",
++    "4. close": "247.4800",
++    "5. volume": "35965"
++   },
++   "2026-11-09 11:40:00": {
++    "1. open": "246.1500",
++    "2. high": "247.1200",
++    "3. low": "246.1200",
++    "4. close": "247.0900",
++    "5. volume": "25788"
++   }
++  }
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_overview_ibm.json b/backend/tests/fixtures/alphavantage_real_overview_ibm.json
+new file mode 100644
+index 0000000..1f03306
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_overview_ibm.json
+@@ -0,0 +1,61 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
++ "body": {
++  "Symbol": "IBM",
++  "AssetType": "Common Stock",
++  "Name": "International Business Machines",
++  "Description": "International Business Machines Corporation (IBM) is an American multinational technology company headquartered in Armonk, New York, with operations in over 170 countries. The company began in 1911, founded in Endicott, New York, as the Computing-Tabulating-Recording Company (CTR) and was renamed International Business Machines in 1924. IBM is incorporated in New York. IBM produces and sells computer hardware, middleware and software, and provides hosting and consulting services in areas ranging from mainframe computers to nanotechnology. IBM is also a major research organization, holding the record for most annual U.S. patents generated by a business (as of 2020) for 28 consecutive years. Inventions by IBM include the automated teller machine (ATM), the floppy disk, the hard disk drive, the magnetic stripe card, the relational database, the SQL programming language, the UPC barcode, and dynamic random-access memory (DRAM). The IBM mainframe, exemplified by the System/360, was the dominant computing platform during the 1960s and 1970s.",
++  "CIK": "51143",
++  "Exchange": "NYSE",
++  "Currency": "USD",
++  "Country": "USA",
++  "Sector": "TECHNOLOGY",
++  "Industry": "INFORMATION TECHNOLOGY SERVICES",
++  "Address": "ONE NEW ORCHARD ROAD, ARMONK, NY, UNITED STATES, 10504",
++  "OfficialSite": "https://www.ibm.com",
++  "FiscalYearEnd": "December",
++  "LatestQuarter": "2026-09-30",
++  "MarketCapitalization": "232603681000",
++  "EBITDA": "16634000000",
++  "PERatio": "21.0",
++  "PEGRatio": "2.308",
++  "BookValue": "37.6",
++  "DividendPerShare": "6.74",
++  "DividendYield": "0.0275",
++  "EPS": "11.72",
++  "RevenuePerShareTTM": "74.31",
++  "ProfitMargin": "0.16",
++  "OperatingMarginTTM": "0.17",
++  "ReturnOnAssetsTTM": "0.0533",
++  "ReturnOnEquityTTM": "0.348",
++  "RevenueTTM": "69868003000",
++  "GrossProfitTTM": "40498999000",
++  "DilutedEPSTTM": "11.72",
++  "QuarterlyEarningsGrowthYOY": "0.25",
++  "QuarterlyRevenueGrowthYOY": "0.047",
++  "AnalystTargetPrice": "259.3",
++  "AnalystRatingStrongBuy": "3",
++  "AnalystRatingBuy": "9",
++  "AnalystRatingHold": "11",
++  "AnalystRatingSell": "1",
++  "AnalystRatingStrongSell": "1",
++  "TrailingPE": "21.0",
++  "ForwardPE": "18.35",
++  "PriceToSalesRatioTTM": "3.329",
++  "PriceToBookRatio": "6.52",
++  "EVToRevenue": "4.117",
++  "EVToEBITDA": "16.22",
++  "Beta": "0.764",
++  "52WeekHigh": "327.83",
++  "52WeekLow": "196.41",
++  "50DayMovingAverage": "236.75",
++  "200DayMovingAverage": "247.97",
++  "SharesOutstanding": "945121000",
++  "SharesFloat": "943183000",
++  "PercentInsiders": "0.105",
++  "PercentInstitutions": "66.178",
++  "DividendDate": "2026-12-10",
++  "ExDividendDate": "2026-11-10"
++ }
++}
+diff --git a/backend/tests/fixtures/alphavantage_real_quote_ibm.json b/backend/tests/fixtures/alphavantage_real_quote_ibm.json
+new file mode 100644
+index 0000000..2156dd3
+--- /dev/null
++++ b/backend/tests/fixtures/alphavantage_real_quote_ibm.json
+@@ -0,0 +1,18 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
++ "body": {
++  "Global Quote": {
++   "01. symbol": "IBM",
++   "02. open": "246.0000",
++   "03. high": "248.8100",
++   "04. low": "245.1957",
++   "05. price": "246.1100",
++   "06. volume": "4629816",
++   "07. latest trading day": "2026-11-09",
++   "08. previous close": "245.0000",
++   "09. change": "1.1100",
++   "10. change percent": "0.4531%"
++  }
++ }
++}
+diff --git a/backend/tests/fixtures/keytest_alphavantage_bad_key.json b/backend/tests/fixtures/keytest_alphavantage_bad_key.json
+new file mode 100644
+index 0000000..36455a8
+--- /dev/null
++++ b/backend/tests/fixtures/keytest_alphavantage_bad_key.json
+@@ -0,0 +1,7 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL text (made-up key, no account), captured with curl for GLOBAL_QUOTE TSLA. Alpha Vantage does not validate keys: an unknown key is treated like an anonymous free key, so this answer is HTTP 200 and says '25 requests per day' (the same words a real free key gets once its day is used up). On other calls the same made-up key gets real data, so this text is not reproducible by scripts/record_providers.py; the key in the text is replaced by REDACTED.",
++ "body": {
++  "Information": "We have detected your API key as REDACTED and our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly remove all daily rate limits."
++ }
++}
+diff --git a/backend/tests/fixtures/keytest_fmp_401.json b/backend/tests/fixtures/keytest_fmp_401.json
+new file mode 100644
+index 0000000..8ce02b1
+--- /dev/null
++++ b/backend/tests/fixtures/keytest_fmp_401.json
+@@ -0,0 +1,7 @@
++{
++ "status": 401,
++ "recorded": "2026-11-10, REAL answer (made-up key, no account)",
++ "body": {
++  "Error Message": "Invalid API KEY. Feel free to create a Free API Key or visit https://site.financialmodelingprep.com/faqs?search=why-is-my-api-key-invalid for more information."
++ }
++}
+diff --git a/backend/tests/fixtures/keytest_polygon_401.json b/backend/tests/fixtures/keytest_polygon_401.json
+new file mode 100644
+index 0000000..bdc289b
+--- /dev/null
++++ b/backend/tests/fixtures/keytest_polygon_401.json
+@@ -0,0 +1,9 @@
++{
++ "status": 401,
++ "recorded": "2026-11-10, REAL answer (made-up key, no account)",
++ "body": {
++  "status": "ERROR",
++  "request_id": "f73bc232750fbdabfc7f954431c3b2c0",
++  "error": "Unknown API Key"
++ }
++}
+diff --git a/backend/tests/fixtures/keytest_twelvedata_401.json b/backend/tests/fixtures/keytest_twelvedata_401.json
+new file mode 100644
+index 0000000..6a5d7f1
+--- /dev/null
++++ b/backend/tests/fixtures/keytest_twelvedata_401.json
+@@ -0,0 +1,9 @@
++{
++ "status": 401,
++ "recorded": "2026-11-10, REAL answer (made-up key, no account)",
++ "body": {
++  "code": 401,
++  "message": "**apikey** parameter is incorrect or not specified. You can get your free API key instantly following this link: https://twelvedata.com/pricing. If you believe that everything is correct, you can contact us at https://twelvedata.com/contact/customer",
++  "status": "error"
++ }
++}
+diff --git a/backend/tests/fixtures/twelvedata_real_quote_aapl.json b/backend/tests/fixtures/twelvedata_real_quote_aapl.json
+new file mode 100644
+index 0000000..9311fcf
+--- /dev/null
++++ b/backend/tests/fixtures/twelvedata_real_quote_aapl.json
+@@ -0,0 +1,33 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (key sent in the Authorization header)",
++ "body": {
++  "symbol": "AAPL",
++  "name": "Apple Inc.",
++  "exchange": "NASDAQ",
++  "mic_code": "XNGS",
++  "currency": "USD",
++  "datetime": "2026-11-10",
++  "timestamp": 1794321000,
++  "last_quote_at": 1794323820,
++  "open": "351.26",
++  "high": "353.785",
++  "low": "346.89",
++  "close": "347.16",
++  "volume": "377853",
++  "previous_close": "350.69000",
++  "change": "-3.53000",
++  "percent_change": "-1.0065877",
++  "average_volume": "53314515",
++  "is_market_open": true,
++  "fifty_two_week": {
++   "low": "243.42000",
++   "high": "355.38000",
++   "low_change": "103.74000",
++   "high_change": "-8.22000",
++   "low_change_percent": "42.61770",
++   "high_change_percent": "-2.31302",
++   "range": "243.419998 - 355.380005"
++  }
++ }
++}
+diff --git a/backend/tests/fixtures/twelvedata_real_search_aapl.json b/backend/tests/fixtures/twelvedata_real_search_aapl.json
+new file mode 100644
+index 0000000..8dac78a
+--- /dev/null
++++ b/backend/tests/fixtures/twelvedata_real_search_aapl.json
+@@ -0,0 +1,59 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (key sent in the Authorization header)",
++ "body": {
++  "data": [
++   {
++    "symbol": "AAPL",
++    "instrument_name": "Apple Inc.",
++    "exchange": "NASDAQ",
++    "mic_code": "XNGS",
++    "exchange_timezone": "America/New_York",
++    "instrument_type": "Common Stock",
++    "country": "United States",
++    "currency": "USD"
++   },
++   {
++    "symbol": "AAPL",
++    "instrument_name": "Apple Inc. CEDEAR",
++    "exchange": "BCBA",
++    "mic_code": "XBUE",
++    "exchange_timezone": "America/Argentina/Buenos_Aires",
++    "instrument_type": "Depositary Receipt",
++    "country": "Argentina",
++    "currency": "ARS"
++   },
++   {
++    "symbol": "AAPL",
++    "instrument_name": "Apple Inc.",
++    "exchange": "BVC",
++    "mic_code": "XBOG",
++    "exchange_timezone": "America/New_York",
++    "instrument_type": "Common Stock",
++    "country": "Colombia",
++    "currency": "COP"
++   },
++   {
++    "symbol": "AAPL",
++    "instrument_name": "Apple Inc.",
++    "exchange": "BMV",
++    "mic_code": "XMEX",
++    "exchange_timezone": "America/Swift_Current",
++    "instrument_type": "Common Stock",
++    "country": "Mexico",
++    "currency": "MXN"
++   },
++   {
++    "symbol": "AAPL",
++    "instrument_name": "Apple Inc.",
++    "exchange": "TSX",
++    "mic_code": "XTSE",
++    "exchange_timezone": "America/Toronto",
++    "instrument_type": "Depositary Receipt",
++    "country": "Canada",
++    "currency": "CAD"
++   }
++  ],
++  "status": "ok"
++ }
++}
+diff --git a/backend/tests/fixtures/twelvedata_real_series_aapl_1day.json b/backend/tests/fixtures/twelvedata_real_series_aapl_1day.json
+new file mode 100644
+index 0000000..64440df
+--- /dev/null
++++ b/backend/tests/fixtures/twelvedata_real_series_aapl_1day.json
+@@ -0,0 +1,258 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (key sent in the Authorization header)",
++ "body": {
++  "meta": {
++   "symbol": "AAPL",
++   "interval": "1day",
++   "currency": "USD",
++   "exchange_timezone": "America/New_York",
++   "exchange": "NASDAQ",
++   "mic_code": "XNGS",
++   "type": "Common Stock"
++  },
++  "values": [
++   {
++    "datetime": "2026-11-10",
++    "open": "351.26",
++    "high": "353.785",
++    "low": "346.89",
++    "close": "347.16",
++    "volume": "377853"
++   },
++   {
++    "datetime": "2026-11-09",
++    "open": "345",
++    "high": "352.32999",
++    "low": "344.78000",
++    "close": "350.69000",
++    "volume": "48691200"
++   },
++   {
++    "datetime": "2026-11-06",
++    "open": "338.73001",
++    "high": "345.79001",
++    "low": "338.29999",
++    "close": "342.37000",
++    "volume": "44703800"
++   },
++   {
++    "datetime": "2026-11-05",
++    "open": "353.89001",
++    "high": "355.38000",
++    "low": "342.059998",
++    "close": "344.17001",
++    "volume": "75678900"
++   },
++   {
++    "datetime": "2026-11-04",
++    "open": "341.57001",
++    "high": "354.5",
++    "low": "340.98999",
++    "close": "349.51001",
++    "volume": "89637700"
++   },
++   {
++    "datetime": "2026-11-03",
++    "open": "325.57999",
++    "high": "334.5",
++    "low": "325.32999",
++    "close": "331.89999",
++    "volume": "63160000"
++   },
++   {
++    "datetime": "2026-11-02",
++    "open": "342.67001",
++    "high": "343.79999",
++    "low": "335.82001",
++    "close": "338.32001",
++    "volume": "64757700"
++   },
++   {
++    "datetime": "2026-10-30",
++    "open": "346.72000",
++    "high": "349.19000",
++    "low": "334.35001",
++    "close": "344.63000",
++    "volume": "67841600"
++   },
++   {
++    "datetime": "2026-10-29",
++    "open": "348",
++    "high": "351.42999",
++    "low": "347.29999",
++    "close": "348.91000",
++    "volume": "42582100"
++   },
++   {
++    "datetime": "2026-10-28",
++    "open": "346.92001",
++    "high": "347.17999",
++    "low": "343.51999",
++    "close": "343.82999",
++    "volume": "35714300"
++   },
++   {
++    "datetime": "2026-10-27",
++    "open": "343.17001",
++    "high": "347.78000",
++    "low": "342.39001",
++    "close": "347.10001",
++    "volume": "39984400"
++   },
++   {
++    "datetime": "2026-10-26",
++    "open": "343.92001",
++    "high": "347.089996",
++    "low": "341.029999",
++    "close": "343.91000",
++    "volume": "42743600"
++   },
++   {
++    "datetime": "2026-10-23",
++    "open": "349.12000",
++    "high": "351.73001",
++    "low": "345.75",
++    "close": "347.73001",
++    "volume": "39539700"
++   },
++   {
++    "datetime": "2026-10-22",
++    "open": "344.94000",
++    "high": "348.35999",
++    "low": "342.28000",
++    "close": "348.22000",
++    "volume": "46898900"
++   },
++   {
++    "datetime": "2026-10-21",
++    "open": "339.35999",
++    "high": "345.25",
++    "low": "338.82999",
++    "close": "343.98999",
++    "volume": "35614100"
++   },
++   {
++    "datetime": "2026-10-20",
++    "open": "339.85999",
++    "high": "343.059998",
++    "low": "338.70001",
++    "close": "339.5",
++    "volume": "35851400"
++   },
++   {
++    "datetime": "2026-10-19",
++    "open": "340.78000",
++    "high": "346",
++    "low": "340.12000",
++    "close": "342.94000",
++    "volume": "34573200"
++   },
++   {
++    "datetime": "2026-10-16",
++    "open": "346.089996",
++    "high": "347.82001",
++    "low": "340.45999",
++    "close": "343.45999",
++    "volume": "59946400"
++   },
++   {
++    "datetime": "2026-10-15",
++    "open": "346.95001",
++    "high": "347.85001",
++    "low": "341.60001",
++    "close": "342",
++    "volume": "39767300"
++   },
++   {
++    "datetime": "2026-10-14",
++    "open": "344.60999",
++    "high": "347.089996",
++    "low": "341.72000",
++    "close": "342.95999",
++    "volume": "50061100"
++   },
++   {
++    "datetime": "2026-10-13",
++    "open": "344.67001",
++    "high": "348.14999",
++    "low": "340.73999",
++    "close": "341.26999",
++    "volume": "38983800"
++   },
++   {
++    "datetime": "2026-10-12",
++    "open": "338.22000",
++    "high": "342.63000",
++    "low": "337.60001",
++    "close": "340.97000",
++    "volume": "25900600"
++   },
++   {
++    "datetime": "2026-10-09",
++    "open": "331.70001",
++    "high": "338.60999",
++    "low": "330.70001",
++    "close": "336.64001",
++    "volume": "37881200"
++   },
++   {
++    "datetime": "2026-10-08",
++    "open": "336.82001",
++    "high": "341.57001",
++    "low": "335.89999",
++    "close": "340.42001",
++    "volume": "35332400"
++   },
++   {
++    "datetime": "2026-10-07",
++    "open": "336.95999",
++    "high": "338.67001",
++    "low": "332.78000",
++    "close": "336.67001",
++    "volume": "34147900"
++   },
++   {
++    "datetime": "2026-10-06",
++    "open": "332.28000",
++    "high": "334.38000",
++    "low": "330.62000",
++    "close": "333.63000",
++    "volume": "30449000"
++   },
++   {
++    "datetime": "2026-10-05",
++    "open": "332.82001",
++    "high": "336.20999",
++    "low": "331.64999",
++    "close": "332.89001",
++    "volume": "34400900"
++   },
++   {
++    "datetime": "2026-10-02",
++    "open": "333.26001",
++    "high": "334.54001",
++    "low": "330.60999",
++    "close": "333.69000",
++    "volume": "33278600"
++   },
++   {
++    "datetime": "2026-10-01",
++    "open": "330",
++    "high": "332.48001",
++    "low": "325.81000",
++    "close": "330.32001",
++    "volume": "36306300"
++   },
++   {
++    "datetime": "2026-09-30",
++    "open": "330.79999",
++    "high": "339.5",
++    "low": "330.14001",
++    "close": "333.019989",
++    "volume": "49988600"
++   }
++  ],
++  "status": "ok"
++ }
++}
+diff --git a/backend/tests/fixtures/twelvedata_real_series_aapl_5min.json b/backend/tests/fixtures/twelvedata_real_series_aapl_5min.json
+new file mode 100644
+index 0000000..396519c
+--- /dev/null
++++ b/backend/tests/fixtures/twelvedata_real_series_aapl_5min.json
+@@ -0,0 +1,498 @@
++{
++ "status": 200,
++ "recorded": "2026-11-10, REAL answer (key sent in the Authorization header)",
++ "body": {
++  "meta": {
++   "symbol": "AAPL",
++   "interval": "5min",
++   "currency": "USD",
++   "exchange_timezone": "America/New_York",
++   "exchange": "NASDAQ",
++   "mic_code": "XNGS",
++   "type": "Common Stock"
++  },
++  "values": [
++   {
++    "datetime": "2026-11-10 15:15:00",
++    "open": "347.04",
++    "high": "347.37",
++    "low": "346.955",
++    "close": "347.19",
++    "volume": "17720"
++   },
++   {
++    "datetime": "2026-11-10 15:10:00",
++    "open": "347.98",
++    "high": "347.985",
++    "low": "346.89",
++    "close": "347.035",
++    "volume": "34331"
++   },
++   {
++    "datetime": "2026-11-10 15:05:00",
++    "open": "348.43",
++    "high": "348.99",
++    "low": "347.98",
++    "close": "347.98",
++    "volume": "35058"
++   },
++   {
++    "datetime": "2026-11-10 15:00:00",
++    "open": "348.07",
++    "high": "348.52",
++    "low": "347.49",
++    "close": "348.43",
++    "volume": "39622"
++   },
++   {
++    "datetime": "2026-11-10 14:55:00",
++    "open": "348.46",
++    "high": "348.83",
++    "low": "347.81",
++    "close": "348.07",
++    "volume": "45645"
++   },
++   {
++    "datetime": "2026-11-10 14:50:00",
++    "open": "350.33",
++    "high": "350.415",
++    "low": "348.35",
++    "close": "348.43",
++    "volume": "41633"
++   },
++   {
++    "datetime": "2026-11-10 14:45:00",
++    "open": "350.99",
++    "high": "351.1",
++    "low": "350",
++    "close": "350.325",
++    "volume": "29799"
++   },
++   {
++    "datetime": "2026-11-10 14:40:00",
++    "open": "351.295",
++    "high": "351.41",
++    "low": "350.155",
++    "close": "350.975",
++    "volume": "28233"
++   },
++   {
++    "datetime": "2026-11-10 14:35:00",
++    "open": "350.88",
++    "high": "351.54",
++    "low": "350.41",
++    "close": "351.31",
++    "volume": "36191"
++   },
++   {
++    "datetime": "2026-11-10 14:30:00",
++    "open": "351.26",
++    "high": "353.785",
++    "low": "350.46",
++    "close": "351.21",
++    "volume": "77076"
++   },
++   {
++    "datetime": "2026-11-09 20:55:00",
++    "open": "351.26999",
++    "high": "351.57001",
++    "low": "350.41",
++    "close": "350.48999",
++    "volume": "2519155"
++   },
++   {
++    "datetime": "2026-11-09 20:50:00",
++    "open": "351.17001",
++    "high": "351.89209",
++    "low": "351.10999",
++    "close": "351.31000",
++    "volume": "1089223"
++   },
++   {
++    "datetime": "2026-11-09 20:45:00",
++    "open": "350.75",
++    "high": "351.42001",
++    "low": "350.73499",
++    "close": "351.17001",
++    "volume": "516870"
++   },
++   {
++    "datetime": "2026-11-09 20:40:00",
++    "open": "350.76001",
++    "high": "350.88000",
++    "low": "350.62000",
++    "close": "350.76001",
++    "volume": "404375"
++   },
++   {
++    "datetime": "2026-11-09 20:35:00",
++    "open": "350.78500",
++    "high": "351.10001",
++    "low": "350.73001",
++    "close": "350.80499",
++    "volume": "435344"
++   },
++   {
++    "datetime": "2026-11-09 20:30:00",
++    "open": "351.14999",
++    "high": "351.17999",
++    "low": "350.54001",
++    "close": "350.78500",
++    "volume": "440350"
++   },
++   {
++    "datetime": "2026-11-09 20:25:00",
++    "open": "350.95999",
++    "high": "351.24",
++    "low": "350.82999",
++    "close": "351.17599",
++    "volume": "464791"
++   },
++   {
++    "datetime": "2026-11-09 20:20:00",
++    "open": "351.19000",
++    "high": "351.25",
++    "low": "350.81000",
++    "close": "350.95700",
++    "volume": "536771"
++   },
++   {
++    "datetime": "2026-11-09 20:15:00",
++    "open": "351.66000",
++    "high": "352",
++    "low": "351.16",
++    "close": "351.17999",
++    "volume": "590658"
++   },
++   {
++    "datetime": "2026-11-09 20:10:00",
++    "open": "351.51999",
++    "high": "351.81",
++    "low": "351.39001",
++    "close": "351.64001",
++    "volume": "479873"
++   },
++   {
++    "datetime": "2026-11-09 20:05:00",
++    "open": "351.50500",
++    "high": "351.67001",
++    "low": "351.35999",
++    "close": "351.51999",
++    "volume": "296938"
++   },
++   {
++    "datetime": "2026-11-09 20:00:00",
++    "open": "351.33420",
++    "high": "351.74",
++    "low": "351.17001",
++    "close": "351.51999",
++    "volume": "347854"
++   },
++   {
++    "datetime": "2026-11-09 19:55:00",
++    "open": "351.26001",
++    "high": "351.70999",
++    "low": "351.059998",
++    "close": "351.34000",
++    "volume": "340881"
++   },
++   {
++    "datetime": "2026-11-09 19:50:00",
++    "open": "351.22501",
++    "high": "351.57999",
++    "low": "351.060089",
++    "close": "351.26999",
++    "volume": "553938"
++   },
++   {
++    "datetime": "2026-11-09 19:45:00",
++    "open": "351.57001",
++    "high": "351.64999",
++    "low": "351.14999",
++    "close": "351.22501",
++    "volume": "231449"
++   },
++   {
++    "datetime": "2026-11-09 19:40:00",
++    "open": "351.89999",
++    "high": "352.28",
++    "low": "351.5",
++    "close": "351.59000",
++    "volume": "339543"
++   },
++   {
++    "datetime": "2026-11-09 19:35:00",
++    "open": "351.33499",
++    "high": "352",
++    "low": "351.029999",
++    "close": "351.89999",
++    "volume": "373340"
++   },
++   {
++    "datetime": "2026-11-09 19:30:00",
++    "open": "351.23001",
++    "high": "351.66000",
++    "low": "351.13000",
++    "close": "351.34000",
++    "volume": "253944"
++   },
++   {
++    "datetime": "2026-11-09 19:25:00",
++    "open": "351.64001",
++    "high": "351.68",
++    "low": "351.14999",
++    "close": "351.23999",
++    "volume": "297432"
++   },
++   {
++    "datetime": "2026-11-09 19:20:00",
++    "open": "351.84000",
++    "high": "351.99",
++    "low": "351.44510",
++    "close": "351.64001",
++    "volume": "337236"
++   },
++   {
++    "datetime": "2026-11-09 19:15:00",
++    "open": "351.87000",
++    "high": "352.019989",
++    "low": "351.75",
++    "close": "351.85199",
++    "volume": "372533"
++   },
++   {
++    "datetime": "2026-11-09 19:10:00",
++    "open": "351.44000",
++    "high": "351.95001",
++    "low": "351.39200",
++    "close": "351.87000",
++    "volume": "433865"
++   },
++   {
++    "datetime": "2026-11-09 19:05:00",
++    "open": "351.16000",
++    "high": "351.5",
++    "low": "351.15500",
++    "close": "351.43500",
++    "volume": "301320"
++   },
++   {
++    "datetime": "2026-11-09 19:00:00",
++    "open": "350.69000",
++    "high": "351.29999",
++    "low": "350.57",
++    "close": "351.16501",
++    "volume": "493035"
++   },
++   {
++    "datetime": "2026-11-09 18:55:00",
++    "open": "350.54999",
++    "high": "350.87000",
++    "low": "350.47",
++    "close": "350.71011",
++    "volume": "271467"
++   },
++   {
++    "datetime": "2026-11-09 18:50:00",
++    "open": "350.25",
++    "high": "350.56000",
++    "low": "350.25",
++    "close": "350.55499",
++    "volume": "195996"
++   },
++   {
++    "datetime": "2026-11-09 18:45:00",
++    "open": "349.97000",
++    "high": "350.46991",
++    "low": "349.95001",
++    "close": "350.23999",
++    "volume": "262489"
++   },
++   {
++    "datetime": "2026-11-09 18:40:00",
++    "open": "349.42999",
++    "high": "350.10001",
++    "low": "349.35001",
++    "close": "349.95999",
++    "volume": "268139"
++   },
++   {
++    "datetime": "2026-11-09 18:35:00",
++    "open": "349.14011",
++    "high": "349.47000",
++    "low": "349.089996",
++    "close": "349.42999",
++    "volume": "123738"
++   },
++   {
++    "datetime": "2026-11-09 18:30:00",
++    "open": "349.10001",
++    "high": "349.39001",
++    "low": "349.08",
++    "close": "349.13501",
++    "volume": "148860"
++   },
++   {
++    "datetime": "2026-11-09 18:25:00",
++    "open": "349.099792",
++    "high": "349.23499",
++    "low": "349.040009",
++    "close": "349.089996",
++    "volume": "133252"
++   },
++   {
++    "datetime": "2026-11-09 18:20:00",
++    "open": "349.16000",
++    "high": "349.33990",
++    "low": "349.079987",
++    "close": "349.080109",
++    "volume": "113188"
++   },
++   {
++    "datetime": "2026-11-09 18:15:00",
++    "open": "349.48001",
++    "high": "349.51001",
++    "low": "349.14001",
++    "close": "349.16000",
++    "volume": "142251"
++   },
++   {
++    "datetime": "2026-11-09 18:10:00",
++    "open": "349.35001",
++    "high": "349.54999",
++    "low": "349.29",
++    "close": "349.49500",
++    "volume": "125478"
++   },
++   {
++    "datetime": "2026-11-09 18:05:00",
++    "open": "349.41501",
++    "high": "349.48001",
++    "low": "349.26999",
++    "close": "349.34000",
++    "volume": "115081"
++   },
++   {
++    "datetime": "2026-11-09 18:00:00",
++    "open": "349.070007",
++    "high": "349.51999",
++    "low": "349.070007",
++    "close": "349.41501",
++    "volume": "159561"
++   },
++   {
++    "datetime": "2026-11-09 17:55:00",
++    "open": "349.31500",
++    "high": "349.42999",
++    "low": "349.070190",
++    "close": "349.089996",
++    "volume": "105822"
++   },
++   {
++    "datetime": "2026-11-09 17:50:00",
++    "open": "349.31000",
++    "high": "349.48999",
++    "low": "349.14340",
++    "close": "349.29999",
++    "volume": "139666"
++   },
++   {
++    "datetime": "2026-11-09 17:45:00",
++    "open": "349",
++    "high": "349.33981",
++    "low": "348.81921",
++    "close": "349.29501",
++    "volume": "16049702"
++   },
++   {
++    "datetime": "2026-11-09 17:40:00",
++    "open": "349.25",
++    "high": "349.32999",
++    "low": "348.92001",
++    "close": "349.010010",
++    "volume": "217811"
++   },
++   {
++    "datetime": "2026-11-09 17:35:00",
++    "open": "349.60001",
++    "high": "349.69000",
++    "low": "349.089996",
++    "close": "349.26999",
++    "volume": "152224"
++   },
++   {
++    "datetime": "2026-11-09 17:30:00",
++    "open": "349.95999",
++    "high": "350",
++    "low": "349.59839",
++    "close": "349.61499",
++    "volume": "163389"
++   },
++   {
++    "datetime": "2026-11-09 17:25:00",
++    "open": "349.88000",
++    "high": "350.025",
++    "low": "349.79999",
++    "close": "349.97000",
++    "volume": "253372"
++   },
++   {
++    "datetime": "2026-11-09 17:20:00",
++    "open": "350.19000",
++    "high": "350.28000",
++    "low": "349.82",
++    "close": "349.90509",
++    "volume": "184356"
++   },
++   {
++    "datetime": "2026-11-09 17:15:00",
++    "open": "350.32999",
++    "high": "350.54001",
++    "low": "350.13000",
++    "close": "350.18271",
++    "volume": "306659"
++   },
++   {
++    "datetime": "2026-11-09 17:10:00",
++    "open": "350.26251",
++    "high": "350.37000",
++    "low": "350.067505",
++    "close": "350.28299",
++    "volume": "143819"
++   },
++   {
++    "datetime": "2026-11-09 17:05:00",
++    "open": "349.85001",
++    "high": "350.28",
++    "low": "349.80289",
++    "close": "350.28000",
++    "volume": "188959"
++   },
++   {
++    "datetime": "2026-11-09 17:00:00",
++    "open": "350.43500",
++    "high": "350.51001",
++    "low": "349.70999",
++    "close": "349.85999",
++    "volume": "235647"
++   },
++   {
++    "datetime": "2026-11-09 16:55:00",
++    "open": "349.96500",
++    "high": "350.48001",
++    "low": "349.89999",
++    "close": "350.45001",
++    "volume": "14218788"
++   },
++   {
++    "datetime": "2026-11-09 16:50:00",
++    "open": "349.39001",
++    "high": "349.98001",
++    "low": "349.33",
++    "close": "349.96500",
++    "volume": "13910744"
++   }
++  ],
++  "status": "ok"
++ }
++}
+diff --git a/scripts/record_providers.py b/scripts/record_providers.py
+new file mode 100644
+index 0000000..09a26f3
+--- /dev/null
++++ b/scripts/record_providers.py
+@@ -0,0 +1,168 @@
++"""Record REAL answers from the keyed market-data sources: Twelve Data, Alpha Vantage, Polygon (Massive) and Financial Modeling Prep.
++
++Run from the repo root:  cd backend; uv run python ../scripts/record_providers.py [--only twelvedata,alphavantage,polygon,fmp]
++
++What needs what:
++  - the "bad key" answers of all four hosts need NO account: they are what each service says to a made-up key (keytest_*_401 style);
++  - Twelve Data and Alpha Vantage publish a shared `demo` key that answers a few symbols (AAPL / IBM), so their success shapes are
++    recorded for real with no account too. Set TWELVEDATA_API_KEY / ALPHAVANTAGE_API_KEY to record with your own key instead;
++  - Polygon (Massive) and FMP have no demo key: with POLYGON_API_KEY / FMP_API_KEY set their success answers are recorded for real,
++    without them those fixtures stay DOC-SHAPED (built from the docs and labelled "NOT A RECORDING" inside the file) and are skipped here.
++
++A key never reaches a fixture: the key text is replaced by REDACTED in the body (Alpha Vantage echoes the key in its limit message).
++Files: backend/tests/fixtures/<source>_real_*.json and keytest_<source>_*.json. Respect the free limits: the script sleeps between calls
++(Twelve Data 8/min, Polygon 5/min, Alpha Vantage 25/day: about 9 calls here when a key is used).
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import os
++import pathlib
++import time
++from dataclasses import dataclass, field
++
++import httpx
++
++OUT = pathlib.Path(__file__).resolve().parent.parent / "backend" / "tests" / "fixtures"
++MADE_UP = "madeupkey12345678"
++
++
++@dataclass
++class Call:
++    name: str
++    url: str
++    params: dict = field(default_factory=dict)
++    needs_key: bool = True  # False = a bad-key answer, recorded with MADE_UP in the place the key goes
++
++
++def scrub(text: str, key: str) -> str:
++    return text.replace(key, "REDACTED") if key and key != "demo" else text  # "demo" is public and part of the services' own sentences
++
++
++def trim_reports(body: object) -> object:
++    """Alpha Vantage statements come with 20 years of reports (150 KB): keep 5 annual and 8 quarterly ones."""
++    if isinstance(body, dict) and "annualReports" in body:
++        return {**body, "annualReports": body["annualReports"][:5], "quarterlyReports": body.get("quarterlyReports", [])[:8]}
++    return body
++
++
++def save(name: str, r: httpx.Response, key: str, note: str) -> None:
++    try:
++        body = json.loads(scrub(r.text, key))
++    except ValueError:
++        body = {"text": scrub(r.text[:400], key)}
++    body = trim_reports(body)
++    rec = {"status": r.status_code, "recorded": f"{time.strftime('%Y-%m-%d')}, REAL answer ({note})", "body": body}
++    (OUT / f"{name}.json").write_text(json.dumps(rec, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
++    print(f"  {name}: HTTP {r.status_code}, {len(r.text)} bytes")
++
++
++def twelvedata(c: httpx.Client) -> None:
++    key = os.environ.get("TWELVEDATA_API_KEY", "")
++    use = key or "demo"
++    print("Twelve Data", "(your key)" if key else "(shared demo key)")
++    base = "https://api.twelvedata.com"
++    hdr = {"Authorization": f"apikey {use}"}
++    calls = [
++        ("twelvedata_real_quote_aapl", "/quote", {"symbol": "AAPL"}),
++        ("twelvedata_real_series_aapl_1day", "/time_series", {"symbol": "AAPL", "interval": "1day", "outputsize": "30", "order": "desc"}),
++        ("twelvedata_real_series_aapl_5min", "/time_series", {"symbol": "AAPL", "interval": "5min", "outputsize": "60", "order": "desc", "timezone": "UTC"}),
++        ("twelvedata_real_search_aapl", "/symbol_search", {"symbol": "AAPL", "outputsize": "5"}),
++        ("twelvedata_real_unknown", "/quote", {"symbol": "ZZZZNOTREAL"}),
++    ]
++    for name, path, params in calls:
++        if not key and name.endswith("_unknown"):
++            continue  # the demo key answers 401 for any symbol it does not cover: only a personal key can show an unknown symbol
++        save(name, c.get(base + path, params=params, headers=hdr), use, "key sent in the Authorization header")
++        time.sleep(8)  # 8 credits a minute on the free plan
++    save("keytest_twelvedata_401", c.get(base + "/quote", params={"symbol": "AAPL"}, headers={"Authorization": f"apikey {MADE_UP}"}),
++         MADE_UP, "made-up key, no account")
++
++
++def alphavantage(c: httpx.Client) -> None:
++    key = os.environ.get("ALPHAVANTAGE_API_KEY", "")
++    use = key or "demo"
++    print("Alpha Vantage", "(your key)" if key else "(shared demo key: IBM only)")
++    base = "https://www.alphavantage.co/query"
++    calls = [
++        ("alphavantage_real_quote_ibm", {"function": "GLOBAL_QUOTE", "symbol": "IBM"}),
++        ("alphavantage_real_daily_ibm", {"function": "TIME_SERIES_DAILY", "symbol": "IBM", "outputsize": "compact"}),
++        ("alphavantage_real_overview_ibm", {"function": "OVERVIEW", "symbol": "IBM"}),
++        ("alphavantage_real_income_ibm", {"function": "INCOME_STATEMENT", "symbol": "IBM"}),
++        ("alphavantage_real_balance_ibm", {"function": "BALANCE_SHEET", "symbol": "IBM"}),
++        ("alphavantage_real_cashflow_ibm", {"function": "CASH_FLOW", "symbol": "IBM"}),
++        ("alphavantage_real_intraday_ibm", {"function": "TIME_SERIES_INTRADAY", "symbol": "IBM", "interval": "5min"}),
++        ("alphavantage_real_search_ibm", {"function": "SYMBOL_SEARCH", "keywords": "ibm"}),
++    ]
++    for name, params in calls:
++        if not key and name.endswith(("_daily_ibm", "_search_ibm")):
++            continue  # the demo key answers "demo purposes only" for these two: only a personal key records them
++        save(name, c.get(base, params={**params, "apikey": use}), use, "apikey query parameter")
++        time.sleep(2)
++    # Alpha Vantage does not validate keys: a made-up key is treated like an anonymous free key. For IBM it can even get data, so ask for
++    # TSLA, where the answer is HTTP 200 with a limit text ("We have detected your API key as ... 25 requests per day"). The text echoes the key.
++    save("keytest_alphavantage_bad_key", c.get(base, params={"function": "GLOBAL_QUOTE", "symbol": "TSLA", "apikey": MADE_UP}),
++         MADE_UP, "made-up key, no account: Alpha Vantage answers 200 with the 25-a-day limit text")
++
++
++def polygon(c: httpx.Client) -> None:
++    key = os.environ.get("POLYGON_API_KEY", "")
++    print("Polygon / Massive", "(your key)" if key else "(no key: success shapes stay doc-shaped)")
++    base = "https://api.massive.com"
++    save("keytest_polygon_401", c.get(base + "/v2/aggs/ticker/AAPL/prev", headers={"Authorization": f"Bearer {MADE_UP}"}), MADE_UP,
++         "made-up key, no account")
++    if not key:
++        return
++    hdr = {"Authorization": f"Bearer {key}"}
++    today = time.strftime("%Y-%m-%d")
++    start = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 40 * 86400))
++    calls = [
++        ("polygon_real_prev_aapl", "/v2/aggs/ticker/AAPL/prev", {"adjusted": "true"}),
++        ("polygon_real_aggs_aapl_1d", f"/v2/aggs/ticker/AAPL/range/1/day/{start}/{today}", {"adjusted": "true", "sort": "asc", "limit": "50000"}),
++        ("polygon_real_aggs_aapl_5m", f"/v2/aggs/ticker/AAPL/range/5/minute/{start}/{today}", {"adjusted": "true", "sort": "asc", "limit": "300"}),
++        ("polygon_real_tickers_search", "/v3/reference/tickers", {"search": "apple", "market": "stocks", "limit": "5"}),
++        ("polygon_real_prev_unknown", "/v2/aggs/ticker/ZZZZNOTREAL/prev", {}),
++        ("polygon_real_snapshot_aapl", "/v2/snapshot/locale/us/markets/stocks/tickers/AAPL", {}),
++    ]
++    for name, path, params in calls:
++        time.sleep(13)  # 5 requests a minute on the free plan
++        save(name, c.get(base + path, params=params, headers=hdr), key, "key sent as a Bearer header")
++
++
++def fmp(c: httpx.Client) -> None:
++    key = os.environ.get("FMP_API_KEY", "")
++    print("FMP", "(your key)" if key else "(no key: success shapes stay doc-shaped)")
++    base = "https://financialmodelingprep.com/stable"
++    save("keytest_fmp_401", c.get(base + "/quote", params={"symbol": "AAPL", "apikey": MADE_UP}), MADE_UP, "made-up key, no account")
++    if not key:
++        return
++    calls = [
++        ("fmp_real_quote_aapl", "/quote", {"symbol": "AAPL"}),
++        ("fmp_real_profile_aapl", "/profile", {"symbol": "AAPL"}),
++        ("fmp_real_key_metrics_aapl", "/key-metrics", {"symbol": "AAPL", "limit": "1"}),
++        ("fmp_real_income_aapl", "/income-statement", {"symbol": "AAPL", "limit": "5"}),
++        ("fmp_real_balance_aapl", "/balance-sheet-statement", {"symbol": "AAPL", "limit": "5"}),
++        ("fmp_real_cashflow_aapl", "/cash-flow-statement", {"symbol": "AAPL", "limit": "5"}),
++        ("fmp_real_search_apple", "/search-symbol", {"query": "apple", "limit": "5"}),
++        ("fmp_real_income_quarter_aapl", "/income-statement", {"symbol": "AAPL", "period": "quarter", "limit": "4"}),  # the paid-plan answer on a free key
++        ("fmp_real_quote_non_us", "/quote", {"symbol": "RELIANCE.NS"}),
++    ]
++    for name, path, params in calls:
++        save(name, c.get(base + path, params={**params, "apikey": key}), key, "apikey query parameter")
++        time.sleep(1)
++
++
++def main() -> None:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--only", default="twelvedata,alphavantage,polygon,fmp")
++    args = ap.parse_args()
++    steps = {"twelvedata": twelvedata, "alphavantage": alphavantage, "polygon": polygon, "fmp": fmp}
++    with httpx.Client(timeout=30, headers={"User-Agent": "OpenTerm/0 (open-source terminal; fixture recording)"}) as c:
++        for name in args.only.split(","):
++            steps[name.strip()](c)
++
++
++if __name__ == "__main__":
++    main()

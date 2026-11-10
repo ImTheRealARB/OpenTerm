@@ -1,0 +1,1431 @@
+diff --git a/backend/openterm/api.py b/backend/openterm/api.py
+index fd956fc..894c0a3 100644
+--- a/backend/openterm/api.py
++++ b/backend/openterm/api.py
+@@ -510,13 +510,15 @@ async def get_settings_doc(request: Request):
+ 
+ @router.put("/settings")
+ async def put_settings_doc(request: Request):
+-    from .settings_store import VERSION, SettingsStore
++    from .settings_store import VERSION, SettingsStore, source_prefs
+ 
+     try:
+         body = await json_object(request)
+         if "settings" not in body:
+             raise UserDataError("bad_request", "BODY NEEDS settings")
+-        return await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
++        doc = await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
++        svc(request).router.prefs = source_prefs(doc["settings"])
++        return doc
+     except UserDataError as e:
+         return error(e)
+ 
+diff --git a/backend/openterm/cachekeys.py b/backend/openterm/cachekeys.py
+index c0e6163..65999f9 100644
+--- a/backend/openterm/cachekeys.py
++++ b/backend/openterm/cachekeys.py
+@@ -29,3 +29,16 @@ def quant(*parts: str) -> str:
+     """Quant-route answers (`q:fundsectors:SPY`, `q:kenfrench`). Shares the `q:` prefix with quotes, as it always did; safe because
+     `resolve()` upper-cases every symbol and these names are lower case, so the two can never meet."""
+     return "q:" + ":".join(parts)
++
++
++def scoped(key: str, pin: str | None, prefs: dict[str, str] | None = None) -> str:
++    """The key with the source choice appended, so an answer cached for one source is never served for another.
++    A pin (`?source=` / `SRC=`) adds `@src=<name>`; with no pin, saved per-capability preferences (SETTINGS SOURCE) add `@pref=<hash>`;
++    neither leaves the key as it was."""
++    if pin:
++        return f"{key}@src={pin}"
++    if prefs:
++        import hashlib
++
++        return f"{key}@pref={hashlib.sha1(repr(sorted(prefs.items())).encode()).hexdigest()[:8]}"
++    return key
+diff --git a/backend/openterm/main.py b/backend/openterm/main.py
+index bfac881..de30d26 100644
+--- a/backend/openterm/main.py
++++ b/backend/openterm/main.py
+@@ -22,6 +22,7 @@ from .delivery.routes import router as delivery_router
+ from .kite_routes import router as kite_router
+ from .mcp.routes import router as mcp_router
+ from .origin import OriginGuardMiddleware
++from .pin import SourcePinMiddleware
+ from .providers.hierarchy import build_order
+ from .quant_routes import router as quant_router
+ from .responses import Orjson, OrjsonRoute
+@@ -118,6 +119,9 @@ async def lifespan(app: FastAPI):
+         if part:
+             part.start()
+ 
++    from .settings_store import SettingsStore, source_prefs
++
++    router.prefs = source_prefs((await SettingsStore(db).get())["settings"])  # SETTINGS SOURCE <capability> <provider>
+     app.state.settings = settings
+     app.state.service = service
+     app.state.hub = hub
+@@ -203,6 +207,7 @@ async def lifespan(app: FastAPI):
+ app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson, lifespan=lifespan)
+ app.router.route_class = OrjsonRoute  # the app's own routes (/api/health, /api/perf) skip jsonable_encoder too (audit E-1)
+ app.add_middleware(perf.TimingMiddleware)
++app.add_middleware(SourcePinMiddleware)  # `?source=nasdaq` pins one data source for the request (pin.py)
+ app.add_middleware(OriginGuardMiddleware)  # outermost: a foreign browser Origin never reaches a route (audit D-2)
+ app.include_router(api_router)
+ app.include_router(quant_router)
+diff --git a/backend/openterm/pin.py b/backend/openterm/pin.py
+new file mode 100644
+index 0000000..29a2e56
+--- /dev/null
++++ b/backend/openterm/pin.py
+@@ -0,0 +1,63 @@
++"""Pin one data source for one request (`?source=nasdaq`, command `SRC=NASDAQ`).
++
++The pin lives in a context variable for the length of a request, so every layer below the route (data service, research, derivs,
++rates, world) sees it without a new argument. The router reads it: a pinned source is the ONLY source asked, and when it cannot
++answer the user gets an error that names it (never a quiet fallback). The cache key carries it (`cachekeys.scoped`).
++
++Imports nothing from the app, so any module can use it.
++"""
++
++from __future__ import annotations
++
++import re
++from contextvars import ContextVar
++from urllib.parse import parse_qs
++
++import orjson
++
++PIN: ContextVar[str | None] = ContextVar("openterm_source_pin", default=None)
++NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}\Z")
++
++
++def clean(raw: str | None) -> str | None:
++    """`" NASDAQ "` -> `"nasdaq"`; empty -> None; anything that cannot be a source name -> ValueError."""
++    name = (raw or "").strip().lower()
++    if not name:
++        return None
++    if not NAME_RE.match(name):
++        raise ValueError(name[:40])
++    return name
++
++
++class SourcePinMiddleware:
++    """Pure ASGI: reads `?source=` and sets `PIN` for the request. An unknown source is a 400 before the route runs."""
++
++    def __init__(self, app):
++        self.app = app
++
++    async def __call__(self, scope, receive, send):
++        if scope["type"] != "http" or b"source=" not in scope.get("query_string", b""):
++            return await self.app(scope, receive, send)
++        raw = parse_qs(scope["query_string"].decode("latin-1")).get("source", [""])[0]
++        try:
++            name = clean(raw)
++        except ValueError:
++            return await self._refuse(send, f"SRC={raw.strip().upper()[:40]}: NOT A SOURCE NAME")
++        if name is None:
++            return await self.app(scope, receive, send)
++        service = getattr(getattr(scope.get("app"), "state", None), "service", None)
++        known = service.router.providers if service is not None else {}
++        if known and name not in known:
++            return await self._refuse(send, f"SRC={name.upper()}: UNKNOWN SOURCE (SEE /api/sources)")
++        token = PIN.set(name)
++        try:
++            await self.app(scope, receive, send)
++        finally:
++            PIN.reset(token)
++
++    @staticmethod
++    async def _refuse(send, message: str) -> None:
++        body = orjson.dumps({"error": message, "kind": "bad_request"})
++        await send({"type": "http.response.start", "status": 400,
++                    "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]})
++        await send({"type": "http.response.body", "body": body})
+diff --git a/backend/openterm/router.py b/backend/openterm/router.py
+index c81ffab..da50349 100644
+--- a/backend/openterm/router.py
++++ b/backend/openterm/router.py
+@@ -9,6 +9,7 @@ from typing import TypeVar
+ 
+ from . import errkinds as K
+ from .perf import percentile
++from .pin import PIN
+ from .providers.base import Provider, ProviderError
+ from .providers.hierarchy import rank_of
+ 
+@@ -55,14 +56,18 @@ class Health:
+ 
+ 
+ class AllFailed(Exception):
+-    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None):
++    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None, pinned: str | None = None):
+         self.errors = errors
+         self.key: str | None = None
++        self.pinned = pinned
+         kinds = {e.kind for _, e in errors}
+         # An expired login (Kite) is a reason shown beside the fallback, not an outage: when the sources that DO answer say
+         # "no such symbol" or "too shallow", the user gets that real answer instead of PROVIDER DOWN (audit A-3).
+         kinds_ex_login = kinds - {K.LOGIN_EXPIRED}
+-        if not errors:
++        if pinned:
++            # A pinned source answers alone: say which one and why, never the generic "no data" of a whole chain.
++            self.kind, msg = self._pinned(pinned, errors[0][1] if errors else None, keys)
++        elif not errors:
+             self.kind, msg = K.UNSUPPORTED, "NO PROVIDER SUPPORTS THIS SYMBOL"
+         elif K.DEPTH in kinds_ex_login and kinds_ex_login <= {K.NOT_FOUND, K.UNSUPPORTED, K.DEPTH}:
+             # Every source that has the symbol is too shallow for this interval + range: a request problem, not missing data.
+@@ -77,17 +82,39 @@ class AllFailed(Exception):
+             self.kind, msg = K.UNAVAILABLE, "PROVIDER DOWN"
+         super().__init__(msg)
+ 
++    def _pinned(self, name: str, err: ProviderError | None, keys: dict[str, str] | None) -> tuple[str, str]:
++        head = f"SRC={name.upper()}"
++        kind = err.kind if err else K.UNSUPPORTED
++        if kind == K.KEY_REQUIRED:
++            self.key = (keys or {}).get(name)
++            return kind, f"{head}: KEY REQUIRED"
++        if kind == K.LOGIN_EXPIRED:
++            return kind, f"{head}: {err}"
++        if kind in (K.UNSUPPORTED, K.DEPTH, K.BAD_REQUEST):
++            return K.BAD_REQUEST, f"{head}: {err}"
++        if kind == K.NOT_FOUND:
++            return kind, f"{head}: NO DATA FOR SYMBOL"
++        return K.UNAVAILABLE, f"{head}: PROVIDER DOWN"
++
+ 
+ class Router:
+     def __init__(self, providers: dict[str, Provider], order: dict[str, list[str]]):
+         self.providers = providers
+         self.order = order
+         self.health = {name: Health() for name in providers}
++        self.prefs: dict[str, str] = {}  # SETTINGS SOURCE <capability> <provider>: tried first, the default order still backs it up
+ 
+     def candidates(self, capability: str, symbol: str | None = None) -> list[Provider]:
++        pin = PIN.get()
++        if pin:  # a pinned source is the only candidate (`pin_block` says why it may still be unable to answer)
++            p = self.providers.get(pin)
++            return [p] if p is not None and p.supports(capability, symbol) else []
++        names = self.order.get(capability, [])
++        if self.prefs.get(capability) in names:
++            names = [self.prefs[capability], *(n for n in names if n != self.prefs[capability])]
+         ps = [
+             self.providers[n]
+-            for n in self.order.get(capability, [])
++            for n in names
+             if n in self.providers and self.providers[n].supports(capability, symbol)
+         ]
+         up = [p for p in ps if not self.health[p.name].down]
+@@ -121,6 +148,9 @@ class Router:
+         """Returns (result, names of providers that failed first)."""
+         errors: list[tuple[str, ProviderError]] = []
+         keys: dict[str, str] = {}
++        pin = PIN.get()
++        if pin:
++            return await self._call_pinned(pin, capability, fn, symbol), []
+         for p in self.candidates(capability, symbol):
+             try:
+                 return await self.attempt(p, fn), [n for n, _ in errors]
+@@ -130,13 +160,44 @@ class Router:
+                     keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
+         raise AllFailed(errors, keys)
+ 
++    def pin_block(self, p: Provider, capability: str, symbol: str | None) -> ProviderError | None:
++        """Why the pinned source cannot even be asked (None = ask it)."""
++        if capability not in p.capabilities:
++            return ProviderError(K.UNSUPPORTED, f"DOES NOT SERVE {capability.upper()}")
++        if p.supports(capability, symbol):
++            return None
++        why = p.why_down()
++        if why:
++            return ProviderError(K.LOGIN_EXPIRED, why)
++        if getattr(p, "key_name", "") and not getattr(p, "has_key", True):
++            return ProviderError(K.KEY_REQUIRED, "KEY REQUIRED")
++        return ProviderError(K.UNSUPPORTED, f"DOES NOT COVER {symbol}" if symbol else "NOT SWITCHED ON")
++
++    async def _call_pinned(self, pin: str, capability: str, fn: Callable[[Provider], Awaitable[T]], symbol: str | None) -> T:
++        p = self.providers.get(pin)
++        err = ProviderError(K.BAD_REQUEST, "UNKNOWN SOURCE") if p is None else self.pin_block(p, capability, symbol)
++        keys = {pin: getattr(p, "key_name", "") or pin.upper()}
++        if err is None:
++            try:
++                return await self.attempt(p, fn)
++            except ProviderError as e:
++                err = e
++        raise AllFailed([(pin, err)], keys, pinned=pin)
++
+     async def quotes(self, symbols: list[str]) -> tuple[dict, dict[str, AllFailed]]:
+         """Batch quotes across providers: each provider gets the symbols still missing that it supports."""
+         found: dict = {}
+         errors: dict[str, list[tuple[str, ProviderError]]] = {s: [] for s in symbols}
+-        for p in self.candidates("quotes"):
++        pin = PIN.get()
++        pinned_p = self.providers.get(pin) if pin else None
++        if pin:  # each symbol gets its own reason when the pinned source is off for it
++            for s in symbols:
++                why = ProviderError(K.BAD_REQUEST, "UNKNOWN SOURCE") if pinned_p is None else self.pin_block(pinned_p, "quotes", s)
++                if why is not None:
++                    errors[s].append((pin, why))
++        for p in ([pinned_p] if pinned_p is not None else []) if pin else self.candidates("quotes"):
+             name = p.name
+-            batch = [s for s in symbols if s not in found and p.supports("quotes", s)]
++            batch = [s for s in symbols if s not in found and not (pin and errors[s]) and p.supports("quotes", s)]
+             if not batch:
+                 continue
+             try:
+@@ -149,7 +210,8 @@ class Router:
+             except ProviderError as e:
+                 for s in batch:
+                     errors[s].append((name, e))
+-        return found, {s: AllFailed(errors[s]) for s in symbols if s not in found}
++        keys = {pin: getattr(pinned_p, "key_name", "") or pin.upper()} if pin else None
++        return found, {s: AllFailed(errors[s], keys, pinned=pin) for s in symbols if s not in found}
+ 
+     def history_limits(self, symbol: str) -> dict:
+         """How far back each intraday candle length reaches for this symbol, from the best source that can serve it.
+diff --git a/backend/openterm/service.py b/backend/openterm/service.py
+index 8cd14a3..7e84a60 100644
+--- a/backend/openterm/service.py
++++ b/backend/openterm/service.py
+@@ -18,6 +18,7 @@ from .cache import Cache
+ from .config import load_yaml
+ from .errors import DataError
+ from .news_tags import Filters, item_matches, validate
++from .pin import PIN
+ from .providers import macro as _macro
+ from .providers.base import ProviderError
+ from .providers.crypto import VS
+@@ -105,6 +106,7 @@ class DataService:
+         """Stale-while-revalidate: the public way for every view service (research, derivs, rates, world/*) to cache a fetch under `key`.
+         Fresh entry (younger than `ttl`): returned at once. Stale entry: returned at once and refreshed in the background.
+         Miss: `fetch()` runs (concurrent callers share it); an AllFailed becomes a DataError."""
++        key = self._scope(key)
+         entry = await self.cache.get(key)
+         if entry is not None:
+             value, stored_at = entry
+@@ -123,6 +125,10 @@ class DataService:
+             raise DataError(e.kind if e.kind != K.UNSUPPORTED else K.NOT_FOUND, str(e), detail, e.key) from e
+         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
+ 
++    def _scope(self, key: str) -> str:
++        """The cache key plus the pinned source (`?source=`) or the saved source preferences, so two sources never share an answer."""
++        return ck.scoped(key, PIN.get(), self.router.prefs)
++
+     # --- public API ---------------------------------------------------------------------------
+     async def history(self, raw_symbol: str, range_: str | None, interval: str | None) -> dict:
+         symbol = resolve(raw_symbol)
+@@ -130,7 +136,7 @@ class DataService:
+             r, i = normalize(range_, interval)
+         except ValueError as e:
+             raise DataError("bad_request", str(e)) from e
+-        if self.local is not None and symbol in self.local.symbols:  # IMPORT: the user's own bars win, labelled LOCAL DATA
++        if self.local is not None and symbol in self.local.symbols and PIN.get() in (None, "local"):  # IMPORT: the user's own bars win, labelled LOCAL DATA
+             try:
+                 data, imported_at = await self.local.history(symbol, r, i)
+             except LocalError as e:
+@@ -207,7 +213,7 @@ class DataService:
+         async def fetch() -> dict:
+             # Phase 13: a keyed source (Finnhub, Alpaca) adds its headlines to the first keyless answer instead of
+             # waiting to be a fallback. Without a key it does not support the capability and nothing changes.
+-            extras = [p for p in self.router.candidates(cap, arg) if getattr(p, "has_key", False)] if kind != "keyword" else []
++            extras = [p for p in self.router.candidates(cap, arg) if getattr(p, "has_key", False)] if kind != "keyword" and not PIN.get() else []
+             extra_results = await asyncio.gather(*(self._extra_news(p, call) for p in extras)) if extras else []
+             try:
+                 out, failed = await self.router.call(cap, call, arg)
+@@ -326,15 +332,18 @@ class DataService:
+                 out[n] = why
+         return out
+ 
++    def _qkey(self, symbol: str) -> str:
++        return self._scope(ck.quote(symbol))
++
+     async def quotes(self, raw_symbols: list[str]) -> dict[str, dict[str, Any]]:
+         """Returns {requested symbol: envelope | {"error", "kind"}}. Missing/stale ones are batched upstream."""
+         symbols = {raw: resolve(raw) for raw in raw_symbols}
+         out: dict[str, dict] = {}
+         need: list[str] = []
+         stale: list[str] = []
+-        found = await self.cache.get_many([ck.quote(s) for s in symbols.values()])  # one SQLite query for every memory miss
++        found = await self.cache.get_many([self._qkey(s) for s in symbols.values()])  # one SQLite query for every memory miss
+         for raw, s in symbols.items():
+-            entry = found.get(ck.quote(s))
++            entry = found.get(self._qkey(s))
+             if entry is None:
+                 self.misses += 1
+                 need.append(s)
+@@ -347,7 +356,7 @@ class DataService:
+                 stale.append(s)
+             else:
+                 self.fresh_hits += 1
+-                if now - self.rest_at.get(ck.quote(s), stored_at) >= self.REST_REFRESH_S:
++                if now - self.rest_at.get(self._qkey(s), stored_at) >= self.REST_REFRESH_S:
+                     stale.append(s)  # streamed price is fresh; renew volume / high / low / previous close in the background
+             out[raw] = envelope(value, stored_at, is_stale)
+         if stale:
+@@ -359,7 +368,7 @@ class DataService:
+                     continue
+                 r = results.get(s)
+                 if isinstance(r, dict):
+-                    entry = self.cache.mem.get(ck.quote(s))
++                    entry = self.cache.mem.get(self._qkey(s))
+                     out[raw] = envelope(r, entry[1] if entry else time.time(), stale=False)
+                 else:
+                     kind = getattr(r, "kind", "unavailable")
+@@ -372,7 +381,7 @@ class DataService:
+         mine: list[str] = []
+         loop = asyncio.get_running_loop()
+         for s in symbols:
+-            key = ck.quote(s)
++            key = self._qkey(s)
+             if key in self._inflight:
+                 futures[s] = self._inflight[key]
+             else:
+@@ -387,8 +396,8 @@ class DataService:
+                     if s in found:
+                         q, failed = found[s]
+                         value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
+-                        self.cache.put(ck.quote(s), value)
+-                        self.rest_at[ck.quote(s)] = time.time()
++                        self.cache.put(self._qkey(s), value)
++                        self.rest_at[self._qkey(s)] = time.time()
+                         fut.set_result(value)
+                     else:
+                         fut.set_exception(errors[s])
+@@ -402,7 +411,7 @@ class DataService:
+                     raise
+             finally:
+                 for s in mine:
+-                    self._inflight.pop(ck.quote(s), None)
++                    self._inflight.pop(self._qkey(s), None)
+         results = await asyncio.gather(*(asyncio.shield(f) for f in futures.values()), return_exceptions=True)
+         return dict(zip(futures.keys(), results))
+ 
+diff --git a/backend/openterm/settings_store.py b/backend/openterm/settings_store.py
+index 9cfb65f..3703d2c 100644
+--- a/backend/openterm/settings_store.py
++++ b/backend/openterm/settings_store.py
+@@ -161,7 +161,30 @@ def _vim(raw) -> bool:
+     return raw
+ 
+ 
++def _sources(raw) -> dict:
++    """{capability: provider}: the source tried first for that kind of data (SETTINGS SOURCE HISTORY NASDAQ). The default order backs it up."""
++    from .pin import NAME_RE
++    from .providers.hierarchy import DEFAULT_ORDER
++
++    if not isinstance(raw, dict) or len(raw) > len(DEFAULT_ORDER):
++        raise _bad("sources MUST MAP CAPABILITIES TO SOURCE NAMES")
++    out = {}
++    for cap, name in raw.items():
++        if cap not in DEFAULT_ORDER:
++            raise _bad(f"UNKNOWN CAPABILITY {str(cap)[:40]!r} IN sources")
++        if not isinstance(name, str) or not NAME_RE.match(name):
++            raise _bad(f"sources.{cap} MUST BE A SOURCE NAME LIKE nasdaq")
++        out[cap] = name
++    return out
++
++
++def source_prefs(settings: dict | None) -> dict[str, str]:
++    """The `sources` preferences of a stored settings object, for the router."""
++    return dict((settings or {}).get("sources") or {})
++
++
+ FIELDS = {
++    "sources": _sources,
+     "mode": lambda v: _choice(v, MODES, "mode"),
+     "theme": lambda v: _choice(v, THEMES, "theme"),
+     "font": _font,
+diff --git a/backend/tests/test_source_pin.py b/backend/tests/test_source_pin.py
+new file mode 100644
+index 0000000..6d29d71
+--- /dev/null
++++ b/backend/tests/test_source_pin.py
+@@ -0,0 +1,193 @@
++"""Pinning one data source: `?source=` on the routes, `SETTINGS SOURCE` preferences, and the cache keys that keep them apart.
++
++A pinned source answers alone. When it cannot, the answer names it and says why; it never falls back to another source.
++"""
++
++import httpx
++import pytest
++
++from openterm import cachekeys as ck
++from openterm.pin import PIN, clean
++from openterm.providers.base import HISTORY, QUOTES, Provider, ProviderError
++from openterm.router import AllFailed, Router
++from openterm.settings_store import source_prefs, validate
++
++
++class Fake(Provider):
++    capabilities = frozenset({HISTORY, QUOTES})
++
++    def __init__(self, name, *, covers=lambda s: True, error=None, caps=None):
++        super().__init__(httpx.AsyncClient())
++        self.name, self.covers, self.error = name, covers, error
++        if caps is not None:
++            self.capabilities = frozenset(caps)
++
++    def supports(self, capability, symbol=None):
++        return capability in self.capabilities and (symbol is None or self.covers(symbol))
++
++    async def history(self, symbol, range_, interval):
++        if self.error:
++            raise self.error
++        return self.name
++
++
++def make(**over):
++    ps = {"yahoo": Fake("yahoo"), "nasdaq": Fake("nasdaq"), **over}
++    return Router(ps, {"history": ["yahoo", "nasdaq"], "quotes": ["yahoo", "nasdaq"]})
++
++
++async def hist(router, symbol="AAPL"):
++    return await router.call("history", lambda p: p.history(symbol, "1Y", "1d"), symbol)
++
++
++def pinned(name):
++    return PIN.set(name)
++
++
++async def test_a_pinned_source_answers_alone_and_nothing_failed_before_it():
++    r = make()
++    tok = pinned("nasdaq")
++    try:
++        assert await hist(r) == ("nasdaq", [])
++    finally:
++        PIN.reset(tok)
++    assert (await hist(r))[0] == "yahoo"  # the pin ended with the request
++
++
++async def test_a_pinned_source_that_fails_is_an_error_naming_it_and_the_other_source_is_never_asked():
++    asked = []
++
++    class Spy(Fake):
++        async def history(self, *a):
++            asked.append(self.name)
++            return await super().history(*a)
++
++    r = make(nasdaq=Spy("nasdaq", error=ProviderError("unavailable", "HTTP 503")), yahoo=Spy("yahoo"))
++    tok = pinned("nasdaq")
++    try:
++        with pytest.raises(AllFailed) as e:
++            await hist(r)
++    finally:
++        PIN.reset(tok)
++    assert str(e.value) == "SRC=NASDAQ: PROVIDER DOWN" and e.value.kind == "unavailable" and e.value.pinned == "nasdaq"
++    assert asked == ["nasdaq"]  # no silent fallback
++
++
++async def test_a_pinned_source_without_the_capability_or_coverage_says_why():
++    r = make(nasdaq=Fake("nasdaq", caps={QUOTES}), yahoo=Fake("yahoo", covers=lambda s: s != "RELIANCE.NS"))
++    tok = pinned("nasdaq")
++    try:
++        with pytest.raises(AllFailed) as e:
++            await hist(r)
++        assert e.value.kind == "bad_request" and "DOES NOT SERVE HISTORY" in str(e.value) and str(e.value).startswith("SRC=NASDAQ")
++    finally:
++        PIN.reset(tok)
++    tok = pinned("yahoo")
++    try:
++        with pytest.raises(AllFailed) as e:
++            await hist(r, "RELIANCE.NS")
++        assert "DOES NOT COVER RELIANCE.NS" in str(e.value)
++    finally:
++        PIN.reset(tok)
++
++
++async def test_a_pinned_keyed_source_without_a_key_is_key_required_with_the_key_name():
++    class Keyed(Fake):
++        key_name = "FOO_KEY"
++        has_key = False
++
++        def supports(self, capability, symbol=None):
++            return False
++
++    r = make(foo=Keyed("foo"))
++    tok = pinned("foo")
++    try:
++        with pytest.raises(AllFailed) as e:
++            await hist(r)
++    finally:
++        PIN.reset(tok)
++    assert e.value.kind == "key_required" and e.value.key == "FOO_KEY" and str(e.value) == "SRC=FOO: KEY REQUIRED"
++
++
++async def test_pinned_quotes_report_each_symbol_on_its_own():
++    class Q(Fake):
++        async def quotes(self, symbols):
++            from openterm.models import Quote
++
++            return [Quote(symbol=s, price=1.0, source=self.name, as_of=0) for s in symbols if s != "ZZZ"]
++
++    r = make(nasdaq=Q("nasdaq", covers=lambda s: s != "NOPE"))
++    tok = pinned("nasdaq")
++    try:
++        found, errors = await r.quotes(["AAPL", "NOPE", "ZZZ"])
++    finally:
++        PIN.reset(tok)
++    assert set(found) == {"AAPL"} and found["AAPL"][1] == []
++    assert "DOES NOT COVER NOPE" in str(errors["NOPE"]) and str(errors["ZZZ"]) == "SRC=NASDAQ: NO DATA FOR SYMBOL"
++
++
++async def test_a_saved_preference_goes_first_but_the_default_order_still_backs_it_up():
++    r = make(nasdaq=Fake("nasdaq", error=ProviderError("unavailable", "down")))
++    assert (await hist(r))[0] == "yahoo"
++    r.prefs = {"history": "nasdaq"}
++    assert [p.name for p in r.candidates("history", "AAPL")] == ["nasdaq", "yahoo"]
++    assert await hist(r) == ("yahoo", ["nasdaq"])  # a preference is not a pin: it falls back, and the panel says from whom
++
++
++def test_cache_keys_never_share_an_answer_between_sources():
++    base = ck.history("AAPL", "1Y", "1d")
++    assert ck.scoped(base, None) == base and ck.scoped(base, None, {}) == base
++    assert ck.scoped(base, "nasdaq") != ck.scoped(base, "yahoo") != base
++    assert ck.scoped(base, "nasdaq") == f"{base}@src=nasdaq"
++    assert ck.scoped(base, None, {"history": "nasdaq"}) != ck.scoped(base, None, {"history": "yahoo"})
++    assert ck.scoped(base, "nasdaq", {"history": "yahoo"}) == ck.scoped(base, "nasdaq")  # a pin outranks a preference
++
++
++def test_names_are_cleaned_and_settings_validate_the_preference_map():
++    assert clean(" NASDAQ ") == "nasdaq" and clean("") is None and clean(None) is None
++    with pytest.raises(ValueError):
++        clean("a b")
++    assert validate({"sources": {"history": "nasdaq"}}) == {"sources": {"history": "nasdaq"}}
++    assert source_prefs({"sources": {"quotes": "yahoo"}}) == {"quotes": "yahoo"} and source_prefs(None) == {}
++    from openterm.userdata import UserDataError
++
++    for bad in ({"sources": {"nope": "yahoo"}}, {"sources": {"history": "No Way"}}, {"sources": []}):
++        with pytest.raises(UserDataError):
++            validate(bad)
++
++
++# --- over HTTP (fixture mode: no network) --------------------------------------------------------------------------------------
++def test_http_pin_does_not_borrow_the_cached_answer_of_another_source(client):
++    plain = client.get("/api/history", params={"symbol": "AAPL", "range": "1Y"})
++    assert plain.status_code == 200 and plain.json()["source"].startswith("yahoo")
++    yahoo = client.get("/api/history", params={"symbol": "AAPL", "range": "1Y", "source": "yahoo"})
++    assert yahoo.status_code == 200 and yahoo.json()["fallback_from"] == []
++    # The fixture NASDAQ has no AAPL bars: pinned, that is an error naming NASDAQ, not Yahoo's cached bars.
++    pin = client.get("/api/history", params={"symbol": "AAPL", "range": "1Y", "source": "nasdaq"})
++    assert pin.status_code == 404 and pin.json()["error"] == "SRC=NASDAQ: NO DATA FOR SYMBOL", pin.text
++    assert "nasdaq" in pin.json()["detail"]
++    assert client.get("/api/history", params={"symbol": "AAPL", "range": "1Y"}).json()["source"].startswith("yahoo")
++
++
++def test_http_pin_that_cannot_serve_names_the_source_and_never_falls_back(client):
++    r = client.get("/api/fa", params={"symbol": "AAPL", "source": "nasdaq"})
++    assert r.status_code == 400 and r.json()["error"].startswith("SRC=NASDAQ") and "DOES NOT SERVE FUNDAMENTALS" in r.json()["error"]
++    q = client.get("/api/quote", params={"symbols": "RELIANCE.NS", "source": "kite"}).json()["results"]["RELIANCE.NS"]
++    assert q["error"].startswith("SRC=KITE")
++
++
++def test_http_unknown_source_is_a_400_before_any_work(client):
++    r = client.get("/api/history", params={"symbol": "AAPL", "source": "nosuch"})
++    assert r.status_code == 400 and r.json()["error"].startswith("SRC=NOSUCH: UNKNOWN SOURCE")
++    assert client.get("/api/history", params={"symbol": "AAPL", "source": ""}).status_code == 200  # empty = no pin
++
++
++def test_http_settings_source_preference_reaches_the_router(client):
++    body = {"settings": {"sources": {"history": "nasdaq"}}}
++    assert client.put("/api/settings", json=body).status_code == 200
++    from openterm.main import app
++
++    assert app.state.service.router.prefs == {"history": "nasdaq"}
++    r = client.get("/api/history", params={"symbol": "AAPL", "range": "1Y"})
++    assert r.status_code == 200 and r.json()["source"].startswith("yahoo") and r.json()["fallback_from"] == ["nasdaq"]
++    assert client.put("/api/settings", json={"settings": {"sources": {"bogus": "x"}}}).status_code == 400
+diff --git a/frontend/src/command/execute.ts b/frontend/src/command/execute.ts
+index f54e193..be91d2f 100644
+--- a/frontend/src/command/execute.ts
++++ b/frontend/src/command/execute.ts
+@@ -136,6 +136,6 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
+   if (fn === "WL" && cur.fn === "WL" && args.length && cur.args[0]?.toUpperCase() === args[0]) return true;
+   if ((fn === "PORT" || fn === "ALRT") && cur.fn === fn && (cur.args[0] ?? "").toUpperCase() === (args[0] ?? "")) return true; // Phase 8
+   commandStart(panelId, parsed.raw);
+-  navigate(panelId, { fn, security, args });
++  navigate(panelId, { fn, security, args, ...(parsed.source ? { source: parsed.source } : {}) });
+   return true;
+ }
+diff --git a/frontend/src/command/parser.ts b/frontend/src/command/parser.ts
+index ff13430..136c6b5 100644
+--- a/frontend/src/command/parser.ts
++++ b/frontend/src/command/parser.ts
+@@ -1,14 +1,16 @@
+ import { MARKET_SUFFIX, isSymbolToken, resolveSecurity, type SecurityRef } from "./markets";
+ import { mapSector, parseSector } from "./sectors";
++import { takeSource } from "./srcArg";
+ 
+ /**
+  * Grammar:
+  *   [N:] <SECURITY> [<MARKET>] [<SECTOR>] [<FUNCTION> [args...]]   (sector words: see sectors.ts, e.g. SPX INDEX GP)
+  *   [N:] <FUNCTION> [args...]
+  * A leading function code always wins over a ticker with the same letters.
++ * `SRC=<name>` anywhere after the first word pins the data source for this command (AAPL GP 5Y SRC=NASDAQ); see srcArg.ts.
+  */
+ export type Parsed =
+-  | { ok: true; raw: string; target?: number; security?: SecurityRef; fn?: string; args: string[] }
++  | { ok: true; raw: string; target?: number; security?: SecurityRef; fn?: string; args: string[]; source?: string }
+   | { ok: false; raw: string; error: string };
+ 
+ export function parseCommand(input: string, isFunction: (code: string) => boolean): Parsed {
+@@ -24,11 +26,14 @@ export function parseCommand(input: string, isFunction: (code: string) => boolea
+     if (!body) return { ok: false, raw, error: "NOTHING AFTER PANEL TARGET" };
+   }
+ 
+-  const tokens = body.split(/\s+/);
++  const picked = takeSource(body.split(/\s+/));
++  if ("error" in picked) return { ok: false, raw, error: picked.error };
++  const tokens = picked.tokens;
+   const first = tokens[0].toUpperCase();
+ 
++  const source = picked.source;
+   if (isFunction(first)) {
+-    return { ok: true, raw, target, fn: first, args: tokens.slice(1) };
++    return { ok: true, raw, target, fn: first, args: tokens.slice(1), source };
+   }
+ 
+   if (!isSymbolToken(first)) return { ok: false, raw, error: `BAD SYMBOL: ${tokens[0]}` };
+@@ -52,7 +57,7 @@ export function parseCommand(input: string, isFunction: (code: string) => boolea
+     if (sector !== "EQUITY") security = { symbol: mapped.symbol, market };
+   }
+   const fnTok = tokens[i]?.toUpperCase();
+-  if (!fnTok) return { ok: true, raw, target, security, args: [] };
++  if (!fnTok) return { ok: true, raw, target, security, args: [], source };
+   if (!isFunction(fnTok)) return { ok: false, raw, error: `UNKNOWN FUNCTION: ${fnTok}` };
+-  return { ok: true, raw, target, security, fn: fnTok, args: tokens.slice(i + 1) };
++  return { ok: true, raw, target, security, fn: fnTok, args: tokens.slice(i + 1), source };
+ }
+diff --git a/frontend/src/command/srcArg.test.ts b/frontend/src/command/srcArg.test.ts
+new file mode 100644
+index 0000000..642a05d
+--- /dev/null
++++ b/frontend/src/command/srcArg.test.ts
+@@ -0,0 +1,73 @@
++import { describe, expect, it } from "vitest";
++import { parseCommand } from "./parser";
++import { matchSources, srcToken, takeSource } from "./srcArg";
++import { settingsArgs } from "../settings/commands";
++import { DEFAULTS, diffFromDefaults, normalize } from "../settings/schema";
++
++const FNS = new Set(["GP", "Q", "FA", "N", "SETTINGS"]);
++const p = (s: string) => parseCommand(s, (c) => FNS.has(c));
++
++describe("SRC= in the command grammar", () => {
++  it("pins the source and leaves the other words alone", () => {
++    expect(p("AAPL GP 5Y SRC=NASDAQ")).toMatchObject({ ok: true, security: { symbol: "AAPL" }, fn: "GP", args: ["5Y"], source: "nasdaq" });
++    expect(p("AAPL Q SRC=kite")).toMatchObject({ fn: "Q", args: [], source: "kite" });
++    expect(p("AAPL SRC=yahoo")).toMatchObject({ ok: true, security: { symbol: "AAPL" }, source: "yahoo" });
++  });
++  it("can sit anywhere after the first word", () => {
++    expect(p("AAPL src=nasdaq GP 5Y")).toMatchObject({ fn: "GP", args: ["5Y"], source: "nasdaq" });
++    expect(p("Q AAPL MSFT SRC=yahoo")).toMatchObject({ fn: "Q", args: ["AAPL", "MSFT"], source: "yahoo" });
++    expect(p("2: AAPL GP SRC=nasdaq")).toMatchObject({ target: 2, source: "nasdaq" });
++  });
++  it("no pin leaves the field off", () => {
++    expect(p("AAPL GP 5Y")).not.toHaveProperty("source", expect.anything());
++  });
++  it("refuses an empty, malformed or repeated pin with a plain message", () => {
++    expect(p("AAPL GP SRC=")).toMatchObject({ ok: false, error: expect.stringContaining("NEEDS A SOURCE NAME") });
++    expect(p("AAPL GP SRC=a-b")).toMatchObject({ ok: false, error: "BAD SOURCE NAME: A-B" });
++    expect(p("AAPL GP SRC=a SRC=b")).toMatchObject({ ok: false, error: "ONE SRC= PER COMMAND" });
++  });
++  it("the first word is never a pin (it stays a symbol, as EURUSD=X is)", () => {
++    expect(p("SRC=NASDAQ GP")).not.toHaveProperty("source", expect.anything());
++  });
++});
++
++describe("srcArg helpers", () => {
++  it("takeSource lower-cases the name", () => {
++    expect(takeSource(["AAPL", "GP", "SRC=NASDAQ"])).toEqual({ tokens: ["AAPL", "GP"], source: "nasdaq" });
++  });
++  it("srcToken finds the partial name only on the last word", () => {
++    expect(srcToken("AAPL GP SRC=NAS")).toBe("NAS");
++    expect(srcToken("AAPL GP SRC=")).toBe("");
++    expect(srcToken("AAPL GP")).toBeNull();
++    expect(srcToken("SRC=N")).toBeNull();
++  });
++  it("matchSources ranks prefixes before substrings", () => {
++    const all = [{ name: "yahoo", label: "Yahoo Finance" }, { name: "nasdaq", label: "Nasdaq" }, { name: "nasdaq_screener", label: "Nasdaq screener" }, { name: "kite", label: "Zerodha Kite" }];
++    expect(matchSources("nas", all).map((s) => s.name)).toEqual(["nasdaq", "nasdaq_screener"]);
++    expect(matchSources("zer", all).map((s) => s.name)).toEqual(["kite"]);
++    expect(matchSources("", all)).toHaveLength(4);
++  });
++});
++
++describe("SETTINGS SOURCE", () => {
++  it("sets, clears and resets a per-capability preference", () => {
++    const set = settingsArgs(["SOURCE", "HISTORY", "NASDAQ"], DEFAULTS);
++    expect(set).toMatchObject({ ok: true, next: { sources: { history: "nasdaq" } } });
++    const next = (set as { next: typeof DEFAULTS }).next;
++    expect(diffFromDefaults(next).sources).toEqual({ history: "nasdaq" });
++    expect(settingsArgs(["SOURCE", "HISTORY", "DEFAULT"], next)).toMatchObject({ ok: true, next: { sources: {} } });
++    expect(settingsArgs(["SOURCE", "RESET"], next)).toMatchObject({ ok: true, next: { sources: {} } });
++    expect(settingsArgs(["SOURCE", "NEWS", "finnhub"], DEFAULTS)).toMatchObject({ next: { sources: { news_symbol: "finnhub" } } });
++  });
++  it("refuses a half-typed command and keeps defaults free of the field", () => {
++    expect(settingsArgs(["SOURCE", "HISTORY"], DEFAULTS)).toMatchObject({ ok: false });
++    expect(settingsArgs(["SOURCE", "HISTORY", "a b"], DEFAULTS)).toMatchObject({ ok: false });
++    expect(diffFromDefaults(DEFAULTS)).not.toHaveProperty("sources");
++  });
++  it("round-trips through normalize and drops a bad entry", () => {
++    expect(normalize({ sources: { history: "nasdaq" } }).settings.sources).toEqual({ history: "nasdaq" });
++    const bad = normalize({ sources: { history: "No Way" } });
++    expect(bad.settings.sources).toEqual({}) ;
++    expect(bad.errors).toContain("sources.history");
++  });
++});
+diff --git a/frontend/src/command/srcArg.ts b/frontend/src/command/srcArg.ts
+new file mode 100644
+index 0000000..bcbb2a2
+--- /dev/null
++++ b/frontend/src/command/srcArg.ts
+@@ -0,0 +1,49 @@
++/**
++ * `SRC=<name>` in the command line: pin the data source for this one command (AAPL GP 5Y SRC=NASDAQ, AAPL Q SRC=KITE).
++ * Pure and tiny (the parser imports it), so it adds nothing to the startup bundle. The name list for autocomplete comes from
++ * GET /api/sources (`net/sources.ts`); the backend is the judge of whether a source exists and can serve the command.
++ */
++
++export const SRC_RE = /^SRC=(.*)$/i;
++const NAME_RE = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
++
++/**
++ * Takes the `SRC=` token out of a command's words. The first word is never a pin. Returns the remaining words and the
++ * source (lower case), or an error text for an empty name, a bad name or a second pin.
++ */
++export function takeSource(tokens: string[]): { tokens: string[]; source?: string } | { error: string } {
++  let source: string | undefined;
++  const rest: string[] = [];
++  for (const [i, t] of tokens.entries()) {
++    const m = i > 0 ? SRC_RE.exec(t) : null;
++    if (!m) {
++      rest.push(t);
++      continue;
++    }
++    if (source !== undefined) return { error: "ONE SRC= PER COMMAND" };
++    if (!m[1]) return { error: "SRC= NEEDS A SOURCE NAME, E.G. SRC=NASDAQ (SEE SOURCES)" };
++    if (!NAME_RE.test(m[1])) return { error: `BAD SOURCE NAME: ${m[1].toUpperCase().slice(0, 40)}` };
++    source = m[1].toLowerCase();
++  }
++  return { tokens: rest, source };
++}
++
++export interface SourceHit {
++  name: string;
++  label: string;
++}
++
++/** The partial name when the last word of `text` is `SRC=...` (and is not the first word), else null. */
++export function srcToken(text: string): string | null {
++  const words = text.trimStart().split(/\s+/);
++  const m = words.length > 1 ? SRC_RE.exec(words[words.length - 1]) : null;
++  return m ? m[1] : null;
++}
++
++/** Sources that start with, then contain, what was typed; at most `max`. */
++export function matchSources(partial: string, all: SourceHit[], max = 10): SourceHit[] {
++  const p = partial.toLowerCase();
++  const starts = all.filter((s) => s.name.startsWith(p));
++  const has = all.filter((s) => !s.name.startsWith(p) && (s.name.includes(p) || s.label.toLowerCase().includes(p)));
++  return [...starts, ...has].slice(0, max);
++}
+diff --git a/frontend/src/components/CommandLine.tsx b/frontend/src/components/CommandLine.tsx
+index e8892dd..3917677 100644
+--- a/frontend/src/components/CommandLine.tsx
++++ b/frontend/src/components/CommandLine.tsx
+@@ -6,6 +6,8 @@ import { fuzzyRank } from "../command/fuzzy";
+ import { history } from "../command/history";
+ import { layoutList, refreshLayouts } from "../command/layouts";
+ import { refreshWatchlists, watchlistList } from "../command/watchlists";
++import { matchSources, srcToken } from "../command/srcArg";
++import { sources as sourcesStore } from "../net/sources";
+ import { TWINS } from "../functions/aliases";
+ import { FUNCTION_LIST, FUNCTIONS, loadModule } from "../functions/registry";
+ import { marketApi, prefetch } from "../net/marketApi";
+@@ -59,6 +61,12 @@ function watchlistSuggestions(token: string): Suggestion[] {
+   return ranked.map((l) => ({ value: l.name, label: `${l.count} SYMBOLS`, kind: "LIST" }));
+ }
+ 
++/** `SRC=<partial>`: provider names from /api/sources (polled by the status bar), so the pin can be picked, not remembered. */
++function sourceSuggestions(partial: string): Suggestion[] {
++  const all = (sourcesStore.get()?.providers ?? []).map((p) => ({ name: p.name, label: p.label || p.name }));
++  return matchSources(partial, all).map((s) => ({ value: `SRC=${s.name.toUpperCase()}`, label: s.label, kind: "ARG" }));
++}
++
+ /** The token under the cursor (always the last one) and whether it sits in the security slot. */
+ function lastToken(text: string): { token: string; securitySlot: boolean } {
+   const tokens = text.trimStart().split(/\s+/);
+@@ -287,6 +295,16 @@ export function CommandLine() {
+       void (layoutArg ? refreshLayouts(5000) : refreshWatchlists(5000)).then(show, () => {});
+       return;
+     }
++    const src = srcToken(v);
++    if (src !== null) {
++      nlItems.current = [];
++      setHint(null);
++      startTransition(() => {
++        setItems(sourceSuggestions(src));
++        setSel(-1);
++      });
++      return;
++    }
+     const { token, securitySlot } = lastToken(v);
+     nlItems.current = [];
+     startTransition(() => {
+diff --git a/frontend/src/components/Panel.tsx b/frontend/src/components/Panel.tsx
+index cfe17bc..a809753 100644
+--- a/frontend/src/components/Panel.tsx
++++ b/frontend/src/components/Panel.tsx
+@@ -58,7 +58,7 @@ function FunctionView({ panelId, view }: { panelId: number; view: ReturnType<typ
+   if (!Mod) return <div className="dim">LOADING {code}…</div>;
+   return (
+     <PanelIdContext.Provider value={panelId}>
+-      <Mod panelId={panelId} security={view.security} args={view.args} />
++      <Mod panelId={panelId} security={view.security} args={view.args} source={view.source} />
+     </PanelIdContext.Provider>
+   );
+ }
+@@ -99,7 +99,7 @@ export function Panel({ id }: { id: number }) {
+   const showStrip = gui && !!tickerPart && !(view.fn && FUNCTIONS.get(view.fn)?.leadsWithPrice);
+   // New command = new history entry = remount. In-place edits (timeframe, list) keep the instance.
+   const mountKey = `${panel.pos}:${view.fn}:${view.security?.symbol}`;
+-  const resetKey = `${mountKey}:${view.args.join(" ")}`;
++  const resetKey = `${mountKey}:${view.args.join(" ")}:${view.source ?? ""}`;
+ 
+   return (
+     <section className={"panel" + (focused ? " focus" : "")} data-panel={id} onMouseDown={() => focusPanel(id)}>
+@@ -110,6 +110,7 @@ export function Panel({ id }: { id: number }) {
+           {tickerPart && fnPart && " | "}
+           {fnPart && <span className="fnm">{fnPart}</span>}
+           {!tickerPart && !fnPart && "—"}
++          {view.source && <span className="dim"> SRC={view.source.toUpperCase()}</span>}
+         </span>
+         {plainTitle && <span className="ph-plain">{"· " + plainTitle}</span>}
+         {panel.views.length > 1 && <span className="dim ph-pos">{panel.pos + 1}/{panel.views.length}</span>}
+diff --git a/frontend/src/functions/DES.tsx b/frontend/src/functions/DES.tsx
+index 1d315f7..2a6b74c 100644
+--- a/frontend/src/functions/DES.tsx
++++ b/frontend/src/functions/DES.tsx
+@@ -112,7 +112,7 @@ function Description({ text, gui }: { text: string; gui: boolean }) {
+   );
+ }
+ 
+-export default function DES({ panelId, security }: FunctionProps) {
++export default function DES({ panelId, security, source }: FunctionProps) {
+   const symbol = security!.symbol;
+   const gui = useStore(settingsStore, (s) => s.mode === "gui");
+   const [prof, setProf] = useState<Result<Profile>>({});
+@@ -123,11 +123,11 @@ export default function DES({ panelId, security }: FunctionProps) {
+     let alive = true;
+     setProf({});
+     setQuote({});
+-    marketApi.profile(symbol).then(
++    marketApi.profile(symbol, source).then(
+       (env) => alive && setProf({ env: env as Envelope<Profile> }),
+       (e: ApiError) => alive && setProf({ error: e.message, keyError: isKeyRequired(e) ? e : undefined }),
+     );
+-    marketApi.quotes([symbol]).then(
++    marketApi.quotes([symbol], source).then(
+       ({ results }) => {
+         if (!alive) return;
+         const r = Object.values(results)[0];
+@@ -138,7 +138,7 @@ export default function DES({ panelId, security }: FunctionProps) {
+     return () => {
+       alive = false;
+     };
+-  }, [symbol, reload]);
++  }, [symbol, reload, source]);
+ 
+   usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
+ 
+diff --git a/frontend/src/functions/FA.tsx b/frontend/src/functions/FA.tsx
+index 722e8cf..6a3bc2d 100644
+--- a/frontend/src/functions/FA.tsx
++++ b/frontend/src/functions/FA.tsx
+@@ -21,7 +21,7 @@ const MAX_COLS = 12;
+ /** Statement lines that are totals or subtotals. In GUI mode they are drawn brighter ("val") so they stand out from the lines under them. */
+ const SUBTOTALS = new Set(["revenue", "gross_profit", "operating_income", "pretax_income", "net_income", "current_assets", "total_assets", "current_liabilities", "total_liabilities", "equity", "operating_cf", "investing_cf", "financing_cf"]);
+ 
+-export default function FA({ panelId, security, args }: FunctionProps) {
++export default function FA({ panelId, security, args, source }: FunctionProps) {
+   const symbol = security!.symbol;
+   const init = useMemo(() => faArgs(args), [args]);
+   const [period, setPeriod] = useState<FaPeriod>(init.period);
+@@ -31,7 +31,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
+   const grid = useRef<GridHandle>(null);
+   const gui = useStore(settingsStore, (st) => st.mode === "gui");
+ 
+-  const { env, error, loading, reload } = useEnvelope<FaPayload>(`${symbol}|${period}`, (fresh) => secApi.fa(symbol, period, fresh));
++  const { env, error, loading, reload } = useEnvelope<FaPayload>(`${symbol}|${period}|${source ?? ""}`, (fresh) => secApi.fa(symbol, period, fresh, source));
+   const shaped = useMemo(() => (env ? faRows(env.data, tab, offset, MAX_COLS) : null), [env, tab, offset]);
+   const rows = useMemo(() => shaped?.rows ?? [], [shaped]);
+ 
+diff --git a/frontend/src/functions/GP.tsx b/frontend/src/functions/GP.tsx
+index 330493f..b2f011c 100644
+--- a/frontend/src/functions/GP.tsx
++++ b/frontend/src/functions/GP.tsx
+@@ -56,7 +56,7 @@ interface Mode {
+   anchor: "C" | "H" | "L" | "O";
+ }
+ 
+-export default function GP({ panelId, security, args }: FunctionProps) {
++export default function GP({ panelId, security, args, source }: FunctionProps) {
+   const chartDefaults = useStore(settingsStore, (st) => st.chart);
+   const p = useMemo(() => parseGpArgs(args, chartDefaults), [args, chartDefaults]);
+   const symbol = security!.symbol;
+@@ -131,8 +131,8 @@ export default function GP({ panelId, security, args }: FunctionProps) {
+   useEffect(() => {
+     let alive = true;
+     setState((s) => ({ ...s, loading: true }));
+-    const main = marketApi.history(symbol, p.range, p.interval);
+-    const cmp = Promise.all(p.compare.map((c) => marketApi.history(c, p.range, p.interval).catch((e: ApiError) => e)));
++    const main = marketApi.history(symbol, p.range, p.interval, false, source);
++    const cmp = Promise.all(p.compare.map((c) => marketApi.history(c, p.range, p.interval, false, source).catch((e: ApiError) => e)));
+     Promise.all([main, cmp])
+       .then(([env, cs]) => {
+         if (!alive) return;
+@@ -152,7 +152,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
+       alive = false;
+     };
+     // eslint-disable-next-line react-hooks/exhaustive-deps -- p.compare is tracked through compareKey (p changes identity every render); `reload` is the manual refetch trigger
+-  }, [symbol, p.range, p.interval, compareKey, reload]);
++  }, [symbol, p.range, p.interval, compareKey, reload, source]);
+ 
+   // Live: extend the last bar from ticks.
+   const resolved = state.loaded?.bars.symbol;
+diff --git a/frontend/src/functions/HIST.tsx b/frontend/src/functions/HIST.tsx
+index 74d6baf..4952a8b 100644
+--- a/frontend/src/functions/HIST.tsx
++++ b/frontend/src/functions/HIST.tsx
+@@ -20,14 +20,14 @@ import { gridCsv, useCsvExport } from "./tableExport";
+ const INTERVALS: Record<string, string> = { D: "1d", W: "1wk", MO: "1mo" };
+ const INTERVAL_LABEL: Record<string, string> = { D: "DAILY", W: "WEEKLY", MO: "MONTHLY" };
+ 
+-export default function HIST({ panelId, security, args }: FunctionProps) {
++export default function HIST({ panelId, security, args, source }: FunctionProps) {
+   const symbol = security!.symbol;
+   const { range, interval, bad } = useMemo(() => histArgs(args), [args]);
+   const grid = useRef<GridHandle>(null);
+ 
+   // useEnvelope drops an answer for an old symbol/range that lands after a re-key.
+-  const { env, error, loading, reload: load } = useEnvelope<BarsAdj>(`${symbol}|${range}|${interval}`, (fresh) =>
+-    marketApi.history(symbol, range, INTERVALS[interval], fresh),
++  const { env, error, loading, reload: load } = useEnvelope<BarsAdj>(`${symbol}|${range}|${interval}|${source ?? ""}`, (fresh) =>
++    marketApi.history(symbol, range, INTERVALS[interval], fresh, source),
+   );
+ 
+   const tz = env?.data.tz ?? null;
+diff --git a/frontend/src/functions/N.tsx b/frontend/src/functions/N.tsx
+index d8bd676..643913d 100644
+--- a/frontend/src/functions/N.tsx
++++ b/frontend/src/functions/N.tsx
+@@ -35,16 +35,16 @@ function openArticle(url: string): void {
+   window.open(url, "_blank", "noopener,noreferrer");
+ }
+ 
+-export default function N({ panelId, args, security }: FunctionProps) {
++export default function N({ panelId, args, security, source }: FunctionProps) {
+   const query = useMemo(() => newsQuery(args, security), [args, security]);
+   const [sel, setSel] = useState(0);
+   const firstIds = useRef<Set<string> | null>(null);
+   const grid = useRef<GridHandle>(null);
+ 
+-  const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify(query), (fresh) => {
++  const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify([query, source ?? ""]), (fresh) => {
+     // A mistyped filter never reaches the network: the panel says what was wrong (below).
+     if (query.kind === "error") return Promise.reject(new Error(query.message));
+-    return marketApi.news(newsParams(query), fresh).then((e) => {
++    return marketApi.news({ ...newsParams(query), source }, fresh).then((e) => {
+       if (query.kind === "top" || query.kind === "symbol") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
+       return e;
+     });
+diff --git a/frontend/src/functions/Q.tsx b/frontend/src/functions/Q.tsx
+index 42a7e44..f7c97f2 100644
+--- a/frontend/src/functions/Q.tsx
++++ b/frontend/src/functions/Q.tsx
+@@ -17,7 +17,7 @@ import { gridCsv, useCsvExport } from "./tableExport";
+ 
+ export const DEFAULT_LIST = ["SPY", "QQQ", "DIA", "^NSEI", "^BSESN", "AAPL", "MSFT", "RELIANCE.NS", "INFY.NS", "BTC-USD", "EURUSD=X", "GC=F", "CL=F"];
+ 
+-export default function Q({ panelId, args, security }: FunctionProps) {
++export default function Q({ panelId, args, security, source }: FunctionProps) {
+   const inputs = useMemo(() => {
+     const list = args.map((a) => a.toUpperCase()).filter(Boolean);
+     if (list.length) return list;
+@@ -28,7 +28,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
+   const gui = useStore(settingsStore, (st) => st.mode === "gui");
+   const COLUMNS = gui ? QUOTE_COLUMNS_GUI : QUOTE_COLUMNS;
+   const [reload, setReload] = useState(0);
+-  const { rows, setRows, loading } = useQuotes(inputs, reload);
++  const { rows, setRows, loading } = useQuotes(inputs, reload, source);
+   const [sort, setSort] = useState<Sort>("INPUT");
+   const grid = useRef<GridHandle>(null);
+   const latest = useLatest({ rows, sort });
+diff --git a/frontend/src/functions/QR.tsx b/frontend/src/functions/QR.tsx
+index 37c05af..6f2c2e2 100644
+--- a/frontend/src/functions/QR.tsx
++++ b/frontend/src/functions/QR.tsx
+@@ -7,14 +7,14 @@ import type { Envelope, Quote } from "../net/types";
+ import type { FunctionProps } from "./registry";
+ 
+ /** Quote recap: one security, live, every quote field we have. */
+-export default function QR({ security }: FunctionProps) {
++export default function QR({ security, source }: FunctionProps) {
+   const symbol = security!.symbol;
+   const [r, setR] = useState<{ env?: Envelope<Quote>; error?: string }>({});
+ 
+   useEffect(() => {
+     let alive = true;
+     setR({});
+-    marketApi.quotes([symbol]).then(
++    marketApi.quotes([symbol], source).then(
+       ({ results }) => {
+         const x = Object.values(results)[0];
+         if (alive) setR(x && !("error" in x) ? { env: x } : { error: x && "error" in x ? x.error : "NO DATA FOR SYMBOL" });
+@@ -24,7 +24,7 @@ export default function QR({ security }: FunctionProps) {
+     return () => {
+       alive = false;
+     };
+-  }, [symbol]);
++  }, [symbol, source]);
+ 
+   if (r.error) return <div className="err">{symbol}: {r.error}</div>;
+   if (!r.env) return <div className="dim">LOADING {symbol}…</div>;
+diff --git a/frontend/src/functions/quoteRows.ts b/frontend/src/functions/quoteRows.ts
+index 50e8ada..da38d50 100644
+--- a/frontend/src/functions/quoteRows.ts
++++ b/frontend/src/functions/quoteRows.ts
+@@ -152,7 +152,7 @@ function toRow(input: string, r: QuoteResult | undefined, now: number): QRow {
+ const CHUNK = 200; // the backend's per-request symbol cap
+ 
+ /** REST snapshot of `inputs` (any length), re-fetched when `inputs` or `reload` change. */
+-export function useQuotes(inputs: string[], reload: number) {
++export function useQuotes(inputs: string[], reload: number, source?: string) {
+   const [rows, setRows] = useState<QRow[]>(() => inputs.map(blankRow));
+   const [loading, setLoading] = useState(true);
+   useEffect(() => {
+@@ -164,7 +164,7 @@ export function useQuotes(inputs: string[], reload: number) {
+       return;
+     }
+     const chunks = Array.from({ length: Math.ceil(inputs.length / CHUNK) }, (_, i) => inputs.slice(i * CHUNK, (i + 1) * CHUNK));
+-    Promise.all(chunks.map((c) => marketApi.quotes(c)))
++    Promise.all(chunks.map((c) => marketApi.quotes(c, source)))
+       .then((parts) => {
+         if (!alive) return;
+         const results = Object.assign({}, ...parts.map((p) => p.results)) as Record<string, QuoteResult>;
+@@ -178,7 +178,7 @@ export function useQuotes(inputs: string[], reload: number) {
+     return () => {
+       alive = false;
+     };
+-  }, [inputs, reload]);
++  }, [inputs, reload, source]);
+   return { rows, setRows, loading };
+ }
+ 
+diff --git a/frontend/src/functions/registry.ts b/frontend/src/functions/registry.ts
+index e62def0..db6596a 100644
+--- a/frontend/src/functions/registry.ts
++++ b/frontend/src/functions/registry.ts
+@@ -6,6 +6,8 @@ export interface FunctionProps {
+   panelId: number;
+   security?: SecurityRef;
+   args: string[];
++  /** Source pinned by `SRC=` for this view; a panel passes it on to its API calls (`?source=`). */
++  source?: string;
+ }
+ 
+ export interface FunctionDef {
+diff --git a/frontend/src/net/marketApi.ts b/frontend/src/net/marketApi.ts
+index ea5fc34..dfbddd8 100644
+--- a/frontend/src/net/marketApi.ts
++++ b/frontend/src/net/marketApi.ts
+@@ -5,17 +5,18 @@ import type {
+ } from "./types";
+ 
+ export const marketApi = {
+-  quotes: (symbols: string[]) =>
+-    get<{ results: Record<string, QuoteResult> }>("/api/quote", { symbols: symbols.join(",") }, TTL.s2),
+-  history: (symbol: string, range?: string, interval?: string, fresh = false) =>
+-    get<Envelope<BarsAdj>>("/api/history", { symbol, range, interval }, TTL.m1, fresh),
++  // `source` pins one data source (SRC=): the backend asks only that source and names it in an error.
++  quotes: (symbols: string[], source?: string) =>
++    get<{ results: Record<string, QuoteResult> }>("/api/quote", { symbols: symbols.join(","), source }, TTL.s2),
++  history: (symbol: string, range?: string, interval?: string, fresh = false, source?: string) =>
++    get<Envelope<BarsAdj>>("/api/history", { symbol, range, interval, source }, TTL.m1, fresh),
+   /** How many days back each minute candle length reaches for this symbol right now (the deepest source that is on decides). */
+   historyLimits: (symbol: string) =>
+     get<{ symbol: string; intraday_days: Record<string, number>; source: string[] }>("/api/history/limits", { symbol }, TTL.s30),
+   search: (q: string) => get<Envelope<SearchHit[]>>("/api/search", { q }, TTL.m10),
+-  profile: (symbol: string) => get<Envelope<unknown>>("/api/profile", { symbol }, TTL.m10),
++  profile: (symbol: string, source?: string) => get<Envelope<unknown>>("/api/profile", { symbol, source }, TTL.m10),
+   // `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope.
+-  news: (q: { symbol?: string; q?: string; section?: string; limit?: string; region?: string; sector?: string; commodity?: string }, fresh = false) =>
++  news: (q: { symbol?: string; q?: string; section?: string; limit?: string; region?: string; sector?: string; commodity?: string; source?: string }, fresh = false) =>
+     get<Envelope<NewsPayload>>("/api/news", q, TTL.s30, fresh),
+   movers: (fresh = false) => get<Envelope<MoversPayload>>("/api/movers", undefined, TTL.s30, fresh),
+   crypto: (vs: string, fresh = false) => get<Envelope<{ vs: string; coins: Coin[] }>>("/api/crypto", { vs }, TTL.s15, fresh),
+diff --git a/frontend/src/net/secApi.ts b/frontend/src/net/secApi.ts
+index 788f3e7..f0ebcb7 100644
+--- a/frontend/src/net/secApi.ts
++++ b/frontend/src/net/secApi.ts
+@@ -4,8 +4,8 @@ import { get, TTL } from "./core";
+ import type { Envelope } from "./types";
+ 
+ export const secApi = {
+-  fa: (symbol: string, period: FaPeriod, fresh = false) =>
+-    get<Envelope<FaPayload>>("/api/fa", { symbol, period }, TTL.m5, fresh),
++  fa: (symbol: string, period: FaPeriod, fresh = false, source?: string) =>
++    get<Envelope<FaPayload>>("/api/fa", { symbol, period, source }, TTL.m5, fresh),
+   filings: (symbol: string, form: string, fresh = false) =>
+     get<Envelope<FilingsPayload>>("/api/filings", { symbol, form }, TTL.m1, fresh),
+   insiders: (symbol: string, fresh = false) =>
+diff --git a/frontend/src/settings/commands.ts b/frontend/src/settings/commands.ts
+index 9f34926..61be0c4 100644
+--- a/frontend/src/settings/commands.ts
++++ b/frontend/src/settings/commands.ts
+@@ -2,10 +2,10 @@
+  * Command-line settings (pure; unit-tested):
+  *   THEME [AMBER|GREEN|WHITE|LIGHT]
+  *   SETTINGS STARTUP HOME|LAYOUT | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
+- *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
++ *            | SOURCE <capability> <source>|DEFAULT | SOURCE RESET | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
+  */
+ import {
+-  AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
++  AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, SOURCE_NAME_RE, isZone, type PollKey, type Settings,
+ } from "./schema";
+ import { FONT_NAME_RE } from "./font";
+ import { FONT_PRESETS, cyclePreset, findPreset, type FontPreset } from "./fontPresets";
+@@ -96,6 +96,22 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
+       if (!Number.isInteger(v) || v < lo || v > hi) return fail(`POLL ${word}: ${lo}-${hi} SECONDS`);
+       return { ok: true, next: { ...cur, poll: { ...cur.poll, [k]: v } }, message: `POLL ${word} ${v}S (APPLIES WHEN THE PANEL REOPENS)` };
+     }
++    case "SOURCE": {
++      // SETTINGS SOURCE HISTORY NASDAQ: the source tried first for that kind of data; DEFAULT removes it, RESET removes all.
++      const usage = "SETTINGS SOURCE <DATA> <SOURCE> | <DATA> DEFAULT | RESET, E.G. SETTINGS SOURCE HISTORY NASDAQ (DATA: HISTORY QUOTES PROFILE FUNDAMENTALS NEWS_SYMBOL ...; SOURCES LISTS THE NAMES)";
++      if (word === "RESET") return { ok: true, next: { ...cur, sources: {} }, message: "SOURCE PREFERENCES CLEARED: THE DEFAULT ORDER APPLIES" };
++      const cap = (rest[0] ?? "").toLowerCase() === "news" ? "news_symbol" : (rest[0] ?? "").toLowerCase();
++      const name = (rest[1] ?? "").toLowerCase();
++      if (!/^[a-z][a-z0-9_]{0,39}$/.test(cap) || !name || rest.length > 2) return fail(usage);
++      const sources = { ...cur.sources };
++      if (name === "default") {
++        delete sources[cap];
++        return { ok: true, next: { ...cur, sources }, message: `${cap.toUpperCase()} USES THE DEFAULT SOURCE ORDER` };
++      }
++      if (!SOURCE_NAME_RE.test(name)) return fail(usage);
++      sources[cap] = name;
++      return { ok: true, next: { ...cur, sources }, message: `${cap.toUpperCase()}: ${name.toUpperCase()} FIRST, THE DEFAULT ORDER BEHIND IT (SRC= PINS ONE COMMAND)` };
++    }
+     case "AI": {
+       const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | RESET";
+       if (word === "RESET") return { ok: true, next: { ...cur, ai: { ...DEFAULTS.ai } }, message: "AI SETTINGS RESET TO DEFAULTS" };
+@@ -119,6 +135,6 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
+       // The shell (mode) is kept: RESET restores preferences, it must not switch between TERMINAL and GUI.
+       return { ok: true, next: { ...DEFAULTS, mode: cur.mode, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
+     default:
+-      return fail("SETTINGS STARTUP|TAPE|MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
++      return fail("SETTINGS STARTUP|TAPE|MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|SOURCE|AI|KEYS|RESET ...");
+   }
+ }
+diff --git a/frontend/src/settings/schema.ts b/frontend/src/settings/schema.ts
+index 29465b9..70e71cf 100644
+--- a/frontend/src/settings/schema.ts
++++ b/frontend/src/settings/schema.ts
+@@ -66,6 +66,8 @@ export interface Settings {
+   tape: boolean;
+   /** Symbols on the tape, in order (TAPE ADD / TAPE DEL / TAPE RESET). */
+   tapeSymbols: string[];
++  /** Preferred source per kind of data, tried first (SETTINGS SOURCE HISTORY NASDAQ): capability -> source name. The default order still backs it up. */
++  sources: Record<string, string>;
+ }
+ 
+ export const DEFAULTS: Settings = Object.freeze({
+@@ -82,8 +84,11 @@ export const DEFAULTS: Settings = Object.freeze({
+   startup: "home",
+   tape: false,
+   tapeSymbols: [...TAPE_DEFAULT],
++  sources: {},
+ }) as Settings;
+ 
++export const SOURCE_NAME_RE = /^[a-z][a-z0-9_]{0,39}$/;
++
+ const ZONE_RE = /^(LOCAL|UTC|[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){1,2})$/;
+ const ACTION_RE = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
+ 
+@@ -175,6 +180,15 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[]
+     Array.isArray(r.tapeSymbols) && r.tapeSymbols.length <= TAPE_MAX && new Set(r.tapeSymbols).size === r.tapeSymbols.length &&
+     r.tapeSymbols.every((x) => typeof x === "string" && TAPE_SYMBOL_RE.test(x));
+ 
++  // sources: capability -> source name. The backend checks the capability against its own table (unknown ones are refused there).
++  const sourcesOut: Record<string, string> = {};
++  if (isObj(r.sources)) {
++    for (const [cap, name] of Object.entries(r.sources)) {
++      if (/^[a-z][a-z0-9_]{0,39}$/.test(cap) && typeof name === "string" && SOURCE_NAME_RE.test(name)) sourcesOut[cap] = name;
++      else errors.push(`sources.${cap}`);
++    }
++  } else if (r.sources !== undefined) errors.push("sources");
++
+   return {
+     settings: {
+       mode,
+@@ -190,6 +204,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[]
+       startup: pick("startup", oneOf(STARTUPS, r.startup), r.startup as Startup, d.startup),
+       tape: pick("tape", typeof r.tape === "boolean", r.tape as boolean, d.tape),
+       tapeSymbols: pick("tapeSymbols", tapeOk, (r.tapeSymbols as string[])?.slice(), [...d.tapeSymbols]),
++      sources: sourcesOut,
+     },
+     errors,
+   };
+@@ -210,6 +225,8 @@ export function diffFromDefaults(s: Settings): Partial<Settings> {
+       if (s.mode === "gui") out.mode = "gui";
+     } else if (k === "keys") {
+       if (Object.keys(s.keys).length) out.keys = s.keys;
++    } else if (k === "sources") {
++      if (Object.keys(s.sources).length) out.sources = s.sources;
+     } else if (!same(s[k], DEFAULTS[k])) (out as Record<string, unknown>)[k] = s[k];
+   }
+   return out;
+diff --git a/frontend/src/state/layoutState.ts b/frontend/src/state/layoutState.ts
+index d3045d9..2952825 100644
+--- a/frontend/src/state/layoutState.ts
++++ b/frontend/src/state/layoutState.ts
+@@ -43,7 +43,8 @@ function parseView(x: unknown, isFunction: (code: string) => boolean): View {
+   const security = sec
+     ? { symbol: sec.symbol as string, ...(typeof sec.market === "string" ? { market: sec.market } : {}) }
+     : undefined;
+-  return { ...(fn ? { fn } : {}), ...(security ? { security } : {}), args };
++  const source = typeof x.source === "string" && /^[a-z][a-z0-9_]{0,39}$/.test(x.source) ? x.source : undefined;
++  return { ...(fn ? { fn } : {}), ...(security ? { security } : {}), args, ...(source ? { source } : {}) };
+ }
+ 
+ /**
+diff --git a/frontend/src/state/workspace.ts b/frontend/src/state/workspace.ts
+index 9f03df3..ca7ae5c 100644
+--- a/frontend/src/state/workspace.ts
++++ b/frontend/src/state/workspace.ts
+@@ -7,6 +7,8 @@ export interface View {
+   fn?: string;
+   security?: SecurityRef;
+   args: string[];
++  /** Data source pinned for this view by `SRC=<name>` (lower case, as the API spells it). Absent = the default hierarchy. */
++  source?: string;
+ }
+ 
+ export interface PanelState {
+diff --git a/sdk/python/pyproject.toml b/sdk/python/pyproject.toml
+new file mode 100644
+index 0000000..8ee15ce
+--- /dev/null
++++ b/sdk/python/pyproject.toml
+@@ -0,0 +1,28 @@
++[project]
++name = "openterm-sdk"
++version = "0.1.0"
++description = "Python client for a running OpenTerm: quotes, bars, fundamentals, news, screens, macro, options and backtests as pandas DataFrames that keep their source and as-of time"
++readme = "README.md"
++license = "MIT"
++requires-python = ">=3.10"
++dependencies = [
++  "httpx>=0.27",
++  "pandas>=2.0",
++]
++
++[project.optional-dependencies]
++test = ["pytest>=8"]
++
++[build-system]
++requires = ["hatchling"]
++build-backend = "hatchling.build"
++
++[tool.hatch.build.targets.wheel]
++packages = ["src/openterm_sdk"]
++
++[tool.pytest.ini_options]
++testpaths = ["tests"]
++pythonpath = ["src"]  # tests run against the source tree, installed or not
++
++[tool.ruff]
++line-length = 110
+diff --git a/sdk/python/src/openterm_sdk/errors.py b/sdk/python/src/openterm_sdk/errors.py
+new file mode 100644
+index 0000000..7e903cb
+--- /dev/null
++++ b/sdk/python/src/openterm_sdk/errors.py
+@@ -0,0 +1,79 @@
++"""Errors the SDK raises. They carry the words OpenTerm itself uses (`KEY REQUIRED`, `PROVIDER DOWN`), never made-up data.
++
++Every error is an `OpenTermError`, so `except OpenTermError` catches all of them. A pinned source that cannot answer
++(`source="nasdaq"`) raises one of these with `.source` set, and its text starts with `SRC=NASDAQ:`.
++"""
++
++from __future__ import annotations
++
++import re
++
++
++class OpenTermError(Exception):
++    """kind: OpenTerm's error word (not_found, unavailable, key_required, bad_request, login_expired ...); status: HTTP status or 0."""
++
++    def __init__(self, message: str, *, kind: str = "error", status: int = 0, detail: str | None = None,
++                 key: str | None = None, source: str | None = None):
++        super().__init__(message)
++        self.message = message
++        self.kind = kind
++        self.status = status
++        self.detail = detail
++        self.key = key
++        self.source = source  # the pinned source the message names (SRC=NAME), if any
++
++    def __str__(self) -> str:
++        return f"{self.message} ({self.detail})" if self.detail else self.message
++
++
++class KeyRequired(OpenTermError):
++    """The source needs an API key. `.key` names it; set it in OpenTerm's APIKEYS screen (the SDK never sees or sends keys)."""
++
++
++class ProviderDown(OpenTermError):
++    """The source (or every source that could answer) is down or blocked. Retry later; nothing was made up."""
++
++
++class NoData(OpenTermError):
++    """The source is up but has nothing for this symbol or series."""
++
++
++class BadRequest(OpenTermError):
++    """The request cannot be served as asked (bad symbol, unknown source, a source that does not serve this data, bad filter)."""
++
++
++class LoginRequired(OpenTermError):
++    """A broker login (Kite) is missing or expired. Run KITE LOGIN in OpenTerm."""
++
++
++class BackendDown(OpenTermError):
++    """No OpenTerm answered at the address. Start it first (`openterm`, or the desktop app)."""
++
++
++_BY_KIND: dict[str, type[OpenTermError]] = {
++    "key_required": KeyRequired,
++    "unavailable": ProviderDown,
++    "not_found": NoData,
++    "bad_request": BadRequest,
++    "login_expired": LoginRequired,
++    "login_required": LoginRequired,
++}
++_SRC = re.compile(r"^SRC=([A-Z0-9_]+)", re.IGNORECASE)
++
++
++def from_reply(status: int, body: object) -> OpenTermError:
++    """The right error for an OpenTerm error answer `{"error", "kind", "detail", "key"}` (any other body becomes a plain error)."""
++    if not isinstance(body, dict):
++        return OpenTermError(f"HTTP {status}", status=status)
++    message = str(body.get("error") or f"HTTP {status}")
++    kind = str(body.get("kind") or "error")
++    key = body.get("key")
++    detail = body.get("detail")
++    if kind == "key_required":
++        message = f"KEY REQUIRED: set {key} in APIKEYS" if key else "KEY REQUIRED"
++        detail = None
++    m = _SRC.match(message)
++    return _BY_KIND.get(kind, OpenTermError)(
++        message, kind=kind, status=status, detail=str(detail) if detail else None,
++        key=str(key) if key else None, source=m.group(1).lower() if m else None,
++    )

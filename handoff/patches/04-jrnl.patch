@@ -1,0 +1,1379 @@
+diff --git a/backend/openterm/ai/tools.py b/backend/openterm/ai/tools.py
+index 8a7bfcb..fd3a062 100644
+--- a/backend/openterm/ai/tools.py
++++ b/backend/openterm/ai/tools.py
+@@ -263,6 +263,19 @@ def _deriv(fn: str, keys: tuple[str, ...]):
+     return lambda a: {"path": f"/api/deriv/{fn}", "params": {k: a[k] for k in keys if a.get(k) is not None}}
+ 
+ 
++def shape_journal(resp: dict, args: dict) -> dict:
++    """JRNL for the model: the statistics and the five findings, never the fills, round trips or trade ids."""
++    if resp.get("empty"):
++        return {"empty": True, "note": "NO JOURNAL IMPORTED"}
++    st = resp.get("stats") or {}
++    keep = ("n", "wins", "losses", "win_rate", "avg_win", "avg_loss", "payoff", "expectancy", "profit_factor", "total_pnl", "fees", "avg_hold_s",
++            "max_consec_losses", "max_drawdown", "first", "last")
++    return {"currency": resp.get("currency"), "currencies": [c["currency"] for c in resp.get("currencies") or []],
++            "stats": {k: st.get(k) for k in keep},
++            "findings": [{"id": d["id"], "status": d["status"], "severity": d["severity"], "summary": d["plain"]} for d in resp.get("diagnostics") or []],
++            "note": "A PATTERN IN THE USER'S OWN HISTORY, NOT ADVICE AND NOT A FORECAST"}
++
++
+ # --- the registry -----------------------------------------------------------------------------------------------------------------------
+ def obj(properties: dict, required: list[str] | None = None) -> dict:
+     return {"type": "object", "properties": properties, "required": required or [], "additionalProperties": False}
+@@ -410,6 +423,9 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
+          "alpha (alpha zoo scan, args {universe}), regime (correlation regime, args {list}).",
+          obj({"fn": {"type": "string", "enum": list(QUANT_FNS)}, "args": {"type": "object"}}, ["fn"]), "/api/quant/{fn}", method="POST",
+          build=lambda a: {"path": f"/api/quant/{a['fn']}", "json": a.get("args") or {}}, shape=shape_table_env, job=True),
++    Tool("journal", "The user's own trade journal (JRNL): round-trip statistics (win rate, expectancy, profit factor, drawdown) and behaviour findings. "
++         "Optional currency. Read only; no individual trades.",
++         obj({"currency": S}), "/api/journal/analysis", shape=shape_journal, desk_only=True),
+ ]}
+ 
+ 
+diff --git a/backend/openterm/db.py b/backend/openterm/db.py
+index 0a3873a..4ca851b 100644
+--- a/backend/openterm/db.py
++++ b/backend/openterm/db.py
+@@ -71,6 +71,19 @@ MIGRATIONS: list[str | list[str]] = [
+         "ALTER TABLE alerts ADD COLUMN channels TEXT",
+         "ALTER TABLE news_alerts ADD COLUMN channels TEXT",
+     ],
++    # 17: trade journal (JRNL). dkey is the de-duplication key (a broker trade id, or a hash of the fill); time is the file's wall clock
++    [
++        (
++            "CREATE TABLE journal_trades (id INTEGER PRIMARY KEY AUTOINCREMENT, dkey TEXT NOT NULL UNIQUE, ts REAL NOT NULL, time TEXT NOT NULL,"
++            " symbol TEXT NOT NULL, side TEXT NOT NULL, qty REAL NOT NULL, price REAL NOT NULL, fee REAL NOT NULL, currency TEXT NOT NULL,"
++            " broker TEXT NOT NULL, order_id TEXT NOT NULL, trade_id TEXT NOT NULL, mult REAL NOT NULL, import_id INTEGER NOT NULL)"
++        ),
++        "CREATE INDEX journal_trades_ts ON journal_trades (currency, ts)",
++        (
++            "CREATE TABLE journal_imports (id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, broker TEXT NOT NULL, name TEXT NOT NULL,"
++            " rows INTEGER NOT NULL, added INTEGER NOT NULL, duplicates INTEGER NOT NULL, ignored INTEGER NOT NULL)"
++        ),
++    ],
+ ]
+ 
+ 
+diff --git a/backend/openterm/jobs/kinds.py b/backend/openterm/jobs/kinds.py
+index 21417e5..e203461 100644
+--- a/backend/openterm/jobs/kinds.py
++++ b/backend/openterm/jobs/kinds.py
+@@ -233,3 +233,26 @@ KINDS["fact.run"] = _quant_kind("fact.run", "FACT", fact_job)
+ KINDS["ql.run"] = _quant_kind("ql.run", "QL", ql_job)
+ KINDS["alpha.scan"] = _quant_kind("alpha.scan", "ALPHA", alpha_job, time_limit_s=240.0)
+ KINDS["corr.regime"] = _quant_kind("corr.regime", "CORR REGIME", regime_job)
++
++
++# --- JRNL Shadow Account (journal.shadow). Params are built by POST /api/journal/shadow: the server fetched the bars and wrote the data file. ----
++
++SHADOW_KEYS = {"data_path", "data_sha", "trips", "rule", "engine", "currency", "config", "bars_per_year", "skipped", "labels"}
++
++
++def validate_shadow(params: dict) -> dict:
++    if not isinstance(params, dict) or set(params) != SHADOW_KEYS:
++        raise BadParams("JOURNAL.SHADOW PARAMS ARE BUILT BY /api/journal/shadow")
++    if not params["trips"]:
++        raise BadParams("JOURNAL.SHADOW NEEDS AT LEAST ONE ROUND TRIP")
++    return params
++
++
++def journal_shadow_job(params: dict, progress: Callable[[float, str], None]) -> dict:
++    from ..journal.shadow import run  # pandas loads here, in the worker
++
++    return run(params, progress)
++
++
++KINDS["journal.shadow"] = Kind("journal.shadow", "1", "SHADOW ACCOUNT", journal_shadow_job, validate_shadow, time_limit_s=120.0, internal=True,
++                               fingerprint=lambda p: p.get("data_sha", ""), hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
+diff --git a/backend/openterm/journal/__init__.py b/backend/openterm/journal/__init__.py
+new file mode 100644
+index 0000000..f919e5b
+--- /dev/null
++++ b/backend/openterm/journal/__init__.py
+@@ -0,0 +1,6 @@
++"""JRNL: the trade journal. Parsers, FIFO round trips, stats, behaviour diagnostics and the Shadow Account job.
++
++Everything outside `shadow.py` is pure Python (the server imports it; pandas and numpy load only inside the job worker).
++The idea (journal import, behaviour diagnostics, a rule-based "shadow" of your own trading) comes from HKUDS/Vibe-Trading
++(MIT, see THIRD_PARTY.md); the code here is written fresh for the three brokers OpenTerm supports.
++"""
+diff --git a/backend/openterm/journal/diagnostics.py b/backend/openterm/journal/diagnostics.py
+new file mode 100644
+index 0000000..0aaffeb
+--- /dev/null
++++ b/backend/openterm/journal/diagnostics.py
+@@ -0,0 +1,236 @@
++"""Behaviour diagnostics: five fixed rules over one currency's round trips. Deterministic, no model, no randomness.
++
++Each finding says in plain words what the rule is, what it found and the numbers behind it, and lists the round trips that
++triggered it (`trips`, at most 50, with `trip_ids` for all of them). A rule that cannot be judged says why (`insufficient`);
++a rule that finds nothing says `clear`. A finding is a pattern in YOUR history, not advice and not a forecast.
++"""
++
++from __future__ import annotations
++
++import bisect
++import math
++import statistics
++from collections import defaultdict
++from datetime import datetime
++
++MIN_TRIPS = 10
++SHOW = 50
++
++# thresholds, kept in one place and quoted in each finding's `rule`
++OVERTRADE_FLOOR = 5  # a busy day has at least this many entries ...
++OVERTRADE_MULT = 2.0  # ... and at least this many times the median day
++REVENGE_WINDOW_S = 30 * 60
++REVENGE_SIZE = 1.25
++DISPOSITION_RATIO = 1.5
++DISPOSITION_MIN = 5
++CREEP_STREAK = 2
++CREEP_SIZE = 1.5
++CREEP_MIN_PRIOR = 5
++HOURS_MIN = 20
++CORE_SHARE = 0.10
++RARE_SHARE = 0.05
++
++
++def dur(s: float | None) -> str:
++    if s is None:
++        return "-"
++    if s < 90:
++        return f"{s:.0f}s"
++    if s < 5400:
++        return f"{s / 60:.0f} min"
++    if s < 172800:
++        return f"{s / 3600:.1f} h"
++    return f"{s / 86400:.1f} days"
++
++
++def money(x: float, ccy: str) -> str:
++    return f"{'-' if x < 0 else ''}{abs(x):,.2f} {ccy}"
++
++
++def _brief(t: dict) -> dict:
++    return {"id": t["id"], "symbol": t["symbol"], "side": t["side"], "qty": t["qty"], "entry_time": t["entry_time"],
++            "exit_time": t["exit_time"], "pnl": t["pnl"]}
++
++
++def _finding(fid: str, title: str, rule: str, status: str, severity: str, plain: str, evidence: dict | None = None,
++             trips: list[dict] | None = None) -> dict:
++    trips = trips or []
++    seen: set[str] = set()
++    uniq = [t for t in trips if not (t["id"] in seen or seen.add(t["id"]))]
++    ids: list[int] = []
++    for t in uniq:
++        for i in [*t["open_ids"], t["close_id"]]:
++            if i not in ids:
++                ids.append(i)
++    return {"id": fid, "title": title, "rule": rule, "status": status, "severity": severity, "plain": plain,
++            "evidence": evidence or {}, "trip_ids": [t["id"] for t in uniq], "trips": [_brief(t) for t in uniq[:SHOW]],
++            "fill_ids": ids[:400]}
++
++
++def _insufficient(fid: str, title: str, rule: str, why: str) -> dict:
++    return _finding(fid, title, rule, "insufficient", "none", f"NOT ENOUGH HISTORY TO JUDGE: {why}")
++
++
++def _mean(xs: list[float]) -> float | None:
++    return statistics.fmean(xs) if xs else None
++
++
++def _day(t: dict) -> str:
++    return t["entry_time"][:10]
++
++
++# ---------------------------------------------------------------- 1 overtrading
++def overtrading(trips: list[dict], ccy: str) -> dict:
++    fid, title = "overtrading", "Overtrading days"
++    rule = (f"A busy day is a day with at least {OVERTRADE_FLOOR} entries and at least {OVERTRADE_MULT:g} times the median day's entries. "
++            "Needs 10 trading days.")
++    by_day: dict[str, list[dict]] = defaultdict(list)
++    for t in trips:
++        by_day[_day(t)].append(t)
++    if len(by_day) < MIN_TRIPS:
++        return _insufficient(fid, title, rule, f"{len(by_day)} trading days, need {MIN_TRIPS}")
++    med = statistics.median(len(v) for v in by_day.values())
++    limit = max(OVERTRADE_FLOOR, math.ceil(OVERTRADE_MULT * med))
++    busy = sorted(d for d, v in by_day.items() if len(v) >= limit)
++    if not busy:
++        return _finding(fid, title, rule, "clear", "none",
++                        f"No day reached {limit} entries (your median day has {med:g}). Your busiest day had {max(len(v) for v in by_day.values())}.")
++    hit = [t for d in busy for t in by_day[d]]
++    rest = [t for d, v in by_day.items() if d not in set(busy) for t in v]
++    a, b = _mean([t["pnl"] for t in hit]), _mean([t["pnl"] for t in rest])
++    worse = a is not None and b is not None and a < b
++    plain = (f"On {len(busy)} day{'s' if len(busy) != 1 else ''} you made {limit} or more entries (a normal day for you is {med:g}). "
++             f"Those days averaged {money(a, ccy)} per trade, other days {money(b, ccy) if b is not None else '-'}. "
++             + ("Busy days did worse than normal days." if worse else "Busy days did not do worse than normal days."))
++    days = [{"day": d, "entries": len(by_day[d]), "pnl": sum(t["pnl"] for t in by_day[d])} for d in busy]
++    return _finding(fid, title, rule, "flagged", "high" if worse else "watch", plain,
++                    {"median_entries": med, "threshold": limit, "days": days[:30], "avg_pnl_busy": a, "avg_pnl_other": b}, hit)
++
++
++# ---------------------------------------------------------------- 2 revenge trades
++def revenge(trips: list[dict], ccy: str) -> dict:
++    fid, title = "revenge", "Revenge trades"
++    rule = (f"A losing trade closes, then within {REVENGE_WINDOW_S // 60} minutes you open a new trade at least {REVENGE_SIZE:g} times as big "
++            "(price x quantity). Needs 10 round trips.")
++    if len(trips) < MIN_TRIPS:
++        return _insufficient(fid, title, rule, f"{len(trips)} round trips, need {MIN_TRIPS}")
++    by_entry = sorted(trips, key=lambda t: (t["entry_ts"], t["close_id"]))
++    entries = [t["entry_ts"] for t in by_entry]
++    pairs: list[tuple[dict, dict]] = []
++    for loss in (t for t in trips if t["pnl"] < 0):
++        i = bisect.bisect_right(entries, loss["exit_ts"])
++        if i < len(by_entry) and by_entry[i]["entry_ts"] - loss["exit_ts"] <= REVENGE_WINDOW_S:
++            nxt = by_entry[i]
++            if nxt["id"] != loss["id"] and nxt["notional"] >= REVENGE_SIZE * loss["notional"]:
++                pairs.append((loss, nxt))
++    losses = sum(1 for t in trips if t["pnl"] < 0)
++    if not pairs:
++        return _finding(fid, title, rule, "clear", "none", f"None of your {losses} losing trades was followed by a bigger trade within {REVENGE_WINDOW_S // 60} minutes.")
++    re_entries = [p[1] for p in pairs]
++    rev_pnl = sum(t["pnl"] for t in re_entries)
++    plain = (f"{len(pairs)} of your {losses} losing trades were followed within {REVENGE_WINDOW_S // 60} minutes by a trade at least "
++             f"{REVENGE_SIZE:g} times as big. Those bigger trades made {money(rev_pnl, ccy)} in total.")
++    ev = {"events": len(pairs), "losses": losses, "pnl_of_reentries": rev_pnl,
++          "pairs": [{"loss": a["id"], "reentry": b["id"], "size_ratio": b["notional"] / a["notional"],
++                     "gap_s": b["entry_ts"] - a["exit_ts"]} for a, b in pairs[:30]]}
++    flat = [t for p in pairs for t in p]
++    return _finding(fid, title, rule, "flagged", "high" if rev_pnl < 0 and len(pairs) >= 3 else "watch", plain, ev, flat)
++
++
++# ---------------------------------------------------------------- 3 disposition effect
++def disposition(trips: list[dict], ccy: str) -> dict:
++    fid, title = "disposition", "Cutting winners early, letting losers run"
++    rule = (f"Your losing trades are held at least {DISPOSITION_RATIO:g} times as long as your winning ones, on average. "
++            f"Needs {DISPOSITION_MIN} winners and {DISPOSITION_MIN} losers.")
++    wins = [t for t in trips if t["pnl"] > 0]
++    loss = [t for t in trips if t["pnl"] < 0]
++    if len(wins) < DISPOSITION_MIN or len(loss) < DISPOSITION_MIN:
++        return _insufficient(fid, title, rule, f"{len(wins)} winners and {len(loss)} losers, need {DISPOSITION_MIN} of each")
++    hw, hl = statistics.fmean(t["hold_s"] for t in wins), statistics.fmean(t["hold_s"] for t in loss)
++    aw, al = statistics.fmean(t["pnl"] for t in wins), statistics.fmean(t["pnl"] for t in loss)
++    ev = {"avg_hold_win_s": hw, "avg_hold_loss_s": hl, "avg_win": aw, "avg_loss": al, "ratio": (hl / hw) if hw > 0 else None}
++    if hw <= 0:
++        return _insufficient(fid, title, rule, "your winners have no holding time (all opened and closed in the same second)")
++    ratio = hl / hw
++    if ratio < DISPOSITION_RATIO:
++        return _finding(fid, title, rule, "clear", "none",
++                        f"Losers were held {dur(hl)} and winners {dur(hw)} on average (ratio {ratio:.2f}, flagged from {DISPOSITION_RATIO:g}).", ev)
++    longest = sorted((t for t in loss if t["hold_s"] >= DISPOSITION_RATIO * hw), key=lambda t: -t["hold_s"])
++    bigger = abs(al) > aw
++    plain = (f"Losing trades were held {dur(hl)} on average, winning trades {dur(hw)}: {ratio:.1f} times longer. "
++             f"Your average loss is {money(al, ccy)} and your average win {money(aw, ccy)}"
++             + (", so the losers you hold are also bigger than the winners you take." if bigger else "."))
++    return _finding(fid, title, rule, "flagged", "high" if ratio >= 2 and bigger else "watch", plain, ev, longest)
++
++
++# ---------------------------------------------------------------- 4 size creep after wins
++def size_creep(trips: list[dict], ccy: str) -> dict:
++    fid, title = "creep", "Size creep after wins"
++    rule = (f"After {CREEP_STREAK} winning trades in a row you open a trade at least {CREEP_SIZE:g} times your median size so far "
++            f"(price x quantity). Needs 10 round trips and {CREEP_MIN_PRIOR} earlier trades for the median.")
++    if len(trips) < MIN_TRIPS:
++        return _insufficient(fid, title, rule, f"{len(trips)} round trips, need {MIN_TRIPS}")
++    by_exit = sorted(trips, key=lambda t: (t["exit_ts"], t["close_id"]))
++    exits = [t["exit_ts"] for t in by_exit]
++    streak: list[int] = []
++    run = 0
++    for t in by_exit:
++        run = run + 1 if t["pnl"] > 0 else 0
++        streak.append(run)
++    seen: list[float] = []
++    events: list[dict] = []
++    after = 0
++    for t in sorted(trips, key=lambda t: (t["entry_ts"], t["close_id"])):
++        if len(seen) >= CREEP_MIN_PRIOR:
++            k = bisect.bisect_left(exits, t["entry_ts"])  # trades that closed before this entry
++            if k and streak[k - 1] >= CREEP_STREAK:
++                after += 1
++                med = seen[len(seen) // 2] if len(seen) % 2 else (seen[len(seen) // 2 - 1] + seen[len(seen) // 2]) / 2
++                if med > 0 and t["notional"] >= CREEP_SIZE * med:
++                    events.append(t)
++        bisect.insort(seen, t["notional"])
++    if not events:
++        return _finding(fid, title, rule, "clear", "none", f"{after} trades followed {CREEP_STREAK}+ wins and none was unusually big.")
++    pnl = sum(t["pnl"] for t in events)
++    ids = {t["id"] for t in events}
++    other = _mean([t["pnl"] for t in trips if t["id"] not in ids])
++    share = len(events) / after if after else 0.0
++    plain = (f"{len(events)} of the {after} trades that followed {CREEP_STREAK} or more wins in a row were at least {CREEP_SIZE:g} times "
++             f"your usual size. They made {money(pnl, ccy)} in total ({money(pnl / len(events), ccy)} each, other trades {money(other, ccy) if other is not None else '-'}).")
++    flagged = len(events) >= 3 and share >= 0.25
++    return _finding(fid, title, rule, "flagged" if flagged else "clear", ("high" if pnl < 0 else "watch") if flagged else "none",
++                    plain if flagged else f"{len(events)} oversized trades after wins, too few to call a pattern (flagged from 3 and 25% of trades after a win streak). " + plain,
++                    {"events": len(events), "after_streak": after, "share": share, "pnl": pnl, "avg_pnl_other": other}, events if flagged else [])
++
++
++# ---------------------------------------------------------------- 5 outside usual hours
++def off_hours(trips: list[dict], ccy: str) -> dict:
++    fid, title = "hours", "Trading outside your usual hours"
++    rule = (f"Your usual window runs from your first to your last hour that holds at least {CORE_SHARE:.0%} of your entries. "
++            f"An entry at least one hour outside it, in an hour holding under {RARE_SHARE:.0%} of entries, is off-hours. Needs {HOURS_MIN} round trips.")
++    if len(trips) < HOURS_MIN:
++        return _insufficient(fid, title, rule, f"{len(trips)} round trips, need {HOURS_MIN}")
++    hours = [datetime.fromisoformat(t["entry_time"]).hour for t in trips]
++    n = len(hours)
++    share = {h: hours.count(h) / n for h in set(hours)}
++    core = [h for h, s in share.items() if s >= CORE_SHARE]
++    if not core:
++        return _finding(fid, title, rule, "clear", "none", "Your entries are spread over many hours, so there is no single usual window to leave.")
++    lo, hi = min(core), max(core)
++    odd = [t for t, h in zip(trips, hours, strict=True) if (h < lo or h > hi) and share[h] < RARE_SHARE]
++    window = f"{lo:02d}:00-{hi:02d}:59"
++    if len(odd) < 3:
++        return _finding(fid, title, rule, "clear", "none", f"Your usual window is {window}; only {len(odd)} entries were clearly outside it.")
++    ids = {t["id"] for t in odd}
++    a, b = _mean([t["pnl"] for t in odd]), _mean([t["pnl"] for t in trips if t["id"] not in ids])
++    worse = a is not None and b is not None and a < b
++    plain = (f"Most of your entries are between {window}. {len(odd)} entries were outside it and averaged {money(a, ccy)}, "
++             f"against {money(b, ccy) if b is not None else '-'} for the rest. " + ("Off-hours entries did worse." if worse else "Off-hours entries did not do worse."))
++    return _finding(fid, title, rule, "flagged", "high" if worse and len(odd) >= 5 else "watch", plain,
++                    {"window": window, "entries_outside": len(odd), "avg_pnl_outside": a, "avg_pnl_rest": b}, odd)
++
++
++def diagnose(trips: list[dict], currency: str) -> list[dict]:
++    """The five findings for one currency's round trips."""
++    return [overtrading(trips, currency), revenge(trips, currency), disposition(trips, currency), size_creep(trips, currency),
++            off_hours(trips, currency)]
+diff --git a/backend/openterm/journal/parsers.py b/backend/openterm/journal/parsers.py
+new file mode 100644
+index 0000000..4a09fa6
+--- /dev/null
++++ b/backend/openterm/journal/parsers.py
+@@ -0,0 +1,389 @@
++"""Broker file parsers: text in, normalised `Trade` rows out. Pure Python (csv, datetime); no pandas.
++
++Formats (all DOC-SHAPED: written from each broker's published column names, not from a recording of a real export):
++- Zerodha Console tradebook CSV: symbol,isin,trade_date,exchange,segment,series,trade_type,auction,quantity,price,trade_id,order_id,order_execution_time
++- IBKR Flex Query trades CSV: the columns you pick in the query; needs Symbol, a date (DateTime or TradeDate), Buy/Sell or a signed
++  Quantity, TradePrice. Uses IBCommission, CurrencyPrimary or Currency, IBOrderID, TradeID, Multiplier, ListingExchange when present.
++- Alpaca account activities CSV: id,activity_type,transaction_time,type,price,qty,side,symbol,leaves_qty,order_id,cum_qty,order_status
++  (only FILL activities are trades; dividends, fees and transfers are ignored and counted).
++- Generic CSV: you map your columns to time, symbol, side, qty, price (and optionally fee, currency, order id).
++
++Rules: a row that cannot be read stops the import and is named by its line (nothing is half-stored). A slash date such as 03/04/2024
++is never guessed: choose DMY or MDY. Times are the file's own wall clock (no time zone is invented); Alpaca's UTC times are shown in
++New York time, the market they belong to. A fee is always a positive cost.
++"""
++
++from __future__ import annotations
++
++import csv
++import hashlib
++import io
++import math
++import re
++from dataclasses import dataclass
++from datetime import UTC, datetime
++from zoneinfo import ZoneInfo
++
++BROKERS = ("zerodha", "ibkr", "alpaca", "generic")
++MAX_ROWS = 50_000
++MAX_TEXT = 4_000_000
++NY = ZoneInfo("America/New_York")
++
++
++class JournalError(ValueError):
++    """A file the parser cannot use. `detail` lists the first problems (one line each)."""
++
++    def __init__(self, message: str, detail: str | None = None):
++        super().__init__(message)
++        self.detail = detail
++
++
++@dataclass
++class Trade:
++    time: str  # ISO "YYYY-MM-DDTHH:MM:SS", the broker file's wall clock
++    symbol: str
++    side: str  # "buy" | "sell"
++    qty: float  # > 0
++    price: float  # > 0
++    fee: float  # >= 0
++    currency: str
++    broker: str
++    order_id: str = ""
++    trade_id: str = ""
++    mult: float = 1.0
++    dkey: str = ""
++
++    @property
++    def ts(self) -> float:
++        return datetime.fromisoformat(self.time).replace(tzinfo=UTC).timestamp()
++
++
++# ---------------------------------------------------------------- cells
++BUY = {"buy", "b", "bought", "bot", "long", "buy to cover", "buy_to_cover", "cover", "buy to open", "buy to close"}
++SELL = {"sell", "s", "sold", "sld", "short", "sell short", "sell_short", "sell to open", "sell to close"}
++
++
++def num(raw: str | None, what: str) -> float:
++    s = (raw or "").strip().replace(",", "")
++    neg = s.startswith("(") and s.endswith(")")  # accounting negative
++    s = s.strip("()").lstrip("$€£₹").strip()
++    try:
++        v = float(s)
++    except ValueError:
++        raise ValueError(f"BAD {what} {raw!r}") from None
++    if not math.isfinite(v):
++        raise ValueError(f"BAD {what} {raw!r}")
++    return -v if neg else v
++
++
++def side_of(raw: str | None) -> str | None:
++    s = (raw or "").strip().lower()
++    if s in BUY:
++        return "buy"
++    if s in SELL:
++        return "sell"
++    return None
++
++
++_ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})?$")
++_COMPACT = re.compile(r"^(\d{4})(\d{2})(\d{2})(?:[;, T]\s*(\d{2}):?(\d{2}):?(\d{2})?)?$")
++_SLASH = re.compile(r"^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?)?$")
++
++
++def when(raw: str | None, order: str | None = None, tz_to: ZoneInfo | None = None) -> str:
++    """One date or date-time cell -> ISO wall clock. `order` is "DMY" or "MDY" for slash dates (never guessed)."""
++    s = (raw or "").strip().strip('"')
++    if not s:
++        raise ValueError("EMPTY TIME")
++    m = _ISO.match(s)
++    try:
++        if m:
++            y, mo, d, hh, mi, ss, off = m.groups()
++            dt = datetime(int(y), int(mo), int(d), int(hh or 0), int(mi or 0), int(ss or 0))
++            if off and tz_to is not None:  # an explicit offset: show it in the market's own clock
++                if off == "Z":
++                    aware = dt.replace(tzinfo=UTC)
++                else:
++                    o = off.replace(":", "")
++                    aware = dt.replace(tzinfo=datetime.strptime(o, "%z").tzinfo)
++                dt = aware.astimezone(tz_to).replace(tzinfo=None)
++            return dt.isoformat(timespec="seconds")
++        m = _COMPACT.match(s)
++        if m:
++            y, mo, d, hh, mi, ss = m.groups()
++            return datetime(int(y), int(mo), int(d), int(hh or 0), int(mi or 0), int(ss or 0)).isoformat(timespec="seconds")
++        m = _SLASH.match(s)
++        if m:
++            a, b, y, hh, mi, ss, ap = m.groups()
++            if order not in ("DMY", "MDY"):
++                raise ValueError(f"SLASH DATE {s!r}: CHOOSE DMY OR MDY")
++            day, mon = (int(a), int(b)) if order == "DMY" else (int(b), int(a))
++            h = int(hh or 0)
++            if ap:
++                h = h % 12 + (12 if ap.lower() == "pm" else 0)
++            return datetime(int(y), mon, day, h, int(mi or 0), int(ss or 0)).isoformat(timespec="seconds")
++    except ValueError as e:
++        if "CHOOSE" in str(e):
++            raise
++        raise ValueError(f"BAD TIME {s!r}") from None
++    raise ValueError(f"BAD TIME {s!r}")
++
++
++def _ccy(raw: str | None, default: str) -> str:
++    s = (raw or "").strip().upper()
++    return s if re.fullmatch(r"[A-Z]{3}", s) else default
++
++
++# ---------------------------------------------------------------- reading
++Rows = list[tuple[int, dict[str, str]]]
++
++
++def read_rows(text: str) -> tuple[list[str], Rows]:
++    """(header, [(line number, row by lower-cased header)]). The delimiter is sniffed (comma, semicolon, tab)."""
++    if len(text) > MAX_TEXT:
++        raise JournalError(f"FILE OVER {MAX_TEXT // 1_000_000} MB")
++    lines = text.lstrip("﻿").splitlines()
++    while lines and not lines[0].strip():
++        lines.pop(0)
++    if not lines:
++        raise JournalError("EMPTY FILE")
++    delim = max(",;\t", key=lines[0].count)
++    if lines[0].count(delim) == 0:
++        raise JournalError("NO COLUMNS FOUND", "THE FIRST LINE MUST BE THE COLUMN NAMES, SEPARATED BY COMMAS")
++    rdr = csv.reader(io.StringIO("\n".join(lines)), delimiter=delim)
++    header = [h.strip() for h in next(rdr)]
++    keys = [h.lower() for h in header]
++    out: Rows = []
++    for row in rdr:
++        if not any(c.strip() for c in row):
++            continue
++        out.append((rdr.line_num, {k: (row[i].strip() if i < len(row) else "") for i, k in enumerate(keys)}))
++        if len(out) > MAX_ROWS:
++            raise JournalError(f"MORE THAN {MAX_ROWS} ROWS", "IMPORT THE FILE IN PARTS")
++    return header, out
++
++
++def detect(header: list[str]) -> str | None:
++    h = {c.strip().lower() for c in header}
++    if {"trade_type", "trade_date", "quantity", "price", "symbol"} <= h:
++        return "zerodha"
++    if {"transaction_time", "qty", "price", "symbol"} <= h or ("activity_type" in h and "qty" in h):
++        return "alpaca"
++    if {"symbol", "tradeprice"} <= h and ("buy/sell" in h or "quantity" in h):
++        return "ibkr"
++    return None
++
++
++# ---------------------------------------------------------------- per-broker
++IBKR_MARKS = {"BOF", "EOF", "BOA", "EOA", "BOS", "EOS", "HEADER", "DATA"}
++IBKR_SUFFIX = {"LSE": ".L", "SEHK": ".HK", "TSE": ".TO", "NSE": ".NS", "BSE": ".BO", "VENTURE": ".V"}
++
++
++def _finish(trades: list[Trade], errs: list[str], ignored: int) -> tuple[list[Trade], int]:
++    if errs:
++        raise JournalError(f"{len(errs)} ROW{'S' if len(errs) != 1 else ''} COULD NOT BE READ, NOTHING WAS STORED", "\n".join(errs[:12]))
++    if not trades:
++        raise JournalError("NO TRADES FOUND IN THE FILE", f"{ignored} ROWS WERE NOT TRADES" if ignored else None)
++    _keys(trades)
++    return trades, ignored
++
++
++def _keys(trades: list[Trade]) -> None:
++    """A stable de-duplication key. A broker trade id decides when there is one; otherwise every field does, and a repeat of the
++    very same row inside one file gets its own count, so two real identical fills stay two while a re-import stays a no-op."""
++    seen: dict[str, int] = {}
++    for t in trades:
++        if t.trade_id:
++            base = f"{t.broker}|id|{t.trade_id}"
++        else:
++            base = "|".join([t.broker, t.time, t.symbol, t.side, f"{t.qty:.8g}", f"{t.price:.8g}", t.order_id])
++        n = seen[base] = seen.get(base, 0) + 1
++        t.dkey = hashlib.sha1(f"{base}#{n}".encode()).hexdigest()[:24]
++
++
++def parse_zerodha(rows: Rows, order: str | None, ccy: str) -> tuple[list[Trade], int]:
++    out: list[Trade] = []
++    errs: list[str] = []
++    for ln, r in rows:
++        try:
++            side = side_of(r.get("trade_type"))
++            if side is None:
++                raise ValueError(f"BAD trade_type {r.get('trade_type')!r}")
++            t = when(r.get("order_execution_time") or r.get("trade_date"), order)
++            qty, price = num(r.get("quantity"), "quantity"), num(r.get("price"), "price")
++            if qty <= 0 or price <= 0:
++                raise ValueError("quantity and price must be above 0")
++            sym = r.get("symbol", "").strip().upper()
++            if not sym:
++                raise ValueError("EMPTY symbol")
++            suffix = {"NSE": ".NS", "BSE": ".BO"}.get(r.get("exchange", "").strip().upper(), "")
++            if r.get("segment", "EQ").strip().upper() not in ("EQ", ""):
++                suffix = ""  # F&O, currency and commodity contracts have no daily-bar symbol
++            out.append(Trade(t, sym + suffix, side, qty, price, 0.0, "INR", "zerodha", r.get("order_id", ""), r.get("trade_id", "")))
++        except ValueError as e:
++            errs.append(f"LINE {ln}: {e}")
++    return _finish(out, errs, 0)
++
++
++def parse_ibkr(rows: Rows, order: str | None, ccy: str) -> tuple[list[Trade], int]:
++    out: list[Trade] = []
++    errs: list[str] = []
++    ignored = 0
++    for ln, r in rows:
++        first = next(iter(r.values()), "")
++        if (first.upper() in IBKR_MARKS and not r.get("symbol")) or r.get("symbol", "").lower() == "symbol":
++            ignored += 1  # section markers and repeated header lines of a multi-section Flex file
++            continue
++        try:
++            q = num(r.get("quantity"), "Quantity")
++            bs = r.get("buy/sell", "")
++            side = side_of(bs) if bs else ("buy" if q > 0 else "sell")
++            if side is None:
++                raise ValueError(f"BAD Buy/Sell {bs!r}")
++            stamp = r.get("datetime") or r.get("tradedatetime") or r.get("tradedate") or r.get("date/time") or ""
++            if not stamp:
++                raise ValueError("NO DateTime OR TradeDate")
++            t = when(stamp, order)
++            price = num(r.get("tradeprice"), "TradePrice")
++            qty = abs(q)
++            if qty <= 0 or price <= 0:
++                raise ValueError("Quantity and TradePrice must be above 0")
++            fee = abs(num(r.get("ibcommission") or r.get("commission") or "0", "IBCommission"))
++            mult = abs(num(r.get("multiplier") or "1", "Multiplier")) or 1.0
++            sym = r.get("symbol", "").strip().upper()
++            if not sym:
++                raise ValueError("EMPTY Symbol")
++            sfx = IBKR_SUFFIX.get((r.get("listingexchange") or "").strip().upper(), "")
++            cur = _ccy(r.get("currencyprimary") or r.get("currency"), ccy)
++            out.append(Trade(t, sym + sfx, side, qty, price, fee, cur, "ibkr", r.get("iborderid", ""), r.get("tradeid", ""), mult))
++        except ValueError as e:
++            errs.append(f"LINE {ln}: {e}")
++    return _finish(out, errs, ignored)
++
++
++def parse_alpaca(rows: Rows, order: str | None, ccy: str) -> tuple[list[Trade], int]:
++    out: list[Trade] = []
++    errs: list[str] = []
++    ignored = 0
++    for ln, r in rows:
++        kind = (r.get("activity_type") or "FILL").strip().upper()
++        if kind != "FILL" or (r.get("type") or "fill").strip().lower() not in ("fill", "partial_fill"):
++            ignored += 1  # dividends, fees, journals, transfers
++            continue
++        try:
++            side = side_of(r.get("side"))
++            if side is None:
++                raise ValueError(f"BAD side {r.get('side')!r}")
++            t = when(r.get("transaction_time"), order, tz_to=NY)
++            qty, price = num(r.get("qty"), "qty"), num(r.get("price"), "price")
++            if qty <= 0 or price <= 0:
++                raise ValueError("qty and price must be above 0")
++            sym = r.get("symbol", "").strip().upper().replace("/", "-")
++            if not sym:
++                raise ValueError("EMPTY symbol")
++            out.append(Trade(t, sym, side, qty, price, 0.0, "USD", "alpaca", r.get("order_id", ""), r.get("id", "")))
++        except ValueError as e:
++            errs.append(f"LINE {ln}: {e}")
++    return _finish(out, errs, ignored)
++
++
++MAP_KEYS = ("time", "date", "symbol", "side", "qty", "price", "fee", "currency", "order_id")
++GUESS = {
++    "time": ("time", "datetime", "date/time", "timestamp", "executed at", "filled at", "date", "trade date"),
++    "date": ("date", "trade date", "tradedate"),
++    "symbol": ("symbol", "ticker", "instrument", "security", "code"),
++    "side": ("side", "action", "buy/sell", "type", "trade type", "direction", "b/s"),
++    "qty": ("qty", "quantity", "shares", "size", "units", "filled"),
++    "price": ("price", "fill price", "avg price", "trade price", "executed price"),
++    "fee": ("fee", "fees", "commission", "commissions", "charges"),
++    "currency": ("currency", "ccy", "curr"),
++    "order_id": ("order id", "order_id", "orderid", "order", "id", "trade id"),
++}
++
++
++def guess_mapping(header: list[str]) -> dict[str, str]:
++    """A first guess at the generic mapping from common column names; the user confirms or changes it."""
++    low = {h.strip().lower(): h for h in header}
++    out: dict[str, str] = {}
++    for k, names in GUESS.items():
++        for n in names:
++            if n in low and low[n] not in out.values():
++                out[k] = low[n]
++                break
++    return out
++
++
++def parse_generic(rows: Rows, order: str | None, ccy: str, mapping: dict[str, str], header: list[str]) -> tuple[list[Trade], int]:
++    have = {h.strip().lower() for h in header}
++    m = {k: v.strip().lower() for k, v in mapping.items() if isinstance(v, str) and v.strip()}
++    for k, v in m.items():
++        if k not in MAP_KEYS:
++            raise JournalError(f"UNKNOWN MAPPING KEY {k.upper()}", f"USE {', '.join(MAP_KEYS)}")
++        if v not in have:
++            raise JournalError(f"MAPPED COLUMN {v.upper()} IS NOT IN THE FILE", f"COLUMNS: {', '.join(header)}")
++    need = [k for k in ("symbol", "qty", "price") if k not in m]
++    if "time" not in m and "date" not in m:
++        need.insert(0, "time")
++    if need:
++        raise JournalError(f"MAP THESE COLUMNS: {', '.join(n.upper() for n in need)}", "side is optional when qty is negative for sells")
++    out: list[Trade] = []
++    errs: list[str] = []
++    for ln, r in rows:
++        try:
++            if "time" in m and "date" in m and m["time"] != m["date"]:
++                stamp = f"{r.get(m['date'], '').strip()} {r.get(m['time'], '').strip()}".strip()
++            else:
++                stamp = r.get(m.get("time") or m["date"], "")
++            t = when(stamp, order)
++            q = num(r.get(m["qty"]), "qty")
++            if "side" in m:
++                side = side_of(r.get(m["side"]))
++                if side is None:
++                    raise ValueError(f"BAD side {r.get(m['side'])!r}")
++            else:
++                side = "buy" if q > 0 else "sell"
++            price, qty = num(r.get(m["price"]), "price"), abs(q)
++            if qty <= 0 or price <= 0:
++                raise ValueError("qty and price must be above 0")
++            sym = r.get(m["symbol"], "").strip().upper()
++            if not sym:
++                raise ValueError("EMPTY symbol")
++            fee = abs(num(r.get(m["fee"]) or "0", "fee")) if "fee" in m else 0.0
++            cur = _ccy(r.get(m["currency"]) if "currency" in m else "", ccy)
++            out.append(Trade(t, sym, side, qty, price, fee, cur, "generic", r.get(m.get("order_id", ""), ""), ""))
++        except ValueError as e:
++            errs.append(f"LINE {ln}: {e}")
++    return _finish(out, errs, 0)
++
++
++# ---------------------------------------------------------------- entry points
++def inspect(text: str) -> dict:
++    """What the file looks like, for the mapping step: detected broker, columns, a guess at the generic mapping, a few raw rows."""
++    header, rows = read_rows(text)
++    return {"broker": detect(header), "columns": header, "rows": len(rows), "mapping": guess_mapping(header),
++            "sample": [{h: r.get(h.lower(), "") for h in header} for _, r in rows[:5]]}
++
++
++def parse(text: str, broker: str = "auto", mapping: dict | None = None, date_order: str | None = None,
++          currency: str = "USD") -> tuple[str, list[Trade], int]:
++    """(broker, trades, ignored rows). Raises JournalError with the reason when the file cannot be used."""
++    if broker not in ("auto", *BROKERS):
++        raise JournalError(f"BROKER MUST BE auto, {', '.join(BROKERS)}")
++    if date_order is not None and date_order not in ("DMY", "MDY"):
++        raise JournalError("DATE ORDER MUST BE DMY OR MDY")
++    ccy = _ccy(currency, "")
++    if not ccy:
++        raise JournalError("CURRENCY MUST BE A 3-LETTER CODE")
++    header, rows = read_rows(text)
++    kind = detect(header) if broker == "auto" else broker
++    if kind is None:
++        raise JournalError("FORMAT NOT RECOGNISED: MAP THE COLUMNS (GENERIC)", f"COLUMNS: {', '.join(header)}")
++    if kind == "zerodha":
++        trades, ign = parse_zerodha(rows, date_order, ccy)
++    elif kind == "ibkr":
++        trades, ign = parse_ibkr(rows, date_order, ccy)
++    elif kind == "alpaca":
++        trades, ign = parse_alpaca(rows, date_order, ccy)
++    else:
++        trades, ign = parse_generic(rows, date_order, ccy, mapping or guess_mapping(header), header)
++    return kind, trades, ign
+diff --git a/backend/openterm/journal/roundtrips.py b/backend/openterm/journal/roundtrips.py
+new file mode 100644
+index 0000000..e550408
+--- /dev/null
++++ b/backend/openterm/journal/roundtrips.py
+@@ -0,0 +1,167 @@
++"""FIFO matching of fills into round trips, and the statistics over them. Pure Python.
++
++A fill is a dict {id, ts, time, symbol, side, qty, price, fee, currency, mult}. Fills are matched per (symbol, currency), oldest lot first,
++so two currencies never cross-match and no money is ever converted. A sell with no long lot opens a short; a buy first covers shorts.
++Every closing fill makes ONE round trip (against one or several opening lots); the part of a fill that is not matched opens a new lot and
++carries its own share of the fee. Fees are split by quantity, so each fee is counted exactly once. Lots still open at the end are
++returned as open positions, never marked to a price.
++"""
++
++from __future__ import annotations
++
++import math
++import statistics
++from collections import defaultdict, deque
++from datetime import datetime
++
++EPS = 1e-9
++
++
++def match(fills: list[dict]) -> tuple[list[dict], list[dict]]:
++    """(round trips in exit order, open positions)."""
++    lots: dict[tuple[str, str], deque] = defaultdict(deque)  # each lot: [signed qty left, price, fee per unit, ts, id, mult]
++    trips: list[dict] = []
++    order = sorted(fills, key=lambda f: (f["ts"], f["id"]))
++    for f in order:
++        key = (f["symbol"], f["currency"])
++        book = lots[key]
++        s = 1 if f["side"] == "buy" else -1
++        q = float(f["qty"])
++        fee_unit = float(f["fee"]) / q if q else 0.0
++        mult = float(f.get("mult") or 1.0)
++        rem = q
++        m_qty = 0.0
++        cost = proceeds = 0.0  # price * qty sums of the opening and closing sides
++        gross = fees = 0.0
++        w_ts = 0.0
++        first_ts: float | None = None
++        first_time = ""
++        open_ids: list[int] = []
++        long_lot = False
++        while rem > EPS and book and (book[0][0] > 0) != (s > 0):
++            lot = book[0]
++            take = min(rem, abs(lot[0]))
++            long_lot = lot[0] > 0
++            gross += ((f["price"] - lot[1]) if long_lot else (lot[1] - f["price"])) * take * mult
++            fees += lot[2] * take + fee_unit * take
++            cost += lot[1] * take
++            proceeds += f["price"] * take
++            w_ts += lot[3] * take
++            if first_ts is None:
++                first_ts, first_time = lot[3], lot[6]
++            if lot[4] not in open_ids:
++                open_ids.append(lot[4])
++            m_qty += take
++            rem -= take
++            lot[0] += -take if long_lot else take
++            if abs(lot[0]) <= EPS:
++                book.popleft()
++        if m_qty > EPS:
++            entry_px, exit_px = cost / m_qty, proceeds / m_qty
++            basis = entry_px * m_qty * mult
++            net = gross - fees
++            trips.append({
++                "id": f"{f['symbol']}:{f['id']}", "symbol": f["symbol"], "currency": f["currency"], "side": "long" if long_lot else "short",
++                "qty": round(m_qty, 8), "entry_time": first_time, "exit_time": f["time"], "entry_ts": first_ts, "exit_ts": f["ts"],
++                "entry_price": entry_px, "exit_price": exit_px, "fees": fees, "pnl_gross": gross, "pnl": net,
++                "pnl_pct": net / basis if basis else 0.0, "hold_s": max(0.0, f["ts"] - w_ts / m_qty), "notional": basis,
++                "open_ids": open_ids, "close_id": f["id"], "mult": mult,
++            })
++        if rem > EPS:
++            book.append([s * rem, f["price"], fee_unit, f["ts"], f["id"], mult, f["time"]])
++    positions = []
++    for (sym, ccy), book in lots.items():
++        net = sum(lot[0] for lot in book)
++        if abs(net) <= EPS:
++            continue
++        qty = sum(abs(lot[0]) for lot in book)
++        positions.append({"symbol": sym, "currency": ccy, "side": "long" if net > 0 else "short", "qty": round(qty, 8),
++                          "avg_price": sum(abs(lot[0]) * lot[1] for lot in book) / qty, "since": book[0][6]})
++    trips.sort(key=lambda t: (t["exit_ts"], t["close_id"]))
++    positions.sort(key=lambda p: (p["symbol"], p["currency"]))
++    return trips, positions
++
++
++def _div(a: float, b: float) -> float | None:
++    return a / b if b else None
++
++
++def _streak(flags: list[bool]) -> int:
++    best = run = 0
++    for x in flags:
++        run = run + 1 if x else 0
++        best = max(best, run)
++    return best
++
++
++def drawdown(trips: list[dict]) -> dict:
++    """Cumulative realised P&L in exit order (one currency), and its largest peak-to-trough fall (in money, from a zero start)."""
++    cum = 0.0
++    peak = 0.0
++    worst = 0.0
++    worst_end = None
++    curve = []
++    for t in trips:
++        cum += t["pnl"]
++        curve.append([t["exit_ts"], cum])
++        peak = max(peak, cum)
++        if peak - cum > worst:
++            worst, worst_end = peak - cum, t["exit_time"]
++    return {"curve": curve, "max_drawdown": worst, "max_drawdown_end": worst_end, "total": cum}
++
++
++def _group(trips: list[dict], key) -> list[dict]:
++    g: dict = defaultdict(list)
++    for t in trips:
++        g[key(t)].append(t["pnl"])
++    return [{"key": k, "n": len(v), "pnl": sum(v), "win_rate": sum(1 for x in v if x > 0) / len(v)}
++            for k, v in sorted(g.items())]
++
++
++WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
++
++
++def stats(trips: list[dict]) -> dict:
++    """Statistics of one currency's round trips (already in exit order). Empty input gives n = 0 and no invented numbers."""
++    n = len(trips)
++    if not n:
++        return {"n": 0}
++    pnl = [t["pnl"] for t in trips]
++    wins = [x for x in pnl if x > 0]
++    losses = [x for x in pnl if x < 0]
++    gw, gl = sum(wins), -sum(losses)
++    avg_win = _div(gw, len(wins))
++    avg_loss = _div(sum(losses), len(losses))
++    holds = [t["hold_s"] for t in trips]
++    dd = drawdown(trips)
++    flags = [x < 0 for x in pnl]
++    wk = _group(trips, lambda t: datetime.fromisoformat(t["entry_time"]).weekday())
++    hr = _group(trips, lambda t: datetime.fromisoformat(t["entry_time"]).hour)
++    return {
++        "n": n, "wins": len(wins), "losses": len(losses), "flat": n - len(wins) - len(losses),
++        "win_rate": len(wins) / n, "avg_win": avg_win, "avg_loss": avg_loss,
++        "payoff": _div(avg_win or 0.0, -(avg_loss or 0.0)) if avg_win is not None and avg_loss else None,
++        "expectancy": sum(pnl) / n, "profit_factor": _div(gw, gl), "total_pnl": sum(pnl), "gross_pnl": sum(t["pnl_gross"] for t in trips),
++        "fees": sum(t["fees"] for t in trips), "best": max(pnl), "worst": min(pnl),
++        "avg_hold_s": statistics.fmean(holds), "median_hold_s": statistics.median(holds),
++        "avg_hold_win_s": statistics.fmean([t["hold_s"] for t in trips if t["pnl"] > 0]) if wins else None,
++        "avg_hold_loss_s": statistics.fmean([t["hold_s"] for t in trips if t["pnl"] < 0]) if losses else None,
++        "max_consec_losses": _streak(flags), "max_consec_wins": _streak([x > 0 for x in pnl]),
++        "max_drawdown": dd["max_drawdown"], "max_drawdown_end": dd["max_drawdown_end"],
++        "by_symbol": sorted(_group(trips, lambda t: t["symbol"]), key=lambda g: g["pnl"]),
++        "by_weekday": [{**g, "key": WEEKDAYS[g["key"]]} for g in wk],
++        "by_hour": [{**g, "key": f"{g['key']:02d}:00"} for g in hr],
++        "equity": dd["curve"],
++        "first": trips[0]["entry_time"] if n else None, "last": trips[-1]["exit_time"] if n else None,
++    }
++
++
++def clean(obj):
++    """JSON-safe: non-finite floats become None."""
++    if isinstance(obj, dict):
++        return {k: clean(v) for k, v in obj.items()}
++    if isinstance(obj, list | tuple):
++        return [clean(v) for v in obj]
++    if isinstance(obj, float) and not math.isfinite(obj):
++        return None
++    return obj
+diff --git a/backend/openterm/journal/shadow.py b/backend/openterm/journal/shadow.py
+new file mode 100644
+index 0000000..5523bb4
+--- /dev/null
++++ b/backend/openterm/journal/shadow.py
+@@ -0,0 +1,130 @@
++"""The `journal.shadow` job, run inside a job worker (pandas and numpy load here only).
++
++Question it answers: "had I kept the same ENTRIES but used one fixed exit rule, how would I have done, compared with how I really exited?"
++Both sides are replayed through the same backtester on the same daily bars with the same costs, so the only difference between the two
++equity curves is the exit:
++
++- YOU: every round trip held from its real entry day to its real exit day.
++- RULE: the same entries, left on a fixed holding period, or on a fixed stop and target checked on daily closes.
++
++Simplifications, all printed in the result's labels: positions are equal-weight (your real sizes are not replayed), a trade is entered
++at the open of its entry day, intraday round trips become one daily bar, and a stop or target is only seen at a daily close.
++The result is a HISTORICAL SIMULATION, NOT A FORECAST.
++"""
++
++from __future__ import annotations
++
++from collections.abc import Callable
++from pathlib import Path
++
++import msgpack
++
++from ..bt.job import HEADLINE, _epoch, scalar_metrics, tail_risk
++
++SHOW_METRICS = ("total_return", "annual_return", "max_drawdown", "sharpe", "trade_count", "win_rate", "profit_loss_ratio")
++
++
++def _bars(df, day: str, side: str) -> int:
++    return int(df.index.searchsorted(day, side=side))
++
++
++def _sets(df, trips: list[dict], rule: dict | None):
++    """(you signal, rule signal, used, skipped) for one symbol's trips on its daily frame."""
++    import numpy as np
++
++    n = len(df)
++    opens, closes = df["open"].to_numpy(float), df["close"].to_numpy(float)
++    you = np.zeros(n + 1)
++    alt = np.zeros(n + 1)
++    used = skipped = 0
++    why: dict[str, int] = {}
++    for t in trips:
++        if t["entry"] < str(df.index[0].date()):
++            why["ENTRY BEFORE THE FIRST BAR"] = why.get("ENTRY BEFORE THE FIRST BAR", 0) + 1
++            continue
++        e = _bars(df, t["entry"], "left")
++        if e >= n:
++            why["ENTRY AFTER THE LAST BAR"] = why.get("ENTRY AFTER THE LAST BAR", 0) + 1
++            continue
++        lo = max(e - 1, 0)  # a signal acts on the next bar, so it starts the bar before the entry day
++        x = min(max(_bars(df, t["exit"], "left"), e, lo + 1), n - 1)
++        d = t["dir"]
++        you[lo] += d
++        you[x] -= d
++        used += 1
++        if rule["kind"] == "hold":
++            xr = min(e + rule["hold_days"], n - 1)
++        else:
++            end = min(e + rule["max_days"], n - 1)
++            ref = opens[e] if opens[e] > 0 else closes[e]
++            move = (closes[e:end + 1] / ref - 1.0) * d * 100.0
++            hit = (move <= -rule["stop_pct"]) | (move >= rule["target_pct"])
++            xr = e + int(np.argmax(hit)) if hit.any() else end
++        alt[lo] += d
++        alt[max(xr, lo + 1)] -= d
++    skipped = len(trips) - used
++    return np.clip(np.cumsum(you[:n]), -1, 1), np.clip(np.cumsum(alt[:n]), -1, 1), used, skipped, why
++
++
++def run(params: dict, progress: Callable[[float, str], None]) -> dict:
++    import pandas as pd
++
++    from ..bt import frames
++    from ..bt.engine import backtest
++
++    progress(0.05, "LOADING DATA")
++    payload = msgpack.unpackb(Path(params["data_path"]).read_bytes(), raw=False)
++    raw = {s: frames.from_bars(b) for s, b in payload["bars"].items()}
++    adjusted = all("adj_close" in f.columns and f["adj_close"].notna().any() for f in raw.values())
++    data = {s: frames.adjusted(f) if adjusted else f for s, f in raw.items()}
++    rule = params["rule"]
++    by_sym: dict[str, list[dict]] = {}
++    for t in params["trips"]:
++        by_sym.setdefault(t["symbol"], []).append(t)
++
++    progress(0.2, "BUILDING SIGNALS")
++    you, alt, used, skipped, why = {}, {}, 0, 0, {}
++    for s, df in data.items():
++        if len(df) < 2:
++            skipped += len(by_sym.get(s, []))
++            why["NOT ENOUGH BARS"] = why.get("NOT ENOUGH BARS", 0) + len(by_sym.get(s, []))
++            continue
++        a, b, u, k, w = _sets(df, by_sym.get(s, []), rule)
++        if u:
++            you[s], alt[s] = pd.Series(a, index=df.index), pd.Series(b, index=df.index)
++        used, skipped = used + u, skipped + k
++        for r, c in w.items():
++            why[r] = why.get(r, 0) + c
++    if not you:
++        raise ValueError("NO TRADE COULD BE REPLAYED: " + ", ".join(f"{k} x{v}" for k, v in why.items()))
++    dm = {s: data[s] for s in you}
++    cfg = dict(params["config"])
++    progress(0.4, "REPLAYING YOUR EXITS")
++    r_you = backtest(dm, you, cfg, engine=params["engine"], bars_per_year=params["bars_per_year"])
++    progress(0.7, "REPLAYING THE RULE")
++    r_alt = backtest(dm, alt, cfg, engine=params["engine"], bars_per_year=params["bars_per_year"])
++    progress(0.95, "WRITING RESULT")
++
++    def curve(res) -> list[list[float]]:
++        return [[_epoch(ts), round(float(v), 4)] for ts, v in res.equity.items()]
++
++    def mets(res) -> dict:
++        m = {**scalar_metrics(res.metrics), **tail_risk(res.equity)}
++        return {k: m.get(k) for k in (*SHOW_METRICS, "var_95", "es_95")}
++
++    cum, real = 0.0, []
++    for t in sorted((t for t in params["trips"] if t["symbol"] in dm), key=lambda t: t["exit"]):
++        cum += t["pnl"]
++        real.append([int(pd.Timestamp(t["exit"]).timestamp()), round(cum, 2)])
++    labels = {**params["labels"], "prices": "ADJ" if adjusted else "RAW", "rule": rule["text"],
++              "notes": ["EQUAL-WEIGHT POSITIONS: YOUR REAL SIZES ARE NOT REPLAYED",
++                        "ENTRIES AT THE OPEN OF YOUR ENTRY DAY; INTRADAY ROUND TRIPS BECOME ONE DAILY BAR",
++                        "A STOP OR TARGET IS ONLY SEEN AT A DAILY CLOSE",
++                        "BOTH CURVES USE THE SAME BARS AND THE SAME COSTS"]}
++    return {
++        "labels": labels, "currency": params["currency"], "rule": rule, "engine": params["engine"],
++        "you": {"equity": curve(r_you), "metrics": mets(r_you)}, "alt": {"equity": curve(r_alt), "metrics": mets(r_alt)},
++        "journal_pnl": {"curve": real, "total": cum, "currency": params["currency"]},
++        "replayed": used, "skipped_trips": skipped, "skipped_reasons": why, "skipped_symbols": params.get("skipped", []),
++        "symbols": sorted(dm), "headline": HEADLINE,
++    }
+diff --git a/backend/openterm/journal/store.py b/backend/openterm/journal/store.py
+new file mode 100644
+index 0000000..edc5026
+--- /dev/null
++++ b/backend/openterm/journal/store.py
+@@ -0,0 +1,94 @@
++"""SQLite store for the journal (tables `journal_trades`, `journal_imports`; migration 17) and the analysis built from it."""
++
++from __future__ import annotations
++
++import time
++
++import aiosqlite
++
++from . import diagnostics, roundtrips
++from .parsers import Trade
++
++COLS = "id, ts, time, symbol, side, qty, price, fee, currency, broker, order_id, trade_id, mult, import_id"
++MAX_TRIPS_SHOWN = 5000
++MAX_FILLS_SHOWN = 20000
++
++
++class JournalStore:
++    def __init__(self, db: aiosqlite.Connection):
++        self.db = db
++
++    async def add(self, trades: list[Trade], broker: str, name: str, ignored: int) -> dict:
++        """Stores new fills; a fill already stored (same de-duplication key) is skipped and counted."""
++        cur = await self.db.execute(
++            "INSERT INTO journal_imports (at, broker, name, rows, added, duplicates, ignored) VALUES (?,?,?,?,0,0,?)",
++            (time.time(), broker, name[:120], len(trades), ignored))
++        import_id = cur.lastrowid
++        before = self.db.total_changes
++        await self.db.executemany(
++            "INSERT OR IGNORE INTO journal_trades (dkey, ts, time, symbol, side, qty, price, fee, currency, broker, order_id, trade_id, mult, import_id)"
++            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
++            [(t.dkey, t.ts, t.time, t.symbol, t.side, t.qty, t.price, t.fee, t.currency, t.broker, t.order_id, t.trade_id, t.mult, import_id)
++             for t in trades])
++        added = self.db.total_changes - before
++        await self.db.execute("UPDATE journal_imports SET added=?, duplicates=? WHERE id=?", (added, len(trades) - added, import_id))
++        await self.db.commit()
++        return {"import_id": import_id, "broker": broker, "rows": len(trades), "added": added, "duplicates": len(trades) - added, "ignored": ignored}
++
++    async def fills(self, currency: str | None = None, symbol: str | None = None) -> list[dict]:
++        sql, args = f"SELECT {COLS} FROM journal_trades", []
++        where = []
++        if currency:
++            where.append("currency=?")
++            args.append(currency)
++        if symbol:
++            where.append("symbol=?")
++            args.append(symbol)
++        if where:
++            sql += " WHERE " + " AND ".join(where)
++        sql += " ORDER BY ts, id"
++        async with self.db.execute(sql, args) as cur:
++            names = [d[0] for d in cur.description]
++            return [dict(zip(names, r, strict=True)) async for r in cur]
++
++    async def summary(self) -> dict:
++        async with self.db.execute("SELECT broker, currency, COUNT(*), MIN(time), MAX(time) FROM journal_trades GROUP BY broker, currency") as cur:
++            groups = [{"broker": b, "currency": c, "fills": n, "first": lo, "last": hi} async for b, c, n, lo, hi in cur]
++        async with self.db.execute("SELECT id, at, broker, name, rows, added, duplicates, ignored FROM journal_imports ORDER BY id DESC LIMIT 20") as cur:
++            names = [d[0] for d in cur.description]
++            imports = [dict(zip(names, r, strict=True)) async for r in cur]
++        return {"fills": sum(g["fills"] for g in groups), "groups": groups, "imports": imports}
++
++    async def clear(self, broker: str | None = None) -> int:
++        cur = await self.db.execute("DELETE FROM journal_trades" + (" WHERE broker=?" if broker else ""), (broker,) if broker else ())
++        if not broker:
++            await self.db.execute("DELETE FROM journal_imports")
++        await self.db.commit()
++        return cur.rowcount
++
++    async def analysis(self, currency: str | None = None) -> dict:
++        fills = await self.fills()
++        if not fills:
++            return {"empty": True, "currencies": [], "currency": None}
++        trips, positions = roundtrips.match(fills)
++        n_fills: dict[str, int] = {}
++        n_trips: dict[str, int] = {}
++        for f in fills:
++            n_fills[f["currency"]] = n_fills.get(f["currency"], 0) + 1
++        for t in trips:
++            n_trips[t["currency"]] = n_trips.get(t["currency"], 0) + 1
++        currencies = sorted(n_fills, key=lambda c: (-n_trips.get(c, 0), -n_fills[c], c))
++        if currency and currency not in n_fills:
++            raise KeyError(currency)
++        cur = currency or currencies[0]
++        mine = [t for t in trips if t["currency"] == cur]
++        shown = mine[-MAX_TRIPS_SHOWN:]
++        return roundtrips.clean({
++            "empty": False, "currency": cur,
++            "currencies": [{"currency": c, "fills": n_fills[c], "round_trips": n_trips.get(c, 0)} for c in currencies],
++            "stats": roundtrips.stats(mine), "round_trips": shown, "round_trips_total": len(mine),
++            "open_positions": [p for p in positions if p["currency"] == cur],
++            "diagnostics": diagnostics.diagnose(mine, cur),
++            "labels": {"note": "FIFO ROUND TRIPS FROM YOUR FILLS, NET OF FEES IN THE FILE. NO CURRENCY IS CONVERTED. OPEN POSITIONS ARE NOT MARKED TO ANY PRICE.",
++                       "times": "TIMES ARE THE BROKER FILE'S OWN CLOCK"},
++        })
+diff --git a/backend/openterm/journal_routes.py b/backend/openterm/journal_routes.py
+new file mode 100644
+index 0000000..9ece2dd
+--- /dev/null
++++ b/backend/openterm/journal_routes.py
+@@ -0,0 +1,186 @@
++"""JRNL routes (`/api/journal/*`): import a broker file, list fills, the analysis (round trips, stats, diagnostics) and the Shadow Account job.
++
++The server parses and matches in plain Python; the Shadow Account fetches daily bars here, writes them to a content-addressed data file and
++submits an internal `journal.shadow` job, so pandas and the backtester load in a worker, never in the request thread (as BT and the quant jobs do).
++"""
++
++import asyncio
++import statistics
++from datetime import date
++
++from fastapi import APIRouter, Query, Request
++
++from .api import bt_of
++from .barfetch import fetch_bars
++from .bt import catalog
++from .errors import DataError
++from .http_util import error, jobs_of, json_object, svc, user
++from .jobs.kinds import BadParams
++from .journal import roundtrips
++from .journal.parsers import BROKERS, JournalError, inspect, parse
++from .journal.store import MAX_FILLS_SHOWN, JournalStore
++from .responses import Orjson, OrjsonRoute
++from .symbols import resolve
++from .userdata import UserDataError
++
++router = APIRouter(prefix="/api/journal", route_class=OrjsonRoute)
++HEADLINE = "HISTORICAL SIMULATION, NOT A FORECAST"
++MIN_TRIPS = 5
++RULES = ("hold", "stop_target")
++
++
++def store_of(request: Request) -> JournalStore:
++    return JournalStore(user(request).db)
++
++
++def bad(msg: str, detail: str | None = None) -> Orjson:
++    return Orjson({"error": msg, "kind": "bad_request", **({"detail": detail} if detail else {})}, status_code=400)
++
++
++async def _text_body(request: Request) -> tuple[dict, str]:
++    body = await json_object(request)
++    text = body.get("text")
++    if not isinstance(text, str) or not text.strip():
++        raise UserDataError("bad_request", "BODY NEEDS text: THE FILE'S CONTENT")
++    return body, text
++
++
++@router.post("/preview")
++async def journal_preview(request: Request):
++    """What a file looks like: the broker it is detected as, its columns and a guessed mapping (the generic mapping step)."""
++    try:
++        _, text = await _text_body(request)
++        return inspect(text)
++    except JournalError as e:
++        return bad(str(e), e.detail)
++    except UserDataError as e:
++        return error(e)
++
++
++@router.post("/import")
++async def journal_import(request: Request):
++    try:
++        body, text = await _text_body(request)
++        mapping = body.get("mapping")
++        if mapping is not None and not isinstance(mapping, dict):
++            raise UserDataError("bad_request", "MAPPING MUST BE AN OBJECT {field: column}")
++        broker, trades, ignored = parse(text, str(body.get("broker") or "auto").lower(), mapping, body.get("date_order"),
++                                        str(body.get("currency") or "USD"))
++    except JournalError as e:
++        return bad(str(e), e.detail)
++    except UserDataError as e:
++        return error(e)
++    out = await store_of(request).add(trades, broker, str(body.get("name") or f"pasted {broker}"), ignored)
++    return {**out, "first": min(t.time for t in trades), "last": max(t.time for t in trades)}
++
++
++@router.get("/summary")
++async def journal_summary(request: Request):
++    return {**await store_of(request).summary(), "brokers": list(BROKERS)}
++
++
++@router.get("/trades")
++async def journal_trades(request: Request, currency: str | None = Query(None, max_length=3), symbol: str | None = Query(None, max_length=32)):
++    fills = await store_of(request).fills(currency.upper() if currency else None, symbol.upper() if symbol else None)
++    return {"fills": fills[-MAX_FILLS_SHOWN:], "total": len(fills), "truncated": len(fills) > MAX_FILLS_SHOWN}
++
++
++@router.get("/analysis")
++async def journal_analysis(request: Request, currency: str | None = Query(None, max_length=3)):
++    try:
++        return await store_of(request).analysis(currency.upper() if currency else None)
++    except KeyError:
++        return bad(f"NO TRADES IN {currency.upper() if currency else ''}")
++
++
++@router.delete("/trades")
++async def journal_clear(request: Request, broker: str | None = Query(None, max_length=16)):
++    return {"deleted": await store_of(request).clear(broker.lower() if broker else None)}
++
++
++# --- Shadow Account -----------------------------------------------------------------------------------------------------------------------
++def _covering_range(first: date) -> str:
++    days = (date.today() - first).days + 45
++    for r, n in (("1Y", 366), ("2Y", 731), ("3Y", 1096), ("5Y", 1827), ("10Y", 3653), ("20Y", 7305)):
++        if days <= n:
++            return r
++    return "MAX"
++
++
++def _num(body: dict, key: str, lo: float, hi: float, default):
++    v = body.get(key)
++    if v is None or v == "":
++        return default
++    if isinstance(v, bool) or not isinstance(v, int | float) or not lo <= v <= hi:
++        raise UserDataError("bad_request", f"{key.upper()} MUST BE A NUMBER {lo:g}-{hi:g}")
++    return float(v)
++
++
++def shadow_rule(body: dict, trips: list[dict]) -> dict:
++    """The rule to replay. Its numbers come from the user's own trips unless typed: hold = the median holding time in days (at least 1),
++    stop = the median loss in percent, target = twice the stop."""
++    kind = str(body.get("rule") or "hold").lower()
++    if kind not in RULES:
++        raise UserDataError("bad_request", f"RULE MUST BE {' OR '.join(RULES)}")
++    med_days = statistics.median(t["hold_s"] for t in trips) / 86400
++    losses = [abs(t["pnl_pct"]) * 100 for t in trips if t["pnl"] < 0]
++    stop_auto = min(30.0, max(0.5, round(statistics.median(losses), 1))) if losses else 2.0
++    hold = _num(body, "hold_days", 1, 250, max(1, round(med_days)))
++    stop = _num(body, "stop_pct", 0.1, 50, stop_auto)
++    target = _num(body, "target_pct", 0.1, 200, round(2 * stop, 1))
++    if kind == "hold":
++        return {"kind": "hold", "hold_days": int(hold), "text": f"HOLD EVERY ENTRY {int(hold)} TRADING DAYS"}
++    return {"kind": "stop_target", "stop_pct": stop, "target_pct": target, "max_days": 60,
++            "text": f"STOP {stop:g}% (YOUR MEDIAN LOSS UNLESS TYPED), TARGET {target:g}%, AT MOST 60 DAYS; CHECKED ON DAILY CLOSES"}
++
++
++@router.post("/shadow")
++async def journal_shadow(request: Request):
++    try:
++        body = await json_object(request)
++        fills = await store_of(request).fills()
++        trips, _ = roundtrips.match(fills)
++        n_by: dict[str, int] = {}
++        for t in trips:
++            n_by[t["currency"]] = n_by.get(t["currency"], 0) + 1
++        cur = str(body.get("currency") or "").upper() or max(n_by, key=lambda c: (n_by[c], c), default="")
++        mine = [t for t in trips if t["currency"] == cur]
++        if len(mine) < MIN_TRIPS:
++            raise UserDataError("bad_request", f"NOT RUNNABLE: {len(mine)} ROUND TRIPS{' IN ' + cur if cur else ''}, NEED {MIN_TRIPS}. IMPORT MORE TRADES")
++        rule = shadow_rule(body, mine)
++        fees = _num(body, "fees_bps", 0, 1000, 0.0)
++        max_syms = int(_num(body, "max_symbols", 1, 12, 8))
++        count: dict[str, int] = {}
++        for t in mine:
++            count[t["symbol"]] = count.get(t["symbol"], 0) + 1
++        picked = sorted(count, key=lambda s: (-count[s], s))[:max_syms]
++        rows = [t for t in mine if t["symbol"] in picked]
++        first = date.fromisoformat(min(t["entry_time"][:10] for t in rows))
++        range_ = _covering_range(first)
++        sym_of = {s: resolve(s) for s in picked}
++        envs, errs = await fetch_bars(svc(request), sorted(set(sym_of.values())), range_, tolerate=True)
++        skipped = [{"symbol": s, "why": str(errs[sym_of[s]]).upper()[:160]} for s in picked if sym_of[s] in errs]
++        have = {s: sym_of[s] for s in picked if sym_of[s] in envs}
++        if not have:
++            raise DataError("unavailable", "NO DAILY BARS FOR ANY OF YOUR SYMBOLS: " + "; ".join(f"{k['symbol']}: {k['why']}" for k in skipped))
++        engine = catalog.engine_for(sorted(have.values()))
++        if engine not in catalog.BUILT or engine == "options":
++            raise UserDataError("bad_request", f"ENGINE {engine.upper()} CANNOT RUN THE SHADOW ACCOUNT")
++        payload = {"bars": {have[s]: envs[have[s]]["data"] for s in have}}
++        sha, path = await asyncio.to_thread(bt_of(request).write_data, payload)
++        trip_rows = [{"symbol": have[t["symbol"]], "entry": t["entry_time"][:10], "exit": t["exit_time"][:10],
++                      "dir": 1 if t["side"] == "long" else -1, "pnl": t["pnl"]} for t in rows if t["symbol"] in have]
++        params = {
++            "data_path": str(path), "data_sha": sha, "trips": trip_rows, "rule": rule, "engine": engine, "currency": cur,
++            "config": {"initial_cash": 100_000.0, **({"fees_bps": fees} if fees else {})}, "bars_per_year": 365 if engine == "crypto" else 252,
++            "skipped": skipped,
++            "labels": {"headline": HEADLINE, "engine": engine, "fees_bps": fees, "costs": catalog.COSTS.get(engine, ""),
++                       "sources": [{"symbol": have[s], "name": envs[have[s]].get("source"), "as_of": envs[have[s]].get("as_of"),
++                                    "age_s": envs[have[s]].get("age_s"), "stale": bool(envs[have[s]].get("stale"))} for s in have],
++                       "fixtures": bool(request.app.state.settings.openterm_fixtures)},
++        }
++        return Orjson(await jobs_of(request).submit("journal.shadow", params, internal=True))
++    except (UserDataError, DataError) as e:
++        return error(e)
++    except BadParams as e:
++        return error(DataError("bad_request", str(e)))
+diff --git a/backend/openterm/main.py b/backend/openterm/main.py
+index bfac881..717871a 100644
+--- a/backend/openterm/main.py
++++ b/backend/openterm/main.py
+@@ -19,6 +19,7 @@ from .cache import Cache
+ from .config import ROOT, get_settings, load_yaml
+ from .db import open_db
+ from .delivery.routes import router as delivery_router
++from .journal_routes import router as journal_router
+ from .kite_routes import router as kite_router
+ from .mcp.routes import router as mcp_router
+ from .origin import OriginGuardMiddleware
+@@ -213,6 +214,7 @@ app.include_router(brief_router)
+ app.include_router(ai_router)
+ app.include_router(mcp_router)
+ app.include_router(routes_run.theses_router)
++app.include_router(journal_router)
+ 
+ 
+ @app.get("/api/health")
+diff --git a/backend/openterm/mcp/server.py b/backend/openterm/mcp/server.py
+index b16ea85..624160b 100644
+--- a/backend/openterm/mcp/server.py
++++ b/backend/openterm/mcp/server.py
+@@ -27,9 +27,13 @@ INVALID_PARAMS = -32602
+ NOT_READ_ONLY = {"backtest_run", "quant"}
+ 
+ 
++# The user's own trade journal stays inside OpenTerm: it is not offered to outside MCP clients.
++PRIVATE = {"journal"}
++
++
+ def exposed_tools() -> list[toolbox.Tool]:
+-    """The tools a client may see: everything in the agent registry except document-only helpers."""
+-    return [t for t in toolbox.REGISTRY.values() if not t.doc_only]
++    """The tools a client may see: everything in the agent registry except document-only helpers and private ones."""
++    return [t for t in toolbox.REGISTRY.values() if not t.doc_only and t.name not in PRIVATE]
+ 
+ 
+ def tool_list() -> list[dict]:
