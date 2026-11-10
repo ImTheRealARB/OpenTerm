@@ -294,3 +294,21 @@ No key is needed for any of them. Each table header shows the source, its age an
 - `SEAS` uses the UTC date of each bar and daily history (adjusted close when the source has it); the month or ISO week still in progress is left out.
 
 - **Alert delivery (Phase 17).** Alerts are evaluated in the browser on live ticks, so email, Telegram and webhook messages go out only while an OpenTerm tab is open (the tab reports the firing to the backend, which then sends). Nothing is sent when the app is closed. Each firing is delivered once; every attempt is logged (last 500) in `deliveries`.
+
+## Token unlocks
+
+Re-checked 2026-11-10. Verdict: **no legitimate free source exists, so `UNLK` is still not built.**
+
+| Source | Finding | Why it fails |
+|---|---|---|
+| DefiLlama `api.llama.fi/emissions` | HTTP 402 "Upgrade to the paid API plan" | Documented endpoint is paid. |
+| DefiLlama Pro API (`/api/emissions`, `/api/emission/{protocol}`) | Listed under Pro in their `llms-pro.txt`; needs a paid key | Paid; their docs say there are only a free (no key) tier and the API plan. |
+| `defillama-datasets.llama.fi/emissions*` | Answers 200 with no key | Unadvertised storage behind the paid endpoint and the website. Using it would route around the paywall, so it is not used. |
+| Messari Token Unlocks API | Documented as an authenticated API endpoint; no public free tier or redistribution terms found | Not keyless; terms unverified. |
+| CoinGecko (Demo, keyless/free key) | No token unlock or vesting schedule endpoint | Only circulating / total / max supply; no schedule. |
+| Tokenomist (ex Token Unlocks) | API needs a key; free trial by form request, longer ranges and commercial use via sales | Not free for an open-source tool; the free website cannot be scraped. |
+| CryptoRank | Unlocks are in a paid API; pricing pages conflict | Paid. |
+| Third-party resellers (e.g. oanor) | Free quota of 100 to 760 calls a month, source is the DefiLlama dataset above | Rehosts the unadvertised dataset; unclear terms. |
+| On-chain vesting contracts | Each project uses its own contract layout; no standard schedule registry | Cannot be built generally without a per-token curated list, which would be hand-typed data. |
+
+Revisit if DefiLlama moves emissions to its free tier or another provider publishes a keyless schedule under open terms. Nothing was probed beyond single GET requests; no site was scraped.

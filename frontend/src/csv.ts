@@ -15,7 +15,12 @@ export function downloadCsv(name: string, header: string[], rows: CsvCell[][]): 
  */
 export function downloadText(file: string, text: string, opts: { type?: string; bom?: boolean } = {}): string {
   const { type = "text/plain;charset=utf-8", bom = false } = opts;
-  const url = URL.createObjectURL(new Blob(bom ? ["﻿", text] : [text], { type }));
+  return downloadBlob(file, new Blob(bom ? ["﻿", text] : [text], { type }));
+}
+
+/** Saves a binary file (a PDF report, an XLSX workbook); returns the file name. */
+export function downloadBlob(file: string, blob: Blob): string {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = file;

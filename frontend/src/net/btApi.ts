@@ -32,7 +32,7 @@ export const btApi = {
   runs: () => send<{ runs: BtRunCard[] }>("GET", "/api/bt/runs"),
   compare: (a: string, b: string) => send<BtCompare>("GET", `/api/bt/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   /** The server-built export: a CSV part (`trades`, `equity`, `metrics`) or the Pine Script of a rule run. */
-  exportText: async (id: string, fmt: "csv" | "pine", part = "trades"): Promise<string> => {
+  exportText: async (id: string, fmt: "csv" | "pine" | "mql5", part = "trades"): Promise<string> => {
     let res: Response;
     try {
       res = await fetch(`/api/bt/runs/${encodeURIComponent(id)}/export?fmt=${fmt}&part=${part}`);
@@ -44,6 +44,20 @@ export const btApi = {
       throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
     }
     return res.text();
+  },
+  /** The server-built binary export (PDF report, XLSX workbook). */
+  exportBlob: async (id: string, fmt: string): Promise<Blob> => {
+    let res: Response;
+    try {
+      res = await fetch(`/api/bt/runs/${encodeURIComponent(id)}/export?fmt=${fmt}`);
+    } catch {
+      throw new ApiError(0, "BACKEND DOWN");
+    }
+    if (!res.ok) {
+      const json = await res.json().catch(() => null);
+      throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
+    }
+    return res.blob();
   },
   /** Start a Monte Carlo (`mc`) or walk-forward (`wf`) job on a stored run. */
   validate: (id: string, kind: "mc" | "wf", body: Record<string, unknown> = {}) =>

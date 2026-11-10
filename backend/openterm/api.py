@@ -1036,7 +1036,8 @@ async def bt_import_delete(request: Request, symbol: str):
 
 @router.get("/bt/runs/{run_id}/export")
 async def bt_run_export(request: Request, run_id: str, fmt: str = "csv", part: str = "trades"):
-    from .bt import export
+    from .bt import export, export_report
+    from .bt.export_mql5 import mql5_expert
     from .bt.store import BtError
 
     try:
@@ -1045,16 +1046,22 @@ async def bt_run_export(request: Request, run_id: str, fmt: str = "csv", part: s
             if part not in export.PARTS:
                 raise BtError("bad_request", f"PART MUST BE {', '.join(export.PARTS).upper()}")
             body, name = export.run_csv(run, part), f"BT_{run_id}_{part}.csv"
-        elif fmt == "pine":
+        elif fmt in ("pine", "mql5"):
             if not run.get("rule"):
-                raise BtError("bad_request", "PINE EXPORT NEEDS A RULE STRATEGY",
+                raise BtError("bad_request", f"{fmt.upper()} EXPORT NEEDS A RULE STRATEGY",
                               detail="PYTHON STRATEGIES CANNOT BE TRANSLATED FAITHFULLY: EXPORT CSV, OR WRITE IT AS A RULE")
             lab = run["labels"] or {}
-            body = export.pine_script(run["rule"], short=bool(lab.get("short")), cash=float(run["config"].get("initial_cash", 100_000)),
-                                      fees_bps=float(lab.get("fees_bps") or 0), symbols=run["symbols"], interval=str(run["interval"]))
-            name = f"BT_{run_id}.pine"
+            translate = export.pine_script if fmt == "pine" else mql5_expert
+            body = translate(run["rule"], short=bool(lab.get("short")), cash=float(run["config"].get("initial_cash", 100_000)),
+                             fees_bps=float(lab.get("fees_bps") or 0), symbols=run["symbols"], interval=str(run["interval"]))
+            name = f"BT_{run_id}.pine" if fmt == "pine" else f"BT_{run_id}.mq5"
+        elif fmt in ("pdf", "xlsx"):
+            build = export_report.run_pdf if fmt == "pdf" else export_report.run_xlsx
+            data = await asyncio.to_thread(build, run)  # blocking and CPU-bound: off the event loop
+            mime = export_report.PDF_TYPE if fmt == "pdf" else export_report.XLSX_TYPE
+            return Response(data, media_type=mime, headers={"Content-Disposition": f'attachment; filename="BT_{run_id}.{fmt}"'})
         else:
-            raise BtError("bad_request", "FMT MUST BE CSV OR PINE")
+            raise BtError("bad_request", "FMT MUST BE CSV, PINE, MQL5, PDF OR XLSX")
     except BtError as e:
         return bt_error(e)
     return Response(body, media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{name}"'})

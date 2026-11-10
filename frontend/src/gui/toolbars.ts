@@ -135,6 +135,9 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Monte Carlo", key: "m", title: "Monte Carlo robustness check (M)" },
     { label: "Walk-forward", key: "w", title: "Walk-forward validation (W)" },
     { label: "Pine", key: "p", title: "Export as a Pine script (P)" },
+    { label: "MT5", key: "q", title: "Export as a MetaTrader 5 Expert Advisor, rule strategies (Q)" },
+    { label: "PDF", key: "d", title: "Export a PDF report of this run (D)" },
+    { label: "Excel", key: "b", title: "Export an Excel workbook of this run (B)" },
     // Only in the strategy editor (BT EDIT <name>). The panel handles T only while the code box is not focused,
     // and a press from this button moves focus to the panel first, so it works from the mouse too.
     { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },

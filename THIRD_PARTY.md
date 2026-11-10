@@ -102,8 +102,9 @@ Live data layers on the map (USGS earthquakes, NASA EONET, IMF PortWatch, AISstr
 | Library | Version | Licence | Notice |
 |---|---|---|---|
 | [TradingView Lightweight Charts™](https://www.tradingview.com/lightweight-charts/) | 5.2.1 | Apache-2.0 | Copyright © TradingView, Inc. The chart's logo is off (`attributionLogo: false`), so attribution and a link to <https://www.tradingview.com/> are shown in GP's status line and in the README, as the library's README asks. |
+| [fpdf2](https://github.com/py-pdf/fpdf2) (`BT EXPORT <runid> PDF`) | 2.9.0 | LGPL-3.0-only | Used unmodified as a separate Python package installed by the package manager (dynamic linking in LGPL terms); you may replace it with any compatible version. Its dependencies Pillow (MIT-CMU) and fontTools (MIT) come with it. Only the built-in core PDF fonts are used, no font files are bundled. |
 
-Other runtime dependencies (React, FastAPI, httpx, orjson, aiosqlite, apscheduler, websockets, keyring) are MIT, BSD or
+Other runtime dependencies (React, FastAPI, httpx, orjson, aiosqlite, apscheduler, websockets, keyring, XlsxWriter) are MIT, BSD or
 Apache-2.0 packages used unmodified through their package managers; their licences ship inside `node_modules/` and the
 Python environment.
 
