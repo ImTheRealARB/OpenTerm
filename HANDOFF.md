@@ -1,6 +1,7 @@
 # Handoff
 
-Last updated 2026-11-10. Branch with this file: `claude/gifted-galileo-w6y22a` (based on `main` at `b8a274a`).
+Last updated 2026-11-10 (end of session). Live branch: `claude/admiring-archimedes-7ibeha`; the older copy of this file on
+`claude/gifted-galileo-w6y22a` is superseded.
 
 ## Resume here
 
@@ -15,10 +16,24 @@ Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that 
 - Decided 2026-11-10: ORD and JRNL keep their in-panel text boxes (written into DESIGN.md as the only two exceptions).
   NSE MCP presets live-checked with the owner's approval (results in docs/MCP.md): 9 of 10 allowed tools answered, 1 got
   NSE's 403 from the cloud machine.
-- Left for the owner: (1) the HTML feature/command checklist lives only on the owner's other laptop; the owner will update it
-  (everything to add is in this branch's CHANGELOG entry of 2026-11-10 and docs/COMMANDS.md); (2) owner-only: updater signing
-  key + Actions secrets, Apple / Windows certificates, a macOS run, first `v*` tag of `release.yml`; (3) later, paid/keyed live
-  runs: Kite, Alpaca, IBKR, OpenRouter.
+- **What is left (owner decisions of 2026-11-10, end of session):**
+  1. **Merge to main.** Everything is on `claude/admiring-archimedes-7ibeha`, not on `main` yet. Open a PR from it (the owner asks
+     for one) and merge.
+  2. **First release `v0.1.0`.** After the merge, tag `main` `v0.1.0` (the app version in `desktop/package.json` and
+     `tauri.conf.json` is already 0.1.0; `release.yml` refuses a tag that does not match) and push the tag. GitHub builds Linux,
+     Windows and macOS into a DRAFT release; review and publish it. This workflow has never run, so check its logs the first time.
+  3. **Updater signing key: later.** `npx tauri signer generate`, then the secrets `TAURI_SIGNING_PRIVATE_KEY` (+ password) in
+     GitHub Settings -> Secrets and variables -> Actions. Without it releases build fine but do not self-update.
+  4. **NO Apple / Windows signing certificates (owner decision).** OpenTerm is an open-source GitHub project, not an app-store
+     app; unsigned installers are fine. Do not add certificate steps or ask again.
+  5. **macOS run: later, on the owner's MacBook Air.** `scripts/setup` then `scripts/start` (and optionally the desktop build in
+     `docs/DESKTOP.md`); report anything that breaks.
+  6. **Paid / keyed live runs: later.** The owner has an OpenCode Go subscription: set `OPENCODE_API_KEY` in `APIKEYS`, then
+     `SETTINGS AI PROVIDER OPENCODEGO`, and run AI, AI AUTO, SWARM and AI BT CODE once each against it (record with the
+     recorder scripts, label recordings). Kite, Alpaca and IBKR live checks need those broker accounts; until then they stay on
+     doc-shaped fixtures.
+  7. **HTML feature/command checklist:** lives only on the owner's other laptop; the owner updates it from this branch's
+     CHANGELOG entry of 2026-11-10 and `docs/COMMANDS.md`.
 - Optional: settings sync per-field merge; Chinese `references/` of elliott-wave, harmonic, ichimoku; bundle the backend as a
   Tauri sidecar.
 
