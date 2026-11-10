@@ -73,3 +73,7 @@ path, tool or module name contains `order`, `orders`, `gtt`, `margins` or `portf
 Ported functions pass Vibe's own numbers (cross-check) and their rewritten tests; the lookahead sentinel passes for every zoo factor; alpha scans run as jobs
 with a bench budget; every function has an e2e test with data and, where it needs a key, the `KEY REQUIRED` path; Kite works only read-only and its
 no-orders test passes; all gates green; bench 24/24 plus the new budgets.
+
+## ALPHA zoo extension (workstream 10)
+
+`ALPHA` now has 435 of Vibe's 478 factors (alpha101 82, qlib158 154, academic 12, gtja191 187); the 43 not ported (20 fundamental, 19 needing a sector map, 4 needing benchmark / Fama-French series) are listed with reasons in `docs/ALPHA_SKIPPED.md`. `FAMILY=CORE` (the default, the 29 above) keeps the run time of v1; `FAMILY=ALL` or one family runs more. `vwap` is the typical price and `amount` is volume x vwap (daily bars carry no traded value; Vibe's non-China rule), disclosed in the job notes. Tests: `backend/tests/test_alpha_zoo.py` (Vibe's own numbers replayed, truncate-and-compare lookahead test at five cut points, warm-up NaN test).

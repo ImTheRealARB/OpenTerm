@@ -15,11 +15,12 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 
-from ..quantlib.alpha import ZOO, compute_factor
+from ..quantlib.alpha import ZOO, compute_factor, extend_panel
 from ..quantlib.alpha.bench import categorise, t_stat
 from ..research.table import col, head, payload, section
 from . import common as cm
 
+_ZOO_BY_ID = {z["id"]: z for z in ZOO}
 MIN_NAMES = 5  # a cross-section needs at least this many names on a day
 MIN_BARS = 60
 KEEP_SHARE = 0.7  # a symbol with fewer than this share of the longest history is dropped
@@ -102,10 +103,12 @@ def factor_info(z: dict) -> str:
 
 
 def scan(panel: dict[str, pd.DataFrame], family: str | None, horizons: list[int], progress: Callable[[float, str], None]):
-    """(rows, skipped [(id, reason)]). The first horizon is the primary one the label and t-stat use."""
+    """(rows, skipped [(id, reason)]). `family`: None = every factor, "core" = the first 29 (the default), else one family.
+    The first horizon is the primary one the label and t-stat use."""
+    panel = extend_panel(panel)  # vwap / amount built once, not per factor
     close = panel["close"]
     fwd = {h: close.shift(-h) / close - 1.0 for h in horizons}
-    zoo = [z for z in ZOO if family in (None, z["family"])]
+    zoo = [z for z in ZOO if family in (None, z["family"]) or (family == "core" and z.get("core"))]
     rows: list[dict] = []
     skipped: list[tuple[str, str]] = []
     for i, z in enumerate(zoo, 1):
@@ -166,7 +169,10 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
         "LABEL (VIBE RULE): ALIVE = IC MEAN > 0.02, IC>0 ON AT LEAST 55% OF DAYS AND |T| > 2; REVERSED = IC MEAN < -0.02 AND |T| > 2; DEAD OTHERWISE",
         "T TREATS DAYS AS INDEPENDENT: FOR H > 1 THE FORWARD RETURNS OVERLAP AND T IS INFLATED. A SCAN OVER MANY FACTORS FINDS CHANCE WINNERS",
         "PRICE AND VOLUME FACTORS ONLY, NO FUNDAMENTALS; NOT A TRADING SIGNAL",
+        f"FAMILY {(params.get('family') or 'all').upper()}: CORE (THE DEFAULT) IS THE FIRST 29 FACTORS; FAMILY=ALL RUNS EVERY PORTED FACTOR AND TAKES LONGER",
     ]
+    if any(r["family"] == "gtja191" or "vwap" in (_ZOO_BY_ID[r["id"]].get("columns_required") or []) for r in rows):
+        notes.append("VWAP IS THE TYPICAL PRICE (O+H+L+C)/4 AND AMOUNT IS VOLUME*VWAP: DAILY BARS CARRY NO TRADED VALUE. GTJA 191 WAS DESIGNED FOR CHINA A-SHARES")
     if dropped or failed:
         gone = sorted({*dropped, *failed})
         notes.append(f"{len(gone)} NAMES DROPPED (NO BARS OR TOO FEW): {', '.join(gone[:8])}{' ...' if len(gone) > 8 else ''}")

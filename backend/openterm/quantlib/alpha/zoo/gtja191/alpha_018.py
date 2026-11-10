@@ -1,0 +1,53 @@
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/gtja191/alpha_018.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
+
+# ============================================================
+# 中文名称: GTJA #18 - 条件量价强度
+# 简要说明: RANK(DELTA(VWAP, 1))^3 / RANK(CORR(LOW, MEAN(VOLUME,50), 12))，VWAP一阶变化与量价相关性的比率。
+# 典型用途: 用于识别VWAP加速变化时的交易机会。
+# ============================================================
+"""GTJA Alpha #18.
+
+Formula: CLOSE/DELAY(CLOSE,5)
+Source: 国泰君安 191 alpha 研报 (2014), alpha 18."""
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from openterm.quantlib.alpha.base import (
+    decay_linear,
+    delta,
+    rank,
+    safe_div,
+    signed_power,
+    ts_argmax,
+    ts_argmin,
+    ts_corr,
+    ts_cov,
+    ts_max,
+    ts_mean,
+    ts_min,
+    ts_rank,
+    ts_std,
+)
+
+__alpha_meta__ = {
+    "id": "gtja191_018",
+    "theme": ['momentum'],
+    "formula_latex": 'CLOSE/DELAY(CLOSE,5)',
+    "columns_required": ['close'],
+    "extras_required": [],
+    "requires_sector": False,
+    "universe": ["equity_cn"],
+    "frequency": ["1d"],
+    "decay_horizon": 5,
+    "min_warmup_bars": 6,
+    "notes": '5d price ratio.',
+}
+
+def compute(panel: dict) -> pd.DataFrame:
+    c = panel["close"]
+    return safe_div(c, c.shift(5))

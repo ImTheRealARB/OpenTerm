@@ -1,6 +1,6 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/academic/smb.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/academic/smb.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 
 # ============================================================
 # 中文名称: 市值规模因子 (SMB)

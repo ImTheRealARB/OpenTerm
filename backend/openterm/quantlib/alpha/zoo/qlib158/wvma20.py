@@ -1,7 +1,6 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/qlib158/wvma20.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-# ruff: noqa: I001
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/qlib158/wvma20.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 # Adapted from microsoft/qlib@be725493eb1a6bbb42bf11b37aa7669f59610ff1:qlib/contrib/data/loader.py
 # (MIT). Copyright (c) Microsoft Corporation.
 # ============================================================
@@ -23,7 +22,7 @@ __alpha_meta__ = {
     'universe': ['equity_us', 'equity_cn', 'equity_hk', 'equity_in', 'equity_kr'],
     'frequency': ['1d'],
     'decay_horizon': 20,
-    'min_warmup_bars': 20,
+    'min_warmup_bars': 21,
 }
 
 

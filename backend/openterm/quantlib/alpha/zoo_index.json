@@ -1,0 +1,5320 @@
+[
+ {
+  "id": "alpha101_001",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_001.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 25,
+  "core": true
+ },
+ {
+  "id": "alpha101_002",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_002.py",
+  "columns_required": [
+   "open",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 8,
+  "core": true
+ },
+ {
+  "id": "alpha101_003",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_003.py",
+  "columns_required": [
+   "open",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": true
+ },
+ {
+  "id": "alpha101_004",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_004.py",
+  "columns_required": [
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 9,
+  "core": true
+ },
+ {
+  "id": "alpha101_005",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_005.py",
+  "columns_required": [
+   "open",
+   "close",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_006",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_006.py",
+  "columns_required": [
+   "open",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": true
+ },
+ {
+  "id": "alpha101_007",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_007.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 67,
+  "core": false
+ },
+ {
+  "id": "alpha101_008",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_008.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 16,
+  "core": false
+ },
+ {
+  "id": "alpha101_009",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_009.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": true
+ },
+ {
+  "id": "alpha101_010",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_010.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "alpha101_011",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_011.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 4,
+  "core": false
+ },
+ {
+  "id": "alpha101_012",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_012.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 2,
+  "core": true
+ },
+ {
+  "id": "alpha101_013",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_013.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": true
+ },
+ {
+  "id": "alpha101_014",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_014.py",
+  "columns_required": [
+   "open",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_015",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_015.py",
+  "columns_required": [
+   "high",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "alpha101_016",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_016.py",
+  "columns_required": [
+   "high",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": true
+ },
+ {
+  "id": "alpha101_017",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_017.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 24,
+  "core": false
+ },
+ {
+  "id": "alpha101_018",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_018.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_019",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_019.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 251,
+  "core": false
+ },
+ {
+  "id": "alpha101_020",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_020.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "alpha101_021",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_021.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": true
+ },
+ {
+  "id": "alpha101_022",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_022.py",
+  "columns_required": [
+   "high",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "alpha101_023",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_023.py",
+  "columns_required": [
+   "high",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "alpha101_024",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_024.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 200,
+  "core": false
+ },
+ {
+  "id": "alpha101_025",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_025.py",
+  "columns_required": [
+   "high",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "alpha101_026",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_026.py",
+  "columns_required": [
+   "high",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "alpha101_027",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_027.py",
+  "columns_required": [
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "alpha101_028",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_028.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 24,
+  "core": false
+ },
+ {
+  "id": "alpha101_029",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_029.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 12,
+  "core": false
+ },
+ {
+  "id": "alpha101_030",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_030.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "alpha101_031",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_031.py",
+  "columns_required": [
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "alpha101_032",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_032.py",
+  "columns_required": [
+   "close",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 235,
+  "core": false
+ },
+ {
+  "id": "alpha101_033",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_033.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 1,
+  "core": true
+ },
+ {
+  "id": "alpha101_034",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_034.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": true
+ },
+ {
+  "id": "alpha101_035",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_035.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 33,
+  "core": false
+ },
+ {
+  "id": "alpha101_036",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_036.py",
+  "columns_required": [
+   "open",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 200,
+  "core": false
+ },
+ {
+  "id": "alpha101_037",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_037.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 201,
+  "core": false
+ },
+ {
+  "id": "alpha101_038",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_038.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_039",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_039.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 251,
+  "core": false
+ },
+ {
+  "id": "alpha101_040",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_040.py",
+  "columns_required": [
+   "high",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_041",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_041.py",
+  "columns_required": [
+   "high",
+   "low",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "alpha101_042",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_042.py",
+  "columns_required": [
+   "close",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "alpha101_043",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_043.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 39,
+  "core": false
+ },
+ {
+  "id": "alpha101_044",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_044.py",
+  "columns_required": [
+   "high",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "alpha101_045",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_045.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 25,
+  "core": false
+ },
+ {
+  "id": "alpha101_046",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_046.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "alpha101_047",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_047.py",
+  "columns_required": [
+   "high",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "alpha101_049",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_049.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "alpha101_050",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_050.py",
+  "columns_required": [
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 9,
+  "core": false
+ },
+ {
+  "id": "alpha101_051",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_051.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "alpha101_052",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_052.py",
+  "columns_required": [
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 241,
+  "core": false
+ },
+ {
+  "id": "alpha101_053",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_053.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_054",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_054.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "alpha101_055",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_055.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 17,
+  "core": false
+ },
+ {
+  "id": "alpha101_057",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_057.py",
+  "columns_required": [
+   "close",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "alpha101_060",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_060.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "alpha101_061",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_061.py",
+  "columns_required": [
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 197,
+  "core": false
+ },
+ {
+  "id": "alpha101_062",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_062.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 50,
+  "core": false
+ },
+ {
+  "id": "alpha101_064",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_064.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 148,
+  "core": false
+ },
+ {
+  "id": "alpha101_065",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_065.py",
+  "columns_required": [
+   "open",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 73,
+  "core": false
+ },
+ {
+  "id": "alpha101_066",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_066.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 17,
+  "core": false
+ },
+ {
+  "id": "alpha101_068",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_068.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 36,
+  "core": false
+ },
+ {
+  "id": "alpha101_071",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_071.py",
+  "columns_required": [
+   "open",
+   "low",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 226,
+  "core": false
+ },
+ {
+  "id": "alpha101_072",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_072.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 57,
+  "core": false
+ },
+ {
+  "id": "alpha101_073",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_073.py",
+  "columns_required": [
+   "open",
+   "low",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "alpha101_074",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_074.py",
+  "columns_required": [
+   "high",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 80,
+  "core": false
+ },
+ {
+  "id": "alpha101_075",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_075.py",
+  "columns_required": [
+   "low",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "alpha101_077",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_077.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 47,
+  "core": false
+ },
+ {
+  "id": "alpha101_078",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_078.py",
+  "columns_required": [
+   "low",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 65,
+  "core": false
+ },
+ {
+  "id": "alpha101_081",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_081.py",
+  "columns_required": [
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 80,
+  "core": false
+ },
+ {
+  "id": "alpha101_083",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_083.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "alpha101_084",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_084.py",
+  "columns_required": [
+   "close",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 35,
+  "core": false
+ },
+ {
+  "id": "alpha101_085",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_085.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 39,
+  "core": false
+ },
+ {
+  "id": "alpha101_086",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_086.py",
+  "columns_required": [
+   "open",
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 58,
+  "core": false
+ },
+ {
+  "id": "alpha101_088",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_088.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 94,
+  "core": false
+ },
+ {
+  "id": "alpha101_092",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_092.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 49,
+  "core": false
+ },
+ {
+  "id": "alpha101_094",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_094.py",
+  "columns_required": [
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 82,
+  "core": false
+ },
+ {
+  "id": "alpha101_095",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_095.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 81,
+  "core": false
+ },
+ {
+  "id": "alpha101_096",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_096.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "vwap"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 103,
+  "core": false
+ },
+ {
+  "id": "alpha101_098",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_098.py",
+  "columns_required": [
+   "open",
+   "volume",
+   "vwap",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 56,
+  "core": false
+ },
+ {
+  "id": "alpha101_099",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_099.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 87,
+  "core": false
+ },
+ {
+  "id": "alpha101_101",
+  "family": "alpha101",
+  "file": "openterm/quantlib/alpha/zoo/alpha101/alpha_101.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 1,
+  "core": true
+ },
+ {
+  "id": "qlib158_beta10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/beta10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": true
+ },
+ {
+  "id": "qlib158_beta20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/beta20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_beta30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/beta30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_beta5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/beta5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_beta60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/beta60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntd10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntd10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntd20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntd20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntd30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntd30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntd5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntd5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntd60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntd60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntn10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntn10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntn20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntn20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntn30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntn30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntn5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntn5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntn60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntn60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntp10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntp10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntp20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntp20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntp30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntp30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntp5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntp5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_cntp60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cntp60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_cord10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cord10.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_cord20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cord20.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_cord30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cord30.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_cord5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cord5.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_cord60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/cord60.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_corr10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/corr10.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": true
+ },
+ {
+  "id": "qlib158_corr20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/corr20.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_corr30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/corr30.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_corr5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/corr5.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_corr60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/corr60.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_imax10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imax10.py",
+  "columns_required": [
+   "high"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_imax20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imax20.py",
+  "columns_required": [
+   "high"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_imax30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imax30.py",
+  "columns_required": [
+   "high"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_imax5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imax5.py",
+  "columns_required": [
+   "high"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_imax60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imax60.py",
+  "columns_required": [
+   "high"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_imin10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imin10.py",
+  "columns_required": [
+   "low"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_imin20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imin20.py",
+  "columns_required": [
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_imin30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imin30.py",
+  "columns_required": [
+   "low"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_imin5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imin5.py",
+  "columns_required": [
+   "low"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_imin60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imin60.py",
+  "columns_required": [
+   "low"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_imxd10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imxd10.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_imxd20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imxd20.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_imxd30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imxd30.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_imxd5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imxd5.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_imxd60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/imxd60.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_klen",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/klen.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_klow",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/klow.py",
+  "columns_required": [
+   "open",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_klow2",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/klow2.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_kmid",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/kmid.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_kmid2",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/kmid2.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_ksft",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ksft.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_ksft2",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ksft2.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_kup",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/kup.py",
+  "columns_required": [
+   "open",
+   "high",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_kup2",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/kup2.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "qlib158_ma10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ma10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_ma20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ma20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": true
+ },
+ {
+  "id": "qlib158_ma30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ma30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_ma5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ma5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_ma60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/ma60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_max10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/max10.py",
+  "columns_required": [
+   "high",
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_max20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/max20.py",
+  "columns_required": [
+   "high",
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_max30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/max30.py",
+  "columns_required": [
+   "high",
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_max5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/max5.py",
+  "columns_required": [
+   "high",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_max60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/max60.py",
+  "columns_required": [
+   "high",
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_min10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/min10.py",
+  "columns_required": [
+   "low",
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_min20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/min20.py",
+  "columns_required": [
+   "low",
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_min30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/min30.py",
+  "columns_required": [
+   "low",
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_min5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/min5.py",
+  "columns_required": [
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_min60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/min60.py",
+  "columns_required": [
+   "low",
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtld10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtld10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtld20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtld20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtld30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtld30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtld5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtld5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtld60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtld60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtlu10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtlu10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtlu20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtlu20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtlu30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtlu30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtlu5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtlu5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_qtlu60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/qtlu60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_rank10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rank10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_rank20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rank20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": true
+ },
+ {
+  "id": "qlib158_rank30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rank30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_rank5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rank5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_rank60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rank60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_resi10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/resi10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": true
+ },
+ {
+  "id": "qlib158_resi20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/resi20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_resi30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/resi30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_resi5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/resi5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_resi60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/resi60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_roc10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/roc10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": true
+ },
+ {
+  "id": "qlib158_roc20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/roc20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_roc30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/roc30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_roc5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/roc5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_roc60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/roc60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsqr10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsqr10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsqr20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsqr20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": true
+ },
+ {
+  "id": "qlib158_rsqr30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsqr30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsqr5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsqr5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsqr60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsqr60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsv10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsv10.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": true
+ },
+ {
+  "id": "qlib158_rsv20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsv20.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsv30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsv30.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsv5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsv5.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_rsv60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/rsv60.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_std10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/std10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_std20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/std20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": true
+ },
+ {
+  "id": "qlib158_std30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/std30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_std5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/std5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_std60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/std60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumd10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumd10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumd20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumd20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumd30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumd30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumd5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumd5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumd60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumd60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumn10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumn10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumn20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumn20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumn30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumn30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumn5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumn5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_sumn60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sumn60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_sump10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sump10.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_sump20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sump20.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_sump30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sump30.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_sump5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sump5.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_sump60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/sump60.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_vma10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vma10.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_vma20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vma20.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_vma30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vma30.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_vma5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vma5.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_vma60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vma60.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_vstd10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vstd10.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "qlib158_vstd20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vstd20.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "qlib158_vstd30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vstd30.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 30,
+  "core": false
+ },
+ {
+  "id": "qlib158_vstd5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vstd5.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "qlib158_vstd60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vstd60.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumd10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumd10.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumd20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumd20.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumd30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumd30.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumd5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumd5.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumd60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumd60.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumn10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumn10.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumn20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumn20.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumn30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumn30.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumn5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumn5.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsumn60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsumn60.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsump10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsump10.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsump20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsump20.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsump30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsump30.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsump5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsump5.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_vsump60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/vsump60.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "qlib158_wvma10",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/wvma10.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "qlib158_wvma20",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/wvma20.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": true
+ },
+ {
+  "id": "qlib158_wvma30",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/wvma30.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "qlib158_wvma5",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/wvma5.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "qlib158_wvma60",
+  "family": "qlib158",
+  "file": "openterm/quantlib/alpha/zoo/qlib158/wvma60.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "academic_bab",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/bab.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 252,
+  "min_warmup_bars": 253,
+  "core": false
+ },
+ {
+  "id": "academic_carhart_mom",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/carhart_mom.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 253,
+  "core": false
+ },
+ {
+  "id": "academic_cma",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/cma.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 120,
+  "core": false
+ },
+ {
+  "id": "academic_corr_rewire",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/corr_rewire.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 140,
+  "core": false
+ },
+ {
+  "id": "academic_high52w",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/high52w.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 252,
+  "core": false
+ },
+ {
+  "id": "academic_hml",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/hml.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 253,
+  "core": false
+ },
+ {
+  "id": "academic_illiq",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/illiq.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 21,
+  "min_warmup_bars": 22,
+  "core": true
+ },
+ {
+  "id": "academic_mkt_rf",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/mkt_rf.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 21,
+  "min_warmup_bars": 22,
+  "core": true
+ },
+ {
+  "id": "academic_retskew",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/retskew.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": true
+ },
+ {
+  "id": "academic_rmw",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/rmw.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 61,
+  "core": true
+ },
+ {
+  "id": "academic_smb",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/smb.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 60,
+  "core": true
+ },
+ {
+  "id": "academic_strev",
+  "family": "academic",
+  "file": "openterm/quantlib/alpha/zoo/academic/strev.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 21,
+  "min_warmup_bars": 22,
+  "core": true
+ },
+ {
+  "id": "gtja191_001",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_001.py",
+  "columns_required": [
+   "volume",
+   "close",
+   "open"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_002",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_002.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_003",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_003.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_004",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_004.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 8,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_005",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_005.py",
+  "columns_required": [
+   "volume",
+   "high"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "gtja191_006",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_006.py",
+  "columns_required": [
+   "open",
+   "high"
+  ],
+  "decay_horizon": 4,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_007",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_007.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 3,
+  "min_warmup_bars": 4,
+  "core": false
+ },
+ {
+  "id": "gtja191_008",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_008.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 4,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_009",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_009.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 7,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_010",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_010.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 25,
+  "core": false
+ },
+ {
+  "id": "gtja191_011",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_011.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_012",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_012.py",
+  "columns_required": [
+   "open",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_013",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_013.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_014",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_014.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_015",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_015.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_016",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_016.py",
+  "columns_required": [
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 9,
+  "core": false
+ },
+ {
+  "id": "gtja191_017",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_017.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 15,
+  "core": false
+ },
+ {
+  "id": "gtja191_018",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_018.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_019",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_019.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_020",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_020.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_021",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_021.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "gtja191_022",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_022.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 9,
+  "core": false
+ },
+ {
+  "id": "gtja191_023",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_023.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_024",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_024.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_025",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_025.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 9,
+  "min_warmup_bars": 251,
+  "core": false
+ },
+ {
+  "id": "gtja191_026",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_026.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 7,
+  "min_warmup_bars": 235,
+  "core": false
+ },
+ {
+  "id": "gtja191_027",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_027.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 18,
+  "core": false
+ },
+ {
+  "id": "gtja191_028",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_028.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 9,
+  "min_warmup_bars": 9,
+  "core": false
+ },
+ {
+  "id": "gtja191_029",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_029.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_031",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_031.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 12,
+  "core": false
+ },
+ {
+  "id": "gtja191_032",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_032.py",
+  "columns_required": [
+   "high",
+   "volume"
+  ],
+  "decay_horizon": 3,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_033",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_033.py",
+  "columns_required": [
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 241,
+  "core": false
+ },
+ {
+  "id": "gtja191_034",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_034.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 12,
+  "core": false
+ },
+ {
+  "id": "gtja191_035",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_035.py",
+  "columns_required": [
+   "open",
+   "volume"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 23,
+  "core": false
+ },
+ {
+  "id": "gtja191_036",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_036.py",
+  "columns_required": [
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_037",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_037.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 16,
+  "core": false
+ },
+ {
+  "id": "gtja191_038",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_038.py",
+  "columns_required": [
+   "high"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_039",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_039.py",
+  "columns_required": [
+   "close",
+   "open",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 14,
+  "min_warmup_bars": 240,
+  "core": false
+ },
+ {
+  "id": "gtja191_040",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_040.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 26,
+  "min_warmup_bars": 27,
+  "core": false
+ },
+ {
+  "id": "gtja191_041",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_041.py",
+  "columns_required": [
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 8,
+  "core": false
+ },
+ {
+  "id": "gtja191_042",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_042.py",
+  "columns_required": [
+   "high",
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_043",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_043.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_044",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_044.py",
+  "columns_required": [
+   "low",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 27,
+  "core": false
+ },
+ {
+  "id": "gtja191_045",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_045.py",
+  "columns_required": [
+   "close",
+   "open",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 164,
+  "core": false
+ },
+ {
+  "id": "gtja191_046",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_046.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 24,
+  "min_warmup_bars": 24,
+  "core": false
+ },
+ {
+  "id": "gtja191_047",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_047.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 9,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_048",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_048.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_049",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_049.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_050",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_050.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_051",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_051.py",
+  "columns_required": [
+   "high",
+   "low"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_052",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_052.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 26,
+  "min_warmup_bars": 27,
+  "core": false
+ },
+ {
+  "id": "gtja191_053",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_053.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_054",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_054.py",
+  "columns_required": [
+   "close",
+   "open"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_055",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_055.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low",
+   "open"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_056",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_056.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 19,
+  "min_warmup_bars": 70,
+  "core": false
+ },
+ {
+  "id": "gtja191_057",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_057.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 9,
+  "min_warmup_bars": 9,
+  "core": false
+ },
+ {
+  "id": "gtja191_058",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_058.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_059",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_059.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_060",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_060.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_061",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_061.py",
+  "columns_required": [
+   "volume",
+   "amount",
+   "low"
+  ],
+  "decay_horizon": 17,
+  "min_warmup_bars": 103,
+  "core": false
+ },
+ {
+  "id": "gtja191_062",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_062.py",
+  "columns_required": [
+   "high",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_063",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_063.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_064",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_064.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 14,
+  "min_warmup_bars": 88,
+  "core": false
+ },
+ {
+  "id": "gtja191_065",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_065.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_066",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_066.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_067",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_067.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 24,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_068",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_068.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_069",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_069.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_070",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_070.py",
+  "columns_required": [
+   "amount"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_071",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_071.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 24,
+  "min_warmup_bars": 24,
+  "core": false
+ },
+ {
+  "id": "gtja191_072",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_072.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_073",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_073.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 16,
+  "min_warmup_bars": 35,
+  "core": false
+ },
+ {
+  "id": "gtja191_074",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_074.py",
+  "columns_required": [
+   "low",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 65,
+  "core": false
+ },
+ {
+  "id": "gtja191_075",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_075.py",
+  "columns_required": [
+   "close",
+   "open"
+  ],
+  "decay_horizon": 50,
+  "min_warmup_bars": 51,
+  "core": false
+ },
+ {
+  "id": "gtja191_076",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_076.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_077",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_077.py",
+  "columns_required": [
+   "high",
+   "low",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 47,
+  "core": false
+ },
+ {
+  "id": "gtja191_078",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_078.py",
+  "columns_required": [
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 23,
+  "core": false
+ },
+ {
+  "id": "gtja191_079",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_079.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_080",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_080.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_081",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_081.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 21,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_082",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_082.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 6,
+  "core": false
+ },
+ {
+  "id": "gtja191_083",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_083.py",
+  "columns_required": [
+   "high",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_084",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_084.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_085",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_085.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 39,
+  "core": false
+ },
+ {
+  "id": "gtja191_086",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_086.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_087",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_087.py",
+  "columns_required": [
+   "close",
+   "open",
+   "high",
+   "low",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 11,
+  "min_warmup_bars": 17,
+  "core": false
+ },
+ {
+  "id": "gtja191_088",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_088.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_089",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_089.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 27,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_090",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_090.py",
+  "columns_required": [
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_091",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_091.py",
+  "columns_required": [
+   "close",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 44,
+  "core": false
+ },
+ {
+  "id": "gtja191_092",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_092.py",
+  "columns_required": [
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 210,
+  "core": false
+ },
+ {
+  "id": "gtja191_093",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_093.py",
+  "columns_required": [
+   "open",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_094",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_094.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "gtja191_095",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_095.py",
+  "columns_required": [
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_096",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_096.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 9,
+  "min_warmup_bars": 9,
+  "core": false
+ },
+ {
+  "id": "gtja191_097",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_097.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_098",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_098.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 200,
+  "core": false
+ },
+ {
+  "id": "gtja191_099",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_099.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 5,
+  "core": false
+ },
+ {
+  "id": "gtja191_100",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_100.py",
+  "columns_required": [
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_101",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_101.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 80,
+  "core": false
+ },
+ {
+  "id": "gtja191_102",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_102.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_103",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_103.py",
+  "columns_required": [
+   "close",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_104",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_104.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_105",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_105.py",
+  "columns_required": [
+   "open",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_106",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_106.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_107",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_107.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_108",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_108.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 125,
+  "core": false
+ },
+ {
+  "id": "gtja191_109",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_109.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_110",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_110.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_111",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_111.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 11,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_112",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_112.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_113",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_113.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 25,
+  "core": false
+ },
+ {
+  "id": "gtja191_114",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_114.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_115",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_115.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 39,
+  "core": false
+ },
+ {
+  "id": "gtja191_116",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_116.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_117",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_117.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 32,
+  "min_warmup_bars": 33,
+  "core": false
+ },
+ {
+  "id": "gtja191_118",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_118.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_119",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_119.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 26,
+  "min_warmup_bars": 56,
+  "core": false
+ },
+ {
+  "id": "gtja191_120",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_120.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_121",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_121.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 80,
+  "core": false
+ },
+ {
+  "id": "gtja191_122",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_122.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 13,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_123",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_123.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 87,
+  "core": false
+ },
+ {
+  "id": "gtja191_124",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_124.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 30,
+  "min_warmup_bars": 31,
+  "core": false
+ },
+ {
+  "id": "gtja191_125",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_125.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 115,
+  "core": false
+ },
+ {
+  "id": "gtja191_126",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_126.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_127",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_127.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 23,
+  "core": false
+ },
+ {
+  "id": "gtja191_128",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_128.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 14,
+  "min_warmup_bars": 15,
+  "core": false
+ },
+ {
+  "id": "gtja191_129",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_129.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_130",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_130.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 40,
+  "min_warmup_bars": 57,
+  "core": false
+ },
+ {
+  "id": "gtja191_131",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_131.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 50,
+  "min_warmup_bars": 84,
+  "core": false
+ },
+ {
+  "id": "gtja191_132",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_132.py",
+  "columns_required": [
+   "close",
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_133",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_133.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_134",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_134.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_135",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_135.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 22,
+  "core": false
+ },
+ {
+  "id": "gtja191_136",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_136.py",
+  "columns_required": [
+   "open",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_137",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_137.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_138",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_138.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 119,
+  "core": false
+ },
+ {
+  "id": "gtja191_139",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_139.py",
+  "columns_required": [
+   "open",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 10,
+  "min_warmup_bars": 10,
+  "core": false
+ },
+ {
+  "id": "gtja191_140",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_140.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 94,
+  "core": false
+ },
+ {
+  "id": "gtja191_141",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_141.py",
+  "columns_required": [
+   "high",
+   "volume",
+   "close"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 23,
+  "core": false
+ },
+ {
+  "id": "gtja191_142",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_142.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 24,
+  "core": false
+ },
+ {
+  "id": "gtja191_143",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_143.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_144",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_144.py",
+  "columns_required": [
+   "close",
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_145",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_145.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 26,
+  "min_warmup_bars": 26,
+  "core": false
+ },
+ {
+  "id": "gtja191_146",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_146.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_147",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_147.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 23,
+  "core": false
+ },
+ {
+  "id": "gtja191_148",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_148.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 73,
+  "core": false
+ },
+ {
+  "id": "gtja191_150",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_150.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low",
+   "volume"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_151",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_151.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_152",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_152.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 26,
+  "min_warmup_bars": 37,
+  "core": false
+ },
+ {
+  "id": "gtja191_153",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_153.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 24,
+  "min_warmup_bars": 24,
+  "core": false
+ },
+ {
+  "id": "gtja191_154",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_154.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 197,
+  "core": false
+ },
+ {
+  "id": "gtja191_155",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_155.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 27,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_156",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_156.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 8,
+  "core": false
+ },
+ {
+  "id": "gtja191_157",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_157.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 5,
+  "min_warmup_bars": 12,
+  "core": false
+ },
+ {
+  "id": "gtja191_158",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_158.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 15,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_159",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_159.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 24,
+  "min_warmup_bars": 25,
+  "core": false
+ },
+ {
+  "id": "gtja191_160",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_160.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_161",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_161.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_162",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_162.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_163",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_163.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_164",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_164.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 13,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_165",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_165.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 48,
+  "min_warmup_bars": 142,
+  "core": false
+ },
+ {
+  "id": "gtja191_166",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_166.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 40,
+  "core": false
+ },
+ {
+  "id": "gtja191_167",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_167.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 13,
+  "core": false
+ },
+ {
+  "id": "gtja191_168",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_168.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_169",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_169.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 26,
+  "min_warmup_bars": 28,
+  "core": false
+ },
+ {
+  "id": "gtja191_170",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_170.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_171",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_171.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_172",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_172.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 14,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_173",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_173.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 13,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_174",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_174.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_175",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_175.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 7,
+  "core": false
+ },
+ {
+  "id": "gtja191_176",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_176.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 12,
+  "min_warmup_bars": 17,
+  "core": false
+ },
+ {
+  "id": "gtja191_177",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_177.py",
+  "columns_required": [
+   "close",
+   "high"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 20,
+  "core": false
+ },
+ {
+  "id": "gtja191_178",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_178.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 2,
+  "core": false
+ },
+ {
+  "id": "gtja191_179",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_179.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume",
+   "amount"
+  ],
+  "decay_horizon": 50,
+  "min_warmup_bars": 61,
+  "core": false
+ },
+ {
+  "id": "gtja191_180",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_180.py",
+  "columns_required": [
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 67,
+  "core": false
+ },
+ {
+  "id": "gtja191_183",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_183.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 24,
+  "min_warmup_bars": 70,
+  "core": false
+ },
+ {
+  "id": "gtja191_184",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_184.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 60,
+  "min_warmup_bars": 201,
+  "core": false
+ },
+ {
+  "id": "gtja191_185",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_185.py",
+  "columns_required": [
+   "open",
+   "close"
+  ],
+  "decay_horizon": 1,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_186",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_186.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 14,
+  "min_warmup_bars": 26,
+  "core": false
+ },
+ {
+  "id": "gtja191_187",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_187.py",
+  "columns_required": [
+   "open",
+   "high"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 21,
+  "core": false
+ },
+ {
+  "id": "gtja191_188",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_188.py",
+  "columns_required": [
+   "close",
+   "high",
+   "low"
+  ],
+  "decay_horizon": 11,
+  "min_warmup_bars": 1,
+  "core": false
+ },
+ {
+  "id": "gtja191_189",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_189.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 6,
+  "min_warmup_bars": 11,
+  "core": false
+ },
+ {
+  "id": "gtja191_190",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_190.py",
+  "columns_required": [
+   "close"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 39,
+  "core": false
+ },
+ {
+  "id": "gtja191_191",
+  "family": "gtja191",
+  "file": "openterm/quantlib/alpha/zoo/gtja191/alpha_191.py",
+  "columns_required": [
+   "open",
+   "high",
+   "low",
+   "close",
+   "volume"
+  ],
+  "decay_horizon": 20,
+  "min_warmup_bars": 24,
+  "core": false
+ }
+]

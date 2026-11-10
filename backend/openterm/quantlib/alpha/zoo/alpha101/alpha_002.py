@@ -1,7 +1,6 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/alpha101/alpha_002.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-# ruff: noqa: F401
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/alpha101/alpha_002.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 
 # ============================================================
 # 中文名称: Alpha #2 - 量价相关偏差
@@ -50,7 +49,7 @@ __alpha_meta__ = {
     'universe': ['equity_us', 'equity_in', 'equity_kr'],
     'frequency': ['1D'],
     'decay_horizon': 5,
-    'min_warmup_bars': 10,
+    'min_warmup_bars': 8,
     'notes': '',
 }
 

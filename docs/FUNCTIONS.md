@@ -241,7 +241,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `REGIME` | Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list |  | `[WL:<NAME>\|LIST:A,B,C] [WIN=60] [EDGE=0.5]` | `REGIME` |
 | `FACT` | Factor regression (Fama-French / momentum / quality) of a symbol or portfolio; the factor data end date is shown |  | `<SYM\|PORTFOLIO> [RANGE=3y]` | `FACT` |
 | `QL` | Quant calculators on bars: GARCH OU COINT HEDGE COPULA ROLL AMIHUD KYLE VPIN EVENT DSR ADF HVAR |  | `<GARCH\|OU\|COINT\|HEDGE\|COPULA\|ROLL\|AMIHUD\|KYLE\|VPIN\|EVENT\|DSR\|ADF\|HVAR> [SYMBOLS] [KEY=VALUE]` | `QL` |
-| `ALPHA` | Alpha factor zoo: IC / IR / decay of Alpha101 and Qlib158 style factors over a universe (historical, not a forecast; SYN is synthetic) |  | `[UNIVERSE=TOP100\|SYN\|WL:<NAME>\|LIST:A,B,C] [RANGE=2y] [FAMILY=...] [H=1,5,10,20]` | `ALPHA` |
+| `ALPHA` | Alpha factor zoo: IC / IR / decay of 435 Alpha101, Qlib158, academic and GTJA191 factors over a universe (default FAMILY=CORE, the first 29; ALL runs every one) (historical, not a forecast; SYN is synthetic) |  | `[UNIVERSE=TOP100\|SYN\|WL:<NAME>\|LIST:A,B,C] [RANGE=2y] [FAMILY=CORE\|ALPHA101\|QLIB158\|ACADEMIC\|GTJA191\|ALL] [H=1,5,10,20]` | `ALPHA` |
 
 ### Research: AI research
 

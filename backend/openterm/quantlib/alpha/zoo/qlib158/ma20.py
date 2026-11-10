@@ -1,7 +1,6 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/qlib158/ma20.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-# ruff: noqa: I001
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/qlib158/ma20.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 # Adapted from microsoft/qlib@d5379c520f66a39953bad76234a7019a72796fd0:qlib/contrib/data/handler.py
 # (Apache-2.0). Copyright (c) Microsoft Corporation.
 # ============================================================
