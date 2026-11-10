@@ -2,6 +2,11 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Skill references in English (2026-11-10)
+- The elliott-wave, harmonic and ichimoku AI playbooks now include their reference notes, translated from Chinese: wave
+  structure and Fibonacci wave ratios; XABCD patterns (Gartley, Bat, Butterfly, Crab) and trading the reversal zone; the
+  Ichimoku five lines and signal system. Translations live in `scripts/vibe_skill_overrides/references/`.
+
 ## Orders, broker sync, journal, MCP client, extensions, web tools, alpha zoo (2026-11-10)
 - `ORD` orders (Phase 18 step 1): paper by default (Alpaca paper); Alpaca live and Kite live only after the key, `L` plus a typed phrase, a mandate that allows the symbol and size (default allows nothing), and typing the symbol again. Every order gets a one-time confirm token (60 s, bound to that exact order); `X` kill switch cancels everything and blocks new orders across restarts; a hash-chained order ledger (migration 19); paper vs live decided by the broker host, never a flag. `I` adds fills to PORT as labelled lots. The AI cannot place, change or cancel orders.
 - `SYNC` / `PORT SYNC` (Phase 18 step 2): read-only Kite holdings (and day positions) and IBKR through the Client Portal Gateway on this machine into a PORT portfolio; re-syncs replace only that broker's lots, manual lots are never touched (shown as CONFLICT). Not yet tried against real accounts.

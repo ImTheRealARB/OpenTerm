@@ -47,8 +47,41 @@ session's designated branch and open a PR only when the owner asks.
      doc-shaped fixtures.
   7. **HTML feature/command checklist:** lives only on the owner's other laptop; the owner updates it from this branch's
      CHANGELOG entry of 2026-11-10 and `docs/COMMANDS.md`.
-- Optional: settings sync per-field merge; Chinese `references/` of elliott-wave, harmonic, ichimoku; bundle the backend as a
-  Tauri sidecar.
+- Later items are listed under "Pending (owner decisions, later on 2026-11-10)" below.
+
+## Pending (owner decisions, later on 2026-11-10)
+
+Branch `claude/bold-tesla-0tk2ek` (not merged yet).
+
+- **Done on this branch:** the 6 Chinese `references/` files of the elliott-wave, harmonic and ichimoku skills are translated
+  (`scripts/vibe_skill_overrides/references/`, mapped by `REF_TRANSLATIONS` in `scripts/port_vibe_skills.py`) and appear as
+  `## Reference: ...` sections in those playbooks. Regenerate with the Vibe-Trading checkout at `8172827`.
+- **Rust port: decided NO.** Server p95 is 0.3-2.5 ms; the time goes to network fetches and browser drawing, and the heavy math
+  already runs in numpy/scipy (C/Fortran). Only port a hotspot (Polars or a PyO3 module) if a measured job proves slow.
+- **REMIND THE OWNER: desktop app, pending, owner will do it later.** Bundle the backend as a Tauri sidecar so the desktop
+  app is one install that starts and stops its own server (today it is the window only). Good companion: tear-off panel
+  windows for multiple monitors.
+- **Settings sync per-field merge: explained to the owner, waiting for a yes/no.** Today `frontend/src/settings/schema.ts`
+  `reconcile()` keeps the whole settings document with the newest `updated_at`, so an edit made on a second device or tab
+  in the meantime is lost. A per-field merge keeps both. Only matters with more than one browser/device (remote mode, desktop + browser).
+- **Owner, later:** the HTML feature checklist; the OpenCode Go, OpenRouter, broker and NSE MCP live tests (item 6 above).
+
+### Feature ideas vs Bloomberg (brainstorm 2026-11-10; the owner has not picked yet)
+Checked against the code: none of these exist yet. All use free data unless noted. Check every new code against real tickers
+(alias rule in `frontend/src/functions/aliases.ts`).
+- Workflow: panel link groups (colour-linked panels follow one security); condition alerts (indicator cross, volume spike,
+  52-week high, news keyword, new 8-K, earnings soon; today ALRT is price/percent only); custom columns in Q/WL; spreadsheet
+  link (Excel / Google Sheets functions over the local API); unified calendar for a watchlist/portfolio; mobile layout for remote mode.
+- Analytics: market breadth (A/D, % above 50/200-day, highs/lows, McClellan); options gamma exposure and max pain, implied
+  earnings move vs past earnings moves, unusual option volume scanner; volatility board (VIX 9D/1M/3M/6M curve, VVIX, MOVE,
+  OVX, GVZ, India VIX); spread/ratio regression panel; sector rotation chart (RRG); money markets monitor (SOFR, EFFR, repo,
+  bills, Fed balance sheet, RRP, TGA: NY Fed + FRED); GDPNow and NY Fed nowcasts; technical criteria in EQS.
+- Research: SEC full-text search (EDGAR FTS); subsidiaries (10-K EX-21) and major customers (AI-extracted, labelled);
+  13D/13G activist tracker; insider cluster-buy screen; earnings press release (8-K EX-99.1) reader + AI summary; fundamentals
+  over time vs peers; ClinicalTrials.gov, openFDA, Senate lobbying, USPTO patents; India pack (FII/DII flows, bulk/block deals,
+  announcements, native NSE option chain, results calendar: NSE blocks cloud IPs, so fixtures here, live from home).
+- Portfolio: tax lots and realized gains (India STCG/LTCG, US wash sales); what-if risk of a trade before ORD; tracking error, active share.
+- Infrastructure: local price-history store (DuckDB/Parquet) for faster BT/ALPHA, offline use, fewer rate limits.
 
 Setup: `cd backend && uv sync --extra ocr`, `cd frontend && npm ci`. Fixture UI check: `OPENTERM_FIXTURES=1 uv run uvicorn
 openterm.main:app --port 8000` + `npx vite preview --port 4180` (proxies `/api`).
