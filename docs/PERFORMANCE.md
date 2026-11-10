@@ -884,3 +884,24 @@ Branch `claude/admiring-archimedes-7ibeha`, Linux cloud container, `node scripts
 15.0 ms (11.2 ms under load), cold start 153 ms, layout load 63.8 ms, BT 10-year run 276.4 ms (budget 300), ALPHA 29 core factors
 850.9 ms, initial bundle 125.2 KB gz. The new panels are lazy chunks; the initial bundle grew 1.6 KB. The ALPHA row measures the
 default `core` family; `FAMILY=ALL` (435 factors) on 200 names takes about 36 s as a job and is not gated.
+
+### 2026-11-10 (later): like-for-like speed audit of the 13 workstreams, and two fixes
+Cloud container (Linux), `scripts/bench.mjs` with the preinstalled Chromium, `b8a274a` (7 Nov, before the workstreams) and branch
+`claude/bold-tesla-0tk2ek` run three times each, taking turns. Medians, old -> new:
+
+| Line | Old | New | Budget |
+|---|---|---|---|
+| Initial bundle (gzip) | 123.5 KB | 125.2 KB | 400 KB |
+| Cold start to usable command line | 141.0 ms | 135.8 ms | 1500 ms |
+| Tick to pixel p95, streaming load | 43.1 ms | 43.8 ms | 50 ms |
+| Layout load to paint p95 | 84.8 ms | 89.7 ms | 100 ms |
+| BT 10-year daily run p95 | 265.6 ms (254-335) | 317.4 ms (272-327) | 300 ms |
+| ALPHA SYN 100 names, 29 core factors | 904.6 ms | 713.8 ms | 8000 ms |
+| AI request to first SSE event p95 | 18.5 ms | 23.9 ms | 60 ms |
+
+Every run missed one line (BT 10-year or SEAS by 0.1-0.4 ms), old code and new alike: this machine. The BT engine was not
+changed by the workstreams. Backend import at start: 554 ms old vs 521 ms new (median of 8).
+The AI line was a real regression (every new run above every old run). Cause: the audit manifest re-read and re-hashed every
+playbook on every run (57 playbooks now). Fixed with `skills.digests()` (cached by mtime and size): manifest 13-15 ms -> 0.65 ms,
+first event p50 about 10 ms -> 1.4 ms in-process. Also fixed: `ALPHA FAMILY=ALL` rolling argmax / argmin / product in numpy
+(all 435 factors bit-for-bit identical; 200 names x 504 bars 29.9 s -> 15.6 s).

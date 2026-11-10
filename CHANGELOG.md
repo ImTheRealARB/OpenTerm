@@ -6,6 +6,8 @@ Format: newest first, one section per phase. Details for each release are in `do
 - `ALPHA FAMILY=ALL` runs about twice as fast with bit-for-bit the same numbers (all 435 factors checked on a 200-name, 2-year
   panel: 29.9 s to 15.6 s). The rolling argmax / argmin / product steps called Python once per window; they now use numpy over
   blocks of windows (`BASE_PATCHES` / `SPEED_PATCHES` in `scripts/port_vibe_alphas.py`, tests in `test_alpha_zoo.py`).
+- AI, SWARM and AI AUTO answer faster: each run fingerprinted every playbook by reading and hashing all of them again; the
+  fingerprints are now cached per file and follow every edit (first event about 10 ms to 1.4 ms in-process, same audit manifest).
 - `docs/ROADMAP_NEXT.md`: 25 features a professional terminal has and OpenTerm lacks, each with a proposed code, data source,
   effort and the order to build them in.
 - The elliott-wave, harmonic and ichimoku AI playbooks now include their reference notes, translated from Chinese: wave

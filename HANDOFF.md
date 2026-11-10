@@ -82,7 +82,13 @@ tickers first (`CAL`, `LINK`, `EPR`, `NOW` are taken).
 - Fixed: `ALPHA FAMILY=ALL` spent about half its time in rolling argmax / argmin / product calling Python once per window
   (Vibe's base.py expects `bottleneck`, which OpenTerm does not ship). Now numpy, applied by the port script
   (`BASE_PATCHES`, `SPEED_PATCHES` in `scripts/port_vibe_alphas.py`), all 435 factors bit-for-bit identical, 29.9 s -> 15.6 s.
-- BENCH_RESULT_PLACEHOLDER
+- Full bench, `b8a274a` (7 Nov) vs this branch, same cloud machine, 3 runs each taking turns: no line got slower beyond the
+  machine's own run-to-run spread. The only misses (BT 10-year run 254-335 ms vs 300, SEAS 15.1-15.4 ms vs 15) hit the OLD
+  code too, so they are this machine. Initial bundle 123.5 -> 125.2 KB gz. ALPHA core 905 -> 714 ms.
+- Fixed: the one real regression, AI request to first event (17-19 ms -> 23-26 ms): the audit manifest re-read and re-hashed every
+  playbook (and listed the folder once per playbook) on every AI / SWARM / AI AUTO run, and 11 more playbooks made it worse. Now
+  `skills.digests()` caches each file's text and sha256 by (mtime, size): same manifest, an edited file is re-read. Manifest
+  13-15 ms -> 0.65 ms; first event p50 about 10 ms -> 1.4 ms in-process (old code vs this branch).
 
 Setup: `cd backend && uv sync --extra ocr`, `cd frontend && npm ci`. Fixture UI check: `OPENTERM_FIXTURES=1 uv run uvicorn
 openterm.main:app --port 8000` + `npx vite preview --port 4180` (proxies `/api`).

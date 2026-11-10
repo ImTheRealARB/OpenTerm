@@ -312,3 +312,22 @@ def test_translated_skills_are_ported_from_the_overrides_and_say_so():
     for n in tr:
         assert (ROOT / "scripts" / "vibe_skill_overrides" / f"{n}.md").exists() and not porter.CJK.search(skills.get(n)), n
     assert "`journal`" in skills.get("trade-journal") and "analyze_trade_journal" not in skills.get("trade-journal")
+
+
+def test_playbook_digests_are_cached_but_follow_every_edit(tmp_path, monkeypatch):
+    """The audit manifest fingerprints every playbook on every AI run: unchanged files come from the cache, an edited one is re-read."""
+    import hashlib
+    import os
+
+    for n in ("alpha", "beta"):
+        (tmp_path / f"{n}.md").write_text(f"# Playbook: {n}\n\nGoal: test {n}.\n", encoding="utf-8")
+    monkeypatch.setattr(skills, "DIR", tmp_path)
+    want = lambda n: hashlib.sha256((tmp_path / f"{n}.md").read_bytes()).hexdigest()
+    assert skills.digests() == {"alpha": want("alpha"), "beta": want("beta")}
+    p = tmp_path / "alpha.md"
+    st = p.stat()
+    p.write_text(p.read_text(encoding="utf-8") + "More.\n", encoding="utf-8")
+    os.utime(p, ns=(st.st_atime_ns, st.st_mtime_ns))  # same mtime: the size change alone must be seen
+    assert skills.digests()["alpha"] == want("alpha") and skills.get("alpha").endswith("More.\n")
+    (tmp_path / "gamma.md").write_text("# Playbook: gamma\n", encoding="utf-8")
+    assert set(skills.digests()) == {"alpha", "beta", "gamma"}

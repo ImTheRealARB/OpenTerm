@@ -9,6 +9,7 @@ A long playbook is read in pieces: `read(name, section)` returns one `##` or `##
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -30,11 +31,32 @@ def names() -> list[str]:
     return sorted(p.stem for p in DIR.glob("*.md"))
 
 
+# path -> ((mtime_ns, size), text, sha256 hex). Every AI run fingerprints every playbook for its audit manifest; re-reading and
+# re-hashing ~60 files (and listing the folder once per file) cost several ms per run. A file is read again only when its
+# modification time or size changes, so an edited playbook is never fingerprinted from a stale copy.
+_FILES: dict[str, tuple[tuple[int, int], str, str]] = {}
+
+
+def _load(path: Path) -> tuple[str, str]:
+    st = path.stat()
+    stamp = (st.st_mtime_ns, st.st_size)
+    hit = _FILES.get(str(path))
+    if hit is None or hit[0] != stamp:
+        raw = path.read_text(encoding="utf-8")
+        hit = _FILES[str(path)] = (stamp, raw, hashlib.sha256(raw.encode("utf-8")).hexdigest())
+    return hit[1], hit[2]
+
+
 def get(name: str) -> str | None:
     """The raw file (header comment included), or None. Only known file stems are read, which also blocks path tricks."""
     if name not in names():
         return None
-    return (DIR / f"{name}.md").read_text(encoding="utf-8")
+    return _load(DIR / f"{name}.md")[0]
+
+
+def digests() -> dict[str, str]:
+    """sha256 of every playbook's raw file, by name (one folder listing; unchanged files are not read again). For the audit manifest."""
+    return {n: _load(DIR / f"{n}.md")[1] for n in names()}
 
 
 def text(name: str) -> str | None:
