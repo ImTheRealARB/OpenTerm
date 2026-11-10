@@ -6,16 +6,18 @@ Last updated 2026-11-10. Branch with this file: `claude/gifted-galileo-w6y22a` (
 
 Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that is marked MERGED). Push there only; no PR unless asked.
 
-**Status (checkpoint, 2026-11-10 19:45 UTC):**
-- MERGED and pushed, full suites green (backend 3971, vitest 1479, ruff/typecheck/lint clean): 02, 12, 08 (incl. storeText UI,
-  AI BT CODE, GUIDANCE/CHAIN), 03 (MCP client, now `openterm/mcpclient/`), 04 (JRNL, migration 18), 01 (orders, migration 19),
-  05, 06, 07, 09, 10, 11 (skills, 57 ported). ORD band fixed to one row (`1360af8`). Docs (CHANGELOG/ROADMAP/FEATURE_GAP) done.
-  E2E: 354/354 (needs the installed Chromium: a local config with `launchOptions.executablePath: /opt/pw-browsers/chromium`;
-  run it with NO backend on :8000, or stale settings there break the GUI-mode tests).
-- IN PROGRESS in an agent worktree (not on the branch yet): 13 packaging (`.claude/worktrees/agent-ae70de471ef4848b2`). If it is gone, re-apply `handoff/patches/13-*`.
-- TODO after 13: full backend + vitest gates, the bench (tick-to-pixel rerun) then the README badge; update the owner's HTML
-  feature/command checklist (location unknown: not in this repo's branches, GitHub, Drive or artifacts; ask the owner).
-- OPEN QUESTION for the owner: ORD (3) and JRNL (2) in-panel text boxes vs DESIGN.md "one text box per screen".
+**Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED** on `claude/admiring-archimedes-7ibeha` and pushed.
+- Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39
+  (tick to pixel p95 42.2 ms). Docs done: CHANGELOG, ROADMAP, FEATURE_GAP, PERFORMANCE, README badge, RELEASE_NOTES, DESKTOP.
+- Local runs in this container need the preinstalled Chromium (`/opt/pw-browsers/chromium`): pass it as `executablePath` in a
+  throwaway Playwright config / bench copy. Run e2e with NO backend on :8000 (stale settings there break GUI-mode tests).
+  Never `scripts/start` / `npm ci` in a worktree whose `frontend/node_modules` is a symlink: it empties the shared copy.
+- Left, needs the owner: (1) ORD (3) and JRNL (2) in-panel text boxes vs DESIGN.md "one text box per screen" (keep, or move to
+  command-line entry?); (2) the HTML feature/command checklist to update: not found in this repo's branches, GitHub, Drive or
+  artifacts, so ask where it is; (3) owner-only: updater signing key + Actions secrets, Apple / Windows certificates, a macOS run,
+  first `v*` tag of `release.yml`, real Kite / Alpaca / IBKR / OpenRouter runs, running the two NSE MCP presets (ask first).
+- Optional: settings sync per-field merge; Chinese `references/` of elliott-wave, harmonic, ichimoku; bundle the backend as a
+  Tauri sidecar.
 
 Setup: `cd backend && uv sync --extra ocr`, `cd frontend && npm ci`. Fixture UI check: `OPENTERM_FIXTURES=1 uv run uvicorn
 openterm.main:app --port 8000` + `npx vite preview --port 4180` (proxies `/api`).
