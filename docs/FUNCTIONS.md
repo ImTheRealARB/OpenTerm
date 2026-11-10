@@ -273,6 +273,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `OPT` | Portfolio optimizer preview (PORT OPT): trades, before/after, risk contributions; A saves <NAME>.OPT, never orders |  | `[PORTFOLIO] [METHOD=EQVOL\|RP\|MV\|MAXDIV\|HRP\|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` | `OPT` |
 | `ATTR` | Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations |  | `[PORTFOLIO] [BENCH=SPY] [RANGE=1y] \| <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] \| <PORTFOLIO> DEL <DATE>` | `ATTR` |
 | `SYNC` | Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders |  | `[KITE\|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]` | `SYNC` |
+| `JRNL` | Trade journal: import Zerodha / IBKR Flex / Alpaca / CSV trades, FIFO round trips, statistics, behaviour findings (heuristics, not advice), Shadow Account. Read only |  | `[TRIPS\|STATS\|FINDINGS\|SHADOW\|IMPORT] [CCY]` | `JRNL` |
 
 ### Backtest
 

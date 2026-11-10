@@ -233,3 +233,26 @@ KINDS["fact.run"] = _quant_kind("fact.run", "FACT", fact_job)
 KINDS["ql.run"] = _quant_kind("ql.run", "QL", ql_job)
 KINDS["alpha.scan"] = _quant_kind("alpha.scan", "ALPHA", alpha_job, time_limit_s=240.0)
 KINDS["corr.regime"] = _quant_kind("corr.regime", "CORR REGIME", regime_job)
+
+
+# --- JRNL Shadow Account (journal.shadow). Params are built by POST /api/journal/shadow: the server fetched the bars and wrote the data file. ----
+
+SHADOW_KEYS = {"data_path", "data_sha", "trips", "rule", "engine", "currency", "config", "bars_per_year", "skipped", "labels"}
+
+
+def validate_shadow(params: dict) -> dict:
+    if not isinstance(params, dict) or set(params) != SHADOW_KEYS:
+        raise BadParams("JOURNAL.SHADOW PARAMS ARE BUILT BY /api/journal/shadow")
+    if not params["trips"]:
+        raise BadParams("JOURNAL.SHADOW NEEDS AT LEAST ONE ROUND TRIP")
+    return params
+
+
+def journal_shadow_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..journal.shadow import run  # pandas loads here, in the worker
+
+    return run(params, progress)
+
+
+KINDS["journal.shadow"] = Kind("journal.shadow", "1", "SHADOW ACCOUNT", journal_shadow_job, validate_shadow, time_limit_s=120.0, internal=True,
+                               fingerprint=lambda p: p.get("data_sha", ""), hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})

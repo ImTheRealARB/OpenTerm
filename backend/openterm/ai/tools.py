@@ -305,6 +305,19 @@ def _deriv(fn: str, keys: tuple[str, ...]):
     return lambda a: {"path": f"/api/deriv/{fn}", "params": {k: a[k] for k in keys if a.get(k) is not None}}
 
 
+def shape_journal(resp: dict, args: dict) -> dict:
+    """JRNL for the model: the statistics and the five findings, never the fills, round trips or trade ids."""
+    if resp.get("empty"):
+        return {"empty": True, "note": "NO JOURNAL IMPORTED"}
+    st = resp.get("stats") or {}
+    keep = ("n", "wins", "losses", "win_rate", "avg_win", "avg_loss", "payoff", "expectancy", "profit_factor", "total_pnl", "fees", "avg_hold_s",
+            "max_consec_losses", "max_drawdown", "first", "last")
+    return {"currency": resp.get("currency"), "currencies": [c["currency"] for c in resp.get("currencies") or []],
+            "stats": {k: st.get(k) for k in keep},
+            "findings": [{"id": d["id"], "status": d["status"], "severity": d["severity"], "summary": d["plain"]} for d in resp.get("diagnostics") or []],
+            "note": "A PATTERN IN THE USER'S OWN HISTORY, NOT ADVICE AND NOT A FORECAST"}
+
+
 # --- the registry -----------------------------------------------------------------------------------------------------------------------
 def obj(properties: dict, required: list[str] | None = None) -> dict:
     return {"type": "object", "properties": properties, "required": required or [], "additionalProperties": False}
@@ -457,6 +470,9 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
          "swing highs/lows, break of structure, fair value gaps, supply/demand blocks (OB zones) and the Ichimoku cloud state. Patterns, not signals or forecasts.",
          obj({"symbol": S, "range": {"type": "string", "description": "3M 6M 1Y 2Y 5Y"}, "kind": {"type": "string", "enum": list(PATTERN_KINDS)}}, ["symbol"]),
          "/api/history", build=lambda a: {"params": {k: v for k, v in a.items() if k != "kind"}}, shape=shape_patterns),
+    Tool("journal", "The user's own trade journal (JRNL): round-trip statistics (win rate, expectancy, profit factor, drawdown) and behaviour findings. "
+         "Optional currency. Read only; no individual trades.",
+         obj({"currency": S}), "/api/journal/analysis", shape=shape_journal, desk_only=True),
 ]}
 
 

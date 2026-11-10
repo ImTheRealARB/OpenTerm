@@ -275,3 +275,16 @@ Reads what your broker already holds and writes it into a `PORT` portfolio. It n
 - A re-sync replaces only the lots that broker wrote earlier (they carry `source` and the sync time in their note) and never duplicates. Manual lots are never touched; if a synced symbol is already held by a manual lot it is listed as a CONFLICT and not merged (sync into its own portfolio, then `RISK` / `OPT` it as usual). Editing a synced lot by hand turns it into a manual lot.
 - IBKR needs the Client Portal Gateway running on this machine (`clientportal.gw`, `bin/run.sh root/conf.yaml`), logged in at `https://localhost:5000`. If it is not running the panel says `IBKR GATEWAY NOT RUNNING` with the next step. The gateway URL is a setting (`PUT /api/sync/ibkr/settings`, default `https://localhost:5000/v1/api`); only `localhost`, `127.0.0.1` and `::1` are accepted, because the gateway's self-signed certificate is trusted for loopback only.
 - Unverified without a live account: Kite `quantity` is taken as the total holding (collateral shares are flagged, not added) and IBKR LSE prices are taken as pence (`GBp`). The tests use doc-shaped fixtures, labelled NOT A RECORDING.
+
+## Trade journal (`JRNL`)
+Your own trades, read back to you. Nothing here sends an order; it only reads files you give it. Details, formats and the limits of each finding: `docs/JOURNAL.md`.
+```
+JRNL                           round trips (FIFO), newest last; positions still open are listed below
+JRNL STATS | FINDINGS | SHADOW | IMPORT
+JRNL STATS EUR                 one currency at a time (nothing is ever converted)
+```
+- Keys: `1`-`5` views (round trips, stats, findings, shadow, import), `I` import, `C` next currency, `R` reload, `S` run the Shadow Account (shadow view), `X` twice clears the journal, `J`/`K` move in the table.
+- Import: paste a Zerodha tradebook CSV, an IBKR Flex trades CSV, an Alpaca account-activities CSV, or any CSV (set the broker to `GENERIC` with `B` and map the columns). `Ctrl+Enter` imports, `Ctrl+O` picks a file. A bad row stops the whole import and names its line; re-importing the same file adds nothing. Slash dates (`03/04/2024`) are never guessed: press `D` to choose DMY or MDY.
+- Findings are heuristics over your own history (overtrading days, revenge trades, losers held longer than winners, size creep after wins, off-hours entries). Each one prints its rule and says `NOT ENOUGH HISTORY` rather than guessing. They are patterns to look at, not advice and not a forecast.
+- Shadow Account: your real entries replayed with one fixed exit rule beside your real exits, through the backtester as a job (see `JOBS`). `HISTORICAL SIMULATION, NOT A FORECAST`.
+- The AI can read the statistics and findings (tool `journal`, never the individual trades). Import and delete answer this machine only.

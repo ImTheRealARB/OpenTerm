@@ -20,6 +20,7 @@ from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
 from .delivery.routes import router as delivery_router
+from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
 from .mcpclient.routes import router as mcp_client_router
@@ -219,6 +220,7 @@ app.include_router(ai_router)
 app.include_router(mcp_router)
 app.include_router(mcp_client_router)
 app.include_router(routes_run.theses_router)
+app.include_router(journal_router)
 
 
 @app.get("/api/health")

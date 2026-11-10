@@ -123,6 +123,16 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Sync IBKR", key: "i", title: "Read Interactive Brokers positions into PORT (I)" },
     { label: "Reload", key: "r", title: "Reload the last-sync status (R)" },
   ],
+  JRNL: [
+    { label: "Round trips", key: "1", title: "FIFO round trips (1)" },
+    { label: "Stats", key: "2", title: "Statistics (2)" },
+    { label: "Findings", key: "3", title: "Behaviour findings: heuristics over your own history (3)" },
+    { label: "Shadow", key: "4", title: "Shadow Account: your entries with one fixed exit rule (4)" },
+    { label: "Import", key: "i", title: "Import a trades file (I)" },
+    { label: "Currency", key: "c", title: "Next currency (C)" },
+    { label: "Run shadow", key: "s", bandHidden: true, title: "Run the Shadow Account job (S, in the Shadow view)" },
+    { label: "Reload", key: "r", title: "Reload (R)" },
+  ],
   BT: [
     { label: "Run again", key: "r", title: "Run the backtest again (R)" },
     { label: "Cancel", key: "x", title: "Cancel the running backtest (X)" },
