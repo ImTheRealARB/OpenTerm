@@ -4,19 +4,27 @@ Last updated 2026-11-10. Branch with this file: `claude/gifted-galileo-w6y22a` (
 
 ## Resume here
 
-1. Check out `claude/gifted-galileo-w6y22a` (it is `main` + this file + `handoff/`). Nothing below is merged into application code yet.
-2. Set up: `cd backend && uv sync` and `cd frontend && npm ci`. Baseline on `main`: `uv run pytest -q` = 2999 passed.
-3. Pick the next workstream from the table, apply its patch, finish it, test, commit, then the next one:
+Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that is marked MERGED). Push there only; no PR unless asked.
 
-   ```bash
-   git apply --3way handoff/patches/02-broker-sync.patch
-   ```
+**Status (checkpoint, 2026-11-10 19:45 UTC):**
+- MERGED and pushed, full suites green (backend 3971, vitest 1479, ruff/typecheck/lint clean): 02, 12, 08 (incl. storeText UI,
+  AI BT CODE, GUIDANCE/CHAIN), 03 (MCP client, now `openterm/mcpclient/`), 04 (JRNL, migration 18), 01 (orders, migration 19),
+  05, 06, 07, 09, 10. ORD band fixed to one row (`1360af8`).
+- IN PROGRESS in agent worktrees (not on the branch yet): 11 skills (`.claude/worktrees/agent-a35455159417699b1`),
+  13 packaging (`.claude/worktrees/agent-ae70de471ef4848b2`). If those worktrees are gone, re-apply `handoff/patches/11-*` / `13-*`.
+- TODO after 11/13: full gates incl. `npx playwright test` and the bench (tick-to-pixel rerun); docs (CHANGELOG, ROADMAP,
+  FEATURE_GAP, README badge, stale "29 factors" lines in CHANGELOG:102, ROADMAP:184, PERFORMANCE:463); update the owner's HTML
+  feature/command checklist (location unknown: not in this repo's branches, GitHub, Drive or artifacts; ask the owner).
+- OPEN QUESTION for the owner: ORD (3) and JRNL (2) in-panel text boxes vs DESIGN.md "one text box per screen".
 
-4. Owner's rules for this work (2026-11-10):
-   - **At most 3 subagents at a time** (Sonnet is fine). The owner asked to be careful with usage: work in small batches and check in
-     between batches; stop everything when the owner says usage is high.
-   - Do not run third-party MCP server packages (`npx stock-nse-india`, `uvx nse-mcp`) without asking the owner first.
-   - Commit and push only to the session's designated branch; no PR unless asked.
+Setup: `cd backend && uv sync --extra ocr`, `cd frontend && npm ci`. Fixture UI check: `OPENTERM_FIXTURES=1 uv run uvicorn
+openterm.main:app --port 8000` + `npx vite preview --port 4180` (proxies `/api`).
+
+Owner's rules for this work (2026-11-10):
+- **At most 3 subagents at a time** (Sonnet is fine). Be careful with usage: small batches; stop when the owner says usage is high.
+  On reaching ~95% of the 5-hour limit: pause, update this file, give the owner a handoff prompt.
+- Do not run third-party MCP server packages (`npx stock-nse-india`, `uvx nse-mcp`) without asking the owner first.
+- Commit and push only to the session's designated branch; no PR unless asked.
 
 ## What the owner asked for (2026-11-10)
 
