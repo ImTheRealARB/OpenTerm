@@ -162,6 +162,8 @@ opinion: a missing input shows `NOT RUNNABLE: MISSING ...`.
 cites them as [T1], and says UNGROUNDED when no tool returned data or UNSOURCED NUMBERS for figures no tool returned. `I` types, Enter sends, Esc cancels, `X` clears. AI output is model output, not data.
 `AI BT <idea in words>` drafts one backtest rule (checked with the BT parser, shown with its command; the AI never runs it: `B` puts the command on the command line, Enter runs it).
 `AI CHART` sends the chart of your newest `GP` panel to the vision model (labelled CHART IMAGE ONLY). `AI` playbooks (valuation, earnings, options, risk, macro) load automatically when a question needs them.
+`AI BT CODE <idea in words>` drafts a Python SignalEngine strategy instead of a rule: it is checked with the same sandbox check `BT EDIT` runs on save (never executed; one automatic repair round at most, errors shown under the code), labelled a draft that is not run or saved. `E` opens it in `BT EDIT <name>` unsaved; Ctrl+S saves it as usual.
+
 `AI DOC FILING <SYMBOL> [FORM]` loads the latest SEC filing of that form (default 10-K); `U` in the AI panel uploads a TXT, CSV, HTML, DOCX, XLSX or PDF (10 MB, kept in memory only, the last 5).
 While a document is loaded, questions use ONLY its text (chunks C1, C2... cited); `AI DOC OFF` goes back to market data. A scanned PDF (no text layer) is read by OCR when `tesseract` is on PATH and `uv sync --extra ocr` was run (40 pages at most); the card then says `OCR TEXT (MAY CONTAIN ERRORS)`. Without them the panel says `OCR NOT INSTALLED`.
 

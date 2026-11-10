@@ -11,6 +11,7 @@ export type AiEvent =
   | { type: "notice"; text: string }
   | { type: "draft"; draft: BtDraft }
   | { type: "draft_error"; text: string }
+  | { type: "code_draft"; draft: CodeDraft }
   | { type: "evidence"; runs: string[]; tested: boolean; note: string }
   | { type: "saved"; run_id: string }
   | { type: "filing"; symbol: string; form: string; filed: string; accession: string; url: string; source: string; sections: number; passages: number; mode: string }
@@ -60,6 +61,30 @@ export interface BtDraft {
   note: string;
 }
 
+/** A strategy drafted by `AI BT CODE`: checked with the BT EDIT sandbox check, never run or saved by the AI. */
+export interface CodeDraft {
+  code: string;
+  name: string;
+  ok: boolean;
+  error: string | null;
+  line: number | null;
+  repaired: boolean;
+  note: string;
+}
+
+/** The validation line shown under a drafted strategy, like the editor's sandbox message. */
+export function codeDraftStatus(d: CodeDraft): string {
+  if (d.ok) return d.repaired ? "SANDBOX CHECK PASSED AFTER ONE REPAIR" : "SANDBOX CHECK PASSED";
+  return `SANDBOX CHECK FAILED${d.repaired ? " AFTER ONE REPAIR" : ""}: ${d.error ?? "UNKNOWN"}`;
+}
+
+/** Numbered lines of drafted code (read-only display). */
+export function numberedLines(code: string): string[] {
+  const lines = code.replace(/\n$/, "").split("\n");
+  const w = String(lines.length).length;
+  return lines.map((l, i) => `${String(i + 1).padStart(w)}  ${l}`);
+}
+
 export interface ToolRow {
   id: string;
   name: string;
@@ -87,6 +112,7 @@ export interface Turn {
   error?: { kind: string; text: string };
   draft?: BtDraft;
   draftError?: string;
+  codeDraft?: CodeDraft;
   /** `AI AUTO`: the backtest runs behind the report (none = the report has no backtest evidence). */
   evidence?: { runs: string[]; tested: boolean; note: string };
   runId?: string;
@@ -128,6 +154,8 @@ export function reduceTurn(t: Turn, e: AiEvent): Turn {
       return { ...t, draft: e.draft };
     case "draft_error":
       return { ...t, draftError: e.text };
+    case "code_draft":
+      return { ...t, codeDraft: e.draft };
     case "evidence":
       return { ...t, evidence: { runs: e.runs, tested: e.tested, note: e.note } };
     case "saved":

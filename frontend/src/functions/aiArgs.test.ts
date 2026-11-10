@@ -59,3 +59,14 @@ describe("aiArgs FILING", () => {
     expect(aiArgs(["what", "FILING", "says"])).toEqual({ mode: "ask", text: "what FILING says" });
   });
 });
+
+describe("aiArgs BT CODE", () => {
+  it("BT CODE drafts a Python strategy from the rest of the line", () => {
+    expect(aiArgs(["BT", "CODE", "buy", "dips"])).toEqual({ mode: "btcode", text: "buy dips" });
+    expect(aiArgs(["bt", "code", "RSI", "dip"])).toEqual({ mode: "btcode", text: "RSI dip" });
+    expect(aiArgs(["BT", "CODE"])).toEqual({ mode: "bad", text: "", error: "USAGE: AI BT CODE <strategy idea in words>" });
+  });
+  it("a plain BT idea that merely contains the word code stays a rule draft", () => {
+    expect(aiArgs(["BT", "buy", "code", "stocks"])).toEqual({ mode: "bt", text: "buy code stocks" });
+  });
+});

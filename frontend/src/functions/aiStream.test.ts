@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citeSegments, newTurn, reduceTurn, stopTurn, turnLine, type AiEvent } from "./aiStream";
+import { citeSegments, codeDraftStatus, newTurn, numberedLines, reduceTurn, stopTurn, turnLine, type AiEvent } from "./aiStream";
 
 // The SSE parser (`parseSse`) moved to net/sse.ts; its tests are in net/sse.test.ts.
 
@@ -110,5 +110,22 @@ describe("stopTurn", () => {
     const after = stopTurn(done, "CANCELLED (ESC)");
     expect(after.notices).not.toContain("CANCELLED (ESC)");
     expect(after.label).toBe("GROUNDED");
+  });
+});
+
+describe("code drafts (AI BT CODE)", () => {
+  const draft = { code: "class SignalEngine:\n    pass\n", name: "x", ok: true, error: null, line: null, repaired: false, note: "n" };
+  it("the reducer keeps the draft and the status line says what the check found", () => {
+    const t = reduceTurn(newTurn("AI BT CODE x"), { type: "code_draft", draft });
+    expect(t.codeDraft).toEqual(draft);
+    expect(codeDraftStatus(draft)).toBe("SANDBOX CHECK PASSED");
+    expect(codeDraftStatus({ ...draft, repaired: true })).toBe("SANDBOX CHECK PASSED AFTER ONE REPAIR");
+    expect(codeDraftStatus({ ...draft, ok: false, repaired: true, error: "LINE 1: IMPORT os IS NOT ALLOWED" })).toBe(
+      "SANDBOX CHECK FAILED AFTER ONE REPAIR: LINE 1: IMPORT os IS NOT ALLOWED",
+    );
+  });
+  it("numbers the lines of the code", () => {
+    expect(numberedLines("a\nb\n")).toEqual(["1  a", "2  b"]);
+    expect(numberedLines(Array.from({ length: 10 }, () => "x").join("\n"))[0]).toBe(" 1  x");
   });
 });

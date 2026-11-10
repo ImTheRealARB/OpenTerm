@@ -1,13 +1,17 @@
-/** `AI [question...]`, `AI BT <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]`, `AI FILING <SYMBOL> [10-K|10-Q] <question | DRIVERS | GUIDANCE | CHAIN>` (pure, unit-tested).
+/** `AI [question...]`, `AI BT <idea>`, `AI BT CODE <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]`, `AI FILING <SYMBOL> [10-K|10-Q] <question | DRIVERS | GUIDANCE | CHAIN>` (pure, unit-tested).
  * Only the first word picks a mode. */
 export type AiArgs =
-  | { mode: "ask" | "bt" | "chart" | "doc" | "docoff" | "auto"; text: string }
+  | { mode: "ask" | "bt" | "btcode" | "chart" | "doc" | "docoff" | "auto"; text: string }
   | { mode: "docfiling"; text: string; symbol: string; form: string }
   | { mode: "filing"; text: string; symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" }
   | { mode: "bad"; text: string; error: string };
 
 export function aiArgs(args: string[]): AiArgs {
   const first = (args[0] ?? "").toUpperCase();
+  if (first === "BT" && (args[1] ?? "").toUpperCase() === "CODE") {
+    const text = args.slice(2).join(" ").trim();
+    return text ? { mode: "btcode", text } : { mode: "bad", text: "", error: "USAGE: AI BT CODE <strategy idea in words>" };
+  }
   if (first === "BT") {
     const text = args.slice(1).join(" ").trim();
     return text ? { mode: "bt", text } : { mode: "bad", text: "", error: "USAGE: AI BT <strategy idea in words>" };
