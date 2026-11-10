@@ -262,3 +262,47 @@ def test_scan_family_selection():
     qlib, _ = scan(panel, "qlib158", [1], lambda *a: None)
     assert {r["id"] for r in core} <= CORE and len(core) >= 20
     assert {r["family"] for r in qlib} == {"qlib158"} and len(qlib) > 100
+
+
+def _frame(rng, T, C, *, ties, nan):
+    a = rng.integers(0, 5, (T, C)).astype(float) if ties else rng.normal(size=(T, C))
+    a[rng.random((T, C)) < nan] = np.nan
+    return pd.DataFrame(a, index=pd.RangeIndex(T), columns=[f"c{i}" for i in range(C)])
+
+
+@pytest.mark.parametrize(("T", "C", "n"), [(300, 17, 10), (300, 17, 1), (5, 4, 10), (260, 3, 60)])
+@pytest.mark.parametrize("ties", [False, True])
+@pytest.mark.parametrize("nan", [0.0, 0.05])
+def test_speed_patches_match_the_per_window_reference(T, C, n, ties, nan, monkeypatch):
+    """`BASE_PATCHES` in scripts/port_vibe_alphas.py: numpy rolling argmax / argmin / prod give bit-for-bit the per-window answers
+    (ties to the most recent bar, any NaN in the window -> NaN) and the same column-major layout, so later sums match too."""
+    x = _frame(np.random.default_rng(T * C + n), T, C, ties=ties, nan=nan)
+    roll = x.rolling(window=n, min_periods=n)
+    for new, ref in ((ops.ts_argmax(x, n), roll.apply(ops._argmax_last, raw=True)),
+                     (ops.ts_argmin(x, n), roll.apply(ops._argmin_last, raw=True)),
+                     (ops.ts_prod(x, n), roll.apply(np.prod, raw=True))):
+        a, b = new.to_numpy(), ref.to_numpy()
+        assert ((a == b) | (np.isnan(a) & np.isnan(b))).all()
+        assert a.flags.f_contiguous == b.flags.f_contiguous
+    # blocks of windows: a tiny block size must not change anything
+    monkeypatch.setattr(ops, "_WINDOW_BLOCK", 7)
+    a, b = ops.ts_argmax(x, n).to_numpy(), roll.apply(ops._argmax_last, raw=True).to_numpy()
+    assert ((a == b) | (np.isnan(a) & np.isnan(b))).all()
+
+
+def test_speed_patched_factors_match_their_original_rolling_apply():
+    """`SPEED_PATCHES`: the five factors that called Python per window give the same values as the original expressions."""
+    p = extend_panel(panel_from(FIX["panel"]))
+    day = lambda df, f: df.rolling(20, min_periods=20).apply(lambda w: f(w[::-1]), raw=True)
+    want = {
+        "gtja191_103": (20.0 - day(p["low"], np.argmin)) / 20.0 * 100.0,
+        "gtja191_177": (20.0 - day(p["high"], np.argmax)) / 20.0 * 100.0,
+        "gtja191_133": (20.0 - day(p["high"], np.argmax)) / 20.0 * 100.0 - (20.0 - day(p["low"], np.argmin)) / 20.0 * 100.0,
+    }
+    for fid, ref in want.items():
+        got = compute_factor(fid, p)
+        a, b = got.to_numpy(dtype=float), ref.to_numpy(dtype=float)
+        assert ((a == b) | (np.isnan(a) & np.isnan(b))).all(), fid
+    for fid in ("alpha101_029", "alpha101_081", *want):
+        head = (ALPHA_DIR.parents[2] / next(z["file"] for z in ZOO if z["id"] == fid)).read_text(encoding="utf-8").split("\n", 2)[1]
+        assert "SPEED_PATCHES" in head, fid

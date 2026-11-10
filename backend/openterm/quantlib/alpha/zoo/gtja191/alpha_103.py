@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/gtja191/alpha_103.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# Changes: imports and a numpy rolling operator in place of a per-window Python call (SPEED_PATCHES in scripts/port_vibe_alphas.py; same values); a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
 # ruff: noqa
 
 # ============================================================
@@ -46,7 +46,7 @@ def compute(panel):
     Returns:
         pd.DataFrame with index = panel["close"].index, columns = panel["close"].columns.
     """
-    lowday = panel["low"].rolling(20, min_periods=20).apply(
-        lambda window: np.argmin(window[::-1]), raw=True
-    )
+    from openterm.quantlib.alpha.base import ts_argmax as _ts_argmax, ts_argmin as _ts_argmin
+
+    lowday = (19.0 - _ts_argmin(panel["low"], 20))  # OpenTerm: numpy rolling argmin (BASE_PATCHES), same values
     return (20.0 - lowday) / 20.0 * 100.0

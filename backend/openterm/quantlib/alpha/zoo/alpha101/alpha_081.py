@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/alpha101/alpha_081.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# Changes: imports and a numpy rolling operator in place of a per-window Python call (SPEED_PATCHES in scripts/port_vibe_alphas.py; same values); a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
 # ruff: noqa
 
 # ============================================================
@@ -62,7 +62,9 @@ def _rolling_sum(df: pd.DataFrame, n: int) -> pd.DataFrame:
 
 def _rolling_prod(df: pd.DataFrame, n: int) -> pd.DataFrame:
     """Rolling window product; warmup -> NaN."""
-    return df.rolling(window=n, min_periods=n).apply(np.prod, raw=True)
+    from openterm.quantlib.alpha.base import ts_prod  # OpenTerm: numpy rolling product (BASE_PATCHES), same values
+
+    return ts_prod(df, n)
 
 
 def compute(panel: dict) -> pd.DataFrame:

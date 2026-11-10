@@ -1,6 +1,6 @@
 """Alpha Zoo base operators.
 Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/base.py (MIT; see THIRD_PARTY.md).
-Changes: imports only.
+Changes: imports, and numpy versions of the rolling argmax / argmin fallbacks plus `ts_prod` (BASE_PATCHES in scripts/port_vibe_alphas.py; same values, faster).
 
 Operators all act on **wide** ``pd.DataFrame`` where ``index = trading_date``
 (DatetimeIndex) and ``columns = instrument_code`` (str). The factor compute
@@ -347,7 +347,7 @@ def ts_argmax(df: pd.DataFrame, n: int) -> pd.DataFrame:
         raw = bn.move_argmax(arr, window=n, min_count=n, axis=0)
         corrected = (n - 1) - raw
         return pd.DataFrame(corrected, index=df.index, columns=df.columns)
-    return df.rolling(window=n, min_periods=n).apply(_argmax_last, raw=True)
+    return _rolling_last_arg(df, n, np.argmax)
 
 
 def ts_argmin(df: pd.DataFrame, n: int) -> pd.DataFrame:
@@ -364,7 +364,43 @@ def ts_argmin(df: pd.DataFrame, n: int) -> pd.DataFrame:
         raw = bn.move_argmin(arr, window=n, min_count=n, axis=0)
         corrected = (n - 1) - raw
         return pd.DataFrame(corrected, index=df.index, columns=df.columns)
-    return df.rolling(window=n, min_periods=n).apply(_argmin_last, raw=True)
+    return _rolling_last_arg(df, n, np.argmin)
+
+
+# Elements per block of windows in the numpy rolling helpers: bounds the temporary arrays (NaN mask, reversed copy) to ~32 MB.
+_WINDOW_BLOCK = 4_000_000
+
+
+def _window_blocks(arr: np.ndarray, n: int):
+    """Yield (first output row, windows) over ``arr`` (T, C): windows is a (k, C, n) view, oldest bar first, in blocks."""
+    T, C = arr.shape
+    step = max(1, _WINDOW_BLOCK // max(1, C * n))
+    for s in range(0, T - n + 1, step):
+        yield s + n - 1, sliding_window_view(arr[s : s + step + n - 1], window_shape=n, axis=0)
+
+
+def _rolling_last_arg(df: pd.DataFrame, n: int, pick) -> pd.DataFrame:
+    """Rolling argmax / argmin (0-based from the window start, ties to the most recent bar), any NaN in the window -> NaN.
+
+    OpenTerm: the same answers as ``rolling(n, min_periods=n).apply(_argmax_last / _argmin_last, raw=True)``, which called Python
+    once per window and column (about half the time of an ALPHA FAMILY=ALL run), computed with numpy over blocks of windows.
+    """
+    arr = df.to_numpy(dtype=np.float64)
+    out = np.full(arr.shape, np.nan, order="F")  # column-major like pandas' frames, so later sums add in the same order (bit-identical)
+    for row, w in _window_blocks(arr, n):
+        res = ((n - 1) - pick(w[..., ::-1], axis=2)).astype(np.float64)
+        res[np.isnan(w).any(axis=2)] = np.nan
+        out[row : row + len(res)] = res
+    return pd.DataFrame(out, index=df.index, columns=df.columns)
+
+
+def ts_prod(df: pd.DataFrame, n: int) -> pd.DataFrame:
+    """OpenTerm: rolling product, any NaN in the window -> NaN (``rolling(n, min_periods=n).apply(np.prod, raw=True)`` in numpy)."""
+    arr = df.to_numpy(dtype=np.float64)
+    out = np.full(arr.shape, np.nan, order="F")  # column-major like pandas' frames, so later sums add in the same order (bit-identical)
+    for row, w in _window_blocks(arr, n):
+        out[row : row + len(w)] = np.prod(w, axis=2)
+    return pd.DataFrame(out, index=df.index, columns=df.columns)
 
 
 def delta(df: pd.DataFrame, d: int) -> pd.DataFrame:
