@@ -167,6 +167,10 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     // and a press from this button moves focus to the panel first, so it works from the mouse too.
     { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },
   ],
+  // Third-party extensions: L shows the list from an extension panel; Enter / D on a list row enable / disable it (the panel's own keys).
+  EXT: [
+    { label: "List", key: "l", title: "Show the installed extensions (L)", when: "args" },
+  ],
 };
 
 /** The buttons to show for a function and its current arguments (applies each button's `when`). */

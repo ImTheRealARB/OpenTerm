@@ -149,6 +149,7 @@ const defs: FunctionDef[] = [
   { code: "APIKEYS", title: "API keys: set, test, remove (optional, zero keys works)", needsSecurity: false, argsSchema: "[PROVIDER]", load: () => import("./APIKEYS"), idlePreload: false },
   { code: "SOURCES", title: "Data sources: health, latency, quota", needsSecurity: false, load: () => import("./Sources") },
   { code: "LOG", title: "Backend log", needsSecurity: false, load: () => import("./Log") },
+  { code: "EXT", title: "Third-party extensions: list, enable, run (their code runs with your permissions)", needsSecurity: false, argsSchema: "[LIST | ENABLE name | DISABLE name | name [route] [args]]", load: () => import("./EXT"), idlePreload: false },
   { code: "DLVR", title: "Alert delivery", needsSecurity: false, load: () => import("./DLVR") },
   { code: "BRIEF", title: "Daily brief", needsSecurity: false, load: () => import("./BRIEF") },
   { code: "TMPL", title: "Workspace templates: Long-term, Day trader, Macro, India", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", load: () => import("./TMPL"), idlePreload: false },

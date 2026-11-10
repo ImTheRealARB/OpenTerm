@@ -7,7 +7,7 @@ const SINGLE_KEY = /^(.|Enter|Escape|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDo
 
 describe("GUI panel toolbars", () => {
   it("covers the main panels", () => {
-    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "FA", "GP", "JRNL", "N", "ORD", "PORT", "Q", "SYNC", "WEI", "WL"]);
+    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "EXT", "FA", "GP", "JRNL", "N", "ORD", "PORT", "Q", "SYNC", "WEI", "WL"]);
   });
 
   it("only names functions that are in the registry (and built)", () => {

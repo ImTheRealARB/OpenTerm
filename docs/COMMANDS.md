@@ -300,3 +300,15 @@ Paper by default. The AI cannot place, change or cancel orders; every order need
 - `X` kill switch: blocks new orders (survives a restart) and cancels every open order at every connected broker; `U` releases it. `C` cancels the selected open order (Up/Down select).
 - `I` adds today's fills to a portfolio as lots labelled `paper`, `alpaca` or `kite-orders` (keep paper fills in a portfolio of their own). `SYNC` never removes them.
 - The panel also lists the blotter (account, open orders, fills, positions) and the order ledger with its hash-chain check. Zero keys shows `KEY REQUIRED` with the key to set.
+
+## Extensions (`EXT`)
+
+```
+EXT / EXT LIST                 the installed extensions: author, version, licence, what each adds, ON / OFF / ERR
+EXT ENABLE <name>              switch one on (third-party code, runs with your permissions; this machine only)
+EXT DISABLE <name>
+EXT <name> [route] [args]      an enabled extension's table or chart; route defaults to main
+```
+
+- Everything is OFF until you enable it. An extension that fails to load or crashes shows `ERR` and the reason; the rest of OpenTerm keeps working. Keys: `J`/`K` move, `Enter` opens (or enables) the selected one, `D` disables, `E` CSV, `F5` refresh.
+- Extensions add read-only data providers, AI tools named `ext.<name>.<tool>` and routes under `/api/ext/<name>/`. They can never add an order or broker tool. How to write one: [EXTENSIONS.md](EXTENSIONS.md). Running OpenTerm on your own server: [HOSTING.md](HOSTING.md).

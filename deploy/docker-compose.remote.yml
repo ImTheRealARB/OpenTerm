@@ -1,0 +1,54 @@
+# OpenTerm on your own server, behind Caddy (automatic HTTPS). See docs/HOSTING.md.
+#
+#   cd deploy
+#   cp .env.example .env        # set OPENTERM_DOMAIN to a name that points at this server
+#   docker compose -f docker-compose.remote.yml up -d --build
+#   docker compose -f docker-compose.remote.yml logs openterm | grep "ACCESS TOKEN"     # printed once, on first start
+#
+# Not run on the machine that wrote it (Docker was not available). Read it before you use it.
+#
+# Why the openterm service has NO `ports:` entry: only Caddy may reach it. Remote mode does not rely on that: every request needs
+# the session cookie, and no route counts as "this machine only" while OPENTERM_REMOTE=1.
+services:
+  openterm:
+    build:
+      context: ..
+    image: openterm:local
+    environment:
+      OPENTERM_REMOTE: "1"
+      OPENTERM_PUBLIC_ORIGIN: "https://${OPENTERM_DOMAIN:?set OPENTERM_DOMAIN in deploy/.env}"
+      # Optional keys; everything works without them. The key screen (APIKEYS) is refused remotely, so keys are set here.
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+    volumes:
+      - openterm-data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      # The image's own check calls /api/health, which needs a session in remote mode. The login page is open.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/login', timeout=2).status == 200 else 1)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - openterm
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      OPENTERM_DOMAIN: ${OPENTERM_DOMAIN:?set OPENTERM_DOMAIN in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  openterm-data:
+  caddy-data:
+  caddy-config:

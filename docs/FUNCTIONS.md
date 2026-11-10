@@ -318,6 +318,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `JOBS` | Background jobs: progress, cancel, results |  | `[TEST [steps] [ms]]` | `JOBS` |
 | `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
 | `LOG` | Backend log |  |  | `LOG` |
+| `EXT` | Third-party extensions: list, enable, run (their code runs with your permissions) |  | `[LIST \| ENABLE name \| DISABLE name \| name [route] [args]]` | `EXT` |
 
 ## Global keyboard shortcuts
 

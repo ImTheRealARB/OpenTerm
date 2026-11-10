@@ -60,7 +60,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
     { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL"] },
     { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
-    { name: "System", codes: ["JOBS", "PERF", "LOG"] },
+    { name: "System", codes: ["JOBS", "PERF", "LOG", "EXT"] },
   ],
 };
 
