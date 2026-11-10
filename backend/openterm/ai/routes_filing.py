@@ -1,4 +1,4 @@
-"""`POST /api/ai/filing` (Phase 20 step 9): `AI FILING <SYM> <question>` and `AI FILING <SYM> DRIVERS`. SSE, loopback only, like the other AI routes.
+"""`POST /api/ai/filing` (Phase 20 step 9): `AI FILING <SYM> <question>` and the presets `DRIVERS`, `GUIDANCE`, `CHAIN`. SSE, loopback only, like the other AI routes.
 
 Pipeline (the pure parts are in `filings.py`): newest 10-K / 10-Q of a US filer from SEC EDGAR -> text -> Items -> passages -> FTS5 / BM25 search ->
 the model answers from those passages and returns quotes -> every quote is checked against the filing text. This module is the glue: it fetches,
@@ -88,13 +88,14 @@ async def ai_filing(request: Request):
     if isinstance(body, Response):
         return body
     symbol = str(body.get("symbol") or "")
-    drivers = body.get("mode") == "drivers"
-    question = filings.DRIVERS_QUESTION if drivers else body.get("question")
+    preset = body.get("mode") if body.get("mode") in filings.PRESETS else None  # drivers | guidance | chain
+    drivers = preset is not None  # every preset retrieves for several themes, like DRIVERS
+    question, themes, extra = filings.PRESETS[preset] if preset else (body.get("question"), None, "")
     form = str(body["form"]).upper() if body.get("form") else None
     if not AI_SYMBOL_RE.match(symbol) or (form is not None and form not in filings.FORMS):
         return http_util.error_response(400, "bad_request", f"SYMBOL MUST BE A TICKER AND FORM ONE OF {', '.join(filings.FORMS)}")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION:
-        return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS (OR mode \"drivers\")")
+        return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS (OR mode \"drivers\", \"guidance\" OR \"chain\")")
     names = _models(body, await ai_settings(request))
     if names is None:
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
@@ -109,7 +110,7 @@ async def ai_filing(request: Request):
         return http_util.error_response(status, "provider" if status == 502 else e.kind, redact(f"SEC: {str(e)[:160]}"))
     except filings.FilingsError as e:
         return http_util.error_response(422, "bad_filing", str(e))
-    questions = list(filings.DRIVERS_THEMES.values()) if drivers else [question.strip()]
+    questions = list(themes.values()) if themes else [question.strip()]
     try:
         hits = await asyncio.to_thread(filings.retrieve, filing.passages, questions,
                                        filings.DRIVERS_PER_THEME if drivers else filings.MAX_HITS,
@@ -124,8 +125,8 @@ async def ai_filing(request: Request):
         now = time.gmtime()
         yield {"type": "start", "model": model, "provider": provider, "started": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", now)}
         yield {"type": "filing", "symbol": filing.symbol, "form": filing.form, "filed": filing.filed, "accession": filing.accession, "url": filing.url,
-               "source": SOURCE, "sections": len(filing.sections), "passages": len(filing.passages), "mode": "drivers" if drivers else "ask"}
-        args = {"symbol": filing.symbol, "form": filing.form, "accession": filing.accession, "mode": "drivers" if drivers else "ask"}
+               "source": SOURCE, "sections": len(filing.sections), "passages": len(filing.passages), "mode": preset or "ask"}
+        args = {"symbol": filing.symbol, "form": filing.form, "accession": filing.accession, "mode": preset or "ask"}
         yield {"type": "tool_call", "id": "T1", "name": TOOL, "args": args}
         sections = sorted({h.section for h in hits})
         yield {"type": "tool_result", "id": "T1", "name": TOOL, "ok": True, "empty": not hits, "source": f"{SOURCE} {filing.form} {filing.filed}",
@@ -136,7 +137,7 @@ async def ai_filing(request: Request):
             yield {"type": "done", "answer": "NO PASSAGE OF THE FILING MATCHES THIS QUESTION: TRY OTHER WORDS.", "grounded": False, "label": "UNGROUNDED",
                    "unsourced": [], "tool_calls": 1, "cost": 0.0, "stopped": None, "verified": 0, "unverified": 0}
             return
-        messages = filings.build_messages(filing.symbol, filing.form, filing.filed, ask, hits, time.strftime("%Y-%m-%d", now))
+        messages = filings.build_messages(filing.symbol, filing.form, filing.filed, ask, hits, time.strftime("%Y-%m-%d", now), extra)
         parts: list[str] = []
         cost = 0.0
         used = 0  # output tokens the provider reports: tells "ran out of budget" apart from "answered badly"
@@ -171,6 +172,6 @@ async def ai_filing(request: Request):
                "verified": good, "unverified": len(checked) - good}
 
     system_for_audit = filings.FILING_SYSTEM
-    tag = "DRIVERS" if drivers else ask
+    tag = preset.upper() if preset else ask
     stream = audit(request, events(), "ai_filing", system_for_audit, f"{symbol.upper()} {tag}", [TOOL], model, provider)
     return _stream(request, t0, stream)

@@ -1,9 +1,9 @@
-/** `AI [question...]`, `AI BT <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]`, `AI FILING <SYMBOL> [10-K|10-Q] <question | DRIVERS>` (pure, unit-tested).
+/** `AI [question...]`, `AI BT <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]`, `AI FILING <SYMBOL> [10-K|10-Q] <question | DRIVERS | GUIDANCE | CHAIN>` (pure, unit-tested).
  * Only the first word picks a mode. */
 export type AiArgs =
   | { mode: "ask" | "bt" | "chart" | "doc" | "docoff" | "auto"; text: string }
   | { mode: "docfiling"; text: string; symbol: string; form: string }
-  | { mode: "filing"; text: string; symbol: string; form: string | null; drivers: boolean }
+  | { mode: "filing"; text: string; symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" }
   | { mode: "bad"; text: string; error: string };
 
 export function aiArgs(args: string[]): AiArgs {
@@ -28,9 +28,9 @@ export function aiArgs(args: string[]): AiArgs {
   return { mode: "ask", text: args.join(" ").trim() };
 }
 
-const FILING_USAGE = "USAGE: AI FILING <SYMBOL> [10-K|10-Q] <question> | AI FILING <SYMBOL> DRIVERS (US FILERS ONLY)";
+const FILING_USAGE = "USAGE: AI FILING <SYMBOL> [10-K|10-Q] <question> | AI FILING <SYMBOL> DRIVERS|GUIDANCE|CHAIN (US FILERS ONLY)";
 
-/** `AAPL [10-K|10-Q] DRIVERS` or `AAPL [10-K|10-Q] <question words>`. The form is optional: without it the newest 10-K or 10-Q is used. */
+/** `AAPL [10-K|10-Q] DRIVERS|GUIDANCE|CHAIN` or `AAPL [10-K|10-Q] <question words>`. The form is optional: without it the newest 10-K or 10-Q is used. */
 function filingArgs(rest: string[]): AiArgs {
   const symbol = (rest[0] ?? "").toUpperCase();
   if (!/^[A-Z0-9.^=-]{1,12}$/.test(symbol)) return { mode: "bad", text: "", error: FILING_USAGE };
@@ -39,6 +39,10 @@ function filingArgs(rest: string[]): AiArgs {
   const form = f === "10-K" || f === "10-Q" ? f : null;
   if (form) words = words.slice(1);
   if (words.length === 1 && words[0].toUpperCase() === "DRIVERS") return { mode: "filing", text: "DRIVERS", symbol, form, drivers: true };
+  if (words.length === 1 && ["GUIDANCE", "CHAIN"].includes(words[0].toUpperCase())) {
+    const w = words[0].toUpperCase();
+    return { mode: "filing", text: w, symbol, form, drivers: false, preset: w === "GUIDANCE" ? "guidance" : "chain" };
+  }
   const text = words.join(" ").trim();
   return text ? { mode: "filing", text, symbol, form, drivers: false } : { mode: "bad", text: "", error: FILING_USAGE };
 }

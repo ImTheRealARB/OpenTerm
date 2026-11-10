@@ -4,7 +4,7 @@
  * data, UNSOURCED NUMBERS for figures no tool returned. AI output is model output, not data. Keys never reach this code: the backend holds them.
  * `AI BT <idea>` drafts a backtest rule (validated by the BT parser, shown, never run by the AI: B puts the BT command on the command line).
  * `AI CHART` sends the chart of the newest GP panel to a vision model. Both answers are labelled model output.
- * `AI FILING <SYM> <question>` / `AI FILING <SYM> DRIVERS` (US filers): the backend searches the newest 10-K / 10-Q, the model answers from the passages
+ * `AI FILING <SYM> <question>` / `AI FILING <SYM> DRIVERS|GUIDANCE|CHAIN` (US filers): the backend searches the newest 10-K / 10-Q, the model answers from the passages
  * and quotes them, and every quote is checked word for word against the filing: VERIFIED with its section, or UNVERIFIED and left out of the summary.
  * `AI DOC FILING <SYM> [FORM]` or U (upload a TXT, CSV, HTML, DOCX, XLSX or PDF) loads one document; questions then use only its text, with chunk
  * citations (`AI DOC OFF` goes back to market data). Keys: I / Enter type a question, Enter sends, Esc cancels a running answer (or leaves the input), X clears the chat.
@@ -175,7 +175,7 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, []);
 
   const send = useCallback(
-    async (question: string, mode: "ask" | "bt" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean }) => {
+    async (question: string, mode: "ask" | "bt" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" }) => {
       const { turns: cur, ai: cfg, doc: curDoc } = state.current;
       if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
       const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : mode === "filing" ? `AI FILING ${filing?.symbol ?? ""}` : "";
@@ -218,7 +218,7 @@ export default function AI({ panelId, args }: FunctionProps) {
           mode === "bt"
             ? { idea: question, model: cfg.model, provider: cfg.provider }
             : mode === "filing" && filing
-              ? { symbol: filing.symbol, ...(filing.form ? { form: filing.form } : {}), ...(filing.drivers ? { mode: "drivers" } : { question }), model: cfg.model, provider: cfg.provider }
+              ? { symbol: filing.symbol, ...(filing.form ? { form: filing.form } : {}), ...(filing.preset ? { mode: filing.preset } : filing.drivers ? { mode: "drivers" } : { question }), model: cfg.model, provider: cfg.provider }
               : mode === "auto"
               ? { hypothesis: question, model: cfg.model, provider: cfg.provider }
               : mode === "chart"
@@ -312,7 +312,7 @@ export default function AI({ panelId, args }: FunctionProps) {
     } else if (a.mode === "docfiling") {
       void loadFiling(a.symbol, a.form);
     } else if (a.mode === "filing") {
-      void send(a.text, "filing", { symbol: a.symbol, form: a.form, drivers: a.drivers });
+      void send(a.text, "filing", { symbol: a.symbol, form: a.form, drivers: a.drivers, preset: a.preset });
     } else if (a.mode === "bad") {
       setTurns([reduceTurn(newTurn("AI " + args.join(" ")), { type: "error", kind: "usage", text: a.error })]);
     } else if (a.mode !== "ask" || a.text) {
@@ -365,7 +365,7 @@ export default function AI({ panelId, args }: FunctionProps) {
         <span className="dim">
           {" "}
           · {ai.provider.toUpperCase()}
-          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI AUTO HYPOTHESIS · AI CHART · AI FILING SYMBOL QUESTION
+          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI AUTO HYPOTHESIS · AI CHART · AI FILING SYMBOL QUESTION|DRIVERS|GUIDANCE|CHAIN
         </span>
       </div>
       {doc && (

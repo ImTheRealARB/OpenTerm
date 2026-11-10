@@ -44,6 +44,12 @@ describe("aiArgs FILING", () => {
     expect(aiArgs(["FILING", "AAPL", "10-K", "drivers"])).toMatchObject({ mode: "filing", form: "10-K", drivers: true });
     expect(aiArgs(["FILING", "AAPL", "what", "drivers", "margins"])).toMatchObject({ mode: "filing", drivers: false, text: "what drivers margins" });
   });
+  it("GUIDANCE and CHAIN are presets like DRIVERS, only when they are the whole question", () => {
+    expect(aiArgs(["FILING", "aapl", "guidance"])).toEqual({ mode: "filing", text: "GUIDANCE", symbol: "AAPL", form: null, drivers: false, preset: "guidance" });
+    expect(aiArgs(["FILING", "AAPL", "10-Q", "chain"])).toMatchObject({ mode: "filing", form: "10-Q", preset: "chain", drivers: false });
+    expect(aiArgs(["FILING", "AAPL", "supply", "chain"])).toEqual({ mode: "filing", text: "supply chain", symbol: "AAPL", form: null, drivers: false });
+    expect(aiArgs(["FILING", "AAPL", "guidance", "for", "capex"])).not.toHaveProperty("preset");
+  });
   it("a missing symbol or question is a usage error, and AI DOC FILING is untouched", () => {
     expect(aiArgs(["FILING"]).mode).toBe("bad");
     expect(aiArgs(["FILING", "AAPL"]).mode).toBe("bad");
