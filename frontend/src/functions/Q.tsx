@@ -17,7 +17,7 @@ import { gridCsv, useCsvExport } from "./tableExport";
 
 export const DEFAULT_LIST = ["SPY", "QQQ", "DIA", "^NSEI", "^BSESN", "AAPL", "MSFT", "RELIANCE.NS", "INFY.NS", "BTC-USD", "EURUSD=X", "GC=F", "CL=F"];
 
-export default function Q({ panelId, args, security }: FunctionProps) {
+export default function Q({ panelId, args, security, source }: FunctionProps) {
   const inputs = useMemo(() => {
     const list = args.map((a) => a.toUpperCase()).filter(Boolean);
     if (list.length) return list;
@@ -28,7 +28,7 @@ export default function Q({ panelId, args, security }: FunctionProps) {
   const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const COLUMNS = gui ? QUOTE_COLUMNS_GUI : QUOTE_COLUMNS;
   const [reload, setReload] = useState(0);
-  const { rows, setRows, loading } = useQuotes(inputs, reload);
+  const { rows, setRows, loading } = useQuotes(inputs, reload, source);
   const [sort, setSort] = useState<Sort>("INPUT");
   const grid = useRef<GridHandle>(null);
   const latest = useLatest({ rows, sort });

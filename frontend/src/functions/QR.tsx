@@ -7,14 +7,14 @@ import type { Envelope, Quote } from "../net/types";
 import type { FunctionProps } from "./registry";
 
 /** Quote recap: one security, live, every quote field we have. */
-export default function QR({ security }: FunctionProps) {
+export default function QR({ security, source }: FunctionProps) {
   const symbol = security!.symbol;
   const [r, setR] = useState<{ env?: Envelope<Quote>; error?: string }>({});
 
   useEffect(() => {
     let alive = true;
     setR({});
-    marketApi.quotes([symbol]).then(
+    marketApi.quotes([symbol], source).then(
       ({ results }) => {
         const x = Object.values(results)[0];
         if (alive) setR(x && !("error" in x) ? { env: x } : { error: x && "error" in x ? x.error : "NO DATA FOR SYMBOL" });
@@ -24,7 +24,7 @@ export default function QR({ security }: FunctionProps) {
     return () => {
       alive = false;
     };
-  }, [symbol]);
+  }, [symbol, source]);
 
   if (r.error) return <div className="err">{symbol}: {r.error}</div>;
   if (!r.env) return <div className="dim">LOADING {symbol}…</div>;

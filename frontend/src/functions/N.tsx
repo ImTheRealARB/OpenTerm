@@ -35,16 +35,16 @@ function openArticle(url: string): void {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-export default function N({ panelId, args, security }: FunctionProps) {
+export default function N({ panelId, args, security, source }: FunctionProps) {
   const query = useMemo(() => newsQuery(args, security), [args, security]);
   const [sel, setSel] = useState(0);
   const firstIds = useRef<Set<string> | null>(null);
   const grid = useRef<GridHandle>(null);
 
-  const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify(query), (fresh) => {
+  const { env, error, loading, reload: load } = useEnvelope<NewsPayload>(JSON.stringify([query, source ?? ""]), (fresh) => {
     // A mistyped filter never reaches the network: the panel says what was wrong (below).
     if (query.kind === "error") return Promise.reject(new Error(query.message));
-    return marketApi.news(newsParams(query), fresh).then((e) => {
+    return marketApi.news({ ...newsParams(query), source }, fresh).then((e) => {
       if (query.kind === "top" || query.kind === "symbol") checkNewsItems(query.kind === "symbol" ? query.symbol.toUpperCase() : null, e.data.items);
       return e;
     });

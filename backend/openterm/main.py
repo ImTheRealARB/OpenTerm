@@ -26,6 +26,7 @@ from .mcp.routes import router as mcp_router
 from .mcpclient.routes import router as mcp_client_router
 from .orders.routes import router as orders_router
 from .origin import OriginGuardMiddleware
+from .pin import SourcePinMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
 from .responses import Orjson, OrjsonRoute
@@ -122,6 +123,9 @@ async def lifespan(app: FastAPI):
         if part:
             part.start()
 
+    from .settings_store import SettingsStore, source_prefs
+
+    router.prefs = source_prefs((await SettingsStore(db).get())["settings"])  # SETTINGS SOURCE <capability> <provider>
     app.state.settings = settings
     app.state.service = service
     app.state.hub = hub
@@ -209,6 +213,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson, lifespan=lifespan)
 app.router.route_class = OrjsonRoute  # the app's own routes (/api/health, /api/perf) skip jsonable_encoder too (audit E-1)
 app.add_middleware(perf.TimingMiddleware)
+app.add_middleware(SourcePinMiddleware)  # `?source=nasdaq` pins one data source for the request (pin.py)
 app.add_middleware(OriginGuardMiddleware)  # outermost: a foreign browser Origin never reaches a route (audit D-2)
 app.include_router(api_router)
 app.include_router(quant_router)

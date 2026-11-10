@@ -6,6 +6,8 @@ export interface FunctionProps {
   panelId: number;
   security?: SecurityRef;
   args: string[];
+  /** Source pinned by `SRC=` for this view; a panel passes it on to its API calls (`?source=`). */
+  source?: string;
 }
 
 export interface FunctionDef {

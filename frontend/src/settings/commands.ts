@@ -2,10 +2,10 @@
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
  *   SETTINGS STARTUP HOME|LAYOUT | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
- *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER|STORETEXT ... | KEYS RESET | RESET
+ *            | SOURCE <capability> <source>|DEFAULT | SOURCE RESET | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER|STORETEXT ... | KEYS RESET | RESET
  */
 import {
-  AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
+  AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, SOURCE_NAME_RE, isZone, type PollKey, type Settings,
 } from "./schema";
 import { FONT_NAME_RE } from "./font";
 import { FONT_PRESETS, cyclePreset, findPreset, type FontPreset } from "./fontPresets";
@@ -96,6 +96,22 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       if (!Number.isInteger(v) || v < lo || v > hi) return fail(`POLL ${word}: ${lo}-${hi} SECONDS`);
       return { ok: true, next: { ...cur, poll: { ...cur.poll, [k]: v } }, message: `POLL ${word} ${v}S (APPLIES WHEN THE PANEL REOPENS)` };
     }
+    case "SOURCE": {
+      // SETTINGS SOURCE HISTORY NASDAQ: the source tried first for that kind of data; DEFAULT removes it, RESET removes all.
+      const usage = "SETTINGS SOURCE <DATA> <SOURCE> | <DATA> DEFAULT | RESET, E.G. SETTINGS SOURCE HISTORY NASDAQ (DATA: HISTORY QUOTES PROFILE FUNDAMENTALS NEWS_SYMBOL ...; SOURCES LISTS THE NAMES)";
+      if (word === "RESET") return { ok: true, next: { ...cur, sources: {} }, message: "SOURCE PREFERENCES CLEARED: THE DEFAULT ORDER APPLIES" };
+      const cap = (rest[0] ?? "").toLowerCase() === "news" ? "news_symbol" : (rest[0] ?? "").toLowerCase();
+      const name = (rest[1] ?? "").toLowerCase();
+      if (!/^[a-z][a-z0-9_]{0,39}$/.test(cap) || !name || rest.length > 2) return fail(usage);
+      const sources = { ...cur.sources };
+      if (name === "default") {
+        delete sources[cap];
+        return { ok: true, next: { ...cur, sources }, message: `${cap.toUpperCase()} USES THE DEFAULT SOURCE ORDER` };
+      }
+      if (!SOURCE_NAME_RE.test(name)) return fail(usage);
+      sources[cap] = name;
+      return { ok: true, next: { ...cur, sources }, message: `${cap.toUpperCase()}: ${name.toUpperCase()} FIRST, THE DEFAULT ORDER BEHIND IT (SRC= PINS ONE COMMAND)` };
+    }
     case "AI": {
       const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | STORETEXT ON|OFF | RESET";
       if (word === "RESET") return { ok: true, next: { ...cur, ai: { ...DEFAULTS.ai } }, message: "AI SETTINGS RESET TO DEFAULTS" };
@@ -124,6 +140,6 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       // The shell (mode) is kept: RESET restores preferences, it must not switch between TERMINAL and GUI.
       return { ok: true, next: { ...DEFAULTS, mode: cur.mode, keys: {} }, message: "SETTINGS RESET TO DEFAULTS" };
     default:
-      return fail("SETTINGS STARTUP|TAPE|MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|AI|KEYS|RESET ...");
+      return fail("SETTINGS STARTUP|TAPE|MODE|THEME|FONT|VIM|CLOCKS|CHART|THOUSANDS|DECIMAL|POLL|SOURCE|AI|KEYS|RESET ...");
   }
 }

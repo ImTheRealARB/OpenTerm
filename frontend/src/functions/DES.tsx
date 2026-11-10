@@ -112,7 +112,7 @@ function Description({ text, gui }: { text: string; gui: boolean }) {
   );
 }
 
-export default function DES({ panelId, security }: FunctionProps) {
+export default function DES({ panelId, security, source }: FunctionProps) {
   const symbol = security!.symbol;
   const gui = useStore(settingsStore, (s) => s.mode === "gui");
   const [prof, setProf] = useState<Result<Profile>>({});
@@ -123,11 +123,11 @@ export default function DES({ panelId, security }: FunctionProps) {
     let alive = true;
     setProf({});
     setQuote({});
-    marketApi.profile(symbol).then(
+    marketApi.profile(symbol, source).then(
       (env) => alive && setProf({ env: env as Envelope<Profile> }),
       (e: ApiError) => alive && setProf({ error: e.message, keyError: isKeyRequired(e) ? e : undefined }),
     );
-    marketApi.quotes([symbol]).then(
+    marketApi.quotes([symbol], source).then(
       ({ results }) => {
         if (!alive) return;
         const r = Object.values(results)[0];
@@ -138,7 +138,7 @@ export default function DES({ panelId, security }: FunctionProps) {
     return () => {
       alive = false;
     };
-  }, [symbol, reload]);
+  }, [symbol, reload, source]);
 
   usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
 

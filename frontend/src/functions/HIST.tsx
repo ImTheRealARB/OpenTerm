@@ -20,14 +20,14 @@ import { gridCsv, useCsvExport } from "./tableExport";
 const INTERVALS: Record<string, string> = { D: "1d", W: "1wk", MO: "1mo" };
 const INTERVAL_LABEL: Record<string, string> = { D: "DAILY", W: "WEEKLY", MO: "MONTHLY" };
 
-export default function HIST({ panelId, security, args }: FunctionProps) {
+export default function HIST({ panelId, security, args, source }: FunctionProps) {
   const symbol = security!.symbol;
   const { range, interval, bad } = useMemo(() => histArgs(args), [args]);
   const grid = useRef<GridHandle>(null);
 
   // useEnvelope drops an answer for an old symbol/range that lands after a re-key.
-  const { env, error, loading, reload: load } = useEnvelope<BarsAdj>(`${symbol}|${range}|${interval}`, (fresh) =>
-    marketApi.history(symbol, range, INTERVALS[interval], fresh),
+  const { env, error, loading, reload: load } = useEnvelope<BarsAdj>(`${symbol}|${range}|${interval}|${source ?? ""}`, (fresh) =>
+    marketApi.history(symbol, range, INTERVALS[interval], fresh, source),
   );
 
   const tz = env?.data.tz ?? null;

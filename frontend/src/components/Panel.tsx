@@ -58,7 +58,7 @@ function FunctionView({ panelId, view }: { panelId: number; view: ReturnType<typ
   if (!Mod) return <div className="dim">LOADING {code}…</div>;
   return (
     <PanelIdContext.Provider value={panelId}>
-      <Mod panelId={panelId} security={view.security} args={view.args} />
+      <Mod panelId={panelId} security={view.security} args={view.args} source={view.source} />
     </PanelIdContext.Provider>
   );
 }
@@ -99,7 +99,7 @@ export function Panel({ id }: { id: number }) {
   const showStrip = gui && !!tickerPart && !(view.fn && FUNCTIONS.get(view.fn)?.leadsWithPrice);
   // New command = new history entry = remount. In-place edits (timeframe, list) keep the instance.
   const mountKey = `${panel.pos}:${view.fn}:${view.security?.symbol}`;
-  const resetKey = `${mountKey}:${view.args.join(" ")}`;
+  const resetKey = `${mountKey}:${view.args.join(" ")}:${view.source ?? ""}`;
 
   return (
     <section className={"panel" + (focused ? " focus" : "")} data-panel={id} onMouseDown={() => focusPanel(id)}>
@@ -110,6 +110,7 @@ export function Panel({ id }: { id: number }) {
           {tickerPart && fnPart && " | "}
           {fnPart && <span className="fnm">{fnPart}</span>}
           {!tickerPart && !fnPart && "—"}
+          {view.source && <span className="dim"> SRC={view.source.toUpperCase()}</span>}
         </span>
         {plainTitle && <span className="ph-plain">{"· " + plainTitle}</span>}
         {panel.views.length > 1 && <span className="dim ph-pos">{panel.pos + 1}/{panel.views.length}</span>}

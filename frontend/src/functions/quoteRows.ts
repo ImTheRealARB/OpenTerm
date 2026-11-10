@@ -152,7 +152,7 @@ function toRow(input: string, r: QuoteResult | undefined, now: number): QRow {
 const CHUNK = 200; // the backend's per-request symbol cap
 
 /** REST snapshot of `inputs` (any length), re-fetched when `inputs` or `reload` change. */
-export function useQuotes(inputs: string[], reload: number) {
+export function useQuotes(inputs: string[], reload: number, source?: string) {
   const [rows, setRows] = useState<QRow[]>(() => inputs.map(blankRow));
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -164,7 +164,7 @@ export function useQuotes(inputs: string[], reload: number) {
       return;
     }
     const chunks = Array.from({ length: Math.ceil(inputs.length / CHUNK) }, (_, i) => inputs.slice(i * CHUNK, (i + 1) * CHUNK));
-    Promise.all(chunks.map((c) => marketApi.quotes(c)))
+    Promise.all(chunks.map((c) => marketApi.quotes(c, source)))
       .then((parts) => {
         if (!alive) return;
         const results = Object.assign({}, ...parts.map((p) => p.results)) as Record<string, QuoteResult>;
@@ -178,7 +178,7 @@ export function useQuotes(inputs: string[], reload: number) {
     return () => {
       alive = false;
     };
-  }, [inputs, reload]);
+  }, [inputs, reload, source]);
   return { rows, setRows, loading };
 }
 

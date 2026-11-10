@@ -38,6 +38,17 @@ jobs:
       - run: uv sync
       - run: uv run pytest -q
 
+  sdk:
+    needs: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults: { run: { working-directory: sdk/python } }
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+      # httpx + pandas only; tests use httpx.MockTransport, so there is no network and no running OpenTerm.
+      - run: uv run --with pytest --with pandas --with httpx pytest -q
+
   vitest:
     needs: static
     runs-on: ubuntu-latest

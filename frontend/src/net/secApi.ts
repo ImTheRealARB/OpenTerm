@@ -4,8 +4,8 @@ import { get, TTL } from "./core";
 import type { Envelope } from "./types";
 
 export const secApi = {
-  fa: (symbol: string, period: FaPeriod, fresh = false) =>
-    get<Envelope<FaPayload>>("/api/fa", { symbol, period }, TTL.m5, fresh),
+  fa: (symbol: string, period: FaPeriod, fresh = false, source?: string) =>
+    get<Envelope<FaPayload>>("/api/fa", { symbol, period, source }, TTL.m5, fresh),
   filings: (symbol: string, form: string, fresh = false) =>
     get<Envelope<FilingsPayload>>("/api/filings", { symbol, form }, TTL.m1, fresh),
   insiders: (symbol: string, fresh = false) =>

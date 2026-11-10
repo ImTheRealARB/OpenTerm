@@ -510,13 +510,15 @@ async def get_settings_doc(request: Request):
 
 @router.put("/settings")
 async def put_settings_doc(request: Request):
-    from .settings_store import VERSION, SettingsStore
+    from .settings_store import VERSION, SettingsStore, source_prefs
 
     try:
         body = await json_object(request)
         if "settings" not in body:
             raise UserDataError("bad_request", "BODY NEEDS settings")
-        return await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
+        doc = await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
+        svc(request).router.prefs = source_prefs(doc["settings"])
+        return doc
     except UserDataError as e:
         return error(e)
 

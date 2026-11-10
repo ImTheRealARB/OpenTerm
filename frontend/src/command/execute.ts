@@ -136,6 +136,6 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   if (fn === "WL" && cur.fn === "WL" && args.length && cur.args[0]?.toUpperCase() === args[0]) return true;
   if ((fn === "PORT" || fn === "ALRT") && cur.fn === fn && (cur.args[0] ?? "").toUpperCase() === (args[0] ?? "")) return true; // Phase 8
   commandStart(panelId, parsed.raw);
-  navigate(panelId, { fn, security, args });
+  navigate(panelId, { fn, security, args, ...(parsed.source ? { source: parsed.source } : {}) });
   return true;
 }

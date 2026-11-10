@@ -21,7 +21,7 @@ const MAX_COLS = 12;
 /** Statement lines that are totals or subtotals. In GUI mode they are drawn brighter ("val") so they stand out from the lines under them. */
 const SUBTOTALS = new Set(["revenue", "gross_profit", "operating_income", "pretax_income", "net_income", "current_assets", "total_assets", "current_liabilities", "total_liabilities", "equity", "operating_cf", "investing_cf", "financing_cf"]);
 
-export default function FA({ panelId, security, args }: FunctionProps) {
+export default function FA({ panelId, security, args, source }: FunctionProps) {
   const symbol = security!.symbol;
   const init = useMemo(() => faArgs(args), [args]);
   const [period, setPeriod] = useState<FaPeriod>(init.period);
@@ -31,7 +31,7 @@ export default function FA({ panelId, security, args }: FunctionProps) {
   const grid = useRef<GridHandle>(null);
   const gui = useStore(settingsStore, (st) => st.mode === "gui");
 
-  const { env, error, loading, reload } = useEnvelope<FaPayload>(`${symbol}|${period}`, (fresh) => secApi.fa(symbol, period, fresh));
+  const { env, error, loading, reload } = useEnvelope<FaPayload>(`${symbol}|${period}|${source ?? ""}`, (fresh) => secApi.fa(symbol, period, fresh, source));
   const shaped = useMemo(() => (env ? faRows(env.data, tab, offset, MAX_COLS) : null), [env, tab, offset]);
   const rows = useMemo(() => shaped?.rows ?? [], [shaped]);
 

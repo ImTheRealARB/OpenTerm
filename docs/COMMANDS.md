@@ -132,6 +132,8 @@ THEME GREEN           AMBER GREEN WHITE LIGHT
 SETTINGS              vim mode, clocks, number format, refresh rates, key rebinding, interface mode
 SETTINGS FONT Fira Code   switch font: presets JetBrains Mono (default), GitHub Mono, Geist Mono, Fira Code, Mononoki, Hack, Monaco, DejaVu Sans Mono, Menlo, Consolas, Comic Sans; NEXT / PREV step through them; any other installed font name works too. GUI mode: the font dropdown in the menu bar
 SETTINGS MODE GUI     GUI mode: menu bar, sidebar, panel buttons (SETTINGS MODE TERMINAL, or Alt+G, switches back)
+SETTINGS SOURCE HISTORY NASDAQ   default source for a kind of data (HISTORY QUOTES PROFILE FUNDAMENTALS NEWS_SYMBOL ...); it goes first and the normal order still backs it up. SETTINGS SOURCE HISTORY DEFAULT removes one, SETTINGS SOURCE RESET all
+AAPL GP 5Y SRC=NASDAQ   pin the data source for this one command (also on Q, HIST, DES, FA, N, QR; the name is any in SOURCES, Tab completes it). A pinned source answers ALONE: if it is down, lacks the data or needs a key you get `SRC=NASDAQ: PROVIDER DOWN`, `DOES NOT SERVE HISTORY` or `KEY REQUIRED`, never another source's data. The cache keeps pinned answers apart. PRED keeps its own `SRC=POLY|KALSHI|ALL`
 Alt+H                 GUI mode: help drawer for the focused panel
 SOURCES               data source health and latency
 APIKEYS               optional API keys: Enter edit (masked), T test, D twice delete, O sign-up page, C AI spend cap

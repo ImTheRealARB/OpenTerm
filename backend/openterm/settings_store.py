@@ -165,7 +165,30 @@ def _vim(raw) -> bool:
     return raw
 
 
+def _sources(raw) -> dict:
+    """{capability: provider}: the source tried first for that kind of data (SETTINGS SOURCE HISTORY NASDAQ). The default order backs it up."""
+    from .pin import NAME_RE
+    from .providers.hierarchy import DEFAULT_ORDER
+
+    if not isinstance(raw, dict) or len(raw) > len(DEFAULT_ORDER):
+        raise _bad("sources MUST MAP CAPABILITIES TO SOURCE NAMES")
+    out = {}
+    for cap, name in raw.items():
+        if cap not in DEFAULT_ORDER:
+            raise _bad(f"UNKNOWN CAPABILITY {str(cap)[:40]!r} IN sources")
+        if not isinstance(name, str) or not NAME_RE.match(name):
+            raise _bad(f"sources.{cap} MUST BE A SOURCE NAME LIKE nasdaq")
+        out[cap] = name
+    return out
+
+
+def source_prefs(settings: dict | None) -> dict[str, str]:
+    """The `sources` preferences of a stored settings object, for the router."""
+    return dict((settings or {}).get("sources") or {})
+
+
 FIELDS = {
+    "sources": _sources,
     "mode": lambda v: _choice(v, MODES, "mode"),
     "theme": lambda v: _choice(v, THEMES, "theme"),
     "font": _font,

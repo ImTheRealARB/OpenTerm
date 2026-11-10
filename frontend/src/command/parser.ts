@@ -1,14 +1,16 @@
 import { MARKET_SUFFIX, isSymbolToken, resolveSecurity, type SecurityRef } from "./markets";
 import { mapSector, parseSector } from "./sectors";
+import { takeSource } from "./srcArg";
 
 /**
  * Grammar:
  *   [N:] <SECURITY> [<MARKET>] [<SECTOR>] [<FUNCTION> [args...]]   (sector words: see sectors.ts, e.g. SPX INDEX GP)
  *   [N:] <FUNCTION> [args...]
  * A leading function code always wins over a ticker with the same letters.
+ * `SRC=<name>` anywhere after the first word pins the data source for this command (AAPL GP 5Y SRC=NASDAQ); see srcArg.ts.
  */
 export type Parsed =
-  | { ok: true; raw: string; target?: number; security?: SecurityRef; fn?: string; args: string[] }
+  | { ok: true; raw: string; target?: number; security?: SecurityRef; fn?: string; args: string[]; source?: string }
   | { ok: false; raw: string; error: string };
 
 export function parseCommand(input: string, isFunction: (code: string) => boolean): Parsed {
@@ -24,11 +26,14 @@ export function parseCommand(input: string, isFunction: (code: string) => boolea
     if (!body) return { ok: false, raw, error: "NOTHING AFTER PANEL TARGET" };
   }
 
-  const tokens = body.split(/\s+/);
+  const picked = takeSource(body.split(/\s+/));
+  if ("error" in picked) return { ok: false, raw, error: picked.error };
+  const tokens = picked.tokens;
   const first = tokens[0].toUpperCase();
 
+  const source = picked.source;
   if (isFunction(first)) {
-    return { ok: true, raw, target, fn: first, args: tokens.slice(1) };
+    return { ok: true, raw, target, fn: first, args: tokens.slice(1), source };
   }
 
   if (!isSymbolToken(first)) return { ok: false, raw, error: `BAD SYMBOL: ${tokens[0]}` };
@@ -52,7 +57,7 @@ export function parseCommand(input: string, isFunction: (code: string) => boolea
     if (sector !== "EQUITY") security = { symbol: mapped.symbol, market };
   }
   const fnTok = tokens[i]?.toUpperCase();
-  if (!fnTok) return { ok: true, raw, target, security, args: [] };
+  if (!fnTok) return { ok: true, raw, target, security, args: [], source };
   if (!isFunction(fnTok)) return { ok: false, raw, error: `UNKNOWN FUNCTION: ${fnTok}` };
-  return { ok: true, raw, target, security, fn: fnTok, args: tokens.slice(i + 1) };
+  return { ok: true, raw, target, security, fn: fnTok, args: tokens.slice(i + 1), source };
 }
