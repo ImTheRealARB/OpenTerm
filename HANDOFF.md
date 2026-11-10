@@ -8,7 +8,7 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
 session's designated branch and open a PR only when the owner asks.
 
-**Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`.**
+**Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`. Next: the owner pushes tag `v0.1.0` (step 2 below).**
 - Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39
   (tick to pixel p95 42.2 ms). Docs done: CHANGELOG, ROADMAP, FEATURE_GAP, PERFORMANCE, README badge, RELEASE_NOTES, DESKTOP.
 - Local runs in this container need the preinstalled Chromium (`/opt/pw-browsers/chromium`): pass it as `executablePath` in a
@@ -19,9 +19,22 @@ session's designated branch and open a PR only when the owner asks.
   NSE's 403 from the cloud machine.
 - **What is left (owner decisions of 2026-11-10, end of session):**
   1. ~~Merge to main~~: done (PR #40).
-  2. **First release `v0.1.0`.** Tag `main` `v0.1.0` (the app version in `desktop/package.json` and
-     `tauri.conf.json` is already 0.1.0; `release.yml` refuses a tag that does not match) and push the tag. GitHub builds Linux,
-     Windows and macOS into a DRAFT release; review and publish it. This workflow has never run, so check its logs the first time.
+  2. **First release `v0.1.0`: NOT DONE YET, the owner runs it on their Windows laptop** (the one with the OpenTerm folder).
+     A Claude cloud session cannot do this step: its git proxy only accepts pushes to the session's own branch (a tag push
+     gets HTTP 403), and its GitHub tools cannot create tags or releases. In PowerShell or Git Bash, inside the OpenTerm folder:
+     ```
+     git checkout main
+     git pull origin main
+     git tag -a v0.1.0 -m "OpenTerm v0.1.0"
+     git push origin v0.1.0
+     ```
+     `git pull` first so the tag lands on the merged `main` (commit `6db6c98` or later); `git log --oneline -1` should show
+     "Merge pull request #41" or newer. No folder handy? On github.com: Releases -> Draft a new release -> "Choose a tag":
+     type `v0.1.0`, "Create new tag on publish", target `main`, then **Publish release** (a draft does not create the tag).
+     Either way GitHub Actions runs `release.yml` (Actions tab, workflow "release"): Linux, Windows and macOS builds into a
+     DRAFT release (Option A) or into the published one (Option B). The app version is already 0.1.0 in
+     `desktop/package.json` and `tauri.conf.json`; `release.yml` refuses a tag that does not match. This workflow has never
+     run: check its logs, and if a build fails, paste the error into the next session to fix.
   3. **Updater signing key: later.** `npx tauri signer generate`, then the secrets `TAURI_SIGNING_PRIVATE_KEY` (+ password) in
      GitHub Settings -> Secrets and variables -> Actions. Without it releases build fine but do not self-update.
   4. **NO Apple / Windows signing certificates (owner decision).** OpenTerm is an open-source GitHub project, not an app-store
