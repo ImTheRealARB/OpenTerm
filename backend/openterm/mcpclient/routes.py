@@ -22,7 +22,7 @@ from ..responses import OrjsonRoute
 from .client import McpError
 from .external import ConfigError, manager_of
 
-log = logging.getLogger("openterm.mcp.client_routes")
+log = logging.getLogger("openterm.mcpclient.routes")
 router = APIRouter(prefix="/api/mcpc", route_class=OrjsonRoute)
 
 

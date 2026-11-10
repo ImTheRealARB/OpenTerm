@@ -35,7 +35,7 @@ import yaml
 from ..ai import tools as toolbox
 from .client import Client, McpError, ServerSpec, ToolInfo, order_like, wrap_untrusted
 
-log = logging.getLogger("openterm.mcp.external")
+log = logging.getLogger("openterm.mcpclient.external")
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$|^[a-z0-9]$")
 TOOL_RE = re.compile(r"^[A-Za-z0-9_\-]{1,48}$")  # a tool name that can be part of a provider function name
 LIST_TTL_S = 600.0

@@ -15,8 +15,8 @@ import yaml
 from fastapi import FastAPI, Request, Response
 
 from openterm.ai import tools as toolbox
-from openterm.mcp import client as mc
-from openterm.mcp import external as ext
+from openterm.mcpclient import client as mc
+from openterm.mcpclient import external as ext
 from tests import fake_mcp_server as fake
 
 HERE = Path(__file__).parent

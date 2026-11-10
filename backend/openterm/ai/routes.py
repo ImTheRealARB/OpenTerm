@@ -127,7 +127,7 @@ async def chat(request: Request):
     if names is None:
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
-    from ..mcp.external import prepare_for_run, with_notes
+    from ..mcpclient.external import prepare_for_run, with_notes
 
     notes = await prepare_for_run(request.app)  # third-party MCP tools the user enabled and allowed (none by default)
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port))

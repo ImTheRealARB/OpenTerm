@@ -30,7 +30,7 @@ from .. import APP_NAME, __version__
 from ..ai.context import RESULT_LIMIT, truncate_text
 from ..redact import redact
 
-log = logging.getLogger("openterm.mcp.client")
+log = logging.getLogger("openterm.mcpclient.client")
 PROTOCOL_VERSION = "2025-06-18"
 MAX_MESSAGE = 4_000_000  # bytes of one JSON-RPC message from a server
 INIT_TIMEOUT_S = 60.0  # `npx -y` may download a package on the first start

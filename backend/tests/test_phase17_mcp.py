@@ -98,8 +98,6 @@ def test_no_order_surface():
         assert not FORBIDDEN.search(t.name + " " + t.description + " " + t.path), t.name
     pkg = Path(server.__file__).parent
     for f in pkg.glob("*.py"):
-        if f.name in {"client.py", "external.py", "client_routes.py"}:
-            continue  # MCP *client* mode: these hold the refusal list of order-like words for third-party tools (test_mcp_client.py covers them)
         assert not FORBIDDEN.search(f.read_text(encoding="utf-8")), f.name
 
 

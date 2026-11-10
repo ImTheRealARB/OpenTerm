@@ -460,7 +460,7 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
 ]}
 
 
-# --- third-party tools (MCP client mode): filled by `mcp.external`, empty until the user enables a server and allows tools -----------------
+# --- third-party tools (MCP client mode): filled by `mcpclient.external`, empty until the user enables a server and allows tools -----------------
 @dataclass(frozen=True)
 class ExternalTool:
     name: str  # "<server>.<tool>": what the ledger, the events and the evidence lines show

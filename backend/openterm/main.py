@@ -21,8 +21,8 @@ from .config import ROOT, get_settings, load_yaml
 from .db import open_db
 from .delivery.routes import router as delivery_router
 from .kite_routes import router as kite_router
-from .mcp.client_routes import router as mcp_client_router
 from .mcp.routes import router as mcp_router
+from .mcpclient.routes import router as mcp_client_router
 from .origin import OriginGuardMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
