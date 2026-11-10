@@ -96,7 +96,7 @@ artifacts and uploads `latest.json`; the app (when built with the feature) reads
 `https://<repo>/releases/latest/download/latest.json`, verifies the signature against the public key, and by default only logs
 that an update exists (`OPENTERM_AUTO_UPDATE=1` installs it, `OPENTERM_NO_UPDATE_CHECK=1` skips the check). With no secrets the
 workflow still runs and produces unsigned bundles without an updater; the job summary says so. The workflow has not been run
-on GitHub, and the action tag (`tauri-action@v0.5.17`) could not be checked online from the build machine.
+on GitHub. `tauri-action` is pinned to the commit of its `v0.5.17` tag (`2a8db2c`, checked with `git ls-remote` 2026-11-10).
 The bundles still contain only the window, not the backend (see "Before shipping").
 
 ## Owner steps (cannot be done by an agent)

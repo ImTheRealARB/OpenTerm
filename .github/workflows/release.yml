@@ -106,7 +106,7 @@ jobs:
         working-directory: desktop
         run: npm ci --no-audit --no-fund
 
-      - uses: tauri-apps/tauri-action@v0.5.17
+      - uses: tauri-apps/tauri-action@2a8db2c169af2fdc695133781e27ecba52daea75 # v0.5.17
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

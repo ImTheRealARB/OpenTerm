@@ -8,8 +8,8 @@ uses `FRED_API_KEY`, the keyless FRED CSV is used otherwise).
 - **From source** (step by step for beginners in the [README](../README.md#install)): `.\scripts\setup.ps1` (light install, about 330 MB; `-Dev` adds test tools and Chromium), then `.\scripts\install-launcher.ps1` once, then just type `openterm` (or run `.\scripts\start.ps1`) (builds, serves on <http://localhost:8000>,
   opens the browser). For development with hot reload: `.\scripts\dev.ps1` and <http://localhost:5173>.
   Commands to try: [COMMANDS.md](COMMANDS.md).
-- **Docker** (unverified, see `docs/DESKTOP.md`): `docker compose up --build`, then <http://localhost:8000>.
-- **Desktop** (scaffold only, see `docs/DESKTOP.md`): Tauri window around the same backend.
+- **Docker** (built and run under compose 2026-11-10, see `docs/DESKTOP.md`): `docker compose up --build`, then <http://localhost:8000>.
+- **Desktop** (Linux deb / AppImage built 2026-11-10, unsigned; Windows and macOS untested; see `docs/DESKTOP.md`): Tauri window around the same backend, which it starts from a repository checkout (the backend is not bundled yet).
 
 ## What is in it
 ### Phase 1: shell
