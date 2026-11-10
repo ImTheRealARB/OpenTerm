@@ -86,6 +86,11 @@ const SETTING_ROWS: SettingRow[] = [
     kind: "setting", id: "ai.provider", label: "AI PROVIDER (KEY IN APIKEYS)", value: (s) => s.ai.provider.toUpperCase(),
     change: (s, d) => ({ ...s, ai: { ...s.ai, provider: cycle(AI_PROVIDERS, s.ai.provider, d) } }),
   },
+  {
+    kind: "setting", id: "ai.storeText", label: "KEEP AI QUESTION AND ANSWER TEXT (OFF: ONLY HASHES. ON: REDACTED TEXT STAYS ON THIS MACHINE NEXT TO THE AUDIT LEDGER, NEVER SENT; PURGE IN AUDIT)",
+    value: (s) => (s.ai.storeText ? "ON" : "OFF") + "   (SETTINGS AI STORETEXT ON|OFF)",
+    change: (s) => ({ ...s, ai: { ...s.ai, storeText: !s.ai.storeText } }),
+  },
   // H / L cycle the presets. Any other installed font: SETTINGS FONT <name>.
   { kind: "setting", id: "font", label: "FONT (ANY INSTALLED: SETTINGS FONT NAME)", value: (s) => fontLabel(s.font), change: (s, d) => ({ ...s, font: cyclePreset(s.font, d).name }) },
   { kind: "setting", id: "startup", label: "ON START-UP OPEN (HOME PAGE OR YOUR LAST LAYOUT)", value: (s) => (s.startup === "home" ? "HOME PAGE" : "LAST LAYOUT"), change: (s, d) => ({ ...s, startup: cycle(STARTUPS, s.startup, d) }) },

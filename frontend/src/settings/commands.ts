@@ -2,7 +2,7 @@
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
  *   SETTINGS STARTUP HOME|LAYOUT | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
- *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER ... | KEYS RESET | RESET
+ *            | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER|STORETEXT ... | KEYS RESET | RESET
  */
 import {
   AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, isZone, type PollKey, type Settings,
@@ -97,12 +97,17 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       return { ok: true, next: { ...cur, poll: { ...cur.poll, [k]: v } }, message: `POLL ${word} ${v}S (APPLIES WHEN THE PANEL REOPENS)` };
     }
     case "AI": {
-      const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | RESET";
+      const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | STORETEXT ON|OFF | RESET";
       if (word === "RESET") return { ok: true, next: { ...cur, ai: { ...DEFAULTS.ai } }, message: "AI SETTINGS RESET TO DEFAULTS" };
       if (word === "PROVIDER") {
         const p = (rest[1] ?? "").toLowerCase();
         if (!(AI_PROVIDERS as readonly string[]).includes(p)) return fail(usage);
         return { ok: true, next: { ...cur, ai: { ...cur.ai, provider: p as Settings["ai"]["provider"] } }, message: `AI PROVIDER ${p.toUpperCase()}` };
+      }
+      if (word === "STORETEXT") {
+        const v = rest[1];
+        if ((v !== "ON" && v !== "OFF") || rest.length > 2) return fail("SETTINGS AI STORETEXT ON|OFF (ON KEEPS THE REDACTED QUESTION AND ANSWER OF EACH AI RUN ON THIS MACHINE; PURGE IN AUDIT)");
+        return { ok: true, next: { ...cur, ai: { ...cur.ai, storeText: v === "ON" } }, message: `AI STORETEXT ${v}${v === "ON" ? " (NEW RUNS KEEP THEIR REDACTED TEXT LOCALLY; PURGE IN AUDIT)" : " (NEW RUNS STORE NO TEXT; PURGE EXISTING TEXT IN AUDIT)"}` };
       }
       if (word === "MODEL" || word === "VISION") {
         const id = rest[1] ?? "";

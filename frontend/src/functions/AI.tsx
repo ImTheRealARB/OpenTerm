@@ -35,6 +35,9 @@ interface DocCard {
   chunks: number;
   chars: number;
   preview: string;
+  /** Text came from OCR of a scanned PDF. */
+  ocr?: boolean;
+  note?: string;
 }
 
 export function Answer({ text, running }: { text: string; running: boolean }) {
@@ -269,7 +272,7 @@ export default function AI({ panelId, args }: FunctionProps) {
       return;
     }
     setDoc(j.doc);
-    setNote({ text: `DOCUMENT LOADED: ${j.doc.name} · ${j.doc.kind.toUpperCase()} · ${j.doc.chunks} CHUNKS · ${j.doc.chars.toLocaleString("en-US")} CHARACTERS · ASK ABOUT IT; ONLY ITS TEXT IS USED`, cls: "up" });
+    setNote({ text: `DOCUMENT LOADED: ${j.doc.name} · ${j.doc.kind.toUpperCase()} · ${j.doc.chunks} CHUNKS · ${j.doc.chars.toLocaleString("en-US")} CHARACTERS${j.doc.ocr ? " · " + (j.doc.note ?? "OCR TEXT (MAY CONTAIN ERRORS)") : ""} · ASK ABOUT IT; ONLY ITS TEXT IS USED`, cls: "up" });
   };
   const loadFiling = async (symbol: string, form: string) => {
     setNote({ text: `FETCHING ${symbol} ${form} FROM SEC...`, cls: "dim" });
@@ -367,7 +370,8 @@ export default function AI({ panelId, args }: FunctionProps) {
       </div>
       {doc && (
         <div className="line" data-testid="ai-doc">
-          <span className="acc">DOC</span> {doc.name} <span className="dim">· {doc.kind.toUpperCase()} · {doc.chunks} CHUNKS · AI DOC OFF UNLOADS</span>
+          <span className="acc">DOC</span> {doc.name}
+          {doc.ocr && <span className="warn" data-testid="ai-doc-ocr"> · {doc.note ?? "OCR TEXT (MAY CONTAIN ERRORS)"}</span>} <span className="dim">· {doc.kind.toUpperCase()} · {doc.chunks} CHUNKS · AI DOC OFF UNLOADS</span>
         </div>
       )}
       {note && (

@@ -64,6 +64,10 @@ export const aiApi = {
   swarmPresets: <T>() => sendRaw<T>("GET", "/api/ai/swarm/presets"),
   swarmRuns: <T>() => sendRaw<T>("GET", "/api/ai/runs?kind=swarm"),
   ledger: <T>() => sendRaw<T>("GET", "/api/ai/ledger?limit=100"),
+  /** Stored (redacted) question and answer of one entry; 404 when none is stored. */
+  ledgerText: <T>(seq: number) => sendRaw<T>("GET", `/api/ai/ledger/${seq}/text`),
+  /** Deletes stored text: one entry (`seq`) or all (null). The hash chain is not touched. */
+  purgeLedgerText: <T>(seq: number | null) => sendRaw<T>("POST", "/api/ai/ledger/purge-text", { json: seq === null ? {} : { seq } }),
   ledgerVerify: <T>() => sendRaw<T>("GET", "/api/ai/ledger/verify"),
   /** Theses, all or for one symbol. */
   theses: <T>(symbol: string | null) => sendRaw<T>("GET", `/api/theses${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`),

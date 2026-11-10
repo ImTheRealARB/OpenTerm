@@ -59,7 +59,7 @@ export interface Settings {
   /** Keybinding overrides: action -> chords (replaces that action's defaults). */
   keys: Record<string, string[]>;
   /** Phase 16: which model the AI panels call (OpenRouter by default; the key lives in APIKEYS, never here). */
-  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number] };
+  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number]; /** Keep the redacted question and answer of each AI run next to the audit ledger (local only; off by default). */ storeText: boolean };
   /** "home" = a new session opens the HOME page; "layout" = it restores the saved workspace as before. */
   startup: Startup;
   /** Also show the ticker tape in the global top bar on every screen (HOME always has its own). */
@@ -78,7 +78,7 @@ export const DEFAULTS: Settings = Object.freeze({
   chart: { range: "1Y", type: "CANDLE" },
   poll: { news: 60, movers: 60, crypto: 30, sources: 10 },
   keys: {},
-  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter" },
+  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter", storeText: false },
   startup: "home",
   tape: false,
   tapeSymbols: [...TAPE_DEFAULT],
@@ -167,6 +167,10 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
   if (ai.provider !== undefined) {
     if (oneOf(AI_PROVIDERS, ai.provider)) aiOut.provider = ai.provider;
     else errors.push("ai.provider");
+  }
+  if (ai.storeText !== undefined) {
+    if (typeof ai.storeText === "boolean") aiOut.storeText = ai.storeText;
+    else errors.push("ai.storeText");
   }
   if (r.ai !== undefined && !isObj(r.ai)) errors.push("ai");
 

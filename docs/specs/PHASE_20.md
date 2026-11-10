@@ -12,7 +12,7 @@ Inputs that already exist: `keys.py` (`telegram`, `smtp` keys with connection te
 4. **No double notification.** The backend is the only place that fires and records a trigger; the browser only shows state.
 5. **Secrets** (bot token, SMTP password, chat id, recipients) never reach the frontend, a URL, a log, a trace, error text or command history (`redact()` on every error path). Email uses STARTTLS or SSL with certificate verification on; plain SMTP only on loopback.
 6. **No order tools** in AI, swarm or MCP. A test scans tool names for `order trade gtt margin kill` and write-style `holdings`.
-7. **AI rules unchanged:** `AI · <model> · <time>`, tool calls linked, `UNGROUNDED` without tool data, ledger records the run (hashes only).
+7. **AI rules unchanged:** `AI · <model> · <time>`, tool calls linked, `UNGROUNDED` without tool data, ledger records the run (hashes only, unless ai.storeText is on).
 8. **A ported preset or skill never names a tool OpenTerm lacks.** A role that needs a missing tool makes the preset `PARTIAL` (capability shown on screen) or `UNAVAILABLE` (reason shown). No role runs ungrounded behind a complete-looking panel.
 9. **Cost is shown before it is spent:** worst-case tokens and USD, daily cap checked, before any swarm run starts.
 10. **Licences:** every ported file has a header naming source path and commit (`HKUDS/Vibe-Trading @ cb99dca`, MIT) and a `THIRD_PARTY.md` row (one per ported directory), plus Vibe's `NOTICE` wording where it applies. OpenTerminalUI is a design reference only: no code copied.
