@@ -55,7 +55,7 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
               system: str | None = None) -> AsyncIterator[dict]:
     now = datetime.now(UTC)
     yield {"type": "start", "model": model, "provider": provider, "started": now.isoformat(timespec="seconds")}
-    messages: list[dict] = [{"role": "system", "content": system or SYSTEM.format(today=now.strftime("%Y-%m-%d"))},
+    messages: list[dict] = [{"role": "system", "content": (system or SYSTEM.format(today=now.strftime("%Y-%m-%d"))) + toolbox.external_rule(tools)},
                             *clean_history(history), {"role": "user", "content": question}]
     offered = toolbox.openai_tools(tools)
     guard = LoopGuard()
@@ -91,6 +91,7 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
         messages.append({"role": "assistant", "content": text or None,
                          "tool_calls": [{"id": c.id, "type": "function", "function": {"name": c.name, "arguments": json.dumps(c.args)}} for c in calls]})
         for c in calls:
+            c.name = toolbox.from_wire(c.name)  # a third-party tool is `server__tool` to the model, `server.tool` everywhere else
             if why is None and executed >= max_calls:
                 why = f"TOOL CALL LIMIT {max_calls} REACHED"
             if why is None:

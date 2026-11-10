@@ -251,6 +251,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SWARM` | Multi-agent desks (built-in, packaged and your own YAML files): analyst roles with their own tools, then a chair; shows coverage, variables and a worst-case cost before a run; stored runs replay without a model (model output, not data; needs OPENROUTER key) |  | `[<DESK> <subject> \| <DESK> NAME=value ... [--force] \| REPLAY <id> \| LIST]` | `SWARM` |
 | `THESIS` | Investment thesis notes per ticker: status, invalidation rule, linked SWARM runs (stored locally) |  | `[SYMBOL \| ADD <SYMBOL> <text> \| INVALID <id> <rule>]` | `THESIS` |
 | `AUDIT` | Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes; text only if ai.storeText is on) |  |  | `AUDIT` |
+| `MCP` | Third-party MCP servers OpenTerm can call (stdio or HTTP): off until enabled, per-tool allow-list, results untrusted; NSE India presets (unofficial, not affiliated with NSE) |  | `[ENABLE <server> [YES] \| DISABLE <server> \| TEST <server> \| ALLOW <server> <tool> \| DENY <server> <tool>]` | `MCP` |
 
 ### Research: Public records
 

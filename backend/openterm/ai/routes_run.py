@@ -126,6 +126,11 @@ async def swarm_run(request: Request):
     if isinstance(est, Response):
         return est
     client = (request.client.host, request.client.port)
+    notes: list[str] = []
+    if any(tools.EXTERNAL_ALL in r.tools for r in preset.roles):  # a role opted in to the third-party MCP tools the user enabled and allowed
+        from ..mcp.external import prepare_for_run
+
+        notes = await prepare_for_run(request.app)
 
     def runner_for(role) -> tools.ToolRunner:
         return tools.ToolRunner(request.app, client=client, tools=list(role.tools))
@@ -148,6 +153,10 @@ async def swarm_run(request: Request):
     # must be part of the question or two different runs of one desk would look identical in the audit log.
     asked = f"{preset.code} {subject}" + "".join(f" {k}={v}" for k, v in sorted((given or {}).items()))
     events = audit(request, events, "swarm", swarm.prompt_text(preset), asked, role_tools, names[0], names[1])
+    if notes:
+        from ..mcp.external import with_notes
+
+        events = with_notes(notes, events)
     return _stream(request, t0, events)
 
 

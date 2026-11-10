@@ -75,3 +75,12 @@ export const aiApi = {
   /** One thesis: PATCH a field, or DELETE it. `path` is `/api/theses/<id>`. */
   thesisCall: <T>(method: string, path: string, body?: unknown) => sendRaw<T>(method, path, { json: body }),
 };
+
+/** Third-party MCP servers (`/api/mcpc`, loopback only): list, enable (returns the notice), disable, allow-list, tool list (starts the server). */
+export const mcpApi = {
+  servers: <T>() => sendRaw<T>("GET", "/api/mcpc/servers"),
+  enable: <T>(name: string) => sendRaw<T>("POST", `/api/mcpc/servers/${encodeURIComponent(name)}/enable`, { json: {} }),
+  disable: <T>(name: string) => sendRaw<T>("POST", `/api/mcpc/servers/${encodeURIComponent(name)}/disable`, { json: {} }),
+  allow: <T>(name: string, tools: string[]) => sendRaw<T>("POST", `/api/mcpc/servers/${encodeURIComponent(name)}/allow`, { json: { tools } }),
+  tools: <T>(name: string) => sendRaw<T>("GET", `/api/mcpc/servers/${encodeURIComponent(name)}/tools`),
+};

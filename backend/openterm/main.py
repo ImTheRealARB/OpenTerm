@@ -21,6 +21,7 @@ from .config import ROOT, get_settings, load_yaml
 from .db import open_db
 from .delivery.routes import router as delivery_router
 from .kite_routes import router as kite_router
+from .mcp.client_routes import router as mcp_client_router
 from .mcp.routes import router as mcp_router
 from .origin import OriginGuardMiddleware
 from .providers.hierarchy import build_order
@@ -189,6 +190,8 @@ async def lifespan(app: FastAPI):
             t.cancel()
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
+        if (mcpm := getattr(app.state, "mcp_manager", None)) is not None:
+            await mcpm.close_all()  # third-party MCP servers: kill their processes
         await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
@@ -214,6 +217,7 @@ app.include_router(delivery_router)
 app.include_router(brief_router)
 app.include_router(ai_router)
 app.include_router(mcp_router)
+app.include_router(mcp_client_router)
 app.include_router(routes_run.theses_router)
 
 

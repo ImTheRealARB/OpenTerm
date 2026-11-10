@@ -127,10 +127,13 @@ async def chat(request: Request):
     if names is None:
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
+    from ..mcp.external import prepare_for_run, with_notes
+
+    notes = await prepare_for_run(request.app)  # third-party MCP tools the user enabled and allowed (none by default)
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port))
     events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1]),
                    "chat", agent.SYSTEM, question.strip(), None, names[0], names[1])
-    return _stream(request, t0, events, runner)
+    return _stream(request, t0, with_notes(notes, events) if notes else events, runner)
 
 
 def parse_draft(answer: str) -> dict:

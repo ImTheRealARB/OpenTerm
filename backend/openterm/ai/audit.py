@@ -44,8 +44,11 @@ def manifest(prompt: str, tool_names: list[str] | None, model: str, provider: st
     """What the run was allowed to use: hashes of the prompt, the offered tools (name, description, schema) and the skill files."""
     names = sorted(tool_names if tool_names is not None else [t.name for t in toolbox.REGISTRY.values() if not t.doc_only])
     spec = [{"name": n, "description": toolbox.REGISTRY[n].description, "parameters": toolbox.REGISTRY[n].parameters} for n in names if n in toolbox.REGISTRY]
-    return {"prompt_sha": sha(prompt), "tools": names, "tools_sha": sha(canonical(spec)),
-            "skills": {n: sha(skills.get(n) or "")[:16] for n in skills.names()}, "app": __version__, "model": model, "provider": provider}
+    mf = {"prompt_sha": sha(prompt), "tools": names, "tools_sha": sha(canonical(spec)),
+          "skills": {n: sha(skills.get(n) or "")[:16] for n in skills.names()}, "app": __version__, "model": model, "provider": provider}
+    if ext := toolbox.external_for(tool_names):  # third-party MCP tools offered to this run: name -> hash of description and schema
+        mf["external"] = {t.name: sha(canonical({"d": t.description, "p": t.parameters}))[:16] for t in sorted(ext, key=lambda t: t.name)}
+    return mf
 
 
 def entry_hash(prev: str, at: float, kind: str, ref: str, model: str, mf: str, meta: str) -> str:

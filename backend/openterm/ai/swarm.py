@@ -157,7 +157,7 @@ def parse_preset(doc: dict, *, source: str, known_tools: set[str] | None = None)
     """Builds a Preset from a parsed YAML document and checks it: tools exist, the graph is acyclic, every variable has a source."""
     if not isinstance(doc, dict):
         raise PresetError(f"{source}: A PRESET FILE MUST BE A MAPPING")
-    known = set(toolbox.REGISTRY) if known_tools is None else known_tools
+    known = (set(toolbox.REGISTRY) | {toolbox.EXTERNAL_ALL}) if known_tools is None else known_tools  # `external` = the user's enabled third-party MCP tools
     code = _need(doc, "code", source).upper()
     if not CODE_RE.match(code):
         raise PresetError(f"{source}: CODE {code!r} MUST BE 2-14 CHARACTERS: A-Z, 0-9, _")
