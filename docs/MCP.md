@@ -109,7 +109,7 @@ the preset then allows a short read-only list of tools; change it in the tool li
 - Every server is off until enabled. Nothing is started for a server that is off, and a server that is on is started only when used and stopped when idle or on exit.
 - Per-tool allow-list: only listed tools reach the AI and SWARM, named `<server>.<tool>` (SWARM roles opt in with the `external` tool entry).
 - Any tool whose name or description looks like order placement is refused: it cannot be allowed, listed for the AI, or called from `MCP`. The AI never places orders.
-- Results are third-party data: wrapped and labelled `THIRD-PARTY MCP: <server>`, truncated, and the AI is told to treat them as untrusted data, never as instructions. Keys named in `env` or `headers` are removed from results and errors.
+- Results are third-party data: wrapped and labelled `THIRD-PARTY MCP: <server>`, truncated, and the AI is told to treat them as untrusted data, never as instructions. They never count as grounding (the same rule as web text in docs/AI_WEB.md): an answer that rests only on a third-party tool is not labelled GROUNDED. Keys named in `env` or `headers` are removed from results and errors.
 - Every AI call of a third-party tool is in the `AUDIT` ledger (`<server>.<tool>`, argument hashes), and so are manual calls.
 - A server that hangs or crashes ends the call with an error after its timeout, and is restarted on the next call.
 - The management routes (`/api/mcpc/...`) answer only to programs on this machine.

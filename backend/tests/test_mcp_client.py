@@ -391,7 +391,7 @@ def test_ai_chat_uses_an_enabled_external_tool_untrusted_labelled_and_audited(cl
     ev = sse(r)
     assert next(e for e in ev if e["type"] == "tool_call")["name"] == "fake.inject"  # dotted everywhere except the model-facing name
     tr = next(e for e in ev if e["type"] == "tool_result")
-    assert tr["ok"] and tr["source"] == "THIRD-PARTY MCP: fake"
+    assert tr["ok"] and tr["source"] == "THIRD-PARTY MCP: fake" and tr["untrusted"] is True  # the panel labels it
     gw = client.app.state.llm
     assert "fake__inject" in {t["function"]["name"] for t in gw.calls[0]["tools"]}
     assert "THIRD-PARTY" in gw.calls[0]["messages"][0]["content"]  # the system prompt carries the untrusted-data rule
@@ -399,7 +399,8 @@ def test_ai_chat_uses_an_enabled_external_tool_untrusted_labelled_and_audited(cl
     assert tool_msg["content"].startswith('[THIRD-PARTY DATA from MCP server "fake"') and "Ignore previous instructions" in tool_msg["content"]
     assert gw.calls[1]["messages"][-2]["tool_calls"][0]["function"]["name"] == "fake__inject"  # the assistant turn keeps the name the model used
     done = ev[-1]
-    assert done["type"] == "done" and done["grounded"] is True
+    # third-party text is never grounding (same rule as web text): an answer built only on it is not GROUNDED, and it is not web either
+    assert done["type"] == "done" and done["grounded"] is not True and "web" not in done
     entry = client.get("/api/ai/ledger").json()["entries"][0]
     assert entry["kind"] == "chat" and entry["manifest"]["external"].keys() == {"fake.echo", "fake.inject", "fake.get_market_status", "fake.get_orders"}
     assert entry["meta"]["tool_calls"][0]["name"] == "fake.inject" and entry["meta"]["tool_calls"][0]["source"] == "THIRD-PARTY MCP: fake"

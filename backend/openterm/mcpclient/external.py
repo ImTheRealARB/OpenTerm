@@ -318,7 +318,9 @@ class Manager:
                     self.errors_seen[server] = str(e)
                 return toolbox.ToolResult(ok=False, text=msg, error=msg, source=label)
             wrapped = wrap_untrusted(server, tool, spec.clean(text))
-            return toolbox.ToolResult(ok=ok, text=wrapped, source=label, age_s=0.0, empty=not text.strip(), error=None if ok else spec.clean(text)[:200])
+            # untrusted: third-party text is never counted as grounding (same rule as web text), and the panel labels it
+            return toolbox.ToolResult(ok=ok, text=wrapped, source=label, age_s=0.0, empty=not text.strip(), error=None if ok else spec.clean(text)[:200],
+                                      untrusted=True)
         return run
 
 

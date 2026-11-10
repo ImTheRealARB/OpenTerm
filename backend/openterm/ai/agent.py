@@ -121,11 +121,12 @@ async def run(gateway, call_tool: GateCall, question: str, history: list, *, mod
                 res = toolbox.ToolResult(ok=False, text=f"TOOL ERROR {type(e).__name__}", error=f"TOOL ERROR {type(e).__name__}")
             if policy is not None and c.name in web.WEB_TOOLS:
                 policy.after(c.name, c.args, res.text, res.ok)
-            if res.untrusted:
-                web_calls += 1
-                if res.ok and not res.empty:
-                    web_ok += 1
-                    web_urls.extend(u for u in res.urls if u not in web_urls)
+            if res.untrusted:  # web text or a third-party MCP tool: never data, never grounding
+                if c.name in web.WEB_TOOLS:
+                    web_calls += 1
+                    if res.ok and not res.empty:
+                        web_ok += 1
+                        web_urls.extend(u for u in res.urls if u not in web_urls)
             elif res.ok and not res.empty:
                 good += 1
                 results.append(res.text)
