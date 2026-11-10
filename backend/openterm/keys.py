@@ -113,6 +113,13 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://api.data.gov/signup/"),
     KeySpec("census", ("CENSUS_API_KEY",), 19, "US Census (free): monthly retail sales, US goods trade by country and HS chapter (USMAC CENSUS)",
             "https://api.census.gov/data/key_signup.html"),
+    # Web search for the AI (SETTINGS AI WEB ON, SETTINGS AI WEB PROVIDER). One of the three; none is used unless web access is on.
+    KeySpec("brave", ("BRAVE_SEARCH_API_KEY",), 20, "Brave Search API (free tier): web_search for the AI when SETTINGS AI WEB is ON and the provider is BRAVE",
+            "https://api-dashboard.search.brave.com/register"),
+    KeySpec("tavily", ("TAVILY_API_KEY",), 20, "Tavily (free tier): web_search for the AI when SETTINGS AI WEB is ON and the provider is TAVILY",
+            "https://app.tavily.com/home"),
+    KeySpec("searxng", ("SEARXNG_URL",), 20, "Your own SearXNG instance (its address, JSON output enabled): web_search for the AI when the provider is SEARXNG",
+            "https://docs.searxng.org/admin/installation.html"),
     KeySpec("kite",("KITE_API_KEY", "KITE_API_SECRET"), 15,
             "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
             "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
@@ -475,6 +482,11 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
                                {"APCA-API-KEY-ID": k["ALPACA_PAPER_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_PAPER_SECRET_KEY"]}, None),
     "alpaca_live": lambda k: ("GET", "https://api.alpaca.markets/v2/account", None,
                               {"APCA-API-KEY-ID": k["ALPACA_LIVE_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_LIVE_SECRET_KEY"]}, None),
+    # Web search keys: one tiny query each (Brave and Tavily spend one of the free-tier searches). SearXNG is the user's own server.
+    "brave": lambda k: ("GET", "https://api.search.brave.com/res/v1/web/search", {"q": "openterm", "count": "1"},
+                        {"X-Subscription-Token": k["BRAVE_SEARCH_API_KEY"], "Accept": "application/json"}, None),
+    "tavily": lambda k: ("POST", "https://api.tavily.com/search", None, _bearer(k["TAVILY_API_KEY"]), {"query": "openterm", "max_results": 1}),
+    "searxng": lambda k: ("GET", k["SEARXNG_URL"].rstrip("/") + "/search", {"q": "openterm", "format": "json"}, {"Accept": "application/json"}, None),
 }
 
 

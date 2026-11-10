@@ -123,16 +123,19 @@ async def chat(request: Request):
     question = body.get("question")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION:
         return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS")
-    names = _models(body, await ai_settings(request))
+    ai_cfg = await ai_settings(request)
+    names = _models(body, ai_cfg)
     if names is None:
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
     from ..mcpclient.external import prepare_for_run, with_notes
+    from . import web
 
     notes = await prepare_for_run(request.app)  # third-party MCP tools the user enabled and allowed (none by default)
-    runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port))
-    events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1]),
-                   "chat", agent.SYSTEM, question.strip(), None, names[0], names[1])
+    webc = web.config_from(request.app, ai_cfg)  # None unless SETTINGS AI WEB ON
+    runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), web=webc)
+    events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], web_access=webc is not None),
+                   "chat", agent.SYSTEM + (web.WEB_RULES.format(reads=web.MAX_READS, searches=web.MAX_SEARCHES) if webc else ""), question.strip(), web.offered_names(None, webc), names[0], names[1])
     return _stream(request, t0, with_notes(notes, events) if notes else events, runner)
 
 

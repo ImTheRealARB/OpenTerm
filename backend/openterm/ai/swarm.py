@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -456,7 +456,8 @@ async def _run_task(gateway, runner_for, preset: Preset, role: Role, task: Task,
         st.notes.append((role, done["answer"]))
     st.summaries[task.id] = done["answer"]
     st.outcomes.append({"role": role.id, "ok": True, "grounded": done["grounded"], "unsourced": done["unsourced"], "tool_calls": done["tool_calls"],
-                        "cost": done["cost"], "stopped": done["stopped"]})
+                        "cost": done["cost"], "stopped": done["stopped"],
+                        **({"web": done["web"]} if done.get("web") else {})})
     await emit({**done, "type": "role_done", "role": role.id})
 
 
@@ -515,7 +516,18 @@ async def run(gateway, runner_for: RunnerFor, preset: Preset, subject: str, *, m
     ok = [o for o in st.outcomes if o["ok"]]
     yield {"type": "swarm_done", "answer": answer, "roles": st.outcomes, "cost": st.cost, "unsourced": st.final["unsourced"] if st.final else [],
            "grounded": any(o.get("grounded") for o in ok), "label": None if any(o.get("grounded") for o in ok) else "UNGROUNDED",
-           "failed": [o["role"] for o in st.outcomes if not o["ok"]], "capped": st.stop == "run_cap", "coverage": preset.coverage, "limits": list(preset.limits)}
+           "failed": [o["role"] for o in st.outcomes if not o["ok"]], "capped": st.stop == "run_cap", "coverage": preset.coverage, "limits": list(preset.limits), "web": _web_report(ok)}
+
+
+def _web_report(outcomes: list[dict]) -> dict:
+    """What the desks took from the open web, as its own class: untrusted third-party text. `grounded`, `unsourced` and the coverage numbers
+    count data from OpenTerm's own tools only; a desk that used nothing but web text is UNGROUNDED."""
+    used = [o for o in outcomes if o.get("web")]
+    urls: list[str] = []
+    for o in used:
+        urls.extend(u for u in o["web"]["urls"] if u not in urls)
+    return {"class": "UNTRUSTED THIRD-PARTY WEB TEXT (NOT DATA, NOT COUNTED IN GROUNDING)", "used": bool(used), "roles": [o["role"] for o in used],
+            "calls": sum(o["web"]["calls"] for o in used), "urls": urls[:30]}
 
 
 def layers_of(preset: Preset) -> list[list[Task]]:
@@ -524,3 +536,31 @@ def layers_of(preset: Preset) -> list[list[Task]]:
         return layers(preset)
     tasks = effective_tasks(preset)
     return [[t for t in tasks if not t.depends_on], [t for t in tasks if t.depends_on]]
+
+
+# --- opt-in web access (SETTINGS AI WEB ON) -----------------------------------------------------------------------------------------------
+WEB_LIMIT = "NO WEB ACCESS"  # the ported presets start this limit with these words when only web tools were missing
+_LIMIT_ROLES = re.compile(r"\(roles:\s*([^)]*)\)\s*\Z")
+
+
+def with_web(preset: Preset, web: bool) -> Preset:
+    """The preset as it runs. With web access ON, the roles named in a `NO WEB ACCESS` limit get web_search and read_url and that limit goes;
+    a preset left with no limits is FULL. A preset with other limits (no code execution, no data source) stays PARTIAL, minus the web limit.
+    Computed from the limits, never hard-coded, so a new preset gets it for free. With web OFF the preset is returned unchanged."""
+    if not web or not any(lim.startswith(WEB_LIMIT) for lim in preset.limits):
+        return preset
+    from .web import WEB_TOOLS
+
+    named: set[str] = set()
+    for lim in preset.limits:
+        m = _LIMIT_ROLES.search(lim) if lim.startswith(WEB_LIMIT) else None
+        named |= {x.strip() for x in m.group(1).split(",") if x.strip()} if m else set()
+    roles = tuple(replace(r, tools=(*r.tools, *(t for t in WEB_TOOLS if t not in r.tools))) if r.id in named else r for r in preset.roles)
+    limits = tuple(lim for lim in preset.limits if not lim.startswith(WEB_LIMIT))
+    coverage = preset.coverage if limits else ("FULL" if preset.coverage == "PARTIAL" else preset.coverage)
+    return replace(preset, roles=roles, limits=limits, coverage=coverage)
+
+
+def web_full(presets: dict[str, Preset] | None = None) -> list[str]:
+    """Codes of the desks that are PARTIAL today only because web access is missing: FULL when web is ON."""
+    return [c for c, p in (presets or PRESETS).items() if p.coverage == "PARTIAL" and with_web(p, True).coverage == "FULL"]

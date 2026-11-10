@@ -13,6 +13,7 @@ export const SECTIONS: readonly { title: string; names: readonly string[] }[] = 
   { title: "Shipping and flights", names: ["aisstream", "opensky"] },
   { title: "Alerts and delivery", names: ["telegram", "smtp", "webhook"] },
   { title: "Trading accounts (ORD)", names: ["alpaca_paper", "alpaca_live"] },
+  { title: "AI web search (opt-in)", names: ["brave", "tavily", "searxng"] },
 ];
 
 /** The section title for a provider name, or "Other" for one nobody has placed yet (it then shows last, never disappears). */

@@ -5,7 +5,7 @@
  *            | SOURCE <capability> <source>|DEFAULT | SOURCE RESET | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER|STORETEXT ... | KEYS RESET | RESET
  */
 import {
-  AI_MODEL_RE, AI_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, SOURCE_NAME_RE, isZone, type PollKey, type Settings,
+  AI_MODEL_RE, AI_PROVIDERS, AI_WEB_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, SOURCE_NAME_RE, isZone, type PollKey, type Settings,
 } from "./schema";
 import { FONT_NAME_RE } from "./font";
 import { FONT_PRESETS, cyclePreset, findPreset, type FontPreset } from "./fontPresets";
@@ -113,7 +113,7 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
       return { ok: true, next: { ...cur, sources }, message: `${cap.toUpperCase()}: ${name.toUpperCase()} FIRST, THE DEFAULT ORDER BEHIND IT (SRC= PINS ONE COMMAND)` };
     }
     case "AI": {
-      const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | STORETEXT ON|OFF | RESET";
+      const usage = "SETTINGS AI MODEL <id> | VISION <id> | PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA | STORETEXT ON|OFF | WEB ON|OFF | WEB PROVIDER BRAVE|TAVILY|SEARXNG | RESET";
       if (word === "RESET") return { ok: true, next: { ...cur, ai: { ...DEFAULTS.ai } }, message: "AI SETTINGS RESET TO DEFAULTS" };
       if (word === "PROVIDER") {
         const p = (rest[1] ?? "").toLowerCase();
@@ -124,6 +124,22 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
         const v = rest[1];
         if ((v !== "ON" && v !== "OFF") || rest.length > 2) return fail("SETTINGS AI STORETEXT ON|OFF (ON KEEPS THE REDACTED QUESTION AND ANSWER OF EACH AI RUN ON THIS MACHINE; PURGE IN AUDIT)");
         return { ok: true, next: { ...cur, ai: { ...cur.ai, storeText: v === "ON" } }, message: `AI STORETEXT ${v}${v === "ON" ? " (NEW RUNS KEEP THEIR REDACTED TEXT LOCALLY; PURGE IN AUDIT)" : " (NEW RUNS STORE NO TEXT; PURGE EXISTING TEXT IN AUDIT)"}` };
+      }
+      if (word === "WEB") {
+        const w = (rest[1] ?? "").toUpperCase();
+        if (w === "PROVIDER") {
+          const p = (rest[2] ?? "").toLowerCase();
+          if (!(AI_WEB_PROVIDERS as readonly string[]).includes(p) || rest.length > 3) return fail(usage);
+          return { ok: true, next: { ...cur, ai: { ...cur.ai, webProvider: p as Settings["ai"]["webProvider"] } }, message: `AI WEB SEARCH PROVIDER ${p.toUpperCase()} (ITS KEY GOES IN APIKEYS)` };
+        }
+        if ((w !== "ON" && w !== "OFF") || rest.length > 2) return fail(usage);
+        const on = w === "ON";
+        return {
+          ok: true, next: { ...cur, ai: { ...cur.ai, web: on } },
+          message: on
+            ? "AI WEB ACCESS ON. WARNING: THE AI CAN NOW SEARCH AND READ PUBLIC WEB PAGES. PAGES ARE WRITTEN BY STRANGERS AND CAN TRY TO MISLEAD IT (PROMPT INJECTION); THEY ARE FENCED OFF AS UNTRUSTED DATA, CAPPED PER ANSWER AND LOGGED IN AUDIT. SEARCH NEEDS A KEY IN APIKEYS"
+            : "AI WEB ACCESS OFF",
+        };
       }
       if (word === "MODEL" || word === "VISION") {
         const id = rest[1] ?? "";

@@ -390,7 +390,7 @@ def registry_names() -> set[str]:
     sys.path.insert(0, str(ROOT / "backend"))
     from openterm.ai import tools
 
-    return set(tools.REGISTRY)
+    return {n for n, t in tools.REGISTRY.items() if not t.web_only}  # web tools are opt-in: a ported playbook must not name them
 
 
 def skipped_doc(skipped: list[Result], ported: list[Result], total: int) -> str:

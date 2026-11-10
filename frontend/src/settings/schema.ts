@@ -21,6 +21,8 @@ export const AI_PROVIDERS = [
   "openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini", "ollama",
 ] as const;
 /** Models the AI rows cycle through (any other id works via `SETTINGS AI MODEL <id>`). */
+/** Search providers for the AI's opt-in web access (SETTINGS AI WEB); keys live in APIKEYS. Keep equal to settings_store.AI_WEB_PROVIDERS. */
+export const AI_WEB_PROVIDERS = ["brave", "tavily", "searxng"] as const;
 export const AI_MODEL_CHOICES = ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_VISION_CHOICES = ["deepseek/deepseek-v4.1-flash", "anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_MODEL_RE = /^[A-Za-z0-9._:/-]{1,80}$/;
@@ -59,7 +61,7 @@ export interface Settings {
   /** Keybinding overrides: action -> chords (replaces that action's defaults). */
   keys: Record<string, string[]>;
   /** Phase 16: which model the AI panels call (OpenRouter by default; the key lives in APIKEYS, never here). */
-  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number]; /** Keep the redacted question and answer of each AI run next to the audit ledger (local only; off by default). */ storeText: boolean };
+  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number]; /** Keep the redacted question and answer of each AI run next to the audit ledger (local only; off by default). */ storeText: boolean; web: boolean; webProvider: (typeof AI_WEB_PROVIDERS)[number] };
   /** "home" = a new session opens the HOME page; "layout" = it restores the saved workspace as before. */
   startup: Startup;
   /** Also show the ticker tape in the global top bar on every screen (HOME always has its own). */
@@ -80,7 +82,7 @@ export const DEFAULTS: Settings = Object.freeze({
   chart: { range: "1Y", type: "CANDLE" },
   poll: { news: 60, movers: 60, crypto: 30, sources: 10 },
   keys: {},
-  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter", storeText: false },
+  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter", storeText: false, web: false, webProvider: "brave" },
   startup: "home",
   tape: false,
   tapeSymbols: [...TAPE_DEFAULT],
@@ -176,6 +178,14 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
   if (ai.storeText !== undefined) {
     if (typeof ai.storeText === "boolean") aiOut.storeText = ai.storeText;
     else errors.push("ai.storeText");
+  }
+  if (ai.web !== undefined) {
+    if (typeof ai.web === "boolean") aiOut.web = ai.web;
+    else errors.push("ai.web");
+  }
+  if (ai.webProvider !== undefined) {
+    if (oneOf(AI_WEB_PROVIDERS, ai.webProvider)) aiOut.webProvider = ai.webProvider;
+    else errors.push("ai.webProvider");
   }
   if (r.ai !== undefined && !isObj(r.ai)) errors.push("ai");
 

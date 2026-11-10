@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 
 SECRET = "sk-test-0123456789abcdefSECRET"
 SPEC_NAMES = {"openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini", "finnhub", "alpaca", "fmp", "fred", "eia", "openfigi", "tradier",
-              "telegram", "smtp", "webhook", "kite", "comtrade", "bls", "bea", "census",
+              "telegram", "smtp", "webhook", "brave", "tavily", "searxng", "kite", "comtrade", "bls", "bea", "census",
               "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov", "alpaca_paper", "alpaca_live",
               "twelvedata", "alphavantage", "polygon"}
 

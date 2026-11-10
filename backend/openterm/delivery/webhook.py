@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import ipaddress
 import os
 from urllib.parse import urlparse
 
 import httpx
 
+from .. import netguard
 from . import DeliveryError, RetryableError
 
 LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
@@ -20,13 +20,7 @@ def _private_host(host: str) -> bool:
     where the backend is tricked into calling a service the outside world cannot reach). Checks address literals
     and well-known names only; a public DNS name that secretly resolves to a private address is not caught, because
     resolving names here would add network calls to a pure check."""
-    if host == "localhost" or host.endswith((".localhost", ".internal", ".local")):
-        return True
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        return False
-    return not ip.is_global  # loopback, 10/8, 172.16/12, 192.168/16, 169.254/16 (cloud metadata), unspecified, reserved
+    return netguard.private_host(host)  # shared with the AI web tools: loopback, private, link-local (cloud metadata), CGNAT, mapped IPv4, odd spellings
 
 
 def check_url(url: str) -> str:

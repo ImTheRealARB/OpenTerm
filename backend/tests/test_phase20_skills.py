@@ -246,7 +246,7 @@ def test_audit_manifest_hashes_every_playbook():
 
 
 # --- the porter script on small inputs (rules, not the data) ------------------------------------------------------------------------------
-REG = set(tools.REGISTRY)
+REG = {n for n, t in tools.REGISTRY.items() if not t.web_only}  # web tools are opt-in, a ported playbook never names them
 
 
 def convert(body, name="demo", desc="A demo playbook about nothing in particular", category="analysis", refs=None, taken=None):

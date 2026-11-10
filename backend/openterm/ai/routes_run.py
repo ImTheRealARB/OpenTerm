@@ -70,9 +70,11 @@ async def swarm_presets(request: Request):
     from . import swarm
 
     presets, errors = swarm.all_presets(user_presets_dir(request))
-    names = _models({}, await ai_settings(request)) or (agent.DEFAULT_MODEL, "openrouter")
+    ai_cfg = await ai_settings(request)
+    names = _models({}, ai_cfg) or (agent.DEFAULT_MODEL, "openrouter")
     price = await api_mod.llm_of(request).price(names[1], names[0])
-    rows = swarm.listing(presets)
+    web_on = ai_cfg.get("web") is True  # with web access ON a desk that only lacked the web is listed FULL
+    rows = swarm.listing({c: swarm.with_web(p, web_on) for c, p in presets.items()})
     for r in rows:
         r["estimate"]["usd"] = swarm.usd(r["estimate"], price)
     spend = await api_mod.llm_of(request).spend_status()
@@ -114,6 +116,10 @@ async def swarm_run(request: Request):
         return http_util.error_response(400, "bad_request", f"PRESET MUST BE ONE OF {', '.join(presets)}")
     if preset.coverage == "UNAVAILABLE":
         return http_util.error_response(400, "unavailable", f"{preset.code} IS UNAVAILABLE: {'; '.join(preset.limits)}")
+    from . import web
+
+    webc = web.config_from(request.app, await ai_settings(request))  # None unless SETTINGS AI WEB ON
+    preset = swarm.with_web(preset, webc is not None)
     given = body.get("variables")
     if given is not None and not (isinstance(given, dict) and all(isinstance(k, str) and isinstance(v, str) and len(v) <= 300 for k, v in given.items())):
         return http_util.error_response(400, "bad_request", "variables MUST BE AN OBJECT OF SHORT STRINGS")
@@ -133,7 +139,7 @@ async def swarm_run(request: Request):
         notes = await prepare_for_run(request.app)
 
     def runner_for(role) -> tools.ToolRunner:
-        return tools.ToolRunner(request.app, client=client, tools=list(role.tools))
+        return tools.ToolRunner(request.app, client=client, tools=list(role.tools), web=webc)
 
     subject = subject.strip()
     run_events = swarm.run(api_mod.llm_of(request), runner_for, preset, subject, model=names[0], provider=names[1], variables=given)

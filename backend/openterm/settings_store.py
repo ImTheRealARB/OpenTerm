@@ -111,15 +111,16 @@ def _keys(raw) -> dict:
 
 AI_PROVIDERS = ("openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks",
                 "gemini", "ollama")  # keep equal to llm.client.PROVIDERS (not imported: the gateway loads on first use)
+AI_WEB_PROVIDERS = ("brave", "tavily", "searxng")  # keep equal to ai.web.PROVIDERS
 AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}\Z")
 
 
 def _ai(raw) -> dict:
     if not isinstance(raw, dict):
         raise _bad("ai MUST BE AN OBJECT")
-    extra = sorted(set(raw) - {"model", "visionModel", "provider", "storeText"})
+    extra = sorted(set(raw) - {"model", "visionModel", "provider", "storeText", "web", "webProvider"})
     if extra:
-        raise _bad(f"ai KEYS: model visionModel provider storeText (NOT {extra[0][:20]!r})")
+        raise _bad(f"ai KEYS: model visionModel provider storeText web webProvider (NOT {extra[0][:20]!r})")
     out = {}
     for k in ("model", "visionModel"):
         if k in raw:
@@ -132,6 +133,12 @@ def _ai(raw) -> dict:
         if not isinstance(raw["storeText"], bool):
             raise _bad("ai.storeText MUST BE true OR false")
         out["storeText"] = raw["storeText"]
+    if "web" in raw:  # opt-in web access for the AI (off unless true); see ai/web.py
+        if not isinstance(raw["web"], bool):
+            raise _bad("ai.web MUST BE true OR false")
+        out["web"] = raw["web"]
+    if "webProvider" in raw:
+        out["webProvider"] = _choice(raw["webProvider"], AI_WEB_PROVIDERS, "ai.webProvider")
     return out
 
 
