@@ -636,6 +636,8 @@ class ToolRunner:
                 return ToolResult(ok=False, text=msg, error=msg)
             return ToolResult(ok=True, text=truncate_text(json.dumps(data, separators=(",", ":")), RESULT_LIMIT), source=data.get("source", "openterm"), age_s=0.0, empty=_is_empty(data))
         spec = {"path": t.path, **t.build(args)}
+        if "/api/orders" in str(spec["path"]).lower():  # the AI never places orders: no tool may reach the order routes
+            return ToolResult(ok=False, text="TOOL ROUTE IS NOT ALLOWED", error="NOT ALLOWED")
         try:
             r = await self.http.request(t.method, spec["path"], params=spec.get("params"), json=spec.get("json"))
             body = r.json()

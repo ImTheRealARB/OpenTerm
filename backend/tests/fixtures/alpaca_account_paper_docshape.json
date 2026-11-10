@@ -1,0 +1,15 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
+ "body": {
+  "id": "00000000-0000-4000-8000-000000000001",
+  "account_number": "PA0000TEST01",
+  "status": "ACTIVE",
+  "currency": "USD",
+  "cash": "100000",
+  "portfolio_value": "100000",
+  "equity": "100000",
+  "buying_power": "200000",
+  "trading_blocked": false,
+  "account_blocked": false
+ }
+}

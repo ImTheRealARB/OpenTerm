@@ -86,6 +86,14 @@ MIGRATIONS: list[str | list[str]] = [
             " rows INTEGER NOT NULL, added INTEGER NOT NULL, duplicates INTEGER NOT NULL, ignored INTEGER NOT NULL)"
         ),
     ],
+    # 19: orders sent to a broker (daily trade cap) and broker fills already added to a portfolio (Phase 18)
+    [
+        ("CREATE TABLE orders_log (id INTEGER PRIMARY KEY, at REAL NOT NULL, day TEXT NOT NULL, broker TEXT NOT NULL, mode TEXT NOT NULL,"
+         " client_id TEXT NOT NULL, broker_order_id TEXT, symbol TEXT NOT NULL, side TEXT NOT NULL, qty REAL NOT NULL, status TEXT NOT NULL)"),
+        "CREATE INDEX orders_log_day ON orders_log (day)",
+        ("CREATE TABLE orders_imported (broker TEXT NOT NULL, fill_id TEXT NOT NULL, portfolio TEXT NOT NULL, order_id TEXT NOT NULL,"
+         " at REAL NOT NULL, PRIMARY KEY (broker, fill_id))"),
+    ],
 ]
 
 

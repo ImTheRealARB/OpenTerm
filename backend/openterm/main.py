@@ -24,6 +24,7 @@ from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
 from .mcpclient.routes import router as mcp_client_router
+from .orders.routes import router as orders_router
 from .origin import OriginGuardMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
@@ -214,6 +215,7 @@ app.include_router(quant_router)
 app.include_router(world_router)
 app.include_router(kite_router)
 app.include_router(brokers_router)
+app.include_router(orders_router)
 app.include_router(delivery_router)
 app.include_router(brief_router)
 app.include_router(ai_router)

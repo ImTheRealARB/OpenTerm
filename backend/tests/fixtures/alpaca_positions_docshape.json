@@ -1,0 +1,25 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
+ "body": [
+  {
+   "asset_id": "b0b6dd9d-8b9b-48a9-ba46-b9d54906e415",
+   "symbol": "AAPL",
+   "qty": "20",
+   "avg_entry_price": "180",
+   "side": "long",
+   "market_value": "3800",
+   "current_price": "190",
+   "cost_basis": "3600"
+  },
+  {
+   "asset_id": "a0b6dd9d-8b9b-48a9-ba46-b9d54906e416",
+   "symbol": "TSLA",
+   "qty": "-5",
+   "avg_entry_price": "250",
+   "side": "short",
+   "market_value": "-1250",
+   "current_price": "250",
+   "cost_basis": "-1250"
+  }
+ ]
+}

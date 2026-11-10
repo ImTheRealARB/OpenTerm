@@ -1,0 +1,19 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
+ "body": {
+  "status": "success",
+  "data": [
+   {
+    "trade_id": "10000001",
+    "order_id": "151220000000002",
+    "exchange": "NSE",
+    "tradingsymbol": "INFY",
+    "transaction_type": "SELL",
+    "product": "MIS",
+    "average_price": 1512.5,
+    "quantity": 10,
+    "fill_timestamp": "2026-11-10 09:30:01"
+   }
+  ]
+ }
+}

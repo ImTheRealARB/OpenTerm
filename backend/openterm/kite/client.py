@@ -81,6 +81,11 @@ class KiteClient:
     async def get_json(self, path: str, params: dict[str, Any] | None = None, historical: bool = False) -> Any:
         return self._json(await self._send("GET", path, params, historical))
 
+    async def call(self, method: str, path: str, params: dict[str, Any] | None = None, data: dict[str, Any] | None = None) -> Any:
+        """Any authenticated call that answers the usual {status, data} envelope. The rate limit, the 403 TokenException handling and the
+        error text are the same as `get_json`. Used by orders/brokers/kite.py (the only caller that is not a data read)."""
+        return self._json(await self._send(method, path, params, False, data))
+
     async def get_text(self, path: str) -> str:
         r = await self._send("GET", path, None, False)
         if r.status_code >= 400:

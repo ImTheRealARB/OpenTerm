@@ -274,6 +274,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `ATTR` | Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations |  | `[PORTFOLIO] [BENCH=SPY] [RANGE=1y] \| <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] \| <PORTFOLIO> DEL <DATE>` | `ATTR` |
 | `SYNC` | Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders |  | `[KITE\|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]` | `SYNC` |
 | `JRNL` | Trade journal: import Zerodha / IBKR Flex / Alpaca / CSV trades, FIFO round trips, statistics, behaviour findings (heuristics, not advice), Shadow Account. Read only |  | `[TRIPS\|STATS\|FINDINGS\|SHADOW\|IMPORT] [CCY]` | `JRNL` |
+| `ORD` | Order ticket and blotter: paper by default, live only with keys, a mandate and your confirm; kill switch; hash-chained order ledger. Never the AI |  | `[PAPER\|ALPACA\|KITE] [BUY\|SELL] [QTY] [SYMBOL] [LMT PRICE \| STP PRICE] [DAY\|GTC\|IOC]` | `ORD` |
 
 ### Backtest
 

@@ -1,0 +1,19 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
+ "body": {
+  "status": "success",
+  "data": {
+   "net": [
+    {
+     "tradingsymbol": "INFY",
+     "exchange": "NSE",
+     "product": "MIS",
+     "quantity": 10,
+     "average_price": 1500.0,
+     "last_price": 1510.0
+    }
+   ],
+   "day": []
+  }
+ }
+}

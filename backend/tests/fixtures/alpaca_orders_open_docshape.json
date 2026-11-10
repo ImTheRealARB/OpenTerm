@@ -1,0 +1,39 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
+ "body": [
+  {
+   "id": "61e69015-8549-4bfd-b9c3-01e75843f47d",
+   "client_order_id": "OT0123456789abcd",
+   "created_at": "2026-11-10T14:30:00.000000Z",
+   "submitted_at": "2026-11-10T14:30:00.000000Z",
+   "symbol": "AAPL",
+   "qty": "10",
+   "filled_qty": "0",
+   "filled_avg_price": null,
+   "order_type": "limit",
+   "type": "limit",
+   "side": "buy",
+   "time_in_force": "day",
+   "limit_price": "190",
+   "stop_price": null,
+   "status": "accepted"
+  },
+  {
+   "id": "72f7a126-9650-4c0e-a4d4-12f86954a58e",
+   "client_order_id": "OT0123456789abcd",
+   "created_at": "2026-11-10T14:30:00.000000Z",
+   "submitted_at": "2026-11-10T14:30:00.000000Z",
+   "symbol": "MSFT",
+   "qty": "5",
+   "filled_qty": "2",
+   "filled_avg_price": null,
+   "order_type": "limit",
+   "type": "limit",
+   "side": "sell",
+   "time_in_force": "day",
+   "limit_price": "420",
+   "stop_price": null,
+   "status": "partially_filled"
+  }
+ ]
+}

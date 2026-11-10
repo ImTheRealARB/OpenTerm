@@ -1,0 +1,31 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
+ "body": [
+  {
+   "activity_type": "FILL",
+   "id": "20261110143001000::8efc7b9a-0000-4000-8000-000000000001",
+   "cum_qty": "10",
+   "leaves_qty": "0",
+   "price": "189.5",
+   "qty": "10",
+   "side": "buy",
+   "symbol": "AAPL",
+   "transaction_time": "2026-11-10T14:30:01.000Z",
+   "order_id": "61e69015-8549-4bfd-b9c3-01e75843f47d",
+   "type": "fill"
+  },
+  {
+   "activity_type": "FILL",
+   "id": "20261110150000000::8efc7b9a-0000-4000-8000-000000000002",
+   "cum_qty": "3",
+   "leaves_qty": "0",
+   "price": "421",
+   "qty": "3",
+   "side": "sell",
+   "symbol": "MSFT",
+   "transaction_time": "2026-11-10T15:00:00.000Z",
+   "order_id": "72f7a126-9650-4c0e-a4d4-12f86954a58e",
+   "type": "fill"
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
+ "body": {
+  "status": "success",
+  "data": [
+   {
+    "tradingsymbol": "RELIANCE",
+    "exchange": "NSE",
+    "quantity": 5,
+    "t1_quantity": 1,
+    "average_price": 2400.0,
+    "last_price": 2500.0
+   }
+  ]
+ }
+}
