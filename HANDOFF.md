@@ -12,10 +12,13 @@ Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that 
 - Local runs in this container need the preinstalled Chromium (`/opt/pw-browsers/chromium`): pass it as `executablePath` in a
   throwaway Playwright config / bench copy. Run e2e with NO backend on :8000 (stale settings there break GUI-mode tests).
   Never `scripts/start` / `npm ci` in a worktree whose `frontend/node_modules` is a symlink: it empties the shared copy.
-- Left, needs the owner: (1) ORD (3) and JRNL (2) in-panel text boxes vs DESIGN.md "one text box per screen" (keep, or move to
-  command-line entry?); (2) the HTML feature/command checklist to update: not found in this repo's branches, GitHub, Drive or
-  artifacts, so ask where it is; (3) owner-only: updater signing key + Actions secrets, Apple / Windows certificates, a macOS run,
-  first `v*` tag of `release.yml`, real Kite / Alpaca / IBKR / OpenRouter runs, running the two NSE MCP presets (ask first).
+- Decided 2026-11-10: ORD and JRNL keep their in-panel text boxes (written into DESIGN.md as the only two exceptions).
+  NSE MCP presets live-checked with the owner's approval (results in docs/MCP.md): 9 of 10 allowed tools answered, 1 got
+  NSE's 403 from the cloud machine.
+- Left for the owner: (1) the HTML feature/command checklist lives only on the owner's other laptop; the owner will update it
+  (everything to add is in this branch's CHANGELOG entry of 2026-11-10 and docs/COMMANDS.md); (2) owner-only: updater signing
+  key + Actions secrets, Apple / Windows certificates, a macOS run, first `v*` tag of `release.yml`; (3) later, paid/keyed live
+  runs: Kite, Alpaca, IBKR, OpenRouter.
 - Optional: settings sync per-field merge; Chinese `references/` of elliott-wave, harmonic, ichimoku; bundle the backend as a
   Tauri sidecar.
 

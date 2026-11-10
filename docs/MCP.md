@@ -95,14 +95,34 @@ The command that is started comes only from this file. It is never taken from a 
 
 | Name | Runs | Source | Notes |
 |---|---|---|---|
-| `stock-nse-india` | `npx -y stock-nse-india mcp` (needs Node.js) | github.com/hi-imcodeman/stock-nse-india, MIT, about 30 tools | NSE India equities, indices, option chains |
-| `nse-mcp` | `uvx nse-mcp` (needs uv) | github.com/jugaad-py/nse-mcp, built on jugaad-data, about 24 tools | NSE India market data |
+| `stock-nse-india` | `npx -y stock-nse-india mcp` (needs Node.js) | github.com/hi-imcodeman/stock-nse-india, MIT, 32 tools | NSE India equities, indices, option chains |
+| `nse-mcp` | `uvx nse-mcp` (needs uv) | github.com/jugaad-py/nse-mcp, built on jugaad-data, no licence stated, 24 tools | NSE India market data |
 
 Both are unofficial community projects, not affiliated with or endorsed by NSE. OpenTerm does not ship their code: `npx` or `uvx`
 fetches it from npm or PyPI on this machine the first time the server is used, runs it with your permissions, and the package is
 not pinned (pin a version in `args` if you want one). Their data terms are the source's, and NSE data may be delayed, rate-limited
 or stop working without notice. Enabling a preset in `MCP` shows this notice and needs a second press (`MCP ENABLE <name> YES`);
 the preset then allows a short read-only list of tools; change it in the tool list. See `THIRD_PARTY.md`.
+
+**Live check, 2026-11-10** (with the owner's approval, through OpenTerm's own client, from a cloud machine, after NSE's close):
+both servers started (about 26-28 s on the first start while `npx` / `uvx` downloaded them), listed their tools, every tool on
+both preset allow-lists exists, and none was refused as order-like. All 10 allowed tools were called once:
+
+| Server | Tool | Result |
+|---|---|---|
+| `stock-nse-india` | `get_market_status` | data (NIFTY 50 close, market Closed) |
+| `stock-nse-india` | `get_equity_historical_data` (INFY, 2026-10-01..11-09) | data |
+| `stock-nse-india` | `get_equity_option_chain` (INFY) | data |
+| `stock-nse-india` | `get_index_option_chain` (`index_symbol` NIFTY) | data |
+| `stock-nse-india` | `get_gainers_and_losers_by_index` (NIFTY 50) | empty lists after the close (shown as empty, not faked) |
+| `stock-nse-india` | `get_equity_details` (INFY) | ERROR: nseindia.com answered 403 to this machine for that endpoint |
+| `nse-mcp` | `market_status` | data |
+| `nse-mcp` | `stock_quote` (INFY) | data (last 1154.1, same close as the other server) |
+| `nse-mcp` | `stock_history` (INFY) | data |
+| `nse-mcp` | `index_option_chain` (NIFTY) | data |
+
+Both servers scrape nseindia.com, which blocks some networks (the 403 above); on a home connection results may differ. Results
+are capped at the AI result size and fenced as THIRD-PARTY DATA, as designed.
 
 ## Safety model
 
