@@ -1,5 +1,27 @@
 # Handoff
 
+## START HERE: owner's to-do list (written 2026-11-10 late; the owner continues later, maybe from the Windows laptop)
+
+Branch `claude/bold-tesla-0tk2ek` has 4 commits NOT on `main` yet (details in "Pending" below): skill reference translations,
+ALPHA about 2x faster (same numbers), AI first response about 10 ms -> 1.4 ms (same audit), `docs/ROADMAP_NEXT.md`. CI on the branch:
+green on `7d5da43`; `17d44ba` was still running when this was written; the one red run (`b7bb803`) was a timing flake on GitHub's
+runner (`test_cached_path_is_fast` 163 ms of 20; the same test passed on the next run). Re-check CI before merging.
+
+In this order:
+1. **Restore Claude's rulebook on the Mac (most important).** `CLAUDE.md` (the project rules for Claude: speed over looks, never fake
+   data, budgets gated by the bench, usage rules) was untracked on 2026-11-05 (commit `a38697b`, "keep them local"), and `.claude/`
+   (project skills and settings) is in `.gitignore`. Neither is on the Mac unless copied. Best: copy `CLAUDE.md` and the `.claude/`
+   folder from the Windows laptop's OpenTerm folder into the Mac's. Fallback: `git show a38697b^:CLAUDE.md > CLAUDE.md` restores the
+   2026-11-05 version (a few days stale). Decide whether to track it in git again so every machine and cloud session has it.
+2. **Merge this branch:** ask Claude to open a PR from `claude/bold-tesla-0tk2ek`, wait for the green CI check, merge. Always merge
+   through PRs: CI (ruff, pytest, sdk, vitest, e2e, bench) is the quality gate on every machine.
+3. **Tag `v0.1.0`** (item 2 under "What is left" below): the commands work in macOS Terminal too. Then watch the "release" workflow.
+4. **Settings sync, yes or no:** per-field merge instead of "newest whole document wins". Only matters with 2+ devices/browsers.
+5. **Pick the first features** from `docs/ROADMAP_NEXT.md` (suggested wave 1: link groups, condition alerts, custom columns,
+   unified calendar).
+6. **Later:** desktop app (bundle the backend into the Tauri app), updater signing key, macOS run of `scripts/setup` /
+   `scripts/start`, the HTML feature checklist, the OpenCode Go / OpenRouter / broker / NSE MCP live tests.
+
 Last updated 2026-11-10 (end of session). Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
 from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and `claude/admiring-archimedes-7ibeha` are superseded.
 
