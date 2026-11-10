@@ -9,11 +9,11 @@ Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that 
 **Status (checkpoint, 2026-11-10 19:45 UTC):**
 - MERGED and pushed, full suites green (backend 3971, vitest 1479, ruff/typecheck/lint clean): 02, 12, 08 (incl. storeText UI,
   AI BT CODE, GUIDANCE/CHAIN), 03 (MCP client, now `openterm/mcpclient/`), 04 (JRNL, migration 18), 01 (orders, migration 19),
-  05, 06, 07, 09, 10. ORD band fixed to one row (`1360af8`).
-- IN PROGRESS in agent worktrees (not on the branch yet): 11 skills (`.claude/worktrees/agent-a35455159417699b1`),
-  13 packaging (`.claude/worktrees/agent-ae70de471ef4848b2`). If those worktrees are gone, re-apply `handoff/patches/11-*` / `13-*`.
-- TODO after 11/13: full gates incl. `npx playwright test` and the bench (tick-to-pixel rerun); docs (CHANGELOG, ROADMAP,
-  FEATURE_GAP, README badge, stale "29 factors" lines in CHANGELOG:102, ROADMAP:184, PERFORMANCE:463); update the owner's HTML
+  05, 06, 07, 09, 10, 11 (skills, 57 ported). ORD band fixed to one row (`1360af8`). Docs (CHANGELOG/ROADMAP/FEATURE_GAP) done.
+  E2E: 354/354 (needs the installed Chromium: a local config with `launchOptions.executablePath: /opt/pw-browsers/chromium`;
+  run it with NO backend on :8000, or stale settings there break the GUI-mode tests).
+- IN PROGRESS in an agent worktree (not on the branch yet): 13 packaging (`.claude/worktrees/agent-ae70de471ef4848b2`). If it is gone, re-apply `handoff/patches/13-*`.
+- TODO after 13: full backend + vitest gates, the bench (tick-to-pixel rerun) then the README badge; update the owner's HTML
   feature/command checklist (location unknown: not in this repo's branches, GitHub, Drive or artifacts; ask the owner).
 - OPEN QUESTION for the owner: ORD (3) and JRNL (2) in-panel text boxes vs DESIGN.md "one text box per screen".
 
