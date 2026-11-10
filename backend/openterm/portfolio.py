@@ -69,7 +69,14 @@ def check_position(raw) -> dict:
     if notes is not None and not isinstance(notes, str):
         raise UserDataError("bad_request", f"{symbol} NOTES MUST BE TEXT")
     notes = (notes or "").strip()[:MAX_NOTES] or None
-    return {"symbol": symbol, "qty": qty, "cost": cost, "currency": check_currency(raw.get("currency")), "notes": notes}
+    out = {"symbol": symbol, "qty": qty, "cost": cost, "currency": check_currency(raw.get("currency")), "notes": notes}
+    # Phase 18 step 2: a lot written by a broker sync carries where it came from; a manual lot has neither field.
+    src, at = raw.get("source"), raw.get("synced_at")
+    if isinstance(src, str) and src.strip():
+        out["source"] = src.strip()[:24]
+        if isinstance(at, int | float) and not isinstance(at, bool) and math.isfinite(at):
+            out["synced_at"] = float(at)
+    return out
 
 
 def add_lot(cur: dict | None, lot: dict) -> dict | None:

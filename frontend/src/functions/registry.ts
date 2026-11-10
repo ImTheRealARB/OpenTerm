@@ -57,6 +57,7 @@ const defs: FunctionDef[] = [
   // SEC and MONITOR are twins (TWINS in functions/aliases.ts): own code and title, same panel module as the original.
   { code: "SEC", title: "SEC filings (alias of FIL)", needsSecurity: true, argsSchema: "[FORM]", load: () => import("./FIL") },
   { code: "PORT", title: "Portfolio (live P&L, CSV import/export)", needsSecurity: false, argsSchema: "[NAME] [ADD SYM QTY [COST] [CCY] | RM SYM... | EXPORT | IMPORT | BASE CCY] | DEL NAME", load: () => import("./PORT") },
+  { code: "SYNC", title: "Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders", needsSecurity: false, argsSchema: "[KITE|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]", load: () => import("./SYNC"), idlePreload: false },
   { code: "ECO", title: "Economic calendar", needsSecurity: false, argsSchema: "[1-62] [MAJOR] [YYYY-MM-DD]", related: { market: 7 }, load: () => import("./ECO") },
   { code: "MACRO", title: "FRED series browser", needsSecurity: false, argsSchema: "[query]", load: () => import("./MACRO") },
   { code: "FRED", title: "Plot a FRED series", needsSecurity: false, argsSchema: "SERIES_ID [1Y|2Y|5Y|10Y|20Y|MAX]", load: () => import("./FRED"), idlePreload: false },

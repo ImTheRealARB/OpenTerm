@@ -1,0 +1,20 @@
+{
+  "_label": "DOC-SHAPED FIXTURE, NOT A RECORDING. Written from the Kite Connect docs (GET /portfolio/holdings and /portfolio/positions); invented symbols, quantities and prices.",
+  "holdings": [
+    {"tradingsymbol": "INFY", "exchange": "NSE", "isin": "INE009A01021", "product": "CNC", "quantity": 10, "t1_quantity": 0, "realised_quantity": 10, "average_price": 1400.5, "last_price": 1500.0, "collateral_quantity": 0},
+    {"tradingsymbol": "RELIANCE", "exchange": "BSE", "isin": "INE002A01018", "product": "CNC", "quantity": 4, "t1_quantity": 1, "realised_quantity": 3, "average_price": 2450.0, "last_price": 2500.0, "collateral_quantity": 2},
+    {"tradingsymbol": "M&M", "exchange": "NSE", "product": "CNC", "quantity": 3, "average_price": 0, "last_price": 3000.0},
+    {"tradingsymbol": "SOLDOUT", "exchange": "NSE", "product": "CNC", "quantity": 0, "average_price": 10.0},
+    {"tradingsymbol": "WEIRD NAME", "exchange": "NSE", "product": "CNC", "quantity": 1, "average_price": 5.0},
+    {"tradingsymbol": "ODDBALL", "exchange": "XYZ", "product": "CNC", "quantity": 1, "average_price": 5.0}
+  ],
+  "positions": {
+    "net": [
+      {"tradingsymbol": "NIFTY26NOVFUT", "exchange": "NFO", "product": "NRML", "quantity": -50, "average_price": 24500.25},
+      {"tradingsymbol": "TCS", "exchange": "NSE", "product": "MIS", "quantity": 5, "average_price": 4100.0},
+      {"tradingsymbol": "INFY", "exchange": "NSE", "product": "CNC", "quantity": 10, "average_price": 1400.5},
+      {"tradingsymbol": "HDFCBANK", "exchange": "NSE", "product": "MIS", "quantity": 0, "average_price": 1700.0}
+    ],
+    "day": []
+  }
+}

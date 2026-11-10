@@ -118,6 +118,11 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Open portfolio", key: "Enter", when: "noargs", title: "Open the selected portfolio (Enter)" },
     { label: "Delete portfolio", key: "x", when: "noargs", title: "Delete the selected portfolio: press twice to confirm (X)" },
   ],
+  SYNC: [
+    { label: "Sync Kite", key: "k", title: "Read Zerodha Kite holdings into PORT (K)" },
+    { label: "Sync IBKR", key: "i", title: "Read Interactive Brokers positions into PORT (I)" },
+    { label: "Reload", key: "r", title: "Reload the last-sync status (R)" },
+  ],
   BT: [
     { label: "Run again", key: "r", title: "Run the backtest again (R)" },
     { label: "Cancel", key: "x", title: "Cancel the running backtest (X)" },

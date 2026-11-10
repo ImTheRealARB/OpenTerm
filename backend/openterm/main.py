@@ -14,6 +14,7 @@ from .ai import routes_filing, routes_run  # noqa: F401 - importing routes_filin
 from .ai.routes import router as ai_router
 from .api import router as api_router
 from .brief_routes import router as brief_router
+from .brokers_routes import router as brokers_router
 from .bt.localdata import LocalData
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
@@ -208,6 +209,7 @@ app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)
 app.include_router(kite_router)
+app.include_router(brokers_router)
 app.include_router(delivery_router)
 app.include_router(brief_router)
 app.include_router(ai_router)
