@@ -13,6 +13,12 @@ describe("APIKEYS sections", () => {
   it("every backend provider has a section (not Other)", () => {
     for (const n of BACKEND_NAMES) expect(sectionOf(n), n).not.toBe("Other");
   });
+  it("lists the four keyed market-data sources (Twelve Data, Alpha Vantage, Polygon, FMP) under Market data", () => {
+    for (const n of ["twelvedata", "alphavantage", "polygon", "fmp"]) {
+      expect(BACKEND_NAMES, n).toContain(n);
+      expect(sectionOf(n), n).toBe("Market data");
+    }
+  });
   it("no provider is listed twice, and every listed name exists in the backend", () => {
     const all = SECTIONS.flatMap((s) => s.names);
     expect(new Set(all).size).toBe(all.length);

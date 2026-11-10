@@ -1,0 +1,7 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Financial Modeling Prep /stable documentation (site.financialmodelingprep.com/developer/docs): no FMP key was available to record it, and field names were not checked against a live key. The wording follows the limit message FMP is widely reported to send. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 429,
+ "body": {
+  "Error Message": "Limit Reach . Please upgrade your plan or visit our documentation for more details at https://site.financialmodelingprep.com/"
+ }
+}

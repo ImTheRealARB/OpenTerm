@@ -1,0 +1,9 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Polygon / Massive REST documentation (massive.com/docs/rest/stocks): no Polygon account or key was available to record it. The NOT_AUTHORIZED wording is the documented one. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 403,
+ "body": {
+  "status": "NOT_AUTHORIZED",
+  "request_id": "docshape",
+  "message": "You are not entitled to this data. Please upgrade your plan at https://polygon.io/pricing"
+ }
+}

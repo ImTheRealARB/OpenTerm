@@ -1,0 +1,7 @@
+{
+ "status": 200,
+ "recorded": "2026-11-10, REAL text (made-up key, no account), captured with curl for GLOBAL_QUOTE TSLA. Alpha Vantage does not validate keys: an unknown key is treated like an anonymous free key, so this answer is HTTP 200 and says '25 requests per day' (the same words a real free key gets once its day is used up). On other calls the same made-up key gets real data, so this text is not reproducible by scripts/record_providers.py; the key in the text is replaced by REDACTED.",
+ "body": {
+  "Information": "We have detected your API key as REDACTED and our standard API rate limit is 25 requests per day. Please subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly remove all daily rate limits."
+ }
+}

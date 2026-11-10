@@ -1,0 +1,57 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Financial Modeling Prep /stable documentation (site.financialmodelingprep.com/developer/docs): no FMP key was available to record it, and field names were not checked against a live key. Three annual periods, newest first. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": [
+  {
+   "date": "2025-09-27",
+   "symbol": "AAPL",
+   "reportedCurrency": "USD",
+   "cik": "0000320193",
+   "filingDate": "2025-10-31",
+   "fiscalYear": "2025",
+   "period": "FY",
+   "cashAndCashEquivalents": 90000000000,
+   "totalCurrentAssets": 450000000000,
+   "totalAssets": 1080000000000,
+   "totalCurrentLiabilities": 420000000000,
+   "totalLiabilities": 840000000000,
+   "shortTermDebt": 30000000000,
+   "longTermDebt": 255000000000,
+   "totalStockholdersEquity": 240000000000
+  },
+  {
+   "date": "2024-09-27",
+   "symbol": "AAPL",
+   "reportedCurrency": "USD",
+   "cik": "0000320193",
+   "filingDate": "2024-10-31",
+   "fiscalYear": "2024",
+   "period": "FY",
+   "cashAndCashEquivalents": 60000000000,
+   "totalCurrentAssets": 300000000000,
+   "totalAssets": 720000000000,
+   "totalCurrentLiabilities": 280000000000,
+   "totalLiabilities": 560000000000,
+   "shortTermDebt": 20000000000,
+   "longTermDebt": 170000000000,
+   "totalStockholdersEquity": 160000000000
+  },
+  {
+   "date": "2023-09-27",
+   "symbol": "AAPL",
+   "reportedCurrency": "USD",
+   "cik": "0000320193",
+   "filingDate": "2023-10-31",
+   "fiscalYear": "2023",
+   "period": "FY",
+   "cashAndCashEquivalents": 30000000000,
+   "totalCurrentAssets": 150000000000,
+   "totalAssets": 360000000000,
+   "totalCurrentLiabilities": 140000000000,
+   "totalLiabilities": 280000000000,
+   "shortTermDebt": 10000000000,
+   "longTermDebt": 85000000000,
+   "totalStockholdersEquity": 80000000000
+  }
+ ]
+}

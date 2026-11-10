@@ -69,6 +69,13 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://app.alpaca.markets/signup"),
     KeySpec("fmp", ("FMP_API_KEY",), 13, "Estimates, index members (transcripts and segments need a paid plan)",
             "https://site.financialmodelingprep.com/developer/docs"),
+    # Keyed market data (free tiers, read only): fallbacks below Yahoo for quotes, candles, search and FA. Limits are per provider docs.
+    KeySpec("twelvedata", ("TWELVEDATA_API_KEY",), 13, "Quotes, candles and search incl. some non-US exchanges (free: 8 credits a minute, 800 a day)",
+            "https://twelvedata.com/pricing"),
+    KeySpec("alphavantage", ("ALPHAVANTAGE_API_KEY",), 13, "US quotes, candles and FA statements, last fallback (free: 25 requests a day)",
+            "https://www.alphavantage.co/support/#api-key"),
+    KeySpec("polygon", ("POLYGON_API_KEY",), 13, "US previous-close quotes, candles and search (Polygon, now Massive; free: 5 requests a minute)",
+            "https://polygon.io/dashboard/signup"),
     KeySpec("fred", ("FRED_API_KEY",), 7, "FRED API: series titles/units, MACRO search, ECO fallback. "
             "Values work keyless via fred_csv", "https://fred.stlouisfed.org/docs/api/api_key.html"),
     KeySpec("eia", ("EIA_API_KEY",), 19, "Energy inventories and production (NRG)", "https://www.eia.gov/opendata/register.php"),
@@ -426,6 +433,12 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
                          {"APCA-API-KEY-ID": k["ALPACA_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_SECRET_KEY"]}, None),
     "fmp": lambda k: ("GET", "https://financialmodelingprep.com/stable/quote",
                       {"symbol": "AAPL", "apikey": k["FMP_API_KEY"]}, None, None),
+    # Twelve Data: key in the Authorization header. api_usage is free of credits. Alpha Vantage does not validate keys and answers 200
+    # either way; its limit text is a QUOTA to classify(). Polygon: Bearer header, the previous-day bar of one ticker.
+    "twelvedata": lambda k: ("GET", "https://api.twelvedata.com/api_usage", None, {"Authorization": f"apikey {k['TWELVEDATA_API_KEY']}"}, None),
+    "alphavantage": lambda k: ("GET", "https://www.alphavantage.co/query",
+                               {"function": "GLOBAL_QUOTE", "symbol": "IBM", "apikey": k["ALPHAVANTAGE_API_KEY"]}, None, None),
+    "polygon": lambda k: ("GET", "https://api.massive.com/v2/aggs/ticker/AAPL/prev", {"adjusted": "true"}, _bearer(k["POLYGON_API_KEY"]), None),
     "fred": lambda k: ("GET", "https://api.stlouisfed.org/fred/series",
                        {"series_id": "DGS10", "api_key": k["FRED_API_KEY"], "file_type": "json"}, None, None),
     "eia": lambda k: ("GET", "https://api.eia.gov/v2/", {"api_key": k["EIA_API_KEY"]}, None, None),

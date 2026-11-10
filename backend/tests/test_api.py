@@ -32,6 +32,7 @@ def test_search_and_sources(client):
         "usgs", "eonet",  # MAP layers (keyless)
         "kraken", "coinbase",  # second crypto exchanges
         "opensky",  # FLT
+            "twelvedata", "polygon", "fmp", "alphavantage",  # keyed market data (workstream 07)
         "usaspending", "federalregister", "openfec", "congressgov",  # USASP, FEDREG, FEC, CONGRESS
     }
     assert s["fixtures"] is True

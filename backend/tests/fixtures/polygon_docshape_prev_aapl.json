@@ -1,0 +1,25 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Polygon / Massive REST documentation (massive.com/docs/rest/stocks): no Polygon account or key was available to record it. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": {
+  "ticker": "AAPL",
+  "queryCount": 1,
+  "resultsCount": 1,
+  "adjusted": true,
+  "status": "OK",
+  "request_id": "docshape",
+  "results": [
+   {
+    "T": "AAPL",
+    "v": 52000000,
+    "vw": 349.1,
+    "o": 351.0,
+    "c": 347.5,
+    "h": 353.0,
+    "l": 346.5,
+    "t": 1794200400000,
+    "n": 600000
+   }
+  ]
+ }
+}

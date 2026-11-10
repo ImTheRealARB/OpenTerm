@@ -1,0 +1,66 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Financial Modeling Prep /stable documentation (site.financialmodelingprep.com/developer/docs): no FMP key was available to record it, and field names were not checked against a live key. Rows are newest first, as documented. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": [
+  {
+   "symbol": "AAPL",
+   "date": "2026-11-09",
+   "open": 348.0,
+   "high": 352.0,
+   "low": 347.0,
+   "close": 350.0,
+   "volume": 50000004,
+   "change": 2.0,
+   "changePercent": 0.58,
+   "vwap": 349.5
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-11-06",
+   "open": 347.0,
+   "high": 351.0,
+   "low": 346.0,
+   "close": 349.0,
+   "volume": 50000003,
+   "change": 2.0,
+   "changePercent": 0.58,
+   "vwap": 348.5
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-11-05",
+   "open": 346.0,
+   "high": 350.0,
+   "low": 345.0,
+   "close": 348.0,
+   "volume": 50000002,
+   "change": 2.0,
+   "changePercent": 0.58,
+   "vwap": 347.5
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-11-04",
+   "open": 345.0,
+   "high": 349.0,
+   "low": 344.0,
+   "close": 347.0,
+   "volume": 50000001,
+   "change": 2.0,
+   "changePercent": 0.58,
+   "vwap": 346.5
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-11-03",
+   "open": 344.0,
+   "high": 348.0,
+   "low": 343.0,
+   "close": 346.0,
+   "volume": 50000000,
+   "change": 2.0,
+   "changePercent": 0.58,
+   "vwap": 345.5
+  }
+ ]
+}

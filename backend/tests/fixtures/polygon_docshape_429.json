@@ -1,0 +1,9 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Polygon / Massive REST documentation (massive.com/docs/rest/stocks): no Polygon account or key was available to record it. The wording is the documented one. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 429,
+ "body": {
+  "status": "ERROR",
+  "request_id": "docshape",
+  "error": "You've exceeded the maximum requests per minute, please wait or upgrade your subscription to continue."
+ }
+}

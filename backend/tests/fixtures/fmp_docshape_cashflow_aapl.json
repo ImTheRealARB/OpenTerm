@@ -1,0 +1,54 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Financial Modeling Prep /stable documentation (site.financialmodelingprep.com/developer/docs): no FMP key was available to record it, and field names were not checked against a live key. Three annual periods, newest first. Capex, dividends and buybacks are negative, as FMP documents cash flows. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": [
+  {
+   "date": "2025-09-27",
+   "symbol": "AAPL",
+   "reportedCurrency": "USD",
+   "cik": "0000320193",
+   "filingDate": "2025-10-31",
+   "fiscalYear": "2025",
+   "period": "FY",
+   "netCashProvidedByOperatingActivities": 360000000000,
+   "capitalExpenditure": -30000000000,
+   "netCashProvidedByInvestingActivities": -15000000000,
+   "netCashProvidedByFinancingActivities": -330000000000,
+   "commonDividendsPaid": -45000000000,
+   "commonStockRepurchased": -270000000000,
+   "depreciationAndAmortization": 33000000000
+  },
+  {
+   "date": "2024-09-27",
+   "symbol": "AAPL",
+   "reportedCurrency": "USD",
+   "cik": "0000320193",
+   "filingDate": "2024-10-31",
+   "fiscalYear": "2024",
+   "period": "FY",
+   "netCashProvidedByOperatingActivities": 240000000000,
+   "capitalExpenditure": -20000000000,
+   "netCashProvidedByInvestingActivities": -10000000000,
+   "netCashProvidedByFinancingActivities": -220000000000,
+   "commonDividendsPaid": -30000000000,
+   "commonStockRepurchased": -180000000000,
+   "depreciationAndAmortization": 22000000000
+  },
+  {
+   "date": "2023-09-27",
+   "symbol": "AAPL",
+   "reportedCurrency": "USD",
+   "cik": "0000320193",
+   "filingDate": "2023-10-31",
+   "fiscalYear": "2023",
+   "period": "FY",
+   "netCashProvidedByOperatingActivities": 120000000000,
+   "capitalExpenditure": -10000000000,
+   "netCashProvidedByInvestingActivities": -5000000000,
+   "netCashProvidedByFinancingActivities": -110000000000,
+   "commonDividendsPaid": -15000000000,
+   "commonStockRepurchased": -90000000000,
+   "depreciationAndAmortization": 11000000000
+  }
+ ]
+}

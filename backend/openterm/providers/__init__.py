@@ -11,6 +11,7 @@ from ..config import Settings
 from ..keys import KEY_SPECS
 from .aisstream import AisStreamProvider
 from .alpaca import AlpacaProvider
+from .alphavantage import AlphaVantageProvider
 from .amfi import AmfiProvider
 from .base import Provider
 from .binance_deriv import BinanceDerivProvider
@@ -26,6 +27,7 @@ from .etherscan import EtherscanProvider
 from .finnhub import FinnhubProvider
 from .finra import FinraProvider
 from .fixtures import fixture_transport
+from .fmp import FmpProvider
 from .frankfurter import FrankfurterProvider
 from .fred_oas import FredOasProvider
 from .futures import CftcProvider, FomcProvider, YahooFuturesProvider
@@ -56,6 +58,7 @@ from .opensky import OpenSkyProvider
 from .options_yahoo import YahooOptionsProvider
 from .ownership import YahooOwnProvider
 from .policy_rates import PolicyRatesProvider
+from .polygon import PolygonProvider
 from .polymarket import PolymarketProvider
 from .portwatch import PortWatchProvider
 from .research_nasdaq import NasdaqResearchProvider
@@ -67,6 +70,7 @@ from .synthetic import SyntheticProvider
 from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
 from .tradier import TradierProvider
 from .treasurydirect import TreasuryDirectProvider
+from .twelvedata import TwelveDataProvider
 from .usgov import CongressProvider, FederalRegisterProvider, OpenFecProvider, UsaSpendingProvider
 from .worldstats import DbnomicsProvider, WorldBankProvider
 from .yahoo import YahooProvider
@@ -122,17 +126,16 @@ ADAPTERS: dict[str, type[Provider]] = {
     "kraken": KrakenProvider, "coinbase": CoinbaseProvider,
     # US government data: USASP (USASpending) and FEDREG (Federal Register) keyless; FEC (OpenFEC) and CONGRESS (Congress.gov) with a free api.data.gov key
     "usaspending": UsaSpendingProvider, "federalregister": FederalRegisterProvider, "openfec": OpenFecProvider, "congressgov": CongressProvider,
+    # Keyed market data (free keys; inert until set, below Yahoo and SEC in every order): see hierarchy.py for where each one sits
+    "twelvedata": TwelveDataProvider, "polygon": PolygonProvider, "fmp": FmpProvider, "alphavantage": AlphaVantageProvider,
     # FLT: live aircraft from the OpenSky Network (works with no key; an optional free account raises the daily credits)
     "opensky": OpenSkyProvider,
 }
 
 # Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a
-# key in the key store (KEY_SPECS: finnhub, fmp, fred, ...) are listed from there instead, so none of them belongs here.
-KEYED = {
-    "twelvedata": ("twelvedata_api_key", 3, "Quotes/history fallback incl. some non-US"),
-    "alphavantage": ("alphavantage_api_key", 6, "Fundamentals fallback"),
-    "polygon": ("polygon_api_key", 3, "US quotes/history fallback"),
-}
+# key in the key store (KEY_SPECS: finnhub, fmp, fred, twelvedata, ...) are listed from there instead, so none of them belongs here.
+# Empty now: Twelve Data, Alpha Vantage and Polygon were the last planned ones.
+KEYED: dict[str, tuple[str, int, str]] = {}
 
 # Removed from the default chain, with the reason shown on SOURCES.
 RETIRED = {
