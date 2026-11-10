@@ -115,6 +115,7 @@ BT MC AAPL SMA20>SMA50 1D 10Y             run it, then shuffle its trades (Monte
 BT WF AAPL SMA20>SMA50 1D 10Y             run it, then walk-forward windows; W on an open run
 BT RUNS                                   stored runs (last 200): Enter opens, C marks two to compare, V switches to equity lines
 BT OPEN <runid>   BT EXPORT <runid> PINE  open a run; export Pine Script (rule runs) or TRADES / EQUITY / METRICS as CSV (P, E in a run)
+BT EXPORT <runid> MQL5|PDF|XLSX           MetaTrader 5 Expert Advisor (rule runs only, Q), PDF report (D) or Excel workbook (B) of a stored run
 BT SAVE golden SMA20>SMA50                save a rule;  BT AAPL @golden 1D 5Y  runs it;  BT DEL golden removes it
 BT EDIT mysma                             Python strategy editor (SignalEngine): a new name first offers templates (SMA cross, RSI mean reversion, breakout); T after Esc reopens them; sandbox errors show under the line; Ctrl+S save, Ctrl+Enter save and run; BT EDIT lists them
 IMPORT MYBARS                             paste daily bars (date,open,high,low,close[,volume]); then GP MYBARS or BT MYBARS CLOSE>SMA20
@@ -131,6 +132,8 @@ THEME GREEN           AMBER GREEN WHITE LIGHT
 SETTINGS              vim mode, clocks, number format, refresh rates, key rebinding, interface mode
 SETTINGS FONT Fira Code   switch font: presets JetBrains Mono (default), GitHub Mono, Geist Mono, Fira Code, Mononoki, Hack, Monaco, DejaVu Sans Mono, Menlo, Consolas, Comic Sans; NEXT / PREV step through them; any other installed font name works too. GUI mode: the font dropdown in the menu bar
 SETTINGS MODE GUI     GUI mode: menu bar, sidebar, panel buttons (SETTINGS MODE TERMINAL, or Alt+G, switches back)
+SETTINGS SOURCE HISTORY NASDAQ   default source for a kind of data (HISTORY QUOTES PROFILE FUNDAMENTALS NEWS_SYMBOL ...); it goes first and the normal order still backs it up. SETTINGS SOURCE HISTORY DEFAULT removes one, SETTINGS SOURCE RESET all
+AAPL GP 5Y SRC=NASDAQ   pin the data source for this one command (also on Q, HIST, DES, FA, N, QR; the name is any in SOURCES, Tab completes it). A pinned source answers ALONE: if it is down, lacks the data or needs a key you get `SRC=NASDAQ: PROVIDER DOWN`, `DOES NOT SERVE HISTORY` or `KEY REQUIRED`, never another source's data. The cache keeps pinned answers apart. PRED keeps its own `SRC=POLY|KALSHI|ALL`
 Alt+H                 GUI mode: help drawer for the focused panel
 SOURCES               data source health and latency
 APIKEYS               optional API keys: Enter edit (masked), T test, D twice delete, O sign-up page, C AI spend cap
@@ -161,19 +164,23 @@ opinion: a missing input shows `NOT RUNNABLE: MISSING ...`.
 cites them as [T1], and says UNGROUNDED when no tool returned data or UNSOURCED NUMBERS for figures no tool returned. `I` types, Enter sends, Esc cancels, `X` clears. AI output is model output, not data.
 `AI BT <idea in words>` drafts one backtest rule (checked with the BT parser, shown with its command; the AI never runs it: `B` puts the command on the command line, Enter runs it).
 `AI CHART` sends the chart of your newest `GP` panel to the vision model (labelled CHART IMAGE ONLY). `AI` playbooks (valuation, earnings, options, risk, macro) load automatically when a question needs them.
+`AI BT CODE <idea in words>` drafts a Python SignalEngine strategy instead of a rule: it is checked with the same sandbox check `BT EDIT` runs on save (never executed; one automatic repair round at most, errors shown under the code), labelled a draft that is not run or saved. `E` opens it in `BT EDIT <name>` unsaved; Ctrl+S saves it as usual.
+
 `AI DOC FILING <SYMBOL> [FORM]` loads the latest SEC filing of that form (default 10-K); `U` in the AI panel uploads a TXT, CSV, HTML, DOCX, XLSX or PDF (10 MB, kept in memory only, the last 5).
-While a document is loaded, questions use ONLY its text (chunks C1, C2... cited); `AI DOC OFF` goes back to market data. Scanned PDFs need OCR, which is not built.
+While a document is loaded, questions use ONLY its text (chunks C1, C2... cited); `AI DOC OFF` goes back to market data. A scanned PDF (no text layer) is read by OCR when `tesseract` is on PATH and `uv sync --extra ocr` was run (40 pages at most); the card then says `OCR TEXT (MAY CONTAIN ERRORS)`. Without them the panel says `OCR NOT INSTALLED`.
 
 `AI AUTO <hypothesis>` turns a hypothesis into one rule, backtests it (`backtest_run`, a stored BT run) and writes an evidence report; the EVIDENCE line names the BT run ids, or says NO BACKTEST WAS RUN. The run is stored.
 `SWARM [COMMITTEE|RISK|EARNINGS|MACRO|QUANT] <subject>` runs a preset desk (the 5 original desks are the "lite" desks; Phase 20 adds 30 more, see the SWARM desks section below): analyst roles with their own tool lists, then a chair. A failed role is retried once and shown if it still fails; the chair's figures are checked against the analysts' notes. `SWARM` lists presets and stored runs; `SWARM REPLAY <id>` shows a stored run again with no model call. `T` saves the desk answer as a THESIS note, `Esc` cancels.
 `THESIS [SYMBOL]` lists thesis notes (status, invalidation rule, linked runs); `THESIS ADD <SYMBOL> <text>`, `THESIS INVALID <id> <rule>`; `S` cycles the status, `D` `D` deletes, Up/Down select.
-`AUDIT` shows the hash-chained ledger of AI, SWARM, AI AUTO and BT runs (manifest hashes, question/answer hashes, tool calls; no text), verifies the chain on open and says where it breaks; `R` verifies again. Note the HEAD hash to detect removal of the newest entries.
-`SETTINGS AI MODEL <id>` / `VISION <id>` / `PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA` / `RESET` (default `deepseek/deepseek-v4-pro`; the AI rows in `SETTINGS` cycle common models).
+`AUDIT` shows the hash-chained ledger of AI, SWARM, AI AUTO and BT runs (manifest hashes, question/answer hashes, tool calls; no text unless `ai.storeText` is on), verifies the chain on open and says where it breaks; `R` verifies again. With `SETTINGS AI STORETEXT ON` the redacted question and answer of each new run are kept locally beside the ledger (outside the hash chain, never sent anywhere); entries that have text show `T`, `V` reads it, `P` (twice) purges the selected entry's text and `X` (twice) all stored text; the chain still verifies afterwards. Note the HEAD hash to detect removal of the newest entries.
+`MCP` lists the third-party MCP servers OpenTerm can call (all off until enabled; two NSE India presets, unofficial and not affiliated with NSE, are listed disabled); `MCP ENABLE <server>` shows the third-party notice (it runs a program from npm/PyPI on this machine) and `MCP ENABLE <server> YES` turns it on; `MCP DISABLE <server>`; `MCP TEST <server>` starts it and lists its tools; `MCP ALLOW <server> <tool>` / `MCP DENY <server> <tool>` edit the per-tool allow-list (only allowed tools reach the AI, as `<server>.<tool>`; order-like tools are refused). Keys: Up/Down select, `E` (twice) enable, `D` disable, `Enter`/`T` test and list tools, `Space` toggles a tool, `Esc` back. Config: `<data dir>/mcp_servers.yaml`, see `docs/MCP.md`.
+`SETTINGS AI MODEL <id>` / `VISION <id>` / `PROVIDER OPENROUTER|OPENAI|ANTHROPIC|OLLAMA` / `WEB ON|OFF` / `WEB PROVIDER BRAVE|TAVILY|SEARXNG` (web access for the AI, **off by default**: `ON` offers `web_search` and `read_url`, caps them per answer, fences their results as untrusted text and logs each call in `AUDIT`; keys in `APIKEYS`; see [AI_WEB.md](AI_WEB.md)) / `STORETEXT ON|OFF` (off by default: only hashes are kept; on keeps each run's redacted question and answer on this machine next to the audit ledger, purge any time in `AUDIT`) / `RESET` (default `deepseek/deepseek-v4-pro`; the AI rows in `SETTINGS` cycle common models).
 
 ### AI FILING (Phase 20): answers from a 10-K / 10-Q with machine-checked quotes
 `AI FILING <SYMBOL> <question>` answers from the newest 10-K or 10-Q of a US filer; `AI FILING <SYMBOL> [10-K|10-Q] DRIVERS` asks what drives revenue, margins and risk. Name `10-K` or `10-Q` after the symbol to pick the form.
+Two more presets work the same way: `AI FILING <SYMBOL> [10-K|10-Q] GUIDANCE` lists management's own forward-looking statements (MD&A outlook, liquidity and capex plans, stated targets, expected trends) and says plainly when the filing gives no numeric guidance (US 10-Ks often do not); they are statements by management, not forecasts by OpenTerm. `AI FILING <SYMBOL> [10-K|10-Q] CHAIN` lists the supply chain the filing itself discloses: named suppliers, sole or single-source dependencies, customer concentration (named customers, % of revenue), manufacturing and geographic dependencies and related risk factors; if the filing names none it says so, and no counterparty is ever added from outside the filing. Both use the same retrieval, the same quote check (unverifiable quotes show `UNVERIFIED` and are left out) and the same `AUDIT` entry as `DRIVERS`.
 How it works: OpenTerm downloads the filing from SEC EDGAR (needs `SEC_USER_AGENT` in `.env`, else `KEY REQUIRED`), splits it at its "Item" headings, and searches the passages with SQLite's built-in full-text search (FTS5, ranked by BM25; no embeddings, nothing written to disk). The best passages go to the model, which must answer only from them and give an exact quote for each claim.
-Every quote is then checked by plain text search against the whole filing (case, spacing, curly quotes and dashes are ignored; wording is not). A matching quote shows `VERIFIED` with its Item. A quote that is paraphrased, shortened with "...", invented, or under 5 words shows `UNVERIFIED`, and its claim is left out of the summary the panel shows. The panel also shows the filing (form, filed date, accession number, `SEC EDGAR`), the passages sent to the model, `AI · <model> · <time>`, and `UNGROUNDED` if no passage matched (the model is then not called and nothing is spent). The run is written to `AUDIT` as hashes only. Limits: US filers only, 10-K and 10-Q only, no earnings-call transcripts; a verified quote proves the words are in the filing, not that the model's claim about them is right.
+Every quote is then checked by plain text search against the whole filing (case, spacing, curly quotes and dashes are ignored; wording is not). A matching quote shows `VERIFIED` with its Item. A quote that is paraphrased, shortened with "...", invented, or under 5 words shows `UNVERIFIED`, and its claim is left out of the summary the panel shows. The panel also shows the filing (form, filed date, accession number, `SEC EDGAR`), the passages sent to the model, `AI · <model> · <time>`, and `UNGROUNDED` if no passage matched (the model is then not called and nothing is spent). The run is written to `AUDIT` as hashes only (unless `ai.storeText` is on). Limits: US filers only, 10-K and 10-Q only, no earnings-call transcripts; a verified quote proves the words are in the filing, not that the model's claim about them is right.
 
 ### SWARM desks (Phase 20)
 `SWARM <CODE> <subject> [NAME=value ...] [--force]` runs a desk. A desk is a small team of AI roles (analysts, then a chair who writes the answer). `SWARM` or `SWARM LIST` shows every desk with its coverage label and a cost estimate; `SWARM REPLAY <run id>` shows a stored run again with no model call.
@@ -231,7 +238,7 @@ Code to Vibe-Trading name (source: HKUDS/Vibe-Trading at commit 8172827, MIT; `d
 `PORT ATTR MAIN ADD 2025-01-01 VALUE=10000 FLOW=500` and `PORT ATTR MAIN DEL 2025-01-01` (under two rows: `NEEDS 2 VALUATIONS`) ·
 `FACT AAPL 3y` or `FACT MAIN` Fama-French 5 + momentum exposures (data lags about two months) · `QL GARCH AAPL H=5`, `QL OU AAPL`, `QL COINT AAPL MSFT`, `QL HEDGE AAPL MSFT`, `QL COPULA AAPL MSFT`,
 `QL ROLL|AMIHUD|KYLE|VPIN AAPL`, `QL EVENT AAPL DATE=2024-08-01`, `QL DSR SR=1.5 N=20 T=500`, `QL ADF AAPL`, `QL HVAR AAPL` ·
-`ALPHA [UNIVERSE=TOP100|WL:<name>|LIST:A,B,C|SYN] [RANGE=2y] [FAMILY=alpha101|qlib158|academic] [H=1,5,10,20]` Alpha Zoo scan: IC, IR, decay, alive / reversed / dead (Enter on a factor shows its formula) ·
+`ALPHA [UNIVERSE=TOP100|WL:<name>|LIST:A,B,C|SYN] [RANGE=2y] [FAMILY=core|alpha101|qlib158|academic|gtja191|all] [H=1,5,10,20]` Alpha Zoo scan: IC, IR, decay, alive / reversed / dead (Enter on a factor shows its formula) ·
 `CORR REGIME [WL:<name>|LIST:A,B,C] [WIN=60] [EDGE=0.5]` correlation edge density and fused / diffuse episodes (no list: the symbols of the `CORR` panel).
 
 Kite (read-only, needs your own Kite Connect app): paste `KITE_API_KEY` and `KITE_API_SECRET` in `APIKEYS`, register `http://127.0.0.1:8000/api/kite/callback` as the redirect URL, then
@@ -259,3 +266,49 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - `CDEP [PAIR] [LEVELS]` (`CDEP ETHUSDT 50`) : order book depth, spread and imbalance (Binance, OKX fallback). `FUND` : perpetual funding board (annualised) and quarterly basis; Enter or `FUND BTC` : last 30 prints, Backspace back.
   `LIQ [COIN]` : latest OKX liquidations. `STBL [CHAIN]` : stablecoin supply (`C` coins / chains, Enter opens a chain). `DEFI [CHAIN|PROJECT]` : yield pools over US$1M TVL.
 - `SECF axis bluechip` : also lists Indian mutual fund schemes from AMFI NAV; `M` switches to the fund rows. `RELIANCE.NS GP 1Y` : when Yahoo cannot answer, daily bars come from the NSE archive (labelled, raw prices).
+
+
+## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
+Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
+- `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.
+- `SYNC KITE [PORTFOLIO] [POS] [GO]` Zerodha Kite holdings (and with `POS` the net MIS / NRML day positions) as INR lots (`INFY.NS`, `.BO`, `.NFO` ...). Uses your existing Kite key and the daily `KITE LOGIN`; without them it says `KEY REQUIRED` / `KITE LOGGED OUT`. Default portfolio `KITE`, created in INR.
+- `SYNC IBKR [PORTFOLIO] [ACCT=U1234567] [GO]` Interactive Brokers stocks and ETFs from every account the gateway lists (or one with `ACCT=`), each lot in its own currency, plus the per-currency cash ledger on the panel. Default portfolio `IBKR`, created in USD. Options, futures, bonds and FX positions are listed as skipped, not imported.
+- `PORT SYNC KITE|IBKR ...` is the same panel. Keys on the panel: `K` sync Kite, `I` sync IBKR, `S` sync the broker on screen, `R` reload. `GO` runs the sync from the command line; without it `SYNC KITE` only shows status.
+- A re-sync replaces only the lots that broker wrote earlier (they carry `source` and the sync time in their note) and never duplicates. Manual lots are never touched; if a synced symbol is already held by a manual lot it is listed as a CONFLICT and not merged (sync into its own portfolio, then `RISK` / `OPT` it as usual). Editing a synced lot by hand turns it into a manual lot.
+- IBKR needs the Client Portal Gateway running on this machine (`clientportal.gw`, `bin/run.sh root/conf.yaml`), logged in at `https://localhost:5000`. If it is not running the panel says `IBKR GATEWAY NOT RUNNING` with the next step. The gateway URL is a setting (`PUT /api/sync/ibkr/settings`, default `https://localhost:5000/v1/api`); only `localhost`, `127.0.0.1` and `::1` are accepted, because the gateway's self-signed certificate is trusted for loopback only.
+- Unverified without a live account: Kite `quantity` is taken as the total holding (collateral shares are flagged, not added) and IBKR LSE prices are taken as pence (`GBp`). The tests use doc-shaped fixtures, labelled NOT A RECORDING.
+
+## Trade journal (`JRNL`)
+Your own trades, read back to you. Nothing here sends an order; it only reads files you give it. Details, formats and the limits of each finding: `docs/JOURNAL.md`.
+```
+JRNL                           round trips (FIFO), newest last; positions still open are listed below
+JRNL STATS | FINDINGS | SHADOW | IMPORT
+JRNL STATS EUR                 one currency at a time (nothing is ever converted)
+```
+- Keys: `1`-`5` views (round trips, stats, findings, shadow, import), `I` import, `C` next currency, `R` reload, `S` run the Shadow Account (shadow view), `X` twice clears the journal, `J`/`K` move in the table.
+- Import: paste a Zerodha tradebook CSV, an IBKR Flex trades CSV, an Alpaca account-activities CSV, or any CSV (set the broker to `GENERIC` with `B` and map the columns). `Ctrl+Enter` imports, `Ctrl+O` picks a file. A bad row stops the whole import and names its line; re-importing the same file adds nothing. Slash dates (`03/04/2024`) are never guessed: press `D` to choose DMY or MDY.
+- Findings are heuristics over your own history (overtrading days, revenge trades, losers held longer than winners, size creep after wins, off-hours entries). Each one prints its rule and says `NOT ENOUGH HISTORY` rather than guessing. They are patterns to look at, not advice and not a forecast.
+- Shadow Account: your real entries replayed with one fixed exit rule beside your real exits, through the backtester as a job (see `JOBS`). `HISTORICAL SIMULATION, NOT A FORECAST`.
+- The AI can read the statistics and findings (tool `journal`, never the individual trades). Import and delete answer this machine only.
+
+## Phase 18 step 1: orders (`ORD`)
+Paper by default. The AI cannot place, change or cancel orders; every order needs your confirm. Loopback only.
+- `ORD [PAPER|ALPACA|KITE] [BUY|SELL] [QTY] [SYMBOL] [LMT PRICE | STP PRICE] [DAY|GTC|IOC]` opens the ticket, filled from the words (`ORD AAPL BUY 10 LMT 190.5`). `PAPER` (default) is the Alpaca paper account, `ALPACA` the Alpaca LIVE account, `KITE` Zerodha Kite (always live; Kite has no paper mode). The banner says PAPER PLAY MONEY or LIVE REAL MONEY.
+- Keys: `E` edit the ticket, `B` broker, `S` side, `T` type, `G` time in force, `Enter` review (mandate check and a one-time confirm token), `Y` send a reviewed PAPER order, `Esc` drop the review, `R` reload.
+- A LIVE order is sent only after: its key is set (`ALPACA_LIVE_KEY_ID` / `ALPACA_LIVE_SECRET_KEY`, or the Kite login), live orders are switched on (`L`, then type `I UNDERSTAND LIVE ORDERS USE REAL MONEY`), the mandate allows it, and you type the symbol again at the review. The token works once and expires after 60 seconds; changing anything on the ticket voids it.
+- `M` mandate: `AAPL,MSFT SHARES=100 NOTIONAL=5000 GROSS=25000 TRADES=10` (allowed symbols, max shares and max notional per order, max gross exposure, max orders per day). The default allows nothing.
+- `X` kill switch: blocks new orders (survives a restart) and cancels every open order at every connected broker; `U` releases it. `C` cancels the selected open order (Up/Down select).
+- `I` adds today's fills to a portfolio as lots labelled `paper`, `alpaca` or `kite-orders` (keep paper fills in a portfolio of their own). `SYNC` never removes them.
+- The panel also lists the blotter (account, open orders, fills, positions) and the order ledger with its hash-chain check. Zero keys shows `KEY REQUIRED` with the key to set.
+
+## Extensions (`EXT`)
+
+```
+EXT / EXT LIST                 the installed extensions: author, version, licence, what each adds, ON / OFF / ERR
+EXT ENABLE <name>              switch one on (third-party code, runs with your permissions; this machine only)
+EXT DISABLE <name>
+EXT <name> [route] [args]      an enabled extension's table or chart; route defaults to main
+```
+
+- Everything is OFF until you enable it. An extension that fails to load or crashes shows `ERR` and the reason; the rest of OpenTerm keeps working. Keys: `J`/`K` move, `Enter` opens (or enables) the selected one, `D` disables, `E` CSV, `F5` refresh.
+- Extensions add read-only data providers, AI tools named `ext.<name>.<tool>` and routes under `/api/ext/<name>/`. They can never add an order or broker tool. How to write one: [EXTENSIONS.md](EXTENSIONS.md). Running OpenTerm on your own server: [HOSTING.md](HOSTING.md).

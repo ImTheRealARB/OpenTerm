@@ -27,9 +27,13 @@ INVALID_PARAMS = -32602
 NOT_READ_ONLY = {"backtest_run", "quant"}
 
 
+# The user's own trade journal stays inside OpenTerm: it is not offered to outside MCP clients.
+PRIVATE = {"journal"}
+
+
 def exposed_tools() -> list[toolbox.Tool]:
-    """The tools a client may see: everything in the agent registry except document-only helpers."""
-    return [t for t in toolbox.REGISTRY.values() if not t.doc_only]
+    """The tools a client may see: everything in the agent registry except document-only helpers and private ones."""
+    return [t for t in toolbox.REGISTRY.values() if not (t.doc_only or t.web_only) and t.name not in PRIVATE]
 
 
 def tool_list() -> list[dict]:

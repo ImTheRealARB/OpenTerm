@@ -43,7 +43,8 @@ function parseView(x: unknown, isFunction: (code: string) => boolean): View {
   const security = sec
     ? { symbol: sec.symbol as string, ...(typeof sec.market === "string" ? { market: sec.market } : {}) }
     : undefined;
-  return { ...(fn ? { fn } : {}), ...(security ? { security } : {}), args };
+  const source = typeof x.source === "string" && /^[a-z][a-z0-9_]{0,39}$/.test(x.source) ? x.source : undefined;
+  return { ...(fn ? { fn } : {}), ...(security ? { security } : {}), args, ...(source ? { source } : {}) };
 }
 
 /**

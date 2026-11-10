@@ -18,6 +18,7 @@ from .cache import Cache
 from .config import load_yaml
 from .errors import DataError
 from .news_tags import Filters, item_matches, validate
+from .pin import PIN
 from .providers import macro as _macro
 from .providers.base import ProviderError
 from .providers.crypto import VS
@@ -105,6 +106,7 @@ class DataService:
         """Stale-while-revalidate: the public way for every view service (research, derivs, rates, world/*) to cache a fetch under `key`.
         Fresh entry (younger than `ttl`): returned at once. Stale entry: returned at once and refreshed in the background.
         Miss: `fetch()` runs (concurrent callers share it); an AllFailed becomes a DataError."""
+        key = self._scope(key)
         entry = await self.cache.get(key)
         if entry is not None:
             value, stored_at = entry
@@ -123,6 +125,10 @@ class DataService:
             raise DataError(e.kind if e.kind != K.UNSUPPORTED else K.NOT_FOUND, str(e), detail, e.key) from e
         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
 
+    def _scope(self, key: str) -> str:
+        """The cache key plus the pinned source (`?source=`) or the saved source preferences, so two sources never share an answer."""
+        return ck.scoped(key, PIN.get(), self.router.prefs)
+
     # --- public API ---------------------------------------------------------------------------
     async def history(self, raw_symbol: str, range_: str | None, interval: str | None) -> dict:
         symbol = resolve(raw_symbol)
@@ -130,7 +136,7 @@ class DataService:
             r, i = normalize(range_, interval)
         except ValueError as e:
             raise DataError("bad_request", str(e)) from e
-        if self.local is not None and symbol in self.local.symbols:  # IMPORT: the user's own bars win, labelled LOCAL DATA
+        if self.local is not None and symbol in self.local.symbols and PIN.get() in (None, "local"):  # IMPORT: the user's own bars win, labelled LOCAL DATA
             try:
                 data, imported_at = await self.local.history(symbol, r, i)
             except LocalError as e:
@@ -207,7 +213,7 @@ class DataService:
         async def fetch() -> dict:
             # Phase 13: a keyed source (Finnhub, Alpaca) adds its headlines to the first keyless answer instead of
             # waiting to be a fallback. Without a key it does not support the capability and nothing changes.
-            extras = [p for p in self.router.candidates(cap, arg) if getattr(p, "has_key", False)] if kind != "keyword" else []
+            extras = [p for p in self.router.candidates(cap, arg) if getattr(p, "has_key", False)] if kind != "keyword" and not PIN.get() else []
             extra_results = await asyncio.gather(*(self._extra_news(p, call) for p in extras)) if extras else []
             try:
                 out, failed = await self.router.call(cap, call, arg)
@@ -326,15 +332,18 @@ class DataService:
                 out[n] = why
         return out
 
+    def _qkey(self, symbol: str) -> str:
+        return self._scope(ck.quote(symbol))
+
     async def quotes(self, raw_symbols: list[str]) -> dict[str, dict[str, Any]]:
         """Returns {requested symbol: envelope | {"error", "kind"}}. Missing/stale ones are batched upstream."""
         symbols = {raw: resolve(raw) for raw in raw_symbols}
         out: dict[str, dict] = {}
         need: list[str] = []
         stale: list[str] = []
-        found = await self.cache.get_many([ck.quote(s) for s in symbols.values()])  # one SQLite query for every memory miss
+        found = await self.cache.get_many([self._qkey(s) for s in symbols.values()])  # one SQLite query for every memory miss
         for raw, s in symbols.items():
-            entry = found.get(ck.quote(s))
+            entry = found.get(self._qkey(s))
             if entry is None:
                 self.misses += 1
                 need.append(s)
@@ -347,7 +356,7 @@ class DataService:
                 stale.append(s)
             else:
                 self.fresh_hits += 1
-                if now - self.rest_at.get(ck.quote(s), stored_at) >= self.REST_REFRESH_S:
+                if now - self.rest_at.get(self._qkey(s), stored_at) >= self.REST_REFRESH_S:
                     stale.append(s)  # streamed price is fresh; renew volume / high / low / previous close in the background
             out[raw] = envelope(value, stored_at, is_stale)
         if stale:
@@ -359,7 +368,7 @@ class DataService:
                     continue
                 r = results.get(s)
                 if isinstance(r, dict):
-                    entry = self.cache.mem.get(ck.quote(s))
+                    entry = self.cache.mem.get(self._qkey(s))
                     out[raw] = envelope(r, entry[1] if entry else time.time(), stale=False)
                 else:
                     kind = getattr(r, "kind", "unavailable")
@@ -372,7 +381,7 @@ class DataService:
         mine: list[str] = []
         loop = asyncio.get_running_loop()
         for s in symbols:
-            key = ck.quote(s)
+            key = self._qkey(s)
             if key in self._inflight:
                 futures[s] = self._inflight[key]
             else:
@@ -387,8 +396,8 @@ class DataService:
                     if s in found:
                         q, failed = found[s]
                         value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
-                        self.cache.put(ck.quote(s), value)
-                        self.rest_at[ck.quote(s)] = time.time()
+                        self.cache.put(self._qkey(s), value)
+                        self.rest_at[self._qkey(s)] = time.time()
                         fut.set_result(value)
                     else:
                         fut.set_exception(errors[s])
@@ -402,7 +411,7 @@ class DataService:
                     raise
             finally:
                 for s in mine:
-                    self._inflight.pop(ck.quote(s), None)
+                    self._inflight.pop(self._qkey(s), None)
         results = await asyncio.gather(*(asyncio.shield(f) for f in futures.values()), return_exceptions=True)
         return dict(zip(futures.keys(), results))
 

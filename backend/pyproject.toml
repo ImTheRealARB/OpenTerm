@@ -26,11 +26,17 @@ dependencies = [
   "psutil>=5.9",
   "keyring>=25",
   "pypdf>=6.21.1",
+  "fpdf2>=2.9.0",
+  "xlsxwriter>=3.3.1",
 ]
 
 # `uv run openterm-mcp` = the stdio bridge for MCP clients (Claude Desktop, Claude Code). Same program as `python -m openterm.mcp`.
 [project.scripts]
 openterm-mcp = "openterm.mcp.__main__:main"
+
+# `uv sync --extra ocr` adds the PDF page renderer for AI DOC OCR of scanned PDFs (Tesseract itself is a separate program on PATH).
+[project.optional-dependencies]
+ocr = ["pypdfium2>=4.30"]
 
 [dependency-groups]
 dev = [

@@ -190,6 +190,5 @@ def test_planned_keyed_rows_have_no_adapter_and_no_key_store_entry():
     # KEYED = SOURCES rows for providers that are planned but not built; anything built or in APIKEYS is listed from elsewhere.
     from openterm.keys import KEY_SPECS
 
-    assert providers.KEYED
-    for name in providers.KEYED:
+    for name in providers.KEYED:  # empty since Twelve Data, Alpha Vantage and Polygon got adapters (workstream 07); the rule still holds
         assert name not in providers.ADAPTERS and name not in KEY_SPECS

@@ -372,6 +372,9 @@ export interface Position {
   cost: number | null;
   currency: string | null;
   notes: string | null;
+  /** Set on lots written by a read-only broker sync ("kite" | "ibkr"); absent on manual lots. */
+  source?: string;
+  synced_at?: number;
 }
 
 export interface PortfolioInfo {

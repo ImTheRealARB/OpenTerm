@@ -1,6 +1,6 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/academic/strev.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/academic/strev.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 
 # ============================================================
 # 中文名称: 短期反转因子 (STREV)
@@ -35,7 +35,7 @@ __alpha_meta__ = {
     'universe': ['equity_us', 'equity_cn', 'equity_hk'],
     'frequency': ['1d'],
     'decay_horizon': 21,
-    'min_warmup_bars': 21,
+    'min_warmup_bars': 22,
     'notes': (
         'Jegadeesh (1990) one-month reversal. Negative trailing 21-day return, '
         'cross-sectional z-score per date for long-short ranking. Top z-scores = '

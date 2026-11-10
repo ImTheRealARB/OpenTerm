@@ -1,0 +1,12 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Polygon / Massive REST documentation (massive.com/docs/rest/stocks): no Polygon account or key was available to record it. An unknown ticker is documented to answer with an empty result set. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": {
+  "ticker": "ZZZZ",
+  "queryCount": 0,
+  "resultsCount": 0,
+  "adjusted": true,
+  "status": "OK",
+  "request_id": "docshape"
+ }
+}

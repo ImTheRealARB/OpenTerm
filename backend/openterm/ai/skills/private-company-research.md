@@ -28,7 +28,7 @@ Private companies are where AI bias is worst. Watch for:
 
 ## Execution
 
-(Step omitted: it needs a Vibe-Trading-only tool, web search, which OpenTerm does not have. Say so if the question depends on it.)
+(Step omitted: it needs a Vibe-Trading-only tool, which OpenTerm does not have. Say so if the question depends on it.)
 
 | Role | Lens |
 |------|------|

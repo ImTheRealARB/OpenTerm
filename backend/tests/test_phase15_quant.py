@@ -196,13 +196,20 @@ def panel() -> dict:
 def test_zoo_ids_are_pinned():
     from openterm.quantlib.alpha import ZOO
 
-    assert [f["id"] for f in ZOO] == [z["id"] for z in ALPHA["zoo"]]
-    assert 24 <= len(ZOO) <= 30
-    assert {f["family"] for f in ZOO} <= {"alpha101", "qlib158", "academic"}
+    # the full zoo (435 factors) is pinned by test_alpha_zoo.py; here, the first 29 ("core", the default scan) stay the v1 list
+    core = [f for f in ZOO if f.get("core")]
+    assert sorted(f["id"] for f in core) == sorted(z["id"] for z in ALPHA["zoo"])
+    assert 24 <= len(core) <= 30
+    assert {f["family"] for f in core} <= {"alpha101", "qlib158", "academic"}
+
+
+# Vibe changed these three formulas after d0db2e3 (Qlib alignment: ROC10 = close[t-10] / close, BETA10 / RESI10 on the close slope); the
+# port is now at 8b8e083 and test_alpha_zoo.py replays them against that commit's numbers, so this older recording skips them.
+CHANGED_AFTER_D0DB2E3 = {"qlib158_roc10", "qlib158_beta10", "qlib158_resi10"}
 
 
 @QUANT
-@pytest.mark.parametrize("zoo", ALPHA["zoo"], ids=lambda z: z["id"])
+@pytest.mark.parametrize("zoo", [z for z in ALPHA["zoo"] if z["id"] not in CHANGED_AFTER_D0DB2E3], ids=lambda z: z["id"])
 def test_zoo_factor_matches_vibes_values(zoo):
     from openterm.quantlib.alpha import compute_factor
 

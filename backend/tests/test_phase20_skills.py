@@ -23,7 +23,7 @@ SPEC.loader.exec_module(porter)
 COMMIT = "8172827"
 HAND_WRITTEN = {"valuation", "earnings", "options", "risk", "macro"}
 # Names that no playbook may use as a tool (spec rule 6 and 8). Compared against whole backticked words, so the real tool `skill` is not caught by "kill".
-FORBIDDEN = {"bash", "read_file", "write_file", "edit_file", "web_search", "read_url", "order", "trade", "gtt", "margin", "kill", "broker"}
+FORBIDDEN = {"bash", "read_file", "write_file", "edit_file", "order", "trade", "gtt", "margin", "kill", "broker"}
 RESULT_CAP = 6000  # context.RESULT_LIMIT
 # Prompt guard: today's `skill` tool spec is 358 characters, about 89 tokens (measured with len/4 before this step). The playbook library may add at most ~600 tokens.
 OLD_SKILL_SPEC_TOKENS = 89
@@ -122,7 +122,11 @@ def test_ported_playbook(stem):
     assert not words & FORBIDDEN, words & FORBIDDEN
     assert not {w for w in words if w.startswith(("trading_", "etoro_", "paper_trade"))}
     assert not re.search(r"^\s*```(bash|sh|shell|powershell|cmd)\b", raw, re.MULTILINE), "shell blocks must be cut"
-    assert not re.search(r"\b(read_file|write_file|edit_file|web_search|read_url|run_swarm|signal_engine)\b", raw)
+    assert not re.search(r"\b(read_file|write_file|edit_file|run_swarm|signal_engine)\b", raw)
+    # opt-in web tools: every mention carries the note, and the playbook says what to do when web is off
+    web = re.findall(r"\b(?:web_search|read_url)\b", prose)
+    assert len(web) == prose.count("needs SETTINGS AI WEB ON") + 2 * len(re.findall(r"`(?:web_search|read_url)` and `(?:web_search|read_url)` work only", prose))
+    assert not web or "SETTINGS AI WEB ON" in raw and "skip that step" in raw
 
     # parses: headings are found outside code, and unique enough to be addressed
     secs = skills.sections(stem)
@@ -246,7 +250,7 @@ def test_audit_manifest_hashes_every_playbook():
 
 
 # --- the porter script on small inputs (rules, not the data) ------------------------------------------------------------------------------
-REG = set(tools.REGISTRY)
+REG = set(tools.REGISTRY)  # web tools are opt-in: the porter names them only with the "needs SETTINGS AI WEB ON" note
 
 
 def convert(body, name="demo", desc="A demo playbook about nothing in particular", category="analysis", refs=None, taken=None):
@@ -258,7 +262,8 @@ def test_porter_renames_equivalent_tools_and_never_names_a_missing_one():
     r = convert("## Steps\n\nUse `get_stock_news` and `get_sec_filings` first.\nThen `web_search` the company.\nFinally `write_file` the report.\n")
     assert r.status == "ported"
     assert "`news`" in r.text and "`filings`" in r.text
-    assert not re.search(r"web_search|write_file", r.text) and "Step omitted" in r.text
+    assert "`web_search` (needs SETTINGS AI WEB ON)" in r.text and "skip that step" in r.text  # mapped, optional, degrades with web off
+    assert not re.search(r"write_file", r.text) and "Step omitted" in r.text
     assert porter.names_in(r.text, REG) == set()
 
 
@@ -279,7 +284,7 @@ def test_porter_skips_chinese_china_data_library_journal_and_central_tool_skills
     many = "\n".join(f"{i}. Call `write_file` for step {i}." for i in range(8))
     r = convert("## A\n\n" + many)
     assert r.status == "skipped" and "8 steps" in r.reason and "write_file" in r.reason
-    for name in ("web-reader", "tushare", "trade-journal", "strategy-dev-manager"):
+    for name in ("web-reader", "tushare", "chanlun", "strategy-dev-manager"):
         assert name in skipped_from_doc()
 
 
@@ -299,3 +304,11 @@ def test_porter_is_idempotent_and_renames_a_clashing_name():
     clash = convert("## A\n\nBody text here.\n", name="risk", taken={"risk"})
     assert clash.name == "vibe-risk" and "# Playbook: vibe-risk" in clash.text and "agent/src/skills/risk/SKILL.md" in clash.text
     assert clash.text.startswith(f"<!-- Ported from HKUDS/Vibe-Trading `agent/src/skills/risk/SKILL.md` @ {COMMIT} (MIT).")
+
+
+def test_translated_skills_are_ported_from_the_overrides_and_say_so():
+    tr = [n for n, src in PORTED.items() if "Translated from Chinese" in skills.get(n).split("\n", 1)[0]]
+    assert {"credit-analysis", "etf-analysis", "financial-statement", "fund-analysis", "sector-rotation", "sentiment-analysis", "trade-journal"} <= set(tr)
+    for n in tr:
+        assert (ROOT / "scripts" / "vibe_skill_overrides" / f"{n}.md").exists() and not porter.CJK.search(skills.get(n)), n
+    assert "`journal`" in skills.get("trade-journal") and "analyze_trade_journal" not in skills.get("trade-journal")

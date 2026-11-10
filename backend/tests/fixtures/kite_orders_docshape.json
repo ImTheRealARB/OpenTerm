@@ -1,0 +1,65 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
+ "body": {
+  "status": "success",
+  "data": [
+   {
+    "order_id": "151220000000001",
+    "exchange_order_id": "1300000000000001",
+    "tag": "OT0123456789abcd",
+    "status": "OPEN",
+    "tradingsymbol": "RELIANCE",
+    "exchange": "NSE",
+    "transaction_type": "BUY",
+    "order_type": "LIMIT",
+    "product": "CNC",
+    "quantity": 4,
+    "filled_quantity": 0,
+    "pending_quantity": 4,
+    "price": 2450.0,
+    "trigger_price": 0,
+    "average_price": 0,
+    "validity": "DAY",
+    "order_timestamp": "2026-11-10 09:20:00"
+   },
+   {
+    "order_id": "151220000000002",
+    "exchange_order_id": "1300000000000002",
+    "tag": null,
+    "status": "COMPLETE",
+    "tradingsymbol": "INFY",
+    "exchange": "NSE",
+    "transaction_type": "SELL",
+    "order_type": "MARKET",
+    "product": "MIS",
+    "quantity": 10,
+    "filled_quantity": 10,
+    "pending_quantity": 0,
+    "price": 0,
+    "trigger_price": 0,
+    "average_price": 1512.5,
+    "validity": "DAY",
+    "order_timestamp": "2026-11-10 09:30:00"
+   },
+   {
+    "order_id": "151220000000003",
+    "exchange_order_id": null,
+    "tag": null,
+    "status": "TRIGGER PENDING",
+    "tradingsymbol": "TCS",
+    "exchange": "BSE",
+    "transaction_type": "SELL",
+    "order_type": "SL-M",
+    "product": "CNC",
+    "quantity": 2,
+    "filled_quantity": 0,
+    "pending_quantity": 2,
+    "price": 0,
+    "trigger_price": 3900.0,
+    "average_price": 0,
+    "validity": "DAY",
+    "order_timestamp": "2026-11-10 09:31:00"
+   }
+  ]
+ }
+}

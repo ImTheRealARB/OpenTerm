@@ -1,24 +1,23 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/qlib158/resi10.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-# ruff: noqa: I001
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/qlib158/resi10.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 # Adapted from microsoft/qlib@d5379c520f66a39953bad76234a7019a72796fd0:qlib/contrib/data/handler.py
 # (Apache-2.0). Copyright (c) Microsoft Corporation.
 # ============================================================
 # 中文名称: 残差 10日
-# 简要说明: (close - ts_mean(close, 10)) / close，价格相对10日均线的偏离度。
-# 典型用途: 衡量价格偏离均线的程度，用于均值回复策略。
+# 简要说明: Resi(close, 10) / close，最新收盘价相对10日线性回归拟合值的残差。
+# 典型用途: 衡量价格偏离趋势线的程度，用于均值回复策略。
 # ============================================================
-"""qlib158 RESI10: formula = (\\mathrm{close} - \\mathrm{ts\\_mean}(\\mathrm{close}, 10)) / \\mathrm{close}."""
+"""qlib158 RESI10: formula = \\mathrm{Resi}(\\mathrm{close}, 10) / \\mathrm{close}."""
 from __future__ import annotations
 
 import pandas as pd
-from openterm.quantlib.alpha.base import safe_div, ts_mean
+from openterm.quantlib.alpha.base import safe_div, ts_resi
 
 __alpha_meta__ = {
     'id': 'qlib158_resi10',
     'theme': ['momentum'],
-    'formula_latex': '(\\\\mathrm{close} - \\\\mathrm{ts\\\\_mean}(\\\\mathrm{close}, 10)) / \\\\mathrm{close}',
+    'formula_latex': '\\\\mathrm{Resi}(\\\\mathrm{close}, 10) / \\\\mathrm{close}',
     'columns_required': ['close'],
     'universe': ['equity_us', 'equity_cn', 'equity_hk', 'equity_in', 'equity_kr'],
     'frequency': ['1d'],
@@ -30,4 +29,4 @@ __alpha_meta__ = {
 def compute(panel: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """Return qlib158 RESI10 on the supplied OHLCV panel."""
     c = panel['close']
-    return safe_div(c - ts_mean(c, 10), c)
+    return safe_div(ts_resi(c, 10), c)

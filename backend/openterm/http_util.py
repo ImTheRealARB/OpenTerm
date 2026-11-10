@@ -17,6 +17,7 @@ from fastapi import Request
 from fastapi.responses import Response
 
 from . import errkinds as K
+from . import remote
 from .errors import DataError
 from .origin import LOOPBACK
 from .redact import redact
@@ -45,7 +46,13 @@ def jobs_of(request: Request):
 
 
 def loopback(request: Request) -> bool:
-    """True when the request comes from this machine (routes that change keys, settings or send messages require it)."""
+    """True when the request comes from this machine (routes that change keys, settings or send messages require it).
+
+    In remote mode (`OPENTERM_REMOTE=1`) it is False for EVERYONE: behind the reverse proxy every request arrives from 127.0.0.1, and
+    forwarded-for headers cannot be trusted, so "from this machine" cannot be told apart from "from the internet" (openterm/remote.py).
+    This is the one place that rule lives; every loopback-only route calls this."""
+    if remote.enabled():
+        return False
     return bool(request.client) and request.client.host in LOOPBACK
 
 

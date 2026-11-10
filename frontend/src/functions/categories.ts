@@ -51,16 +51,16 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Filings and owners", codes: ["FIL", "OWN", "HDS", "MGR", "SI", "ETF", "MEMB"] },
     { name: "Options", codes: ["OMON", "PCR", "OV", "OSA", "OVDV", "SKEW", "HIVG"] },
     { name: "Statistics", codes: ["CORR", "REGIME", "FACT", "QL", "ALPHA"] },
-    { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT"] },
+    { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT", "MCP"] },
     { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO"] },
   ],
-  Portfolio: [{ name: "Portfolio", codes: ["PORT", "ALRT", "RISK", "OPT", "ATTR"] }],
+  Portfolio: [{ name: "Portfolio", codes: ["PORT", "ALRT", "RISK", "OPT", "ATTR", "SYNC", "JRNL", "ORD"] }],
   Backtest: [{ name: "Backtest", codes: ["BT", "IMPORT"] }],
   Settings: [
     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
     { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL"] },
     { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
-    { name: "System", codes: ["JOBS", "PERF", "LOG"] },
+    { name: "System", codes: ["JOBS", "PERF", "LOG", "EXT"] },
   ],
 };
 

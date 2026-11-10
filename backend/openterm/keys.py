@@ -69,6 +69,13 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://app.alpaca.markets/signup"),
     KeySpec("fmp", ("FMP_API_KEY",), 13, "Estimates, index members (transcripts and segments need a paid plan)",
             "https://site.financialmodelingprep.com/developer/docs"),
+    # Keyed market data (free tiers, read only): fallbacks below Yahoo for quotes, candles, search and FA. Limits are per provider docs.
+    KeySpec("twelvedata", ("TWELVEDATA_API_KEY",), 13, "Quotes, candles and search incl. some non-US exchanges (free: 8 credits a minute, 800 a day)",
+            "https://twelvedata.com/pricing"),
+    KeySpec("alphavantage", ("ALPHAVANTAGE_API_KEY",), 13, "US quotes, candles and FA statements, last fallback (free: 25 requests a day)",
+            "https://www.alphavantage.co/support/#api-key"),
+    KeySpec("polygon", ("POLYGON_API_KEY",), 13, "US previous-close quotes, candles and search (Polygon, now Massive; free: 5 requests a minute)",
+            "https://polygon.io/dashboard/signup"),
     KeySpec("fred", ("FRED_API_KEY",), 7, "FRED API: series titles/units, MACRO search, ECO fallback. "
             "Values work keyless via fred_csv", "https://fred.stlouisfed.org/docs/api/api_key.html"),
     KeySpec("eia", ("EIA_API_KEY",), 19, "Energy inventories and production (NRG)", "https://www.eia.gov/opendata/register.php"),
@@ -106,10 +113,24 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://api.data.gov/signup/"),
     KeySpec("census", ("CENSUS_API_KEY",), 19, "US Census (free): monthly retail sales, US goods trade by country and HS chapter (USMAC CENSUS)",
             "https://api.census.gov/data/key_signup.html"),
+    # Web search for the AI (SETTINGS AI WEB ON, SETTINGS AI WEB PROVIDER). One of the three; none is used unless web access is on.
+    KeySpec("brave", ("BRAVE_SEARCH_API_KEY",), 20, "Brave Search API (free tier): web_search for the AI when SETTINGS AI WEB is ON and the provider is BRAVE",
+            "https://api-dashboard.search.brave.com/register"),
+    KeySpec("tavily", ("TAVILY_API_KEY",), 20, "Tavily (free tier): web_search for the AI when SETTINGS AI WEB is ON and the provider is TAVILY",
+            "https://app.tavily.com/home"),
+    KeySpec("searxng", ("SEARXNG_URL",), 20, "Your own SearXNG instance (its address, JSON output enabled): web_search for the AI when the provider is SEARXNG",
+            "https://docs.searxng.org/admin/installation.html"),
     KeySpec("kite",("KITE_API_KEY", "KITE_API_SECRET"), 15,
             "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
             "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
             hidden_secret=("KITE_ACCESS_TOKEN",)),
+    # Phase 18 (trading): account-specific keys, one slot per account type. The slot decides the broker host (orders/brokers/alpaca.py), never a request.
+    KeySpec("alpaca_paper", ("ALPACA_PAPER_KEY_ID", "ALPACA_PAPER_SECRET_KEY"), 18,
+            "Alpaca PAPER trading account (play money): paper orders, positions, account (ORD). Separate from the data key above",
+            "https://app.alpaca.markets/paper/dashboard/overview", secret_fields=("ALPACA_PAPER_SECRET_KEY",)),
+    KeySpec("alpaca_live", ("ALPACA_LIVE_KEY_ID", "ALPACA_LIVE_SECRET_KEY"), 18,
+            "Alpaca LIVE trading account (REAL MONEY): live orders (ORD) once you switch them on in ORD. Needs a funded account",
+            "https://app.alpaca.markets/brokerage/dashboard/overview", secret_fields=("ALPACA_LIVE_SECRET_KEY",)),
 ]}
 
 class KeyStoreError(Exception):
@@ -419,6 +440,12 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
                          {"APCA-API-KEY-ID": k["ALPACA_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_SECRET_KEY"]}, None),
     "fmp": lambda k: ("GET", "https://financialmodelingprep.com/stable/quote",
                       {"symbol": "AAPL", "apikey": k["FMP_API_KEY"]}, None, None),
+    # Twelve Data: key in the Authorization header. api_usage is free of credits. Alpha Vantage does not validate keys and answers 200
+    # either way; its limit text is a QUOTA to classify(). Polygon: Bearer header, the previous-day bar of one ticker.
+    "twelvedata": lambda k: ("GET", "https://api.twelvedata.com/api_usage", None, {"Authorization": f"apikey {k['TWELVEDATA_API_KEY']}"}, None),
+    "alphavantage": lambda k: ("GET", "https://www.alphavantage.co/query",
+                               {"function": "GLOBAL_QUOTE", "symbol": "IBM", "apikey": k["ALPHAVANTAGE_API_KEY"]}, None, None),
+    "polygon": lambda k: ("GET", "https://api.massive.com/v2/aggs/ticker/AAPL/prev", {"adjusted": "true"}, _bearer(k["POLYGON_API_KEY"]), None),
     "fred": lambda k: ("GET", "https://api.stlouisfed.org/fred/series",
                        {"series_id": "DGS10", "api_key": k["FRED_API_KEY"], "file_type": "json"}, None, None),
     "eia": lambda k: ("GET", "https://api.eia.gov/v2/", {"api_key": k["EIA_API_KEY"]}, None, None),
@@ -450,6 +477,16 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
                          {"get": "cell_value", "time": "2024-01", "category_code": "44X72", "data_type_code": "SM", "seasonally_adj": "no",  # seasonally_adj is a REQUIRED variable here: without it Census answers 400 and TEST showed ERROR for a good key (checked live 2026-11-05)
                           "key": k["CENSUS_API_KEY"]},
                          None, None),
+    # Phase 18: the read-only account call on each trading host (never an order).
+    "alpaca_paper": lambda k: ("GET", "https://paper-api.alpaca.markets/v2/account", None,
+                               {"APCA-API-KEY-ID": k["ALPACA_PAPER_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_PAPER_SECRET_KEY"]}, None),
+    "alpaca_live": lambda k: ("GET", "https://api.alpaca.markets/v2/account", None,
+                              {"APCA-API-KEY-ID": k["ALPACA_LIVE_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_LIVE_SECRET_KEY"]}, None),
+    # Web search keys: one tiny query each (Brave and Tavily spend one of the free-tier searches). SearXNG is the user's own server.
+    "brave": lambda k: ("GET", "https://api.search.brave.com/res/v1/web/search", {"q": "openterm", "count": "1"},
+                        {"X-Subscription-Token": k["BRAVE_SEARCH_API_KEY"], "Accept": "application/json"}, None),
+    "tavily": lambda k: ("POST", "https://api.tavily.com/search", None, _bearer(k["TAVILY_API_KEY"]), {"query": "openterm", "max_results": 1}),
+    "searxng": lambda k: ("GET", k["SEARXNG_URL"].rstrip("/") + "/search", {"q": "openterm", "format": "json"}, {"Accept": "application/json"}, None),
 }
 
 

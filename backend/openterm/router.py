@@ -9,6 +9,7 @@ from typing import TypeVar
 
 from . import errkinds as K
 from .perf import percentile
+from .pin import PIN
 from .providers.base import Provider, ProviderError
 from .providers.hierarchy import rank_of
 
@@ -55,14 +56,18 @@ class Health:
 
 
 class AllFailed(Exception):
-    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None):
+    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None, pinned: str | None = None):
         self.errors = errors
         self.key: str | None = None
+        self.pinned = pinned
         kinds = {e.kind for _, e in errors}
         # An expired login (Kite) is a reason shown beside the fallback, not an outage: when the sources that DO answer say
         # "no such symbol" or "too shallow", the user gets that real answer instead of PROVIDER DOWN (audit A-3).
         kinds_ex_login = kinds - {K.LOGIN_EXPIRED}
-        if not errors:
+        if pinned:
+            # A pinned source answers alone: say which one and why, never the generic "no data" of a whole chain.
+            self.kind, msg = self._pinned(pinned, errors[0][1] if errors else None, keys)
+        elif not errors:
             self.kind, msg = K.UNSUPPORTED, "NO PROVIDER SUPPORTS THIS SYMBOL"
         elif K.DEPTH in kinds_ex_login and kinds_ex_login <= {K.NOT_FOUND, K.UNSUPPORTED, K.DEPTH}:
             # Every source that has the symbol is too shallow for this interval + range: a request problem, not missing data.
@@ -77,17 +82,39 @@ class AllFailed(Exception):
             self.kind, msg = K.UNAVAILABLE, "PROVIDER DOWN"
         super().__init__(msg)
 
+    def _pinned(self, name: str, err: ProviderError | None, keys: dict[str, str] | None) -> tuple[str, str]:
+        head = f"SRC={name.upper()}"
+        kind = err.kind if err else K.UNSUPPORTED
+        if kind == K.KEY_REQUIRED:
+            self.key = (keys or {}).get(name)
+            return kind, f"{head}: KEY REQUIRED"
+        if kind == K.LOGIN_EXPIRED:
+            return kind, f"{head}: {err}"
+        if kind in (K.UNSUPPORTED, K.DEPTH, K.BAD_REQUEST):
+            return K.BAD_REQUEST, f"{head}: {err}"
+        if kind == K.NOT_FOUND:
+            return kind, f"{head}: NO DATA FOR SYMBOL"
+        return K.UNAVAILABLE, f"{head}: PROVIDER DOWN"
+
 
 class Router:
     def __init__(self, providers: dict[str, Provider], order: dict[str, list[str]]):
         self.providers = providers
         self.order = order
         self.health = {name: Health() for name in providers}
+        self.prefs: dict[str, str] = {}  # SETTINGS SOURCE <capability> <provider>: tried first, the default order still backs it up
 
     def candidates(self, capability: str, symbol: str | None = None) -> list[Provider]:
+        pin = PIN.get()
+        if pin:  # a pinned source is the only candidate (`pin_block` says why it may still be unable to answer)
+            p = self.providers.get(pin)
+            return [p] if p is not None and p.supports(capability, symbol) else []
+        names = self.order.get(capability, [])
+        if self.prefs.get(capability) in names:
+            names = [self.prefs[capability], *(n for n in names if n != self.prefs[capability])]
         ps = [
             self.providers[n]
-            for n in self.order.get(capability, [])
+            for n in names
             if n in self.providers and self.providers[n].supports(capability, symbol)
         ]
         up = [p for p in ps if not self.health[p.name].down]
@@ -121,6 +148,9 @@ class Router:
         """Returns (result, names of providers that failed first)."""
         errors: list[tuple[str, ProviderError]] = []
         keys: dict[str, str] = {}
+        pin = PIN.get()
+        if pin:
+            return await self._call_pinned(pin, capability, fn, symbol), []
         for p in self.candidates(capability, symbol):
             try:
                 return await self.attempt(p, fn), [n for n, _ in errors]
@@ -130,13 +160,44 @@ class Router:
                     keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
         raise AllFailed(errors, keys)
 
+    def pin_block(self, p: Provider, capability: str, symbol: str | None) -> ProviderError | None:
+        """Why the pinned source cannot even be asked (None = ask it)."""
+        if capability not in p.capabilities:
+            return ProviderError(K.UNSUPPORTED, f"DOES NOT SERVE {capability.upper()}")
+        if p.supports(capability, symbol):
+            return None
+        why = p.why_down()
+        if why:
+            return ProviderError(K.LOGIN_EXPIRED, why)
+        if getattr(p, "key_name", "") and not getattr(p, "has_key", True):
+            return ProviderError(K.KEY_REQUIRED, "KEY REQUIRED")
+        return ProviderError(K.UNSUPPORTED, f"DOES NOT COVER {symbol}" if symbol else "NOT SWITCHED ON")
+
+    async def _call_pinned(self, pin: str, capability: str, fn: Callable[[Provider], Awaitable[T]], symbol: str | None) -> T:
+        p = self.providers.get(pin)
+        err = ProviderError(K.BAD_REQUEST, "UNKNOWN SOURCE") if p is None else self.pin_block(p, capability, symbol)
+        keys = {pin: getattr(p, "key_name", "") or pin.upper()}
+        if err is None:
+            try:
+                return await self.attempt(p, fn)
+            except ProviderError as e:
+                err = e
+        raise AllFailed([(pin, err)], keys, pinned=pin)
+
     async def quotes(self, symbols: list[str]) -> tuple[dict, dict[str, AllFailed]]:
         """Batch quotes across providers: each provider gets the symbols still missing that it supports."""
         found: dict = {}
         errors: dict[str, list[tuple[str, ProviderError]]] = {s: [] for s in symbols}
-        for p in self.candidates("quotes"):
+        pin = PIN.get()
+        pinned_p = self.providers.get(pin) if pin else None
+        if pin:  # each symbol gets its own reason when the pinned source is off for it
+            for s in symbols:
+                why = ProviderError(K.BAD_REQUEST, "UNKNOWN SOURCE") if pinned_p is None else self.pin_block(pinned_p, "quotes", s)
+                if why is not None:
+                    errors[s].append((pin, why))
+        for p in ([pinned_p] if pinned_p is not None else []) if pin else self.candidates("quotes"):
             name = p.name
-            batch = [s for s in symbols if s not in found and p.supports("quotes", s)]
+            batch = [s for s in symbols if s not in found and not (pin and errors[s]) and p.supports("quotes", s)]
             if not batch:
                 continue
             try:
@@ -149,7 +210,8 @@ class Router:
             except ProviderError as e:
                 for s in batch:
                     errors[s].append((name, e))
-        return found, {s: AllFailed(errors[s]) for s in symbols if s not in found}
+        keys = {pin: getattr(pinned_p, "key_name", "") or pin.upper()} if pin else None
+        return found, {s: AllFailed(errors[s], keys, pinned=pin) for s in symbols if s not in found}
 
     def history_limits(self, symbol: str) -> dict:
         """How far back each intraday candle length reaches for this symbol, from the best source that can serve it.

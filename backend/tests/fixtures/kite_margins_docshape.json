@@ -1,0 +1,23 @@
+{
+ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
+ "body": {
+  "status": "success",
+  "data": {
+   "equity": {
+    "enabled": true,
+    "net": 150000.0,
+    "available": {
+     "cash": 120000.0,
+     "live_balance": 120000.0
+    },
+    "utilised": {
+     "debits": 0
+    }
+   },
+   "commodity": {
+    "enabled": true,
+    "net": 0
+   }
+  }
+ }
+}

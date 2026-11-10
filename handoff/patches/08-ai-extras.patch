@@ -1,0 +1,948 @@
+diff --git a/backend/openterm/ai/audit.py b/backend/openterm/ai/audit.py
+index 55af83c..395435b 100644
+--- a/backend/openterm/ai/audit.py
++++ b/backend/openterm/ai/audit.py
+@@ -2,7 +2,8 @@
+ 
+ Each entry holds a run manifest (hash of the system prompt, hash of the offered tool registry, skill file hashes, app version, model) and metadata
+ (hash of the question and of the answer, tool calls with argument hashes, cost, grounding verdict). Prompts, questions, answers and tool results are NOT
+-stored here, only their hashes (the stored SWARM / AI AUTO runs keep events for replay; that is a separate table). `hash` covers the entry and the previous
++stored here, only their hashes (the stored SWARM / AI AUTO runs keep events for replay; that is a separate table). Only when the user turns on `ai.storeText`
++are the redacted question and answer also kept, in the side table `ai_ledger_text` keyed by `seq`: it is outside the hash, so purging it never breaks the chain. `hash` covers the entry and the previous
+ entry's hash, so changing or removing a middle entry breaks the chain from that point; verify() reports where. Removing the newest entries cannot be
+ detected from the table alone: note the head hash shown by AUDIT to detect that.
+ """
+@@ -20,12 +21,14 @@ import aiosqlite
+ import orjson
+ 
+ from .. import __version__
++from ..redact import redact
+ from . import skills
+ from . import tools as toolbox
+ 
+ log = logging.getLogger("openterm.ai.audit")
+ GENESIS = "0" * 64
+ MAX_TOOL_LINES = 60
++MAX_STORED_TEXT = 20_000  # characters kept per prompt or answer when `ai.storeText` is on
+ FINAL_EVENTS = ("done", "swarm_done")
+ 
+ 
+@@ -67,6 +70,33 @@ class AuditLog:
+             await self.db.commit()
+         return {"seq": cur.lastrowid, "hash": h, "prev_hash": prev}
+ 
++    async def text_enabled(self) -> bool:
++        """`ai.storeText` from the stored settings (off unless the user turned it on). A settings read failure means off."""
++        from ..settings_store import SettingsStore
++
++        try:
++            ai = ((await SettingsStore(self.db).get()).get("settings") or {}).get("ai")
++        except Exception:
++            return False
++        return isinstance(ai, dict) and ai.get("storeText") is True
++
++    async def store_text(self, seq: int, question: str, answer: str) -> None:
++        """Keeps the redacted prompt and answer for one ledger entry in the side table (never part of the hash chain)."""
++        await self.db.execute("INSERT OR REPLACE INTO ai_ledger_text (seq, question, answer, stored_at) VALUES (?,?,?,?)",
++                              (seq, redact(question)[:MAX_STORED_TEXT], redact(answer)[:MAX_STORED_TEXT], round(time.time(), 3)))
++        await self.db.commit()
++
++    async def text(self, seq: int) -> dict | None:
++        async with self.db.execute("SELECT question, answer, stored_at FROM ai_ledger_text WHERE seq=?", (seq,)) as cur:
++            r = await cur.fetchone()
++        return {"seq": seq, "question": r[0], "answer": r[1], "stored_at": r[2]} if r else None
++
++    async def purge_text(self, seq: int | None = None) -> int:
++        """Deletes stored text (all of it, or one entry's). Returns how many rows went. The ledger itself is untouched, so the chain still verifies."""
++        cur = await self.db.execute("DELETE FROM ai_ledger_text" + (" WHERE seq=?" if seq is not None else ""), (seq,) if seq is not None else ())
++        await self.db.commit()
++        return cur.rowcount
++
+     @staticmethod
+     def _row(r) -> dict:
+         return {"seq": r[0], "at": r[1], "kind": r[2], "ref": r[3], "model": r[4], "manifest": orjson.loads(r[5]), "meta": orjson.loads(r[6]),
+@@ -75,7 +105,13 @@ class AuditLog:
+     async def entries(self, limit: int = 50) -> list[dict]:
+         async with self.db.execute("SELECT seq, at, kind, ref, model, manifest, meta, prev_hash, hash FROM ai_ledger ORDER BY seq DESC LIMIT ?",
+                                    (max(1, min(limit, 500)),)) as cur:
+-            return [self._row(r) for r in await cur.fetchall()]
++            rows = [self._row(r) for r in await cur.fetchall()]
++        if rows:
++            async with self.db.execute("SELECT seq FROM ai_ledger_text WHERE seq BETWEEN ? AND ?", (rows[-1]["seq"], rows[0]["seq"])) as cur:
++                have = {r[0] for r in await cur.fetchall()}
++            for e in rows:
++                e["has_text"] = e["seq"] in have  # not part of the hashed entry: the chain verifies the same with or without it
++        return rows
+ 
+     async def verify(self) -> dict:
+         """Walks the whole chain. {ok, count, head, broken_at, reason}: broken_at is the first seq whose link or hash does not match."""
+@@ -118,7 +154,9 @@ async def audited(ledger: AuditLog, events: AsyncIterator[dict], kind: str, mf:
+                 meta = {"question_sha": sha(question), "answer_sha": sha(answer), "cost": ev.get("cost"), "grounded": ev.get("grounded"),
+                         "unsourced": len(ev.get("unsourced") or []), "tool_calls": calls, "stopped": ev.get("stopped"), "failed_roles": ev.get("failed")}
+                 try:
+-                    await ledger.append(kind, run_id, mf["model"], mf, meta)
++                    entry = await ledger.append(kind, run_id, mf["model"], mf, meta)
++                    if await ledger.text_enabled():
++                        await ledger.store_text(entry["seq"], question, answer)
+                 except Exception:
+                     log.exception("ai ledger append failed")
+             yield ev
+diff --git a/backend/openterm/ai/doc.py b/backend/openterm/ai/doc.py
+index 63995e9..3a6c3eb 100644
+--- a/backend/openterm/ai/doc.py
++++ b/backend/openterm/ai/doc.py
+@@ -8,6 +8,8 @@ from __future__ import annotations
+ import io
+ import math
+ import re
++import shutil
++import subprocess
+ import uuid
+ import zipfile
+ from collections import Counter, OrderedDict
+@@ -114,8 +116,63 @@ def _pdf(data: bytes) -> str:
+         raise ValueError(f"NOT A READABLE PDF FILE: {type(e).__name__}") from e
+ 
+ 
++OCR_LABEL = "OCR TEXT (MAY CONTAIN ERRORS)"
++OCR_MAX_PAGES = 40
++OCR_PAGE_TIMEOUT_S = 60
++OCR_SCALE = 2.0  # pypdfium2 render scale: 72 dpi x 2 = 144 dpi, enough for body text without a huge image
++OCR_NOT_INSTALLED = ("OCR NOT INSTALLED: THIS PDF IS A SCAN (IT HAS NO TEXT LAYER). INSTALL TESSERACT (https://tesseract-ocr.github.io/tessdoc/Installation.html: "
++                     "apt install tesseract-ocr, brew install tesseract, or the Windows installer), MAKE SURE `tesseract` IS ON PATH, RESTART OPENTERM AND LOAD THE FILE AGAIN")
++OCR_NEEDS_RENDERER = ("OCR NEEDS THE pypdfium2 PACKAGE (OPTIONAL, TO DRAW THE PDF PAGES FOR TESSERACT): RUN `uv sync --extra ocr` IN backend, RESTART OPENTERM AND LOAD THE FILE AGAIN")
++
++
++def ocr_available() -> bool:
++    return shutil.which("tesseract") is not None
++
++
++def _page_images(data: bytes):
++    """Yields each page of a PDF (up to OCR_MAX_PAGES) as binary PGM bytes (grey, 8 bit): a format Tesseract reads, built with no image library."""
++    try:
++        import pypdfium2 as pdfium
++    except ImportError as e:
++        raise ValueError(OCR_NEEDS_RENDERER) from e
++    try:
++        pdf = pdfium.PdfDocument(data)
++        for i in range(min(len(pdf), OCR_MAX_PAGES)):
++            arr = pdf[i].render(scale=OCR_SCALE, grayscale=True).to_numpy()
++            h, w = arr.shape[0], arr.shape[1]
++            yield b"P5\n%d %d\n255\n" % (w, h) + arr.reshape(h, w).tobytes()
++    except ValueError:
++        raise
++    except Exception as e:  # pdfium raises PdfiumError for a damaged file
++        raise ValueError(f"THE PDF PAGES COULD NOT BE DRAWN FOR OCR: {type(e).__name__}") from e
++
++
++def ocr_pdf(data: bytes) -> str:
++    """Text of a scanned PDF through the `tesseract` program (pages go to its stdin, nothing is written to disk). The result starts with OCR_LABEL.
++    Raises ValueError with a screen-ready message when Tesseract or the page renderer is missing or finds no text."""
++    exe = shutil.which("tesseract")
++    if exe is None:
++        raise ValueError(OCR_NOT_INSTALLED)
++    pages: list[str] = []
++    for n, img in enumerate(_page_images(data), 1):
++        try:
++            r = subprocess.run([exe, "stdin", "stdout", "-l", "eng"], input=img, capture_output=True, timeout=OCR_PAGE_TIMEOUT_S, check=False)  # noqa: S603 - fixed argv, no shell
++        except subprocess.TimeoutExpired as e:
++            raise ValueError(f"OCR TIMED OUT ON PAGE {n} (OVER {OCR_PAGE_TIMEOUT_S} S)") from e
++        except OSError as e:
++            raise ValueError(f"OCR NOT INSTALLED: TESSERACT COULD NOT START ({type(e).__name__})") from e
++        if r.returncode != 0:
++            raise ValueError(f"TESSERACT FAILED ON PAGE {n}: {r.stderr.decode('utf-8', 'replace').strip()[:120] or 'EXIT ' + str(r.returncode)}")
++        t = r.stdout.decode("utf-8", errors="replace").strip()
++        if t:
++            pages.append(t)
++    if not pages:
++        raise ValueError("OCR FOUND NO TEXT IN THE PDF (TOO FAINT, OR NOT TEXT)")
++    return OCR_LABEL + "\n" + "\n".join(pages)
++
++
+ def extract_text(name: str, data: bytes) -> tuple[str, str]:
+-    """-> (kind, text). Raises ValueError with a message fit for the screen."""
++    """-> (kind, text). Raises ValueError with a message fit for the screen. A PDF with no text layer goes to OCR (text then starts with OCR_LABEL)."""
+     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+     kind = KINDS.get(ext)
+     if kind is None:
+@@ -130,8 +187,10 @@ def extract_text(name: str, data: bytes) -> tuple[str, str]:
+         text = html_to_text(data.decode("utf-8", errors="replace"))
+     else:
+         text = data.decode("utf-8", errors="replace")
++    if not text.strip() and kind == "pdf":
++        text = ocr_pdf(data)
+     if not text.strip():
+-        raise ValueError("THE FILE HAS NO TEXT (EMPTY, OR A SCANNED PDF: OCR IS NOT BUILT)")
++        raise ValueError("THE FILE HAS NO TEXT (EMPTY)")
+     return kind, text[:MAX_CHARS].strip()
+ 
+ 
+@@ -194,6 +253,7 @@ class Doc:
+     name: str
+     kind: str
+     chunks: list[str] = field(default_factory=list)
++    ocr: bool = False  # the text came from OCR: it starts with OCR_LABEL and may contain errors
+     _index: list[tuple[Counter, int]] | None = field(default=None, repr=False)
+ 
+     def index(self) -> list[tuple[Counter, int]]:
+@@ -206,7 +266,7 @@ class Doc:
+         return sum(len(c) for c in self.chunks)
+ 
+     def card(self) -> dict:
+-        return {"id": self.id, "name": self.name, "kind": self.kind, "chunks": len(self.chunks), "chars": self.chars, "preview": self.chunks[0][:240] if self.chunks else ""}
++        return {"id": self.id, "name": self.name, "kind": self.kind, "chunks": len(self.chunks), "chars": self.chars, "ocr": self.ocr, **({"note": OCR_LABEL} if self.ocr else {}), "preview": self.chunks[0][:240] if self.chunks else ""}
+ 
+ 
+ class DocStore:
+diff --git a/backend/openterm/ai/patterns.py b/backend/openterm/ai/patterns.py
+new file mode 100644
+index 0000000..76565fc
+--- /dev/null
++++ b/backend/openterm/ai/patterns.py
+@@ -0,0 +1,168 @@
++"""Chart-pattern detection for the AI `patterns` tool: candlestick patterns, smart-money structure and the Ichimoku cloud state.
++
++A line-for-line port of the GP overlay code in `frontend/src/chart/patterns.ts` (candlePatterns, smc) and `ichimoku` in `frontend/src/chart/studies.ts`,
++so the AI names the same marks the chart draws. These are PATTERNS read off price rules, not signals or forecasts. Pure functions on lists of floats.
++Keep this file and the TypeScript in step: `tests/test_ai_patterns.py` pins the thresholds with hand-built bars.
++"""
++
++from __future__ import annotations
++
++# code -> (name, short, direction): 1 bullish, -1 bearish, 0 neutral. Same table as PATTERN_INFO in patterns.ts.
++PATTERN_INFO: dict[int, tuple[str, int]] = {
++    1: ("DOJI", 0), 2: ("HAMMER", 1), 3: ("SHOOTING STAR", -1), 4: ("BULL ENGULFING", 1), 5: ("BEAR ENGULFING", -1),
++    6: ("MORNING STAR", 1), 7: ("EVENING STAR", -1), 8: ("BULL HARAMI", 1), 9: ("BEAR HARAMI", -1),
++}
++
++
++def candle_patterns(o: list[float], h: list[float], low: list[float], c: list[float]) -> list[int]:
++    """One code per bar (0 = none), see PATTERN_INFO. Reversal patterns need a trend before them: the close of the bar before the pattern is below
++    (above) the close three bars earlier for bullish (bearish) ones. The pattern is stamped on its LAST bar."""
++    n = len(c)
++    out = [0] * n
++
++    def down(i0: int) -> bool:
++        return i0 >= 4 and c[i0 - 1] < c[i0 - 4]
++
++    def up(i0: int) -> bool:
++        return i0 >= 4 and c[i0 - 1] > c[i0 - 4]
++
++    def body(i: int) -> float:
++        return abs(c[i] - o[i])
++
++    def rng(i: int) -> float:
++        return h[i] - low[i]
++
++    def green(i: int) -> bool:
++        return c[i] > o[i]
++
++    def red(i: int) -> bool:
++        return c[i] < o[i]
++
++    def long_body(i: int) -> bool:
++        return rng(i) > 0 and body(i) >= 0.6 * rng(i)
++
++    for i in range(n):
++        code = 0
++        if i >= 2:
++            a, b = i - 2, i - 1
++            b_mid = (o[b] + c[b]) / 2
++            if down(a) and red(a) and long_body(a) and body(b) <= 0.3 * body(a) and b_mid <= c[a] and green(i) and c[i] > (o[a] + c[a]) / 2:
++                code = 6
++            elif up(a) and green(a) and long_body(a) and body(b) <= 0.3 * body(a) and b_mid >= c[a] and red(i) and c[i] < (o[a] + c[a]) / 2:
++                code = 7
++        if not code and i >= 1:
++            p = i - 1
++            if down(p) and red(p) and green(i) and o[i] <= c[p] and c[i] >= o[p] and body(i) > body(p):
++                code = 4
++            elif up(p) and green(p) and red(i) and o[i] >= c[p] and c[i] <= o[p] and body(i) > body(p):
++                code = 5
++            elif down(p) and red(p) and long_body(p) and green(i) and o[i] >= c[p] and c[i] <= o[p] and body(i) < body(p):
++                code = 8
++            elif up(p) and green(p) and long_body(p) and red(i) and o[i] <= c[p] and c[i] >= o[p] and body(i) < body(p):
++                code = 9
++        if not code and rng(i) > 0:
++            r = rng(i)
++            upper = h[i] - max(o[i], c[i])
++            lower = min(o[i], c[i]) - low[i]
++            b = body(i)
++            if b >= 0.1 * r and lower >= 2 * b and upper <= 0.1 * r and down(i):
++                code = 2
++            elif b >= 0.1 * r and upper >= 2 * b and lower <= 0.1 * r and up(i):
++                code = 3
++            elif b <= 0.1 * r:
++                code = 1
++        out[i] = code
++    return out
++
++
++def smc(o: list[float], h: list[float], low: list[float], c: list[float], k: int = 3) -> dict:
++    """Swings (stamped on the swing bar, known k bars later), break of structure (+-1) / change of character (+-2) on the breaking bar, and fair
++    value gap / order block zones: {swing, bos, zones: [{kind, dir, i0, i1, top, bot, filled}]}."""
++    n = len(c)
++    swing = [0] * n
++    bos = [0] * n
++    zones: list[dict] = []
++    for i in range(k, n - k):
++        hi = lo = True
++        for j in range(1, k + 1):
++            if not (h[i] > h[i - j]) or not (h[i] >= h[i + j]):
++                hi = False
++            if not (low[i] < low[i - j]) or not (low[i] <= low[i + j]):
++                lo = False
++        swing[i] = 1 if hi else (-1 if lo else 0)
++    last_high: dict | None = None
++    last_low: dict | None = None
++    trend = 0
++    for i in range(n):
++        s = i - k
++        if s >= 0 and swing[s] == 1:
++            last_high = {"idx": s, "val": h[s], "broken": False}
++        elif s >= 0 and swing[s] == -1:
++            last_low = {"idx": s, "val": low[s], "broken": False}
++        if last_high and not last_high["broken"] and c[i] > last_high["val"]:
++            bos[i] = 2 if trend == -1 else 1
++            trend = 1
++            last_high["broken"] = True
++            start = last_low["idx"] if last_low else 0
++            for j in range(i - 1, start - 1, -1):
++                if c[j] < o[j]:
++                    z = {"kind": "OB", "dir": 1, "i0": j, "i1": n - 1, "top": h[j], "bot": low[j], "filled": False}
++                    zones.append(z)
++                    for t in range(i + 1, n):
++                        if c[t] < z["bot"]:
++                            z["filled"], z["i1"] = True, t
++                            break
++                    break
++        elif last_low and not last_low["broken"] and c[i] < last_low["val"]:
++            bos[i] = -2 if trend == 1 else -1
++            trend = -1
++            last_low["broken"] = True
++            start = last_high["idx"] if last_high else 0
++            for j in range(i - 1, start - 1, -1):
++                if c[j] > o[j]:
++                    z = {"kind": "OB", "dir": -1, "i0": j, "i1": n - 1, "top": h[j], "bot": low[j], "filled": False}
++                    zones.append(z)
++                    for t in range(i + 1, n):
++                        if c[t] > z["top"]:
++                            z["filled"], z["i1"] = True, t
++                            break
++                    break
++    for i in range(2, n):
++        if low[i] > h[i - 2]:
++            z = {"kind": "FVG", "dir": 1, "i0": i - 1, "i1": n - 1, "top": low[i], "bot": h[i - 2], "filled": False}
++            for t in range(i + 1, n):
++                if low[t] <= z["bot"]:
++                    z["filled"], z["i1"] = True, t
++                    break
++            zones.append(z)
++        elif h[i] < low[i - 2]:
++            z = {"kind": "FVG", "dir": -1, "i0": i - 1, "i1": n - 1, "top": low[i - 2], "bot": h[i], "filled": False}
++            for t in range(i + 1, n):
++                if h[t] >= z["top"]:
++                    z["filled"], z["i1"] = True, t
++                    break
++            zones.append(z)
++    return {"swing": swing, "bos": bos, "zones": zones}
++
++
++def ichimoku_state(h: list[float], low: list[float], c: list[float], tn: int = 9, kn: int = 26, bn: int = 52, shift: int = 26) -> dict | None:
++    """The cloud at the LAST bar, from the same maths as `ichimoku` in studies.ts (spans are drawn `shift` bars ahead, so the cloud under the last bar
++    was computed `shift` bars ago). None when there are not enough bars for it."""
++    n = len(c)
++
++    def mid(i: int, w: int) -> float | None:
++        return (max(h[i - w + 1:i + 1]) + min(low[i - w + 1:i + 1])) / 2 if i >= w - 1 else None
++
++    if n - 1 - shift < max(kn, bn) - 1:
++        return None
++    src = n - 1 - shift
++    tenkan, kijun = mid(n - 1, tn), mid(n - 1, kn)
++    a_t, a_k, b = mid(src, tn), mid(src, kn), mid(src, bn)
++    if None in (tenkan, kijun, a_t, a_k, b):
++        return None
++    span_a = (a_t + a_k) / 2
++    top, bot = max(span_a, b), min(span_a, b)
++    px = c[-1]
++    pos = "ABOVE THE CLOUD" if px > top else ("BELOW THE CLOUD" if px < bot else "INSIDE THE CLOUD")
++    return {"tenkan": tenkan, "kijun": kijun, "span_a": span_a, "span_b": b, "cloud_top": top, "cloud_bottom": bot, "price": pos,
++            "tenkan_vs_kijun": "TENKAN ABOVE KIJUN" if tenkan > kijun else ("TENKAN BELOW KIJUN" if tenkan < kijun else "TENKAN EQUALS KIJUN")}
+diff --git a/backend/openterm/ai/routes.py b/backend/openterm/ai/routes.py
+index ba99f86..4799e25 100644
+--- a/backend/openterm/ai/routes.py
++++ b/backend/openterm/ai/routes.py
+@@ -229,7 +229,8 @@ Rules:
+ - Find passages with the doc_search tool (try different words if the first search finds nothing). Chunks come back labelled C1, C2...
+ - Answer only from the chunks you retrieved. Cite the chunk in parentheses after each fact, like (C3), and the tool call as [T1].
+ - If the document does not contain the answer, say so plainly. Never fill a gap with outside knowledge; figures you state must appear in a retrieved chunk.
+-- Quote numbers exactly as written in the document. Be brief."""
++- Quote numbers exactly as written in the document. Be brief.{ocr_note}"""
++OCR_NOTE = "\n- This document was read by OCR (scanned pages): the text may contain recognition errors in words and digits. Say so when a figure matters and never correct a number from memory."
+ 
+ 
+ def doc_store(request: Request):
+@@ -248,7 +249,7 @@ def _ingest(name: str, fname: str, data: bytes, kind_as: str | None = None):
+     from . import doc
+ 
+     kind, text = doc.extract_text(fname, data)
+-    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text))
++    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text), ocr=text.startswith(doc.OCR_LABEL))
+     d.index()
+     return d
+ 
+@@ -318,7 +319,7 @@ async def doc_ask(request: Request):
+         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+     history = body.get("history") if isinstance(body.get("history"), list) else []
+     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=["doc_search"], context={"doc": d})
+-    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), today=time.strftime("%Y-%m-%d", time.gmtime()))
++    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), ocr_note=OCR_NOTE if d.ocr else "", today=time.strftime("%Y-%m-%d", time.gmtime()))
+     events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], tools=["doc_search"], system=system, max_rounds=6),
+                    "ai_doc", DOC_SYSTEM, question.strip(), ["doc_search"], names[0], names[1])
+     return _stream(request, t0, events, runner)
+diff --git a/backend/openterm/ai/routes_run.py b/backend/openterm/ai/routes_run.py
+index 31b242d..ad19e86 100644
+--- a/backend/openterm/ai/routes_run.py
++++ b/backend/openterm/ai/routes_run.py
+@@ -202,6 +202,32 @@ async def ledger_verify(request: Request):
+     return await audit_of(request.app, http_util.user(request).db).verify()
+ 
+ 
++@router.get("/ledger/{seq}/text")
++async def ledger_text(request: Request, seq: int):
++    """The stored (redacted) question and answer of one ledger entry; 404 when none is stored (the setting was off, or it was purged)."""
++    from .audit import audit_of
++
++    if not http_util.loopback(request):
++        return http_util.error_response(403, "forbidden", "STORED AI TEXT CAN ONLY BE READ FROM THIS MACHINE")
++    t = await audit_of(request.app, http_util.user(request).db).text(seq)
++    return t if t is not None else http_util.error_response(404, "not_found", f"NO STORED TEXT FOR ENTRY {seq} (ai.storeText WAS OFF, OR IT WAS PURGED)")
++
++
++@router.post("/ledger/purge-text")
++async def ledger_purge_text(request: Request):
++    """Deletes stored prompt / answer text (all of it, or {seq}). The hash chain is not touched."""
++    from .audit import audit_of
++
++    body = await _body(request)
++    if isinstance(body, Response):
++        return body
++    seq = body.get("seq")
++    if seq is not None and (not isinstance(seq, int) or isinstance(seq, bool)):
++        return http_util.error_response(400, "bad_request", "seq MUST BE AN ENTRY NUMBER")
++    n = await audit_of(request.app, http_util.user(request).db).purge_text(seq)
++    return {"purged": n}
++
++
+ @router.get("/runs")
+ async def runs_list(request: Request, kind: str | None = None):
+     return {"runs": await _store(request).runs(kind if kind in ("swarm", "auto") else None)}
+diff --git a/backend/openterm/ai/tools.py b/backend/openterm/ai/tools.py
+index 8a7bfcb..894ab85 100644
+--- a/backend/openterm/ai/tools.py
++++ b/backend/openterm/ai/tools.py
+@@ -237,6 +237,48 @@ def shape_indicators(env: dict, args: dict) -> dict:
+             "bollinger20": {"mid": _round(mid), "upper": _round(mid + 2 * sd), "lower": _round(mid - 2 * sd)} if mid is not None and sd is not None else None}
+ 
+ 
++PATTERN_KINDS = ("candles", "smc", "ichimoku", "all")
++PATTERN_RECENT = 12  # candlestick marks listed (newest last); a long window has hundreds of dojis
++
++
++def shape_patterns(env: dict, args: dict) -> dict:
++    """Rule-based candlestick, smart-money structure and Ichimoku readings over the daily bars `history` returns. The same rules the GP overlays draw
++    (see ai/patterns.py). Patterns, not signals: the note says so and the numbers are bar values, never a forecast."""
++    from . import patterns as P
++
++    d = env["data"]
++    rows = [r for r in zip(d.get("t") or [], d.get("o") or [], d.get("h") or [], d.get("l") or [], d.get("c") or [], strict=False) if None not in r]
++    if not rows:
++        return {"symbol": d.get("symbol"), "n_bars": 0}
++    t, o, h, lo, c = (list(x) for x in zip(*rows, strict=True))
++    kind = args.get("kind") or "all"
++    day = lambda i: _iso(t[i])  # noqa: E731
++    out: dict[str, Any] = {"symbol": d.get("symbol"), "interval": d.get("interval"), "n_bars": len(c), "from": day(0), "as_of": day(-1), "close": _round(c[-1]),
++                           "source": env.get("source"), "age_s": env.get("age_s"),
++                           "note": "RULE-BASED PATTERNS READ OFF PRICE, NOT SIGNALS OR FORECASTS"}
++    if kind in ("candles", "all"):
++        codes = P.candle_patterns(o, h, lo, c)
++        marks = [(i, k) for i, k in enumerate(codes) if k]
++        out["candles"] = {"total_marks": len(marks), "recent": [{"date": day(i), "pattern": P.PATTERN_INFO[k][0], "bias": {1: "BULLISH", -1: "BEARISH", 0: "NEUTRAL"}[P.PATTERN_INFO[k][1]]}
++                                                                for i, k in marks[-PATTERN_RECENT:]]}
++    if kind in ("smc", "all"):
++        m = P.smc(o, h, lo, c)
++        names = {1: "BREAK OF STRUCTURE UP", -1: "BREAK OF STRUCTURE DOWN", 2: "CHANGE OF CHARACTER UP", -2: "CHANGE OF CHARACTER DOWN"}
++        sw_hi = next(((i, h[i]) for i in range(len(c) - 1, -1, -1) if m["swing"][i] == 1), None)
++        sw_lo = next(((i, lo[i]) for i in range(len(c) - 1, -1, -1) if m["swing"][i] == -1), None)
++        open_z = [z for z in m["zones"] if not z["filled"]]
++        pick = [z for z in open_z if z["kind"] == "FVG"][-6:] + [z for z in open_z if z["kind"] == "OB"][-3:]
++        out["smc"] = {"last_swing_high": {"date": day(sw_hi[0]), "price": _round(sw_hi[1])} if sw_hi else None,
++                      "last_swing_low": {"date": day(sw_lo[0]), "price": _round(sw_lo[1])} if sw_lo else None,
++                      "structure_events": [{"date": day(i), "event": names[v]} for i, v in enumerate(m["bos"]) if v][-5:],
++                      "open_zones": [{"kind": "FAIR VALUE GAP" if z["kind"] == "FVG" else "ORDER BLOCK", "bias": "BULLISH" if z["dir"] == 1 else "BEARISH",
++                                      "since": day(z["i0"]), "top": _round(z["top"]), "bottom": _round(z["bot"])} for z in pick]}
++    if kind in ("ichimoku", "all"):
++        ich = P.ichimoku_state(h, lo, c)
++        out["ichimoku"] = {k: (_round(v) if isinstance(v, float) else v) for k, v in ich.items()} if ich else {"state": "NEEDS 79 OR MORE BARS"}
++    return out
++
++
+ def _rigor(a: dict, ctx: dict) -> dict:
+     """Pure arithmetic checks on numbers the model is about to quote: do the parts add up to the total, and do they look like one unit?"""
+     parts = [float(x) for x in a["parts"]]
+@@ -410,6 +452,11 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
+          "alpha (alpha zoo scan, args {universe}), regime (correlation regime, args {list}).",
+          obj({"fn": {"type": "string", "enum": list(QUANT_FNS)}, "args": {"type": "object"}}, ["fn"]), "/api/quant/{fn}", method="POST",
+          build=lambda a: {"path": f"/api/quant/{a['fn']}", "json": a.get("args") or {}}, shape=shape_table_env, job=True),
++    # --- chart patterns: the rules the GP overlays draw (candlesticks, smart-money structure, Ichimoku cloud), read-only over daily bars ---
++    Tool("patterns", "Rule-based chart patterns for a ticker from daily bars, the same rules GP draws: recent candlestick patterns (doji, hammer, engulfing, stars, harami), "
++         "swing highs/lows, break of structure, fair value gaps, order blocks and the Ichimoku cloud state. Patterns, not signals or forecasts.",
++         obj({"symbol": S, "range": {"type": "string", "description": "3M 6M 1Y 2Y 5Y"}, "kind": {"type": "string", "enum": list(PATTERN_KINDS)}}, ["symbol"]),
++         "/api/history", build=lambda a: {"params": {k: v for k, v in a.items() if k != "kind"}}, shape=shape_patterns),
+ ]}
+ 
+ 
+diff --git a/backend/openterm/db.py b/backend/openterm/db.py
+index 0a3873a..6ee6b5b 100644
+--- a/backend/openterm/db.py
++++ b/backend/openterm/db.py
+@@ -71,6 +71,8 @@ MIGRATIONS: list[str | list[str]] = [
+         "ALTER TABLE alerts ADD COLUMN channels TEXT",
+         "ALTER TABLE news_alerts ADD COLUMN channels TEXT",
+     ],
++    # 17: optional prompt / answer text of AI runs (`ai.storeText`), keyed by ledger seq. A side table: the ledger hash never covers it, so purging text keeps the chain valid
++    "CREATE TABLE ai_ledger_text (seq INTEGER PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL, stored_at REAL NOT NULL)",
+ ]
+ 
+ 
+diff --git a/backend/openterm/settings_store.py b/backend/openterm/settings_store.py
+index 9cfb65f..36c6773 100644
+--- a/backend/openterm/settings_store.py
++++ b/backend/openterm/settings_store.py
+@@ -117,9 +117,9 @@ AI_MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}\Z")
+ def _ai(raw) -> dict:
+     if not isinstance(raw, dict):
+         raise _bad("ai MUST BE AN OBJECT")
+-    extra = sorted(set(raw) - {"model", "visionModel", "provider"})
++    extra = sorted(set(raw) - {"model", "visionModel", "provider", "storeText"})
+     if extra:
+-        raise _bad(f"ai KEYS: model visionModel provider (NOT {extra[0][:20]!r})")
++        raise _bad(f"ai KEYS: model visionModel provider storeText (NOT {extra[0][:20]!r})")
+     out = {}
+     for k in ("model", "visionModel"):
+         if k in raw:
+@@ -128,6 +128,10 @@ def _ai(raw) -> dict:
+             out[k] = raw[k]
+     if "provider" in raw:
+         out["provider"] = _choice(raw["provider"], AI_PROVIDERS, "ai.provider")
++    if "storeText" in raw:
++        if not isinstance(raw["storeText"], bool):
++            raise _bad("ai.storeText MUST BE true OR false")
++        out["storeText"] = raw["storeText"]
+     return out
+ 
+ 
+diff --git a/backend/pyproject.toml b/backend/pyproject.toml
+index e538635..79a1a4b 100644
+--- a/backend/pyproject.toml
++++ b/backend/pyproject.toml
+@@ -32,6 +32,10 @@ dependencies = [
+ [project.scripts]
+ openterm-mcp = "openterm.mcp.__main__:main"
+ 
++# `uv sync --extra ocr` adds the PDF page renderer for AI DOC OCR of scanned PDFs (Tesseract itself is a separate program on PATH).
++[project.optional-dependencies]
++ocr = ["pypdfium2>=4.30"]
++
+ [dependency-groups]
+ dev = [
+     "pytest>=8",
+diff --git a/backend/tests/test_ai_doc_ocr.py b/backend/tests/test_ai_doc_ocr.py
+new file mode 100644
+index 0000000..4d7cfd8
+--- /dev/null
++++ b/backend/tests/test_ai_doc_ocr.py
+@@ -0,0 +1,110 @@
++"""AI DOC OCR for scanned PDFs. Tesseract is optional: absent -> a clear next step; present -> pages are drawn with pypdfium2 and piped to it.
++No test needs a real Tesseract: a tiny fake `tesseract` script stands in for it (the real one is exercised too when it is on PATH)."""
++
++import io
++import os
++import shutil
++import stat
++import sys
++
++import pytest
++from test_phase16_agent import FakeGateway, call, sse, text
++
++from openterm.ai import doc
++
++
++
++@pytest.fixture
++def renderer():
++    """Tests that draw PDF pages need the optional extra (uv sync --extra ocr); the rest run in the default install."""
++    return pytest.importorskip("pypdfium2", reason="optional OCR extra: uv sync --extra ocr")
++
++
++def scanned_pdf(pages: int = 1) -> bytes:
++    """A PDF whose pages carry no text layer (what a scan looks like to pypdf)."""
++    from pypdf import PdfWriter
++
++    w = PdfWriter()
++    for _ in range(pages):
++        w.add_blank_page(200, 100)
++    b = io.BytesIO()
++    w.write(b)
++    return b.getvalue()
++
++
++@pytest.fixture
++def no_tesseract(monkeypatch):
++    monkeypatch.setattr(doc.shutil, "which", lambda name: None)
++
++
++@pytest.fixture
++def fake_tesseract(tmp_path, monkeypatch):
++    """A script named `tesseract` first on PATH: reads the PGM from stdin and prints one line saying how big the page was."""
++    exe = tmp_path / "bin" / "tesseract"
++    exe.parent.mkdir()
++    exe.write_text(f"#!{sys.executable}\nimport sys\nd = sys.stdin.buffer.read()\nassert d.startswith(b'P5')\nprint('Scanned revenue was 42 million, page of', len(d), 'bytes')\n")
++    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
++    monkeypatch.setenv("PATH", str(exe.parent) + os.pathsep + os.environ["PATH"])
++
++
++def test_scanned_pdf_without_tesseract_says_how_to_install_it(no_tesseract):
++    with pytest.raises(ValueError) as e:
++        doc.extract_text("scan.pdf", scanned_pdf())
++    msg = str(e.value)
++    assert msg.startswith("OCR NOT INSTALLED") and "INSTALL TESSERACT" in msg and "OCR IS NOT BUILT" not in msg
++
++
++def test_scanned_pdf_route_answers_400_with_the_next_step(client, no_tesseract):
++    r = client.post("/api/ai/doc/upload?name=scan.pdf", content=scanned_pdf(), headers={"content-type": "application/octet-stream"})
++    assert r.status_code == 400 and r.json()["error"].startswith("OCR NOT INSTALLED") and "TESSERACT" in r.json()["error"]
++
++
++def test_ocr_text_is_labelled_and_tesseract_gets_every_page(fake_tesseract, renderer):
++    kind, t = doc.extract_text("scan.pdf", scanned_pdf(pages=2))
++    assert kind == "pdf" and t.startswith(doc.OCR_LABEL) and doc.OCR_LABEL == "OCR TEXT (MAY CONTAIN ERRORS)"
++    assert t.count("Scanned revenue was 42 million") == 2
++
++
++def test_a_pdf_with_a_text_layer_never_calls_ocr(no_tesseract):
++    from test_phase16_doc import make_pdf
++
++    kind, t = doc.extract_text("p.pdf", make_pdf("Hello PDF world"))
++    assert "Hello PDF world" in t and not t.startswith(doc.OCR_LABEL)
++
++
++def test_missing_renderer_names_the_optional_extra(fake_tesseract, monkeypatch):
++    monkeypatch.setitem(sys.modules, "pypdfium2", None)  # import raises ImportError
++    with pytest.raises(ValueError, match="uv sync --extra ocr"):
++        doc.extract_text("scan.pdf", scanned_pdf())
++
++
++def test_tesseract_failure_and_empty_output_are_errors_not_empty_documents(tmp_path, renderer, monkeypatch):
++    exe = tmp_path / "bin" / "tesseract"
++    exe.parent.mkdir()
++    exe.write_text(f"#!{sys.executable}\nimport sys\nsys.stderr.write('boom')\nsys.exit(3)\n")
++    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
++    monkeypatch.setenv("PATH", str(exe.parent) + os.pathsep + os.environ["PATH"])
++    with pytest.raises(ValueError, match="TESSERACT FAILED ON PAGE 1: boom"):
++        doc.extract_text("scan.pdf", scanned_pdf())
++    exe.write_text(f"#!{sys.executable}\nimport sys\nsys.stdin.buffer.read()\n")
++    with pytest.raises(ValueError, match="OCR FOUND NO TEXT"):
++        doc.extract_text("scan.pdf", scanned_pdf())
++
++
++def test_route_loads_an_ocr_document_and_the_model_is_told_it_is_ocr(client, fake_tesseract, renderer):
++    r = client.post("/api/ai/doc/upload?name=scan.pdf", content=scanned_pdf(), headers={"content-type": "application/octet-stream"})
++    card = r.json()["doc"]
++    assert r.status_code == 200 and card["ocr"] is True and card["note"] == "OCR TEXT (MAY CONTAIN ERRORS)" and card["preview"].startswith("OCR TEXT")
++    client.app.state.llm = FakeGateway(call("doc_search", {"query": "revenue"}), text("Revenue was 42 million (C1) [T1]."))
++    ev = sse(client.post("/api/ai/doc/ask", json={"doc_id": card["id"], "question": "what was revenue?"}))
++    assert ev[-1]["type"] == "done"
++    system = client.app.state.llm.calls[0]["messages"][0]["content"]
++    assert "read by OCR" in system and "recognition errors" in system
++
++
++@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed here")
++def test_real_tesseract_reads_a_rendered_page(renderer):
++    from pypdf import PdfReader  # noqa: F401 - the blank page has no text; a real scan needs an image PDF, so only check it does not crash
++
++    with pytest.raises(ValueError, match="OCR FOUND NO TEXT"):
++        doc.extract_text("blank.pdf", scanned_pdf())
+diff --git a/backend/tests/test_ai_ledger_text.py b/backend/tests/test_ai_ledger_text.py
+new file mode 100644
+index 0000000..e8b9934
+--- /dev/null
++++ b/backend/tests/test_ai_ledger_text.py
+@@ -0,0 +1,92 @@
++"""Opt-in ledger text (`ai.storeText`): the redacted question and answer are kept in a side table, outside the hash chain. Models are scripted."""
++
++import json
++
++from test_phase16_agent import SECRET, FakeGateway, sse, text
++
++
++def set_store_text(client, on: bool):
++    cur = client.get("/api/settings").json()
++    s = dict(cur["settings"] or {})
++    s["ai"] = {**(s.get("ai") or {}), "storeText": on}
++    r = client.put("/api/settings", json={"settings": s, "version": cur["version"]})
++    assert r.status_code == 200, r.text
++
++
++def ask(client, q):
++    return sse(client.post("/api/ai/chat", json={"question": q}))
++
++
++def test_text_is_not_stored_by_default(client):
++    client.app.state.llm = FakeGateway(text("The answer is PLUM."))
++    ask(client, "what about APRICOT?")
++    es = client.get("/api/ai/ledger").json()["entries"]
++    assert len(es) == 1 and es[0]["has_text"] is False
++    assert client.get(f"/api/ai/ledger/{es[0]['seq']}/text").status_code == 404
++
++
++def test_text_on_stores_redacted_question_and_answer_and_the_chain_still_verifies(client):
++    set_store_text(client, True)
++    client.app.state.llm = FakeGateway(text(f"The answer is PLUM and token={SECRET}."))
++    ask(client, f"what about APRICOT? apikey={SECRET}")
++    e = client.get("/api/ai/ledger").json()["entries"][0]
++    assert e["has_text"] is True
++    t = client.get(f"/api/ai/ledger/{e['seq']}/text").json()
++    assert "APRICOT" in t["question"] and "PLUM" in t["answer"] and t["stored_at"] > 0
++    assert SECRET not in json.dumps(t) and "***" in t["question"] and "***" in t["answer"]
++    assert SECRET not in json.dumps(client.get("/api/ai/ledger").json())
++    assert "APRICOT" not in json.dumps(e)  # the ledger entry itself still holds hashes only
++    v = client.get("/api/ai/ledger/verify").json()
++    assert v["ok"] and v["count"] == 1
++
++
++def test_purge_removes_text_but_never_breaks_the_chain(client):
++    set_store_text(client, True)
++    client.app.state.llm = FakeGateway(text("one"), text("two"), text("three"))
++    for q in ("q1", "q2", "q3"):
++        ask(client, q)
++    head = client.get("/api/ai/ledger/verify").json()["head"]
++    assert all(e["has_text"] for e in client.get("/api/ai/ledger").json()["entries"])
++    r = client.post("/api/ai/ledger/purge-text", json={"seq": 2})
++    assert r.json() == {"purged": 1}
++    assert [e["has_text"] for e in client.get("/api/ai/ledger").json()["entries"]] == [True, False, True]
++    assert client.post("/api/ai/ledger/purge-text", json={}).json() == {"purged": 2}
++    assert not any(e["has_text"] for e in client.get("/api/ai/ledger").json()["entries"])
++    v = client.get("/api/ai/ledger/verify").json()
++    assert v["ok"] and v["count"] == 3 and v["head"] == head  # same chain, text gone
++    assert client.get("/api/ai/ledger/1/text").status_code == 404
++
++
++def test_turning_it_off_again_stops_storing(client):
++    set_store_text(client, True)
++    client.app.state.llm = FakeGateway(text("a"), text("b"))
++    ask(client, "first")
++    set_store_text(client, False)
++    ask(client, "second")
++    assert [e["has_text"] for e in client.get("/api/ai/ledger").json()["entries"]] == [False, True]
++
++
++def test_every_run_kind_stores_text_when_on(client):
++    set_store_text(client, True)
++    client.app.state.llm = FakeGateway(text("fund"), text("tech"), text("risk"), text("chair"), text("No backtest was run."), text("a rule"))
++    sse(client.post("/api/ai/swarm", json={"preset": "COMMITTEE", "subject": "AAPL"}))
++    sse(client.post("/api/ai/auto", json={"hypothesis": "momentum works"}))
++    sse(client.post("/api/ai/bt", json={"idea": "buy dips"}))
++    es = client.get("/api/ai/ledger").json()["entries"]
++    assert [e["kind"] for e in es] == ["ai_bt", "ai_auto", "swarm"] and all(e["has_text"] for e in es)
++    assert "momentum works" in client.get(f"/api/ai/ledger/{es[1]['seq']}/text").json()["question"]
++
++
++def test_text_routes_are_loopback_only(client):
++    from fastapi.testclient import TestClient
++
++    other = TestClient(client.app, client=("203.0.113.9", 5))
++    assert other.get("/api/ai/ledger/1/text").status_code == 403
++    assert other.post("/api/ai/ledger/purge-text", json={}).status_code == 403
++
++
++def test_settings_validate_store_text(client):
++    cur = client.get("/api/settings").json()
++    s = dict(cur["settings"] or {})
++    s["ai"] = {"storeText": "yes"}
++    assert client.put("/api/settings", json={"settings": s, "version": cur["version"]}).status_code == 400
+diff --git a/backend/tests/test_ai_patterns.py b/backend/tests/test_ai_patterns.py
+new file mode 100644
+index 0000000..71c1106
+--- /dev/null
++++ b/backend/tests/test_ai_patterns.py
+@@ -0,0 +1,101 @@
++"""The `patterns` AI tool: the GP overlay rules (candlesticks, smart-money structure, Ichimoku) ported to Python. Hand-built bars pin each rule; the
++port was also checked against the TypeScript on a 400-bar random series (candle codes, BOS, swings, zones and cloud values all equal)."""
++
++import json
++
++from openterm.ai import patterns as P
++from openterm.ai import tools
++from openterm.ai.context import RESULT_LIMIT
++
++
++def bars(rows):
++    """rows of (open, high, low, close) -> four lists."""
++    return tuple(list(x) for x in zip(*rows, strict=True))
++
++
++def test_bull_engulfing_after_a_decline_is_found_on_its_last_bar():
++    rows = [(10.5, 10.6, 9.9, 10), (10, 10.1, 8.9, 9), (9, 9.1, 7.9, 8), (8, 8.1, 6.9, 7), (7, 7.1, 5.9, 6), (5.9, 7.3, 5.8, 7.2)]
++    o, h, low, c = bars(rows)
++    codes = P.candle_patterns(o, h, low, c)
++    assert codes[5] == 4 and P.PATTERN_INFO[4] == ("BULL ENGULFING", 1)
++    assert not any(codes[:5][i] == 4 for i in range(5))
++
++
++def test_the_same_candles_without_a_prior_trend_are_not_an_engulfing():
++    rows = [(10, 10.1, 9.9, 10.05)] * 4 + [(7, 7.1, 5.9, 6), (5.9, 7.3, 5.8, 7.2)]
++    o, h, low, c = bars(rows)
++    assert P.candle_patterns(o, h, low, c)[5] != 4  # needs c[3] < c[0]-style decline before the pattern
++
++
++def test_doji_hammer_and_shooting_star():
++    flat = [(10, 11, 9, 10.05)]
++    assert P.candle_patterns(*bars(flat))[0] == 1  # body 0.05 of range 2: doji
++    down = [(12, 12.1, 11.9, 12), (11, 11.1, 10.9, 11), (10, 10.1, 9.9, 10), (9, 9.1, 8.9, 9), (8, 8.05, 7.9, 8), (7.7, 7.95, 6.5, 7.9)]
++    o, h, low, c = bars(down)
++    assert P.candle_patterns(o, h, low, c)[5] == 2  # small body at the top, long lower shadow after a decline
++    up = [(8, 8.1, 7.9, 8), (9, 9.1, 8.9, 9), (10, 10.1, 9.9, 10), (11, 11.1, 10.9, 11), (12, 12.1, 11.9, 12), (12.1, 13.5, 12.05, 12.3)]
++    o, h, low, c = bars(up)
++    assert P.candle_patterns(o, h, low, c)[5] == 3  # small body at the bottom, long upper shadow after a rise
++
++
++def test_smc_finds_swings_a_break_of_structure_and_a_fair_value_gap():
++    # a peak at bar 3 (high 12), then a close above it at bar 8 -> BOS up; bars 7..9 leave a gap (low[9] > high[7])
++    rows = [(9, 10, 8.5, 9.5), (9.5, 11, 9, 10.5), (10.5, 11.5, 10, 11), (11, 12, 10.5, 10.8), (10.8, 11, 9.8, 10), (10, 10.5, 9.5, 10.2),
++            (10.2, 10.8, 9.9, 10.6), (10.6, 11.2, 10.4, 11), (11, 12.5, 10.9, 12.4), (12.4, 13.5, 12.3, 13.2), (13.2, 13.6, 13.0, 13.4)]
++    o, h, low, c = bars(rows)
++    m = P.smc(o, h, low, c, k=3)
++    assert m["swing"][3] == 1
++    assert m["bos"][8] == 1  # close 12.4 > swing high 12
++    fvg = [z for z in m["zones"] if z["kind"] == "FVG" and z["dir"] == 1]
++    assert any(z["bot"] == h[7] and z["top"] == low[9] and not z["filled"] for z in fvg)  # the gap between bar 7's high and bar 9's low is still open
++
++
++def test_ichimoku_state_needs_enough_bars_and_reports_the_cloud_position():
++    n = 120
++    c = [100 + i * 0.5 for i in range(n)]
++    h = [x + 1 for x in c]
++    low = [x - 1 for x in c]
++    st = P.ichimoku_state(h, low, c)
++    assert st and st["price"] == "ABOVE THE CLOUD" and st["tenkan_vs_kijun"] == "TENKAN ABOVE KIJUN" and st["cloud_top"] >= st["cloud_bottom"]
++    assert P.ichimoku_state(h[:60], low[:60], c[:60]) is None
++
++
++def history_env(n=120, falling_then_engulf=False):
++    t = [1_700_000_000 + 86400 * i for i in range(n)]
++    c = [100 + (i % 7) * 0.4 + i * 0.1 for i in range(n)]
++    o = [x - 0.2 for x in c]
++    return {"source": "fixture", "age_s": 5.0, "data": {"symbol": "T", "interval": "1d", "t": t, "o": o, "h": [x + 1 for x in c], "l": [x - 1 for x in c], "c": c}}
++
++
++def test_shape_patterns_is_compact_labelled_and_honours_kind():
++    out = tools.shape_patterns(history_env(), {})
++    assert out["n_bars"] == 120 and out["note"].startswith("RULE-BASED PATTERNS") and out["source"] == "fixture"
++    assert set(out) >= {"candles", "smc", "ichimoku"}
++    assert len(out["candles"]["recent"]) <= tools.PATTERN_RECENT
++    assert set(tools.shape_patterns(history_env(), {"kind": "ichimoku"})) >= {"ichimoku"} and "candles" not in tools.shape_patterns(history_env(), {"kind": "ichimoku"})
++    assert "ichimoku" not in tools.shape_patterns(history_env(), {"kind": "candles"})
++    assert tools.shape_patterns({"data": {"symbol": "T", "t": [], "c": []}}, {}) == {"symbol": "T", "n_bars": 0}
++    assert len(json.dumps(out)) < RESULT_LIMIT
++
++
++def test_registry_entry_validates_and_reaches_the_mcp_list():
++    from openterm.mcp import server
++
++    t = tools.REGISTRY["patterns"]
++    assert t.method == "GET" and t.path == "/api/history" and not t.doc_only
++    assert tools.validate("patterns", {"symbol": "AAPL", "kind": "smc"}) is None
++    assert "kind" in tools.validate("patterns", {"symbol": "AAPL", "kind": "orders"})
++    assert "patterns" in {x.name for x in server.exposed_tools()}
++    assert "patterns" in {s["function"]["name"] for s in tools.openai_tools()}
++
++
++async def test_tool_runs_end_to_end_on_the_fixture_history_within_the_cap(client):
++    runner = tools.ToolRunner(client.app)
++    try:
++        res = await runner("patterns", {"symbol": "AAPL", "range": "1Y"})
++    finally:
++        await runner.aclose()
++    assert res.ok and len(res.text) <= RESULT_LIMIT + 200
++    data = json.loads(res.text.split("\n")[0]) if res.text.startswith("{") and res.text.endswith("}") else None
++    if data:  # an untruncated result is JSON
++        assert data["symbol"] == "AAPL" and data["note"].startswith("RULE-BASED")
+diff --git a/backend/uv.lock b/backend/uv.lock
+index 22203ad..ee1bf72 100644
+--- a/backend/uv.lock
++++ b/backend/uv.lock
+@@ -482,6 +482,11 @@ dependencies = [
+     { name = "uvloop", marker = "sys_platform != 'win32'" },
+ ]
+ 
++[package.optional-dependencies]
++ocr = [
++    { name = "pypdfium2" },
++]
++
+ [package.dev-dependencies]
+ dev = [
+     { name = "pytest" },
+@@ -506,12 +511,14 @@ requires-dist = [
+     { name = "pydantic", specifier = ">=2.8" },
+     { name = "pydantic-settings", specifier = ">=2.4" },
+     { name = "pypdf", specifier = ">=6.21.1" },
++    { name = "pypdfium2", marker = "extra == 'ocr'", specifier = ">=4.30" },
+     { name = "pyyaml", specifier = ">=6.0" },
+     { name = "scipy", specifier = ">=1.13" },
+     { name = "statsmodels", specifier = ">=0.14" },
+     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+     { name = "uvloop", marker = "sys_platform != 'win32'", specifier = ">=0.19" },
+ ]
++provides-extras = ["ocr"]
+ 
+ [package.metadata.requires-dev]
+ dev = [
+@@ -694,6 +701,36 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl", hash = "sha256:553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b", size = 405134, upload-time = "2026-10-17T10:29:50.687Z" },
+ ]
+ 
++[[package]]
++name = "pypdfium2"
++version = "5.15.2"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/fb/47/8555ff96dd676dd7b2029b8c98a8afd255f5f9eef4a2f4a0445566a323bb/pypdfium2-5.15.2.tar.gz", hash = "sha256:0185193bbdf0cc39f0bf31954c25f12edb81048bcb628ea4fc3dccf8d2ce2aef", size = 696348, upload-time = "2026-11-09T15:33:28.299Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/73/cf/a4adc114427c7e72716aaa487ddff7d085791dbe5ac830f2345f61814f3c/pypdfium2-5.15.2-py3-none-android_23_arm64_v8a.whl", hash = "sha256:fe64472c32d0717669c99758ce234066500b0234730dad0327248f09399e9736", size = 3605158, upload-time = "2026-11-09T15:32:35.375Z" },
++    { url = "https://files.pythonhosted.org/packages/05/6f/fae810e1c45427c7b3d229497eca0ff37fd35d6c81d5c1f8f3028251763e/pypdfium2-5.15.2-py3-none-android_23_armeabi_v7a.whl", hash = "sha256:8faaafc2a18b17b3bcfad79b376bb382d536b011cb9e6eee2f4d7e8af0a23167", size = 3023159, upload-time = "2026-11-09T15:32:37.448Z" },
++    { url = "https://files.pythonhosted.org/packages/e7/bb/bf88a781a53c905022b25b2d1fb742c908f86b8076403471f626cc41a508/pypdfium2-5.15.2-py3-none-macosx_13_0_arm64.whl", hash = "sha256:e71fe832e94421ac3c28d6a6ed4a9e61f22417089652d339f391c4ffc2a44c35", size = 3710813, upload-time = "2026-11-09T15:32:39.633Z" },
++    { url = "https://files.pythonhosted.org/packages/09/de/9e7eda3ee1c00228d72f7fc53a370d76eed51fe5fea25debc428ac684e35/pypdfium2-5.15.2-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:7f296a298074d76fb7c3d1ecb80d7097a96778bf0ad9c5c48a0170e56e2c6821", size = 3940099, upload-time = "2026-11-09T15:32:41.647Z" },
++    { url = "https://files.pythonhosted.org/packages/03/1f/7a18e64c50049dce8512239bcdb9f8469d0a0c352dd42ae85b6b01d143f8/pypdfium2-5.15.2-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:dd46e93c0c3a73f6cea8489baff6d77a5d0759dd53fbbce0aeb49c91830176fc", size = 3887212, upload-time = "2026-11-09T15:32:43.395Z" },
++    { url = "https://files.pythonhosted.org/packages/c6/cf/2ee999eed1ffdd6c4be8fcd824f05acc4d5b47785ba8ca3c80d51aac15cc/pypdfium2-5.15.2-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:f4d422d2662bf0be37118abb14dbac6acc3bfbc04a82da92cb200b570ee24da2", size = 3595005, upload-time = "2026-11-09T15:32:45.368Z" },
++    { url = "https://files.pythonhosted.org/packages/64/4d/9555e8d15d112ba179895218cc78cc0a2370b71570f918158418b2c8a2bb/pypdfium2-5.15.2-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:397271721330866d1da291042b128595f44cb0314c4675bb439ebaf5c7349b8b", size = 4077462, upload-time = "2026-11-09T15:32:47.108Z" },
++    { url = "https://files.pythonhosted.org/packages/95/86/2942d7e6257048abaa12273d9299251861985fcfb422f1f8d5584322c5ad/pypdfium2-5.15.2-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:93e51d8ed458085cf67974834e6888bde0df5581e1212de46da2ff5c07dedfd2", size = 4467118, upload-time = "2026-11-09T15:32:48.806Z" },
++    { url = "https://files.pythonhosted.org/packages/c8/e5/2e668bc1bc6fe22f9006694b5571a2dd2c9b874d6a21d16ee839c8f7f6ea/pypdfium2-5.15.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dc31aea5b0fb9fefc9b537a65f4113980b2c40798445736a7e6565bc85161e37", size = 4020833, upload-time = "2026-11-09T15:32:50.715Z" },
++    { url = "https://files.pythonhosted.org/packages/ff/62/c4f6890085a829681ea4bfc7232979742d9dd7a59320f1f26c268f46a699/pypdfium2-5.15.2-py3-none-manylinux_2_27_s390x.manylinux_2_28_s390x.whl", hash = "sha256:fddd832b17f11cae080c395530eed01da0c003c66d6c233ba656e93ddf570ee0", size = 4184727, upload-time = "2026-11-09T15:32:52.592Z" },
++    { url = "https://files.pythonhosted.org/packages/af/89/1384feac64c4a60d0a7940e929dd3815195647eefbb250424cb953a2ca2c/pypdfium2-5.15.2-py3-none-manylinux_2_34_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:2dd2ef2e966181b199870e109ae3c17af4415fc012ba12b7f8d7e08d521bd480", size = 4097549, upload-time = "2026-11-09T15:32:54.809Z" },
++    { url = "https://files.pythonhosted.org/packages/ef/29/5a68e61d8404047b411219b5d1915692c5daf02326449aed4c75fb3b2809/pypdfium2-5.15.2-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:71ba93a356708cb2a7b1a82dbc2c07ddb62c501e35bb6a67c7323e1da6ae9cb7", size = 5113284, upload-time = "2026-11-09T15:32:56.709Z" },
++    { url = "https://files.pythonhosted.org/packages/43/31/5a7a23f299df390269cc4d8c09a61bc2dcea04621b1dafb162527e05eb80/pypdfium2-5.15.2-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:7a8edc5f3a020373ebf839e75db86590c364566b958703e89e5c0c9b4fa5a885", size = 4643080, upload-time = "2026-11-09T15:32:58.726Z" },
++    { url = "https://files.pythonhosted.org/packages/43/09/6b9e20130411acfaf5ecbbbdd9e65a84c35860873163fedc152e90e87c6c/pypdfium2-5.15.2-py3-none-musllinux_1_2_i686.whl", hash = "sha256:de2ca1627ad8c08d577f7e17f1ac8b9ff599b26c727ebf687f964ddff8fed78e", size = 5387839, upload-time = "2026-11-09T15:33:11.6Z" },
++    { url = "https://files.pythonhosted.org/packages/8c/04/745e3062d97d43c0e4756649883af663b6bf5aef21f606acca635415399b/pypdfium2-5.15.2-py3-none-musllinux_1_2_ppc64le.whl", hash = "sha256:5c4c89468afc3d9498b547becf9732cf710836a5a24f4c18dcf6041a895fcfe5", size = 5296188, upload-time = "2026-11-09T15:33:13.49Z" },
++    { url = "https://files.pythonhosted.org/packages/d9/16/ec34d4561835b2f8d099089c1e06756f43bb05db6de313113761f0b550ad/pypdfium2-5.15.2-py3-none-musllinux_1_2_riscv64.whl", hash = "sha256:95aa8134acaeac540bf8cf5b30def149b26df0db6a955f1d0e64b5f633b2721b", size = 4737631, upload-time = "2026-11-09T15:33:15.361Z" },
++    { url = "https://files.pythonhosted.org/packages/1a/c2/1563e718832be7dd44d091a0e541f5e0ee0baed7a7892a0736c1cb5b3cf7/pypdfium2-5.15.2-py3-none-musllinux_1_2_s390x.whl", hash = "sha256:c4eee1d6d483783a115953fbf9caae42fead0187ddd2a1178f616d4453afb6a0", size = 5228144, upload-time = "2026-11-09T15:33:17.226Z" },
++    { url = "https://files.pythonhosted.org/packages/53/54/2936bc6b2887fd8bba6bfc641448d3820e56469e4a47e3aee8ef212bfc96/pypdfium2-5.15.2-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:ef452a7178744196d4ff97029f46b56a13817346fc7ee0473c75643512276b3a", size = 5193509, upload-time = "2026-11-09T15:33:19.228Z" },
++    { url = "https://files.pythonhosted.org/packages/bd/4b/f3425e1f3759d2a6473cddbba5bdcc25ac0c49939921d568331fee16ca03/pypdfium2-5.15.2-py3-none-pyemscripten_2026_0_wasm32.whl", hash = "sha256:51e380faf433899d3b07a40b3f6aa97b9ab61399e732280f4007dc7aa0d0694f", size = 2695471, upload-time = "2026-11-09T15:33:21.089Z" },
++    { url = "https://files.pythonhosted.org/packages/8b/3b/37e7bfcb6a51e967e7a4c6e3698c73548f4455176c7e352a31ee7011c2dc/pypdfium2-5.15.2-py3-none-win32.whl", hash = "sha256:4cfc5ae26b600f92c5be0a0dccb949c10bd8bd3c93e440b75a362f9c1453fd93", size = 4015242, upload-time = "2026-11-09T15:33:22.919Z" },
++    { url = "https://files.pythonhosted.org/packages/fe/7f/8aa446529fa14523e5c18f89e823afc95526689f76a75efe68a82a10d850/pypdfium2-5.15.2-py3-none-win_amd64.whl", hash = "sha256:74d1bace34fb01c660d0b64344d5a4b7d276942b7c6623c88ab59ea21c5acfbd", size = 4187589, upload-time = "2026-11-09T15:33:24.718Z" },
++    { url = "https://files.pythonhosted.org/packages/e7/20/edc21f0b086aba3162a33e5725a4f224dcabb46f67a051e1a1be81e3cbbc/pypdfium2-5.15.2-py3-none-win_arm64.whl", hash = "sha256:a20398367f188eb817be156bfd00077dcb5f8ad06c093849f3fa70b8087b4a87", size = 3907705, upload-time = "2026-11-09T15:33:26.624Z" },
++]
++
+ [[package]]
+ name = "pytest"
+ version = "9.1.1"

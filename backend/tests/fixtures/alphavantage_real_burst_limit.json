@@ -1,0 +1,7 @@
+{
+ "status": 200,
+ "recorded": "2026-11-10, REAL text (made-up key, no account), captured with curl for TIME_SERIES_DAILY IBM when two calls came within one second: Alpha Vantage's 1-request-per-second burst limit.",
+ "body": {
+  "Information": "Thank you for using Alpha Vantage! Please consider spreading out your free API requests more sparingly (1 request per second). You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to lift the free key rate limit (25 requests per day), raise the per-second burst limit, and instantly unlock all premium endpoints"
+ }
+}

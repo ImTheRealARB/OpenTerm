@@ -29,3 +29,16 @@ def quant(*parts: str) -> str:
     """Quant-route answers (`q:fundsectors:SPY`, `q:kenfrench`). Shares the `q:` prefix with quotes, as it always did; safe because
     `resolve()` upper-cases every symbol and these names are lower case, so the two can never meet."""
     return "q:" + ":".join(parts)
+
+
+def scoped(key: str, pin: str | None, prefs: dict[str, str] | None = None) -> str:
+    """The key with the source choice appended, so an answer cached for one source is never served for another.
+    A pin (`?source=` / `SRC=`) adds `@src=<name>`; with no pin, saved per-capability preferences (SETTINGS SOURCE) add `@pref=<hash>`;
+    neither leaves the key as it was."""
+    if pin:
+        return f"{key}@src={pin}"
+    if prefs:
+        import hashlib
+
+        return f"{key}@pref={hashlib.sha1(repr(sorted(prefs.items())).encode()).hexdigest()[:8]}"
+    return key

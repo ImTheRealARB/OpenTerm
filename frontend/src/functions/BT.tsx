@@ -21,7 +21,8 @@ import { useStore } from "../state/store";
 import { BtStarter } from "./BtStarter";
 import { BtRuleLazy } from "./BtRuleLazy";
 import { ruleToSentence } from "./ruleSentence";
-import { downloadText } from "../csv";
+import { downloadBlob, downloadText } from "../csv";
+import { BT_EXPORTS, EXPORT_WORDS, exportFileName, rulesOnlyRefusal } from "../bt/exportFormats";
 import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { btApi } from "../net/btApi";
@@ -40,7 +41,16 @@ import { errText } from "../net/errText";
 
 const BASE_VIEWS = ["CHART", "METRICS", "TRADES", "CODE"] as const;
 type View = (typeof BASE_VIEWS)[number] | "MC" | "WF";
-const EXPORT_USAGE = "USAGE: BT EXPORT <RUNID> [PINE|TRADES|EQUITY|METRICS]  (PINE: rule strategies only; the default is PINE)";
+const EXPORT_USAGE = `USAGE: BT EXPORT <RUNID> [${EXPORT_WORDS}]  (PINE and MQL5: rule strategies only; the default is PINE)`;
+
+/** Builds the export on the server and saves it as a file; resolves to the file name. */
+async function exportAndSave(id: string, word: string): Promise<string> {
+  const f = BT_EXPORTS[word.toUpperCase()];
+  const file = exportFileName(id, word);
+  if (f.binary) return downloadBlob(file, await btApi.exportBlob(id, f.fmt));
+  const text = await btApi.exportText(id, f.fmt as "csv" | "pine" | "mql5", f.part ?? "trades");
+  return downloadText(file, text);
+}
 const VAL_NAME = { MC: "MONTE CARLO", WF: "WALK-FORWARD" } as const;
 
 type State =
@@ -220,14 +230,10 @@ export default function BT({ panelId, args }: FunctionProps) {
   /** Server-built export (Pine for rule runs, CSV parts), saved as a file. */
   const exportRun = (id: string | undefined, what = "PINE") => {
     const w = what.toUpperCase();
-    if (!id || !(w === "PINE" || ["TRADES", "EQUITY", "METRICS"].includes(w))) return setState({ k: "bad", error: EXPORT_USAGE });
+    if (!id || !(w in BT_EXPORTS)) return setState({ k: "bad", error: EXPORT_USAGE });
     setState({ k: "note", text: `EXPORTING ${w} OF ${id}…` });
-    btApi
-      .exportText(id, w === "PINE" ? "pine" : "csv", w.toLowerCase())
-      .then((text) => {
-        const file = downloadText(w === "PINE" ? `BT_${id}.pine` : `BT_${id}_${w.toLowerCase()}.csv`, text);
-        setState({ k: "note", text: `EXPORTED ${file}` });
-      })
+    exportAndSave(id, w)
+      .then((file) => setState({ k: "note", text: `EXPORTED ${file}` }))
       .catch((e) => setState({ k: "failed", error: errText(e) }));
   };
 
@@ -402,12 +408,13 @@ export default function BT({ panelId, args }: FunctionProps) {
           submit(p);
           return true;
         }
-        if (k === "p" && r) {
-          if (!r.rule) setMsg("P: PINE EXPORT NEEDS A RULE STRATEGY (PYTHON CODE CANNOT BE TRANSLATED FAITHFULLY; E EXPORTS CSV)");
+        const word = ({ p: "PINE", q: "MQL5", d: "PDF", b: "XLSX" } as Record<string, string>)[k];
+        if (word && r) {
+          if (BT_EXPORTS[word].rulesOnly && !r.rule) setMsg(`${e.key.toUpperCase()}: ${rulesOnlyRefusal(word)}`);
           else {
-            btApi
-              .exportText(r.id, "pine")
-              .then((text) => setMsg(`EXPORTED ${downloadText(`BT_${r.id}.pine`, text)}`))
+            setMsg(`EXPORTING ${word}…`);
+            exportAndSave(r.id, word)
+              .then((file) => setMsg(`EXPORTED ${file}`))
               .catch((err) => setMsg(`ERR: ${errText(err)}`));
           }
           return true;
@@ -457,7 +464,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
           <div className="dim">BT EDIT [NAME] = PYTHON STRATEGY EDITOR · BT SAVE &lt;NAME&gt; &lt;RULE&gt; · BT DEL &lt;NAME&gt; · BT &lt;SYMBOLS&gt; @&lt;NAME&gt; RUNS A SAVED ONE</div>
-          <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|TRADES|EQUITY|METRICS]</div>
+          <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|MQL5|PDF|XLSX|TRADES|EQUITY|METRICS]</div>
           <div className="dim">BT MC|WF &lt;SYMBOLS&gt; &lt;RULE&gt; … RUNS IT, THEN SHUFFLES ITS TRADES (MC) OR SPLITS IT INTO WINDOWS (WF) · M / W ON AN OPEN RUN DO THE SAME</div>
         </>
       )}
@@ -490,7 +497,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <Headline run={run} />
           <div className="line">
             VIEW <span className="bt-view acc">{shown}</span>
-            <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
+            <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE · Q MQL5 · D PDF · B XLSX{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
           </div>
           {shown === "CHART" && chartBits && chartFor !== run.id && <div className="dim">DRAWING CHART…</div>}
           {shown === "CHART" && chartBits && chartFor === run.id && (

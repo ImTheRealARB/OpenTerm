@@ -114,18 +114,18 @@ parts are Apache-2.0. Ported code keeps its notices in `THIRD_PARTY.md`.
 | Risk x-ray, regime, correlation regime | `risk_xray.py`, `regime.py`, `correlation.py` | `RISK`, `CORR REGIME` | 15 |
 | quantlib: 306 tested functions, 23 modules | `agent/src/quantlib/` | `QL`, `OV`, `YAS`, `SWPM`, `CDSW` | 14, 15 |
 | Valuation: DCF, comps, three-statement; missing input = NOT RUNNABLE | `quantlib/valuation/` | `DCF`, `WACC`, `RV` | 13 |
-| Alpha Zoo (478 alphas, lookahead-banned operators) + decay lifecycle | `agent/src/factors/zoo/`, `strategy_discovery/` | `ALPHA` | 15 |
+| Alpha Zoo (478 alphas, lookahead-banned operators) + decay lifecycle | `agent/src/factors/zoo/`, `strategy_discovery/` | `ALPHA` (435 ported 2026-11-10 in families; 43 skipped with reasons in `docs/ALPHA_SKIPPED.md`) | 15 |
 | Agent loop: tool grounding, loop guard, context budget, memory, skills | `agent/src/agent/` | `AI` (12 more read-only desk tools in Phase 20) | 16, 20 |
 | 30 swarm presets (investment committee, risk committee, earnings desk...) | `agent/src/swarm/presets/` | `SWARM` (all 30 ported 2026-11-05, every one PARTIAL: no web, no shell, no China A-share; see `docs/PHASE_20_PRESETS.md`) | 16, 20 |
 | 90 finance skills (markdown playbooks) | `agent/src/skills/` | Prompt library for `AI` and `SWARM` (46 of 89 ported, 43 skipped with reasons in `docs/PHASE_20_SKIPPED.md`) | 16, 20 |
 | Hypothesis registry, Research Autopilot, thesis tracker | `hypotheses/`, `goal/` | `THESIS`, `AI AUTO` | 16 |
-| Document reader (PDF/DOCX/XLSX + OCR), chart vision, web reader | `tools/doc_reader_tool.py`, `image_vision_tool.py` | `AI DOC`, `AI CHART` | 16 |
+| Document reader (PDF/DOCX/XLSX + OCR), chart vision, web reader | `tools/doc_reader_tool.py`, `image_vision_tool.py` | `AI DOC` (OCR optional), `AI CHART`, `read_url` / `web_search` (opt-in, off by default, 2026-11-10) | 16 |
 | Governance: run manifest, hash-chained audit ledger, sink-aware redaction | `governance/`, `tools/redaction.py` | Audit log for AI, BT and orders | 16 |
-| Trade journal parsers + Shadow Account (behaviour diagnostics) | `tools/trade_journal_*`, `shadow_account/` | `JRNL` | 17 |
+| Trade journal parsers + Shadow Account (behaviour diagnostics) | `tools/trade_journal_*`, `shadow_account/` | `JRNL` (built 2026-11-10: Zerodha, IBKR Flex, Alpaca, generic CSV; Shadow Account via BT jobs) | 17 |
 | Scheduled research, IM channels (Telegram, Slack, email...) | `scheduled_research/`, `channels/` | `BRIEF`, push alerts (Telegram + email + desktop only) | 17 |
-| MCP server + MCP client mode | `tools/mcp.py` | OpenTerm MCP server (HTTP and the `openterm-mcp` stdio command; server mode only, no client mode); REST routes documented in `docs/API.md` | 17, 20 |
-| Broker connectors with mandates (allowlist, size caps, daily cap, kill switch) | `trading/`, `live/` | `ORD` (Alpaca paper, Zerodha, IBKR) | 18 |
-| Exports: Pine Script, MT5, PDF, xlsx | `skills/pine-script`, `tools/pdf_report.py` | `BT EXPORT` | 12, 17 |
+| MCP server + MCP client mode | `tools/mcp.py` | OpenTerm MCP server (HTTP and the `openterm-mcp` stdio command) and, since 2026-11-10, an MCP client (`MCP`, servers off until enabled, results untrusted); REST routes documented in `docs/API.md` | 17, 20 |
+| Broker connectors with mandates (allowlist, size caps, daily cap, kill switch) | `trading/`, `live/` | `ORD` (built 2026-11-10: Alpaca paper and live, Kite live; mandate, confirm token, kill switch) and read-only `SYNC` (Kite, IBKR) | 18 |
+| Exports: Pine Script, MT5, PDF, xlsx | `skills/pine-script`, `tools/pdf_report.py` | `BT EXPORT` (Pine, MQL5, PDF, XLSX built) | 12, 17 |
 | Options chain / pricing / payoff tools | `tools/options_*` | `OMON`, `OV`, `OSA` | 14 |
 | ETF look-through, 13F QoQ diffs, prediction markets, research papers | `tools/etf_holdings_tool.py`, `institutional_holdings_tool.py`, `prediction_market_tool.py`, `research_papers_tool.py` | `ETF`, `HDS` diffs, `PRED`, `AI` tool | 13, 19 |
 | Crypto: perp funding/basis, liquidation heatmap, stablecoin flow, DeFi yield, token unlocks | `skills/crypto-*`, `tools/*` | `CRYP` sub-views | 19 |

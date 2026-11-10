@@ -276,6 +276,63 @@ def _route_llm(request: httpx.Request) -> httpx.Response | None:
         return httpx.Response(404, text="not recorded")
     return None
 
+# --- Keyed market data: Twelve Data, Alpha Vantage, Polygon (Massive), Financial Modeling Prep ---
+# A key that does not start with "docshape" gets what each service says to a made-up key (real recordings: keytest_*_401, and Alpha Vantage's
+# 200-with-a-limit-text). With a "docshape" key: Twelve Data and Alpha Vantage replay REAL recordings made with their public demo keys
+# (AAPL on Twelve Data, IBM on Alpha Vantage); Polygon and FMP have no public key, so they replay DOC-SHAPED files (NOT A RECORDING inside).
+# Anything else is "not recorded".
+_TD = {("quote", ""): "twelvedata_real_quote_aapl", ("time_series", "1day"): "twelvedata_real_series_aapl_1day",
+       ("time_series", "5min"): "twelvedata_real_series_aapl_5min"}
+_AV = {"GLOBAL_QUOTE": "alphavantage_real_quote_ibm", "TIME_SERIES_DAILY": "alphavantage_docshape_daily_ibm", "OVERVIEW": "alphavantage_real_overview_ibm",
+       "INCOME_STATEMENT": "alphavantage_real_income_ibm", "BALANCE_SHEET": "alphavantage_real_balance_ibm", "CASH_FLOW": "alphavantage_real_cashflow_ibm"}
+_FMP = {"quote": "fmp_docshape_quote_aapl", "historical-price-eod/full": "fmp_docshape_history_aapl", "income-statement": "fmp_docshape_income_aapl",
+        "balance-sheet-statement": "fmp_docshape_balance_aapl", "cash-flow-statement": "fmp_docshape_cashflow_aapl", "search-symbol": "fmp_docshape_search_apple"}
+_KEYED_MARKET_HOSTS = ("api.twelvedata.com", "www.alphavantage.co", "api.massive.com", "financialmodelingprep.com")
+
+
+def _route_keyedmarket(request: httpx.Request) -> httpx.Response | None:
+    host, p, q = request.url.host, request.url.path, request.url.params
+    if host not in _KEYED_MARKET_HOSTS:
+        return None
+    missing = httpx.Response(404, json={"message": "not recorded"})
+    if host == "api.twelvedata.com":
+        if not request.headers.get("authorization", "").removeprefix("apikey ").startswith(_DOCSHAPE_KEY):
+            return _load("keytest_twelvedata_401")
+        endpoint = p.strip("/")
+        if endpoint == "symbol_search":
+            return _load("twelvedata_real_search_aapl") if q.get("symbol", "").upper() == "AAPL" else missing
+        name = _TD.get((endpoint, q.get("interval", "") if endpoint == "time_series" else ""))
+        return _load(name) if name and q.get("symbol") == "AAPL" else missing
+    if host == "www.alphavantage.co":
+        if not q.get("apikey", "").startswith(_DOCSHAPE_KEY):
+            return _load("keytest_alphavantage_bad_key")
+        fn = q.get("function", "")
+        if q.get("symbol") != "IBM":
+            return missing
+        if fn == "TIME_SERIES_INTRADAY":
+            return _load("alphavantage_real_intraday_ibm") if q.get("interval") == "5min" else missing
+        return _load(_AV[fn]) if fn in _AV else missing
+    if host == "api.massive.com":
+        if not request.headers.get("authorization", "").removeprefix("Bearer ").startswith(_DOCSHAPE_KEY):
+            return _load("keytest_polygon_401")
+        if p == "/v2/aggs/ticker/AAPL/prev":
+            return _load("polygon_docshape_prev_aapl")
+        if p.startswith("/v2/aggs/ticker/AAPL/range/1/day/"):
+            return _load("polygon_docshape_aggs_aapl_1d")
+        if p.startswith("/v2/aggs/ticker/AAPL/range/5/minute/"):
+            return _load("polygon_docshape_aggs_aapl_5m")
+        if p == "/v3/reference/tickers" and q.get("search", "").lower() == "apple":
+            return _load("polygon_docshape_tickers_search_apple")
+        return missing
+    if not q.get("apikey", "").startswith(_DOCSHAPE_KEY):
+        return _load("keytest_fmp_401")
+    name = _FMP.get(p.removeprefix("/stable/"))
+    if name and q.get("period") == "quarter":
+        return _load("fmp_docshape_402_premium")  # a free key is refused the quarterly view
+    ok = q.get("symbol") == "AAPL" or q.get("query", "").lower() == "apple"
+    return _load(name) if name and ok else missing
+
+
 # --- Phase 12: BT (10-year daily bars, recorded 2026-10-19 by scripts/record_phase12.py) ---
 ROUTES.update({
     ("/v8/finance/chart/AAPL", "10y", "1d"): "yahoo_chart_aapl_10y_1d",
@@ -1080,6 +1137,7 @@ ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
     _route_deribit,     # Deribit options
     _route_phase14,     # Yahoo and Tradier options
     _route_keyed,       # Finnhub and Alpaca news (keyed, doc-shaped)
+    _route_keyedmarket,  # Twelve Data, Alpha Vantage, Polygon, FMP (a key that does not start with docshape gets the 401)
     _route_phase13,     # research: quoteSummary modules, Nasdaq extras, SEC archives, FINRA, dividend events
     _route_llm,         # LLM gateway hosts and the Ollama port
     _route_key_tests,   # APIKEYS key tests

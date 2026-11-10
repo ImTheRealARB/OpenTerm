@@ -21,6 +21,8 @@ export const AI_PROVIDERS = [
   "openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini", "ollama",
 ] as const;
 /** Models the AI rows cycle through (any other id works via `SETTINGS AI MODEL <id>`). */
+/** Search providers for the AI's opt-in web access (SETTINGS AI WEB); keys live in APIKEYS. Keep equal to settings_store.AI_WEB_PROVIDERS. */
+export const AI_WEB_PROVIDERS = ["brave", "tavily", "searxng"] as const;
 export const AI_MODEL_CHOICES = ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_VISION_CHOICES = ["deepseek/deepseek-v4.1-flash", "anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "google/gemma-4-31b-it:free"] as const;
 export const AI_MODEL_RE = /^[A-Za-z0-9._:/-]{1,80}$/;
@@ -59,13 +61,15 @@ export interface Settings {
   /** Keybinding overrides: action -> chords (replaces that action's defaults). */
   keys: Record<string, string[]>;
   /** Phase 16: which model the AI panels call (OpenRouter by default; the key lives in APIKEYS, never here). */
-  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number] };
+  ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number]; /** Keep the redacted question and answer of each AI run next to the audit ledger (local only; off by default). */ storeText: boolean; web: boolean; webProvider: (typeof AI_WEB_PROVIDERS)[number] };
   /** "home" = a new session opens the HOME page; "layout" = it restores the saved workspace as before. */
   startup: Startup;
   /** Also show the ticker tape in the global top bar on every screen (HOME always has its own). */
   tape: boolean;
   /** Symbols on the tape, in order (TAPE ADD / TAPE DEL / TAPE RESET). */
   tapeSymbols: string[];
+  /** Preferred source per kind of data, tried first (SETTINGS SOURCE HISTORY NASDAQ): capability -> source name. The default order still backs it up. */
+  sources: Record<string, string>;
 }
 
 export const DEFAULTS: Settings = Object.freeze({
@@ -78,11 +82,14 @@ export const DEFAULTS: Settings = Object.freeze({
   chart: { range: "1Y", type: "CANDLE" },
   poll: { news: 60, movers: 60, crypto: 30, sources: 10 },
   keys: {},
-  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter" },
+  ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter", storeText: false, web: false, webProvider: "brave" },
   startup: "home",
   tape: false,
   tapeSymbols: [...TAPE_DEFAULT],
+  sources: {},
 }) as Settings;
+
+export const SOURCE_NAME_RE = /^[a-z][a-z0-9_]{0,39}$/;
 
 const ZONE_RE = /^(LOCAL|UTC|[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){1,2})$/;
 const ACTION_RE = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
@@ -168,12 +175,33 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
     if (oneOf(AI_PROVIDERS, ai.provider)) aiOut.provider = ai.provider;
     else errors.push("ai.provider");
   }
+  if (ai.storeText !== undefined) {
+    if (typeof ai.storeText === "boolean") aiOut.storeText = ai.storeText;
+    else errors.push("ai.storeText");
+  }
+  if (ai.web !== undefined) {
+    if (typeof ai.web === "boolean") aiOut.web = ai.web;
+    else errors.push("ai.web");
+  }
+  if (ai.webProvider !== undefined) {
+    if (oneOf(AI_WEB_PROVIDERS, ai.webProvider)) aiOut.webProvider = ai.webProvider;
+    else errors.push("ai.webProvider");
+  }
   if (r.ai !== undefined && !isObj(r.ai)) errors.push("ai");
 
   // tapeSymbols: a list of at most TAPE_MAX distinct, well-formed symbols (empty is allowed: an empty tape).
   const tapeOk =
     Array.isArray(r.tapeSymbols) && r.tapeSymbols.length <= TAPE_MAX && new Set(r.tapeSymbols).size === r.tapeSymbols.length &&
     r.tapeSymbols.every((x) => typeof x === "string" && TAPE_SYMBOL_RE.test(x));
+
+  // sources: capability -> source name. The backend checks the capability against its own table (unknown ones are refused there).
+  const sourcesOut: Record<string, string> = {};
+  if (isObj(r.sources)) {
+    for (const [cap, name] of Object.entries(r.sources)) {
+      if (/^[a-z][a-z0-9_]{0,39}$/.test(cap) && typeof name === "string" && SOURCE_NAME_RE.test(name)) sourcesOut[cap] = name;
+      else errors.push(`sources.${cap}`);
+    }
+  } else if (r.sources !== undefined) errors.push("sources");
 
   return {
     settings: {
@@ -190,6 +218,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
       startup: pick("startup", oneOf(STARTUPS, r.startup), r.startup as Startup, d.startup),
       tape: pick("tape", typeof r.tape === "boolean", r.tape as boolean, d.tape),
       tapeSymbols: pick("tapeSymbols", tapeOk, (r.tapeSymbols as string[])?.slice(), [...d.tapeSymbols]),
+      sources: sourcesOut,
     },
     errors,
   };
@@ -210,6 +239,8 @@ export function diffFromDefaults(s: Settings): Partial<Settings> {
       if (s.mode === "gui") out.mode = "gui";
     } else if (k === "keys") {
       if (Object.keys(s.keys).length) out.keys = s.keys;
+    } else if (k === "sources") {
+      if (Object.keys(s.sources).length) out.sources = s.sources;
     } else if (!same(s[k], DEFAULTS[k])) (out as Record<string, unknown>)[k] = s[k];
   }
   return out;

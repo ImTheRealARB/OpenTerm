@@ -56,7 +56,7 @@ interface Mode {
   anchor: "C" | "H" | "L" | "O";
 }
 
-export default function GP({ panelId, security, args }: FunctionProps) {
+export default function GP({ panelId, security, args, source }: FunctionProps) {
   const chartDefaults = useStore(settingsStore, (st) => st.chart);
   const p = useMemo(() => parseGpArgs(args, chartDefaults), [args, chartDefaults]);
   const symbol = security!.symbol;
@@ -131,8 +131,8 @@ export default function GP({ panelId, security, args }: FunctionProps) {
   useEffect(() => {
     let alive = true;
     setState((s) => ({ ...s, loading: true }));
-    const main = marketApi.history(symbol, p.range, p.interval);
-    const cmp = Promise.all(p.compare.map((c) => marketApi.history(c, p.range, p.interval).catch((e: ApiError) => e)));
+    const main = marketApi.history(symbol, p.range, p.interval, false, source);
+    const cmp = Promise.all(p.compare.map((c) => marketApi.history(c, p.range, p.interval, false, source).catch((e: ApiError) => e)));
     Promise.all([main, cmp])
       .then(([env, cs]) => {
         if (!alive) return;
@@ -152,7 +152,7 @@ export default function GP({ panelId, security, args }: FunctionProps) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- p.compare is tracked through compareKey (p changes identity every render); `reload` is the manual refetch trigger
-  }, [symbol, p.range, p.interval, compareKey, reload]);
+  }, [symbol, p.range, p.interval, compareKey, reload, source]);
 
   // Live: extend the last bar from ticks.
   const resolved = state.loaded?.bars.symbol;

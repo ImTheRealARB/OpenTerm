@@ -7,6 +7,8 @@ export interface View {
   fn?: string;
   security?: SecurityRef;
   args: string[];
+  /** Data source pinned for this view by `SRC=<name>` (lower case, as the API spells it). Absent = the default hierarchy. */
+  source?: string;
 }
 
 export interface PanelState {

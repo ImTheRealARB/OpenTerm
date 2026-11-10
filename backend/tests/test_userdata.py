@@ -16,7 +16,9 @@ STATE = {
 
 # Tables each migration creates, by schema version (independent of db.py's SQL, so a renamed table fails here).
 TABLES_BY_VERSION = {1: {"cache"}, 2: {"kv"}, 3: {"layouts"}, 4: {"history"}, 5: {"watchlists"}, 6: {"portfolios"},
-                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}, 10: {"local_bars"}, 11: {"news_alerts"}, 12: {"iv_snapshots"}, 13: {"ai_runs", "theses"}, 14: {"ai_ledger"}, 15: {"deliveries"}, 16: set()}
+                     7: {"alerts"}, 8: {"jobs"}, 9: {"strategies", "bt_runs"}, 10: {"local_bars"}, 11: {"news_alerts"}, 12: {"iv_snapshots"}, 13: {"ai_runs", "theses"}, 14: {"ai_ledger"}, 15: {"deliveries"}, 16: set(),
+                     17: {"ai_ledger_text"}, 18: {"journal_trades", "journal_imports"},
+                     19: {"orders_log", "orders_imported"}}
 # Migrations that add a COLUMN to an existing table (not a new table): version -> [(table, column)]. The upgrade test below
 # removes these columns again so that the migration has something to add (otherwise ALTER TABLE ADD COLUMN would fail
 # with "duplicate column name" on a database stamped with the older version).

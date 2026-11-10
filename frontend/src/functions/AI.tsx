@@ -4,7 +4,7 @@
  * data, UNSOURCED NUMBERS for figures no tool returned. AI output is model output, not data. Keys never reach this code: the backend holds them.
  * `AI BT <idea>` drafts a backtest rule (validated by the BT parser, shown, never run by the AI: B puts the BT command on the command line).
  * `AI CHART` sends the chart of the newest GP panel to a vision model. Both answers are labelled model output.
- * `AI FILING <SYM> <question>` / `AI FILING <SYM> DRIVERS` (US filers): the backend searches the newest 10-K / 10-Q, the model answers from the passages
+ * `AI FILING <SYM> <question>` / `AI FILING <SYM> DRIVERS|GUIDANCE|CHAIN` (US filers): the backend searches the newest 10-K / 10-Q, the model answers from the passages
  * and quotes them, and every quote is checked word for word against the filing: VERIFIED with its section, or UNVERIFIED and left out of the summary.
  * `AI DOC FILING <SYM> [FORM]` or U (upload a TXT, CSV, HTML, DOCX, XLSX or PDF) loads one document; questions then use only its text, with chunk
  * citations (`AI DOC OFF` goes back to market data). Keys: I / Enter type a question, Enter sends, Esc cancels a running answer (or leaves the input), X clears the chat.
@@ -16,11 +16,12 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { gauges } from "../perf/metrics";
 import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
-import { replaceView } from "../state/workspace";
+import { setPendingDraft } from "../bt/draftHandoff";
+import { navigate, replaceView } from "../state/workspace";
 import { aiArgs } from "./aiArgs";
 import { aiApi, isAbort, streamPost } from "../net/aiApi";
 import type { RawReply } from "../net/core";
-import { citeSegments, newTurn, reduceTurn, stopTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
+import { citeSegments, codeDraftStatus, newTurn, numberedLines, reduceTurn, stopTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
 import type { FunctionProps } from "./registry";
 import { watchPanelGone } from "./panelGoneWatch";
 import { usePanelMemory } from "./usePanelMemory";
@@ -35,6 +36,9 @@ interface DocCard {
   chunks: number;
   chars: number;
   preview: string;
+  /** Text came from OCR of a scanned PDF. */
+  ocr?: boolean;
+  note?: string;
 }
 
 export function Answer({ text, running }: { text: string; running: boolean }) {
@@ -119,6 +123,20 @@ function TurnView({ t }: { t: Turn }) {
           <div className="dim">B PUTS THE COMMAND ON THE COMMAND LINE, THEN ENTER RUNS IT IN BT</div>
         </div>
       )}
+      {t.codeDraft && (
+        <div data-testid="ai-code-draft">
+          <div className="warn">DRAFT, NOT RUN: {t.codeDraft.name}</div>
+          <pre className="dim" style={{ margin: 0, whiteSpace: "pre-wrap" }} data-testid="ai-code-draft-code">
+            {numberedLines(t.codeDraft.code).join("\n")}
+          </pre>
+          <div className={t.codeDraft.ok ? "acc" : "err"} data-testid="ai-code-draft-status">
+            {codeDraftStatus(t.codeDraft)}
+            {t.codeDraft.line ? ` (LINE ${t.codeDraft.line})` : ""}
+          </div>
+          <div className="warn">{t.codeDraft.note}</div>
+          {t.codeDraft.code && <div className="dim">E OPENS IT IN BT EDIT {t.codeDraft.name.toUpperCase()} UNSAVED, THEN CTRL+S SAVES IT</div>}
+        </div>
+      )}
       {t.draftError && (
         <div className="warn" data-testid="ai-draft-error">
           {t.draftError}
@@ -172,10 +190,10 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, []);
 
   const send = useCallback(
-    async (question: string, mode: "ask" | "bt" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean }) => {
+    async (question: string, mode: "ask" | "bt" | "btcode" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" }) => {
       const { turns: cur, ai: cfg, doc: curDoc } = state.current;
       if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
-      const label = mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : mode === "filing" ? `AI FILING ${filing?.symbol ?? ""}` : "";
+      const label = mode === "btcode" ? "AI BT CODE" : mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : mode === "filing" ? `AI FILING ${filing?.symbol ?? ""}` : "";
       const shown = label ? `${label} ${question}`.trim() : question;
       const shot = mode === "chart" ? latestChartShot() : null;
       const image = shot?.shot() ?? null;
@@ -210,12 +228,12 @@ export default function AI({ panelId, args }: FunctionProps) {
       try {
         const asking = mode === "ask" && curDoc;
         const url =
-          mode === "bt" ? "/api/ai/bt" : mode === "auto" ? "/api/ai/auto" : mode === "chart" ? "/api/ai/chart" : mode === "filing" ? "/api/ai/filing" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
+          mode === "btcode" ? "/api/ai/bt_code" : mode === "bt" ? "/api/ai/bt" : mode === "auto" ? "/api/ai/auto" : mode === "chart" ? "/api/ai/chart" : mode === "filing" ? "/api/ai/filing" : asking ? "/api/ai/doc/ask" : "/api/ai/chat";
         const payload =
-          mode === "bt"
+          mode === "bt" || mode === "btcode"
             ? { idea: question, model: cfg.model, provider: cfg.provider }
             : mode === "filing" && filing
-              ? { symbol: filing.symbol, ...(filing.form ? { form: filing.form } : {}), ...(filing.drivers ? { mode: "drivers" } : { question }), model: cfg.model, provider: cfg.provider }
+              ? { symbol: filing.symbol, ...(filing.form ? { form: filing.form } : {}), ...(filing.preset ? { mode: filing.preset } : filing.drivers ? { mode: "drivers" } : { question }), model: cfg.model, provider: cfg.provider }
               : mode === "auto"
               ? { hypothesis: question, model: cfg.model, provider: cfg.provider }
               : mode === "chart"
@@ -269,7 +287,7 @@ export default function AI({ panelId, args }: FunctionProps) {
       return;
     }
     setDoc(j.doc);
-    setNote({ text: `DOCUMENT LOADED: ${j.doc.name} · ${j.doc.kind.toUpperCase()} · ${j.doc.chunks} CHUNKS · ${j.doc.chars.toLocaleString("en-US")} CHARACTERS · ASK ABOUT IT; ONLY ITS TEXT IS USED`, cls: "up" });
+    setNote({ text: `DOCUMENT LOADED: ${j.doc.name} · ${j.doc.kind.toUpperCase()} · ${j.doc.chunks} CHUNKS · ${j.doc.chars.toLocaleString("en-US")} CHARACTERS${j.doc.ocr ? " · " + (j.doc.note ?? "OCR TEXT (MAY CONTAIN ERRORS)") : ""} · ASK ABOUT IT; ONLY ITS TEXT IS USED`, cls: "up" });
   };
   const loadFiling = async (symbol: string, form: string) => {
     setNote({ text: `FETCHING ${symbol} ${form} FROM SEC...`, cls: "dim" });
@@ -309,7 +327,7 @@ export default function AI({ panelId, args }: FunctionProps) {
     } else if (a.mode === "docfiling") {
       void loadFiling(a.symbol, a.form);
     } else if (a.mode === "filing") {
-      void send(a.text, "filing", { symbol: a.symbol, form: a.form, drivers: a.drivers });
+      void send(a.text, "filing", { symbol: a.symbol, form: a.form, drivers: a.drivers, preset: a.preset });
     } else if (a.mode === "bad") {
       setTurns([reduceTurn(newTurn("AI " + args.join(" ")), { type: "error", kind: "usage", text: a.error })]);
     } else if (a.mode !== "ask" || a.text) {
@@ -341,6 +359,13 @@ export default function AI({ panelId, args }: FunctionProps) {
           prefillCommand(d.command);
           return true;
         }
+        if (e.key === "e" || e.key === "E") {
+          const d = [...state.current.turns].reverse().find((t) => t.codeDraft?.code)?.codeDraft;
+          if (!d) return false;
+          setPendingDraft(d.name, d.code);
+          navigate(panelId, { fn: "BT", args: ["EDIT", d.name] });
+          return true;
+        }
         if (e.key === "i" || e.key === "I" || e.key === "Enter") {
           box.current?.focus();
           return true;
@@ -362,12 +387,13 @@ export default function AI({ panelId, args }: FunctionProps) {
         <span className="dim">
           {" "}
           · {ai.provider.toUpperCase()}
-          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI AUTO HYPOTHESIS · AI CHART · AI FILING SYMBOL QUESTION
+          {spend ? ` · US$${spend.today.toFixed(2)} OF US$${spend.cap.toFixed(2)} TODAY` : ""} · MODEL OUTPUT, NOT DATA · I ASK · ESC CANCEL · X CLEAR · U DOC · AI BT IDEA · AI BT CODE IDEA · AI AUTO HYPOTHESIS · AI CHART · AI FILING SYMBOL QUESTION|DRIVERS|GUIDANCE|CHAIN
         </span>
       </div>
       {doc && (
         <div className="line" data-testid="ai-doc">
-          <span className="acc">DOC</span> {doc.name} <span className="dim">· {doc.kind.toUpperCase()} · {doc.chunks} CHUNKS · AI DOC OFF UNLOADS</span>
+          <span className="acc">DOC</span> {doc.name}
+          {doc.ocr && <span className="warn" data-testid="ai-doc-ocr"> · {doc.note ?? "OCR TEXT (MAY CONTAIN ERRORS)"}</span>} <span className="dim">· {doc.kind.toUpperCase()} · {doc.chunks} CHUNKS · AI DOC OFF UNLOADS</span>
         </div>
       )}
       {note && (

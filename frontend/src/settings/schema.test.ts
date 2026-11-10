@@ -180,7 +180,7 @@ describe("command arguments", () => {
 
 describe("AI settings", () => {
   it("defaults to the Phase 16 models and keeps valid ai fields, dropping bad ones", () => {
-    expect(DEFAULTS.ai).toEqual({ model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter" });
+    expect(DEFAULTS.ai).toEqual({ model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter", storeText: false, web: false, webProvider: "brave" });
     expect(normalize({ ai: { model: "anthropic/claude-sonnet-5.5", provider: "anthropic" } }).settings.ai).toEqual({ ...DEFAULTS.ai, model: "anthropic/claude-sonnet-5.5", provider: "anthropic" });
     const bad = normalize({ ai: { model: "bad model!", provider: "skynet", visionModel: 5 } });
     expect(bad.settings.ai).toEqual(DEFAULTS.ai);
@@ -190,6 +190,42 @@ describe("AI settings", () => {
   it("stores only a changed ai block", () => {
     expect(diffFromDefaults(DEFAULTS).ai).toBeUndefined();
     expect(diffFromDefaults({ ...DEFAULTS, ai: { ...DEFAULTS.ai, model: "x/y" } }).ai).toEqual({ ...DEFAULTS.ai, model: "x/y" });
+  });
+
+  it("keeps ai.storeText through normalize and diffFromDefaults, rejecting a non-boolean", () => {
+    expect(normalize({ ai: { storeText: true } }).settings.ai.storeText).toBe(true);
+    const bad = normalize({ ai: { storeText: "yes" } });
+    expect(bad.settings.ai.storeText).toBe(false);
+    expect(bad.errors).toContain("ai.storeText");
+    expect(diffFromDefaults({ ...DEFAULTS, ai: { ...DEFAULTS.ai, storeText: true } }).ai).toEqual({ ...DEFAULTS.ai, storeText: true });
+  });
+
+  it("SETTINGS AI STORETEXT ON|OFF", () => {
+    const on = settingsArgs(["AI", "STORETEXT", "ON"], DEFAULTS);
+    expect(on && on.ok && on.next.ai.storeText).toBe(true);
+    const off = settingsArgs(["AI", "STORETEXT", "OFF"], { ...DEFAULTS, ai: { ...DEFAULTS.ai, storeText: true } });
+    expect(off && off.ok && off.next.ai.storeText).toBe(false);
+    expect(settingsArgs(["AI", "STORETEXT", "MAYBE"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["AI", "STORETEXT"], DEFAULTS)).toMatchObject({ ok: false });
+    const reset = settingsArgs(["AI", "RESET"], { ...DEFAULTS, ai: { ...DEFAULTS.ai, storeText: true } });
+    expect(reset && reset.ok && reset.next.ai.storeText).toBe(false);
+  });
+
+  it("SETTINGS AI WEB ON|OFF and WEB PROVIDER (off by default, warns when turned on)", () => {
+    expect(DEFAULTS.ai.web).toBe(false);
+    const on = settingsArgs(["AI", "WEB", "ON"], DEFAULTS);
+    expect(on && on.ok && on.next.ai.web).toBe(true);
+    expect(on && on.ok && on.message).toContain("STRANGERS");
+    const off = settingsArgs(["AI", "WEB", "OFF"], { ...DEFAULTS, ai: { ...DEFAULTS.ai, web: true } });
+    expect(off && off.ok && off.next.ai.web).toBe(false);
+    const prov = settingsArgs(["AI", "WEB", "PROVIDER", "TAVILY"], DEFAULTS);
+    expect(prov && prov.ok && prov.next.ai.webProvider).toBe("tavily");
+    expect(settingsArgs(["AI", "WEB", "PROVIDER", "GOOGLE"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["AI", "WEB", "MAYBE"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["AI", "WEB"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(normalize({ ai: { web: "yes", webProvider: "bing" } }).errors.length).toBeGreaterThan(0);
+    const reset = settingsArgs(["AI", "RESET"], { ...DEFAULTS, ai: { ...DEFAULTS.ai, web: true } });
+    expect(reset && reset.ok && reset.next.ai.web).toBe(false);
   });
 
   it("SETTINGS AI MODEL / VISION / PROVIDER / RESET", () => {

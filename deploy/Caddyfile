@@ -1,0 +1,14 @@
+# Caddy gets and renews the HTTPS certificate for {$OPENTERM_DOMAIN} by itself (ports 80 and 443 must be reachable from the internet).
+{$OPENTERM_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# The WebSocket (/ws) is proxied with no extra setting. Caddy sets X-Forwarded-For itself; OpenTerm never uses it for an access decision.
+	reverse_proxy openterm:8000
+}

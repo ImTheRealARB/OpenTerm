@@ -1,0 +1,30 @@
+{
+  "_label": "DOC-SHAPED FIXTURE, NOT A RECORDING. Written from the IBKR Client Portal Web API docs (/iserver/auth/status, /portfolio/accounts, /portfolio/{id}/positions/{page}, /portfolio/{id}/ledger); invented accounts, quantities and prices.",
+  "auth": {"authenticated": true, "connected": true, "competing": false},
+  "accounts": [{"id": "U1111111", "accountId": "U1111111", "currency": "USD", "type": "INDIVIDUAL"}, {"id": "U2222222", "accountId": "U2222222", "currency": "EUR", "type": "INDIVIDUAL"}],
+  "positions": {
+    "U1111111": [
+      {"acctId": "U1111111", "conid": 265598, "contractDesc": "AAPL", "ticker": "AAPL", "position": 25.0, "mktPrice": 230.0, "currency": "USD", "avgCost": 150.5, "avgPrice": 150.5, "assetClass": "STK", "listingExchange": "NASDAQ"},
+      {"acctId": "U1111111", "conid": 76792991, "contractDesc": "BRK B", "ticker": "BRK B", "position": 3.0, "currency": "USD", "avgPrice": 400.0, "assetClass": "STK", "listingExchange": "NYSE"},
+      {"acctId": "U1111111", "conid": 4815747, "contractDesc": "VOD", "ticker": "VOD", "position": 1000.0, "currency": "GBP", "avgPrice": 72.5, "assetClass": "STK", "listingExchange": "LSE"},
+      {"acctId": "U1111111", "conid": 111, "contractDesc": "AAPL DEC2026 250 C", "ticker": "AAPL", "position": 2.0, "currency": "USD", "avgPrice": 5.0, "assetClass": "OPT", "listingExchange": "SMART"},
+      {"acctId": "U1111111", "conid": 222, "contractDesc": "XYZ", "ticker": "XYZ", "position": 5.0, "currency": "ZZZ", "avgPrice": 5.0, "assetClass": "STK", "listingExchange": "MOON"}
+    ],
+    "U2222222": [
+      {"acctId": "U2222222", "conid": 14094, "contractDesc": "SAP", "ticker": "SAP", "position": 12.0, "currency": "EUR", "avgPrice": 180.0, "assetClass": "STK", "listingExchange": "IBIS"},
+      {"acctId": "U2222222", "conid": 265598, "contractDesc": "AAPL", "ticker": "AAPL", "position": 5.0, "currency": "USD", "avgPrice": 200.0, "assetClass": "STK", "listingExchange": "NASDAQ"},
+      {"acctId": "U2222222", "conid": 333, "contractDesc": "OLD", "ticker": "OLD", "position": 0.0, "currency": "EUR", "avgPrice": 1.0, "assetClass": "STK", "listingExchange": "IBIS"}
+    ]
+  },
+  "ledger": {
+    "U1111111": {
+      "USD": {"currency": "USD", "cashbalance": 1500.25, "settledcash": 1500.25, "netliquidationvalue": 12000.0, "unrealizedpnl": 300.0},
+      "GBP": {"currency": "GBP", "cashbalance": 200.0, "settledcash": 200.0, "netliquidationvalue": 200.0, "unrealizedpnl": 0.0},
+      "BASE": {"currency": "BASE", "cashbalance": 1750.0, "settledcash": 1750.0, "netliquidationvalue": 12300.0, "unrealizedpnl": 300.0}
+    },
+    "U2222222": {
+      "EUR": {"currency": "EUR", "cashbalance": 50.0, "settledcash": 50.0, "netliquidationvalue": 2200.0, "unrealizedpnl": 10.0},
+      "BASE": {"currency": "BASE", "cashbalance": 50.0, "settledcash": 50.0, "netliquidationvalue": 2200.0, "unrealizedpnl": 10.0}
+    }
+  }
+}

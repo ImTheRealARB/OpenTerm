@@ -5,17 +5,18 @@ import type {
 } from "./types";
 
 export const marketApi = {
-  quotes: (symbols: string[]) =>
-    get<{ results: Record<string, QuoteResult> }>("/api/quote", { symbols: symbols.join(",") }, TTL.s2),
-  history: (symbol: string, range?: string, interval?: string, fresh = false) =>
-    get<Envelope<BarsAdj>>("/api/history", { symbol, range, interval }, TTL.m1, fresh),
+  // `source` pins one data source (SRC=): the backend asks only that source and names it in an error.
+  quotes: (symbols: string[], source?: string) =>
+    get<{ results: Record<string, QuoteResult> }>("/api/quote", { symbols: symbols.join(","), source }, TTL.s2),
+  history: (symbol: string, range?: string, interval?: string, fresh = false, source?: string) =>
+    get<Envelope<BarsAdj>>("/api/history", { symbol, range, interval, source }, TTL.m1, fresh),
   /** How many days back each minute candle length reaches for this symbol right now (the deepest source that is on decides). */
   historyLimits: (symbol: string) =>
     get<{ symbol: string; intraday_days: Record<string, number>; source: string[] }>("/api/history/limits", { symbol }, TTL.s30),
   search: (q: string) => get<Envelope<SearchHit[]>>("/api/search", { q }, TTL.m10),
-  profile: (symbol: string) => get<Envelope<unknown>>("/api/profile", { symbol }, TTL.m10),
+  profile: (symbol: string, source?: string) => get<Envelope<unknown>>("/api/profile", { symbol, source }, TTL.m10),
   // `fresh` (F5) skips this client's short cache; the backend still serves its SWR envelope.
-  news: (q: { symbol?: string; q?: string; section?: string; limit?: string; region?: string; sector?: string; commodity?: string }, fresh = false) =>
+  news: (q: { symbol?: string; q?: string; section?: string; limit?: string; region?: string; sector?: string; commodity?: string; source?: string }, fresh = false) =>
     get<Envelope<NewsPayload>>("/api/news", q, TTL.s30, fresh),
   movers: (fresh = false) => get<Envelope<MoversPayload>>("/api/movers", undefined, TTL.s30, fresh),
   crypto: (vs: string, fresh = false) => get<Envelope<{ vs: string; coins: Coin[] }>>("/api/crypto", { vs }, TTL.s15, fresh),

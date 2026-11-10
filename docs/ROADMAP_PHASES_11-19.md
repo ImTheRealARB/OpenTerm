@@ -1,6 +1,6 @@
 # Roadmap: Phases 11-19
 
-Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 DONE 2026-10-18 (live smoke of SWARM and AI AUTO done); Phases 17 and 18 PAUSED by the user on 2026-10-18; Phase 17 BUILT 2026-11-03 (`docs/specs/PHASE_17.md`), Phase 18 still paused; order is 15, 16, 19). **Scope decided 2026-10-19:** full scope minus
+Status: **in progress** (Phases 11, 12, 13, 14 and 15 done, Phase 15 including the read-only Kite Connect source, whose real recordings are still pending the user's Kite key; Phase 16 DONE 2026-10-18 (live smoke of SWARM and AI AUTO done); Phase 17 BUILT 2026-11-03 (`docs/specs/PHASE_17.md`), its MCP client, `JRNL` and API/SDK added 2026-11-10; Phase 18 BUILT 2026-11-10 (paper and live `ORD`, read-only `SYNC`; not yet tried against real broker accounts); Phase 19 DONE and merged). **Scope decided 2026-10-19:** full scope minus
 paid-only data (`TRAN`, `SEG` removed); free sign-up keys allowed; OpenRouter (DeepSeek default) is the only paid
 service; roadmap defaults pre-approved. Details: HANDOFF.md "Resume here".
 
@@ -181,7 +181,7 @@ with and without its key (`KEY REQUIRED` path), bench unchanged.
 for the surface render recorded.
 
 ## Phase 15: Risk, quant library, alphas (DONE 2026-10-18)
-**Built and closed 2026-10-18** (real-app smoke run, live keyless `FACT` / `ALPHA TOP100` / `RISK` checks and `ALPHA` Enter done; bench 29/29; KITE read-only, real recordings pending; spec `docs/specs/PHASE_15.md`, steps 1-8; bench budgets in `docs/PERFORMANCE.md`). Kite is built read-only; its fixtures are doc-shaped, a real recording is pending a key (`scripts/record_phase15.py --kite`). `ALPHA` ships 29 factors; the other ~450 of the 478 are not ported.
+**Built and closed 2026-10-18** (real-app smoke run, live keyless `FACT` / `ALPHA TOP100` / `RISK` checks and `ALPHA` Enter done; bench 29/29; KITE read-only, real recordings pending; spec `docs/specs/PHASE_15.md`, steps 1-8; bench budgets in `docs/PERFORMANCE.md`). Kite is built read-only; its fixtures are doc-shaped, a real recording is pending a key (`scripts/record_phase15.py --kite`). `ALPHA` shipped 29 factors here; 2026-11-10 added the rest (435 ported, 43 skipped with reasons in `docs/ALPHA_SKIPPED.md`); the 29 stay the default family `core`.
 
 | Function | What |
 |---|---|
@@ -222,7 +222,7 @@ token budget recorded, no key = `KEY REQUIRED`, and keys never reach the fronten
 
 ## Phase 17: Delivery, MCP, API
 
-**PAUSED (2026-10-18):** the user does not need real-time alerts or delivery. Do not spec or build unless asked.
+**BUILT:** MCP server, alert delivery and `BRIEF` on 2026-11-03; MCP client, `JRNL` and the Python SDK (`sdk/python`) on 2026-11-10.
 | Item | What |
 |---|---|
 | Server-side alerts | Backend evaluates `ALRT` rules so they fire with the tab closed; frontend alerts stay as the fast path |
@@ -237,7 +237,7 @@ token budget recorded, no key = `KEY REQUIRED`, and keys never reach the fronten
 
 ## Phase 18: Brokers and orders
 
-**PAUSED (2026-10-18):** same reason as Phase 17. Phase 19 has no dependency on 17 or 18.
+**BUILT 2026-11-10** (unpaused by the user): all three steps below. Broker paths use doc-shaped fixtures; real-account runs are pending the user's keys.
 In this order, each one a separate approval:
 1. **Paper trading** (Alpaca paper): `ORD` ticket, blotter, fills into `PORT`.
 2. **Read-only sync**: Zerodha Kite holdings, IBKR via TWS/Gateway, Alpaca live account read.
@@ -246,7 +246,7 @@ In this order, each one a separate approval:
    Paper vs live decided by a structural broker check (host or account type), never a flag the AI can set.
 
 ## Phase 19: Charting, discovery, macro, crypto
-**Status: DONE (2026-10-18).** Steps 1-10 done on branch `claude/openterm-phase-19-step-4-c5c695` (`UNLK` NOT BUILT: DefiLlama emissions are paid, HTTP 402). Bench rerun on Windows and live keyless smoke done (spec Progress log). Not merged to `main`. See HANDOFF.md.
+**Status: DONE (2026-10-18).** Steps 1-10 done on branch `claude/openterm-phase-19-step-4-c5c695` (`UNLK` NOT BUILT: DefiLlama emissions are paid, HTTP 402). Bench rerun on Windows and live keyless smoke done (spec Progress log). Merged to `main`.
 
 | Area | Items |
 |---|---|
@@ -266,12 +266,12 @@ In this order, each one a separate approval:
 1. **Strategy format:** decided and built in Phase 12 (Vibe's `SignalEngine` contract + a rule shortcut).
 2. **Default AI model** on OpenRouter, and the daily spend cap.
 3. **Market priority:** US first, or US + India together (the India cost model and Zerodha sync are ready to port).
-4. **Live orders:** Phase 18 is paused by the user (2026-10-18); decide when it is unpaused.
+4. **Live orders:** built 2026-11-10 behind a mandate, typed confirm and kill switch (`ORD`).
 5. **Paid keys:** decided 2026-10-19: skip them (`TRAN`, `SEG` removed).
 
 ## Gaps vs OpenBB with no phase (2026-10-18)
-Python SDK / DataFrame API, third-party extension system, user-facing provider switch (same command on Yahoo, FMP, Polygon),
-hosted workspace. The SDK and REST API would build on the paused Phase 17 API work. Decide before unpausing 17.
+All four built 2026-11-10: Python SDK (`sdk/python`), extensions (`EXT`), per-command source pin (`SRC=`, `SETTINGS SOURCE`),
+and self-hosted remote mode (`OPENTERM_REMOTE=1`, `docs/HOSTING.md`).
 
 ## Not reachable even with keys
 See the end of [FEATURE_GAP.md](FEATURE_GAP.md).

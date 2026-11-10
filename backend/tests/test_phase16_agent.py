@@ -105,7 +105,7 @@ def test_registry_is_read_only_with_schemas():
     for name, t in tools.REGISTRY.items():
         assert t.description and t.parameters["type"] == "object"
         assert not any(w in name.lower() for w in FORBIDDEN), name
-        assert t.method in ("GET", "POST") and (t.path.startswith("/api/") or t.local is not None)
+        assert t.method in ("GET", "POST") and (t.path.startswith("/api/") or t.local is not None or t.web_only)
         assert not any(w in t.path.lower() for w in FORBIDDEN), t.path
     specs = tools.openai_tools()
     assert all(s["type"] == "function" and s["function"]["parameters"]["type"] == "object" for s in specs)

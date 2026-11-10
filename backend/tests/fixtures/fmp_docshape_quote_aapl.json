@@ -1,0 +1,25 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Financial Modeling Prep /stable documentation (site.financialmodelingprep.com/developer/docs): no FMP key was available to record it, and field names were not checked against a live key. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": [
+  {
+   "symbol": "AAPL",
+   "name": "Apple Inc.",
+   "price": 347.16,
+   "changePercentage": -1.0066,
+   "change": -3.53,
+   "volume": 52000000,
+   "dayLow": 346.89,
+   "dayHigh": 353.78,
+   "yearHigh": 355.38,
+   "yearLow": 243.42,
+   "marketCap": 5100000000000,
+   "priceAvg50": 330.1,
+   "priceAvg200": 300.2,
+   "exchange": "NASDAQ",
+   "open": 351.26,
+   "previousClose": 350.69,
+   "timestamp": 1794321000
+  }
+ ]
+}

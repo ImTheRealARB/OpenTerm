@@ -1,0 +1,9 @@
+# Example OpenTerm extension. Copy this folder to <data dir>/extensions/hello/ (the data dir is the folder that holds
+# openterm.db), then in OpenTerm type:  EXT LIST   ->   EXT ENABLE hello   ->   EXT hello   or   EXT hello wave
+name: hello          # must equal the folder name: lowercase letters, digits, _ and -
+version: 0.1.0
+author: OpenTerm contributors
+license: MIT
+description: Example extension - a table route, a series route and one read-only AI tool. Shows nothing but computed demo values.
+adds: [route, tools]   # what it adds: provider, tools, route
+entry: extension.py    # optional, defaults to extension.py

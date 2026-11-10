@@ -1,0 +1,992 @@
+diff --git a/backend/openterm/api.py b/backend/openterm/api.py
+index fd956fc..8105dde 100644
+--- a/backend/openterm/api.py
++++ b/backend/openterm/api.py
+@@ -1036,7 +1036,8 @@ async def bt_import_delete(request: Request, symbol: str):
+ 
+ @router.get("/bt/runs/{run_id}/export")
+ async def bt_run_export(request: Request, run_id: str, fmt: str = "csv", part: str = "trades"):
+-    from .bt import export
++    from .bt import export, export_report
++    from .bt.export_mql5 import mql5_expert
+     from .bt.store import BtError
+ 
+     try:
+@@ -1045,16 +1046,22 @@ async def bt_run_export(request: Request, run_id: str, fmt: str = "csv", part: s
+             if part not in export.PARTS:
+                 raise BtError("bad_request", f"PART MUST BE {', '.join(export.PARTS).upper()}")
+             body, name = export.run_csv(run, part), f"BT_{run_id}_{part}.csv"
+-        elif fmt == "pine":
++        elif fmt in ("pine", "mql5"):
+             if not run.get("rule"):
+-                raise BtError("bad_request", "PINE EXPORT NEEDS A RULE STRATEGY",
++                raise BtError("bad_request", f"{fmt.upper()} EXPORT NEEDS A RULE STRATEGY",
+                               detail="PYTHON STRATEGIES CANNOT BE TRANSLATED FAITHFULLY: EXPORT CSV, OR WRITE IT AS A RULE")
+             lab = run["labels"] or {}
+-            body = export.pine_script(run["rule"], short=bool(lab.get("short")), cash=float(run["config"].get("initial_cash", 100_000)),
+-                                      fees_bps=float(lab.get("fees_bps") or 0), symbols=run["symbols"], interval=str(run["interval"]))
+-            name = f"BT_{run_id}.pine"
++            translate = export.pine_script if fmt == "pine" else mql5_expert
++            body = translate(run["rule"], short=bool(lab.get("short")), cash=float(run["config"].get("initial_cash", 100_000)),
++                             fees_bps=float(lab.get("fees_bps") or 0), symbols=run["symbols"], interval=str(run["interval"]))
++            name = f"BT_{run_id}.pine" if fmt == "pine" else f"BT_{run_id}.mq5"
++        elif fmt in ("pdf", "xlsx"):
++            build = export_report.run_pdf if fmt == "pdf" else export_report.run_xlsx
++            data = await asyncio.to_thread(build, run)  # blocking and CPU-bound: off the event loop
++            mime = export_report.PDF_TYPE if fmt == "pdf" else export_report.XLSX_TYPE
++            return Response(data, media_type=mime, headers={"Content-Disposition": f'attachment; filename="BT_{run_id}.{fmt}"'})
+         else:
+-            raise BtError("bad_request", "FMT MUST BE CSV OR PINE")
++            raise BtError("bad_request", "FMT MUST BE CSV, PINE, MQL5, PDF OR XLSX")
+     except BtError as e:
+         return bt_error(e)
+     return Response(body, media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+diff --git a/backend/openterm/bt/export_mql5.py b/backend/openterm/bt/export_mql5.py
+new file mode 100644
+index 0000000..c53522a
+--- /dev/null
++++ b/backend/openterm/bt/export_mql5.py
+@@ -0,0 +1,154 @@
++"""BT EXPORT as a MetaTrader 5 Expert Advisor (MQL5) for a RULE strategy: the same rule coverage as the Pine export
++(`export.pine_script`). Python strategies are refused by the caller (code cannot be translated faithfully, spec decision J).
++The signal is read on the last closed bar and traded at the new bar's open, like OpenTerm. The text is a translation,
++never compiled or run here."""
++
++from __future__ import annotations
++
++from .job import HEADLINE
++from .rules import BoolOp, Cmp, Term, parse
++
++_TF = {"1D": "PERIOD_D1", "1W": "PERIOD_W1"}
++_CMP = {">": "GT", "<": "LT", ">=": "GE", "<=": "LE"}
++_PRICE = {"CLOSE": "iClose", "OPEN": "iOpen", "HIGH": "iHigh", "LOW": "iLow"}
++_Cross = tuple[str, str, str, str]
++
++
++def _term(t: Term, shift: str, used: set[tuple[str, int]]) -> str:
++    n = int(t.n)
++    if t.kind == "NUM":
++        return f"{t.n:g}"
++    if t.kind == "FIELD":
++        return f"(double)iVolume(_Symbol, TF, {shift})" if t.name == "VOLUME" else f"{_PRICE[t.name]}(_Symbol, TF, {shift})"
++    if t.kind in ("SMA", "EMA", "RSI"):
++        used.add((t.kind.lower(), n))
++        return f"BufValue(h_{t.kind.lower()}{n}, {shift})"
++    return {"HIGH": f"HighestHigh({n}, {shift})", "LOW": f"LowestLow({n}, {shift})", "RET": f"Ret({n}, {shift})"}[t.kind]
++
++
++def _expr(node, cross: list[_Cross], used: set[tuple[str, int]]) -> str:
++    """MQL5 boolean on the last closed bar; CROSS> / CROSS< become global flags updated once per bar (as in the Pine export)."""
++    if isinstance(node, BoolOp):
++        return "(" + f" {'&&' if node.op == 'AND' else '||'} ".join(_expr(x, cross, used) for x in node.items) + ")"
++    assert isinstance(node, Cmp)
++    if node.op in ("CROSS>", "CROSS<"):
++        args = ", ".join(_term(t, s, used) for t, s in ((node.left, "1"), (node.left, "2"), (node.right, "1"), (node.right, "2")))
++        up, down = ("CrossUp", "CrossDown") if node.op == "CROSS>" else ("CrossDown", "CrossUp")
++        cross.append((f"cross{len(cross)}", up, args, down))
++        return cross[-1][0]
++    return f"{_CMP[node.op]}({_term(node.left, '1', used)}, {_term(node.right, '1', used)})"
++
++
++_HELPERS = """\
++bool GT(double a, double b) { return a != EMPTY_VALUE && b != EMPTY_VALUE && a > b; }
++bool LT(double a, double b) { return a != EMPTY_VALUE && b != EMPTY_VALUE && a < b; }
++bool GE(double a, double b) { return a != EMPTY_VALUE && b != EMPTY_VALUE && a >= b; }
++bool LE(double a, double b) { return a != EMPTY_VALUE && b != EMPTY_VALUE && a <= b; }
++bool Known(double a1, double a2, double b1, double b2) { return a1 != EMPTY_VALUE && a2 != EMPTY_VALUE && b1 != EMPTY_VALUE && b2 != EMPTY_VALUE; }
++bool CrossUp(double a1, double a2, double b1, double b2)   { return Known(a1, a2, b1, b2) && a1 > b1 && a2 <= b2; }
++bool CrossDown(double a1, double a2, double b1, double b2) { return Known(a1, a2, b1, b2) && a1 < b1 && a2 >= b2; }
++
++double BufValue(int handle, int shift)
++{
++   double buf[1];
++   if(CopyBuffer(handle, 0, shift, 1, buf) != 1) return EMPTY_VALUE;
++   return buf[0];
++}
++double HighestHigh(int n, int shift)
++{
++   if(Bars(_Symbol, TF) < shift + n) return EMPTY_VALUE;
++   int i = iHighest(_Symbol, TF, MODE_HIGH, n, shift);
++   return i < 0 ? EMPTY_VALUE : iHigh(_Symbol, TF, i);
++}
++double LowestLow(int n, int shift)
++{
++   if(Bars(_Symbol, TF) < shift + n) return EMPTY_VALUE;
++   int i = iLowest(_Symbol, TF, MODE_LOW, n, shift);
++   return i < 0 ? EMPTY_VALUE : iLow(_Symbol, TF, i);
++}
++double Ret(int n, int shift)
++{
++   double now = iClose(_Symbol, TF, shift), then = iClose(_Symbol, TF, shift + n);
++   return (now <= 0 || then <= 0) ? EMPTY_VALUE : now / then - 1.0;
++}
++
++// +1 long, -1 short, 0 flat: this EA's magic number on this symbol
++int CurrentSide()
++{
++   for(int i = PositionsTotal() - 1; i >= 0; i--)
++   {
++      if(PositionGetSymbol(i) != _Symbol || PositionGetInteger(POSITION_MAGIC) != InpMagic) continue;
++      return PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? 1 : -1;
++   }
++   return 0;
++}
++"""
++
++
++def mql5_expert(rule: str, *, short: bool, cash: float, fees_bps: float, symbols: list[str], interval: str) -> str:
++    cross: list[_Cross] = []
++    used: set[tuple[str, int]] = set()
++    cond = _expr(parse(rule), cross, used)
++    handles = sorted(used, key=lambda x: (x[1], x[0]))
++    h = lambda k, n: f"h_{k}{n}"
++    out = [
++        f"// {HEADLINE}",
++        "// GENERATED by OpenTerm from the rule below. UNTESTED ON A LIVE ACCOUNT: compile it in MetaEditor and run it in the",
++        "// Strategy Tester on a demo account first. Expect different results from OpenTerm: EMA / RSI seeding, lot sizing,",
++        "// spreads, swaps and OpenTerm's per-market cost stack and slippage are not reproduced; MT5 volume is tick volume.",
++        f"// RULE: {' '.join(rule.split())}",
++        f"// RUN: {', '.join(symbols)} {interval}; initial cash {cash:g}; fees {fees_bps:g} bps (set costs in the tester instead)",
++        "// An EA trades its chart symbol: attach it to each symbol of the run separately.",
++        "#property strict",
++        '#property description "OpenTerm BT rule strategy - HISTORICAL SIMULATION, NOT A FORECAST"',
++        "#include <Trade/Trade.mqh>",
++        "",
++        "input double          InpLots    = 1.0;   // fixed lot size (OpenTerm sizes by equity: adjust to your account)",
++        f"input ENUM_TIMEFRAMES TF         = {_TF.get(interval, 'PERIOD_D1')};",
++        f"input bool            AllowShort = {'true' if short else 'false'};",
++        "input long            InpMagic   = 20250101;",
++        "",
++        "CTrade   trade;",
++        "datetime lastBar = 0;",
++        *[f"int      {h(k, n)} = INVALID_HANDLE;" for k, n in handles],
++        *[f"bool     {c[0]} = false;" for c in cross],
++        "",
++        _HELPERS,
++        "int OnInit()",
++        "{",
++        "   trade.SetExpertMagicNumber(InpMagic);",
++    ]
++    for k, n in handles:
++        out.append(f"   {h(k, n)} = iRSI(_Symbol, TF, {n}, PRICE_CLOSE);" if k == "rsi"
++                   else f"   {h(k, n)} = iMA(_Symbol, TF, {n}, 0, MODE_{k.upper()}, PRICE_CLOSE);")
++        out.append(f"   if({h(k, n)} == INVALID_HANDLE) return INIT_FAILED;")
++    out += [
++        "   return INIT_SUCCEEDED;",
++        "}",
++        "",
++        "void OnDeinit(const int reason)",
++        "{",
++        *[f"   if({h(k, n)} != INVALID_HANDLE) IndicatorRelease({h(k, n)});" for k, n in handles],
++        "}",
++        "",
++        "void OnTick()",
++        "{",
++        "   datetime bar = iTime(_Symbol, TF, 0);",
++        "   if(bar == 0 || bar == lastBar) return;   // once per new bar: decide on the last closed bar, trade at this bar's open",
++        "   lastBar = bar;",
++        *[f"   if({up}({args})) {name} = true; else if({down}({args})) {name} = false;" for name, up, args, down in cross],
++        f"   bool signal = {cond};",
++        "   int side = CurrentSide();",
++        "   if(signal)",
++        "   {",
++        "      if(side < 0) trade.PositionClose(_Symbol);",
++        "      if(side <= 0) trade.Buy(InpLots, _Symbol);",
++        "   }",
++        "   else",
++        "   {",
++        "      if(side > 0) trade.PositionClose(_Symbol);",
++        "      if(AllowShort && side >= 0) trade.Sell(InpLots, _Symbol);",
++        "   }",
++        "}",
++    ]
++    return "\n".join(out) + "\n"
+diff --git a/backend/openterm/bt/export_report.py b/backend/openterm/bt/export_report.py
+new file mode 100644
+index 0000000..8bbf4df
+--- /dev/null
++++ b/backend/openterm/bt/export_report.py
+@@ -0,0 +1,233 @@
++"""BT EXPORT as a PDF report (fpdf2) or an XLSX workbook (xlsxwriter) of a stored run. Both are built from the stored
++run only (nothing is recomputed, nothing is fetched) and carry the HISTORICAL SIMULATION label. Blocking and CPU-bound:
++the API calls these through `asyncio.to_thread`. Text cells are neutralised against spreadsheet formulas like the CSV export.
++"""
++
++from __future__ import annotations
++
++import datetime as dt
++import io
++import itertools
++import json
++
++from .export import TRADE_FIELDS, neutralize
++from .job import HEADLINE
++
++PDF_TYPE = "application/pdf"
++XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
++SHEETS = ("Summary", "Equity", "Trades", "Parameters")
++
++
++def _day(t) -> str:
++    return dt.datetime.fromtimestamp(t, dt.UTC).strftime("%Y-%m-%d")
++
++
++def _text(v) -> str:
++    if v is None:
++        return ""
++    if isinstance(v, float):
++        return f"{v:.6g}"
++    if isinstance(v, dict | list | tuple):
++        return json.dumps(v, sort_keys=True, default=str)
++    return str(v)
++
++
++def scalar_metrics(run: dict) -> list[tuple[str, object]]:
++    return [(k, v) for k, v in run["metrics"].items() if not isinstance(v, dict | list)]
++
++
++def parameter_rows(run: dict) -> list[tuple[str, str]]:
++    """Everything that defines the run, as (name, text) pairs: strategy, universe, options, costs, data sources."""
++    lab, cfg = run.get("labels") or {}, run.get("config") or {}
++    rows: list[tuple[str, str]] = [("run id (content hash)", run["id"]), ("engine", run.get("engine") or lab.get("engine")),
++                                   ("rule", run.get("rule")), ("python strategy", run.get("strategy")),
++                                   ("symbols", ", ".join(run.get("symbols") or [])), ("interval", run.get("interval")),
++                                   ("range", run.get("range")), ("short selling", lab.get("short")),
++                                   ("prices", lab.get("prices")), ("fees (bps)", lab.get("fees_bps")),
++                                   ("slippage (bps)", lab.get("slip_bps")), ("cost model", lab.get("costs")),
++                                   ("warmup bars", lab.get("warmup_bars")), ("benchmark", lab.get("benchmark")),
++                                   ("data note", lab.get("data_note")), ("model", lab.get("model"))]
++    for s in lab.get("sources") or []:
++        rows.append((f"data source {s.get('symbol')}", f"{s.get('name')} as of {s.get('as_of')}"
++                     + (" STALE" if s.get("stale") else "")))
++    rows += [(f"config.{k}", v) for k, v in sorted(cfg.items())]
++    return [(k, _text(v)) for k, v in rows if v not in (None, "")]
++
++
++def trade_summary(run: dict) -> dict:
++    tr = run["trades"]
++    pnl = [t["pnl"] for t in tr if isinstance(t.get("pnl"), int | float)]
++    wins = [p for p in pnl if p > 0]
++    return {"trades": len(tr), "with pnl": len(pnl), "winners": len(wins), "losers": sum(1 for p in pnl if p < 0),
++            "win rate": (len(wins) / len(pnl)) if pnl else None, "total pnl": sum(pnl) if pnl else None,
++            "best trade": max(pnl) if pnl else None, "worst trade": min(pnl) if pnl else None}
++
++
++def _drawdown(eq: list[float]) -> list[float]:
++    peak, out = float("-inf"), []
++    for v in eq:
++        peak = max(peak, v)
++        out.append(v / peak - 1.0 if peak else 0.0)
++    return out
++
++
++# --- XLSX -----------------------------------------------------------------------------------------------------------------
++
++def run_xlsx(run: dict) -> bytes:
++    import xlsxwriter
++
++    buf = io.BytesIO()
++    # strings_to_formulas / urls off: a text cell is never parsed as a formula or link; neutralize() adds the second guard.
++    wb = xlsxwriter.Workbook(buf, {"in_memory": True, "strings_to_formulas": False, "strings_to_urls": False,
++                                   "strings_to_numbers": False})
++    bold = wb.add_format({"bold": True})
++    cell = lambda ws, r, c, v: ws.write(r, c, "" if v is None else neutralize(v) if isinstance(v, str) else v)
++
++    def table(name: str, header: list[str], rows: list[list], widths: list[int]):
++        ws = wb.add_worksheet(name)
++        for c, h in enumerate(header):
++            ws.write(0, c, h, bold)
++            ws.set_column(c, c, widths[c])
++        for r, row in enumerate(rows, 1):
++            for c, v in enumerate(row):
++                cell(ws, r, c, v)
++        ws.freeze_panes(1, 0)
++        return ws
++
++    summary: list[list] = [["notice", HEADLINE], ["run id", run["id"]], ["created (UTC)", _day(run["created_at"]) if run.get("created_at") else ""]]
++    summary += [[f"metric: {k}", v] for k, v in scalar_metrics(run)]
++    summary += [[f"trades: {k}", v] for k, v in trade_summary(run).items()]
++    table("Summary", ["item", "value"], summary, [34, 40])
++    bench = {t: v for t, v in run.get("benchmark") or []}
++    table("Equity", ["date", "equity", "benchmark"], [[_day(t), v, bench.get(t)] for t, v in run["equity"]], [14, 16, 16])
++    table("Trades", list(TRADE_FIELDS), [[t.get(k) for k in TRADE_FIELDS] for t in run["trades"]], [14] * len(TRADE_FIELDS))
++    table("Parameters", ["parameter", "value"], [[k, v] for k, v in parameter_rows(run)], [30, 70])
++    wb.close()
++    return buf.getvalue()
++
++
++# --- PDF ------------------------------------------------------------------------------------------------------------------
++
++def _latin(s) -> str:
++    """The built-in PDF fonts are Latin-1 only: anything else becomes '?', never an exception."""
++    return _text(s).encode("latin-1", "replace").decode("latin-1")
++
++
++def _fmt(v) -> str:
++    if isinstance(v, bool) or not isinstance(v, int | float):
++        return _latin(v)
++    if isinstance(v, int) or abs(v) >= 1000:
++        return f"{v:,.0f}" if abs(v) >= 1000 else str(v)
++    return f"{v:.4f}".rstrip("0").rstrip(".") if v else "0"
++
++
++def run_pdf(run: dict) -> bytes:
++    from fpdf import FPDF
++
++    class Report(FPDF):
++        def footer(self):
++            self.set_y(-12)
++            self.set_font("Helvetica", "B", 7)
++            self.cell(0, 5, f"{HEADLINE}  |  run {run['id']}  |  page {self.page_no()}/{{nb}}", align="C")
++
++    pdf = Report(format="A4")
++    pdf.set_auto_page_break(True, margin=16)
++    pdf.set_title(_latin(f"OpenTerm BT report {run['id']}"))
++    pdf.set_creator("OpenTerm")
++    pdf.alias_nb_pages()
++    pdf.add_page()
++    W = pdf.w - pdf.l_margin - pdf.r_margin
++
++    def h(txt):
++        pdf.ln(2)
++        pdf.set_font("Helvetica", "B", 11)
++        pdf.cell(0, 7, _latin(txt), new_x="LMARGIN", new_y="NEXT")
++        pdf.set_font("Helvetica", "", 8)
++
++    def kv(rows, col=62):
++        for k, v in rows:
++            pdf.set_x(pdf.l_margin)
++            pdf.cell(col, 4.6, _latin(k)[:48], border="B")
++            pdf.multi_cell(W - col, 4.6, _fmt(v)[:300], border="B", new_x="LMARGIN", new_y="NEXT")
++
++    pdf.set_font("Helvetica", "B", 16)
++    pdf.cell(0, 9, "OpenTerm backtest report", new_x="LMARGIN", new_y="NEXT")
++    pdf.set_font("Helvetica", "B", 10)
++    pdf.set_text_color(160, 30, 30)
++    pdf.cell(0, 6, HEADLINE, new_x="LMARGIN", new_y="NEXT")
++    pdf.set_text_color(0)
++    pdf.set_font("Helvetica", "", 8)
++    pdf.multi_cell(0, 4.2, _latin(
++        f"Run {run['id']} (content hash of the strategy, options and data) | "
++        f"{', '.join(run.get('symbols') or [])} {run.get('interval') or ''} {run.get('range') or ''} | "
++        f"{run.get('rule') or run.get('strategy') or 'strategy code'}"), new_x="LMARGIN", new_y="NEXT")
++
++    def chart(title, series, height, fmt):
++        h(title)
++        x0, y0, w = pdf.l_margin, pdf.get_y() + 1, W
++        pdf.set_draw_color(180)
++        pdf.rect(x0, y0, w, height)
++        for name, pts, rgb in series:
++            if len(pts) < 2:
++                continue
++            lo, hi = min(min(p) for _, p, _ in series if len(p) > 1), max(max(p) for _, p, _ in series if len(p) > 1)
++            span = (hi - lo) or 1.0
++            pdf.set_draw_color(*rgb)
++            pdf.set_line_width(0.3)
++            step = max(1, len(pts) // 600)
++            idx = list(range(0, len(pts), step)) + ([len(pts) - 1] if (len(pts) - 1) % step else [])
++            xy = [(x0 + w * i / (len(pts) - 1), y0 + height - height * (pts[i] - lo) / span) for i in idx]
++            for (xa, ya), (xb, yb) in itertools.pairwise(xy):
++                pdf.line(xa, ya, xb, yb)
++        pdf.set_line_width(0.2)
++        pdf.set_draw_color(0)
++        vals = [v for _, p, _ in series for v in p]
++        if vals:
++            pdf.set_font("Helvetica", "", 7)
++            pdf.set_xy(x0 + 1, y0 + 0.5)
++            pdf.cell(60, 3.5, f"max {fmt(max(vals))}")
++            pdf.set_xy(x0 + 1, y0 + height - 4)
++            pdf.cell(60, 3.5, f"min {fmt(min(vals))}   " + "   ".join(n for n, p, _ in series if len(p) > 1))
++        pdf.set_y(y0 + height + 1)
++        pdf.set_font("Helvetica", "", 8)
++
++    eq = [v for _, v in run["equity"]]
++    bench = [v for _, v in run.get("benchmark") or []]
++    if len(eq) >= 2:
++        span = f"{_day(run['equity'][0][0])} to {_day(run['equity'][-1][0])}"
++        chart(f"Equity curve ({span}); blue = strategy, grey = benchmark", [("strategy", eq, (30, 80, 170)),
++              ("benchmark", bench if len(bench) == len(eq) else [], (140, 140, 140))], 50, lambda v: f"{v:,.0f}")
++        chart("Drawdown from the running peak", [("drawdown", _drawdown(eq), (170, 40, 40))], 28, lambda v: f"{v:.1%}")
++    else:
++        h("Equity curve")
++        pdf.cell(0, 5, "NO EQUITY CURVE STORED FOR THIS RUN", new_x="LMARGIN", new_y="NEXT")
++
++    h("Metrics")
++    kv(scalar_metrics(run))
++    h("Trades summary")
++    kv(list(trade_summary(run).items()))
++    tr = run["trades"]
++    if tr:
++        cols = ("symbol", "direction", "entry_time", "exit_time", "pnl", "pnl_pct", "exit_reason")
++        widths = [34, 16, 28, 28, 24, 20, W - 150]
++        pdf.ln(1)
++        pdf.set_font("Helvetica", "B", 7)
++        for c, w in zip(cols, widths, strict=True):
++            pdf.cell(w, 4.4, c, border="B")
++        pdf.ln()
++        pdf.set_font("Helvetica", "", 7)
++        for t in tr[:40]:
++            for c, w in zip(cols, widths, strict=True):
++                pdf.cell(w, 4.2, _fmt(t.get(c))[:22])
++            pdf.ln()
++        if len(tr) > 40:
++            pdf.cell(0, 4.4, f"... {len(tr) - 40} more trades: use the TRADES CSV or XLSX export", new_x="LMARGIN", new_y="NEXT")
++        pdf.set_font("Helvetica", "", 8)
++    h("Parameters, data source, fees and slippage")
++    kv(parameter_rows(run))
++    h("Notice")
++    pdf.multi_cell(0, 4.2, _latin(
++        f"{HEADLINE}. Past results do not predict future ones. Fills, fees and slippage follow the models listed above and "
++        "will differ from live trading. Generated by OpenTerm from the stored run; nothing here was recomputed."),
++        new_x="LMARGIN", new_y="NEXT")
++    return bytes(pdf.output())
+diff --git a/backend/pyproject.toml b/backend/pyproject.toml
+index e538635..fea4f7e 100644
+--- a/backend/pyproject.toml
++++ b/backend/pyproject.toml
+@@ -26,6 +26,8 @@ dependencies = [
+   "psutil>=5.9",
+   "keyring>=25",
+   "pypdf>=6.21.1",
++  "fpdf2>=2.9.0",
++  "xlsxwriter>=3.3.1",
+ ]
+ 
+ # `uv run openterm-mcp` = the stdio bridge for MCP clients (Claude Desktop, Claude Code). Same program as `python -m openterm.mcp`.
+diff --git a/backend/tests/test_bt_export_formats.py b/backend/tests/test_bt_export_formats.py
+new file mode 100644
+index 0000000..3f543df
+--- /dev/null
++++ b/backend/tests/test_bt_export_formats.py
+@@ -0,0 +1,157 @@
++"""BT EXPORT additions: MQL5 Expert Advisor, PDF report, XLSX workbook. Structure tests, no network, no MT5 compiler."""
++
++import io
++import re
++import time
++import zipfile
++
++import pytest
++
++from openterm.bt import export_report
++from openterm.bt.export_mql5 import mql5_expert
++from openterm.bt.rules import RuleError
++
++LABEL = "HISTORICAL SIMULATION, NOT A FORECAST"
++
++
++def _ea(rule, **kw):
++    opts = {"short": False, "cash": 50_000, "fees_bps": 10, "symbols": ["AAPL"], "interval": "1D"} | kw
++    return mql5_expert(rule, **opts)
++
++
++def test_mql5_sample_rule_uses_standard_calls():
++    ea = _ea("SMA20>SMA50")
++    for text in (LABEL, "GENERATED", "UNTESTED ON A LIVE ACCOUNT", "#include <Trade/Trade.mqh>", "CTrade   trade;",
++                 "iMA(_Symbol, TF, 20, 0, MODE_SMA, PRICE_CLOSE)", "iMA(_Symbol, TF, 50, 0, MODE_SMA, PRICE_CLOSE)",
++                 "CopyBuffer(handle, 0, shift, 1, buf)", "GT(BufValue(h_sma20, 1), BufValue(h_sma50, 1))",
++                 "int OnInit()", "void OnTick()", "trade.Buy(", "input bool            AllowShort = false;",
++                 "PERIOD_D1", "IndicatorRelease(h_sma20)"):
++        assert text in ea, text
++    assert ea.count("{") == ea.count("}")
++
++
++def test_mql5_rsi_ema_cross_and_other_terms():
++    ea = _ea("EMA12>=EMA26 AND RSI14<30 OR HIGH20>LOW10 AND RET5<0.05 AND CLOSE>100 AND VOLUME>1000", interval="1W", short=True)
++    for text in ("iRSI(_Symbol, TF, 14, PRICE_CLOSE)", "MODE_EMA", "GE(BufValue(h_ema12, 1), BufValue(h_ema26, 1))",
++                 "LT(BufValue(h_rsi14, 1), 30)", "GT(HighestHigh(20, 1), LowestLow(10, 1))", "LT(Ret(5, 1), 0.05)",
++                 "GT(iClose(_Symbol, TF, 1), 100)", "iVolume(_Symbol, TF, 1)", "PERIOD_W1", "AllowShort = true", "&&", "||"):
++        assert text in ea, text
++    x = _ea("SMA20 CROSS> SMA50")
++    assert "bool     cross0 = false;" in x
++    assert "if(CrossUp(BufValue(h_sma20, 1), BufValue(h_sma20, 2), BufValue(h_sma50, 1), BufValue(h_sma50, 2))) cross0 = true;" in x
++    assert "else if(CrossDown(" in x and "bool signal = cross0;" in x
++    d = _ea("SMA20 CROSS< SMA50")
++    assert "if(CrossDown(BufValue(h_sma20, 1)" in d
++
++
++@pytest.mark.parametrize("rule", ["SMA20>", "FOO>1", "SMA0>1", "CLOSE>>1", ""])
++def test_mql5_refuses_what_the_parser_refuses(rule):
++    with pytest.raises(RuleError):
++        _ea(rule)
++
++
++def _run(**over):
++    day = 86400
++    eq = [[1_700_000_000 + i * day, 100_000 + 50 * i - (700 if 10 < i < 18 else 0)] for i in range(40)]
++    run = {
++        "id": "abcdef0123456789", "rule": "SMA20>SMA50", "strategy": None, "symbols": ["AAPL"], "interval": "1D", "range": "10Y",
++        "engine": "equity", "created_at": 1_700_000_000.0, "config": {"initial_cash": 100000, "fees_bps": 5},
++        "labels": {"headline": LABEL, "fees_bps": 5, "slip_bps": 2, "costs": "TEST COSTS", "short": False, "prices": "ADJ",
++                   "sources": [{"symbol": "AAPL", "name": "fixture", "as_of": "2024-01-01", "stale": False}]},
++        "metrics": {"total_return": 0.12, "sharpe": 1.5, "max_drawdown": -0.1, "n_trades": 2, "nested": {"a": 1}},
++        "equity": eq, "benchmark": [[t, v * 0.9] for t, v in eq],
++        "trades": [{"symbol": "AAPL", "direction": 1, "entry_time": "2024-01-02", "exit_time": "2024-02-01", "entry_price": 10.0,
++                    "exit_price": 11.0, "size": 5, "pnl": 5.0, "pnl_pct": 0.1, "commission": 0.1, "holding_bars": 20,
++                    "exit_reason": "=HYPERLINK(\"http://x\")"},
++                   {"symbol": "-cmd", "direction": -1, "entry_time": "2024-03-01", "exit_time": "2024-03-05", "entry_price": 11.0,
++                    "exit_price": 12.0, "size": 5, "pnl": -5.0, "pnl_pct": -0.09, "commission": 0.1, "holding_bars": 4,
++                    "exit_reason": "signal"}],
++    }
++    return run | over
++
++
++def _pdf_pages(data):
++    from pypdf import PdfReader
++
++    return PdfReader(io.BytesIO(data)).pages
++
++
++def test_pdf_has_label_run_id_sections_and_pages():
++    pages = _pdf_pages(export_report.run_pdf(_run()))
++    assert len(pages) >= 1
++    text = "\n".join(p.extract_text() for p in pages)
++    for t in (LABEL, "abcdef0123456789", "Metrics", "Trades summary", "Equity curve", "Drawdown", "TEST COSTS",
++              "slippage (bps)", "fees (bps)", "data source AAPL", "SMA20>SMA50", "total_return"):
++        assert t in text, t
++    assert all(LABEL in p.extract_text() for p in pages)  # the footer carries it on every page
++
++
++def test_pdf_many_trades_paginates_and_survives_odd_text():
++    run = _run(trades=_run()["trades"] * 60, rule=None, strategy="café 中文 strategy", equity=[], benchmark=[])
++    pages = _pdf_pages(export_report.run_pdf(run))
++    text = "\n".join(p.extract_text() for p in pages)
++    assert len(pages) >= 2 and "NO EQUITY CURVE" in text and "more trades" in text
++
++
++def _sheets(data):
++    z = zipfile.ZipFile(io.BytesIO(data))
++    wb = z.read("xl/workbook.xml").decode()
++    names = re.findall(r'<sheet name="([^"]+)"', wb)
++    return z, names
++
++
++def test_xlsx_sheets_and_formula_neutralisation():
++    z, names = _sheets(export_report.run_xlsx(_run()))
++    assert names == list(export_report.SHEETS)
++    shared = z.read("xl/sharedStrings.xml").decode()
++    assert LABEL in shared and "abcdef0123456789" in shared
++    assert "'=HYPERLINK" in shared and "'-cmd" in shared  # leading apostrophe on formula-like text
++    assert ">=HYPERLINK" not in shared and ">-cmd" not in shared
++    for i in range(1, 5):
++        assert "<f>" not in z.read(f"xl/worksheets/sheet{i}.xml").decode()
++    eq = z.read("xl/worksheets/sheet2.xml").decode()
++    assert eq.count("<row ") == 41  # header + 40 bars
++    assert eq.count("<row ") == 41
++
++
++def test_api_formats(client):
++    def run_id(rule):
++        r = client.post("/api/bt/run", json={"rule": rule, "symbols": ["AAPL"], "interval": "1D", "range": "10Y", "options": {}})
++        end = time.monotonic() + 90
++        while time.monotonic() < end:
++            job = client.get(f"/api/jobs/{r.json()['id']}").json()
++            if job["state"] in ("done", "error", "cancelled"):
++                assert job["state"] == "done", job
++                return job["result"]["run_id"]
++            time.sleep(0.05)
++        raise AssertionError("job did not finish")
++
++    rid = run_id("SMA20>SMA50")
++    mq = client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "mql5"})
++    assert mq.status_code == 200 and f'filename="BT_{rid}.mq5"' in mq.headers["content-disposition"] and "OnTick" in mq.text
++    pdf = client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "pdf"})
++    assert pdf.headers["content-type"] == "application/pdf" and pdf.content.startswith(b"%PDF")
++    assert LABEL in _pdf_pages(pdf.content)[0].extract_text()
++    xl = client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "xlsx"})
++    assert _sheets(xl.content)[1] == list(export_report.SHEETS)
++    assert client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "doc"}).status_code == 400
++    assert client.get("/api/bt/runs/nope/export", params={"fmt": "pdf"}).status_code == 404
++
++
++def test_mql5_refused_for_python_strategies_but_pdf_xlsx_work(client):
++    code = ("import pandas as pd\n\nclass SignalEngine:\n    def generate(self, data_map):\n"
++            "        return {s: (d['close'] > d['close'].rolling(20).mean()).astype(float) for s, d in data_map.items()}\n")
++    client.put("/api/bt/strategies/mysma", json={"code": code})
++    r = client.post("/api/bt/run", json={"strategy": "mysma", "symbols": ["AAPL"], "interval": "1D", "range": "10Y"})
++    end = time.monotonic() + 90
++    while True:
++        job = client.get(f"/api/jobs/{r.json()['id']}").json()
++        if job["state"] in ("done", "error", "cancelled") or time.monotonic() > end:
++            break
++        time.sleep(0.05)
++    assert job["state"] == "done", job
++    rid = job["result"]["run_id"]
++    bad = client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "mql5"})
++    assert bad.status_code == 400 and "MQL5 EXPORT NEEDS A RULE STRATEGY" in bad.json()["error"] and "RULE" in bad.json()["detail"]
++    assert client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "pdf"}).content.startswith(b"%PDF")
++    assert client.get(f"/api/bt/runs/{rid}/export", params={"fmt": "xlsx"}).content.startswith(b"PK")
+diff --git a/backend/uv.lock b/backend/uv.lock
+index 22203ad..50159ee 100644
+--- a/backend/uv.lock
++++ b/backend/uv.lock
+@@ -190,6 +190,24 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/2c/1a/03d246befcf307219bb2161c97d8c5d314f84125bf7dd245730a28589828/fastapi-0.143.3-py3-none-any.whl", hash = "sha256:75e8bd68e2f52f77d29b2879749c257d64de2d85282d25270caf2bfccce5efe5", size = 144849, upload-time = "2026-10-16T14:14:11.763Z" },
+ ]
+ 
++[[package]]
++name = "fonttools"
++version = "4.68.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/0c/b5/672312ae80ce8b8eb9779c56052a24c8f36652aa7293a1a420553bcf03e5/fonttools-4.68.0.tar.gz", hash = "sha256:73294e233070f71e2b3653b6bd8564af676d57f26d075761fb06d1ab2e4a7a5d", size = 3848583, upload-time = "2026-10-27T16:30:26.451Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/15/63/f332b2099599b4911786a6f6fd69552fdd5ae6a45cfaffb0c881092f36c8/fonttools-4.68.0-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:f265c85432c398d86f26add143423924a4747879b2dce001a3ffe0a5fed30638", size = 3143556, upload-time = "2026-10-27T16:28:21.812Z" },
++    { url = "https://files.pythonhosted.org/packages/c8/97/68816bb56843e06631ff11517e4fb35fc62d76aec6e29f11df095e7f33c5/fonttools-4.68.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:d225096687fc3bac0ebe3357e95b2dd8b0a49d191f016db0771d537ccdd6f47e", size = 2633689, upload-time = "2026-10-27T16:28:23.54Z" },
++    { url = "https://files.pythonhosted.org/packages/21/94/b125c7a6d154d17f4f699150ef3abebd9d8ad0f7eddce9dad649a9e5c1d8/fonttools-4.68.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b41e71b2657c9843b2327b4e3c116db1757dc8cd05d978cd47cb5061272d4997", size = 5462605, upload-time = "2026-10-27T16:28:25.774Z" },
++    { url = "https://files.pythonhosted.org/packages/7f/58/fe13db71e3f5a020c6875f349806e84f7550f3f24cb3cdbabdd693968b1d/fonttools-4.68.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:3edce69ecdefa73ab1041901ca22eefed6ebb93a77bc77e889d940479f25bf7d", size = 5443448, upload-time = "2026-10-27T16:28:27.898Z" },
++    { url = "https://files.pythonhosted.org/packages/f1/7f/48236f8c626007670586dd6b0d61ed80323a6b17ead763c881d717525cea/fonttools-4.68.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:d8d5674de2b614575f0751671727056af042ac1d61beacb59a298d74282fa492", size = 5399992, upload-time = "2026-10-27T16:28:29.99Z" },
++    { url = "https://files.pythonhosted.org/packages/cb/0d/09e9a433430e277e454eace1c4d02c3691a33d5257bd234702a427a9d090/fonttools-4.68.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:7ab8097e7e191784974c5608eb95fb31e1243fe3054cb66778ac82558e9b36f8", size = 5563739, upload-time = "2026-10-27T16:28:32.691Z" },
++    { url = "https://files.pythonhosted.org/packages/ac/54/6708f4c6742de2d5bf4280d8bde22fb8aef5120328bdc19ca34a9d2e8e8b/fonttools-4.68.0-cp312-cp312-win32.whl", hash = "sha256:1695cd2e1f9768fe3f14d369ce6ef1b3e8561069cc9e47059571985d1ea42614", size = 2481614, upload-time = "2026-10-27T16:28:35.122Z" },
++    { url = "https://files.pythonhosted.org/packages/1c/3e/ef786310a3774ae7aacaa288ca6d1e1dfd03c24214137478e4b630b76af0/fonttools-4.68.0-cp312-cp312-win_amd64.whl", hash = "sha256:fedc183bdbc3fdbfbdca26e0e04566d089cbb404712509a4e824608e9304cc77", size = 2533508, upload-time = "2026-10-27T16:28:37.085Z" },
++    { url = "https://files.pythonhosted.org/packages/06/11/2cc4272ddd485c448c0363be9beb0a24d3f429f1cc8c5aafa716c508e899/fonttools-4.68.0-cp312-cp312-win_arm64.whl", hash = "sha256:95628bbc5ea81d5761268f4c4f1ba709af510b970f363498ac801c0c1fd7a4a8", size = 2502049, upload-time = "2026-10-27T16:28:39.355Z" },
++    { url = "https://files.pythonhosted.org/packages/35/74/4ea331ecc65ba05a58b1e4e8ccd604c8a15565f876dfbf93fc2a2ea2e22b/fonttools-4.68.0-py3-none-any.whl", hash = "sha256:d76f8fdcb6936f5e1045a0c9dd721a4bf11112e60d1e243bfa1d39f06a8b3104", size = 1248357, upload-time = "2026-10-27T16:30:24.389Z" },
++]
++
+ [[package]]
+ name = "formulaic"
+ version = "1.2.2"
+@@ -208,6 +226,19 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/fc/75/0576b03f7889ad25b5385b4f6c69e0543713425a6f193b056c9b0a2e65ce/formulaic-1.2.2-py3-none-any.whl", hash = "sha256:0f84ff49e3fc9dc0e68ab08a0a9427874021aa6c558e66b44dc634a35739b09b", size = 118939, upload-time = "2026-06-02T18:24:41.344Z" },
+ ]
+ 
++[[package]]
++name = "fpdf2"
++version = "2.9.0"
++source = { registry = "https://pypi.org/simple" }
++dependencies = [
++    { name = "fonttools" },
++    { name = "pillow" },
++]
++sdist = { url = "https://files.pythonhosted.org/packages/ec/be/440da8ede1cf7aaff73be5c5a6d0dc6f2938df6604ffbc313f9c6dc63f55/fpdf2-2.9.0.tar.gz", hash = "sha256:af2e7e06a5a2f9e32e24b146b56f58166142dfff45f55370ab03bfac9c8e3e21", size = 408671, upload-time = "2026-10-29T23:13:20.353Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/2f/b0/f0e770163d0e635c81e8ba117686e31c6b172715e1185ff00ea2eb0b2f3d/fpdf2-2.9.0-py3-none-any.whl", hash = "sha256:e57f9eb183a61bbfc1a16ccb3eb68654f9ef3de0d9a78e37015a0df2eb29ab89", size = 360586, upload-time = "2026-10-29T23:13:18.341Z" },
++]
++
+ [[package]]
+ name = "h11"
+ version = "0.16.0"
+@@ -465,6 +496,7 @@ dependencies = [
+     { name = "apscheduler" },
+     { name = "arch" },
+     { name = "fastapi" },
++    { name = "fpdf2" },
+     { name = "httpx", extra = ["http2"] },
+     { name = "keyring" },
+     { name = "msgpack" },
+@@ -480,6 +512,7 @@ dependencies = [
+     { name = "statsmodels" },
+     { name = "uvicorn", extra = ["standard"] },
+     { name = "uvloop", marker = "sys_platform != 'win32'" },
++    { name = "xlsxwriter" },
+ ]
+ 
+ [package.dev-dependencies]
+@@ -496,6 +529,7 @@ requires-dist = [
+     { name = "apscheduler", specifier = ">=3.10,<4" },
+     { name = "arch", specifier = ">=7.0" },
+     { name = "fastapi", specifier = ">=0.115" },
++    { name = "fpdf2", specifier = ">=2.9.0" },
+     { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
+     { name = "keyring", specifier = ">=25" },
+     { name = "msgpack", specifier = ">=1.0" },
+@@ -511,6 +545,7 @@ requires-dist = [
+     { name = "statsmodels", specifier = ">=0.14" },
+     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
+     { name = "uvloop", marker = "sys_platform != 'win32'", specifier = ">=0.19" },
++    { name = "xlsxwriter", specifier = ">=3.3.1" },
+ ]
+ 
+ [package.metadata.requires-dev]
+@@ -582,6 +617,28 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/20/70/cd3cf5cff538323076a879edef02cce6f13f7d75e03d12f211b0a0dbd178/patsy-1.0.3-py2.py3-none-any.whl", hash = "sha256:d3dbebe8fd5f46e29912d030b63c6268647b59bf788a99e2af28a30234cf357c", size = 233318, upload-time = "2026-08-29T21:35:30.913Z" },
+ ]
+ 
++[[package]]
++name = "pillow"
++version = "13.0.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/ce/a4/9cc30690a394a8305e8be4c9036aa16d0dfddadd09079860b582f562496d/pillow-13.0.0.tar.gz", hash = "sha256:cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510", size = 47058631, upload-time = "2026-10-16T22:18:09.718Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/7a/b8/58d79332229482eb0d27c82973850808c19d37e5bdc14443d3417bd373f5/pillow-13.0.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:67c8d44ad89fa7eb88de5d6ef6199b1e03dd24974f85a67639fc8badb801fe79", size = 5568643, upload-time = "2026-10-16T22:15:44.474Z" },
++    { url = "https://files.pythonhosted.org/packages/39/4b/f2ed53d83aa44ac19599ac0a54897f867fafb95f406980d1e24083f8cbe3/pillow-13.0.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:fc481f742ccda20e9ed760b8f978dff50f2a4e9bc253ac167fb0a05b0783ef52", size = 4852329, upload-time = "2026-10-16T22:15:46.284Z" },
++    { url = "https://files.pythonhosted.org/packages/3b/bb/9e30e8ed18c20800ee327a12107d5249ad8dc444867b3adfcc21654e3c71/pillow-13.0.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8bf295fe459343bc6093c8e5e0df60bfa189e0fcb775a22e2c2488fdeccc6c0d", size = 6519309, upload-time = "2026-10-16T22:15:48.14Z" },
++    { url = "https://files.pythonhosted.org/packages/e6/99/fdf65cc539e266ab93546c261bdf98411fe165c6e4e13f9dbf597097192b/pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca", size = 7144542, upload-time = "2026-10-16T22:15:50.093Z" },
++    { url = "https://files.pythonhosted.org/packages/26/9b/f38b7c4d8f599537e2d1a6d546cec9beef7536ff8f5c49a3f9c78179d8ac/pillow-13.0.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:4bd024d567eca931b668978d672dba914d4b8e2628e2c3073a2ad178de8a2620", size = 6618042, upload-time = "2026-10-16T22:15:52.054Z" },
++    { url = "https://files.pythonhosted.org/packages/a8/7c/45ee28531f89ee4582967d8a17f7a26d71ca64cd902b93c269590cd60a00/pillow-13.0.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:23edf4ec4b6f4f240e8df6e4985e9ee2ced86474632433e55fb1e2548744bf40", size = 7228137, upload-time = "2026-10-16T22:15:54.009Z" },
++    { url = "https://files.pythonhosted.org/packages/01/bc/9c2a969cb1b70201d04fa17fd5aedf02a732870b8da86bceaaa30b0ca385/pillow-13.0.0-cp312-cp312-win32.whl", hash = "sha256:02464da86f561f410e13b061ec37c3068a9cb557a095494157742d07b3c24a27", size = 6515423, upload-time = "2026-10-16T22:15:56.25Z" },
++    { url = "https://files.pythonhosted.org/packages/ff/cd/73a79ecdc822076002eb24b5e1e4a530b0bb5310fcb6d239abbec877110b/pillow-13.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b", size = 7272166, upload-time = "2026-10-16T22:15:58.597Z" },
++    { url = "https://files.pythonhosted.org/packages/4a/a3/be5a1236efd085b3984e4305da8f179ae9dab80c991d2ad78f2bd5c4c843/pillow-13.0.0-cp312-cp312-win_arm64.whl", hash = "sha256:c3bc8ee0271387e0b1e3ad0ff893645990a656e79bf9c42f4f734a3642b11d51", size = 2698943, upload-time = "2026-10-16T22:16:00.637Z" },
++    { url = "https://files.pythonhosted.org/packages/60/da/f6d644e631c5b370c5d0b899f3ccadd2780aab070b29a110527cf4e1fd2c/pillow-13.0.0-pp312-pypy312_pp80-macosx_10_15_x86_64.whl", hash = "sha256:8619685cad8efc4c38c66d3b36aad854523297c43d748b3b6f0cc03c90ba3463", size = 5523188, upload-time = "2026-10-16T22:17:59.334Z" },
++    { url = "https://files.pythonhosted.org/packages/e4/b0/2594f202d743a35d4fe80682bfd96f277e5ca7aecb27cf64ef5bfc1d000b/pillow-13.0.0-pp312-pypy312_pp80-macosx_11_0_arm64.whl", hash = "sha256:7e91e97a929232cdb828889ee6ad0e48d7f40f4ec38818f4e4a8968b2b1af22e", size = 4806808, upload-time = "2026-10-16T22:18:01.188Z" },
++    { url = "https://files.pythonhosted.org/packages/8e/ed/d504165ef79af6fafe25c76726cf30f544cc236002f7ed054f1d51adc4ff/pillow-13.0.0-pp312-pypy312_pp80-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:93ff9c9c3663ce23aaa5d0b6b6abac55359e2a0c06c7e30f3771829af816be63", size = 5464358, upload-time = "2026-10-16T22:18:02.779Z" },
++    { url = "https://files.pythonhosted.org/packages/7b/fe/a10aba5503ca13e9e009b8bd0a1a4ce5584bdce246245fd6f3a83701369c/pillow-13.0.0-pp312-pypy312_pp80-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e65dd6e75de67b2362a4fa3e16aa627595f65054dc4ec73d64680c84d592fa61", size = 6043514, upload-time = "2026-10-16T22:18:04.538Z" },
++    { url = "https://files.pythonhosted.org/packages/c0/37/66b12dc476041fe523bca29c9d58fbf1ea92a4eaf73acfb9e993948f1191/pillow-13.0.0-pp312-pypy312_pp80-win_amd64.whl", hash = "sha256:567f20f1c75897d7663830da6ea8af719e03d712b1d9ee7f813319f9ece42e5a", size = 7366030, upload-time = "2026-10-16T22:18:06.638Z" },
++]
++
+ [[package]]
+ name = "pluggy"
+ version = "1.7.0"
+@@ -1048,3 +1105,12 @@ wheels = [
+     { url = "https://files.pythonhosted.org/packages/21/bf/65743adeeb5476920c62dad6cded7bc8789e19bd4f9a336d4ac812adb8de/wrapt-2.5.1-cp312-cp312-win_arm64.whl", hash = "sha256:e089a22ff5af1290b8c759a610830bdb2a829ef9c3d7797e4ee32c2f795ed482", size = 103200, upload-time = "2026-10-14T00:37:34.673Z" },
+     { url = "https://files.pythonhosted.org/packages/bc/0c/7da7513ddcc8f1d831ec4bfbedc9f7f174ecb91042bc16916fc1e0d06b22/wrapt-2.5.1-py3-none-any.whl", hash = "sha256:c6e6c226b1ca5402d7ae5fb34a0d21f1b49124fe4200e5884d1e19e53c47ac1d", size = 81849, upload-time = "2026-10-14T00:39:37.441Z" },
+ ]
++
++[[package]]
++name = "xlsxwriter"
++version = "3.3.1"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/9c/fb/31bdbf3737222d92ef7d2db4d50089b2253dbbb63ceb6d20a4447f6b7ed0/xlsxwriter-3.3.1.tar.gz", hash = "sha256:0867761912cceac76f97ffa76eeda18c623ae9217f601be8512f55b1af4bdb6e", size = 223040, upload-time = "2026-10-28T22:52:46.592Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/88/eb/1e6af9959a567901a7e7c7cef2e75883e487df223ed67f9a8977ff863bd8/xlsxwriter-3.3.1-py3-none-any.whl", hash = "sha256:8e2c89e59d733fe59e112317218c64fbbc276d90a8c144ebd6f7fa15e7ab184a", size = 180583, upload-time = "2026-10-28T22:52:45.048Z" },
++]
+diff --git a/docs/DATA_LIMITS.md b/docs/DATA_LIMITS.md
+index 4321697..f2b8324 100644
+--- a/docs/DATA_LIMITS.md
++++ b/docs/DATA_LIMITS.md
+@@ -294,3 +294,21 @@ No key is needed for any of them. Each table header shows the source, its age an
+ - `SEAS` uses the UTC date of each bar and daily history (adjusted close when the source has it); the month or ISO week still in progress is left out.
+ 
+ - **Alert delivery (Phase 17).** Alerts are evaluated in the browser on live ticks, so email, Telegram and webhook messages go out only while an OpenTerm tab is open (the tab reports the firing to the backend, which then sends). Nothing is sent when the app is closed. Each firing is delivered once; every attempt is logged (last 500) in `deliveries`.
++
++## Token unlocks
++
++Re-checked 2026-11-10. Verdict: **no legitimate free source exists, so `UNLK` is still not built.**
++
++| Source | Finding | Why it fails |
++|---|---|---|
++| DefiLlama `api.llama.fi/emissions` | HTTP 402 "Upgrade to the paid API plan" | Documented endpoint is paid. |
++| DefiLlama Pro API (`/api/emissions`, `/api/emission/{protocol}`) | Listed under Pro in their `llms-pro.txt`; needs a paid key | Paid; their docs say there are only a free (no key) tier and the API plan. |
++| `defillama-datasets.llama.fi/emissions*` | Answers 200 with no key | Unadvertised storage behind the paid endpoint and the website. Using it would route around the paywall, so it is not used. |
++| Messari Token Unlocks API | Documented as an authenticated API endpoint; no public free tier or redistribution terms found | Not keyless; terms unverified. |
++| CoinGecko (Demo, keyless/free key) | No token unlock or vesting schedule endpoint | Only circulating / total / max supply; no schedule. |
++| Tokenomist (ex Token Unlocks) | API needs a key; free trial by form request, longer ranges and commercial use via sales | Not free for an open-source tool; the free website cannot be scraped. |
++| CryptoRank | Unlocks are in a paid API; pricing pages conflict | Paid. |
++| Third-party resellers (e.g. oanor) | Free quota of 100 to 760 calls a month, source is the DefiLlama dataset above | Rehosts the unadvertised dataset; unclear terms. |
++| On-chain vesting contracts | Each project uses its own contract layout; no standard schedule registry | Cannot be built generally without a per-token curated list, which would be hand-typed data. |
++
++Revisit if DefiLlama moves emissions to its free tier or another provider publishes a keyless schedule under open terms. Nothing was probed beyond single GET requests; no site was scraped.
+diff --git a/frontend/src/bt/exportFormats.test.ts b/frontend/src/bt/exportFormats.test.ts
+new file mode 100644
+index 0000000..899e39e
+--- /dev/null
++++ b/frontend/src/bt/exportFormats.test.ts
+@@ -0,0 +1,25 @@
++import { describe, expect, it } from "vitest";
++import { BT_EXPORTS, EXPORT_WORDS, exportFileName, rulesOnlyRefusal } from "./exportFormats";
++import { buttonsFor } from "../gui/toolbars";
++
++describe("BT export formats", () => {
++  it("names files by format", () => {
++    expect(exportFileName("abc", "pine")).toBe("BT_abc.pine");
++    expect(exportFileName("abc", "MQL5")).toBe("BT_abc.mq5");
++    expect(exportFileName("abc", "pdf")).toBe("BT_abc.pdf");
++    expect(exportFileName("abc", "XLSX")).toBe("BT_abc.xlsx");
++    expect(exportFileName("abc", "trades")).toBe("BT_abc_trades.csv");
++  });
++
++  it("only translations are rule-only; reports are binary", () => {
++    expect(Object.entries(BT_EXPORTS).filter(([, f]) => f.rulesOnly).map(([w]) => w)).toEqual(["PINE", "MQL5"]);
++    expect(BT_EXPORTS.PDF.binary && BT_EXPORTS.XLSX.binary && !BT_EXPORTS.MQL5.binary).toBe(true);
++    expect(EXPORT_WORDS).toContain("MQL5|PDF|XLSX");
++    expect(rulesOnlyRefusal("mql5")).toContain("MQL5 EXPORT NEEDS A RULE STRATEGY");
++  });
++
++  it("the BT toolbar has a button per export key", () => {
++    const keys = buttonsFor("BT", ["SMA20>SMA50"]).map((b) => b.key);
++    for (const k of ["p", "q", "d", "b"]) expect(keys).toContain(k);
++  });
++});
+diff --git a/frontend/src/bt/exportFormats.ts b/frontend/src/bt/exportFormats.ts
+new file mode 100644
+index 0000000..f94229e
+--- /dev/null
++++ b/frontend/src/bt/exportFormats.ts
+@@ -0,0 +1,35 @@
++/** BT EXPORT targets: what each word asks the server for and what the downloaded file is called. */
++export interface BtExportFormat {
++  /** The server's `fmt` query value. */
++  fmt: "csv" | "pine" | "mql5" | "pdf" | "xlsx";
++  part?: "trades" | "equity" | "metrics";
++  ext: string;
++  /** Rule strategies only (Python code cannot be translated faithfully). */
++  rulesOnly: boolean;
++  /** Binary files come back as bytes, text files as text. */
++  binary: boolean;
++  mime: string;
++}
++
++export const BT_EXPORTS: Record<string, BtExportFormat> = {
++  PINE: { fmt: "pine", ext: "pine", rulesOnly: true, binary: false, mime: "text/plain;charset=utf-8" },
++  MQL5: { fmt: "mql5", ext: "mq5", rulesOnly: true, binary: false, mime: "text/plain;charset=utf-8" },
++  PDF: { fmt: "pdf", ext: "pdf", rulesOnly: false, binary: true, mime: "application/pdf" },
++  XLSX: { fmt: "xlsx", ext: "xlsx", rulesOnly: false, binary: true, mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
++  TRADES: { fmt: "csv", part: "trades", ext: "csv", rulesOnly: false, binary: false, mime: "text/csv;charset=utf-8" },
++  EQUITY: { fmt: "csv", part: "equity", ext: "csv", rulesOnly: false, binary: false, mime: "text/csv;charset=utf-8" },
++  METRICS: { fmt: "csv", part: "metrics", ext: "csv", rulesOnly: false, binary: false, mime: "text/csv;charset=utf-8" },
++};
++
++export const EXPORT_WORDS = Object.keys(BT_EXPORTS).join("|");
++
++/** File name of a run's export: `BT_<id>.pine`, `BT_<id>.pdf`, `BT_<id>_trades.csv`. */
++export function exportFileName(id: string, word: string): string {
++  const f = BT_EXPORTS[word.toUpperCase()];
++  return f ? `BT_${id}${f.part ? `_${f.part}` : ""}.${f.ext}` : `BT_${id}`;
++}
++
++/** The refusal a rule-only format gives for a Python strategy (the server says the same). */
++export function rulesOnlyRefusal(word: string): string {
++  return `${word.toUpperCase()} EXPORT NEEDS A RULE STRATEGY (PYTHON CODE CANNOT BE TRANSLATED FAITHFULLY; TRADES / EQUITY / METRICS / PDF / XLSX WORK)`;
++}
+diff --git a/frontend/src/csv.ts b/frontend/src/csv.ts
+index 552933d..177f32c 100644
+--- a/frontend/src/csv.ts
++++ b/frontend/src/csv.ts
+@@ -15,7 +15,12 @@ export function downloadCsv(name: string, header: string[], rows: CsvCell[][]):
+  */
+ export function downloadText(file: string, text: string, opts: { type?: string; bom?: boolean } = {}): string {
+   const { type = "text/plain;charset=utf-8", bom = false } = opts;
+-  const url = URL.createObjectURL(new Blob(bom ? ["﻿", text] : [text], { type }));
++  return downloadBlob(file, new Blob(bom ? ["﻿", text] : [text], { type }));
++}
++
++/** Saves a binary file (a PDF report, an XLSX workbook); returns the file name. */
++export function downloadBlob(file: string, blob: Blob): string {
++  const url = URL.createObjectURL(blob);
+   const a = document.createElement("a");
+   a.href = url;
+   a.download = file;
+diff --git a/frontend/src/functions/BT.tsx b/frontend/src/functions/BT.tsx
+index d481e02..c8ae55b 100644
+--- a/frontend/src/functions/BT.tsx
++++ b/frontend/src/functions/BT.tsx
+@@ -21,7 +21,8 @@ import { useStore } from "../state/store";
+ import { BtStarter } from "./BtStarter";
+ import { BtRuleLazy } from "./BtRuleLazy";
+ import { ruleToSentence } from "./ruleSentence";
+-import { downloadText } from "../csv";
++import { downloadBlob, downloadText } from "../csv";
++import { BT_EXPORTS, EXPORT_WORDS, exportFileName, rulesOnlyRefusal } from "../bt/exportFormats";
+ import { fmtAge, fmtNum, fmtPct, fmtPrice } from "../format";
+ import { registerPanelKeys } from "../keys/panelKeys";
+ import { btApi } from "../net/btApi";
+@@ -40,7 +41,16 @@ import { errText } from "../net/errText";
+ 
+ const BASE_VIEWS = ["CHART", "METRICS", "TRADES", "CODE"] as const;
+ type View = (typeof BASE_VIEWS)[number] | "MC" | "WF";
+-const EXPORT_USAGE = "USAGE: BT EXPORT <RUNID> [PINE|TRADES|EQUITY|METRICS]  (PINE: rule strategies only; the default is PINE)";
++const EXPORT_USAGE = `USAGE: BT EXPORT <RUNID> [${EXPORT_WORDS}]  (PINE and MQL5: rule strategies only; the default is PINE)`;
++
++/** Builds the export on the server and saves it as a file; resolves to the file name. */
++async function exportAndSave(id: string, word: string): Promise<string> {
++  const f = BT_EXPORTS[word.toUpperCase()];
++  const file = exportFileName(id, word);
++  if (f.binary) return downloadBlob(file, await btApi.exportBlob(id, f.fmt));
++  const text = await btApi.exportText(id, f.fmt as "csv" | "pine" | "mql5", f.part ?? "trades");
++  return downloadText(file, text);
++}
+ const VAL_NAME = { MC: "MONTE CARLO", WF: "WALK-FORWARD" } as const;
+ 
+ type State =
+@@ -220,14 +230,10 @@ export default function BT({ panelId, args }: FunctionProps) {
+   /** Server-built export (Pine for rule runs, CSV parts), saved as a file. */
+   const exportRun = (id: string | undefined, what = "PINE") => {
+     const w = what.toUpperCase();
+-    if (!id || !(w === "PINE" || ["TRADES", "EQUITY", "METRICS"].includes(w))) return setState({ k: "bad", error: EXPORT_USAGE });
++    if (!id || !(w in BT_EXPORTS)) return setState({ k: "bad", error: EXPORT_USAGE });
+     setState({ k: "note", text: `EXPORTING ${w} OF ${id}…` });
+-    btApi
+-      .exportText(id, w === "PINE" ? "pine" : "csv", w.toLowerCase())
+-      .then((text) => {
+-        const file = downloadText(w === "PINE" ? `BT_${id}.pine` : `BT_${id}_${w.toLowerCase()}.csv`, text);
+-        setState({ k: "note", text: `EXPORTED ${file}` });
+-      })
++    exportAndSave(id, w)
++      .then((file) => setState({ k: "note", text: `EXPORTED ${file}` }))
+       .catch((e) => setState({ k: "failed", error: errText(e) }));
+   };
+ 
+@@ -402,12 +408,13 @@ export default function BT({ panelId, args }: FunctionProps) {
+           submit(p);
+           return true;
+         }
+-        if (k === "p" && r) {
+-          if (!r.rule) setMsg("P: PINE EXPORT NEEDS A RULE STRATEGY (PYTHON CODE CANNOT BE TRANSLATED FAITHFULLY; E EXPORTS CSV)");
++        const word = ({ p: "PINE", q: "MQL5", d: "PDF", b: "XLSX" } as Record<string, string>)[k];
++        if (word && r) {
++          if (BT_EXPORTS[word].rulesOnly && !r.rule) setMsg(`${e.key.toUpperCase()}: ${rulesOnlyRefusal(word)}`);
+           else {
+-            btApi
+-              .exportText(r.id, "pine")
+-              .then((text) => setMsg(`EXPORTED ${downloadText(`BT_${r.id}.pine`, text)}`))
++            setMsg(`EXPORTING ${word}…`);
++            exportAndSave(r.id, word)
++              .then((file) => setMsg(`EXPORTED ${file}`))
+               .catch((err) => setMsg(`ERR: ${errText(err)}`));
+           }
+           return true;
+@@ -457,7 +464,7 @@ export default function BT({ panelId, args }: FunctionProps) {
+           <div className="dim">RULE TERMS: CLOSE OPEN HIGH LOW VOLUME SMAn EMAn RSIn HIGHn LOWn RETn NUMBER · OPS: &gt; &lt; &gt;= &lt;= CROSS&gt; CROSS&lt; · AND OR</div>
+           <div className="dim">EXAMPLE: BT AAPL SMA20&gt;SMA50 1D 5Y · BT SPY,QQQ RSI14&lt;30 1D 10Y SHORT FEES=5 SLIP=5</div>
+           <div className="dim">BT EDIT [NAME] = PYTHON STRATEGY EDITOR · BT SAVE &lt;NAME&gt; &lt;RULE&gt; · BT DEL &lt;NAME&gt; · BT &lt;SYMBOLS&gt; @&lt;NAME&gt; RUNS A SAVED ONE</div>
+-          <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|TRADES|EQUITY|METRICS]</div>
++          <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|MQL5|PDF|XLSX|TRADES|EQUITY|METRICS]</div>
+           <div className="dim">BT MC|WF &lt;SYMBOLS&gt; &lt;RULE&gt; … RUNS IT, THEN SHUFFLES ITS TRADES (MC) OR SPLITS IT INTO WINDOWS (WF) · M / W ON AN OPEN RUN DO THE SAME</div>
+         </>
+       )}
+@@ -490,7 +497,7 @@ export default function BT({ panelId, args }: FunctionProps) {
+           <Headline run={run} />
+           <div className="line">
+             VIEW <span className="bt-view acc">{shown}</span>
+-            <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
++            <span className="dim legend"> · V NEXT VIEW (1-{views.length}: {views.join(" ")}) · M MONTE CARLO · W WALK-FORWARD · R RE-RUN · E EXPORT CSV · P PINE · Q MQL5 · D PDF · B XLSX{shown === "CHART" ? " · H/L PAN · +/- ZOOM" : shown === "MC" || shown === "CODE" ? "" : " · J/K MOVE"}</span>
+           </div>
+           {shown === "CHART" && chartBits && chartFor !== run.id && <div className="dim">DRAWING CHART…</div>}
+           {shown === "CHART" && chartBits && chartFor === run.id && (
+diff --git a/frontend/src/gui/toolbars.ts b/frontend/src/gui/toolbars.ts
+index 5e62a86..c05a27a 100644
+--- a/frontend/src/gui/toolbars.ts
++++ b/frontend/src/gui/toolbars.ts
+@@ -130,6 +130,9 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
+     { label: "Monte Carlo", key: "m", title: "Monte Carlo robustness check (M)" },
+     { label: "Walk-forward", key: "w", title: "Walk-forward validation (W)" },
+     { label: "Pine", key: "p", title: "Export as a Pine script (P)" },
++    { label: "MT5", key: "q", title: "Export as a MetaTrader 5 Expert Advisor, rule strategies (Q)" },
++    { label: "PDF", key: "d", title: "Export a PDF report of this run (D)" },
++    { label: "Excel", key: "b", title: "Export an Excel workbook of this run (B)" },
+     // Only in the strategy editor (BT EDIT <name>). The panel handles T only while the code box is not focused,
+     // and a press from this button moves focus to the panel first, so it works from the mouse too.
+     { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },
+diff --git a/frontend/src/net/btApi.ts b/frontend/src/net/btApi.ts
+index ddac8ae..6129b14 100644
+--- a/frontend/src/net/btApi.ts
++++ b/frontend/src/net/btApi.ts
+@@ -32,7 +32,7 @@ export const btApi = {
+   runs: () => send<{ runs: BtRunCard[] }>("GET", "/api/bt/runs"),
+   compare: (a: string, b: string) => send<BtCompare>("GET", `/api/bt/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
+   /** The server-built export: a CSV part (`trades`, `equity`, `metrics`) or the Pine Script of a rule run. */
+-  exportText: async (id: string, fmt: "csv" | "pine", part = "trades"): Promise<string> => {
++  exportText: async (id: string, fmt: "csv" | "pine" | "mql5", part = "trades"): Promise<string> => {
+     let res: Response;
+     try {
+       res = await fetch(`/api/bt/runs/${encodeURIComponent(id)}/export?fmt=${fmt}&part=${part}`);
+@@ -45,6 +45,20 @@ export const btApi = {
+     }
+     return res.text();
+   },
++  /** The server-built binary export (PDF report, XLSX workbook). */
++  exportBlob: async (id: string, fmt: string): Promise<Blob> => {
++    let res: Response;
++    try {
++      res = await fetch(`/api/bt/runs/${encodeURIComponent(id)}/export?fmt=${fmt}`);
++    } catch {
++      throw new ApiError(0, "BACKEND DOWN");
++    }
++    if (!res.ok) {
++      const json = await res.json().catch(() => null);
++      throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
++    }
++    return res.blob();
++  },
+   /** Start a Monte Carlo (`mc`) or walk-forward (`wf`) job on a stored run. */
+   validate: (id: string, kind: "mc" | "wf", body: Record<string, unknown> = {}) =>
+     send<JobRec>("POST", `/api/bt/runs/${encodeURIComponent(id)}/${kind}`, body),

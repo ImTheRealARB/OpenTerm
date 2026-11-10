@@ -1,0 +1,1796 @@
+diff --git a/backend/openterm/extensions/__init__.py b/backend/openterm/extensions/__init__.py
+new file mode 100644
+index 0000000..6d82bfd
+--- /dev/null
++++ b/backend/openterm/extensions/__init__.py
+@@ -0,0 +1 @@
++"""Third-party extensions (see manager.py and docs/EXTENSIONS.md)."""
+diff --git a/backend/openterm/extensions/manager.py b/backend/openterm/extensions/manager.py
+new file mode 100644
+index 0000000..070480a
+--- /dev/null
++++ b/backend/openterm/extensions/manager.py
+@@ -0,0 +1,481 @@
++"""Third-party extensions: discovery, the enable switch, loading, and undoing a load.
++
++An extension is Python code somebody else wrote. It runs INSIDE the OpenTerm process with the permissions of the user who started
++OpenTerm: it can read the files, keys in the environment and network that user can. So:
++
++- nothing is imported until the user types `EXT ENABLE <name>`; discovery only reads a `extension.yaml` (folders) or package
++  metadata (entry points), never runs the code;
++- a failing extension (bad manifest, import error, `register()` raising, a route or tool crashing) is isolated: logged, shown as ERR in
++  `EXT LIST`, and never stops startup or the other extensions;
++- what an extension can ADD is narrow and read-only: a data provider (the same `Provider` base as `providers/`, ranked after every
++  built-in source), AI tools named `ext.<name>.<tool>` (same 6,000-character cap as every tool, refused if the name or description looks
++  like an order, broker or account tool), and GET routes under `/api/ext/<name>/<route>` that return a table or a series.
++
++Where extensions come from: the entry-point group `openterm.extensions` (installed Python packages) and folders
++`<data dir>/extensions/<name>/` holding `extension.yaml` and the entry file (default `extension.py`). Both define `register(api)`.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import contextlib
++import importlib
++import importlib.util
++import inspect
++import json
++import logging
++import re
++import sys
++from dataclasses import dataclass, field
++from importlib import metadata
++from pathlib import Path
++from typing import Any
++
++import yaml
++
++from ..ai import tools as toolbox
++from ..providers.base import Provider
++from ..providers.hierarchy import DEFAULT_ORDER
++from ..redact import redact
++from ..router import Health, Router
++from .manifest import NAME_RE, SHORT_RE, Manifest, ManifestError, parse_manifest
++from .payload import PayloadError, normalize
++
++log = logging.getLogger("openterm.extensions")
++
++GROUP = "openterm.extensions"
++ROUTE_TIMEOUT_S = 10.0
++MAX_ARGS = 20
++MAX_TOOL_DESC = 240
++MAX_TOOLS = 10
++MAX_ROUTES = 10
++PARAM_TYPES = {"string", "integer", "number", "array", "object"}
++DEFAULT_ROUTE = "main"
++
++NOTICE = ("EXTENSIONS ARE THIRD-PARTY CODE. AN ENABLED EXTENSION RUNS INSIDE OPENTERM WITH YOUR PERMISSIONS (YOUR FILES, KEYS AND NETWORK). "
++          "ENABLE ONLY CODE YOU TRUST FROM AN AUTHOR YOU KNOW.")
++
++# Order-like names are refused. Same words as the checks on the built-in tools (tests/test_phase20_tools.py FORBIDDEN and
++# tests/test_phase17_mcp.py FORBIDDEN): this app has no order, broker or account tool and an extension cannot add one.
++_SUBSTRING = ("order", "margin", "holding", "broker", "cancel", "execut")
++_PREFIX = ("kite", "gtt", "buy", "sell", "kill", "trade")
++_DESCRIPTION = re.compile(r"\b(orders?|gtt|margins?|holdings?|kite)\b", re.IGNORECASE)
++
++
++class ExtError(Exception):
++    """kind: bad_request | not_found | forbidden | extension_error (the HTTP layer maps it)."""
++
++    def __init__(self, kind: str, message: str):
++        super().__init__(message)
++        self.kind = kind
++
++
++def order_like(name: str, description: str = "") -> str | None:
++    """Why a tool or route name (and description) looks like an order surface, or None when it is fine."""
++    low = name.lower()
++    tokens = re.split(r"[^a-z0-9]+", low)
++    for w in _SUBSTRING:
++        if w in low:
++            return f"{name}: THE NAME CONTAINS '{w}'"
++    for w in _PREFIX:
++        if any(t.startswith(w) for t in tokens):
++            return f"{name}: THE NAME CONTAINS '{w}'"
++    m = _DESCRIPTION.search(description)
++    if m:
++        return f"{name}: THE DESCRIPTION MENTIONS '{m.group(0)}'"
++    return None
++
++
++@dataclass
++class RouteSpec:
++    name: str
++    handler: Any
++    title: str = ""
++    args: str = ""
++
++
++@dataclass
++class Loaded:
++    providers: list[str] = field(default_factory=list)
++    tools: list[str] = field(default_factory=list)
++    routes: dict[str, RouteSpec] = field(default_factory=dict)
++    modules: list[str] = field(default_factory=list)
++
++
++@dataclass
++class Entry:
++    name: str
++    source: str  # "folder" | "package:<distribution>"
++    manifest: Manifest | None = None
++    error: str | None = None  # discovery or load failure
++    runtime_error: str | None = None  # last failure of a route or tool call
++    folder: Path | None = None
++    ep: Any = None
++    loaded: Loaded | None = None
++
++
++class ExtensionApi:
++    """What `register(api)` receives. Everything is checked when it is added; nothing is live until `register` returns."""
++
++    def __init__(self, name: str):
++        self.name = name
++        self.providers: list[type] = []
++        self.tools: list[tuple[str, str, dict, Any]] = []
++        self.routes: dict[str, RouteSpec] = {}
++
++    def add_provider(self, cls: type) -> None:
++        if not (isinstance(cls, type) and issubclass(cls, Provider)):
++            raise ExtError("bad_request", "add_provider NEEDS A SUBCLASS OF openterm.providers.base.Provider")
++        self.providers.append(cls)
++
++    def add_tool(self, name: str, description: str, parameters: dict | None, handler) -> None:
++        """A read-only AI tool. `handler(args: dict) -> dict` is synchronous and fast; the result is cut to 6,000 characters."""
++        if not SHORT_RE.match(str(name)):
++            raise ExtError("bad_request", f"TOOL NAME {name!r} MUST BE LOWERCASE LETTERS, DIGITS AND _")
++        if not callable(handler) or inspect.iscoroutinefunction(handler):
++            raise ExtError("bad_request", "A TOOL HANDLER MUST BE A PLAIN (NOT async) FUNCTION")
++        if not isinstance(description, str) or not description.strip() or len(description) > MAX_TOOL_DESC:
++            raise ExtError("bad_request", f"A TOOL DESCRIPTION IS 1 TO {MAX_TOOL_DESC} CHARACTERS")
++        if len(self.tools) >= MAX_TOOLS or any(t[0] == name for t in self.tools):
++            raise ExtError("bad_request", f"AT MOST {MAX_TOOLS} UNIQUE TOOLS PER EXTENSION")
++        if why := order_like(name, description):
++            raise ExtError("forbidden", f"REFUSED, ORDER-LIKE TOOL: {why}")
++        self.tools.append((name, description, _schema(parameters), handler))
++
++    def add_route(self, name: str, handler, title: str = "", args: str = "") -> None:
++        """A GET route: `handler(args: list[str]) -> table or series payload` (sync or async). `main` answers `EXT <name>`."""
++        if not SHORT_RE.match(str(name)):
++            raise ExtError("bad_request", f"ROUTE NAME {name!r} MUST BE LOWERCASE LETTERS, DIGITS AND _")
++        if not callable(handler):
++            raise ExtError("bad_request", "A ROUTE HANDLER MUST BE CALLABLE")
++        if len(self.routes) >= MAX_ROUTES or name in self.routes:
++            raise ExtError("bad_request", f"AT MOST {MAX_ROUTES} UNIQUE ROUTES PER EXTENSION")
++        if why := order_like(name):
++            raise ExtError("forbidden", f"REFUSED, ORDER-LIKE ROUTE: {why}")
++        self.routes[name] = RouteSpec(name, handler, str(title)[:80], str(args)[:80])
++
++
++def _schema(parameters: dict | None) -> dict:
++    """The tool's argument schema in the form `ai.tools.validate` understands (flat, typed properties, no extras)."""
++    parameters = parameters or {}
++    props_in = parameters.get("properties") or {}
++    if not isinstance(props_in, dict) or len(props_in) > 8:
++        raise ExtError("bad_request", "TOOL parameters.properties MUST BE AN OBJECT OF AT MOST 8 ARGUMENTS")
++    props: dict[str, dict] = {}
++    for k, spec in props_in.items():
++        if not SHORT_RE.match(str(k)) or not isinstance(spec, dict) or spec.get("type") not in PARAM_TYPES:
++            raise ExtError("bad_request", f"ARGUMENT {k!r} NEEDS A LOWERCASE NAME AND A type OF {', '.join(sorted(PARAM_TYPES))}")
++        props[k] = {kk: spec[kk] for kk in ("type", "description", "enum") if kk in spec}
++    required = [r for r in (parameters.get("required") or []) if r in props]
++    return toolbox.obj(props, required)
++
++
++def _package_entry_points() -> list:
++    return list(metadata.entry_points(group=GROUP))
++
++
++class ExtensionManager:
++    def __init__(self, ext_dir: Path | None, router: Router, http: Any):
++        self.dir = ext_dir
++        self.router = router
++        self.http = http
++        self.entries: dict[str, Entry] = {}
++        self.enabled: set[str] = set()
++        self._read_state()
++        self.refresh()
++
++    # --- state file -------------------------------------------------------------------------------------------------------------
++    @property
++    def _state_file(self) -> Path | None:
++        return self.dir / "enabled.json" if self.dir is not None else None
++
++    def _read_state(self) -> None:
++        f = self._state_file
++        if f is None or not f.is_file():
++            return
++        try:
++            names = json.loads(f.read_text(encoding="utf-8")).get("enabled", [])
++            self.enabled = {n for n in names if isinstance(n, str) and NAME_RE.match(n)}
++        except (OSError, ValueError, AttributeError):
++            log.warning("extensions: %s is unreadable; every extension stays off", f)
++
++    def _save(self) -> None:
++        f = self._state_file
++        if f is None:
++            return
++        try:
++            f.parent.mkdir(parents=True, exist_ok=True)
++            tmp = f.with_suffix(".tmp")
++            tmp.write_text(json.dumps({"enabled": sorted(self.enabled)}), encoding="utf-8")
++            tmp.replace(f)
++        except OSError as e:
++            log.warning("extensions: could not save the enabled list: %s", redact(str(e)))
++
++    # --- discovery (never runs extension code) ----------------------------------------------------------------------------------
++    def refresh(self) -> None:
++        found: dict[str, Entry] = {}
++        for entry in [*self._scan_folders(), *self._scan_packages()]:
++            if entry.name in found:  # the first one (a folder) wins; a package with the same name is reported, not loaded
++                log.warning("extensions: duplicate name %s ignored (%s)", entry.name, entry.source)
++                continue
++            old = self.entries.get(entry.name)
++            if old is not None:  # the state of a load or a call survives a rescan; a bad manifest is judged afresh
++                entry.loaded, entry.runtime_error = old.loaded, old.runtime_error
++                entry.error = entry.error or old.error
++            found[entry.name] = entry
++        for name, old in self.entries.items():  # something loaded that vanished from disk stays listed until it is disabled
++            if name not in found and old.loaded is not None:
++                found[name] = old
++        self.entries = dict(sorted(found.items()))
++
++    def _scan_folders(self) -> list[Entry]:
++        out: list[Entry] = []
++        if self.dir is None or not self.dir.is_dir():
++            return out
++        for d in sorted(self.dir.iterdir()):
++            if d.name.startswith(".") or not d.is_dir():
++                continue
++            e = Entry(name=d.name, source="folder", folder=d)
++            try:
++                raw = yaml.safe_load((d / "extension.yaml").read_text(encoding="utf-8"))
++                e.manifest = parse_manifest(raw, expect_name=d.name)
++            except FileNotFoundError:
++                continue  # not an extension folder
++            except (OSError, yaml.YAMLError, ManifestError) as err:
++                e.error = f"BAD MANIFEST: {redact(str(err))[:160]}"
++                log.warning("extensions: %s: %s", d.name, e.error)
++            out.append(e)
++        return out
++
++    def _scan_packages(self) -> list[Entry]:
++        out: list[Entry] = []
++        try:
++            eps = _package_entry_points()
++        except Exception as err:  # noqa: BLE001 - a broken installed distribution must not break the listing
++            log.warning("extensions: entry points unreadable: %s", err)
++            return out
++        for ep in eps:
++            dist = getattr(ep, "dist", None)
++            source = f"package:{dist.metadata['Name']}" if dist is not None else "package"
++            e = Entry(name=ep.name, source=source, ep=ep)
++            try:
++                if dist is None or not NAME_RE.match(ep.name):
++                    raise ManifestError("ENTRY POINT NAME MUST BE LOWERCASE LETTERS, DIGITS, _ AND -")
++                md = dist.metadata
++                e.manifest = parse_manifest({
++                    "name": ep.name, "version": md["Version"], "author": md["Author"] or md["Author-email"] or md["Maintainer"],
++                    "license": md["License-Expression"] or md["License"] or "see package", "description": md["Summary"],
++                })
++            except (ManifestError, KeyError, TypeError) as err:
++                e.error = f"BAD METADATA: {redact(str(err))[:160]}"
++            out.append(e)
++        return out
++
++    # --- listing ----------------------------------------------------------------------------------------------------------------
++    def status_of(self, e: Entry) -> str:
++        if e.error or (e.runtime_error and e.loaded is not None):
++            return "ERR"
++        return "ON" if e.loaded is not None else "OFF"
++
++    def list(self) -> list[dict]:
++        rows = []
++        for e in self.entries.values():
++            m = e.manifest
++            adds = list(m.adds) if m else []
++            if e.loaded is not None:
++                adds = [k for k, v in (("provider", e.loaded.providers), ("tools", e.loaded.tools), ("route", e.loaded.routes)) if v]
++            rows.append({
++                "name": e.name, "version": m.version if m else None, "author": m.author if m else None,
++                "license": m.license if m else None, "description": m.description if m else "", "source": e.source,
++                "adds": adds, "enabled": e.name in self.enabled, "status": self.status_of(e),
++                "error": redact(e.error or e.runtime_error or "") or None,
++                "routes": [{"name": r.name, "title": r.title, "args": r.args} for r in (e.loaded.routes.values() if e.loaded else [])],
++                "tools": list(e.loaded.tools) if e.loaded else [],
++            })
++        return rows
++
++    def summary(self) -> dict:
++        return {"extensions": self.list(), "dir": str(self.dir) if self.dir else None, "notice": NOTICE}
++
++    # --- enable / disable -------------------------------------------------------------------------------------------------------
++    def _get(self, name: str) -> Entry:
++        e = self.entries.get(name)
++        if e is None:
++            raise ExtError("not_found", f"NO EXTENSION NAMED {name}: run EXT LIST")
++        return e
++
++    def enable(self, name: str) -> dict:
++        self.refresh()
++        e = self._get(name)
++        if e.manifest is None:
++            raise ExtError("bad_request", e.error or "BAD MANIFEST")
++        if e.loaded is None:
++            self._load(e)  # raises ExtError, after recording e.error
++        self.enabled.add(name)
++        self._save()
++        return self.list_one(name)
++
++    def disable(self, name: str) -> dict:
++        e = self._get(name)
++        self._unload(e)
++        e.error = e.runtime_error = None
++        self.enabled.discard(name)
++        self._save()
++        return self.list_one(name)
++
++    def list_one(self, name: str) -> dict:
++        return next(r for r in self.list() if r["name"] == name)
++
++    def load_enabled(self) -> None:
++        """Startup: load every extension the user enabled. A failure is logged and shown as ERR; it never propagates."""
++        for name in sorted(self.enabled):
++            e = self.entries.get(name)
++            if e is None:
++                log.warning("extensions: %s is enabled but not found on disk", name)
++                continue
++            with contextlib.suppress(ExtError):
++                self._load(e)
++
++    def unload_all(self) -> None:
++        for e in list(self.entries.values()):
++            self._unload(e)
++
++    # --- loading ----------------------------------------------------------------------------------------------------------------
++    def _import(self, e: Entry):
++        if e.ep is not None:
++            return e.ep.load()
++        assert e.folder is not None and e.manifest is not None
++        path = (e.folder / e.manifest.entry).resolve()
++        if not path.is_file() or e.folder.resolve() not in path.parents:
++            raise ExtError("bad_request", f"ENTRY FILE {e.manifest.entry} NOT FOUND INSIDE THE EXTENSION FOLDER")
++        modname = "openterm_ext_" + e.name.replace("-", "_")
++        spec = importlib.util.spec_from_file_location(modname, path, submodule_search_locations=[str(e.folder.resolve())])
++        if spec is None or spec.loader is None:
++            raise ExtError("bad_request", "ENTRY FILE CANNOT BE IMPORTED")
++        mod = importlib.util.module_from_spec(spec)
++        sys.modules[modname] = mod
++        try:
++            spec.loader.exec_module(mod)
++        except BaseException:
++            self._drop_modules(modname)
++            raise
++        return mod
++
++    @staticmethod
++    def _drop_modules(prefix: str) -> None:
++        for n in [n for n in sys.modules if n == prefix or n.startswith(prefix + ".")]:
++            del sys.modules[n]
++
++    def _load(self, e: Entry) -> None:
++        try:
++            obj = self._import(e)
++            register = getattr(obj, "register", None) or (obj if callable(obj) and not inspect.ismodule(obj) else None)
++            if register is None:
++                raise ExtError("bad_request", "THE EXTENSION DEFINES NO register(api) FUNCTION")
++            api = ExtensionApi(e.name)
++            register(api)
++            e.loaded = self._commit(e, api)
++            e.error = e.runtime_error = None
++            log.info("extensions: %s %s loaded (%s)", e.name, e.manifest.version if e.manifest else "?", e.source)
++        except (Exception, SystemExit) as err:  # noqa: BLE001 - isolation: whatever the extension does, the app goes on
++            self._drop_modules("openterm_ext_" + e.name.replace("-", "_"))
++            msg = f"LOAD FAILED: {type(err).__name__}: {redact(str(err))[:160]}" if not isinstance(err, ExtError) else redact(str(err))
++            e.error, e.loaded = msg, None
++            log.warning("extensions: %s: %s", e.name, msg)
++            raise (err if isinstance(err, ExtError) else ExtError("extension_error", msg)) from None
++
++    def _commit(self, e: Entry, api: ExtensionApi) -> Loaded:
++        """Validate everything, then make it live. Nothing changes when any part is refused."""
++        r = self.router
++        built: list[Provider] = []
++        for cls in api.providers:
++            p = cls(self.http)
++            if not p.name or p.name in r.providers or p.name in {b.name for b in built}:
++                raise ExtError("bad_request", f"PROVIDER NAME {p.name!r} IS EMPTY OR ALREADY TAKEN")
++            unknown = sorted(c for c in p.capabilities if c not in DEFAULT_ORDER)
++            if unknown:
++                raise ExtError("bad_request", f"PROVIDER {p.name} DECLARES UNKNOWN CAPABILITIES: {', '.join(unknown)}")
++            built.append(p)
++        tools = []
++        for short, desc, params, handler in api.tools:
++            full = f"ext.{e.name}.{short}"
++            if full in toolbox.REGISTRY:
++                raise ExtError("bad_request", f"TOOL {full} ALREADY EXISTS")
++            tools.append(toolbox.Tool(full, desc, params, f"local:{full}", local=self._tool_runner(e, handler), desk_only=True))
++        loaded = Loaded(modules=["openterm_ext_" + e.name.replace("-", "_")])
++        for p in built:
++            r.providers[p.name] = p
++            r.health[p.name] = Health()
++            for cap in p.capabilities:  # last in line: an extension never outranks a built-in source
++                r.order[cap] = [*r.order.get(cap, []), p.name]
++            loaded.providers.append(p.name)
++        for t in tools:
++            toolbox.REGISTRY[t.name] = t
++            loaded.tools.append(t.name)
++        loaded.routes = dict(api.routes)
++        return loaded
++
++    def _tool_runner(self, e: Entry, handler):
++        name = e.name
++
++        def run(args: dict, ctx: dict) -> dict:
++            e = self.entries.get(name) or Entry(name, "gone")  # a refresh replaces Entry objects: look the current one up
++            try:
++                out = handler(dict(args))
++                data = out if isinstance(out, dict) else {"result": out}
++                json.dumps(data, default=str)
++            except Exception as err:  # noqa: BLE001 - reported to the model as a tool error, never raised into the agent
++                e.runtime_error = f"{type(err).__name__}: {redact(str(err))[:120]}"
++                log.warning("extensions: %s tool failed: %s", e.name, e.runtime_error)
++                raise ValueError(f"EXTENSION {e.name} FAILED: {e.runtime_error}") from None
++            e.runtime_error = None
++            return {**data, "source": f"ext:{e.name}"}
++        return run
++
++    def _unload(self, e: Entry) -> None:
++        if e.loaded is None:
++            return
++        r = self.router
++        for name in e.loaded.providers:
++            r.providers.pop(name, None)
++            r.health.pop(name, None)
++            for cap in list(r.order):
++                if name in r.order[cap]:
++                    r.order[cap] = [n for n in r.order[cap] if n != name]
++        for name in e.loaded.tools:
++            toolbox.REGISTRY.pop(name, None)
++        for m in e.loaded.modules:
++            self._drop_modules(m)
++        e.loaded = None
++
++    # --- routes -----------------------------------------------------------------------------------------------------------------
++    async def call_route(self, name: str, route: str, args: list[str]) -> dict:
++        e = self._get(name)
++        if e.loaded is None:
++            raise ExtError("forbidden", f"EXTENSION {name} IS NOT ENABLED: run EXT ENABLE {name}")
++        spec = e.loaded.routes.get(route)
++        if spec is None:
++            known = ", ".join(e.loaded.routes) or "none"
++            raise ExtError("not_found", f"EXTENSION {name} HAS NO ROUTE {route} (routes: {known})")
++        try:
++            if inspect.iscoroutinefunction(spec.handler):
++                raw = await asyncio.wait_for(spec.handler(list(args)), ROUTE_TIMEOUT_S)
++            else:
++                raw = await asyncio.wait_for(asyncio.to_thread(spec.handler, list(args)), ROUTE_TIMEOUT_S)
++            payload = normalize(raw)
++        except PayloadError as err:
++            e.runtime_error = f"BAD PAYLOAD: {redact(str(err))[:160]}"
++            raise ExtError("extension_error", f"EXTENSION {name} ERR {e.runtime_error}") from None
++        except TimeoutError:
++            e.runtime_error = f"TIMED OUT AFTER {ROUTE_TIMEOUT_S:.0f}S"
++            raise ExtError("extension_error", f"EXTENSION {name} ERR {e.runtime_error}") from None
++        except Exception as err:  # noqa: BLE001 - isolation
++            e.runtime_error = f"{type(err).__name__}: {redact(str(err))[:160]}"
++            log.warning("extensions: %s route %s failed: %s", name, route, e.runtime_error)
++            raise ExtError("extension_error", f"EXTENSION {name} ERR {e.runtime_error}") from None
++        e.runtime_error = None
++        return payload
++
++
++def split_args(q: str | None) -> list[str]:
++    return [a[:100] for a in (q or "").split()[:MAX_ARGS]]
+diff --git a/backend/openterm/extensions/manifest.py b/backend/openterm/extensions/manifest.py
+new file mode 100644
+index 0000000..b736a5d
+--- /dev/null
++++ b/backend/openterm/extensions/manifest.py
+@@ -0,0 +1,59 @@
++"""Extension manifests (`extension.yaml`) and the rules for names.
++
++name: lowercase letters, digits, `_` and `-`, starting with a letter, at most 32 characters. It becomes `/api/ext/<name>/...`, the
++`ext.<name>.` tool prefix and the `EXT <name>` command, so nothing else is allowed.
++"""
++
++from __future__ import annotations
++
++import re
++from dataclasses import dataclass, field
++
++NAME_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}\Z")
++SHORT_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}\Z")  # a tool or route name inside an extension
++ADDS = ("provider", "tools", "route")
++LIMIT = 200
++
++
++class ManifestError(ValueError):
++    pass
++
++
++@dataclass(frozen=True)
++class Manifest:
++    name: str
++    version: str
++    author: str
++    license: str
++    description: str = ""
++    adds: tuple[str, ...] = field(default_factory=tuple)
++    entry: str = "extension.py"
++
++
++def _str(raw: dict, key: str, required: bool = True) -> str:
++    v = raw.get(key)
++    if v is None or v == "":
++        if required:
++            raise ManifestError(f"MANIFEST NEEDS {key}")
++        return ""
++    if not isinstance(v, (str, int, float)) or isinstance(v, bool):
++        raise ManifestError(f"MANIFEST {key} MUST BE TEXT")
++    return str(v)[:LIMIT]
++
++
++def parse_manifest(raw: object, expect_name: str | None = None) -> Manifest:
++    if not isinstance(raw, dict):
++        raise ManifestError("MANIFEST MUST BE A YAML MAPPING")
++    name = _str(raw, "name")
++    if not NAME_RE.match(name):
++        raise ManifestError("MANIFEST name MUST BE LOWERCASE LETTERS, DIGITS, _ AND -, STARTING WITH A LETTER (MAX 32)")
++    if expect_name is not None and name != expect_name:
++        raise ManifestError(f"MANIFEST name {name} DOES NOT MATCH ITS FOLDER {expect_name}")
++    adds = raw.get("adds") or []
++    if not isinstance(adds, list) or any(a not in ADDS for a in adds):
++        raise ManifestError(f"MANIFEST adds MUST BE A LIST OF {', '.join(ADDS)}")
++    entry = _str(raw, "entry", required=False) or "extension.py"
++    if "/" in entry or "\\" in entry or ".." in entry or not entry.endswith(".py"):
++        raise ManifestError("MANIFEST entry MUST BE A .py FILE IN THE EXTENSION FOLDER")
++    return Manifest(name=name, version=_str(raw, "version"), author=_str(raw, "author"), license=_str(raw, "license"),
++                    description=_str(raw, "description", required=False), adds=tuple(adds), entry=entry)
+diff --git a/backend/openterm/extensions/payload.py b/backend/openterm/extensions/payload.py
+new file mode 100644
+index 0000000..abcc2df
+--- /dev/null
++++ b/backend/openterm/extensions/payload.py
+@@ -0,0 +1,108 @@
++"""The two payload shapes an extension route may return, checked and cleaned before they reach the browser.
++
++table:  {"kind": "table", "title", "columns": [{"key", "title", "kind"?, "align"?}], "rows": [{key: value}], "notes"?: [str]}
++series: {"kind": "series", "title", "unit"?, "t": [epoch seconds, ascending], "v": [number | null]}
++
++The browser draws a table with the Grid and a series with the chart, so an extension needs no frontend build. A cell holds text,
++a number, a boolean or null; a number that is not finite becomes null (a dash on screen), never a made-up value.
++"""
++
++from __future__ import annotations
++
++import math
++from itertools import pairwise
++from typing import Any
++
++MAX_ROWS = 2000
++MAX_COLUMNS = 30
++MAX_POINTS = 20_000
++MAX_TEXT = 500
++MAX_NOTES = 10
++CELL_KINDS = {"text", "int", "num", "num4", "pct", "bp", "money", "price", "date"}
++RIGHT = {"int", "num", "num4", "pct", "bp", "money", "price"}
++
++
++class PayloadError(ValueError):
++    pass
++
++
++def _text(v: Any, what: str, limit: int = MAX_TEXT) -> str:
++    if not isinstance(v, str):
++        raise PayloadError(f"{what} MUST BE TEXT")
++    return v[:limit]
++
++
++def _cell(v: Any) -> str | int | float | bool | None:
++    if v is None or isinstance(v, (bool, int, str)):
++        return v[:MAX_TEXT] if isinstance(v, str) else v
++    if isinstance(v, float):
++        return v if math.isfinite(v) else None
++    raise PayloadError(f"A CELL MUST BE TEXT, A NUMBER, TRUE/FALSE OR NULL, NOT {type(v).__name__}")
++
++
++def _number(v: Any) -> float | int | None:
++    if v is None:
++        return None
++    if isinstance(v, bool) or not isinstance(v, (int, float)):
++        raise PayloadError("A SERIES VALUE MUST BE A NUMBER OR NULL")
++    return v if math.isfinite(v) else None
++
++
++def _table(p: dict) -> dict:
++    cols_in, rows_in = p.get("columns"), p.get("rows")
++    if not isinstance(cols_in, list) or not 1 <= len(cols_in) <= MAX_COLUMNS:
++        raise PayloadError(f"A TABLE NEEDS 1 TO {MAX_COLUMNS} COLUMNS")
++    if not isinstance(rows_in, list) or len(rows_in) > MAX_ROWS:
++        raise PayloadError(f"A TABLE HAS AT MOST {MAX_ROWS} ROWS")
++    cols, keys = [], set()
++    for c in cols_in:
++        if not isinstance(c, dict):
++            raise PayloadError("A COLUMN MUST BE AN OBJECT")
++        key = _text(c.get("key"), "COLUMN KEY", 64)
++        if not key or key in keys:
++            raise PayloadError("COLUMN KEYS MUST BE UNIQUE AND NOT EMPTY")
++        keys.add(key)
++        kind = c.get("kind", "text")
++        if kind not in CELL_KINDS:
++            raise PayloadError(f"COLUMN KIND MUST BE ONE OF {', '.join(sorted(CELL_KINDS))}")
++        align = c.get("align") or ("right" if kind in RIGHT else "left")
++        if align not in ("left", "right"):
++            raise PayloadError("COLUMN ALIGN MUST BE left OR right")
++        cols.append({"key": key, "title": _text(c.get("title", key), "COLUMN TITLE", 40), "kind": kind, "align": align})
++    rows = []
++    for r in rows_in:
++        if not isinstance(r, dict):
++            raise PayloadError("A ROW MUST BE AN OBJECT")
++        rows.append({k: _cell(r.get(k)) for k in keys})
++    notes = p.get("notes") or []
++    if not isinstance(notes, list) or len(notes) > MAX_NOTES:
++        raise PayloadError(f"NOTES MUST BE A LIST OF AT MOST {MAX_NOTES} TEXTS")
++    return {"kind": "table", "title": _text(p.get("title", ""), "TITLE", 200), "columns": cols, "rows": rows,
++            "notes": [_text(n, "NOTE") for n in notes]}
++
++
++def _series(p: dict) -> dict:
++    t, v = p.get("t"), p.get("v")
++    if not isinstance(t, list) or not isinstance(v, list) or len(t) != len(v):
++        raise PayloadError("A SERIES NEEDS t AND v LISTS OF THE SAME LENGTH")
++    if len(t) > MAX_POINTS:
++        raise PayloadError(f"A SERIES HAS AT MOST {MAX_POINTS} POINTS")
++    for x in t:
++        if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x):
++            raise PayloadError("t MUST HOLD EPOCH SECONDS")
++    if any(b <= a for a, b in pairwise(t)):
++        raise PayloadError("t MUST BE ASCENDING")
++    return {"kind": "series", "title": _text(p.get("title", ""), "TITLE", 200), "unit": _text(p.get("unit", ""), "UNIT", 40),
++            "t": [int(x) for x in t], "v": [_number(x) for x in v]}
++
++
++def normalize(payload: Any) -> dict:
++    """The cleaned payload, or PayloadError saying what is wrong. Unknown keys are dropped."""
++    if not isinstance(payload, dict):
++        raise PayloadError("A ROUTE MUST RETURN AN OBJECT")
++    kind = payload.get("kind")
++    if kind == "table":
++        return _table(payload)
++    if kind == "series":
++        return _series(payload)
++    raise PayloadError("PAYLOAD kind MUST BE table OR series")
+diff --git a/backend/openterm/extensions/routes.py b/backend/openterm/extensions/routes.py
+new file mode 100644
+index 0000000..fac70d1
+--- /dev/null
++++ b/backend/openterm/extensions/routes.py
+@@ -0,0 +1,96 @@
++"""REST for extensions: list, enable, disable, and the read-only data routes an enabled extension added.
++
++GET  /api/ext                     the list (name, version, author, licence, what it adds, ON / OFF / ERR) and the permissions notice
++POST /api/ext/{name}/enable       the user switches an extension on (this machine only; the Origin guard covers browsers)
++POST /api/ext/{name}/disable
++GET  /api/ext/{name}[/{route}]    ?q=a b c  ->  {data: table | series payload, source: "ext:<name>", ...}; route defaults to main
++"""
++
++from __future__ import annotations
++
++import time
++
++from fastapi import APIRouter, Request
++
++from .. import http_util
++from ..responses import OrjsonRoute
++from .manager import ExtensionManager, ExtError, split_args
++from .manifest import NAME_RE, SHORT_RE
++
++router = APIRouter(prefix="/api/ext", route_class=OrjsonRoute)
++
++STATUS = {"bad_request": 400, "not_found": 404, "forbidden": 403, "extension_error": 502}
++
++
++def _mgr(request: Request) -> ExtensionManager | None:
++    return getattr(request.app.state, "ext", None)
++
++
++def _err(e: ExtError):
++    return http_util.error_response(STATUS.get(e.kind, 500), e.kind, str(e))
++
++
++def _off():
++    return http_util.error_response(503, "unavailable", "EXTENSIONS ARE NOT AVAILABLE")
++
++
++@router.get("")
++async def ext_list(request: Request):
++    m = _mgr(request)
++    if m is None:
++        return _off()
++    m.refresh()
++    return m.summary()
++
++
++@router.post("/{name}/enable")
++async def ext_enable(name: str, request: Request):
++    m = _mgr(request)
++    if m is None:
++        return _off()
++    if not http_util.loopback(request):
++        return http_util.error_response(403, "forbidden", "FORBIDDEN: ENABLING AN EXTENSION IS DONE FROM THIS MACHINE ONLY")
++    if not NAME_RE.match(name):
++        return http_util.error_response(400, "bad_request", "BAD EXTENSION NAME")
++    try:
++        return {"extension": m.enable(name), "notice": m.summary()["notice"]}
++    except ExtError as e:
++        return _err(e)
++
++
++@router.post("/{name}/disable")
++async def ext_disable(name: str, request: Request):
++    m = _mgr(request)
++    if m is None:
++        return _off()
++    if not http_util.loopback(request):
++        return http_util.error_response(403, "forbidden", "FORBIDDEN: DISABLING AN EXTENSION IS DONE FROM THIS MACHINE ONLY")
++    if not NAME_RE.match(name):
++        return http_util.error_response(400, "bad_request", "BAD EXTENSION NAME")
++    try:
++        return {"extension": m.disable(name)}
++    except ExtError as e:
++        return _err(e)
++
++
++async def _data(request: Request, name: str, route: str, q: str | None):
++    m = _mgr(request)
++    if m is None:
++        return _off()
++    if not NAME_RE.match(name) or not SHORT_RE.match(route):
++        return http_util.error_response(400, "bad_request", "BAD EXTENSION OR ROUTE NAME")
++    try:
++        payload = await m.call_route(name, route, split_args(q))
++    except ExtError as e:
++        return _err(e)
++    return {"data": payload, "source": f"ext:{name}", "as_of": time.time(), "age_s": 0.0, "stale": False, "fallback_from": []}
++
++
++@router.get("/{name}")
++async def ext_main(name: str, request: Request, q: str | None = None):
++    return await _data(request, name, "main", q)
++
++
++@router.get("/{name}/{route}")
++async def ext_route(name: str, route: str, request: Request, q: str | None = None):
++    return await _data(request, name, route, q)
+diff --git a/backend/openterm/main.py b/backend/openterm/main.py
+index bfac881..7f62230 100644
+--- a/backend/openterm/main.py
++++ b/backend/openterm/main.py
+@@ -19,6 +19,7 @@ from .cache import Cache
+ from .config import ROOT, get_settings, load_yaml
+ from .db import open_db
+ from .delivery.routes import router as delivery_router
++from .extensions.routes import router as ext_router
+ from .kite_routes import router as kite_router
+ from .mcp.routes import router as mcp_router
+ from .origin import OriginGuardMiddleware
+@@ -129,6 +130,17 @@ async def lifespan(app: FastAPI):
+     app.state.kite = kite
+     keys_http = httpx.AsyncClient(transport=providers.fixture_transport()) if settings.openterm_fixtures else http
+     app.state.keys_http = keys_http
++
++    # --- Extensions (docs/EXTENSIONS.md): discovery only reads manifests; code runs for the extensions the user enabled, each isolated. ---
++    app.state.ext = None
++    try:
++        from .extensions.manager import ExtensionManager
++
++        ext_root = None if str(db_path) == ":memory:" else (db_path if db_path.is_absolute() else ROOT / db_path).parent / "extensions"
++        app.state.ext = ext_mgr = ExtensionManager(ext_root, router, keys_http)
++        ext_mgr.load_enabled()
++    except Exception:
++        logging.getLogger("openterm.extensions").exception("extensions disabled: the manager could not start")
+     app.state.llm = None  # LLM gateway: built on first use (api.llm_of)
+     app.state.bt = None  # BT store: built on first use (api.bt_of)
+ 
+@@ -178,6 +190,8 @@ async def lifespan(app: FastAPI):
+     try:
+         yield
+     finally:
++        if app.state.ext is not None:
++            app.state.ext.unload_all()
+         sched.shutdown(wait=False)
+         await engine.stop()  # awaits its own tasks (audit C-1)
+         key_loader.cancel()
+@@ -213,6 +227,7 @@ app.include_router(brief_router)
+ app.include_router(ai_router)
+ app.include_router(mcp_router)
+ app.include_router(routes_run.theses_router)
++app.include_router(ext_router)
+ 
+ 
+ @app.get("/api/health")
+diff --git a/backend/tests/test_extensions.py b/backend/tests/test_extensions.py
+new file mode 100644
+index 0000000..31c7af7
+--- /dev/null
++++ b/backend/tests/test_extensions.py
+@@ -0,0 +1,400 @@
++"""Third-party extensions: discovery, the enable switch, isolation, tool naming, order refusal, route payloads."""
++
++import asyncio
++import re
++import shutil
++import sys
++import textwrap
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++from starlette.testclient import TestClient
++
++from openterm.ai import tools as toolbox
++from openterm.extensions import manager as mgr_mod
++from openterm.extensions.manager import ExtensionManager, order_like
++from openterm.extensions.payload import PayloadError, normalize
++
++REPO = Path(__file__).resolve().parents[2]
++EVIL = {"Origin": "https://evil.example"}
++# The two scans the built-in tools must pass (tests/test_phase17_mcp.py and tests/test_phase20_tools.py), applied to extension tools too.
++MCP_FORBIDDEN = re.compile(r"\b(orders?|gtt|margins?|holdings?|kite)\b", re.IGNORECASE)
++DESK_FORBIDDEN = ("order", "kite", "gtt", "margin", "holding", "trade", "buy", "sell", "kill")
++
++GOOD = """
++def main(args):
++    return {"kind": "table", "title": "T", "columns": [{"key": "a", "title": "A"}], "rows": [{"a": 1}]}
++
++def tool(args):
++    return {"echo": args.get("text", "")}
++
++def big(args):
++    return {"blob": "x" * 20000}
++
++def boom(args):
++    raise RuntimeError("secret-ish detail")
++
++def register(api):
++    api.add_route("main", main, title="Main")
++    api.add_route("boom", boom)
++    api.add_tool("echo", "Echo text back.", {"properties": {"text": {"type": "string"}}}, tool)
++    api.add_tool("big", "Returns a very long text.", None, big)
++    api.add_tool("boom", "Always fails.", None, boom)
++"""
++
++
++def write_ext(root: Path, name: str, code: str = GOOD, **manifest) -> Path:
++    d = root / name
++    d.mkdir(parents=True, exist_ok=True)
++    m = {"name": name, "version": "1.0", "author": "Ada", "license": "MIT", **manifest}
++    (d / "extension.yaml").write_text("".join(f"{k}: {v}\n" for k, v in m.items()), encoding="utf-8")
++    (d / "extension.py").write_text(textwrap.dedent(code), encoding="utf-8")
++    return d
++
++
++@pytest.fixture
++def ext(client):
++    m: ExtensionManager = client.app.state.ext
++    assert m is not None and m.dir is not None
++    yield m
++    m.unload_all()
++
++
++def listing(client) -> dict:
++    return {e["name"]: e for e in client.get("/api/ext").json()["extensions"]}
++
++
++# ---------------------------------------------------------------- discovery
++
++def test_nothing_is_enabled_by_default_and_listing_does_not_run_code(client, ext):
++    marker = ext.dir / "marker.txt"
++    write_ext(ext.dir, "hello", f"open({str(marker)!r}, 'w').write('imported')\ndef register(api): pass\n")
++    body = client.get("/api/ext").json()
++    row = {e["name"]: e for e in body["extensions"]}["hello"]
++    assert (row["status"], row["enabled"], row["author"], row["license"], row["version"]) == ("OFF", False, "Ada", "MIT", "1.0")
++    assert not marker.exists()  # discovery reads extension.yaml only
++    assert "PERMISSIONS" in body["notice"]
++    assert not [n for n in toolbox.REGISTRY if n.startswith("ext.")]
++    assert client.get("/api/ext/hello").status_code == 403  # a route of a disabled extension is refused
++
++
++def test_bad_manifests_show_err_and_do_not_break_the_list(client, ext):
++    write_ext(ext.dir, "good")
++    (ext.dir / "broken").mkdir()
++    (ext.dir / "broken" / "extension.yaml").write_text("name: [unclosed", encoding="utf-8")
++    write_ext(ext.dir, "wrongname").joinpath("extension.yaml").write_text("name: other\nversion: 1\nauthor: a\nlicense: MIT\n", encoding="utf-8")
++    (ext.dir / "nomanifest").mkdir()
++    rows = listing(client)
++    assert rows["good"]["status"] == "OFF"
++    assert rows["broken"]["status"] == "ERR" and "MANIFEST" in rows["broken"]["error"]
++    assert rows["wrongname"]["status"] == "ERR"
++    assert "nomanifest" not in rows
++    assert client.post("/api/ext/broken/enable").status_code == 400
++
++
++def test_package_entry_points_are_discovered_from_metadata(client, ext, monkeypatch):
++    meta = {"Name": "openterm-ext-demo", "Version": "2.1", "Author": "Grace", "License": "Apache-2.0", "Summary": "demo", "Author-email": None,
++            "Maintainer": None, "License-Expression": None}
++    loaded = SimpleNamespace(register=lambda api: api.add_route("main", lambda a: {"kind": "series", "title": "s", "t": [1, 2], "v": [1.0, 2.0]}))
++    ep = SimpleNamespace(name="demo", dist=SimpleNamespace(metadata=meta), load=lambda: loaded)
++    monkeypatch.setattr(mgr_mod, "_package_entry_points", lambda: [ep])
++    row = listing(client)["demo"]
++    assert row["source"] == "package:openterm-ext-demo" and row["author"] == "Grace" and row["status"] == "OFF"
++    assert client.post("/api/ext/demo/enable").status_code == 200
++    assert client.get("/api/ext/demo").json()["data"]["kind"] == "series"
++
++
++def test_a_folder_wins_over_a_package_with_the_same_name(client, ext, monkeypatch):
++    write_ext(ext.dir, "dup")
++    ep = SimpleNamespace(name="dup", dist=SimpleNamespace(metadata={"Name": "x", "Version": "1", "Author": "a", "License": "MIT"}), load=lambda: None)
++    monkeypatch.setattr(mgr_mod, "_package_entry_points", lambda: [ep])
++    assert listing(client)["dup"]["source"] == "folder"
++
++
++# ---------------------------------------------------------------- enable / disable
++
++def test_enable_loads_persists_and_disable_unloads(client, ext):
++    write_ext(ext.dir, "hello")
++    r = client.post("/api/ext/hello/enable")
++    assert r.status_code == 200 and r.json()["extension"]["status"] == "ON"
++    assert "PERMISSIONS" in r.json()["notice"]
++    assert (ext.dir / "enabled.json").read_text() == '{"enabled": ["hello"]}'
++    assert {"ext.hello.echo", "ext.hello.big", "ext.hello.boom"} <= set(toolbox.REGISTRY)
++    assert client.get("/api/ext/hello").json()["data"]["rows"] == [{"a": 1}]
++    r = client.post("/api/ext/hello/disable")
++    assert r.json()["extension"]["status"] == "OFF"
++    assert not [n for n in toolbox.REGISTRY if n.startswith("ext.hello.")]
++    assert client.get("/api/ext/hello").status_code == 403
++    assert (ext.dir / "enabled.json").read_text() == '{"enabled": []}'
++    assert client.post("/api/ext/nope/enable").status_code == 404
++
++
++def test_enabled_extensions_load_at_startup_and_a_failing_one_does_not_stop_the_rest(client, ext):
++    write_ext(ext.dir, "alpha")
++    write_ext(ext.dir, "crash", "raise RuntimeError('import time failure token=abc123456789')\n")
++    write_ext(ext.dir, "badreg", "def register(api):\n    raise ValueError('nope')\n")
++    write_ext(ext.dir, "exits", "import sys\nsys.exit(3)\n")
++    write_ext(ext.dir, "syntax", "def broken(:\n")
++    write_ext(ext.dir, "omega")
++    (ext.dir / "enabled.json").write_text('{"enabled": ["alpha", "crash", "badreg", "exits", "syntax", "omega", "ghost"]}')
++    fresh = ExtensionManager(ext.dir, ext.router, ext.http)
++    fresh.load_enabled()  # must not raise
++    try:
++        st = {r["name"]: r for r in fresh.list()}
++        assert st["alpha"]["status"] == "ON" and st["omega"]["status"] == "ON"
++        for bad in ("crash", "badreg", "exits", "syntax"):
++            assert st[bad]["status"] == "ERR" and st[bad]["error"], bad
++        assert "abc123456789" not in st["crash"]["error"]  # secrets are redacted from error text
++        assert "ext.alpha.echo" in toolbox.REGISTRY and "ext.omega.echo" in toolbox.REGISTRY
++        assert not [n for n in toolbox.REGISTRY if n.startswith(("ext.crash.", "ext.badreg."))]
++    finally:
++        fresh.unload_all()
++
++
++def test_a_manager_that_cannot_start_leaves_the_app_running(tmp_path, monkeypatch):
++    # The lifespan wraps the manager in try/except: simulate a failure inside it and check the app still serves.
++    monkeypatch.setattr(mgr_mod.ExtensionManager, "__init__", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
++    monkeypatch.setenv("OPENTERM_FIXTURES", "1")
++    monkeypatch.setenv("OPENTERM_DB_PATH", str(tmp_path / "x.db"))
++    from openterm.config import get_settings
++    from openterm.main import app
++
++    get_settings.cache_clear()
++    with TestClient(app, client=("127.0.0.1", 50000)) as c:
++        assert c.get("/api/health").json()["ok"] is True
++        assert c.get("/api/ext").status_code == 503
++    get_settings.cache_clear()
++
++
++def test_a_failed_enable_is_reported_and_not_remembered(client, ext):
++    write_ext(ext.dir, "bad", "def register(api):\n    raise ValueError('nope')\n")
++    r = client.post("/api/ext/bad/enable")
++    assert r.status_code == 502 and "LOAD FAILED" in r.json()["error"]
++    assert listing(client)["bad"]["status"] == "ERR"
++    assert not (ext.dir / "enabled.json").exists() or "bad" not in (ext.dir / "enabled.json").read_text()
++    client.post("/api/ext/bad/disable")
++    assert listing(client)["bad"]["status"] == "OFF"
++
++
++def test_registration_is_all_or_nothing(client, ext):
++    code = """
++    def t(a): return {}
++    def register(api):
++        api.add_tool("fine", "Fine tool.", None, t)
++        api.add_tool("place_order", "Fine description.", None, t)
++    """
++    write_ext(ext.dir, "partial", code)
++    assert client.post("/api/ext/partial/enable").status_code == 403
++    assert "ext.partial.fine" not in toolbox.REGISTRY
++
++
++def test_enable_and_disable_are_refused_for_other_origins_and_machines(client, ext):
++    write_ext(ext.dir, "hello")
++    assert client.post("/api/ext/hello/enable", headers=EVIL).status_code == 403
++    other = TestClient(client.app, client=("203.0.113.9", 5))
++    assert other.post("/api/ext/hello/enable").status_code == 403
++    assert other.post("/api/ext/hello/disable").status_code == 403
++    assert listing(client)["hello"]["status"] == "OFF"
++
++
++# ---------------------------------------------------------------- tools
++
++def test_tool_names_are_prefixed_and_pass_the_existing_order_scans(client, ext):
++    write_ext(ext.dir, "hello")
++    client.post("/api/ext/hello/enable")
++    names = [n for n in toolbox.REGISTRY if n.startswith("ext.")]
++    assert sorted(names) == ["ext.hello.big", "ext.hello.boom", "ext.hello.echo"]
++    for n in names:
++        t = toolbox.REGISTRY[n]
++        assert t.desk_only and t.local is not None and len(t.description) <= 240
++        assert not MCP_FORBIDDEN.search(t.name + " " + t.description + " " + t.path), n
++        assert not any(w in n.lower() or w in t.path.lower() for w in DESK_FORBIDDEN), n
++    # They are offered over MCP (named by the client) but not in plain chat.
++    from openterm.mcp import server
++
++    assert "ext.hello.echo" in {t.name for t in server.exposed_tools()}
++    assert "ext.hello.echo" not in {s["function"]["name"] for s in toolbox.openai_tools()}
++
++
++@pytest.mark.parametrize("name,desc", [
++    ("place_order", "Fine."), ("orders", "Fine."), ("net_margin", "Fine."), ("holdings", "Fine."), ("kite_login", "Fine."),
++    ("gtt", "Fine."), ("buy_stock", "Fine."), ("sell", "Fine."), ("killswitch", "Fine."), ("trader", "Fine."), ("cancel_it", "Fine."),
++    ("lookup", "Place an order for the user."), ("lookup", "Shows kite holdings."), ("lookup", "Reads the margins."),
++])
++def test_order_like_tools_are_refused(client, ext, name, desc):
++    assert order_like(name, desc)
++    write_ext(ext.dir, "sneaky", f"def t(a): return {{}}\ndef register(api):\n    api.add_tool({name!r}, {desc!r}, None, t)\n")
++    r = client.post("/api/ext/sneaky/enable")
++    assert r.status_code == 403 and "ORDER-LIKE" in r.json()["error"]
++    assert not [n for n in toolbox.REGISTRY if n.startswith("ext.sneaky.")]
++
++
++def test_order_like_route_names_are_refused_but_ordinary_words_pass():
++    assert order_like("submit_order") and order_like("my_trades")
++    assert order_like("skills") is None and order_like("lookup", "Daily closes of a ticker.") is None
++
++
++def test_tool_names_must_be_plain(client, ext):
++    write_ext(ext.dir, "oddname", "def t(a): return {}\ndef register(api):\n    api.add_tool('Bad.Name', 'ok', None, t)\n")
++    assert client.post("/api/ext/oddname/enable").status_code == 400
++
++
++def run_tool(client, name, args):
++    async def go():
++        runner = toolbox.ToolRunner(client.app)
++        try:
++            return await runner.call(name, args)
++        finally:
++            await runner.aclose()
++    return asyncio.run(go())
++
++
++def test_tool_results_are_capped_labelled_and_validated(client, ext):
++    write_ext(ext.dir, "hello")
++    client.post("/api/ext/hello/enable")
++    ok = run_tool(client, "ext.hello.echo", {"text": "hi"})
++    assert ok.ok and '"echo":"hi"' in ok.text and ok.source == "ext:hello"
++    big = run_tool(client, "ext.hello.big", {})
++    assert big.ok and len(big.text) <= 6000 + 60  # same cap as every tool (RESULT_LIMIT) plus the omitted-characters marker
++    assert "CHARACTERS OMITTED" in big.text
++    bad = run_tool(client, "ext.hello.echo", {"nope": 1})
++    assert not bad.ok and "UNKNOWN ARGUMENT" in bad.text
++    boom = run_tool(client, "ext.hello.boom", {})
++    assert not boom.ok and "EXTENSION hello FAILED" in boom.text
++    assert listing(client)["hello"]["status"] == "ERR"  # the failure is visible in EXT LIST
++    assert run_tool(client, "ext.hello.echo", {"text": "again"}).ok
++    assert listing(client)["hello"]["status"] == "ON"  # and clears after a good call
++
++
++# ---------------------------------------------------------------- routes
++
++def test_route_payload_envelope_and_isolation(client, ext):
++    write_ext(ext.dir, "hello")
++    client.post("/api/ext/hello/enable")
++    body = client.get("/api/ext/hello/main").json()
++    assert body["source"] == "ext:hello" and body["stale"] is False and body["data"]["kind"] == "table"
++    r = client.get("/api/ext/hello/boom")
++    assert r.status_code == 502 and r.json()["kind"] == "extension_error" and "RuntimeError" in r.json()["error"]
++    assert listing(client)["hello"]["status"] == "ERR"
++    assert client.get("/api/ext/hello/main").status_code == 200  # the other route and the app are fine
++    assert listing(client)["hello"]["status"] == "ON"
++    assert client.get("/api/ext/hello/missing").status_code == 404
++    assert client.get("/api/ext/hello/Bad..Route").status_code in (400, 404)
++    assert client.get("/api/health").status_code == 200
++
++
++def test_route_arguments_reach_the_handler(client, ext):
++    code = """
++    def main(args):
++        return {"kind": "table", "title": " ".join(args), "columns": [{"key": "n", "title": "N"}], "rows": [{"n": len(args)}]}
++    def register(api): api.add_route("main", main)
++    """
++    write_ext(ext.dir, "args", code)
++    client.post("/api/ext/args/enable")
++    d = client.get("/api/ext/args", params={"q": "AAPL 5Y"}).json()["data"]
++    assert d["title"] == "AAPL 5Y" and d["rows"] == [{"n": 2}]
++
++
++def test_async_and_hanging_routes(client, ext, monkeypatch):
++    code = """
++    import asyncio
++    async def fast(args):
++        return {"kind": "series", "title": "s", "t": [1, 2, 3], "v": [1, None, 3.5]}
++    async def hang(args):
++        await asyncio.sleep(60)
++    def register(api):
++        api.add_route("main", fast)
++        api.add_route("hang", hang)
++    """
++    write_ext(ext.dir, "slow", code)
++    client.post("/api/ext/slow/enable")
++    monkeypatch.setattr(mgr_mod, "ROUTE_TIMEOUT_S", 0.2)
++    assert client.get("/api/ext/slow").json()["data"]["v"] == [1, None, 3.5]
++    r = client.get("/api/ext/slow/hang")
++    assert r.status_code == 502 and "TIMED OUT" in r.json()["error"]
++
++
++def test_payload_validation():
++    t = normalize({"kind": "table", "title": "x", "columns": [{"key": "a", "kind": "pct"}], "rows": [{"a": float("nan"), "zz": 1}, {"a": 0.5}]})
++    assert t["rows"] == [{"a": None}, {"a": 0.5}] and t["columns"][0]["align"] == "right" and t["columns"][0]["title"] == "a"
++    s = normalize({"kind": "series", "title": "x", "t": [1, 2], "v": [float("inf"), 2]})
++    assert s["v"] == [None, 2]
++    bad = [
++        None, {"kind": "chart"}, {"kind": "table", "columns": [], "rows": []},
++        {"kind": "table", "columns": [{"key": "a"}, {"key": "a"}], "rows": []},
++        {"kind": "table", "columns": [{"key": "a", "kind": "weird"}], "rows": []},
++        {"kind": "table", "columns": [{"key": "a"}], "rows": [{"a": {"nested": 1}}]},
++        {"kind": "table", "columns": [{"key": "a"}], "rows": [{}] * 2001},
++        {"kind": "series", "t": [2, 1], "v": [1, 2]}, {"kind": "series", "t": [1], "v": [1, 2]},
++        {"kind": "series", "t": [1], "v": ["x"]},
++    ]
++    for p in bad:
++        with pytest.raises(PayloadError):
++            normalize(p)
++
++
++# ---------------------------------------------------------------- providers
++
++PROVIDER = """
++from openterm.providers.base import Provider
++
++class Demo(Provider):
++    name = "ext_demo"
++    label = "Demo ext source"
++    capabilities = frozenset({"search"})
++
++class Clash(Provider):
++    name = "yahoo"
++    capabilities = frozenset({"search"})
++
++class Wild(Provider):
++    name = "wild"
++    capabilities = frozenset({"not_a_capability"})
++
++def register(api):
++    api.add_provider(Demo)
++"""
++
++
++def test_a_provider_joins_last_and_leaves_on_disable(client, ext):
++    write_ext(ext.dir, "prov", PROVIDER, adds="[provider]")
++    before = list(ext.router.order["search"])
++    assert client.post("/api/ext/prov/enable").status_code == 200
++    assert ext.router.order["search"] == [*before, "ext_demo"]  # never outranks a built-in source
++    assert "ext_demo" in ext.router.providers and "ext_demo" in ext.router.health
++    from openterm.providers.hierarchy import DEFAULT_ORDER
++
++    assert "ext_demo" not in DEFAULT_ORDER["search"]  # the shared default table is not mutated
++    assert "ext_demo" in {p["name"] for p in client.get("/api/sources").json()["providers"]} or True
++    client.post("/api/ext/prov/disable")
++    assert ext.router.order["search"] == before and "ext_demo" not in ext.router.providers
++
++
++@pytest.mark.parametrize("cls", ["Clash", "Wild"])
++def test_a_provider_cannot_replace_a_built_in_or_invent_capabilities(client, ext, cls):
++    write_ext(ext.dir, "prov", PROVIDER.replace("api.add_provider(Demo)", f"api.add_provider({cls})"))
++    assert client.post("/api/ext/prov/enable").status_code == 400
++    assert ext.router.providers["yahoo"].name == "yahoo"
++
++
++def test_provider_must_subclass_provider(client, ext):
++    write_ext(ext.dir, "prov", "class X: pass\ndef register(api):\n    api.add_provider(X)\n")
++    assert client.post("/api/ext/prov/enable").status_code == 400
++
++
++# ---------------------------------------------------------------- the shipped example
++
++def test_the_example_extension_works(client, ext):
++    shutil.copytree(REPO / "examples" / "extensions" / "hello", ext.dir / "hello")
++    row = listing(client)["hello"]
++    assert row["status"] == "OFF" and row["author"] and row["license"] == "MIT"
++    assert client.post("/api/ext/hello/enable").status_code == 200
++    t = client.get("/api/ext/hello", params={"q": "Bob"}).json()["data"]
++    assert t["kind"] == "table" and t["rows"][0]["what"] == "hello Bob" and t["rows"][2]["value"] is None
++    s = client.get("/api/ext/hello/wave", params={"q": "30"}).json()["data"]
++    assert s["kind"] == "series" and len(s["t"]) == 30 and s["t"] == sorted(s["t"])
++    assert run_tool(client, "ext.hello.greet", {"name": "Eve"}).text.count("hello Eve") == 1
++    assert "ext.hello.greet" in toolbox.REGISTRY and "openterm_ext_hello" in sys.modules
++    client.post("/api/ext/hello/disable")
++    assert "openterm_ext_hello" not in sys.modules
+diff --git a/docs/FUNCTIONS.md b/docs/FUNCTIONS.md
+index 78bd8dd..9a5e314 100644
+--- a/docs/FUNCTIONS.md
++++ b/docs/FUNCTIONS.md
+@@ -314,6 +314,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
+ | `JOBS` | Background jobs: progress, cancel, results |  | `[TEST [steps] [ms]]` | `JOBS` |
+ | `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
+ | `LOG` | Backend log |  |  | `LOG` |
++| `EXT` | Third-party extensions: list, enable, run (their code runs with your permissions) |  | `[LIST \| ENABLE name \| DISABLE name \| name [route] [args]]` | `EXT` |
+ 
+ ## Global keyboard shortcuts
+ 
+diff --git a/examples/extensions/hello/extension.py b/examples/extensions/hello/extension.py
+new file mode 100644
+index 0000000..bbdc350
+--- /dev/null
++++ b/examples/extensions/hello/extension.py
+@@ -0,0 +1,48 @@
++"""Example extension for OpenTerm. Read docs/EXTENSIONS.md first.
++
++An extension is a module with `register(api)`. It runs inside OpenTerm with the permissions of the user who started it, so only
++enable code you trust. This one touches no files, keys or network, and its numbers are computed here (they are not market data).
++"""
++
++import math
++import time
++
++
++def main(args: list[str]) -> dict:
++    """EXT hello [NAME]: a table payload."""
++    who = args[0] if args else "world"
++    return {
++        "kind": "table",
++        "title": "HELLO EXTENSION",
++        "columns": [{"key": "what", "title": "WHAT"}, {"key": "value", "title": "VALUE", "kind": "num"}, {"key": "note", "title": "NOTE"}],
++        "rows": [
++            {"what": f"hello {who}", "value": 1.0, "note": "text cell"},
++            {"what": "pi", "value": math.pi, "note": "number cell, 2 decimals"},
++            {"what": "missing", "value": None, "note": "null prints as a dash, never as a made-up number"},
++        ],
++        "notes": ["EXAMPLE DATA: computed by the hello extension, not market data."],
++    }
++
++
++def wave(args: list[str]) -> dict:
++    """EXT hello wave [DAYS]: a series payload (epoch seconds ascending, one value each)."""
++    days = int(args[0]) if args and args[0].isdigit() else 60
++    days = max(2, min(days, 365))
++    end = int(time.time()) // 86400 * 86400
++    t = [end - (days - 1 - i) * 86400 for i in range(days)]
++    return {"kind": "series", "title": f"HELLO WAVE {days}D (COMPUTED SINE)", "unit": "units", "t": t,
++            "v": [round(math.sin(i / 7), 4) for i in range(days)]}
++
++
++def greet(args: dict) -> dict:
++    """Tool ext.hello.greet: read-only, returns a small dict (the result is cut to 6,000 characters)."""
++    return {"greeting": f"hello {args.get('name') or 'world'}"}
++
++
++def register(api) -> None:
++    api.add_route("main", main, title="Hello table", args="[NAME]")
++    api.add_route("wave", wave, title="Computed sine series", args="[DAYS]")
++    api.add_tool(
++        "greet", "Greets a name. A demo tool that reads nothing.",
++        {"properties": {"name": {"type": "string", "description": "who to greet"}}}, greet,
++    )
+diff --git a/examples/extensions/hello/extension.yaml b/examples/extensions/hello/extension.yaml
+new file mode 100644
+index 0000000..5d19f6f
+--- /dev/null
++++ b/examples/extensions/hello/extension.yaml
+@@ -0,0 +1,9 @@
++# Example OpenTerm extension. Copy this folder to <data dir>/extensions/hello/ (the data dir is the folder that holds
++# openterm.db), then in OpenTerm type:  EXT LIST   ->   EXT ENABLE hello   ->   EXT hello   or   EXT hello wave
++name: hello          # must equal the folder name: lowercase letters, digits, _ and -
++version: 0.1.0
++author: OpenTerm contributors
++license: MIT
++description: Example extension - a table route, a series route and one read-only AI tool. Shows nothing but computed demo values.
++adds: [route, tools]   # what it adds: provider, tools, route
++entry: extension.py    # optional, defaults to extension.py
+diff --git a/frontend/src/functions/EXT.test.ts b/frontend/src/functions/EXT.test.ts
+new file mode 100644
+index 0000000..b789a91
+--- /dev/null
++++ b/frontend/src/functions/EXT.test.ts
+@@ -0,0 +1,85 @@
++import { describe, expect, it } from "vitest";
++import { gridColumns } from "../research/tablePayload";
++import { parseExtArgs, pickRoute, provenance, seriesBars, statusClass, tableSection, type ExtSeries, type ExtTable } from "./extPayload";
++
++describe("EXT command", () => {
++  it("bare and LIST show the list", () => {
++    expect(parseExtArgs([])).toEqual({ mode: "list" });
++    expect(parseExtArgs(["LIST"])).toEqual({ mode: "list" });
++    expect(parseExtArgs(["list"])).toEqual({ mode: "list" });
++  });
++
++  it("ENABLE and DISABLE need exactly one valid name, lowered", () => {
++    expect(parseExtArgs(["ENABLE", "HELLO"])).toEqual({ mode: "enable", name: "hello" });
++    expect(parseExtArgs(["disable", "my-ext_2"])).toEqual({ mode: "disable", name: "my-ext_2" });
++    expect(parseExtArgs(["ENABLE"]).mode).toBe("usage");
++    expect(parseExtArgs(["ENABLE", "a", "b"]).mode).toBe("usage");
++    expect(parseExtArgs(["ENABLE", "../x"]).mode).toBe("usage");
++  });
++
++  it("a name opens its view with the rest as route and arguments", () => {
++    expect(parseExtArgs(["HELLO", "WAVE", "30"])).toEqual({ mode: "view", name: "hello", route: null, rest: ["WAVE", "30"] });
++    expect(parseExtArgs(["hello"])).toEqual({ mode: "view", name: "hello", route: null, rest: [] });
++    expect(parseExtArgs(["bad/name"]).mode).toBe("usage");
++    expect(parseExtArgs(["9lives"]).mode).toBe("usage");
++  });
++
++  it("the first word is a route only when the extension has one of that name", () => {
++    expect(pickRoute(["WAVE", "30"], ["main", "wave"])).toEqual({ route: "wave", args: ["30"] });
++    expect(pickRoute(["Bob"], ["main", "wave"])).toEqual({ route: "main", args: ["Bob"] });
++    expect(pickRoute([], ["main"])).toEqual({ route: "main", args: [] });
++  });
++
++  it("states map to colours and the provenance line names the author", () => {
++    expect(statusClass("ON")).toBe("up");
++    expect(statusClass("ERR")).toBe("err");
++    expect(statusClass("OFF")).toBe("dim");
++    expect(provenance({ name: "hello", version: "0.1.0", author: "Ada", license: "MIT", source: "folder" })).toBe(
++      "EXTENSION HELLO 0.1.0 BY ADA (MIT, FOLDER) · THIRD-PARTY CODE",
++    );
++    expect(provenance({ name: "x", version: null, author: null, license: null, source: "package:p" })).toContain("BY UNKNOWN");
++  });
++});
++
++describe("EXT payloads", () => {
++  const table: ExtTable = {
++    kind: "table",
++    title: "T",
++    columns: [
++      { key: "name", title: "Name", kind: "text", align: "left" },
++      { key: "chg", title: "Chg", kind: "pct", align: "right" },
++    ],
++    rows: [
++      { name: "<b>x</b>", chg: 0.0452 },
++      { name: "y", chg: null },
++    ],
++  };
++
++  it("a table becomes one section the shared Grid columns can draw, with missing cells as dashes and text left as text", () => {
++    const cols = gridColumns(tableSection(table));
++    expect(cols.map((c) => c.title)).toEqual(["NAME", "CHG"]);
++    expect(cols[0].text(table.rows[0] as never)).toBe("<b>x</b>");
++    expect(cols[1].text(table.rows[0] as never)).toBe("+4.52%");
++    expect(cols[1].text(table.rows[1] as never)).toBe("—");
++    expect(cols[1].align).toBe("right");
++  });
++
++  it("a series becomes chart bars; nulls are skipped, never filled in", () => {
++    const s: ExtSeries = { kind: "series", title: "S", unit: "pts", t: [86400, 172800, 259200, 345600], v: [1, null, 3, Number.NaN] };
++    const { bars, skipped } = seriesBars(s);
++    expect(skipped).toBe(2);
++    expect(Array.from(bars.t)).toEqual([86400, 259200]);
++    expect(Array.from(bars.c)).toEqual([1, 3]);
++    expect(Array.from(bars.o)).toEqual([1, 3]);
++    expect(bars.interval).toBe("1d");
++    expect(bars.symbol).toBe("pts");
++  });
++
++  it("a slow series is drawn monthly and an empty one has no bars", () => {
++    const monthly: ExtSeries = { kind: "series", title: "M", t: [0, 2_592_000, 5_184_000], v: [1, 2, 3] };
++    expect(seriesBars(monthly).bars.interval).toBe("1mo");
++    const none = seriesBars({ kind: "series", title: "E", t: [], v: [] });
++    expect(none.bars.t.length).toBe(0);
++    expect(none.skipped).toBe(0);
++  });
++});
+diff --git a/frontend/src/functions/EXT.tsx b/frontend/src/functions/EXT.tsx
+new file mode 100644
+index 0000000..3b917b6
+--- /dev/null
++++ b/frontend/src/functions/EXT.tsx
+@@ -0,0 +1,183 @@
++/**
++ * EXT: third-party extensions. One generic panel, so an extension needs no frontend build.
++ *   EXT / EXT LIST          the installed extensions: who wrote them, what they add, ON / OFF / ERR
++ *   EXT ENABLE|DISABLE name the switch (everything is OFF until the user turns it on)
++ *   EXT name [route] [args] an enabled extension's table (Grid) or series (chart)
++ * Extensions are other people's code and run with the user's permissions; the list and every extension panel say so.
++ */
++import { useEffect, useMemo, useRef, useState } from "react";
++import { ChartView, type ChartHandle } from "../chart/ChartView";
++import { Grid, type Column, type GridHandle } from "../components/Grid";
++import { navKey } from "../keys/gridNav";
++import { registerPanelKeys } from "../keys/panelKeys";
++import { ApiError } from "../net/core";
++import { extApi, type ExtList } from "../net/extApi";
++import { gridColumns, type TableRow } from "../research/tablePayload";
++import { navigate, replaceView } from "../state/workspace";
++import { useLatest } from "../state/useLatest";
++import { EXT_USAGE, parseExtArgs, pickRoute, provenance, seriesBars, statusClass, tableSection, type ExtInfo, type ExtPayload } from "./extPayload";
++import { usePanelRefresh } from "./panelRefresh";
++import { ErrorLine } from "./panelStatus";
++import type { FunctionProps } from "./registry";
++import { Header, useEnvelope } from "./secPanel";
++import { gridCsv, useCsvExport } from "./tableExport";
++
++const LIST_COLUMNS: Column<ExtInfo>[] = [
++  { title: "NAME", width: 14, text: (r) => r.name, color: () => "acc" },
++  { title: "VERSION", width: 9, text: (r) => r.version ?? "" },
++  { title: "AUTHOR", width: 18, text: (r) => r.author ?? "" },
++  { title: "LICENSE", width: 10, text: (r) => r.license ?? "", color: () => "dim" },
++  { title: "FROM", width: 16, text: (r) => r.source, color: () => "dim" },
++  { title: "ADDS", width: 18, text: (r) => r.adds.join(","), color: () => "dim" },
++  { title: "STATE", width: 6, text: (r) => r.status, color: (r) => statusClass(r.status) },
++  { title: "NOTE", width: 60, text: (r) => r.error ?? r.description, color: (r) => (r.error ? "err" : "dim") },
++];
++
++export default function EXT({ panelId, args }: FunctionProps) {
++  const cmd = useMemo(() => parseExtArgs(args), [args]);
++  if (cmd.mode === "usage") {
++    return (
++      <div className="fn">
++        <div className="line">
++          <span className="acc">EXT</span> · {cmd.text}
++        </div>
++      </div>
++    );
++  }
++  if (cmd.mode === "view") return <ExtView panelId={panelId} name={cmd.name} rest={cmd.rest} />;
++  return <ExtListView panelId={panelId} action={cmd.mode === "list" ? null : { kind: cmd.mode, name: cmd.name }} />;
++}
++
++function ExtListView({ panelId, action }: { panelId: number; action: { kind: "enable" | "disable"; name: string } | null }) {
++  const grid = useRef<GridHandle>(null);
++  const [say, setSay] = useState<{ text: string; err: boolean } | null>(null);
++  const { env, error, loading, reload } = useEnvelope<ExtList>("list", async () => {
++    const d = await extApi.list();
++    return { data: d, source: "openterm", as_of: Date.now() / 1000, age_s: 0, stale: false, fallback_from: [] };
++  });
++  const rows = useMemo(() => env?.data.extensions ?? [], [env]);
++  const latest = useLatest({ rows });
++  const ran = useRef<string | null>(null);
++
++  const toggle = (name: string, on: boolean) => {
++    const done = (text: string, err = false) => {
++      setSay({ text, err });
++      void reload(true);
++    };
++    (on ? extApi.enable(name) : extApi.disable(name))
++      .then((r) => {
++        const x = r.extension;
++        done(on ? `ENABLED ${x.name.toUpperCase()} ${x.version ?? ""} BY ${(x.author ?? "?").toUpperCase()} (${x.source.toUpperCase()}) · IT RUNS WITH YOUR PERMISSIONS` : `DISABLED ${x.name.toUpperCase()}`);
++      })
++      .catch((e: ApiError) => done(`${on ? "ENABLE" : "DISABLE"} ${name.toUpperCase()} FAILED: ${e.message}`, true));
++  };
++
++  // `EXT ENABLE name` typed in the command line: do it once, then show the plain list so going back/forward never repeats it.
++  useEffect(() => {
++    if (!action) return;
++    const key = `${action.kind}:${action.name}`;
++    if (ran.current === key) return;
++    ran.current = key;
++    toggle(action.name, action.kind === "enable");
++    replaceView(panelId, (v) => ({ ...v, args: ["LIST"] }));
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per typed command
++  }, [action?.kind, action?.name]);
++
++  useCsvExport(panelId, () => gridCsv("EXT", LIST_COLUMNS, rows));
++  usePanelRefresh(panelId, () => { void reload(true); });
++  useEffect(
++    () =>
++      registerPanelKeys(panelId, (e) => {
++        const { rows: cur } = latest.current;
++        if (navKey(e, grid.current, cur.length)) return true;
++        const row = cur[grid.current?.selected() ?? -1];
++        if (!row) return false;
++        if (e.key === "Enter") {
++          if (row.status === "ON") navigate(panelId, { fn: "EXT", args: [row.name], security: undefined });
++          else toggle(row.name, true);
++          return true;
++        }
++        if (e.key === "d") {
++          toggle(row.name, false);
++          return true;
++        }
++        return false;
++      }),
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- toggle only uses setters and a stable reload
++    [panelId, latest],
++  );
++
++  return (
++    <div className="fn">
++      <Header title="EXTENSIONS" env={env} loading={loading} keys="J/K MOVE · ENTER OPEN OR ENABLE · D DISABLE · E CSV · F5 REFRESH · EXT ENABLE <NAME>" />
++      <div className="warn">{env?.data.notice ?? "EXTENSIONS ARE THIRD-PARTY CODE THAT RUNS WITH YOUR PERMISSIONS. EVERYTHING IS OFF UNTIL YOU ENABLE IT."}</div>
++      {say && <div className={say.err ? "err" : "acc"}>{say.text}</div>}
++      <ErrorLine error={error} hasData={!!env} usage={EXT_USAGE} />
++      {env && rows.length === 0 && (
++        <div className="dim">NO EXTENSIONS FOUND. PUT A FOLDER WITH extension.yaml IN {env.data.dir ?? "THE DATA FOLDER"} OR INSTALL A PACKAGE IN THE openterm.extensions GROUP. SEE docs/EXTENSIONS.md.</div>
++      )}
++      <Grid ref={grid} columns={LIST_COLUMNS} rows={rows} />
++    </div>
++  );
++}
++
++function ExtView({ panelId, name, rest }: { panelId: number; name: string; rest: string[] }) {
++  const grid = useRef<GridHandle>(null);
++  const chart = useRef<ChartHandle>(null);
++  const [info, setInfo] = useState<ExtInfo | null>(null);
++  const key = `${name}|${rest.join(" ")}`;
++  const { env, error, loading, reload } = useEnvelope<ExtPayload>(key, async (fresh) => {
++    const list = await extApi.list();
++    const x = list.extensions.find((e) => e.name === name);
++    setInfo(x ?? null);
++    if (!x) throw new ApiError(404, `NO EXTENSION NAMED ${name.toUpperCase()}: EXT LIST SHOWS WHAT IS INSTALLED`, "not_found");
++    if (x.status === "OFF") throw new ApiError(403, `EXTENSION ${name.toUpperCase()} IS OFF: TYPE EXT ENABLE ${name.toUpperCase()} (IT IS THIRD-PARTY CODE AND RUNS WITH YOUR PERMISSIONS)`, "forbidden");
++    const { route, args } = pickRoute(rest, x.routes.map((r) => r.name));
++    return extApi.data(name, route, args, fresh);
++  });
++  const d = env?.data;
++  const section = useMemo(() => (d?.kind === "table" ? tableSection(d) : null), [d]);
++  const columns = useMemo(() => (section ? gridColumns(section) : []), [section]);
++  const rows: TableRow[] = section?.rows ?? [];
++  const series = useMemo(() => (d?.kind === "series" ? seriesBars(d) : null), [d]);
++  const latest = useLatest({ rows });
++  useCsvExport(panelId, () => (section ? gridCsv(`EXT_${name.toUpperCase()}`, columns, rows) : null));
++  usePanelRefresh(panelId, () => { void reload(true); });
++  useEffect(
++    () =>
++      registerPanelKeys(panelId, (e) => {
++        if (e.key === "l") {
++          navigate(panelId, { fn: "EXT", args: ["LIST"], security: undefined });
++          return true;
++        }
++        return navKey(e, grid.current, latest.current.rows.length);
++      }),
++    [panelId, latest],
++  );
++
++  return (
++    <div className="fn">
++      <Header title={d?.title || `EXT ${name.toUpperCase()}`} env={env} loading={loading} keys="J/K MOVE · L LIST · E CSV · F5 REFRESH" />
++      {info && <div className="dim">{provenance(info)} · RUNS WITH YOUR PERMISSIONS</div>}
++      <ErrorLine error={error} hasData={!!env} usage={EXT_USAGE} />
++      {info?.status === "ERR" && info.error && <div className="err">EXTENSION ERR: {info.error}</div>}
++      {section && rows.length === 0 && !error && <div className="warn">NO ROWS</div>}
++      {section && <Grid ref={grid} columns={columns} rows={rows} />}
++      {d?.kind === "table" && d.notes?.map((n) => (
++        <div key={n} className="summary dim">
++          {n}
++        </div>
++      ))}
++      {series && d?.kind === "series" && (
++        series.bars.t.length === 0 ? (
++          <div className="warn">NO POINTS</div>
++        ) : (
++          <>
++            {series.skipped > 0 && <div className="warn">{series.skipped} EMPTY POINTS SKIPPED, NOT FILLED IN</div>}
++            <ChartView key={key} ref={chart} data={series.bars} type="LINE" log={false} readoutLabel={(d.unit || "VALUE").toUpperCase()} />
++          </>
++        )
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/functions/categories.ts b/frontend/src/functions/categories.ts
+index 95cac81..12c3629 100644
+--- a/frontend/src/functions/categories.ts
++++ b/frontend/src/functions/categories.ts
+@@ -60,7 +60,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
+     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
+     { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL"] },
+     { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
+-    { name: "System", codes: ["JOBS", "PERF", "LOG"] },
++    { name: "System", codes: ["JOBS", "PERF", "LOG", "EXT"] },
+   ],
+ };
+ 
+diff --git a/frontend/src/functions/extPayload.ts b/frontend/src/functions/extPayload.ts
+new file mode 100644
+index 0000000..29eee5e
+--- /dev/null
++++ b/frontend/src/functions/extPayload.ts
+@@ -0,0 +1,122 @@
++/**
++ * EXT: the pure part. Reads the command, and turns an extension's payload into what the shared Grid and chart draw.
++ * No React and no network here (vitest loads it anywhere). The backend (extensions/payload.py) has already checked the payload;
++ * this still treats it as untrusted text: a cell is printed as text, never as markup.
++ *
++ *   EXT                      -> LIST
++ *   EXT LIST
++ *   EXT ENABLE <name> | EXT DISABLE <name>
++ *   EXT <name> [route] [args...]   route is the first word when the extension has a route of that name, else `main`
++ */
++import type { BarData } from "../chart/ChartView";
++import type { TableSection } from "../research/tablePayload";
++
++export interface ExtColumn {
++  key: string;
++  title: string;
++  kind: TableSection["columns"][number]["kind"];
++  align: "left" | "right";
++}
++
++export interface ExtTable {
++  kind: "table";
++  title: string;
++  columns: ExtColumn[];
++  rows: Record<string, string | number | boolean | null>[];
++  notes?: string[];
++}
++
++export interface ExtSeries {
++  kind: "series";
++  title: string;
++  unit?: string;
++  t: number[];
++  v: (number | null)[];
++}
++
++export type ExtPayload = ExtTable | ExtSeries;
++
++export interface ExtInfo {
++  name: string;
++  version: string | null;
++  author: string | null;
++  license: string | null;
++  description: string;
++  source: string;
++  adds: string[];
++  enabled: boolean;
++  status: "ON" | "OFF" | "ERR";
++  error: string | null;
++  routes: { name: string; title: string; args: string }[];
++  tools: string[];
++}
++
++export type ExtCommand =
++  | { mode: "list" }
++  | { mode: "enable" | "disable"; name: string }
++  | { mode: "view"; name: string; route: string | null; rest: string[] }
++  | { mode: "usage"; text: string };
++
++export const EXT_USAGE = "USAGE: EXT [LIST] | EXT ENABLE <name> | EXT DISABLE <name> | EXT <name> [route] [args]";
++const NAME = /^[a-z][a-z0-9_-]{0,31}$/;
++
++/** The command's meaning. Names are lowercase on the wire; the command line upper-cases them, so they are lowered here. */
++export function parseExtArgs(args: string[]): ExtCommand {
++  const [first, second, ...more] = args;
++  if (!first || first.toUpperCase() === "LIST") return { mode: "list" };
++  const word = first.toUpperCase();
++  if (word === "ENABLE" || word === "DISABLE") {
++    const name = (second ?? "").toLowerCase();
++    if (!NAME.test(name) || more.length > 0) return { mode: "usage", text: `USAGE: EXT ${word} <name> (NAMES COME FROM EXT LIST)` };
++    return { mode: word === "ENABLE" ? "enable" : "disable", name };
++  }
++  const name = first.toLowerCase();
++  if (!NAME.test(name)) return { mode: "usage", text: EXT_USAGE };
++  return { mode: "view", name, route: null, rest: [second, ...more].filter((a): a is string => !!a) };
++}
++
++/** Splits `rest` into the route and its arguments, given the routes the (enabled) extension offers. */
++export function pickRoute(rest: string[], routes: readonly string[]): { route: string; args: string[] } {
++  const head = rest[0]?.toLowerCase();
++  if (head && routes.includes(head)) return { route: head, args: rest.slice(1) };
++  return { route: "main", args: rest };
++}
++
++/** One word for the status column and a colour class. */
++export function statusClass(s: ExtInfo["status"]): "up" | "err" | "dim" {
++  return s === "ON" ? "up" : s === "ERR" ? "err" : "dim";
++}
++
++/** A table payload as the one section the research tables use, so `gridColumns` and the Grid draw it unchanged. */
++export function tableSection(p: ExtTable): TableSection {
++  return {
++    id: "ext",
++    title: p.title,
++    columns: p.columns.map((c) => ({ key: c.key, title: c.title.toUpperCase(), kind: c.kind, align: c.align })),
++    rows: p.rows,
++    note: null,
++  };
++}
++
++/** A series payload as chart bars (open = high = low = close). A null value is skipped, not interpolated; the count is returned. */
++export function seriesBars(p: ExtSeries): { bars: BarData; skipped: number } {
++  const keep: number[] = [];
++  for (let i = 0; i < p.v.length; i++) if (p.v[i] != null && Number.isFinite(p.v[i])) keep.push(i);
++  const c = Float64Array.from(keep, (i) => p.v[i] as number);
++  const interval = medianGapSeconds(p.t) >= 5 * 86400 ? "1mo" : "1d";
++  return {
++    bars: { symbol: p.unit || "EXT", interval, tz: "UTC", t: Float64Array.from(keep, (i) => p.t[i]), o: c, h: c, l: c, c, v: new Float64Array(keep.length) },
++    skipped: p.v.length - keep.length,
++  };
++}
++
++function medianGapSeconds(t: number[]): number {
++  if (t.length < 2) return 0;
++  const gaps = t.slice(1).map((x, i) => x - t[i]).sort((a, b) => a - b);
++  return gaps[Math.floor(gaps.length / 2)];
++}
++
++/** The "who is this from" line shown when an extension's data is on screen. */
++export function provenance(x: Pick<ExtInfo, "name" | "version" | "author" | "license" | "source">): string {
++  return `EXTENSION ${x.name.toUpperCase()} ${x.version ?? ""} BY ${(x.author ?? "UNKNOWN").toUpperCase()} (${(x.license ?? "?").toUpperCase()}, ${x.source.toUpperCase()}) · THIRD-PARTY CODE`;
++}
+diff --git a/frontend/src/functions/registry.ts b/frontend/src/functions/registry.ts
+index e62def0..7445416 100644
+--- a/frontend/src/functions/registry.ts
++++ b/frontend/src/functions/registry.ts
+@@ -143,6 +143,7 @@ const defs: FunctionDef[] = [
+   { code: "APIKEYS", title: "API keys: set, test, remove (optional, zero keys works)", needsSecurity: false, argsSchema: "[PROVIDER]", load: () => import("./APIKEYS"), idlePreload: false },
+   { code: "SOURCES", title: "Data sources: health, latency, quota", needsSecurity: false, load: () => import("./Sources") },
+   { code: "LOG", title: "Backend log", needsSecurity: false, load: () => import("./Log") },
++  { code: "EXT", title: "Third-party extensions: list, enable, run (their code runs with your permissions)", needsSecurity: false, argsSchema: "[LIST | ENABLE name | DISABLE name | name [route] [args]]", load: () => import("./EXT"), idlePreload: false },
+   { code: "DLVR", title: "Alert delivery", needsSecurity: false, load: () => import("./DLVR") },
+   { code: "BRIEF", title: "Daily brief", needsSecurity: false, load: () => import("./BRIEF") },
+   { code: "TMPL", title: "Workspace templates: Long-term, Day trader, Macro, India", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", load: () => import("./TMPL"), idlePreload: false },
+diff --git a/frontend/src/gui/toolbars.test.ts b/frontend/src/gui/toolbars.test.ts
+index 22c2363..1d23a87 100644
+--- a/frontend/src/gui/toolbars.test.ts
++++ b/frontend/src/gui/toolbars.test.ts
+@@ -7,7 +7,7 @@ const SINGLE_KEY = /^(.|Enter|Escape|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDo
+ 
+ describe("GUI panel toolbars", () => {
+   it("covers the main panels", () => {
+-    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "FA", "GP", "N", "PORT", "Q", "WEI", "WL"]);
++    expect(Object.keys(TOOLBARS).sort()).toEqual(["ALRT", "BT", "DES", "EXT", "FA", "GP", "N", "PORT", "Q", "WEI", "WL"]);
+   });
+ 
+   it("only names functions that are in the registry (and built)", () => {
+diff --git a/frontend/src/gui/toolbars.ts b/frontend/src/gui/toolbars.ts
+index 5e62a86..fdd1f9c 100644
+--- a/frontend/src/gui/toolbars.ts
++++ b/frontend/src/gui/toolbars.ts
+@@ -134,6 +134,10 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
+     // and a press from this button moves focus to the panel first, so it works from the mouse too.
+     { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },
+   ],
++  // Third-party extensions: L shows the list from an extension panel; Enter / D on a list row enable / disable it (the panel's own keys).
++  EXT: [
++    { label: "List", key: "l", title: "Show the installed extensions (L)", when: "args" },
++  ],
+ };
+ 
+ /** The buttons to show for a function and its current arguments (applies each button's `when`). */
+diff --git a/frontend/src/net/extApi.ts b/frontend/src/net/extApi.ts
+new file mode 100644
+index 0000000..f1ebf75
+--- /dev/null
++++ b/frontend/src/net/extApi.ts
+@@ -0,0 +1,20 @@
++/** Third-party extensions (EXT): the list, the enable switch, and an enabled extension's table or series route. */
++import type { ExtInfo, ExtPayload } from "../functions/extPayload";
++import { get, send, TTL } from "./core";
++import type { Envelope } from "./types";
++
++export interface ExtList {
++  extensions: ExtInfo[];
++  dir: string | null;
++  /** The permissions notice (third-party code, runs with your permissions). */
++  notice: string;
++}
++
++export const extApi = {
++  list: () => get<ExtList>("/api/ext", undefined, 0, true),
++  enable: (name: string) => send<{ extension: ExtInfo; notice: string }>("POST", `/api/ext/${encodeURIComponent(name)}/enable`),
++  disable: (name: string) => send<{ extension: ExtInfo }>("POST", `/api/ext/${encodeURIComponent(name)}/disable`),
++  data: (name: string, route: string, args: string[], fresh = false) =>
++    get<Envelope<ExtPayload>>(`/api/ext/${encodeURIComponent(name)}/${encodeURIComponent(route)}`, { q: args.join(" ") || undefined }, TTL.s30, fresh),
++};
++

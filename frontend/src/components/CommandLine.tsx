@@ -6,6 +6,8 @@ import { fuzzyRank } from "../command/fuzzy";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
 import { refreshWatchlists, watchlistList } from "../command/watchlists";
+import { matchSources, srcToken } from "../command/srcArg";
+import { sources as sourcesStore } from "../net/sources";
 import { TWINS } from "../functions/aliases";
 import { FUNCTION_LIST, FUNCTIONS, loadModule } from "../functions/registry";
 import { marketApi, prefetch } from "../net/marketApi";
@@ -57,6 +59,12 @@ function watchlistSuggestions(token: string): Suggestion[] {
   const lists = watchlistList.get() ?? [];
   const ranked = token ? fuzzyRank(token, lists, (l) => l.name, 10) : lists.slice(0, 10);
   return ranked.map((l) => ({ value: l.name, label: `${l.count} SYMBOLS`, kind: "LIST" }));
+}
+
+/** `SRC=<partial>`: provider names from /api/sources (polled by the status bar), so the pin can be picked, not remembered. */
+function sourceSuggestions(partial: string): Suggestion[] {
+  const all = (sourcesStore.get()?.providers ?? []).map((p) => ({ name: p.name, label: p.label || p.name }));
+  return matchSources(partial, all).map((s) => ({ value: `SRC=${s.name.toUpperCase()}`, label: s.label, kind: "ARG" }));
 }
 
 /** The token under the cursor (always the last one) and whether it sits in the security slot. */
@@ -285,6 +293,16 @@ export function CommandLine() {
       };
       show();
       void (layoutArg ? refreshLayouts(5000) : refreshWatchlists(5000)).then(show, () => {});
+      return;
+    }
+    const src = srcToken(v);
+    if (src !== null) {
+      nlItems.current = [];
+      setHint(null);
+      startTransition(() => {
+        setItems(sourceSuggestions(src));
+        setSel(-1);
+      });
       return;
     }
     const { token, securitySlot } = lastToken(v);

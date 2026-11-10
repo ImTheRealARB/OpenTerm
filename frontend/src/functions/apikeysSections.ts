@@ -6,12 +6,14 @@
  */
 export const SECTIONS: readonly { title: string; names: readonly string[] }[] = [
   { title: "AI models", names: ["openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini"] },
-  { title: "Market data", names: ["finnhub", "alpaca", "fmp", "tradier", "openfigi", "marketaux"] },
+  { title: "Market data", names: ["finnhub", "alpaca", "fmp", "twelvedata", "alphavantage", "polygon", "tradier", "openfigi", "marketaux"] },
   { title: "Economic and official data", names: ["fred", "eia", "bls", "bea", "census", "comtrade", "companies_house", "openfec", "congressgov"] },
   { title: "India", names: ["kite"] },
   { title: "Crypto and on-chain", names: ["etherscan"] },
   { title: "Shipping and flights", names: ["aisstream", "opensky"] },
   { title: "Alerts and delivery", names: ["telegram", "smtp", "webhook"] },
+  { title: "Trading accounts (ORD)", names: ["alpaca_paper", "alpaca_live"] },
+  { title: "AI web search (opt-in)", names: ["brave", "tavily", "searxng"] },
 ];
 
 /** The section title for a provider name, or "Other" for one nobody has placed yet (it then shows last, never disappears). */

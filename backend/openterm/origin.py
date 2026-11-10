@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import orjson
 
+from . import remote
+
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 
 ALLOWED_ORIGINS = ("http://localhost", "http://127.0.0.1", "http://[::1]")
@@ -27,6 +29,8 @@ def origin_ok(origin: str | None) -> bool:
     """True when there is no Origin (not a browser page) or it is this machine. 'null' (sandboxed pages, file://) is refused."""
     if origin is None:
         return True
+    if remote.enabled():  # remote mode: the one public address, not this machine (a page on localhost is just another site)
+        return origin == remote.public_origin()
     # "http://localhost" itself or followed by a port / path; "http://localhost.evil.com" must not pass.
     return any(origin == p or origin.startswith((p + ":", p + "/")) for p in ALLOWED_ORIGINS)
 
@@ -51,7 +55,10 @@ class OriginGuardMiddleware:
                 return await self._refuse_http(send)
         elif kind == "websocket":
             client = scope.get("client")
-            if not client or client[0] not in LOOPBACK or not origin_ok(_header(scope, b"origin")):
+            # Remote mode: behind the proxy the client is always the proxy, so the address check is meaningless; the session cookie
+            # (RemoteAuthMiddleware) and the Origin check carry the weight instead.
+            local = remote.enabled() or (client and client[0] in LOOPBACK)
+            if not local or not origin_ok(_header(scope, b"origin")):
                 # Answering the handshake with a close frame before accept() makes the server reply HTTP 403.
                 await receive()
                 return await send({"type": "websocket.close", "code": 1008})

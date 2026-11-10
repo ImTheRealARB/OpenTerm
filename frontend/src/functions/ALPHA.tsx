@@ -4,7 +4,7 @@ import { makeResearchPanel } from "./ResearchPanel";
 
 export default makeResearchPanel({
   fn: "alpha",
-  usage: "USAGE: ALPHA [UNIVERSE=TOP100|SYN|WL:<NAME>|LIST:A,B,C] [RANGE=2y] [FAMILY=...] [H=1,5,10,20]",
+  usage: "USAGE: ALPHA [UNIVERSE=TOP100|SYN|WL:<NAME>|LIST:A,B,C] [RANGE=2y] [FAMILY=CORE|ALPHA101|QLIB158|ACADEMIC|GTJA191|ALL] [H=1,5,10,20]",
   keys: "ENTER FORMULA · HISTORICAL IC, NOT A FORECAST",
   params: (p) => {
     const { params, bad } = alphaArgs(p.args);

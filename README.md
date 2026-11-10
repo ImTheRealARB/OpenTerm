@@ -8,7 +8,7 @@
 Quotes, charts, company filings, macro data and backtests, one command away. No account, no subscription.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-FFB000?style=flat-square&labelColor=000000)](LICENSE)
-[![Benchmarks: 37 of 37 within budget](https://img.shields.io/badge/benchmarks-37%2F37_in_budget-FFB000?style=flat-square&labelColor=000000)](docs/PERFORMANCE.md)
+[![Benchmarks: 39 of 39 within budget](https://img.shields.io/badge/benchmarks-39%2F39_in_budget-FFB000?style=flat-square&labelColor=000000)](docs/PERFORMANCE.md)
 [![Works with zero API keys](https://img.shields.io/badge/API_keys-none_needed-FFB000?style=flat-square&labelColor=000000)](#api-keys-optional)
 
 [Install](#install) ·
@@ -180,8 +180,8 @@ Every function is listed in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 ## Built to be fast
 
 Speed is treated like a feature with a budget. Every number below must pass the project's own benchmark
-(`node scripts/bench.mjs`) before a change is accepted. Latest run, on a Windows PC on the 5th of November 2026, 37 of 37
-within budget ([full record](docs/PERFORMANCE.md)):
+(`node scripts/bench.mjs`) before a change is accepted. The table is from a Windows PC on the 5th of November 2026; the latest run, on Linux on the 10th of November 2026, had
+all 39 budgets within limits ([full record](docs/PERFORMANCE.md)):
 
 | What you do | Result | Budget |
 |---|---|---|

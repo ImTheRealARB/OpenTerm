@@ -6,6 +6,8 @@ export interface FunctionProps {
   panelId: number;
   security?: SecurityRef;
   args: string[];
+  /** Source pinned by `SRC=` for this view; a panel passes it on to its API calls (`?source=`). */
+  source?: string;
 }
 
 export interface FunctionDef {
@@ -57,6 +59,9 @@ const defs: FunctionDef[] = [
   // SEC and MONITOR are twins (TWINS in functions/aliases.ts): own code and title, same panel module as the original.
   { code: "SEC", title: "SEC filings (alias of FIL)", needsSecurity: true, argsSchema: "[FORM]", load: () => import("./FIL") },
   { code: "PORT", title: "Portfolio (live P&L, CSV import/export)", needsSecurity: false, argsSchema: "[NAME] [ADD SYM QTY [COST] [CCY] | RM SYM... | EXPORT | IMPORT | BASE CCY] | DEL NAME", load: () => import("./PORT") },
+  { code: "JRNL", title: "Trade journal: import Zerodha / IBKR Flex / Alpaca / CSV trades, FIFO round trips, statistics, behaviour findings (heuristics, not advice), Shadow Account. Read only", needsSecurity: false, argsSchema: "[TRIPS|STATS|FINDINGS|SHADOW|IMPORT] [CCY]", load: () => import("./JRNL"), idlePreload: false },
+  { code: "SYNC", title: "Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders", needsSecurity: false, argsSchema: "[KITE|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]", load: () => import("./SYNC"), idlePreload: false },
+  { code: "ORD", title: "Order ticket and blotter: paper by default, live only with keys, a mandate and your confirm; kill switch; hash-chained order ledger. Never the AI", needsSecurity: false, argsSchema: "[PAPER|ALPACA|KITE] [BUY|SELL] [QTY] [SYMBOL] [LMT PRICE | STP PRICE] [DAY|GTC|IOC]", load: () => import("./ORD"), idlePreload: false },
   { code: "ECO", title: "Economic calendar", needsSecurity: false, argsSchema: "[1-62] [MAJOR] [YYYY-MM-DD]", related: { market: 7 }, load: () => import("./ECO") },
   { code: "MACRO", title: "FRED series browser", needsSecurity: false, argsSchema: "[query]", load: () => import("./MACRO") },
   { code: "FRED", title: "Plot a FRED series", needsSecurity: false, argsSchema: "SERIES_ID [1Y|2Y|5Y|10Y|20Y|MAX]", load: () => import("./FRED"), idlePreload: false },
@@ -133,16 +138,18 @@ const defs: FunctionDef[] = [
   { code: "ATTR", title: "Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations", needsSecurity: false, argsSchema: "[PORTFOLIO] [BENCH=SPY] [RANGE=1y] | <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] | <PORTFOLIO> DEL <DATE>", load: () => import("./ATTR") },
   { code: "FACT", title: "Factor regression (Fama-French / momentum / quality) of a symbol or portfolio; the factor data end date is shown", needsSecurity: false, argsSchema: "<SYM|PORTFOLIO> [RANGE=3y]", load: () => import("./FACT") },
   { code: "QL", title: "Quant calculators on bars: GARCH OU COINT HEDGE COPULA ROLL AMIHUD KYLE VPIN EVENT DSR ADF HVAR", needsSecurity: false, argsSchema: "<GARCH|OU|COINT|HEDGE|COPULA|ROLL|AMIHUD|KYLE|VPIN|EVENT|DSR|ADF|HVAR> [SYMBOLS] [KEY=VALUE]", load: () => import("./QL") },
-  { code: "ALPHA", title: "Alpha factor zoo: IC / IR / decay of Alpha101 and Qlib158 style factors over a universe (historical, not a forecast; SYN is synthetic)", needsSecurity: false, argsSchema: "[UNIVERSE=TOP100|SYN|WL:<NAME>|LIST:A,B,C] [RANGE=2y] [FAMILY=...] [H=1,5,10,20]", load: () => import("./ALPHA") },
+  { code: "ALPHA", title: "Alpha factor zoo: IC / IR / decay of 435 Alpha101, Qlib158, academic and GTJA191 factors over a universe (default FAMILY=CORE, the first 29; ALL runs every one) (historical, not a forecast; SYN is synthetic)", needsSecurity: false, argsSchema: "[UNIVERSE=TOP100|SYN|WL:<NAME>|LIST:A,B,C] [RANGE=2y] [FAMILY=CORE|ALPHA101|QLIB158|ACADEMIC|GTJA191|ALL] [H=1,5,10,20]", load: () => import("./ALPHA") },
   { code: "REGIME", title: "Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list", needsSecurity: false, argsSchema: "[WL:<NAME>|LIST:A,B,C] [WIN=60] [EDGE=0.5]", load: () => import("./REGIME") },
   { code: "KITE", title: "Kite Connect (read-only data source): login state, LOGIN opens Kite in a new tab, LOGOUT clears the token; no orders", needsSecurity: false, argsSchema: "[LOGIN|STATUS|LOGOUT]", load: () => import("./KITE") },
   { code: "AI", title: "AI research assistant over OpenTerm data: tool calls with sources, [T1] citations, UNGROUNDED / UNSOURCED flags (model output, not data; needs OPENROUTER key)", needsSecurity: false, argsSchema: "[question... | BT <strategy idea> | AUTO <hypothesis> | CHART | DOC FILING <SYM> [FORM] | DOC OFF]", load: () => import("./AI"), idlePreload: false },
   { code: "SWARM", title: "Multi-agent desks (built-in, packaged and your own YAML files): analyst roles with their own tools, then a chair; shows coverage, variables and a worst-case cost before a run; stored runs replay without a model (model output, not data; needs OPENROUTER key)", needsSecurity: false, argsSchema: "[<DESK> <subject> | <DESK> NAME=value ... [--force] | REPLAY <id> | LIST]", load: () => import("./SWARM"), idlePreload: false },
   { code: "THESIS", title: "Investment thesis notes per ticker: status, invalidation rule, linked SWARM runs (stored locally)", needsSecurity: false, argsSchema: "[SYMBOL | ADD <SYMBOL> <text> | INVALID <id> <rule>]", load: () => import("./THESIS"), idlePreload: false },
-  { code: "AUDIT", title: "Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes only)", needsSecurity: false, load: () => import("./AUDIT"), idlePreload: false },
+  { code: "AUDIT", title: "Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes; text only if ai.storeText is on)", needsSecurity: false, load: () => import("./AUDIT"), idlePreload: false },
+  { code: "MCP", title: "Third-party MCP servers OpenTerm can call (stdio or HTTP): off until enabled, per-tool allow-list, results untrusted; NSE India presets (unofficial, not affiliated with NSE)", needsSecurity: false, argsSchema: "[ENABLE <server> [YES] | DISABLE <server> | TEST <server> | ALLOW <server> <tool> | DENY <server> <tool>]", load: () => import("./MCP"), idlePreload: false },
   { code: "APIKEYS", title: "API keys: set, test, remove (optional, zero keys works)", needsSecurity: false, argsSchema: "[PROVIDER]", load: () => import("./APIKEYS"), idlePreload: false },
   { code: "SOURCES", title: "Data sources: health, latency, quota", needsSecurity: false, load: () => import("./Sources") },
   { code: "LOG", title: "Backend log", needsSecurity: false, load: () => import("./Log") },
+  { code: "EXT", title: "Third-party extensions: list, enable, run (their code runs with your permissions)", needsSecurity: false, argsSchema: "[LIST | ENABLE name | DISABLE name | name [route] [args]]", load: () => import("./EXT"), idlePreload: false },
   { code: "DLVR", title: "Alert delivery", needsSecurity: false, load: () => import("./DLVR") },
   { code: "BRIEF", title: "Daily brief", needsSecurity: false, load: () => import("./BRIEF") },
   { code: "TMPL", title: "Workspace templates: Long-term, Day trader, Macro, India", needsSecurity: false, argsSchema: "[LONGTERM|DAY|MACRO|INDIA]", load: () => import("./TMPL"), idlePreload: false },

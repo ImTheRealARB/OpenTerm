@@ -32,7 +32,8 @@ To add a source: write the adapter ([ADDING_A_PROVIDER.md](ADDING_A_PROVIDER.md)
 | **Frankfurter** (new) | none | ECB reference rates: one fix per business day for FX pairs (EURUSD=X, USDINR=X, crosses), back to 1999; no high/low | `history` below Yahoo, `quotes` below Yahoo (Yahoo-down fallback for FX) |
 | **Companies House, Marketaux, Etherscan** (new) | free keys | `UKCO` UK register; `N` headlines with sentiment; `ADDR` EVM address and gas | specialists (Marketaux joins the news order) |
 | Yahoo, Nasdaq, SEC EDGAR, FRED (keyless CSV), ECB, BoE, BoC, MoF, Treasury, CFTC, Deribit, OKX, Binance, Kraken, Coinbase, CoinGecko, DefiLlama, Polymarket, Kalshi, World Bank, DBnomics, Open-Meteo, NWS, NSE archive, AMFI, GDELT, RSS | none | global shares, rates, futures, crypto, macro, weather, prediction markets, funds, news | fallbacks and specialists |
-| Finnhub, Alpaca (IEX), FMP, EIA, OpenFIGI, Tradier, FRED API | free keys | news, ratings, real-time US trades, energy, identifiers, options | specialists |
+| Finnhub, Alpaca (IEX), EIA, OpenFIGI, Tradier, FRED API | free keys | news, ratings, real-time US trades, energy, identifiers, options | specialists |
+| **Twelve Data, Polygon (now Massive), FMP, Alpha Vantage** (new, workstream 07) | free keys, inert until set | quotes, candles, symbol search, and (FMP, Alpha Vantage) FA statements; Twelve Data adds FX and non-US exchanges | `quotes` / `history` below Yahoo in this order: Twelve Data, FMP (quotes) or Polygon (history), then the other, Alpha Vantage last; `search` below Yahoo; `fundamentals` below SEC (FMP, then Alpha Vantage). With no key none of them is asked and the chain is exactly the old one. Limits and terms: see "Keyed market data" below |
 
 ## Free sources worth adding (catalog, researched 2026-11-05)
 
@@ -54,10 +55,14 @@ on the provider's page before building. Most search hits were comparison blogs, 
 | **Etherscan** | Ethereum and some other chains: balances, transactions, gas | 3 calls/s, 100,000/day, selected chains | Built: `ADDR` (balance, last 20 transactions, gas). Run live: fixtures `etherscan_real_*.json` are real recordings |
 | **CoinMarketCap Basic** | Crypto ranks and prices beyond the top 50 | 15,000 credits/month, 50 requests/minute | Checked (CMC's own article) |
 | **AISstream** | Live ship positions, destinations, ETAs, ship details (WebSocket) | free, **beta, no uptime promise**; 3 connections per account and per IP (docs) | Built: `AIS` (ship positions in a chokepoint or box, listen up to 15 s). Run live 2026-11-05: `ais_stream_recording.json` is a real 46-message recording |
-| **Twelve Data, Tiingo, Alpha Vantage** | Fallback prices, daily history | see above | Checked |
+| **Twelve Data, Alpha Vantage** | Fallback prices, daily history | **Built** (workstream 07, see "Keyed market data" below) | Built |
+| **Tiingo** | Fallback prices, daily history | not built | Checked |
 | **Angel One SmartAPI, Fyers** | Indian broker data, backup to Kite | free with account; TOTP login | Checked (forums) |
 | **USDA NASS QuickStats** | US crop, livestock and food statistics | free key | Memory |
 | **USASpending.gov** | Federal contracts, grants, agencies (USD obligated) | no key | Built: `USASP` (top contract recipients and largest awards for a keyword over 3 fiscal years; `USASP AGENCY` top agencies, Enter drills into an agency). Run live 2026-11-05, real recordings |
+| **Brave Search API** | Web search results for the AI's opt-in `web_search` (not market data; never counted as data) | paid key with a monthly free allowance, `BRAVE_SEARCH_API_KEY`; terms and limits per provider docs, not verified here | Built, opt-in (`SETTINGS AI WEB ON`, provider BRAVE). Tested on a mock transport only, NOT RUN with a key. The query text goes to Brave |
+| **Tavily Search API** | Same, alternative provider | key with a free tier, `TAVILY_API_KEY`; terms and limits per provider docs, not verified here | Built, opt-in (provider TAVILY). Mock transport only, NOT RUN with a key. The query text goes to Tavily |
+| **SearXNG (self-hosted)** | Same, with no third-party account | your own instance, `SEARXNG_URL` (JSON output enabled) | Built, opt-in (provider SEARXNG). Mock transport only. The instance forwards queries to the engines it is set up with |
 | **Federal Register** | Rules, proposed rules, notices, presidential documents | no key | Built: `FEDREG [RULE\|PROPOSED\|NOTICE\|PRESDOC] <words>`. Run live 2026-11-05, real recordings (an empty search has no `results` key) |
 | **OpenFEC** | US campaign finance: candidates, committees, totals by cycle | free api.data.gov key `FEC_API_KEY`, 1,000 calls/hour | Built: `FEC`. DOC-SHAPED, NOT RUN with a key (fixtures `fec_*_docshape`, invented numbers). Only the gateway 403 answers are real **Status 2026-11-05: the owner decided not to get this key; stays DOC-SHAPED, never run live.** |
 | **Congress.gov API v3** | US bills, sponsors, latest actions | free api.data.gov key `CONGRESS_API_KEY`, 5,000 calls/hour | Built: `CONGRESS`. DOC-SHAPED, NOT RUN with a key. The bill list has no sponsor and (per the docs) no text search, so words filter titles of the 250 latest updated bills **Status 2026-11-05: the owner decided not to get this key; stays DOC-SHAPED, never run live.** |
@@ -77,11 +82,37 @@ on the provider's page before building. Most search hits were comparison blogs, 
 | **Drewry World Container Index** | Weekly container freight rates | Free on Drewry's site; API only "on request": not scrapable (bot rules) |
 | **SCFI (Shanghai Shipping Exchange)** | Weekly container index | Published weekly; no API found |
 
+### Keyed market data (Twelve Data, Alpha Vantage, Polygon / Massive, FMP): workstream 07
+
+Read-only fallbacks that sit below Yahoo (and SEC for statements). **Every limit and term below is "per provider docs, not verified here":** no
+account was available to check the live plans, and free tiers change. Re-check on the provider's page before relying on a number.
+
+| Source | Key (APIKEYS) and where it travels | Free limits | Data on the free plan | Terms to know |
+|---|---|---|---|---|
+| **Twelve Data** | `TWELVEDATA_API_KEY`, `Authorization: apikey` header (never the URL) | 8 credits a minute, 800 a day; 1 credit per symbol per call; 5000 bars per call | quotes, daily and minute candles, symbol search, FX, shares on NSE, BSE, LSE, TSX, HKEX, TSE, Xetra, Euronext and others; some exchanges and fields need a paid plan; prices can be delayed | Terms page not read here. The `demo` key is public and covers a few symbols only (the fixtures are recorded with it) |
+| **Alpha Vantage** | `ALPHAVANTAGE_API_KEY`, `apikey` query parameter (the API has no header form; masked everywhere, see below) | 25 requests a day, 1 a second | US quotes, daily candles (last 100 sessions), income statement, balance sheet, cash flow (3 requests for FA); intraday and full history can be premium | Terms page not read here. The API does **not validate keys**: a made-up key gets data or the 25-a-day text, so APIKEYS TEST can say OK for a wrong key |
+| **Polygon.io, now Massive** (`api.massive.com`) | `POLYGON_API_KEY`, `Authorization: Bearer` header | 5 requests a minute | US shares and ETFs: the PREVIOUS session's bar as the quote (not live), daily to minute candles for about 2 years (minute candles include pre- and after-market), symbol search | Terms page not read here. Real-time, snapshots and unlimited calls are paid |
+| **Financial Modeling Prep** (`/stable`) | `FMP_API_KEY`, `apikey` query parameter | 250 requests a day | US quote, daily candles (about 5 years), search, annual statements (FA); quarterly statements, intraday and most non-US data are paid (the Q view is left empty with a note, never filled from annual numbers) | Terms page not read here |
+
+- **Where they rank and why** is in `providers/hierarchy.py` (each `Rank` carries covers, depth, freshness, limits and the reason). None sits above Yahoo
+  because quotas of 25 a day to 800 a day cannot feed a chart or a 50-row grid and Yahoo needs no key; among themselves, depth first, then limits, then
+  freshness. For `quotes`: Twelve Data, FMP, Polygon, Alpha Vantage. For `history`: Twelve Data, Polygon, FMP, Alpha Vantage. `fundamentals`: SEC, FMP, Alpha Vantage.
+- **No key, no change.** The adapters are skipped (`supports()` is false), so the chains, SOURCES order and answers are exactly what they were; a test
+  (`tests/test_keyed_market.py`) compares the order with the old one.
+- **Not live data.** Polygon's quote is the previous session (its `market_time` is that session); Alpha Vantage sends only a date, so its quote time is that day
+  at 00:00 UTC and its age is never understated. Every answer carries its source, fetch time and age, and a cached one past its time to live is `STALE`.
+- **Fixtures.** Real recordings exist only where a public demo key allows one: `twelvedata_real_*` (demo key) and `alphavantage_real_*` (demo key, plus two
+  real limit texts), and the real 401 answers `keytest_{twelvedata,polygon,fmp}_401`. Everything else for Polygon, FMP and Alpha Vantage's daily and premium
+  answers is `*_docshape_*`, marked NOT A RECORDING inside the file; field names there are not checked against a live key.
+  `scripts/record_providers.py` re-records them (never run in CI) and refuses to write a file that contains the key.
+- **Attribution.** No code from these providers or their SDKs is used, so `THIRD_PARTY.md` has no row. Whether a provider's terms ask for an attribution or
+  forbid redistribution on screen was not checked here; read each provider's terms before shipping data from them anywhere beyond your own screen.
+
 ### Already in OpenTerm (no action)
 
 Yahoo, Nasdaq, SEC EDGAR, FRED, ECB, BoE, BoC, Japan MoF, US Treasury and TreasuryDirect, CFTC, FINRA, Deribit, OKX, Binance, CoinGecko, DefiLlama,
 Polymarket, Kalshi, World Bank, DBnomics, Open-Meteo, NWS, NSE archive, AMFI, GDELT, RSS, Ken French, OpenFIGI, EIA, Finnhub, Alpaca, Tradier, FMP
-(stored but not wired: its useful endpoints are paid), Kite.
+(quotes, daily candles, search and annual statements as a keyed fallback; quarterly statements, intraday and most non-US data are paid), Twelve Data, Alpha Vantage, Polygon, Kite.
 
 ### What Bloomberg has that has no free equivalent
 
@@ -132,7 +163,7 @@ are left out and the panel says so). Both measured live on 2026-11-05 and record
 (`ECONNREFUSED`), so no layer was built; try again from another network before writing one. Recorder: `node scripts/record_map_fixtures.mjs`.
 
 Left, in order:
-1. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, Twelve Data, MFapi**, CoinMarketCap, USDA NASS, FEC. (OpenSky is built as FLT but still needs a live check from a network that can reach it.)
+1. **EDINET** (Japan filings), **Angel One / Fyers** (Indian backups to Kite), **Tiingo, MFapi**, CoinMarketCap, USDA NASS, FEC. (OpenSky is built as FLT but still needs a live check from a network that can reach it.)
 2. Live-test every keyed source that has only doc-shaped fixtures (AISstream included).
 
 None of the global free tiers beats Yahoo for charts, so none should be ranked above it.

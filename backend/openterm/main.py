@@ -9,21 +9,29 @@ import httpx
 import orjson
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, scheduler
+from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, remote, scheduler
 from .ai import routes_filing, routes_run  # noqa: F401 - importing routes_filing registers POST /api/ai/filing on the shared AI router
 from .ai.routes import router as ai_router
 from .api import router as api_router
 from .brief_routes import router as brief_router
+from .brokers_routes import router as brokers_router
 from .bt.localdata import LocalData
 from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
 from .delivery.routes import router as delivery_router
+from .extensions.routes import router as ext_router
+from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
+from .mcpclient.routes import router as mcp_client_router
+from .orders.routes import router as orders_router
 from .origin import OriginGuardMiddleware
+from .pin import SourcePinMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
+from .remote import RemoteAuthMiddleware
+from .remote_routes import router as remote_router
 from .responses import Orjson, OrjsonRoute
 from .router import Router
 from .service import DataService
@@ -118,6 +126,9 @@ async def lifespan(app: FastAPI):
         if part:
             part.start()
 
+    from .settings_store import SettingsStore, source_prefs
+
+    router.prefs = source_prefs((await SettingsStore(db).get())["settings"])  # SETTINGS SOURCE <capability> <provider>
     app.state.settings = settings
     app.state.service = service
     app.state.hub = hub
@@ -129,6 +140,23 @@ async def lifespan(app: FastAPI):
     app.state.kite = kite
     keys_http = httpx.AsyncClient(transport=providers.fixture_transport()) if settings.openterm_fixtures else http
     app.state.keys_http = keys_http
+
+    # --- Extensions (docs/EXTENSIONS.md): discovery only reads manifests; code runs for the extensions the user enabled, each isolated. ---
+    app.state.remote = None
+    if remote.enabled():  # self-hosted remote mode: refuses to start half-configured, makes the token on first start
+        remote.check_config()
+        app.state.remote = auth = remote.RemoteAuth(None if str(db_path) == ":memory:" else (db_path if db_path.is_absolute() else ROOT / db_path).parent)
+        if (first := auth.ensure_token()) is not None:
+            remote.announce(first, auth.path)
+    app.state.ext = None
+    try:
+        from .extensions.manager import ExtensionManager
+
+        ext_root = None if str(db_path) == ":memory:" else (db_path if db_path.is_absolute() else ROOT / db_path).parent / "extensions"
+        app.state.ext = ext_mgr = ExtensionManager(ext_root, router, keys_http)
+        ext_mgr.load_enabled()
+    except Exception:
+        logging.getLogger("openterm.extensions").exception("extensions disabled: the manager could not start")
     app.state.llm = None  # LLM gateway: built on first use (api.llm_of)
     app.state.bt = None  # BT store: built on first use (api.bt_of)
 
@@ -178,6 +206,8 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        if app.state.ext is not None:
+            app.state.ext.unload_all()
         sched.shutdown(wait=False)
         await engine.stop()  # awaits its own tasks (audit C-1)
         key_loader.cancel()
@@ -188,6 +218,8 @@ async def lifespan(app: FastAPI):
             t.cancel()
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
+        if (mcpm := getattr(app.state, "mcp_manager", None)) is not None:
+            await mcpm.close_all()  # third-party MCP servers: kill their processes
         await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
@@ -203,16 +235,24 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=APP_NAME, version=__version__, default_response_class=Orjson, lifespan=lifespan)
 app.router.route_class = OrjsonRoute  # the app's own routes (/api/health, /api/perf) skip jsonable_encoder too (audit E-1)
 app.add_middleware(perf.TimingMiddleware)
-app.add_middleware(OriginGuardMiddleware)  # outermost: a foreign browser Origin never reaches a route (audit D-2)
+app.add_middleware(SourcePinMiddleware)  # `?source=nasdaq` pins one data source for the request (pin.py)
+app.add_middleware(OriginGuardMiddleware)  # a foreign browser Origin never reaches a route (audit D-2)
+app.add_middleware(RemoteAuthMiddleware)  # outermost; inert unless OPENTERM_REMOTE=1: then no session, no route (openterm/remote.py)
 app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)
 app.include_router(kite_router)
+app.include_router(brokers_router)
+app.include_router(orders_router)
 app.include_router(delivery_router)
 app.include_router(brief_router)
 app.include_router(ai_router)
 app.include_router(mcp_router)
+app.include_router(mcp_client_router)
 app.include_router(routes_run.theses_router)
+app.include_router(journal_router)
+app.include_router(ext_router)
+app.include_router(remote_router)
 
 
 @app.get("/api/health")

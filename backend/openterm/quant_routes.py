@@ -436,7 +436,7 @@ async def build_ql(request: Request, body: dict) -> dict:
 
 
 # --- ALPHA / CORR REGIME ------------------------------------------------------------------------------------------------------------
-ALPHA_FAMILIES = ("alpha101", "qlib158", "academic")
+ALPHA_FAMILIES = ("core", "alpha101", "qlib158", "academic", "gtja191")  # core = the first 29, the default; ALL = every ported factor
 MAX_REGIME = 50
 TOP_N = 100
 
@@ -486,8 +486,8 @@ def _horizons(body: dict) -> list[int]:
 
 async def build_alpha(request: Request, body: dict) -> dict:
     spec = str(body.get("universe") or "TOP100").strip()
-    fam = str(body.get("family") or "").strip().lower()
-    if fam in ("", "all"):
+    fam = str(body.get("family") or "").strip().lower() or "core"
+    if fam == "all":
         fam = None
     elif fam not in ALPHA_FAMILIES:
         raise _bad(f"FAMILY MUST BE {', '.join(f.upper() for f in ALPHA_FAMILIES)} OR ALL")

@@ -12,7 +12,7 @@ Known limitations, surfaced in the UI where they apply. Updated each phase.
 
 Non-US symbols currently have **one** zero-key source (Yahoo). If Yahoo is down they show
 `PROVIDER DOWN` (or their last cached value, labelled `STALE` with its age). Keyed fallbacks
-(Twelve Data, Finnhub) are planned for phase 3.
+(Twelve Data, Polygon, FMP, Alpha Vantage) are built as free-key fallbacks (workstream 07; see "Keyed market data" in DATA_SOURCES.md): with a key set, a non-US symbol also has Twelve Data below Yahoo.
 
 ## Streaming (phase 3)
 - Live ticks come from Yahoo's public streamer (`wss://streamer.finance.yahoo.com`), unofficial and
@@ -130,7 +130,7 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
   `UNTESTED`, `OK`, `INVALID`, `QUOTA` or `ERROR` from the key store; a key test only reports the state, never data.
 - **Key tests cost one call each**, made only when you save a key or press `T` in APIKEYS (none on a timer). Endpoints:
   OpenRouter `/api/v1/key`, OpenAI and Anthropic `/v1/models`, Finnhub `/quote?symbol=AAPL`, Alpaca paper `/v2/account`,
-  FMP `/stable/quote`, FRED `series`, EIA `/v2/`, OpenFIGI one mapping, Tradier sandbox clock, Telegram `getMe`,
+  FMP `/stable/quote`, Twelve Data `/api_usage`, Polygon previous-day bar of AAPL, Alpha Vantage `GLOBAL_QUOTE` for IBM (Alpha Vantage does not validate keys, so its TEST can say OK for a wrong key), FRED `series`, EIA `/v2/`, OpenFIGI one mapping, Tradier sandbox clock, Telegram `getMe`,
   SMTP `EHLO` + `AUTH` (no mail sent).
 - **LLM gateway:** no AI functions yet (Phase 16), so nothing calls a model on its own. OpenRouter reports the real cost per
   answer (usage accounting); `:free` models cost US$0 but have their own low rate limits. OpenAI and Anthropic direct
@@ -177,7 +177,7 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
   The forecast is your assumptions applied to filed figures: a scenario, not a prediction.
 - **Finnhub and Alpaca** (keys in `APIKEYS`) are written from the documented response shapes; no key was available to record them, so their fixtures
   are labelled doc-shaped and the live shapes are unverified. Finnhub backs `ANR` with the recommendation trend only (no targets) and `EEO` with EPS
-  surprises only (no revisions), and says so. **FMP is not wired** (its useful endpoints are paid). `TRAN` and `SEG` are not built (paid data).
+  surprises only (no revisions), and says so. **FMP** is wired only as a keyed fallback for quotes, daily candles, search and annual FA statements (free plan; per provider docs, not verified here); transcripts, segments and quarterly statements are paid. `TRAN` and `SEG` are not built (paid data).
 - **Intraday depth is per source, not global** (changed 2026-11-05): Yahoo keeps 1 minute for 7 days, 2/5/15/30/90 minutes for 60 days, 60 minutes for
   730 days, and says so itself (`ProviderError("depth")`); `GET /api/history/limits?symbol=X` reports the deepest source that is switched on for `X`.
 - **Real-time quotes (`RT IEX`)** are the last trade on IEX only (one exchange, about 2-3% of volume): the price can differ from the consolidated last
@@ -251,7 +251,7 @@ No key is needed for any of them. Each table header shows the source, its age an
 ## Phase 16 limits (AI layer)
 - The model is OpenRouter (default `deepseek/deepseek-v4-pro`), paid, behind the daily spend cap; no key = `KEY REQUIRED`. Model output is never data: every answer lists its tool calls and flags UNGROUNDED / UNSOURCED numbers (a check, not a proof).
 - Tools return what the panels show (same source, age and STALE labels); results are cut to 6 000 characters, so long tables reach the model as a head and tail. Order, Kite and account tools do not exist.
-- AI DOC: filing text and uploads are parsed locally (TXT, CSV, HTML, DOCX, XLSX, PDF via pypdf; no OCR, so scanned PDFs have no text), kept in memory (last 5), 10 MB each. The SEC document fetch has only been tested with a patched provider.
+- AI DOC: filing text and uploads are parsed locally (TXT, CSV, HTML, DOCX, XLSX, PDF via pypdf; a scanned PDF with no text layer is read by OCR only when the `tesseract` program is on PATH and the optional page renderer is installed with `uv sync --extra ocr`, at most 40 pages, labelled OCR TEXT (MAY CONTAIN ERRORS); otherwise the panel says OCR NOT INSTALLED), kept in memory (last 5), 10 MB each. The SEC document fetch has only been tested with a patched provider.
 - SWARM roles run one after another in the 5 lite desks (the Phase 20 desks run up to 2 independent roles at once, see below); a failed role is retried once. The chair's numbers are checked against the analysts' notes, not against raw tool results. AI AUTO's evidence line lists the BT runs the server saw, whatever the model says.
 - AI BT drafts rule strings only (no SignalEngine code). Backtests stay historical simulations, not forecasts.
 - AUDIT stores hashes and metadata, not text. Stored SWARM / AI AUTO runs (for replay) do keep the events, including answers and tool summaries, in the local database (last 200).
@@ -294,3 +294,34 @@ No key is needed for any of them. Each table header shows the source, its age an
 - `SEAS` uses the UTC date of each bar and daily history (adjusted close when the source has it); the month or ISO week still in progress is left out.
 
 - **Alert delivery (Phase 17).** Alerts are evaluated in the browser on live ticks, so email, Telegram and webhook messages go out only while an OpenTerm tab is open (the tab reports the firing to the backend, which then sends). Nothing is sent when the app is closed. Each firing is delivered once; every attempt is logged (last 500) in `deliveries`.
+
+## Token unlocks
+
+Re-checked 2026-11-10. Verdict: **no legitimate free source exists, so `UNLK` is still not built.**
+
+| Source | Finding | Why it fails |
+|---|---|---|
+| DefiLlama `api.llama.fi/emissions` | HTTP 402 "Upgrade to the paid API plan" | Documented endpoint is paid. |
+| DefiLlama Pro API (`/api/emissions`, `/api/emission/{protocol}`) | Listed under Pro in their `llms-pro.txt`; needs a paid key | Paid; their docs say there are only a free (no key) tier and the API plan. |
+| `defillama-datasets.llama.fi/emissions*` | Answers 200 with no key | Unadvertised storage behind the paid endpoint and the website. Using it would route around the paywall, so it is not used. |
+| Messari Token Unlocks API | Documented as an authenticated API endpoint; no public free tier or redistribution terms found | Not keyless; terms unverified. |
+| CoinGecko (Demo, keyless/free key) | No token unlock or vesting schedule endpoint | Only circulating / total / max supply; no schedule. |
+| Tokenomist (ex Token Unlocks) | API needs a key; free trial by form request, longer ranges and commercial use via sales | Not free for an open-source tool; the free website cannot be scraped. |
+| CryptoRank | Unlocks are in a paid API; pricing pages conflict | Paid. |
+| Third-party resellers (e.g. oanor) | Free quota of 100 to 760 calls a month, source is the DefiLlama dataset above | Rehosts the unadvertised dataset; unclear terms. |
+| On-chain vesting contracts | Each project uses its own contract layout; no standard schedule registry | Cannot be built generally without a per-token curated list, which would be hand-typed data. |
+
+Revisit if DefiLlama moves emissions to its free tier or another provider publishes a keyless schedule under open terms. Nothing was probed beyond single GET requests; no site was scraped.
+
+## Keyed market data (workstream 07, 2026-11-10)
+- **Zero keys: nothing changes.** Twelve Data, Alpha Vantage, Polygon and FMP are skipped without a key and the quote, history, search and FA chains are the old ones.
+  Limits are as the providers publish them and were **not verified here** (no account): Twelve Data 8 credits a minute and 800 a day; Alpha Vantage 25 requests a day
+  and 1 a second; Polygon 5 requests a minute; FMP 250 requests a day. A limit answer shows as `RATE LIMITED` with the provider name and the next source answers.
+- **Depth.** Twelve Data 5000 bars per call (about 20 years of daily candles, about 89 days of 5-minute candles); Polygon about 2 years, with minute candles that include
+  pre- and after-market; FMP daily only, about 5 years; Alpha Vantage the last 100 daily or intraday bars. A request deeper than that raises a depth error and the next
+  source answers. Declared depths feed `GET /api/history/limits` only while a key is set.
+- **Plan limits** show as `KEY PLAN: ... needs a paid ... plan` (unsupported, not an outage, no circuit-breaker strike).
+- **FA from FMP** has annual statements only: the quarterly view is empty with a note. **FA from Alpha Vantage** has no EPS or diluted share rows and no fiscal year
+  (periods are named by their end date). Rows a vendor does not send stay blank.
+- **Doc-shaped fixtures.** Polygon and FMP successes, and Alpha Vantage's daily and premium answers, are built from the docs (NOT A RECORDING in the file). Their live
+  field names and error wording are unverified.

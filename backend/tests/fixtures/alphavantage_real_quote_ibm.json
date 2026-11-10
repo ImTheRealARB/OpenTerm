@@ -1,0 +1,18 @@
+{
+ "status": 200,
+ "recorded": "2026-11-10, REAL answer (apikey query parameter)",
+ "body": {
+  "Global Quote": {
+   "01. symbol": "IBM",
+   "02. open": "246.0000",
+   "03. high": "248.8100",
+   "04. low": "245.1957",
+   "05. price": "246.1100",
+   "06. volume": "4629816",
+   "07. latest trading day": "2026-11-09",
+   "08. previous close": "245.0000",
+   "09. change": "1.1100",
+   "10. change percent": "0.4531%"
+  }
+ }
+}

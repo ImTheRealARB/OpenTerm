@@ -70,9 +70,11 @@ async def swarm_presets(request: Request):
     from . import swarm
 
     presets, errors = swarm.all_presets(user_presets_dir(request))
-    names = _models({}, await ai_settings(request)) or (agent.DEFAULT_MODEL, "openrouter")
+    ai_cfg = await ai_settings(request)
+    names = _models({}, ai_cfg) or (agent.DEFAULT_MODEL, "openrouter")
     price = await api_mod.llm_of(request).price(names[1], names[0])
-    rows = swarm.listing(presets)
+    web_on = ai_cfg.get("web") is True  # with web access ON a desk that only lacked the web is listed FULL
+    rows = swarm.listing({c: swarm.with_web(p, web_on) for c, p in presets.items()})
     for r in rows:
         r["estimate"]["usd"] = swarm.usd(r["estimate"], price)
     spend = await api_mod.llm_of(request).spend_status()
@@ -114,6 +116,10 @@ async def swarm_run(request: Request):
         return http_util.error_response(400, "bad_request", f"PRESET MUST BE ONE OF {', '.join(presets)}")
     if preset.coverage == "UNAVAILABLE":
         return http_util.error_response(400, "unavailable", f"{preset.code} IS UNAVAILABLE: {'; '.join(preset.limits)}")
+    from . import web
+
+    webc = web.config_from(request.app, await ai_settings(request))  # None unless SETTINGS AI WEB ON
+    preset = swarm.with_web(preset, webc is not None)
     given = body.get("variables")
     if given is not None and not (isinstance(given, dict) and all(isinstance(k, str) and isinstance(v, str) and len(v) <= 300 for k, v in given.items())):
         return http_util.error_response(400, "bad_request", "variables MUST BE AN OBJECT OF SHORT STRINGS")
@@ -126,9 +132,14 @@ async def swarm_run(request: Request):
     if isinstance(est, Response):
         return est
     client = (request.client.host, request.client.port)
+    notes: list[str] = []
+    if any(tools.EXTERNAL_ALL in r.tools for r in preset.roles):  # a role opted in to the third-party MCP tools the user enabled and allowed
+        from ..mcpclient.external import prepare_for_run
+
+        notes = await prepare_for_run(request.app)
 
     def runner_for(role) -> tools.ToolRunner:
-        return tools.ToolRunner(request.app, client=client, tools=list(role.tools))
+        return tools.ToolRunner(request.app, client=client, tools=list(role.tools), web=webc)
 
     subject = subject.strip()
     run_events = swarm.run(api_mod.llm_of(request), runner_for, preset, subject, model=names[0], provider=names[1], variables=given)
@@ -148,6 +159,10 @@ async def swarm_run(request: Request):
     # must be part of the question or two different runs of one desk would look identical in the audit log.
     asked = f"{preset.code} {subject}" + "".join(f" {k}={v}" for k, v in sorted((given or {}).items()))
     events = audit(request, events, "swarm", swarm.prompt_text(preset), asked, role_tools, names[0], names[1])
+    if notes:
+        from ..mcpclient.external import with_notes
+
+        events = with_notes(notes, events)
     return _stream(request, t0, events)
 
 
@@ -200,6 +215,32 @@ async def ledger_verify(request: Request):
     from .audit import audit_of
 
     return await audit_of(request.app, http_util.user(request).db).verify()
+
+
+@router.get("/ledger/{seq}/text")
+async def ledger_text(request: Request, seq: int):
+    """The stored (redacted) question and answer of one ledger entry; 404 when none is stored (the setting was off, or it was purged)."""
+    from .audit import audit_of
+
+    if not http_util.loopback(request):
+        return http_util.error_response(403, "forbidden", "STORED AI TEXT CAN ONLY BE READ FROM THIS MACHINE")
+    t = await audit_of(request.app, http_util.user(request).db).text(seq)
+    return t if t is not None else http_util.error_response(404, "not_found", f"NO STORED TEXT FOR ENTRY {seq} (ai.storeText WAS OFF, OR IT WAS PURGED)")
+
+
+@router.post("/ledger/purge-text")
+async def ledger_purge_text(request: Request):
+    """Deletes stored prompt / answer text (all of it, or {seq}). The hash chain is not touched."""
+    from .audit import audit_of
+
+    body = await _body(request)
+    if isinstance(body, Response):
+        return body
+    seq = body.get("seq")
+    if seq is not None and (not isinstance(seq, int) or isinstance(seq, bool)):
+        return http_util.error_response(400, "bad_request", "seq MUST BE AN ENTRY NUMBER")
+    n = await audit_of(request.app, http_util.user(request).db).purge_text(seq)
+    return {"purged": n}
 
 
 @router.get("/runs")

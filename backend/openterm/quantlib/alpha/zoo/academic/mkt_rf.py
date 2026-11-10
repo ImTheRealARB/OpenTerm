@@ -1,6 +1,6 @@
-# Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/src/factors/zoo/academic/mkt_rf.py (MIT; see THIRD_PARTY.md).
-# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order).
-
+# Ported from HKUDS/Vibe-Trading @ 8b8e083, agent/src/factors/zoo/academic/mkt_rf.py (MIT; see THIRD_PARTY.md).
+# Changes: imports only; a per-file `ruff: noqa` header covers lint (unused imports, import order, style).
+# ruff: noqa
 
 # ============================================================
 # 中文名称: 市场超额收益因子 (Mkt-RF)
@@ -34,7 +34,7 @@ __alpha_meta__ = {
     'universe': ['equity_us', 'equity_cn', 'equity_hk'],
     'frequency': ['1d'],
     'decay_horizon': 21,
-    'min_warmup_bars': 21,
+    'min_warmup_bars': 22,
     'notes': (
         '[PRICE PROXY] for the Sharpe (1964) / Fama-French market factor (MKT-RF). '
         'The original definition uses value-weighted market excess returns; here we '

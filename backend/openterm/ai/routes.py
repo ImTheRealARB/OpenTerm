@@ -123,14 +123,20 @@ async def chat(request: Request):
     question = body.get("question")
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION:
         return http_util.error_response(400, "bad_request", f"QUESTION MUST BE 1-{MAX_QUESTION} CHARACTERS")
-    names = _models(body, await ai_settings(request))
+    ai_cfg = await ai_settings(request)
+    names = _models(body, ai_cfg)
     if names is None:
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
-    runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port))
-    events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1]),
-                   "chat", agent.SYSTEM, question.strip(), None, names[0], names[1])
-    return _stream(request, t0, events, runner)
+    from ..mcpclient.external import prepare_for_run, with_notes
+    from . import web
+
+    notes = await prepare_for_run(request.app)  # third-party MCP tools the user enabled and allowed (none by default)
+    webc = web.config_from(request.app, ai_cfg)  # None unless SETTINGS AI WEB ON
+    runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), web=webc)
+    events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], web_access=webc is not None),
+                   "chat", agent.SYSTEM + (web.WEB_RULES.format(reads=web.MAX_READS, searches=web.MAX_SEARCHES) if webc else ""), question.strip(), web.offered_names(None, webc), names[0], names[1])
+    return _stream(request, t0, with_notes(notes, events) if notes else events, runner)
 
 
 def parse_draft(answer: str) -> dict:
@@ -184,6 +190,61 @@ async def bt(request: Request):
     return _stream(request, t0, events, runner, tap)
 
 
+@router.post("/bt_code")
+async def bt_code(request: Request):
+    """`AI BT CODE`: a drafted SignalEngine strategy, checked with the BT EDIT sandbox check (nothing executed), one repair round at most. Never saved or run."""
+    from . import btcode
+
+    t0 = time.perf_counter()
+    body = await _body(request)
+    if isinstance(body, Response):
+        return body
+    idea = body.get("idea")
+    if not isinstance(idea, str) or not idea.strip() or len(idea) > MAX_QUESTION:
+        return http_util.error_response(400, "bad_request", f"IDEA MUST BE 1-{MAX_QUESTION} CHARACTERS")
+    names = _models(body, await ai_settings(request))
+    if names is None:
+        return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
+    runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=btcode.BT_CODE_TOOLS)
+    system = btcode.system_prompt(time.strftime("%Y-%m-%d", time.gmtime()))
+    gateway = api_mod.llm_of(request)
+    idea = idea.strip()
+
+    def one(question: str, history: list[dict]) -> AsyncIterator[dict]:
+        return agent.run(gateway, runner, question, history, model=names[0], provider=names[1], tools=btcode.BT_CODE_TOOLS, system=system, max_rounds=4, max_tokens=2500)
+
+    async def run() -> AsyncIterator[dict]:
+        answer, cost, calls, repaired = "", 0.0, 0, False
+        async for ev in one(idea, []):
+            if ev["type"] == "done":
+                answer, cost, calls = ev["answer"], ev["cost"], ev["tool_calls"]
+            else:
+                yield ev
+            if ev["type"] == "error":
+                return
+        code = btcode.extract_code(answer)
+        check = btcode.validate(code)
+        if not check["ok"] and code is not None:  # one repair round: the error goes back to the model, then whatever is left is returned
+            repaired = True
+            yield {"type": "notice", "text": f"DRAFT FAILED THE SANDBOX CHECK ({check['error']}): ASKING THE MODEL TO REPAIR IT ONCE"}
+            history = [{"role": "user", "content": idea}, {"role": "assistant", "content": answer}]
+            async for ev in one(btcode.REPAIR.format(error=check["error"]), history):
+                if ev["type"] == "done":
+                    answer, cost, calls = ev["answer"], cost + ev["cost"], calls + ev["tool_calls"]
+                elif ev["type"] != "start":
+                    yield ev
+                if ev["type"] == "error":
+                    return
+            code = btcode.extract_code(answer)
+            check = btcode.validate(code)
+        yield {"type": "code_draft", "draft": {"code": code or "", "name": btcode.suggest_name(answer), "ok": check["ok"], "error": check["error"], "line": check["line"],
+                                                 "repaired": repaired, "note": btcode.NOTE}}
+        yield {"type": "done", "answer": btcode.rationale(answer), "grounded": True, "label": None, "unsourced": [], "tool_calls": calls, "cost": cost, "stopped": None}
+
+    events = audit(request, run(), "ai_bt_code", btcode.BT_CODE_SYSTEM, idea, btcode.BT_CODE_TOOLS, names[0], names[1])
+    return _stream(request, t0, events, runner)
+
+
 @router.post("/chart")
 async def chart(request: Request):
     t0 = time.perf_counter()
@@ -229,7 +290,8 @@ Rules:
 - Find passages with the doc_search tool (try different words if the first search finds nothing). Chunks come back labelled C1, C2...
 - Answer only from the chunks you retrieved. Cite the chunk in parentheses after each fact, like (C3), and the tool call as [T1].
 - If the document does not contain the answer, say so plainly. Never fill a gap with outside knowledge; figures you state must appear in a retrieved chunk.
-- Quote numbers exactly as written in the document. Be brief."""
+- Quote numbers exactly as written in the document. Be brief.{ocr_note}"""
+OCR_NOTE = "\n- This document was read by OCR (scanned pages): the text may contain recognition errors in words and digits. Say so when a figure matters and never correct a number from memory."
 
 
 def doc_store(request: Request):
@@ -248,7 +310,7 @@ def _ingest(name: str, fname: str, data: bytes, kind_as: str | None = None):
     from . import doc
 
     kind, text = doc.extract_text(fname, data)
-    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text))
+    d = doc.Doc(uuid.uuid4().hex[:8], name, kind_as or kind, doc.chunk(text), ocr=text.startswith(doc.OCR_LABEL))
     d.index()
     return d
 
@@ -318,7 +380,7 @@ async def doc_ask(request: Request):
         return http_util.error_response(400, "bad_request", "MODEL OR PROVIDER NAME IS NOT VALID")
     history = body.get("history") if isinstance(body.get("history"), list) else []
     runner = tools.ToolRunner(request.app, client=(request.client.host, request.client.port), tools=["doc_search"], context={"doc": d})
-    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), today=time.strftime("%Y-%m-%d", time.gmtime()))
+    system = DOC_SYSTEM.format(name=d.name, kind=d.kind, chunks=len(d.chunks), ocr_note=OCR_NOTE if d.ocr else "", today=time.strftime("%Y-%m-%d", time.gmtime()))
     events = audit(request, agent.run(api_mod.llm_of(request), runner, question.strip(), history, model=names[0], provider=names[1], tools=["doc_search"], system=system, max_rounds=6),
                    "ai_doc", DOC_SYSTEM, question.strip(), ["doc_search"], names[0], names[1])
     return _stream(request, t0, events, runner)

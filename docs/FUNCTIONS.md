@@ -241,7 +241,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `REGIME` | Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list |  | `[WL:<NAME>\|LIST:A,B,C] [WIN=60] [EDGE=0.5]` | `REGIME` |
 | `FACT` | Factor regression (Fama-French / momentum / quality) of a symbol or portfolio; the factor data end date is shown |  | `<SYM\|PORTFOLIO> [RANGE=3y]` | `FACT` |
 | `QL` | Quant calculators on bars: GARCH OU COINT HEDGE COPULA ROLL AMIHUD KYLE VPIN EVENT DSR ADF HVAR |  | `<GARCH\|OU\|COINT\|HEDGE\|COPULA\|ROLL\|AMIHUD\|KYLE\|VPIN\|EVENT\|DSR\|ADF\|HVAR> [SYMBOLS] [KEY=VALUE]` | `QL` |
-| `ALPHA` | Alpha factor zoo: IC / IR / decay of Alpha101 and Qlib158 style factors over a universe (historical, not a forecast; SYN is synthetic) |  | `[UNIVERSE=TOP100\|SYN\|WL:<NAME>\|LIST:A,B,C] [RANGE=2y] [FAMILY=...] [H=1,5,10,20]` | `ALPHA` |
+| `ALPHA` | Alpha factor zoo: IC / IR / decay of 435 Alpha101, Qlib158, academic and GTJA191 factors over a universe (default FAMILY=CORE, the first 29; ALL runs every one) (historical, not a forecast; SYN is synthetic) |  | `[UNIVERSE=TOP100\|SYN\|WL:<NAME>\|LIST:A,B,C] [RANGE=2y] [FAMILY=CORE\|ALPHA101\|QLIB158\|ACADEMIC\|GTJA191\|ALL] [H=1,5,10,20]` | `ALPHA` |
 
 ### Research: AI research
 
@@ -250,7 +250,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `AI` | AI research assistant over OpenTerm data: tool calls with sources, [T1] citations, UNGROUNDED / UNSOURCED flags (model output, not data; needs OPENROUTER key) |  | `[question... \| BT <strategy idea> \| AUTO <hypothesis> \| CHART \| DOC FILING <SYM> [FORM] \| DOC OFF]` | `AI` |
 | `SWARM` | Multi-agent desks (built-in, packaged and your own YAML files): analyst roles with their own tools, then a chair; shows coverage, variables and a worst-case cost before a run; stored runs replay without a model (model output, not data; needs OPENROUTER key) |  | `[<DESK> <subject> \| <DESK> NAME=value ... [--force] \| REPLAY <id> \| LIST]` | `SWARM` |
 | `THESIS` | Investment thesis notes per ticker: status, invalidation rule, linked SWARM runs (stored locally) |  | `[SYMBOL \| ADD <SYMBOL> <text> \| INVALID <id> <rule>]` | `THESIS` |
-| `AUDIT` | Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes only) |  |  | `AUDIT` |
+| `AUDIT` | Audit ledger of AI, SWARM, AI AUTO and BT runs: hash chain verified, manifests and tool calls (hashes; text only if ai.storeText is on) |  |  | `AUDIT` |
+| `MCP` | Third-party MCP servers OpenTerm can call (stdio or HTTP): off until enabled, per-tool allow-list, results untrusted; NSE India presets (unofficial, not affiliated with NSE) |  | `[ENABLE <server> [YES] \| DISABLE <server> \| TEST <server> \| ALLOW <server> <tool> \| DENY <server> <tool>]` | `MCP` |
 
 ### Research: Public records
 
@@ -271,6 +272,9 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `RISK` | Portfolio risk: VaR (historical, normal, EVT), expected shortfall, contributions, stress replays, VaR backtest (historical simulation, not a forecast) |  | `[PORTFOLIO] [RANGE=3y] [BENCH=SPY] [CONF=95] [HOR=1]` | `RISK` |
 | `OPT` | Portfolio optimizer preview (PORT OPT): trades, before/after, risk contributions; A saves <NAME>.OPT, never orders |  | `[PORTFOLIO] [METHOD=EQVOL\|RP\|MV\|MAXDIV\|HRP\|TURN] [CAP=0.25] [LOOKBACK=252] [RF=0] [TC=0]` | `OPT` |
 | `ATTR` | Performance attribution (PORT ATTR): Brinson-Fachler by sector, TWR, MWR, Modified Dietz from stored valuations |  | `[PORTFOLIO] [BENCH=SPY] [RANGE=1y] \| <PORTFOLIO> ADD <DATE> VALUE= [FLOW=] \| <PORTFOLIO> DEL <DATE>` | `ATTR` |
+| `SYNC` | Read-only broker sync into PORT: Zerodha Kite holdings, Interactive Brokers (local gateway); last sync, counts, differences. Never orders |  | `[KITE\|IBKR] [PORTFOLIO] [POS] [ACCT=ID] [GO]` | `SYNC` |
+| `JRNL` | Trade journal: import Zerodha / IBKR Flex / Alpaca / CSV trades, FIFO round trips, statistics, behaviour findings (heuristics, not advice), Shadow Account. Read only |  | `[TRIPS\|STATS\|FINDINGS\|SHADOW\|IMPORT] [CCY]` | `JRNL` |
+| `ORD` | Order ticket and blotter: paper by default, live only with keys, a mandate and your confirm; kill switch; hash-chained order ledger. Never the AI |  | `[PAPER\|ALPACA\|KITE] [BUY\|SELL] [QTY] [SYMBOL] [LMT PRICE \| STP PRICE] [DAY\|GTC\|IOC]` | `ORD` |
 
 ### Backtest
 
@@ -314,6 +318,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `JOBS` | Background jobs: progress, cancel, results |  | `[TEST [steps] [ms]]` | `JOBS` |
 | `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
 | `LOG` | Backend log |  |  | `LOG` |
+| `EXT` | Third-party extensions: list, enable, run (their code runs with your permissions) |  | `[LIST \| ENABLE name \| DISABLE name \| name [route] [args]]` | `EXT` |
 
 ## Global keyboard shortcuts
 

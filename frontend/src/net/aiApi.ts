@@ -64,10 +64,23 @@ export const aiApi = {
   swarmPresets: <T>() => sendRaw<T>("GET", "/api/ai/swarm/presets"),
   swarmRuns: <T>() => sendRaw<T>("GET", "/api/ai/runs?kind=swarm"),
   ledger: <T>() => sendRaw<T>("GET", "/api/ai/ledger?limit=100"),
+  /** Stored (redacted) question and answer of one entry; 404 when none is stored. */
+  ledgerText: <T>(seq: number) => sendRaw<T>("GET", `/api/ai/ledger/${seq}/text`),
+  /** Deletes stored text: one entry (`seq`) or all (null). The hash chain is not touched. */
+  purgeLedgerText: <T>(seq: number | null) => sendRaw<T>("POST", "/api/ai/ledger/purge-text", { json: seq === null ? {} : { seq } }),
   ledgerVerify: <T>() => sendRaw<T>("GET", "/api/ai/ledger/verify"),
   /** Theses, all or for one symbol. */
   theses: <T>(symbol: string | null) => sendRaw<T>("GET", `/api/theses${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`),
   createThesis: <T>(body: unknown) => sendRaw<T>("POST", "/api/theses", { json: body }),
   /** One thesis: PATCH a field, or DELETE it. `path` is `/api/theses/<id>`. */
   thesisCall: <T>(method: string, path: string, body?: unknown) => sendRaw<T>(method, path, { json: body }),
+};
+
+/** Third-party MCP servers (`/api/mcpc`, loopback only): list, enable (returns the notice), disable, allow-list, tool list (starts the server). */
+export const mcpApi = {
+  servers: <T>() => sendRaw<T>("GET", "/api/mcpc/servers"),
+  enable: <T>(name: string) => sendRaw<T>("POST", `/api/mcpc/servers/${encodeURIComponent(name)}/enable`, { json: {} }),
+  disable: <T>(name: string) => sendRaw<T>("POST", `/api/mcpc/servers/${encodeURIComponent(name)}/disable`, { json: {} }),
+  allow: <T>(name: string, tools: string[]) => sendRaw<T>("POST", `/api/mcpc/servers/${encodeURIComponent(name)}/allow`, { json: { tools } }),
+  tools: <T>(name: string) => sendRaw<T>("GET", `/api/mcpc/servers/${encodeURIComponent(name)}/tools`),
 };

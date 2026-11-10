@@ -45,6 +45,23 @@ HIERARCHY: dict[str, tuple[Rank, ...]] = {
         Rank("yahoo", "global shares, ETFs, indices, FX, futures", "daily back 20 years; 1 minute only 7 days, other minute candles 60 days, hourly 2 years",
              "up to 15 minutes late on some exchanges", "keyless but unofficial; bursts get blocked",
              "Widest coverage with no key, so it answers whatever the sources above do not cover"),
+        # The four keyed free-tier sources sit directly below Yahoo and above every other keyless fallback. With no key set they are skipped
+        # (supports() is false: nothing changes in the chain). With a key they only answer when Yahoo (or Kite/Binance above) failed or could
+        # not serve the request: none of them can sit above Yahoo because their quotas (8 a minute, 5 a minute, 250 or 25 a day) cannot feed a
+        # chart or a 50-row grid, and Yahoo needs no key. Among themselves: depth first, then limits, then freshness.
+        Rank("twelvedata", "US shares and ETFs, FX pairs, and shares on NSE, BSE, LSE, TSX, HKEX, TSE, Xetra, Euronext and other mapped exchanges",
+             "daily and 1 minute to 1 hour candles, up to 5000 bars per call (about 20 years of daily, about 89 days of 5-minute candles)",
+             "as the plan delivers it (free plans can be delayed)", "free key: 8 credits a minute, 800 a day, 1 credit per call (per provider docs)",
+             "First keyed fallback: the only keyed source that covers non-US exchanges and FX, deepest daily history, 800 calls a day; mapped suffixes only, so an unmapped exchange is skipped, never mis-resolved"),
+        Rank("polygon", "US shares and ETFs", "daily, weekly, monthly and minute candles, about 2 years on the free plan; minute candles include pre- and after-market",
+             "end of day on the free plan", "free key: 5 requests a minute (per provider docs)",
+             "Second keyed fallback for US names: official exchange-sourced bars and 2 years of minute candles, but US only and a call every 12 seconds"),
+        Rank("fmp", "US shares and ETFs", "daily candles only, about 5 years on the free plan", "end of day on the free plan",
+             "free key: 250 requests a day (per provider docs)",
+             "Third: daily bars only (intraday is a paid plan), so it cannot serve a 1D or 5D chart, and its quota is shared with FA statements"),
+        Rank("alphavantage", "US shares and ETFs", "daily, the last 100 sessions; intraday candles over the last 100 bars (can be premium)",
+             "end of day (latest trading day)", "free key: 25 requests a day and 1 a second (per provider docs)",
+             "Last of the keyed sources: 25 calls a day is a few charts, so it only answers when everything above failed"),
         Rank("coinbase", "crypto pairs against USD, USDT, EUR, GBP written BTC-USD / ETH-USDT (a USD pair is not a USDT pair: the quote is shown)",
              "1 minute, 5 minutes, 15 minutes, 1 hour, 1 day; paged back up to 4,000 candles per request (the API goes back to 2015); no 2m, 30m, weekly or monthly",
              "real time (the forming candle is included)", "keyless; about 10 requests a second per IP, a long range is up to 14 calls at once",
@@ -67,6 +84,21 @@ HIERARCHY: dict[str, tuple[Rank, ...]] = {
              "Real-time exchange prices instead of Yahoo's delayed ones for the symbols Kite covers"),
         Rank("yahoo", "global shares, ETFs, indices, FX, futures", "last price, day range, 52-week range", "up to 15 minutes late on some exchanges",
              "keyless but unofficial", "Widest coverage with no key"),
+        # Keyed free-tier fallbacks below Yahoo: see the note in "history". Among themselves for a quote: freshness first (a live-ish price beats
+        # a previous close), then coverage, then limits. All skipped with no key.
+        Rank("twelvedata", "US shares and ETFs, FX pairs, and shares on NSE, BSE, LSE, TSX, HKEX, TSE, Xetra, Euronext and other mapped exchanges",
+             "last price, day range, 52-week range, previous close", "as the plan delivers it (free plans can be delayed)",
+             "free key: 8 credits a minute, 800 a day, 1 credit per symbol (per provider docs); at most 8 symbols per call here",
+             "First keyed fallback: widest coverage (non-US and FX), a price with day and 52-week ranges, 800 calls a day"),
+        Rank("fmp", "US shares and ETFs", "last price, day range, 52-week range, previous close", "delayed or end of day on the free plan",
+             "free key: 250 requests a day (per provider docs); at most 5 symbols per call here",
+             "Second: a full quote with ranges for US names; US only and a smaller daily quota"),
+        Rank("polygon", "US shares and ETFs", "the PREVIOUS session's open, high, low, close and volume (no live price on the free plan)",
+             "end of day: the quote is a session old", "free key: 5 requests a minute (per provider docs)",
+             "Third: official bars but not a live price (its market time shows the session), so it only answers when the two above cannot"),
+        Rank("alphavantage", "US shares and ETFs", "last price, day range, previous close, latest trading day (a date, no time)",
+             "end of day", "free key: 25 requests a day and 1 a second (per provider docs); at most 3 symbols per call here",
+             "Last keyed: 25 calls a day"),
         Rank("frankfurter", "FX pairs the ECB publishes (EURUSD=X, USDINR=X, cross rates)", "last ECB reference rate and the one before it",
              "once a day (the fix date is the quote's time, so a weekend quote is up to 3 days old)", "keyless; no quota stated, rate limited against abuse",
              "Not live, so it ranks below Yahoo and only answers FX pairs when Yahoo is down"),
@@ -93,7 +125,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     # Market data. quotes/history: ranked above, with reasons.
     "quotes": order_for("quotes"),
     "history": order_for("history"),
-    "search": ["yahoo"],
+    "search": ["yahoo", "twelvedata", "polygon", "fmp"],  # keyed free-tier fallbacks, inert without a key; US names or mapped exchanges only
     "profile": ["yahoo", "nasdaq"],
     "movers": ["nasdaq"],
     "screener": ["nasdaq_screener"],
@@ -117,7 +149,9 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "yields": ["defillama"],
     "chain": ["etherscan"],  # ADDR: one keyed source; no key = KEY REQUIRED, never fake data
     # SEC / ownership
-    "fundamentals": ["sec"],
+    # SEC EDGAR first: official, free, keyless and deep (12 annual / 16 quarterly periods). FMP then Alpha Vantage only when SEC cannot answer
+    # (down, or a ticker it lacks): FMP gives annual statements (quarterly is paid) in 3 calls of 250 a day, Alpha Vantage both views in 3 of 25.
+    "fundamentals": ["sec", "fmp", "alphavantage"],
     "filings": ["sec"],
     "insiders": ["sec", "yahoo_own"],
     "holders": ["yahoo_own"],

@@ -1,0 +1,9 @@
+{
+ "status": 401,
+ "recorded": "2026-11-10, REAL answer (made-up key, no account)",
+ "body": {
+  "status": "ERROR",
+  "request_id": "f73bc232750fbdabfc7f954431c3b2c0",
+  "error": "Unknown API Key"
+ }
+}

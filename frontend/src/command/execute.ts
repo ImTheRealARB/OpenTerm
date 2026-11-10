@@ -82,7 +82,7 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
     fnOverride = "SETTINGS";
   }
   // Phase 15: PORT OPT / PORT ATTR are the OPT / ATTR panels; every other PORT argument stays with the PORT panel below.
-  if (parsed.fn === "PORT" && (args[0]?.toUpperCase() === "OPT" || args[0]?.toUpperCase() === "ATTR")) {
+  if (parsed.fn === "PORT" && (args[0]?.toUpperCase() === "OPT" || args[0]?.toUpperCase() === "ATTR" || args[0]?.toUpperCase() === "SYNC")) {
     fnOverride = args[0].toUpperCase();
     args = args.slice(1);
   }
@@ -136,6 +136,6 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   if (fn === "WL" && cur.fn === "WL" && args.length && cur.args[0]?.toUpperCase() === args[0]) return true;
   if ((fn === "PORT" || fn === "ALRT") && cur.fn === fn && (cur.args[0] ?? "").toUpperCase() === (args[0] ?? "")) return true; // Phase 8
   commandStart(panelId, parsed.raw);
-  navigate(panelId, { fn, security, args });
+  navigate(panelId, { fn, security, args, ...(parsed.source ? { source: parsed.source } : {}) });
   return true;
 }

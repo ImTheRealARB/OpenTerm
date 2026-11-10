@@ -1,0 +1,7 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the wording Alpha Vantage's own premium-endpoint answer is documented and widely reported to use (HTTP 200, an 'Information' text containing 'premium endpoint'); no account on a free key was available to record it. Used for TIME_SERIES_DAILY with outputsize=full and for TIME_SERIES_INTRADAY on a free key.",
+ "status": 200,
+ "body": {
+  "Information": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium endpoints"
+ }
+}

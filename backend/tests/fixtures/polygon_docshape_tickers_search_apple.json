@@ -1,0 +1,41 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Polygon / Massive REST documentation (massive.com/docs/rest/stocks): no Polygon account or key was available to record it. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 200,
+ "body": {
+  "status": "OK",
+  "request_id": "docshape",
+  "count": 3,
+  "results": [
+   {
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "market": "stocks",
+    "locale": "us",
+    "primary_exchange": "XNAS",
+    "type": "CS",
+    "active": true,
+    "currency_name": "usd"
+   },
+   {
+    "ticker": "APLE",
+    "name": "Apple Hospitality REIT, Inc.",
+    "market": "stocks",
+    "locale": "us",
+    "primary_exchange": "XNYS",
+    "type": "REIT",
+    "active": true,
+    "currency_name": "usd"
+   },
+   {
+    "ticker": "APC",
+    "name": "Apple Example Foreign Listing",
+    "market": "stocks",
+    "locale": "global",
+    "primary_exchange": "XFRA",
+    "type": "CS",
+    "active": true,
+    "currency_name": "eur"
+   }
+  ]
+ }
+}

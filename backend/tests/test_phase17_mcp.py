@@ -101,8 +101,9 @@ def test_no_order_surface():
         assert not FORBIDDEN.search(f.read_text(encoding="utf-8")), f.name
 
 
-def test_exposed_tools_are_the_agent_registry_minus_doc_only():
-    assert {t.name for t in server.exposed_tools()} == {n for n, t in toolbox.REGISTRY.items() if not t.doc_only}
+def test_exposed_tools_are_the_agent_registry_minus_doc_only_and_private():
+    assert {t.name for t in server.exposed_tools()} == {n for n, t in toolbox.REGISTRY.items() if not (t.doc_only or t.web_only) and n not in server.PRIVATE}
+    assert server.PRIVATE == {"journal"}  # widening what is hidden from outside MCP clients is a deliberate, reviewed change
 
 
 # --- stdio bridge -----------------------------------------------------------------------------------------------------------------------

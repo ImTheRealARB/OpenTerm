@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 // type-only import: erased at build time, so it does NOT pull CodeMirror into this chunk
 import type { CodeEditor } from "../bt/codeEditor";
+import { takePendingDraft } from "../bt/draftHandoff";
 import { isBtRun, parseBtArgs } from "../bt/ruleParse";
 import { parseSandboxError, type SandboxError } from "../bt/sandboxError";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
@@ -256,18 +257,26 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
       .strategy(name)
       .then((s) => {
         if (!live) return;
-        docRef.current = s.code;
+        const draft = takePendingDraft(name); // an AI draft for this name replaces the box text, unsaved
+        docRef.current = draft ?? s.code;
         setSaved(s);
-        setText(s.code);
+        setText(draft ?? s.code);
+        if (draft) setMsg({ cls: "warn", text: "AI DRAFT LOADED, NOT RUN AND NOT SAVED: CTRL+S SAVES IT (IT REPLACES THE SAVED STRATEGY OF THIS NAME)" });
       })
       .catch((e: ApiError) => {
         if (!live) return;
         if (e.status === 404) {
           // A name that does not exist yet: the box starts empty, hidden behind the template chooser.
-          docRef.current = "";
+          const draft = takePendingDraft(name);
+          docRef.current = draft ?? "";
           setSaved("new");
-          setView("choose");
-          void loadTemplates();
+          if (draft) {
+            setText(draft);
+            setMsg({ cls: "warn", text: "AI DRAFT LOADED, NOT RUN AND NOT SAVED: CTRL+S SAVES IT" });
+          } else {
+            setView("choose");
+            void loadTemplates();
+          }
         } else setMsg({ cls: "err", text: `ERR: ${errText(e)}` });
       });
     return () => {

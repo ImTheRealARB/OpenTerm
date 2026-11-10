@@ -3,6 +3,7 @@ hand-made filing text; the route runs inside the app with a scripted model (`Fak
 touches the network or a real model, so it costs nothing to run."""
 
 import json
+import re
 import sqlite3
 from collections import OrderedDict
 
@@ -261,6 +262,49 @@ def test_route_drivers_mode_uses_the_fixed_question_and_three_themes(client, sec
     assert F.DRIVERS_QUESTION in sent
     sections = {p["section"] for p in next(e for e in ev if e["type"] == "passages")["items"]}
     assert any("Risk Factors" in s for s in sections) and any("Management" in s for s in sections)
+
+
+@pytest.mark.parametrize("mode,question,themes,marker", [
+    ("guidance", F.GUIDANCE_QUESTION, F.GUIDANCE_THEMES, "GUIDANCE request"),
+    ("chain", F.CHAIN_QUESTION, F.CHAIN_THEMES, "SUPPLY CHAIN request"),
+])
+def test_route_guidance_and_chain_presets_send_their_text_and_verify_quotes(client, sec, mode, question, themes, marker):
+    client.app.state.llm = FakeGateway(points_reply(GOOD, BAD))
+    ev = sse(client.post("/api/ai/filing", json={"symbol": "AAPL", "form": "10-K", "mode": mode}))
+    assert next(e for e in ev if e["type"] == "filing")["mode"] == mode
+    msgs = client.app.state.llm.calls[0]["messages"]
+    assert question in msgs[1]["content"] and marker in msgs[0]["content"] and "ONLY the numbered passages" in msgs[0]["content"]
+    assert client.app.state.llm.calls[0]["tools"] is None
+    q = next(e for e in ev if e["type"] == "quotes")["items"]
+    assert [(c["verified"], c["section"]) for c in q] == [(True, "Item 1A. Risk Factors"), (False, None)]  # same flagging as DRIVERS
+    done = ev[-1]
+    assert done["verified"] == 1 and done["unverified"] == 1 and "improve soon" not in done["answer"]
+    assert "limited number of suppliers" in done["answer"]
+    ledger = client.get("/api/ai/ledger").json()["entries"]
+    assert len(ledger) == 1 and ledger[0]["kind"] == "ai_filing"
+
+
+def test_route_presets_do_not_leak_into_each_other_and_drivers_is_unchanged(client, sec):
+    client.app.state.llm = FakeGateway(points_reply(GOOD), points_reply(GOOD))
+    sse(client.post("/api/ai/filing", json={"symbol": "AAPL", "form": "10-K", "mode": "drivers"}))
+    sse(client.post("/api/ai/filing", json={"symbol": "AAPL", "form": "10-K", "mode": "chain"}))
+    drivers_sys, chain_sys = (c["messages"][0]["content"] for c in client.app.state.llm.calls)
+    assert "SUPPLY CHAIN request" not in drivers_sys and "SUPPLY CHAIN request" in chain_sys
+    assert "GUIDANCE request" not in chain_sys
+
+
+def test_route_preset_selects_the_asked_form(client, sec):
+    client.app.state.llm = FakeGateway(points_reply(GOOD))
+    ev = sse(client.post("/api/ai/filing", json={"symbol": "AAPL", "form": "10-K", "mode": "guidance"}))
+    assert next(e for e in ev if e["type"] == "filing")["form"] == "10-K"
+    r = client.post("/api/ai/filing", json={"symbol": "AAPL", "form": "8-K", "mode": "guidance"})
+    assert r.status_code == 400
+
+
+def test_preset_texts_keep_the_ai_tool_words_out_and_say_what_is_not_inferred():
+    for t in (F.GUIDANCE_SYSTEM, F.CHAIN_SYSTEM, F.GUIDANCE_QUESTION, F.CHAIN_QUESTION):
+        assert not re.search(r"\b(orders?|gtt|margins?|holdings?|kite)\b", t, re.IGNORECASE)
+    assert "not forecasts by OpenTerm" in F.GUIDANCE_SYSTEM and "Never add" in F.CHAIN_SYSTEM
 
 
 def test_route_with_no_matching_passage_is_ungrounded_and_spends_nothing(client, sec):

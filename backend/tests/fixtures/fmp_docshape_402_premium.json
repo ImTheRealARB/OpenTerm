@@ -1,0 +1,7 @@
+{
+ "doc_shaped": "NOT A RECORDING. Built from the Financial Modeling Prep /stable documentation (site.financialmodelingprep.com/developer/docs): no FMP key was available to record it, and field names were not checked against a live key. The 402 status is documented for plan-restricted calls; the exact wording is a guess at its shape. Numbers are made up for the shape; nothing here was fetched from the service.",
+ "status": 402,
+ "body": {
+  "Error Message": "Premium Query Parameter: This endpoint or parameter is only available for premium subscriptions. Please upgrade your plan."
+ }
+}

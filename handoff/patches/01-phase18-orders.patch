@@ -1,0 +1,2273 @@
+diff --git a/backend/openterm/db.py b/backend/openterm/db.py
+index 0a3873a..142ce0c 100644
+--- a/backend/openterm/db.py
++++ b/backend/openterm/db.py
+@@ -71,6 +71,14 @@ MIGRATIONS: list[str | list[str]] = [
+         "ALTER TABLE alerts ADD COLUMN channels TEXT",
+         "ALTER TABLE news_alerts ADD COLUMN channels TEXT",
+     ],
++    # 17: orders sent to a broker (daily trade cap) and broker fills already added to a portfolio (Phase 18)
++    [
++        "CREATE TABLE orders_log (id INTEGER PRIMARY KEY, at REAL NOT NULL, day TEXT NOT NULL, broker TEXT NOT NULL, mode TEXT NOT NULL,"
++        " client_id TEXT NOT NULL, broker_order_id TEXT, symbol TEXT NOT NULL, side TEXT NOT NULL, qty REAL NOT NULL, status TEXT NOT NULL)",
++        "CREATE INDEX orders_log_day ON orders_log (day)",
++        "CREATE TABLE orders_imported (broker TEXT NOT NULL, fill_id TEXT NOT NULL, portfolio TEXT NOT NULL, order_id TEXT NOT NULL,"
++        " at REAL NOT NULL, PRIMARY KEY (broker, fill_id))",
++    ],
+ ]
+ 
+ 
+diff --git a/backend/openterm/keys.py b/backend/openterm/keys.py
+index 720c3ee..17910e4 100644
+--- a/backend/openterm/keys.py
++++ b/backend/openterm/keys.py
+@@ -110,6 +110,13 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
+             "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
+             "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
+             hidden_secret=("KITE_ACCESS_TOKEN",)),
++    # Phase 18 (trading): account-specific keys, one slot per account type. The slot decides the broker host (orders/brokers/alpaca.py), never a request.
++    KeySpec("alpaca_paper", ("ALPACA_PAPER_KEY_ID", "ALPACA_PAPER_SECRET_KEY"), 18,
++            "Alpaca PAPER trading account (play money): paper orders, positions, account (ORD). Separate from the data key above",
++            "https://app.alpaca.markets/paper/dashboard/overview", secret_fields=("ALPACA_PAPER_SECRET_KEY",)),
++    KeySpec("alpaca_live", ("ALPACA_LIVE_KEY_ID", "ALPACA_LIVE_SECRET_KEY"), 18,
++            "Alpaca LIVE trading account (REAL MONEY): live orders (ORD) once ORD LIVE ON is typed. Needs a funded account",
++            "https://app.alpaca.markets/brokerage/dashboard/overview", secret_fields=("ALPACA_LIVE_SECRET_KEY",)),
+ ]}
+ 
+ class KeyStoreError(Exception):
+@@ -450,6 +457,11 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
+                          {"get": "cell_value", "time": "2024-01", "category_code": "44X72", "data_type_code": "SM", "seasonally_adj": "no",  # seasonally_adj is a REQUIRED variable here: without it Census answers 400 and TEST showed ERROR for a good key (checked live 2026-11-05)
+                           "key": k["CENSUS_API_KEY"]},
+                          None, None),
++    # Phase 18: the read-only account call on each trading host (never an order).
++    "alpaca_paper": lambda k: ("GET", "https://paper-api.alpaca.markets/v2/account", None,
++                               {"APCA-API-KEY-ID": k["ALPACA_PAPER_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_PAPER_SECRET_KEY"]}, None),
++    "alpaca_live": lambda k: ("GET", "https://api.alpaca.markets/v2/account", None,
++                              {"APCA-API-KEY-ID": k["ALPACA_LIVE_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_LIVE_SECRET_KEY"]}, None),
+ }
+ 
+ 
+diff --git a/backend/openterm/kite/client.py b/backend/openterm/kite/client.py
+index 4906184..dd964c7 100644
+--- a/backend/openterm/kite/client.py
++++ b/backend/openterm/kite/client.py
+@@ -81,6 +81,11 @@ class KiteClient:
+     async def get_json(self, path: str, params: dict[str, Any] | None = None, historical: bool = False) -> Any:
+         return self._json(await self._send("GET", path, params, historical))
+ 
++    async def call(self, method: str, path: str, params: dict[str, Any] | None = None, data: dict[str, Any] | None = None) -> Any:
++        """Any authenticated call that answers the usual {status, data} envelope. The rate limit, the 403 TokenException handling and the
++        error text are the same as `get_json`. Used by orders/brokers/kite.py (the only caller that is not a data read)."""
++        return self._json(await self._send(method, path, params, False, data))
++
+     async def get_text(self, path: str) -> str:
+         r = await self._send("GET", path, None, False)
+         if r.status_code >= 400:
+diff --git a/backend/openterm/main.py b/backend/openterm/main.py
+index bfac881..ffa1391 100644
+--- a/backend/openterm/main.py
++++ b/backend/openterm/main.py
+@@ -20,6 +20,7 @@ from .config import ROOT, get_settings, load_yaml
+ from .db import open_db
+ from .delivery.routes import router as delivery_router
+ from .kite_routes import router as kite_router
++from .orders.routes import router as orders_router
+ from .mcp.routes import router as mcp_router
+ from .origin import OriginGuardMiddleware
+ from .providers.hierarchy import build_order
+@@ -208,6 +209,7 @@ app.include_router(api_router)
+ app.include_router(quant_router)
+ app.include_router(world_router)
+ app.include_router(kite_router)
++app.include_router(orders_router)
+ app.include_router(delivery_router)
+ app.include_router(brief_router)
+ app.include_router(ai_router)
+diff --git a/backend/openterm/orders/__init__.py b/backend/openterm/orders/__init__.py
+new file mode 100644
+index 0000000..e248f78
+--- /dev/null
++++ b/backend/openterm/orders/__init__.py
+@@ -0,0 +1,12 @@
++"""Orders (Phase 18, spec docs/specs/PHASE_18.md): order model, mandate, one-time confirm tokens, kill switch, broker adapters.
++
++Rules this package enforces in code, not in the UI:
++- An order reaches a broker only through `service.OrderService.submit`: kill switch off, key present, mode derived from the broker
++  (host and account), live switched on by the user, mandate passed, and a fresh one-time confirm token issued for exactly that order.
++- PAPER or LIVE is never read from a request. It comes from the broker adapter (the host its key slot talks to, checked against
++  the account the broker returns).
++- Every order event is written to the hash-chained audit ledger (kind `order`).
++- Nothing in `ai/` or `mcp/` imports this package; tests scan both for order tools and routes.
++"""
++
++FIXTURE_LABEL = "DOC-SHAPED FIXTURE, NOT A RECORDING"
+diff --git a/backend/openterm/orders/brokers/__init__.py b/backend/openterm/orders/brokers/__init__.py
+new file mode 100644
+index 0000000..ff6012f
+--- /dev/null
++++ b/backend/openterm/orders/brokers/__init__.py
+@@ -0,0 +1 @@
++"""Broker adapters for orders. One class per account type, all with the same async interface (base.Broker)."""
+diff --git a/backend/openterm/orders/brokers/alpaca.py b/backend/openterm/orders/brokers/alpaca.py
+new file mode 100644
+index 0000000..b26e279
+--- /dev/null
++++ b/backend/openterm/orders/brokers/alpaca.py
+@@ -0,0 +1,179 @@
++"""Alpaca trading API v2 (paper and live). Shapes are from the Alpaca Trading API documentation; the fixtures that replay them are
++labelled doc-shaped and NOT A RECORDING.
++
++PAPER OR LIVE IS STRUCTURAL. Each adapter instance is built for one key slot (`alpaca_paper` or `alpaca_live`, keys.py) and talks to one
++host from `HOSTS`. `detect_mode(host, account_number)` derives the mode from that host and refuses a live host that answers with a
++paper-looking account number (Alpaca paper account numbers start with PA; checked against the docs, not against a live account). Nothing
++in a request, the settings or the AI can change the host. Keys travel in the APCA-API-* headers only.
++"""
++
++from __future__ import annotations
++
++import re
++from datetime import datetime
++from typing import Any
++from urllib.parse import urlparse
++from zoneinfo import ZoneInfo
++
++import httpx
++
++from ...redact import redact
++from ..errors import OrderError
++from ..model import Order, qty_text
++from .base import OPEN_STATES, Broker, fnum
++
++HOSTS = {"paper": "https://paper-api.alpaca.markets", "live": "https://api.alpaca.markets"}
++HOST_MODE = {"paper-api.alpaca.markets": "paper", "api.alpaca.markets": "live"}
++ID_RE = re.compile(r"^[A-Za-z0-9\-]{8,64}\Z")
++NY = ZoneInfo("America/New_York")
++STATUS = {"new": "NEW", "accepted": "NEW", "accepted_for_bidding": "NEW", "held": "NEW", "calculated": "NEW", "partially_filled": "PARTIAL",
++          "pending_new": "PENDING", "pending_cancel": "PENDING", "pending_replace": "PENDING", "filled": "FILLED", "canceled": "CANCELED",
++          "done_for_day": "CANCELED", "expired": "EXPIRED", "rejected": "REJECTED", "replaced": "REPLACED", "stopped": "CANCELED",
++          "suspended": "REJECTED"}
++
++
++def detect_mode(host: str, account_number: str | None) -> str:
++    """paper | live from the host the adapter talks to; OrderError if the host is unknown or the account contradicts it."""
++    mode = HOST_MODE.get(urlparse(host).hostname or "")
++    if mode is None:
++        raise OrderError("mode_mismatch", "UNKNOWN ALPACA HOST: ORDERS REFUSED")
++    acct = (account_number or "").upper()
++    if mode == "live" and acct.startswith("PA"):
++        raise OrderError("mode_mismatch", "THE LIVE HOST ANSWERED WITH A PAPER ACCOUNT NUMBER: ORDERS REFUSED, CHECK THE LIVE KEY")
++    return mode
++
++
++def normalize_order(o: dict) -> dict:
++    raw = str(o.get("status") or "")
++    return {"id": o.get("id"), "client_id": o.get("client_order_id"), "symbol": o.get("symbol"), "side": o.get("side"),
++            "qty": fnum(o.get("qty")), "filled_qty": fnum(o.get("filled_qty")) or 0.0, "type": o.get("type") or o.get("order_type"),
++            "tif": o.get("time_in_force"), "limit_price": fnum(o.get("limit_price")), "stop_price": fnum(o.get("stop_price")),
++            "status": STATUS.get(raw, raw.upper() or "OTHER"), "raw_status": raw, "avg_fill_price": fnum(o.get("filled_avg_price")),
++            "submitted_at": o.get("submitted_at") or o.get("created_at")}
++
++
++class AlpacaTrading(Broker):
++    def __init__(self, slot: str, store, http: httpx.AsyncClient, host: str | None = None):
++        if slot not in HOSTS:
++            raise ValueError(slot)
++        self.slot = slot
++        self.id = f"alpaca-{slot}"
++        self.label = f"Alpaca {slot}"
++        self.key_name = f"alpaca_{slot}"
++        self.host = host or HOSTS[slot]  # a test may point at a fake host name; the mode check still runs on it
++        self.store = store
++        self.http = http
++        self.id_field, self.secret_field = (f"ALPACA_{slot.upper()}_KEY_ID", f"ALPACA_{slot.upper()}_SECRET_KEY")
++
++    def not_ready(self) -> OrderError | None:
++        if self.store.get(self.key_name) is None:
++            return OrderError("key_required", f"KEY REQUIRED: set {self.id_field} and {self.secret_field} in APIKEYS")
++        return None
++
++    async def _req(self, method: str, path: str, params: dict | None = None, body: dict | None = None) -> Any:
++        err = self.not_ready()
++        if err:
++            raise err
++        keys = self.store.get(self.key_name)
++        headers = {"APCA-API-KEY-ID": keys[self.id_field], "APCA-API-SECRET-KEY": keys[self.secret_field], "User-Agent": "OpenTerm/0.1",
++                   "Accept": "application/json"}
++        try:
++            r = await self.http.request(method, f"{self.host}{path}", params=params, json=body, headers=headers, timeout=15.0)
++        except httpx.TimeoutException as e:
++            raise OrderError("unavailable", "ALPACA TIMEOUT") from e
++        except httpx.HTTPError as e:
++            raise OrderError("unavailable", f"ALPACA UNREACHABLE ({type(e).__name__})") from e
++        if r.status_code == 204:
++            return None
++        try:
++            data = r.json()
++        except ValueError:
++            data = None
++        said = str(data.get("message") or "").strip().lower() if isinstance(data, dict) else ""
++        if r.status_code == 401 or (r.status_code == 403 and said in ("", "forbidden", "forbidden.")):  # other 403s are order refusals (buying power ...)
++            raise OrderError("forbidden", f"ALPACA REFUSED THE {self.slot.upper()} KEY (HTTP {r.status_code}): CHECK IT IN APIKEYS")
++        if r.status_code == 429:
++            raise OrderError("unavailable", "ALPACA RATE LIMITED (429)")
++        if r.status_code == 404:
++            raise OrderError("not_found", "ALPACA: NOT FOUND")
++        if r.status_code >= 400:
++            msg = redact(str(data.get("message") if isinstance(data, dict) and data.get("message") else f"HTTP {r.status_code}"))
++            kind = "broker_rejected" if r.status_code in (403, 422) else "unavailable"
++            raise OrderError(kind, f"ALPACA: {msg}")
++        return data
++
++    async def account(self) -> dict:
++        a = await self._req("GET", "/v2/account")
++        if not isinstance(a, dict):
++            raise OrderError("unavailable", "ALPACA ANSWERED WITH AN UNEXPECTED ACCOUNT BODY")
++        mode = detect_mode(self.host, a.get("account_number"))
++        return {"broker": self.id, "id": a.get("account_number") or "", "mode": mode, "currency": a.get("currency") or "USD",
++                "equity": fnum(a.get("equity")), "cash": fnum(a.get("cash")), "buying_power": fnum(a.get("buying_power")),
++                "status": a.get("status"), "trading_blocked": bool(a.get("trading_blocked")), "host": urlparse(self.host).hostname,
++                "note": "PAPER ACCOUNT: PLAY MONEY" if mode == "paper" else "LIVE ACCOUNT: REAL MONEY"}
++
++    async def positions(self) -> list[dict]:
++        out = []
++        for p in await self._req("GET", "/v2/positions") or []:
++            qty = fnum(p.get("qty"))
++            if qty is None:
++                continue
++            if p.get("side") == "short" and qty > 0:
++                qty = -qty
++            out.append({"symbol": p.get("symbol"), "qty": qty, "avg_cost": fnum(p.get("avg_entry_price")),
++                        "price": fnum(p.get("current_price")), "market_value": fnum(p.get("market_value"))})
++        return out
++
++    async def open_orders(self) -> list[dict]:
++        rows = await self._req("GET", "/v2/orders", {"status": "open", "limit": 100, "direction": "desc"}) or []
++        return [o for o in map(normalize_order, rows) if o["status"] in OPEN_STATES]
++
++    async def fills_today(self) -> list[dict]:
++        day = datetime.now(NY).strftime("%Y-%m-%d")  # the US market date, not the machine's
++        rows = await self._req("GET", "/v2/account/activities/FILL", {"date": day}) or []
++        acct = (await self._req("GET", "/v2/account") or {}).get("currency") or "USD"
++        out = []
++        for a in rows:
++            q, px = fnum(a.get("qty")), fnum(a.get("price"))
++            if q is None or px is None or not a.get("id"):
++                continue
++            out.append({"fill_id": a["id"], "order_id": a.get("order_id"), "symbol": a.get("symbol"), "side": a.get("side"), "qty": q,
++                        "price": px, "at": a.get("transaction_time"), "currency": acct})
++        return out
++
++    @staticmethod
++    def body(order: Order) -> dict:
++        b: dict[str, Any] = {"symbol": order.symbol, "qty": qty_text(order.qty), "side": order.side, "type": order.type, "time_in_force": order.tif}
++        if order.limit_price is not None:
++            b["limit_price"] = f"{order.limit_price:g}"
++        if order.stop_price is not None:
++            b["stop_price"] = f"{order.stop_price:g}"
++        return b
++
++    async def submit(self, order: Order, client_id: str) -> dict:
++        o = await self._req("POST", "/v2/orders", body={**self.body(order), "client_order_id": client_id})
++        if not isinstance(o, dict) or not o.get("id"):
++            raise OrderError("unavailable", "ALPACA ANSWERED WITHOUT AN ORDER ID: CHECK THE BLOTTER BEFORE SENDING AGAIN")
++        return normalize_order(o)
++
++    @staticmethod
++    def _check_id(order_id: str) -> str:
++        if not isinstance(order_id, str) or not ID_RE.match(order_id):
++            raise OrderError("bad_request", "BAD ORDER ID")
++        return order_id
++
++    async def cancel(self, order_id: str) -> None:
++        await self._req("DELETE", f"/v2/orders/{self._check_id(order_id)}")
++
++    async def cancel_all(self) -> list[dict]:
++        rows = await self._req("DELETE", "/v2/orders") or []
++        return [{"id": r.get("id"), "ok": 200 <= int(r.get("status") or 0) < 300, "detail": f"HTTP {r.get('status')}"} for r in rows if isinstance(r, dict)]
++
++    async def replace(self, order_id: str, order: Order) -> dict:
++        patch: dict[str, Any] = {"qty": qty_text(order.qty), "time_in_force": order.tif}
++        if order.limit_price is not None:
++            patch["limit_price"] = f"{order.limit_price:g}"
++        if order.stop_price is not None:
++            patch["stop_price"] = f"{order.stop_price:g}"
++        o = await self._req("PATCH", f"/v2/orders/{self._check_id(order_id)}", body=patch)
++        return normalize_order(o or {})
+diff --git a/backend/openterm/orders/brokers/base.py b/backend/openterm/orders/brokers/base.py
+new file mode 100644
+index 0000000..5293582
+--- /dev/null
++++ b/backend/openterm/orders/brokers/base.py
+@@ -0,0 +1,61 @@
++"""What every broker adapter offers, and the normalised shapes the rest of the order code works with.
++
++Normalised order: {id, client_id, symbol, side, qty, filled_qty, type, tif, limit_price, stop_price, status, raw_status, avg_fill_price,
++submitted_at}. `status` is one of NEW PARTIAL PENDING FILLED CANCELED REJECTED EXPIRED REPLACED OTHER; OPEN_STATES are the ones a cancel can still act on.
++Normalised position: {symbol, qty (signed), avg_cost, price, market_value}. Normalised fill: {fill_id, order_id, symbol, side, qty, price, at, currency}.
++Normalised account: {broker, id, mode ("paper" | "live"), currency, equity, cash, buying_power, status, host, note}.
++"""
++
++from __future__ import annotations
++
++from typing import Any
++
++from ..errors import OrderError
++from ..model import Order
++
++OPEN_STATES = ("NEW", "PARTIAL", "PENDING")
++
++
++def fnum(x: Any) -> float | None:
++    """A broker number (Alpaca sends strings) as a float, or None when it is missing or not a number."""
++    try:
++        return None if x is None or x == "" else float(x)
++    except (TypeError, ValueError):
++        return None
++
++
++class Broker:
++    id = ""
++    label = ""
++    #: shown on screen when the broker has no paper mode
++    note = ""
++
++    def not_ready(self) -> OrderError | None:
++        """None when keys (and login) are in place, else the OrderError that says what to set. No network."""
++        raise NotImplementedError
++
++    async def account(self) -> dict:
++        """The account with its `mode`, derived from the host this adapter talks to and checked against the broker's own answer."""
++        raise NotImplementedError
++
++    async def positions(self) -> list[dict]:
++        raise NotImplementedError
++
++    async def open_orders(self) -> list[dict]:
++        raise NotImplementedError
++
++    async def fills_today(self) -> list[dict]:
++        raise NotImplementedError
++
++    async def submit(self, order: Order, client_id: str) -> dict:
++        raise NotImplementedError
++
++    async def cancel(self, order_id: str) -> None:
++        raise NotImplementedError
++
++    async def cancel_all(self) -> list[dict]:
++        """Cancel every open order. Returns [{id, ok, detail}]."""
++        raise NotImplementedError
++
++    async def replace(self, order_id: str, order: Order) -> dict:
++        raise NotImplementedError
+diff --git a/backend/openterm/orders/brokers/kite.py b/backend/openterm/orders/brokers/kite.py
+new file mode 100644
+index 0000000..5a289f8
+--- /dev/null
++++ b/backend/openterm/orders/brokers/kite.py
+@@ -0,0 +1,193 @@
++"""Zerodha Kite Connect orders (live only). Shapes are from the Kite Connect v3 documentation (orders, trades, portfolio, margins); the
++fixtures that replay them are labelled doc-shaped and NOT A RECORDING.
++
++Kite has NO paper mode. `mode` is therefore always "live", and the adapter says so on screen (`note`). The host is the constant KITE_API
++(api.kite.trade); the mode is asserted from it, not from anything a request carries. The login, the daily token and the rate limits are
++the read-only client's (kite/client.py); this adapter only adds the order calls on top of `KiteClient.call`.
++"""
++
++from __future__ import annotations
++
++from typing import Any
++from urllib.parse import urlparse
++
++from ...errors import DataError
++from ...kite import KITE_API
++from ...kite.symbols import split_key, to_kite, to_yahoo
++from ...redact import redact
++from ..errors import OrderError
++from ..model import Order
++from .base import OPEN_STATES, Broker, fnum
++
++KITE_HOST = "api.kite.trade"
++OPEN_RAW = {"OPEN", "TRIGGER PENDING", "PUT ORDER REQ RECEIVED", "VALIDATION PENDING", "MODIFY VALIDATION PENDING", "MODIFY PENDING",
++            "OPEN PENDING", "AMO REQ RECEIVED", "CANCEL PENDING", "UPDATE"}
++TYPE_OUT = {"market": "MARKET", "limit": "LIMIT", "stop": "SL-M"}
++TYPE_IN = {"MARKET": "market", "LIMIT": "limit", "SL": "stop", "SL-M": "stop"}
++VALIDITY_OUT = {"day": "DAY", "ioc": "IOC"}
++ID_OK = set("0123456789")
++
++
++def detect_mode() -> str:
++    """Kite has one trading host and no sandbox: always live. Refuses if the client's host constant ever stops being Kite's."""
++    if urlparse(KITE_API).hostname != KITE_HOST:
++        raise OrderError("mode_mismatch", "THE KITE HOST IS NOT api.kite.trade: ORDERS REFUSED")
++    return "live"
++
++
++def status_of(raw: str, filled: float) -> str:
++    if raw == "COMPLETE":
++        return "FILLED"
++    if raw == "REJECTED":
++        return "REJECTED"
++    if raw == "CANCELLED":
++        return "CANCELED"
++    if raw in OPEN_RAW:
++        return "PARTIAL" if filled > 0 else "PENDING" if raw in ("VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "CANCEL PENDING") else "NEW"
++    return raw or "OTHER"
++
++
++def symbol_of(exchange: str, trading: str) -> str:
++    return to_yahoo(f"{exchange}:{trading}") or f"{trading}.{exchange}"
++
++
++def normalize_order(o: dict) -> dict:
++    filled = fnum(o.get("filled_quantity")) or 0.0
++    raw = str(o.get("status") or "")
++    return {"id": o.get("order_id"), "client_id": o.get("tag"), "symbol": symbol_of(str(o.get("exchange") or ""), str(o.get("tradingsymbol") or "")),
++            "side": str(o.get("transaction_type") or "").lower(), "qty": fnum(o.get("quantity")), "filled_qty": filled,
++            "type": TYPE_IN.get(str(o.get("order_type")), str(o.get("order_type") or "").lower()), "tif": str(o.get("validity") or "").lower(),
++            "limit_price": fnum(o.get("price")) or None, "stop_price": fnum(o.get("trigger_price")) or None,
++            "status": status_of(raw, filled), "raw_status": raw, "avg_fill_price": fnum(o.get("average_price")) or None,
++            "submitted_at": o.get("order_timestamp")}
++
++
++def default_product(exchange: str) -> str:
++    return "NRML" if exchange in ("NFO", "BFO", "MCX", "CDS") else "CNC"
++
++
++class KiteTrading(Broker):
++    id = "kite"
++    label = "Zerodha Kite"
++    note = "KITE HAS NO PAPER MODE: EVERY KITE ORDER IS REAL MONEY"
++
++    def __init__(self, kite):
++        self.kite = kite  # providers.kite.KiteProvider: .session, .client, .instruments
++
++    def not_ready(self) -> OrderError | None:
++        s = self.kite.session
++        if s is None or s.state == "NO KEY":
++            return OrderError("key_required", "KEY REQUIRED: set KITE_API_KEY in APIKEYS")
++        if s.state == "LOGGED OUT":
++            return OrderError("login_required", s.message() or "KITE LOGGED OUT: run KITE LOGIN")
++        if s.state != "OK":
++            return OrderError("login_expired", s.message() or "KITE LOGIN EXPIRED: run KITE LOGIN")
++        return None
++
++    async def _call(self, method: str, path: str, params: dict | None = None, data: dict | None = None) -> Any:
++        err = self.not_ready()
++        if err:
++            raise err
++        try:
++            return await self.kite.client.call(method, path, params, data)
++        except DataError as e:
++            kind = e.kind if e.kind in ("key_required", "login_required", "login_expired", "not_found") else "unavailable"
++            msg = redact(str(e))
++            if kind == "unavailable" and method != "GET" and msg.startswith("KITE:"):
++                kind = "broker_rejected"
++            raise OrderError(kind, msg) from e
++
++    async def account(self) -> dict:
++        mode = detect_mode()
++        m = await self._call("GET", "/user/margins")
++        eq = (m or {}).get("equity") or {}
++        av = eq.get("available") or {}
++        return {"broker": self.id, "id": self.kite.session.status().get("user") or "KITE", "mode": mode, "currency": "INR",
++                "equity": fnum(eq.get("net")), "cash": fnum(av.get("cash")), "buying_power": fnum(av.get("live_balance")),
++                "status": "ACTIVE" if eq.get("enabled", True) else "DISABLED", "trading_blocked": not eq.get("enabled", True),
++                "host": KITE_HOST, "note": self.note}
++
++    async def positions(self) -> list[dict]:
++        """Net positions plus delivered holdings (T1 included). A CNC buy made today can appear in both: exposure is then overstated, which is
++        the safe side for a cap."""
++        out = []
++        pos = await self._call("GET", "/portfolio/positions")
++        for p in (pos or {}).get("net") or []:
++            q, px = fnum(p.get("quantity")), fnum(p.get("last_price"))
++            if q:
++                out.append({"symbol": symbol_of(p.get("exchange", ""), p.get("tradingsymbol", "")), "qty": q, "avg_cost": fnum(p.get("average_price")),
++                            "price": px, "market_value": q * px if px is not None else None})
++        for h in await self._call("GET", "/portfolio/holdings") or []:
++            q = (fnum(h.get("quantity")) or 0.0) + (fnum(h.get("t1_quantity")) or 0.0)
++            px = fnum(h.get("last_price"))
++            if q:
++                out.append({"symbol": symbol_of(h.get("exchange", ""), h.get("tradingsymbol", "")), "qty": q, "avg_cost": fnum(h.get("average_price")),
++                            "price": px, "market_value": q * px if px is not None else None})
++        return out
++
++    async def open_orders(self) -> list[dict]:
++        rows = await self._call("GET", "/orders") or []
++        return [o for o in map(normalize_order, rows) if o["status"] in OPEN_STATES]
++
++    async def fills_today(self) -> list[dict]:
++        out = []
++        for t in await self._call("GET", "/trades") or []:
++            q, px = fnum(t.get("quantity")), fnum(t.get("average_price"))
++            if q is None or px is None or not t.get("trade_id"):
++                continue
++            out.append({"fill_id": str(t["trade_id"]), "order_id": t.get("order_id"), "symbol": symbol_of(t.get("exchange", ""), t.get("tradingsymbol", "")),
++                        "side": str(t.get("transaction_type") or "").lower(), "qty": q, "price": px, "at": t.get("fill_timestamp"), "currency": "INR"})
++        return out
++
++    async def _form(self, order: Order, client_id: str | None) -> dict[str, Any]:
++        key = to_kite(order.symbol)
++        if key is None:
++            raise OrderError("bad_request", "NOT A KITE SYMBOL: USE RELIANCE.NS, TCS.BO, <X>.NFO OR <X>.MCX")
++        inst = await self.kite.instruments.resolve(key)
++        if inst is None:
++            raise OrderError("not_found", f"{key} IS NOT IN THE KITE INSTRUMENT DUMP")
++        exchange, trading = split_key(key)
++        form: dict[str, Any] = {"exchange": exchange, "tradingsymbol": trading, "transaction_type": order.side.upper(),
++                                "order_type": TYPE_OUT[order.type], "quantity": int(order.qty), "product": order.product or default_product(exchange),
++                                "validity": VALIDITY_OUT[order.tif]}
++        if order.limit_price is not None:
++            form["price"] = f"{order.limit_price:g}"
++        if order.stop_price is not None:
++            form["trigger_price"] = f"{order.stop_price:g}"
++        if client_id:
++            form["tag"] = client_id[:20]
++        return form
++
++    async def submit(self, order: Order, client_id: str) -> dict:
++        data = await self._call("POST", "/orders/regular", data=await self._form(order, client_id))
++        oid = (data or {}).get("order_id")
++        if not oid:
++            raise OrderError("unavailable", "KITE ANSWERED WITHOUT AN ORDER ID: CHECK THE BLOTTER BEFORE SENDING AGAIN")
++        return {"id": str(oid), "client_id": client_id, "symbol": order.symbol, "side": order.side, "qty": order.qty, "filled_qty": 0.0,
++                "type": order.type, "tif": order.tif, "limit_price": order.limit_price, "stop_price": order.stop_price, "status": "PENDING",
++                "raw_status": "SUBMITTED", "avg_fill_price": None, "submitted_at": None}
++
++    @staticmethod
++    def _check_id(order_id: str) -> str:
++        if not isinstance(order_id, str) or not order_id or not set(order_id) <= ID_OK or len(order_id) > 32:
++            raise OrderError("bad_request", "BAD ORDER ID")
++        return order_id
++
++    async def cancel(self, order_id: str) -> None:
++        await self._call("DELETE", f"/orders/regular/{self._check_id(order_id)}")
++
++    async def cancel_all(self) -> list[dict]:
++        out = []
++        for o in await self.open_orders():
++            try:
++                await self.cancel(o["id"])
++                out.append({"id": o["id"], "ok": True, "detail": "CANCEL SENT"})
++            except OrderError as e:
++                out.append({"id": o["id"], "ok": False, "detail": str(e)})
++        return out
++
++    async def replace(self, order_id: str, order: Order) -> dict:
++        form = await self._form(order, None)
++        form = {k: v for k, v in form.items() if k in ("quantity", "price", "trigger_price", "order_type", "validity")}
++        data = await self._call("PUT", f"/orders/regular/{self._check_id(order_id)}", data=form)
++        return {"id": str((data or {}).get("order_id") or order_id), "status": "PENDING"}
+diff --git a/backend/openterm/orders/confirm.py b/backend/openterm/orders/confirm.py
+new file mode 100644
+index 0000000..d62c6b3
+--- /dev/null
++++ b/backend/openterm/orders/confirm.py
+@@ -0,0 +1,48 @@
++"""One-time confirm tokens. `issue(fingerprint)` is called by the preview step after the mandate passed; `consume` is called by submit.
++
++A token is bound to a fingerprint (the whole order plus mode and account), expires after TTL seconds, works once, and is burned by any
++failed attempt (a wrong order presented with a right token cannot be retried with it). Held in memory only: a restart voids every token.
++"""
++
++from __future__ import annotations
++
++import secrets
++import time
++
++from .errors import OrderError
++
++TTL = 60.0
++MAX_OPEN = 50
++
++
++class ConfirmTokens:
++    def __init__(self, clock=time.monotonic, ttl: float = TTL):
++        self.clock = clock
++        self.ttl = ttl
++        self._open: dict[str, tuple[str, float]] = {}
++
++    def _sweep(self) -> None:
++        now = self.clock()
++        for t in [t for t, (_, exp) in self._open.items() if exp <= now]:
++            del self._open[t]
++        while len(self._open) > MAX_OPEN:
++            del self._open[next(iter(self._open))]
++
++    def issue(self, fp: str) -> tuple[str, float]:
++        self._sweep()
++        token = secrets.token_urlsafe(24)
++        self._open[token] = (fp, self.clock() + self.ttl)
++        return token, self.ttl
++
++    def consume(self, token, fp: str) -> None:
++        self._sweep()
++        if not isinstance(token, str) or not token:
++            raise OrderError("confirm_required", "CONFIRM REQUIRED: PREVIEW THE ORDER AND CONFIRM IT (NO CONFIRM TOKEN)")
++        got = self._open.pop(token, None)  # popped first: single use, and burned on a mismatch
++        if got is None:
++            raise OrderError("confirm_required", "CONFIRM TOKEN IS UNKNOWN, USED OR EXPIRED: PREVIEW AND CONFIRM AGAIN")
++        if got[0] != fp:
++            raise OrderError("confirm_required", "CONFIRM TOKEN WAS ISSUED FOR A DIFFERENT ORDER: PREVIEW AND CONFIRM AGAIN")
++
++    def clear(self) -> None:
++        self._open.clear()
+diff --git a/backend/openterm/orders/errors.py b/backend/openterm/orders/errors.py
+new file mode 100644
+index 0000000..4430626
+--- /dev/null
++++ b/backend/openterm/orders/errors.py
+@@ -0,0 +1,12 @@
++"""One exception for everything an order can run into. `kind` picks the HTTP status in routes.py."""
++
++STATUS = {"bad_request": 400, "forbidden": 403, "not_found": 404, "confirm_required": 409, "mandate": 422, "broker_rejected": 422,
++          "kill_switch": 423, "key_required": 424, "login_required": 401, "login_expired": 403, "mode_mismatch": 409,
++          "live_off": 403, "unavailable": 503}
++
++
++class OrderError(Exception):
++    def __init__(self, kind: str, message: str, detail: dict | None = None):
++        super().__init__(message)
++        self.kind = kind
++        self.detail = detail
+diff --git a/backend/openterm/orders/ledger.py b/backend/openterm/orders/ledger.py
+new file mode 100644
+index 0000000..55168d0
+--- /dev/null
++++ b/backend/openterm/orders/ledger.py
+@@ -0,0 +1,40 @@
++"""Every order event goes into the hash-chained audit ledger (ai/audit.py, table `ai_ledger`) as kind `order`.
++
++Entry: ref = our client order id (or the event name for account-level events), model = `<broker>:<mode>`, manifest = {event, app, broker, mode,
++account tail}, meta = the event's facts (order fields, check results, broker order id, error text). Never a key, token or confirm token.
++Error text is redacted. A ledger failure is logged and re-raised only for the events that must not happen unrecorded (see service.submit).
++"""
++
++from __future__ import annotations
++
++import logging
++
++from .. import __version__
++from ..ai.audit import AuditLog
++from ..redact import redact
++
++log = logging.getLogger("openterm.orders.ledger")
++KIND = "order"
++EVENTS = ("confirm_issued", "refused", "submitted", "accepted", "failed", "cancel", "cancel_failed", "replace", "kill_on", "kill_off", "kill_cancel_all",
++          "live_on", "live_off", "mandate_changed", "import_fills")
++
++
++def clean(v):
++    """Strings are redacted and clipped; containers are cleaned recursively."""
++    if isinstance(v, str):
++        return redact(v)[:400]
++    if isinstance(v, dict):
++        return {str(k): clean(x) for k, x in v.items()}
++    if isinstance(v, list | tuple):
++        return [clean(x) for x in v[:100]]
++    return v
++
++
++class OrderLedger:
++    def __init__(self, audit: AuditLog):
++        self.audit = audit
++
++    async def event(self, event: str, broker: str = "-", mode: str = "-", ref: str | None = None, account: str = "", **meta) -> dict:
++        assert event in EVENTS, event
++        mf = {"event": event, "app": __version__, "broker": broker, "mode": mode, "account": ("…" + account[-4:]) if account else ""}
++        return await self.audit.append(KIND, ref or event, f"{broker}:{mode}", mf, clean(meta))
+diff --git a/backend/openterm/orders/mandate.py b/backend/openterm/orders/mandate.py
+new file mode 100644
+index 0000000..6ff0ac1
+--- /dev/null
++++ b/backend/openterm/orders/mandate.py
+@@ -0,0 +1,88 @@
++"""The mandate: what the user allows orders to do. Pure checks (`check`) plus validation of the stored document.
++
++Zero means zero: a cap of 0 refuses every order, and an empty symbol list allows no symbol. The default mandate therefore allows
++nothing until the user sets it (ORD MANDATE). A check that cannot be computed (no price for a market order, positions unreadable)
++fails: the mandate never passes on missing data.
++"""
++
++from __future__ import annotations
++
++import math
++from dataclasses import asdict, dataclass, field
++
++from .errors import OrderError
++from .model import SYMBOL_RE, Order, number, qty_text
++
++MAX_SYMBOLS = 200
++MAX_VALUE = 1e12
++
++
++@dataclass
++class Mandate:
++    symbols: list[str] = field(default_factory=list)
++    max_shares: float = 100.0
++    max_notional: float = 5000.0
++    max_gross: float = 25000.0
++    max_trades_per_day: int = 10
++
++    def public(self) -> dict:
++        return asdict(self)
++
++
++def parse(raw) -> Mandate:
++    """A validated mandate from a JSON object. Unknown fields are refused."""
++    if not isinstance(raw, dict):
++        raise OrderError("bad_request", "MANDATE MUST BE AN OBJECT")
++    extra = sorted(set(raw) - set(Mandate.__dataclass_fields__))
++    if extra:
++        raise OrderError("bad_request", f"UNKNOWN MANDATE FIELD {', '.join(extra)[:60].upper()}")
++    base = Mandate()
++    syms = raw.get("symbols", base.symbols)
++    if not isinstance(syms, list) or len(syms) > MAX_SYMBOLS or not all(isinstance(s, str) for s in syms):
++        raise OrderError("bad_request", f"symbols MUST BE A LIST OF AT MOST {MAX_SYMBOLS} SYMBOLS")
++    clean: list[str] = []
++    for s in syms:
++        u = s.strip().upper()
++        if not SYMBOL_RE.match(u):
++            raise OrderError("bad_request", f"BAD SYMBOL IN MANDATE: {u[:24]}")
++        if u not in clean:
++            clean.append(u)
++    out = Mandate(symbols=clean)
++    for name in ("max_shares", "max_notional", "max_gross"):
++        v = number(raw.get(name, getattr(base, name)), name)
++        if not 0 <= v <= MAX_VALUE:
++            raise OrderError("bad_request", f"{name} MUST BE 0 TO {MAX_VALUE:g}")
++        setattr(out, name, v)
++    n = number(raw.get("max_trades_per_day", base.max_trades_per_day), "max_trades_per_day", integer=True)
++    if not 0 <= n <= 1000:
++        raise OrderError("bad_request", "max_trades_per_day MUST BE 0 TO 1000")
++    out.max_trades_per_day = int(n)
++    return out
++
++
++def check(order: Order, m: Mandate, price: float | None, gross: float | None, position_qty: float | None, trades_today: int) -> dict:
++    """{ok, checks: [{name, ok, detail}]}. `price` is the reference price (limit, stop or a quote), `gross` the account's current gross
++    exposure, `position_qty` the signed quantity held in this symbol; any of them None fails the check that needs it."""
++    checks: list[dict] = []
++
++    def add(name: str, ok: bool, detail: str) -> None:
++        checks.append({"name": name, "ok": bool(ok), "detail": detail})
++
++    allowed = order.symbol in m.symbols
++    add("SYMBOL ALLOWED", allowed,
++        f"{order.symbol} IS ON THE ALLOWLIST" if allowed else f"{order.symbol} IS NOT ON THE ALLOWLIST ({len(m.symbols)} SYMBOLS)")
++    add("MAX SHARES", order.qty <= m.max_shares, f"{qty_text(order.qty)} OF MAX {m.max_shares:g}")
++    if price is None or not math.isfinite(price) or price <= 0:
++        add("MAX NOTIONAL", False, "NO PRICE TO VALUE THE ORDER (A MARKET ORDER NEEDS A LIVE QUOTE): REFUSED")
++        add("MAX GROSS EXPOSURE", False, "NO PRICE TO VALUE THE ORDER: REFUSED")
++    else:
++        notional = order.qty * price
++        add("MAX NOTIONAL", notional <= m.max_notional, f"{notional:,.2f} OF MAX {m.max_notional:,.2f} (PRICE {price:g})")
++        if gross is None or position_qty is None:
++            add("MAX GROSS EXPOSURE", False, "ACCOUNT POSITIONS COULD NOT BE READ: REFUSED")
++        else:
++            signed = order.qty if order.side == "buy" else -order.qty
++            after = gross - abs(position_qty * price) + abs((position_qty + signed) * price)
++            add("MAX GROSS EXPOSURE", after <= m.max_gross, f"{after:,.2f} AFTER THIS ORDER OF MAX {m.max_gross:,.2f} (NOW {gross:,.2f})")
++    add("DAILY TRADES", trades_today < m.max_trades_per_day, f"{trades_today} SENT TODAY OF MAX {m.max_trades_per_day}")
++    return {"ok": all(c["ok"] for c in checks), "checks": checks}
+diff --git a/backend/openterm/orders/model.py b/backend/openterm/orders/model.py
+new file mode 100644
+index 0000000..0e5d4ec
+--- /dev/null
++++ b/backend/openterm/orders/model.py
+@@ -0,0 +1,129 @@
++"""The order a user typed, validated. Pure: no network, no database.
++
++`Order.from_body` accepts exactly the fields below. A request can name a broker (`alpaca-paper`, `alpaca-live`, `kite`) but can never
++say "paper" or "live": those words are refused as fields, because the mode comes from the broker account (brokers/*.detect_mode).
++"""
++
++from __future__ import annotations
++
++import hashlib
++import math
++import re
++from dataclasses import dataclass
++
++import orjson
++
++from .errors import OrderError
++
++BROKERS = ("alpaca-paper", "alpaca-live", "kite")
++SIDES = ("buy", "sell")
++TYPES = ("market", "limit", "stop")
++TIFS = ("day", "gtc", "ioc")
++KITE_PRODUCTS = ("CNC", "MIS", "NRML")
++KITE_SUFFIXES = ("NS", "BO", "NFO", "MCX")
++FIELDS = {"broker", "symbol", "side", "qty", "type", "tif", "limit_price", "stop_price", "product"}
++SYMBOL_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-&]{0,19}\Z")
++MAX_QTY = 1e9
++MAX_PRICE = 1e9
++#: words that would mean "a request sets the mode"; refused with a pointed message instead of the generic unknown-field one
++MODE_WORDS = {"mode", "live", "paper", "account_type", "host", "base_url", "environment", "env", "sandbox", "simulate", "dry_run", "force"}
++
++
++def number(x, what: str, integer: bool = False) -> float:
++    if isinstance(x, bool) or not isinstance(x, int | float) or not math.isfinite(x):
++        raise OrderError("bad_request", f"{what} MUST BE A FINITE NUMBER")
++    if integer and float(x) != int(x):
++        raise OrderError("bad_request", f"{what} MUST BE A WHOLE NUMBER")
++    return float(x)
++
++
++def qty_text(q: float) -> str:
++    """Canonical text of a quantity (no float noise): 10, 0.5, 1.25."""
++    return f"{q:.6f}".rstrip("0").rstrip(".")
++
++
++@dataclass(frozen=True)
++class Order:
++    broker: str
++    symbol: str
++    side: str
++    qty: float
++    type: str
++    tif: str
++    limit_price: float | None = None
++    stop_price: float | None = None
++    product: str | None = None
++
++    @classmethod
++    def from_body(cls, body) -> Order:
++        if not isinstance(body, dict):
++            raise OrderError("bad_request", "ORDER MUST BE AN OBJECT")
++        bad = [k for k in body if k in MODE_WORDS]
++        if bad:
++            raise OrderError("bad_request", "PAPER OR LIVE IS NEVER SET BY A REQUEST: IT COMES FROM THE BROKER ACCOUNT. PICK THE BROKER "
++                                            f"({', '.join(BROKERS)}) AND REMOVE {', '.join(sorted(bad)).upper()}")
++        extra = sorted(set(body) - FIELDS)
++        if extra:
++            raise OrderError("bad_request", f"UNKNOWN ORDER FIELD {', '.join(extra)[:60].upper()}")
++        broker = body.get("broker")
++        if broker not in BROKERS:
++            raise OrderError("bad_request", f"broker MUST BE ONE OF {', '.join(BROKERS)}")
++        sym = body.get("symbol")
++        if not isinstance(sym, str) or not SYMBOL_RE.match(sym.strip().upper()):
++            raise OrderError("bad_request", "symbol MUST BE LETTERS/DIGITS, E.G. AAPL OR RELIANCE.NS")
++        sym = sym.strip().upper()
++        side = body.get("side")
++        if side not in SIDES:
++            raise OrderError("bad_request", "side MUST BE buy OR sell")
++        typ = body.get("type", "market")
++        if typ not in TYPES:
++            raise OrderError("bad_request", "type MUST BE market, limit OR stop")
++        tif = body.get("tif", "day")
++        if tif not in TIFS:
++            raise OrderError("bad_request", "tif MUST BE day, gtc OR ioc")
++        qty = number(body.get("qty"), "qty", integer=broker == "kite")
++        if not 0 < qty <= MAX_QTY:
++            raise OrderError("bad_request", "qty MUST BE ABOVE 0")
++        if round(qty, 6) != qty:
++            raise OrderError("bad_request", "qty HAS AT MOST 6 DECIMALS")
++        limit = stop = None
++        if typ == "limit":
++            limit = number(body.get("limit_price"), "limit_price")
++        elif body.get("limit_price") is not None:
++            raise OrderError("bad_request", "limit_price IS ONLY FOR type limit")
++        if typ == "stop":
++            stop = number(body.get("stop_price"), "stop_price")
++        elif body.get("stop_price") is not None:
++            raise OrderError("bad_request", "stop_price IS ONLY FOR type stop")
++        for name, v in (("limit_price", limit), ("stop_price", stop)):
++            if v is not None and not 0 < v <= MAX_PRICE:
++                raise OrderError("bad_request", f"{name} MUST BE ABOVE 0")
++        product = body.get("product")
++        if broker == "kite":
++            if tif == "gtc":
++                raise OrderError("bad_request", "KITE HAS NO GTC: USE day OR ioc")
++            if "." not in sym or sym.rsplit(".", 1)[-1] not in KITE_SUFFIXES:
++                raise OrderError("bad_request", "KITE SYMBOL NEEDS A SUFFIX: RELIANCE.NS, TCS.BO, <X>.NFO OR <X>.MCX")
++            if product is not None and product not in KITE_PRODUCTS:
++                raise OrderError("bad_request", f"product MUST BE ONE OF {', '.join(KITE_PRODUCTS)}")
++        elif product is not None:
++            raise OrderError("bad_request", "product IS ONLY FOR kite")
++        return cls(broker, sym, side, qty, typ, tif, limit, stop, product)
++
++    def ref_price(self) -> float | None:
++        """The price the order itself names (limit, else stop); None for a market order, whose price must come from a quote."""
++        return self.limit_price if self.limit_price is not None else self.stop_price
++
++    def public(self) -> dict:
++        return {"broker": self.broker, "symbol": self.symbol, "side": self.side, "qty": self.qty, "type": self.type, "tif": self.tif,
++                "limit_price": self.limit_price, "stop_price": self.stop_price, "product": self.product}
++
++    def line(self) -> str:
++        px = f" @ {self.limit_price:g}" if self.limit_price is not None else f" STOP {self.stop_price:g}" if self.stop_price is not None else ""
++        return f"{self.side.upper()} {qty_text(self.qty)} {self.symbol} {self.type.upper()}{px} {self.tif.upper()}"
++
++
++def fingerprint(order: Order, mode: str, account: str) -> str:
++    """What a confirm token is bound to: the whole order plus the mode and account the broker reported."""
++    d = {**order.public(), "qty": qty_text(order.qty), "mode": mode, "account": account}
++    return hashlib.sha256(orjson.dumps(d, option=orjson.OPT_SORT_KEYS)).hexdigest()
+diff --git a/backend/openterm/orders/routes.py b/backend/openterm/orders/routes.py
+new file mode 100644
+index 0000000..ddf5d57
+--- /dev/null
++++ b/backend/openterm/orders/routes.py
+@@ -0,0 +1,158 @@
++"""Order routes, all under /api/orders and ALL loopback-only (account data and money). Not in the AI tool registry or the MCP server;
++tests scan both for these paths.
++
++No route takes a `mode`, `live` or `paper` field: the order body is parsed by `Order.from_body`, which refuses those words.
++"""
++
++from __future__ import annotations
++
++from fastapi import APIRouter, Request
++
++from ..http_util import json_object, loopback
++from ..redact import redact
++from ..responses import Orjson, OrjsonRoute
++from ..userdata import UserDataError
++from .errors import STATUS, OrderError
++
++router = APIRouter(prefix="/api/orders", route_class=OrjsonRoute)
++
++
++def service_of(request: Request):
++    """Built on first use. A new database (tests reuse the app object) gets a new service."""
++    from ..ai.audit import audit_of
++    from ..http_util import svc, user
++    from .brokers.alpaca import AlpacaTrading
++    from .brokers.kite import KiteTrading
++    from .ledger import OrderLedger
++    from .service import OrderService
++
++    app = request.app
++    db = user(request).db
++    cur = getattr(app.state, "orders", None)
++    if cur is None or cur.db is not db:
++        store, http, service = app.state.keys, app.state.keys_http, svc(request)
++
++        async def price_of(symbol: str):
++            """Last price from the quote service. A stale or missing quote gives None, which the mandate treats as a refusal."""
++            try:
++                env = (await service.quotes([symbol])).get(symbol) or {}
++            except Exception:  # noqa: BLE001 - any quote failure is "no price"
++                return None, "QUOTE FAILED"
++            data = env.get("data") if isinstance(env, dict) else None
++            price = data.get("price") if isinstance(data, dict) else None
++            if not isinstance(price, int | float) or env.get("stale"):
++                return None, "NO FRESH QUOTE"
++            return float(price), f"{env.get('source') or 'quote'} {env.get('age_s', 0):g}s OLD"
++
++        brokers = {b.id: b for b in (AlpacaTrading("paper", store, http), AlpacaTrading("live", store, http), KiteTrading(app.state.kite))}
++        app.state.orders = OrderService(db, OrderLedger(audit_of(app, db)), brokers, price_of)
++    return app.state.orders
++
++
++def fail(e: OrderError) -> Orjson:
++    body = {"error": redact(str(e)), "kind": e.kind}
++    if e.detail:
++        body["detail"] = e.detail
++    if e.kind == "key_required":
++        body["key"] = redact(str(e)).split("set ", 1)[-1].split(" in ")[0]
++    return Orjson(body, status_code=STATUS.get(e.kind, 500))
++
++
++def forbidden() -> Orjson:
++    return Orjson({"error": "ORDERS CAN ONLY BE USED FROM THIS MACHINE", "kind": "forbidden"}, status_code=403)
++
++
++async def body_of(request: Request) -> dict:
++    try:
++        return await json_object(request)
++    except UserDataError as e:
++        raise OrderError("bad_request", str(e)) from e
++
++
++def guarded(fn):
++    """Loopback check, OrderError -> error answer."""
++    import functools
++
++    @functools.wraps(fn)
++    async def wrapper(request: Request, *a, **kw):
++        if not loopback(request):
++            return forbidden()
++        try:
++            return await fn(request, *a, **kw)
++        except OrderError as e:
++            return fail(e)
++
++    return wrapper
++
++
++@router.get("/status")
++@guarded
++async def status(request: Request):
++    return await service_of(request).status()
++
++
++@router.get("/blotter")
++@guarded
++async def blotter(request: Request, broker: str = ""):
++    return await service_of(request).blotter(broker)
++
++
++@router.post("/preview")
++@guarded
++async def preview(request: Request):
++    body = await body_of(request)
++    if set(body) - {"order", "replace"}:
++        raise OrderError("bad_request", "BODY NEEDS order (AND OPTIONALLY replace)")
++    return await service_of(request).preview(body.get("order"), body.get("replace"))
++
++
++@router.post("/submit")
++@guarded
++async def submit(request: Request):
++    body = await body_of(request)
++    if set(body) - {"order", "token", "replace"}:
++        raise OrderError("bad_request", "BODY NEEDS order, token (AND OPTIONALLY replace)")
++    return await service_of(request).submit(body.get("order"), body.get("token"), body.get("replace"))
++
++
++@router.post("/cancel")
++@guarded
++async def cancel(request: Request):
++    body = await body_of(request)
++    return await service_of(request).cancel(body.get("broker"), body.get("order_id"))
++
++
++@router.post("/kill")
++@guarded
++async def kill(request: Request):
++    return await service_of(request).kill()
++
++
++@router.post("/unkill")
++@guarded
++async def unkill(request: Request):
++    return await service_of(request).unkill()
++
++
++@router.put("/mandate")
++@guarded
++async def put_mandate(request: Request):
++    return await service_of(request).set_mandate(await body_of(request))
++
++
++@router.put("/live")
++@guarded
++async def put_live(request: Request):
++    body = await body_of(request)
++    if not isinstance(body.get("on"), bool):
++        raise OrderError("bad_request", "BODY NEEDS on (true OR false)")
++    return await service_of(request).set_live(body["on"], body.get("phrase"))
++
++
++@router.post("/import")
++@guarded
++async def import_fills(request: Request):
++    body = await body_of(request)
++    if not isinstance(body.get("portfolio"), str) or not body["portfolio"].strip():
++        raise OrderError("bad_request", "BODY NEEDS portfolio (A NAME)")
++    return await service_of(request).import_fills(body.get("broker"), body["portfolio"].strip())
+diff --git a/backend/openterm/orders/service.py b/backend/openterm/orders/service.py
+new file mode 100644
+index 0000000..7c1237e
+--- /dev/null
++++ b/backend/openterm/orders/service.py
+@@ -0,0 +1,258 @@
++"""OrderService: the only way an order reaches a broker.
++
++submit() order of checks (each one a refusal that is written to the ledger):
++  1. kill switch off            2. keys / login present        3. account read from the broker: mode from its host and account
++  4. live switched on by the user (live only)                   5. mandate passes (allowlist, size, notional, gross exposure, daily cap)
++  6. a fresh one-time confirm token issued for exactly this order, mode and account
++then `submitted` is written to the ledger BEFORE the broker is called, and `accepted` or `failed` after.
++A lock serialises preview-to-send, so two orders cannot both pass the daily cap, and the kill switch is read again inside it.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import logging
++import time
++import uuid
++
++from ..portfolio import Portfolios
++from ..redact import redact
++from ..userdata import UserDataError
++from . import mandate as mandate_mod
++from .brokers.base import Broker
++from .confirm import ConfirmTokens
++from .errors import OrderError
++from .ledger import OrderLedger
++from .model import Order, fingerprint
++from .store import OrdersStore
++
++log = logging.getLogger("openterm.orders")
++LIVE_PHRASE = "I UNDERSTAND LIVE ORDERS USE REAL MONEY"
++EXPECTED_MODE = {"alpaca-paper": "paper", "alpaca-live": "live", "kite": "live"}
++
++
++class OrderService:
++    def __init__(self, db, ledger: OrderLedger, brokers: dict[str, Broker], price_fn, tokens: ConfirmTokens | None = None):
++        self.store = OrdersStore(db)
++        self.db = db
++        self.ledger = ledger
++        self.brokers = brokers
++        self.price_fn = price_fn  # async (symbol) -> (price | None, note)
++        self.tokens = tokens or ConfirmTokens()
++        self.lock = asyncio.Lock()
++
++    # --- lookups ---
++    def broker(self, broker_id: str) -> Broker:
++        b = self.brokers.get(broker_id)
++        if b is None:
++            raise OrderError("bad_request", f"UNKNOWN BROKER {str(broker_id)[:24]}")
++        return b
++
++    async def _ready_account(self, b: Broker) -> dict:
++        """The broker's account, with `mode` verified against what this broker id must be."""
++        err = b.not_ready()
++        if err:
++            raise err
++        acct = await b.account()
++        if acct["mode"] != EXPECTED_MODE.get(b.id):
++            raise OrderError("mode_mismatch", f"{b.id} REPORTED A {acct['mode'].upper()} ACCOUNT: ORDERS REFUSED")
++        return acct
++
++    # --- status ---
++    async def status(self) -> dict:
++        kill = await self.store.kill()
++        return {"kill": {"on": bool(kill.get("on")), "at": kill.get("at")}, "live_enabled": await self.store.live_enabled(),
++                "mandate": (await self.store.mandate()).public(), "trades_today": await self.store.trades_today(),
++                "brokers": [self._broker_row(b) for b in self.brokers.values()]}
++
++    @staticmethod
++    def _broker_row(b: Broker) -> dict:
++        err = b.not_ready()
++        return {"id": b.id, "label": b.label, "slot_mode": EXPECTED_MODE.get(b.id), "ready": err is None,
++                "message": str(err) if err else None, "kind": err.kind if err else None, "note": b.note}
++
++    async def blotter(self, broker_id: str) -> dict:
++        """Account, open orders, today's fills and positions. A part that fails is named in `errors`; the others still show."""
++        b = self.broker(broker_id)
++        acct = await self._ready_account(b)
++        parts = await asyncio.gather(b.open_orders(), b.fills_today(), b.positions(), return_exceptions=True)
++        out: dict = {"broker": b.id, "account": acct, "as_of": time.time(), "errors": {}}
++        for name, got in zip(("open_orders", "fills", "positions"), parts, strict=True):
++            if isinstance(got, OrderError):
++                out["errors"][name] = str(got)
++                out[name] = None
++            elif isinstance(got, BaseException):
++                out["errors"][name] = f"{b.label.upper()} {name.upper()} FAILED ({type(got).__name__})"
++                out[name] = None
++            else:
++                out[name] = got
++        return out
++
++    # --- the gate shared by preview and submit ---
++    async def _gate(self, order: Order, replace: str | None) -> dict:
++        kill = await self.store.kill()
++        if kill.get("on"):
++            raise OrderError("kill_switch", "KILL SWITCH IS ON: NO NEW ORDERS UNTIL ORD UNKILL")
++        b = self.broker(order.broker)
++        acct = await self._ready_account(b)
++        mode = acct["mode"]
++        if mode == "live" and not await self.store.live_enabled():
++            raise OrderError("live_off", "LIVE ORDERS ARE OFF. TYPE ORD LIVE ON TO ENABLE THEM (REAL MONEY)")
++        if acct.get("trading_blocked"):
++            raise OrderError("broker_rejected", f"{b.label.upper()} SAYS TRADING IS BLOCKED FOR THIS ACCOUNT")
++        if replace is not None:
++            current = next((o for o in await b.open_orders() if o["id"] == replace), None)
++            if current is None:
++                raise OrderError("not_found", "THE ORDER TO REPLACE IS NOT OPEN")
++            if current["symbol"] != order.symbol or current["side"] != order.side:
++                raise OrderError("bad_request", "A REPLACE CANNOT CHANGE THE SYMBOL OR THE SIDE: CANCEL AND ENTER A NEW ORDER")
++        price = order.ref_price()
++        price_note = "ORDER PRICE" if price is not None else None
++        if price is None:
++            price, price_note = await self.price_fn(order.symbol)
++        try:
++            positions = await b.positions()
++            gross = sum(abs(p["market_value"]) for p in positions if p.get("market_value") is not None)
++            gross_ok = all(p.get("market_value") is not None for p in positions)
++            held = sum(p["qty"] for p in positions if p["symbol"] == order.symbol)
++        except OrderError:
++            gross, gross_ok, held = None, False, None
++        m = await self.store.mandate()
++        check = mandate_mod.check(order, m, price, gross if gross_ok else None, held, await self.store.trades_today())
++        fp = fingerprint(order, mode, acct["id"] + (f"|replace:{replace}" if replace else ""))
++        return {"broker": b, "account": acct, "mode": mode, "check": check, "price": price, "price_note": price_note, "fp": fp,
++                "mandate": m.public(), "kill": False}
++
++    @staticmethod
++    def _facts(order: Order, ctx: dict | None = None, **extra) -> dict:
++        d = {"order": order.public(), **extra}
++        if ctx:
++            d.update(acct_tail=ctx["account"]["id"][-4:], price=ctx["price"], mandate_ok=ctx["check"]["ok"])
++        return d
++
++    async def preview(self, body, replace: str | None = None) -> dict:
++        """Everything the confirm step shows: the order, mode, account, the mandate check, and (only if all of it passes) a one-time token."""
++        order = Order.from_body(body)
++        try:
++            ctx = await self._gate(order, replace)
++        except OrderError as e:
++            await self.ledger.event("refused", order.broker, EXPECTED_MODE.get(order.broker, "-"), **self._facts(order), reason=str(e), kind=e.kind, step="preview")
++            raise
++        out = {"order": order.public(), "line": order.line(), "replace": replace, "broker": order.broker, "mode": ctx["mode"], "account": ctx["account"],
++               "price": ctx["price"], "price_note": ctx["price_note"], "check": ctx["check"], "mandate": ctx["mandate"],
++               "note": ctx["broker"].note or None, "token": None, "token_ttl_s": None}
++        if ctx["check"]["ok"]:
++            out["token"], out["token_ttl_s"] = self.tokens.issue(ctx["fp"])
++            await self.ledger.event("confirm_issued", order.broker, ctx["mode"], account=ctx["account"]["id"], **self._facts(order, ctx), replace=replace)
++        else:
++            await self.ledger.event("refused", order.broker, ctx["mode"], account=ctx["account"]["id"], **self._facts(order, ctx), step="mandate",
++                                    reason="; ".join(c["detail"] for c in ctx["check"]["checks"] if not c["ok"]), kind="mandate")
++        return out
++
++    async def submit(self, body, token, replace: str | None = None) -> dict:
++        order = Order.from_body(body)
++        async with self.lock:
++            try:
++                ctx = await self._gate(order, replace)
++                if not ctx["check"]["ok"]:
++                    raise OrderError("mandate", "MANDATE REFUSES THIS ORDER: " + "; ".join(c["detail"] for c in ctx["check"]["checks"] if not c["ok"]),
++                                     {"check": ctx["check"]})
++                self.tokens.consume(token, ctx["fp"])
++                if (await self.store.kill()).get("on"):  # read again right before sending
++                    raise OrderError("kill_switch", "KILL SWITCH IS ON: NO NEW ORDERS UNTIL ORD UNKILL")
++            except OrderError as e:
++                await self.ledger.event("refused", order.broker, EXPECTED_MODE.get(order.broker, "-"), **self._facts(order), reason=str(e), kind=e.kind, step="submit")
++                raise
++            b, mode, acct = ctx["broker"], ctx["mode"], ctx["account"]["id"]
++            client_id = "OT" + uuid.uuid4().hex[:14]
++            # Written first: if the process dies during the call, the ledger still shows an order may be at the broker.
++            await self.ledger.event("submitted", b.id, mode, client_id, acct, **self._facts(order, ctx), replace=replace)
++            try:
++                res = await (b.replace(replace, order) if replace else b.submit(order, client_id))
++            except OrderError as e:
++                await self.ledger.event("failed", b.id, mode, client_id, acct, **self._facts(order, ctx), reason=str(e), kind=e.kind)
++                # A refusal by the broker counts toward the daily cap like any sent order; "unavailable" may have reached it, so it counts too.
++                if not replace:
++                    await self.store.log_order(b.id, mode, client_id, None, order.symbol, order.side, order.qty, "FAILED" if e.kind == "broker_rejected" else "UNKNOWN")
++                raise
++            if not replace:
++                await self.store.log_order(b.id, mode, client_id, res.get("id"), order.symbol, order.side, order.qty, res.get("status") or "NEW")
++            await self.ledger.event("replace" if replace else "accepted", b.id, mode, client_id, acct, **self._facts(order, ctx), broker_order_id=res.get("id"),
++                                    status=res.get("status"))
++            return {"order": res, "client_id": client_id, "mode": mode, "broker": b.id}
++
++    # --- cancel and kill ---
++    async def cancel(self, broker_id: str, order_id: str) -> dict:
++        b = self.broker(broker_id)
++        acct = await self._ready_account(b)
++        try:
++            await b.cancel(order_id)
++        except OrderError as e:
++            await self.ledger.event("cancel_failed", b.id, acct["mode"], order_id, acct["id"], reason=str(e), kind=e.kind)
++            raise
++        await self.ledger.event("cancel", b.id, acct["mode"], order_id, acct["id"])
++        return {"cancelled": order_id, "broker": b.id}
++
++    async def kill(self) -> dict:
++        """Block new orders first (persisted), void every confirm token, then cancel everything at every connected broker."""
++        st = await self.store.set_kill(True)
++        self.tokens.clear()
++        await self.ledger.event("kill_on", at=st["at"])
++        results: dict[str, dict] = {}
++
++        async def one(b: Broker) -> None:
++            if b.not_ready() is not None:
++                results[b.id] = {"ok": None, "detail": "NOT CONNECTED: NOTHING TO CANCEL", "cancelled": 0, "failed": 0}
++                return
++            try:
++                async with self.lock:  # an order that was already past the gate finishes first, then it is cancelled with the rest
++                    rows = await b.cancel_all()
++                ok = [r for r in rows if r["ok"]]
++                results[b.id] = {"ok": len(ok) == len(rows), "detail": f"{len(ok)} OF {len(rows)} OPEN ORDERS CANCELLED", "cancelled": len(ok),
++                                 "failed": len(rows) - len(ok)}
++            except Exception as e:  # noqa: BLE001 - one broker failing must not stop the others
++                results[b.id] = {"ok": False, "detail": redact(str(e))[:200] or type(e).__name__, "cancelled": 0, "failed": -1}
++            await self.ledger.event("kill_cancel_all", b.id, EXPECTED_MODE.get(b.id, "-"), **results[b.id])
++
++        await asyncio.gather(*(one(b) for b in self.brokers.values()))
++        return {"kill": {"on": True, "at": st["at"]}, "brokers": results}
++
++    async def unkill(self) -> dict:
++        st = await self.store.set_kill(False)
++        await self.ledger.event("kill_off", at=st["at"])
++        return {"kill": {"on": False, "at": st["at"]}}
++
++    # --- settings ---
++    async def set_live(self, on: bool, phrase: str | None) -> dict:
++        if on and phrase != LIVE_PHRASE:
++            raise OrderError("bad_request", f"TO TURN LIVE ORDERS ON TYPE: {LIVE_PHRASE}")
++        await self.store.set_live(on)
++        if not on:
++            self.tokens.clear()
++        await self.ledger.event("live_on" if on else "live_off")
++        return {"live_enabled": on}
++
++    async def set_mandate(self, raw) -> dict:
++        m = await self.store.set_mandate(raw)
++        self.tokens.clear()  # a token was checked against the old mandate
++        await self.ledger.event("mandate_changed", mandate=m.public())
++        return m.public()
++
++    # --- fills into a portfolio ---
++    async def import_fills(self, broker_id: str, portfolio: str) -> dict:
++        b = self.broker(broker_id)
++        acct = await self._ready_account(b)
++        done = await self.store.imported_ids(b.id)
++        fills = [f for f in await b.fills_today() if f["fill_id"] not in done]
++        if not fills:
++            return {"added": 0, "portfolio": portfolio, "detail": "NO NEW FILLS TODAY"}
++        lots = [{"symbol": f["symbol"], "qty": f["qty"] if f["side"] == "buy" else -f["qty"], "cost": f["price"], "currency": f["currency"],
++                 "notes": f"{b.label} {acct['mode']} order {f['order_id']}"[:200]} for f in fills]
++        try:
++            res = await Portfolios(self.db).edit(portfolio, add=lots)
++        except UserDataError as e:
++            raise OrderError("bad_request", f"PORTFOLIO: {e}") from e
++        await self.store.mark_imported(b.id, fills, res["name"])
++        await self.ledger.event("import_fills", b.id, acct["mode"], account=acct["id"], portfolio=res["name"], fills=len(fills),
++                                orders=sorted({str(f.get("order_id")) for f in fills}))
++        return {"added": len(fills), "portfolio": res["name"], "detail": f"{len(fills)} FILLS ADDED AS LOTS TO {res['name']}"}
+diff --git a/backend/openterm/orders/store.py b/backend/openterm/orders/store.py
+new file mode 100644
+index 0000000..36b66fd
+--- /dev/null
++++ b/backend/openterm/orders/store.py
+@@ -0,0 +1,89 @@
++"""SQLite side of orders: the mandate, the live switch and the kill switch (kv rows), the sent-orders log behind the daily cap, and the record of
++fills already added to a portfolio. The tables come from migration 17 (db.py)."""
++
++from __future__ import annotations
++
++import time
++
++import aiosqlite
++import orjson
++
++from . import mandate as mandate_mod
++from .errors import OrderError
++
++K_MANDATE, K_SETTINGS, K_KILL = "orders.mandate", "orders.settings", "orders.kill"
++
++
++def today() -> str:
++    return time.strftime("%Y-%m-%d")  # the machine's local day
++
++
++class OrdersStore:
++    def __init__(self, db: aiosqlite.Connection):
++        self.db = db
++
++    async def _get(self, key: str, default: dict) -> dict:
++        async with self.db.execute("SELECT value FROM kv WHERE key=?", (key,)) as cur:
++            row = await cur.fetchone()
++        if not row:
++            return dict(default)
++        try:
++            v = orjson.loads(row[0])
++        except orjson.JSONDecodeError:
++            return dict(default)
++        return v if isinstance(v, dict) else dict(default)
++
++    async def _put(self, key: str, value: dict) -> None:
++        await self.db.execute("INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, orjson.dumps(value)))
++        await self.db.commit()
++
++    # --- mandate ---
++    async def mandate(self) -> mandate_mod.Mandate:
++        raw = await self._get(K_MANDATE, {})
++        try:
++            return mandate_mod.parse(raw)
++        except OrderError:  # a damaged stored document must not become a permissive one: the default allows nothing
++            return mandate_mod.Mandate()
++
++    async def set_mandate(self, raw) -> mandate_mod.Mandate:
++        m = mandate_mod.parse(raw)
++        await self._put(K_MANDATE, m.public())
++        return m
++
++    # --- live switch ---
++    async def live_enabled(self) -> bool:
++        return (await self._get(K_SETTINGS, {})).get("live") is True
++
++    async def set_live(self, on: bool) -> None:
++        await self._put(K_SETTINGS, {"live": bool(on), "at": time.time()})
++
++    # --- kill switch ---
++    async def kill(self) -> dict:
++        return await self._get(K_KILL, {"on": False})
++
++    async def set_kill(self, on: bool) -> dict:
++        v = {"on": bool(on), "at": time.time()}
++        await self._put(K_KILL, v)
++        return v
++
++    # --- sent orders ---
++    async def log_order(self, broker: str, mode: str, client_id: str, broker_order_id: str | None, symbol: str, side: str, qty: float, status: str) -> None:
++        await self.db.execute("INSERT INTO orders_log (at, day, broker, mode, client_id, broker_order_id, symbol, side, qty, status) VALUES (?,?,?,?,?,?,?,?,?,?)",
++                              (time.time(), today(), broker, mode, client_id, broker_order_id, symbol, side, qty, status))
++        await self.db.commit()
++
++    async def trades_today(self) -> int:
++        async with self.db.execute("SELECT COUNT(*) FROM orders_log WHERE day=?", (today(),)) as cur:
++            (n,) = await cur.fetchone()
++        return int(n)
++
++    # --- fills added to a portfolio ---
++    async def imported_ids(self, broker: str) -> set[str]:
++        async with self.db.execute("SELECT fill_id FROM orders_imported WHERE broker=?", (broker,)) as cur:
++            return {r[0] for r in await cur.fetchall()}
++
++    async def mark_imported(self, broker: str, fills: list[dict], portfolio: str) -> None:
++        now = time.time()
++        await self.db.executemany("INSERT OR IGNORE INTO orders_imported (broker, fill_id, portfolio, order_id, at) VALUES (?,?,?,?,?)",
++                                  [(broker, f["fill_id"], portfolio, str(f.get("order_id") or ""), now) for f in fills])
++        await self.db.commit()
+diff --git a/backend/tests/fixtures/alpaca_account_live_docshape.json b/backend/tests/fixtures/alpaca_account_live_docshape.json
+new file mode 100644
+index 0000000..493ed29
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_account_live_docshape.json
+@@ -0,0 +1,15 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": {
++  "id": "00000000-0000-4000-8000-000000000002",
++  "account_number": "912345678",
++  "status": "ACTIVE",
++  "currency": "USD",
++  "cash": "5000",
++  "portfolio_value": "5000",
++  "equity": "5000",
++  "buying_power": "5000",
++  "trading_blocked": false,
++  "account_blocked": false
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/alpaca_account_paper_docshape.json b/backend/tests/fixtures/alpaca_account_paper_docshape.json
+new file mode 100644
+index 0000000..fa4c000
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_account_paper_docshape.json
+@@ -0,0 +1,15 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": {
++  "id": "00000000-0000-4000-8000-000000000001",
++  "account_number": "PA0000TEST01",
++  "status": "ACTIVE",
++  "currency": "USD",
++  "cash": "100000",
++  "portfolio_value": "100000",
++  "equity": "100000",
++  "buying_power": "200000",
++  "trading_blocked": false,
++  "account_blocked": false
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/alpaca_cancel_all_docshape.json b/backend/tests/fixtures/alpaca_cancel_all_docshape.json
+new file mode 100644
+index 0000000..4b5a09f
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_cancel_all_docshape.json
+@@ -0,0 +1,13 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": [
++  {
++   "id": "61e69015-8549-4bfd-b9c3-01e75843f47d",
++   "status": 200
++  },
++  {
++   "id": "72f7a126-9650-4c0e-a4d4-12f86954a58e",
++   "status": 500
++  }
++ ]
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/alpaca_fills_docshape.json b/backend/tests/fixtures/alpaca_fills_docshape.json
+new file mode 100644
+index 0000000..f251caa
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_fills_docshape.json
+@@ -0,0 +1,31 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": [
++  {
++   "activity_type": "FILL",
++   "id": "20261110143001000::8efc7b9a-0000-4000-8000-000000000001",
++   "cum_qty": "10",
++   "leaves_qty": "0",
++   "price": "189.5",
++   "qty": "10",
++   "side": "buy",
++   "symbol": "AAPL",
++   "transaction_time": "2026-11-10T14:30:01.000Z",
++   "order_id": "61e69015-8549-4bfd-b9c3-01e75843f47d",
++   "type": "fill"
++  },
++  {
++   "activity_type": "FILL",
++   "id": "20261110150000000::8efc7b9a-0000-4000-8000-000000000002",
++   "cum_qty": "3",
++   "leaves_qty": "0",
++   "price": "421",
++   "qty": "3",
++   "side": "sell",
++   "symbol": "MSFT",
++   "transaction_time": "2026-11-10T15:00:00.000Z",
++   "order_id": "72f7a126-9650-4c0e-a4d4-12f86954a58e",
++   "type": "fill"
++  }
++ ]
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/alpaca_order_accepted_docshape.json b/backend/tests/fixtures/alpaca_order_accepted_docshape.json
+new file mode 100644
+index 0000000..677ac65
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_order_accepted_docshape.json
+@@ -0,0 +1,20 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": {
++  "id": "61e69015-8549-4bfd-b9c3-01e75843f47d",
++  "client_order_id": "OT0123456789abcd",
++  "created_at": "2026-11-10T14:30:00.000000Z",
++  "submitted_at": "2026-11-10T14:30:00.000000Z",
++  "symbol": "AAPL",
++  "qty": "10",
++  "filled_qty": "0",
++  "filled_avg_price": null,
++  "order_type": "limit",
++  "type": "limit",
++  "side": "buy",
++  "time_in_force": "day",
++  "limit_price": "190",
++  "stop_price": null,
++  "status": "accepted"
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/alpaca_orders_open_docshape.json b/backend/tests/fixtures/alpaca_orders_open_docshape.json
+new file mode 100644
+index 0000000..11a6508
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_orders_open_docshape.json
+@@ -0,0 +1,39 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": [
++  {
++   "id": "61e69015-8549-4bfd-b9c3-01e75843f47d",
++   "client_order_id": "OT0123456789abcd",
++   "created_at": "2026-11-10T14:30:00.000000Z",
++   "submitted_at": "2026-11-10T14:30:00.000000Z",
++   "symbol": "AAPL",
++   "qty": "10",
++   "filled_qty": "0",
++   "filled_avg_price": null,
++   "order_type": "limit",
++   "type": "limit",
++   "side": "buy",
++   "time_in_force": "day",
++   "limit_price": "190",
++   "stop_price": null,
++   "status": "accepted"
++  },
++  {
++   "id": "72f7a126-9650-4c0e-a4d4-12f86954a58e",
++   "client_order_id": "OT0123456789abcd",
++   "created_at": "2026-11-10T14:30:00.000000Z",
++   "submitted_at": "2026-11-10T14:30:00.000000Z",
++   "symbol": "MSFT",
++   "qty": "5",
++   "filled_qty": "2",
++   "filled_avg_price": null,
++   "order_type": "limit",
++   "type": "limit",
++   "side": "sell",
++   "time_in_force": "day",
++   "limit_price": "420",
++   "stop_price": null,
++   "status": "partially_filled"
++  }
++ ]
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/alpaca_positions_docshape.json b/backend/tests/fixtures/alpaca_positions_docshape.json
+new file mode 100644
+index 0000000..f083be9
+--- /dev/null
++++ b/backend/tests/fixtures/alpaca_positions_docshape.json
+@@ -0,0 +1,25 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Alpaca Trading API v2 documentation describes",
++ "body": [
++  {
++   "asset_id": "b0b6dd9d-8b9b-48a9-ba46-b9d54906e415",
++   "symbol": "AAPL",
++   "qty": "20",
++   "avg_entry_price": "180",
++   "side": "long",
++   "market_value": "3800",
++   "current_price": "190",
++   "cost_basis": "3600"
++  },
++  {
++   "asset_id": "a0b6dd9d-8b9b-48a9-ba46-b9d54906e416",
++   "symbol": "TSLA",
++   "qty": "-5",
++   "avg_entry_price": "250",
++   "side": "short",
++   "market_value": "-1250",
++   "current_price": "250",
++   "cost_basis": "-1250"
++  }
++ ]
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/kite_holdings_docshape.json b/backend/tests/fixtures/kite_holdings_docshape.json
+new file mode 100644
+index 0000000..8cb7eec
+--- /dev/null
++++ b/backend/tests/fixtures/kite_holdings_docshape.json
+@@ -0,0 +1,16 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
++ "body": {
++  "status": "success",
++  "data": [
++   {
++    "tradingsymbol": "RELIANCE",
++    "exchange": "NSE",
++    "quantity": 5,
++    "t1_quantity": 1,
++    "average_price": 2400.0,
++    "last_price": 2500.0
++   }
++  ]
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/kite_margins_docshape.json b/backend/tests/fixtures/kite_margins_docshape.json
+new file mode 100644
+index 0000000..2b98f19
+--- /dev/null
++++ b/backend/tests/fixtures/kite_margins_docshape.json
+@@ -0,0 +1,23 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
++ "body": {
++  "status": "success",
++  "data": {
++   "equity": {
++    "enabled": true,
++    "net": 150000.0,
++    "available": {
++     "cash": 120000.0,
++     "live_balance": 120000.0
++    },
++    "utilised": {
++     "debits": 0
++    }
++   },
++   "commodity": {
++    "enabled": true,
++    "net": 0
++   }
++  }
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/kite_orders_docshape.json b/backend/tests/fixtures/kite_orders_docshape.json
+new file mode 100644
+index 0000000..30e6012
+--- /dev/null
++++ b/backend/tests/fixtures/kite_orders_docshape.json
+@@ -0,0 +1,65 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
++ "body": {
++  "status": "success",
++  "data": [
++   {
++    "order_id": "151220000000001",
++    "exchange_order_id": "1300000000000001",
++    "tag": "OT0123456789abcd",
++    "status": "OPEN",
++    "tradingsymbol": "RELIANCE",
++    "exchange": "NSE",
++    "transaction_type": "BUY",
++    "order_type": "LIMIT",
++    "product": "CNC",
++    "quantity": 4,
++    "filled_quantity": 0,
++    "pending_quantity": 4,
++    "price": 2450.0,
++    "trigger_price": 0,
++    "average_price": 0,
++    "validity": "DAY",
++    "order_timestamp": "2026-11-10 09:20:00"
++   },
++   {
++    "order_id": "151220000000002",
++    "exchange_order_id": "1300000000000002",
++    "tag": null,
++    "status": "COMPLETE",
++    "tradingsymbol": "INFY",
++    "exchange": "NSE",
++    "transaction_type": "SELL",
++    "order_type": "MARKET",
++    "product": "MIS",
++    "quantity": 10,
++    "filled_quantity": 10,
++    "pending_quantity": 0,
++    "price": 0,
++    "trigger_price": 0,
++    "average_price": 1512.5,
++    "validity": "DAY",
++    "order_timestamp": "2026-11-10 09:30:00"
++   },
++   {
++    "order_id": "151220000000003",
++    "exchange_order_id": null,
++    "tag": null,
++    "status": "TRIGGER PENDING",
++    "tradingsymbol": "TCS",
++    "exchange": "BSE",
++    "transaction_type": "SELL",
++    "order_type": "SL-M",
++    "product": "CNC",
++    "quantity": 2,
++    "filled_quantity": 0,
++    "pending_quantity": 2,
++    "price": 0,
++    "trigger_price": 3900.0,
++    "average_price": 0,
++    "validity": "DAY",
++    "order_timestamp": "2026-11-10 09:31:00"
++   }
++  ]
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/kite_place_order_docshape.json b/backend/tests/fixtures/kite_place_order_docshape.json
+new file mode 100644
+index 0000000..70ca0a7
+--- /dev/null
++++ b/backend/tests/fixtures/kite_place_order_docshape.json
+@@ -0,0 +1,9 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
++ "body": {
++  "status": "success",
++  "data": {
++   "order_id": "151220000000009"
++  }
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/kite_positions_docshape.json b/backend/tests/fixtures/kite_positions_docshape.json
+new file mode 100644
+index 0000000..3b6194b
+--- /dev/null
++++ b/backend/tests/fixtures/kite_positions_docshape.json
+@@ -0,0 +1,19 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
++ "body": {
++  "status": "success",
++  "data": {
++   "net": [
++    {
++     "tradingsymbol": "INFY",
++     "exchange": "NSE",
++     "product": "MIS",
++     "quantity": 10,
++     "average_price": 1500.0,
++     "last_price": 1510.0
++    }
++   ],
++   "day": []
++  }
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/fixtures/kite_trades_docshape.json b/backend/tests/fixtures/kite_trades_docshape.json
+new file mode 100644
+index 0000000..f591880
+--- /dev/null
++++ b/backend/tests/fixtures/kite_trades_docshape.json
+@@ -0,0 +1,19 @@
++{
++ "_label": "DOC-SHAPED, NOT A RECORDING: invented values in the layout the Kite Connect v3 documentation describes",
++ "body": {
++  "status": "success",
++  "data": [
++   {
++    "trade_id": "10000001",
++    "order_id": "151220000000002",
++    "exchange": "NSE",
++    "tradingsymbol": "INFY",
++    "transaction_type": "SELL",
++    "product": "MIS",
++    "average_price": 1512.5,
++    "quantity": 10,
++    "fill_timestamp": "2026-11-10 09:30:01"
++   }
++  ]
++ }
++}
+\ No newline at end of file
+diff --git a/backend/tests/test_phase11.py b/backend/tests/test_phase11.py
+index 964cde2..241ee05 100644
+--- a/backend/tests/test_phase11.py
++++ b/backend/tests/test_phase11.py
+@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
+ SECRET = "sk-test-0123456789abcdefSECRET"
+ SPEC_NAMES = {"openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini", "finnhub", "alpaca", "fmp", "fred", "eia", "openfigi", "tradier",
+               "telegram", "smtp", "webhook", "kite", "comtrade", "bls", "bea", "census",
+-              "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov"}
++              "companies_house", "marketaux", "etherscan", "aisstream", "opensky", "openfec", "congressgov", "alpaca_paper", "alpaca_live"}
+ 
+ 
+ def mod(name: str):
+diff --git a/backend/tests/test_phase18_orders.py b/backend/tests/test_phase18_orders.py
+new file mode 100644
+index 0000000..31c7f61
+--- /dev/null
++++ b/backend/tests/test_phase18_orders.py
+@@ -0,0 +1,423 @@
++"""Phase 18: the order core (model, mandate, confirm tokens, kill switch, structural mode, ledger). A fake broker stands in for the network.
++
++Nothing here touches the network. Broker-shaped data comes from FakeBroker or from the doc-shaped fixtures (NOT A RECORDING) in test_phase18_brokers.py.
++"""
++
++import pytest
++
++from openterm.ai.audit import AuditLog
++from openterm.db import open_db
++from openterm.orders import mandate as md
++from openterm.orders.brokers.base import Broker
++from openterm.orders.confirm import ConfirmTokens
++from openterm.orders.errors import OrderError
++from openterm.orders.ledger import OrderLedger
++from openterm.orders.model import Order, fingerprint
++from openterm.orders.service import LIVE_PHRASE, OrderService
++
++PAPER, LIVE = "alpaca-paper", "alpaca-live"
++
++
++class FakeBroker(Broker):
++    """In-memory broker. `mode` is what its account reports, like a real adapter's host-derived mode."""
++
++    def __init__(self, bid=PAPER, mode="paper", ready=True, positions=None, fail_submit=None):
++        self.id, self.label, self.mode, self.ready = bid, bid, mode, ready
++        self._positions = positions if positions is not None else []
++        self.fail_submit = fail_submit
++        self.sent, self.cancelled, self.open, self.cancel_all_calls = [], [], [], 0
++
++    def not_ready(self):
++        return None if self.ready else OrderError("key_required", "KEY REQUIRED: set FAKE_KEY in APIKEYS")
++
++    async def account(self):
++        return {"broker": self.id, "id": "FAKE0001", "mode": self.mode, "currency": "USD", "equity": 1.0, "cash": 1.0, "buying_power": 1.0,
++                "status": "ACTIVE", "trading_blocked": False, "host": "fake", "note": ""}
++
++    async def positions(self):
++        return self._positions
++
++    async def open_orders(self):
++        return self.open
++
++    async def fills_today(self):
++        return []
++
++    async def submit(self, order, client_id):
++        if self.fail_submit:
++            raise self.fail_submit
++        self.sent.append((order, client_id))
++        row = {"id": f"B{len(self.sent)}", "client_id": client_id, "symbol": order.symbol, "side": order.side, "qty": order.qty, "status": "NEW"}
++        self.open.append(row)
++        return row
++
++    async def cancel(self, order_id):
++        self.cancelled.append(order_id)
++
++    async def cancel_all(self):
++        self.cancel_all_calls += 1
++        rows = [{"id": o["id"], "ok": True, "detail": "x"} for o in self.open]
++        self.open = []
++        return rows
++
++
++async def quote(symbol):
++    return 100.0, "TEST QUOTE"
++
++
++async def no_quote(symbol):
++    return None, "NO FRESH QUOTE"
++
++
++OPEN_DBS: list = []
++
++
++@pytest.fixture(autouse=True)
++async def close_dbs():
++    yield
++    while OPEN_DBS:
++        await OPEN_DBS.pop().close()
++
++
++async def make(tmp_path, *brokers, price=quote, allow=("AAPL",), **mandate):
++    db = await open_db(tmp_path / "o.db")
++    OPEN_DBS.append(db)
++    svc = OrderService(db, OrderLedger(AuditLog(db)), {b.id: b for b in brokers or [FakeBroker()]}, price)
++    await svc.set_mandate({"symbols": list(allow), "max_shares": 100, "max_notional": 10000, "max_gross": 50000, "max_trades_per_day": 5, **mandate})
++    return svc
++
++
++def body(**kw):
++    return {"broker": PAPER, "symbol": "AAPL", "side": "buy", "qty": 10, "type": "market", "tif": "day", **kw}
++
++
++async def confirmed(svc, **kw):
++    pre = await svc.preview(body(**kw))
++    assert pre["token"], pre["check"]
++    return pre["token"]
++
++
++async def ledger_events(svc):
++    return [e for e in await svc.ledger.audit.entries(500) if e["kind"] == "order"][::-1]
++
++
++# --- model --------------------------------------------------------------------------------------------------------------------------------
++def test_order_validation():
++    o = Order.from_body(body(type="limit", limit_price=190.5, symbol=" aapl "))
++    assert (o.symbol, o.limit_price, o.type) == ("AAPL", 190.5, "limit")
++    for bad in ({"side": "hold"}, {"qty": 0}, {"qty": -1}, {"qty": float("nan")}, {"qty": True}, {"type": "limit"}, {"type": "stop"},
++                {"limit_price": 5}, {"tif": "forever"}, {"symbol": "A B"}, {"broker": "ibkr"}, {"product": "CNC"}, {"qty": 1.0000001}):
++        with pytest.raises(OrderError) as e:
++            Order.from_body(body(**bad))
++        assert e.value.kind == "bad_request", bad
++
++
++@pytest.mark.parametrize("word", ["mode", "live", "paper", "host", "base_url", "environment", "sandbox", "force"])
++def test_a_request_can_never_set_paper_or_live(word):
++    with pytest.raises(OrderError) as e:
++        Order.from_body(body(**{word: "live"}))
++    assert "NEVER SET BY A REQUEST" in str(e.value)
++
++
++def test_kite_orders_need_whole_shares_a_suffix_and_no_gtc():
++    ok = Order.from_body({"broker": "kite", "symbol": "RELIANCE.NS", "side": "buy", "qty": 3, "type": "limit", "limit_price": 2400, "product": "CNC"})
++    assert ok.product == "CNC"
++    for bad in ({"qty": 1.5}, {"symbol": "RELIANCE"}, {"tif": "gtc"}, {"product": "XYZ"}):
++        with pytest.raises(OrderError):
++            Order.from_body({"broker": "kite", "symbol": "RELIANCE.NS", "side": "buy", "qty": 3, **bad})
++
++
++def test_fingerprint_binds_every_field_and_the_mode():
++    o = Order.from_body(body())
++    fp = fingerprint(o, "paper", "A1")
++    assert fp != fingerprint(o, "live", "A1") and fp != fingerprint(o, "paper", "A2")
++    assert fp != fingerprint(Order.from_body(body(qty=11)), "paper", "A1")
++    assert fp == fingerprint(Order.from_body(body()), "paper", "A1")
++
++
++# --- mandate (pure) ---------------------------------------------------------------------------------------------------------------------------
++def m(**kw):
++    return md.parse({"symbols": ["AAPL"], "max_shares": 100, "max_notional": 5000, "max_gross": 10000, "max_trades_per_day": 3, **kw})
++
++
++def names_failed(res):
++    return [c["name"] for c in res["checks"] if not c["ok"]]
++
++
++def test_mandate_passes_and_fails_each_check_alone():
++    o = Order.from_body(body(qty=10))
++    assert md.check(o, m(), 100.0, 0.0, 0.0, 0)["ok"]
++    assert names_failed(md.check(Order.from_body(body(symbol="MSFT")), m(), 100.0, 0.0, 0.0, 0)) == ["SYMBOL ALLOWED"]
++    assert names_failed(md.check(Order.from_body(body(qty=101)), m(max_notional=1e9, max_gross=1e9), 1.0, 0.0, 0.0, 0)) == ["MAX SHARES"]
++    assert names_failed(md.check(Order.from_body(body(qty=60)), m(), 100.0, 0.0, 0.0, 0)) == ["MAX NOTIONAL"]
++    assert names_failed(md.check(o, m(), 100.0, 9500.0, 0.0, 0)) == ["MAX GROSS EXPOSURE"]
++    assert names_failed(md.check(o, m(), 100.0, 0.0, 0.0, 3)) == ["DAILY TRADES"]
++
++
++def test_mandate_boundaries_are_inclusive_and_zero_means_zero():
++    o = Order.from_body(body(qty=50))
++    assert md.check(o, m(), 100.0, 0.0, 0.0, 2)["ok"]  # exactly the notional cap, third trade of three
++    assert not md.check(o, m(max_trades_per_day=0), 100.0, 0.0, 0.0, 0)["ok"]
++    assert not md.check(o, m(max_shares=0), 100.0, 0.0, 0.0, 0)["ok"]
++    assert not md.check(o, md.Mandate(), 100.0, 0.0, 0.0, 0)["ok"]  # the default mandate allows nothing (no symbols)
++
++
++def test_mandate_fails_closed_on_missing_data():
++    o = Order.from_body(body())
++    assert not md.check(o, m(), None, 0.0, 0.0, 0)["ok"]  # no price
++    assert not md.check(o, m(), 100.0, None, None, 0)["ok"]  # positions unreadable
++
++
++def test_gross_exposure_counts_the_position_after_the_order():
++    sell = Order.from_body(body(side="sell", qty=10))
++    # holding 10 (value 1000), gross 9900; selling 10 closes it: 8900 after, fine. Selling 30 flips short 20: 9900 - 1000 + 2000
++    assert md.check(sell, m(max_gross=9000), 100.0, 9900.0, 10.0, 0)["ok"]
++    flip = Order.from_body(body(side="sell", qty=30))
++    assert names_failed(md.check(flip, m(max_gross=10500), 100.0, 9900.0, 10.0, 0)) == ["MAX GROSS EXPOSURE"]
++
++
++def test_mandate_parse_rejects_bad_documents():
++    for bad in ([], {"nope": 1}, {"symbols": "AAPL"}, {"symbols": ["A B"]}, {"max_shares": -1}, {"max_trades_per_day": 1.5}, {"max_notional": float("inf")}):
++        with pytest.raises(OrderError):
++            md.parse(bad)
++
++
++# --- confirm tokens ---------------------------------------------------------------------------------------------------------------------------
++def test_token_is_single_use_exact_and_expires():
++    now = [0.0]
++    t = ConfirmTokens(clock=lambda: now[0], ttl=60)
++    tok, _ = t.issue("fp1")
++    t.consume(tok, "fp1")
++    with pytest.raises(OrderError, match="UNKNOWN, USED OR EXPIRED"):
++        t.consume(tok, "fp1")  # second use
++    tok, _ = t.issue("fp1")
++    with pytest.raises(OrderError, match="DIFFERENT ORDER"):
++        t.consume(tok, "fp2")  # mismatch...
++    with pytest.raises(OrderError):
++        t.consume(tok, "fp1")  # ...burns the token
++    tok, _ = t.issue("fp1")
++    now[0] = 61
++    with pytest.raises(OrderError, match="EXPIRED"):
++        t.consume(tok, "fp1")
++    for none in (None, "", 5):
++        with pytest.raises(OrderError, match="NO CONFIRM TOKEN"):
++            t.consume(none, "fp1")
++
++
++# --- the service: confirm, mandate, kill, mode ---------------------------------------------------------------------------------------------------------
++async def test_submit_needs_a_token_issued_for_exactly_that_order(tmp_path):
++    svc = await make(tmp_path)
++    b = svc.brokers[PAPER]
++    with pytest.raises(OrderError) as e:
++        await svc.submit(body(), None)
++    assert e.value.kind == "confirm_required" and not b.sent
++    tok = await confirmed(svc)
++    with pytest.raises(OrderError, match="DIFFERENT ORDER"):
++        await svc.submit(body(qty=11), tok)  # same token, changed quantity
++    assert not b.sent
++    with pytest.raises(OrderError):
++        await svc.submit(body(), tok)  # the mismatch burned it
++    res = await svc.submit(body(), await confirmed(svc))
++    assert res["mode"] == "paper" and len(b.sent) == 1 and res["client_id"].startswith("OT")
++    assert len(b.sent) == 1
++
++
++async def test_a_used_token_cannot_send_a_second_order(tmp_path):
++    svc = await make(tmp_path)
++    tok = await confirmed(svc)
++    await svc.submit(body(), tok)
++    with pytest.raises(OrderError) as e:
++        await svc.submit(body(), tok)
++    assert e.value.kind == "confirm_required" and len(svc.brokers[PAPER].sent) == 1
++
++
++async def test_preview_gives_no_token_when_the_mandate_refuses(tmp_path):
++    svc = await make(tmp_path)
++    pre = await svc.preview(body(symbol="MSFT"))
++    assert pre["token"] is None and not pre["check"]["ok"] and "SYMBOL ALLOWED" in names_failed(pre["check"])
++    with pytest.raises(OrderError) as e:  # and submit refuses even with a token minted for another order
++        await svc.submit(body(symbol="MSFT"), await confirmed(svc))
++    assert e.value.kind in ("mandate", "confirm_required")
++    assert not svc.brokers[PAPER].sent
++
++
++async def test_market_order_without_a_quote_is_refused(tmp_path):
++    svc = await make(tmp_path, price=no_quote)
++    assert (await svc.preview(body()))["token"] is None
++    assert (await svc.preview(body(type="limit", limit_price=100)))["token"]  # a limit order names its own price
++
++
++async def test_daily_trade_cap_counts_sent_orders(tmp_path):
++    svc = await make(tmp_path, max_trades_per_day=2)
++    for _ in range(2):
++        await svc.submit(body(), await confirmed(svc))
++    pre = await svc.preview(body())
++    assert pre["token"] is None and "DAILY TRADES" in names_failed(pre["check"])
++    with pytest.raises(OrderError):
++        await svc.submit(body(), "whatever")
++    assert len(svc.brokers[PAPER].sent) == 2
++
++
++async def test_a_broker_refusal_still_counts_and_is_ledgered(tmp_path):
++    bad = FakeBroker(fail_submit=OrderError("broker_rejected", "ALPACA: insufficient buying power"))
++    svc = await make(tmp_path, bad)
++    with pytest.raises(OrderError) as e:
++        await svc.submit(body(), await confirmed(svc))
++    assert e.value.kind == "broker_rejected" and await svc.store.trades_today() == 1
++    ev = [x["manifest"]["event"] for x in await ledger_events(svc)]
++    assert ev == ["mandate_changed", "confirm_issued", "submitted", "failed"]
++
++
++async def test_kill_switch_blocks_new_orders_and_cancels_everything(tmp_path):
++    paper, live, off = FakeBroker(), FakeBroker(LIVE, "live"), FakeBroker("kite", "live", ready=False)
++    svc = await make(tmp_path, paper, live, off)
++    await svc.submit(body(), await confirmed(svc))
++    tok = await confirmed(svc)  # a token minted before the kill must be dead after it
++    res = await svc.kill()
++    assert res["kill"]["on"] and paper.cancel_all_calls == 1 and live.cancel_all_calls == 1 and off.cancel_all_calls == 0
++    assert res["brokers"][PAPER]["cancelled"] == 1 and res["brokers"]["kite"]["ok"] is None
++    with pytest.raises(OrderError) as e:
++        await svc.submit(body(), tok)
++    assert e.value.kind == "kill_switch"
++    with pytest.raises(OrderError) as e:
++        await svc.preview(body())
++    assert e.value.kind == "kill_switch"
++    assert (await svc.status())["kill"]["on"]
++    await svc.unkill()
++    assert not (await svc.status())["kill"]["on"]
++    await svc.submit(body(), await confirmed(svc))  # works again after UNKILL
++    assert len(paper.sent) == 2
++
++
++async def test_kill_switch_survives_a_restart(tmp_path):
++    svc = await make(tmp_path)
++    await svc.kill()
++    again = OrderService(svc.db, svc.ledger, svc.brokers, quote)  # a new service on the same database
++    with pytest.raises(OrderError) as e:
++        await again.preview(body())
++    assert e.value.kind == "kill_switch"
++
++
++async def test_kill_reports_a_broker_that_fails_and_still_blocks(tmp_path):
++    class Boom(FakeBroker):
++        async def cancel_all(self):
++            raise OrderError("unavailable", "ALPACA TIMEOUT")
++
++    svc = await make(tmp_path, Boom(), FakeBroker(LIVE, "live"))
++    res = await svc.kill()
++    assert res["brokers"][PAPER]["ok"] is False and "TIMEOUT" in res["brokers"][PAPER]["detail"] and res["brokers"][LIVE]["ok"]
++    assert (await svc.status())["kill"]["on"]
++
++
++async def test_live_is_structural_off_by_default_and_needs_a_typed_phrase(tmp_path):
++    live = FakeBroker(LIVE, "live")
++    svc = await make(tmp_path, FakeBroker(), live)
++    lb = body(broker=LIVE)
++    with pytest.raises(OrderError) as e:
++        await svc.preview(lb)
++    assert e.value.kind == "live_off"
++    with pytest.raises(OrderError, match="TYPE"):
++        await svc.set_live(True, "yes")
++    await svc.set_live(True, LIVE_PHRASE)
++    pre = await svc.preview(lb)
++    assert pre["mode"] == "live" and pre["token"]
++    await svc.submit(lb, pre["token"])
++    assert len(live.sent) == 1
++    await svc.set_live(False, None)
++    with pytest.raises(OrderError) as e:
++        await svc.submit(lb, svc.tokens.issue("x")[0])
++    assert e.value.kind == "live_off"
++
++
++async def test_mode_comes_from_the_broker_not_the_request(tmp_path):
++    """A broker id whose account reports the other mode is refused, and no request field can change what the account reports."""
++    liar = FakeBroker(PAPER, "live")  # 'alpaca-paper' answering with a live account
++    svc = await make(tmp_path, liar)
++    with pytest.raises(OrderError) as e:
++        await svc.preview(body())
++    assert e.value.kind == "mode_mismatch"
++    with pytest.raises(OrderError):
++        await svc.preview(body(mode="paper"))
++    assert not liar.sent
++
++
++async def test_missing_key_gives_key_required_not_a_crash(tmp_path):
++    svc = await make(tmp_path, FakeBroker(ready=False))
++    with pytest.raises(OrderError) as e:
++        await svc.preview(body())
++    assert e.value.kind == "key_required" and "KEY REQUIRED" in str(e.value)
++    row = (await svc.status())["brokers"][0]
++    assert row["ready"] is False and "KEY REQUIRED" in row["message"]
++
++
++async def test_replace_checks_the_mandate_and_cannot_change_symbol(tmp_path):
++    svc = await make(tmp_path)
++    b = svc.brokers[PAPER]
++    await svc.submit(body(type="limit", limit_price=100), await confirmed(svc, type="limit", limit_price=100))
++    oid = b.open[0]["id"]
++    with pytest.raises(OrderError, match="SYMBOL OR THE SIDE"):
++        await svc.preview(body(symbol="MSFT"), replace=oid)
++    with pytest.raises(OrderError) as e:
++        await svc.preview(body(), replace="nope")
++    assert e.value.kind == "not_found"
++    big = await svc.preview(body(qty=500, type="limit", limit_price=100), replace=oid)
++    assert big["token"] is None  # a replace cannot slip past the size cap
++
++
++async def test_import_fills_adds_lots_once_with_broker_and_order_id(tmp_path):
++    class Filled(FakeBroker):
++        async def fills_today(self):
++            return [{"fill_id": "F1", "order_id": "O1", "symbol": "AAPL", "side": "buy", "qty": 10, "price": 189.5, "at": "t", "currency": "USD"},
++                    {"fill_id": "F2", "order_id": "O2", "symbol": "AAPL", "side": "sell", "qty": 4, "price": 195.0, "at": "t", "currency": "USD"}]
++
++    svc = await make(tmp_path, Filled())
++    r = await svc.import_fills(PAPER, "PAPERACCT")
++    assert r["added"] == 2
++    from openterm.portfolio import Portfolios
++
++    p = await Portfolios(svc.db).get("PAPERACCT")
++    (pos,) = p["positions"]
++    assert pos["symbol"] == "AAPL" and pos["qty"] == 6 and pos["cost"] == 189.5 and "order O2" in pos["notes"] and "paper" in pos["notes"]
++    assert (await svc.import_fills(PAPER, "PAPERACCT"))["added"] == 0  # the same fills are never added twice
++
++
++# --- ledger -----------------------------------------------------------------------------------------------------------------------------------
++async def test_every_order_event_is_in_the_verified_hash_chain(tmp_path):
++    svc = await make(tmp_path)
++    await svc.preview(body(symbol="MSFT"))  # refused by the mandate
++    await svc.submit(body(), await confirmed(svc))
++    with pytest.raises(OrderError):
++        await svc.submit(body(), "bogus")
++    await svc.cancel(PAPER, "B1")
++    await svc.kill()
++    await svc.unkill()
++    await svc.set_live(True, LIVE_PHRASE)
++    events = await ledger_events(svc)
++    assert [e["manifest"]["event"] for e in events] == [
++        "mandate_changed", "refused", "confirm_issued", "submitted", "accepted", "refused", "cancel", "kill_on", "kill_cancel_all", "kill_off", "live_on"]
++    assert all(e["kind"] == "order" for e in events)
++    sub = next(e for e in events if e["manifest"]["event"] == "submitted")
++    assert sub["meta"]["order"]["symbol"] == "AAPL" and sub["model"] == "alpaca-paper:paper" and sub["ref"].startswith("OT")
++    assert (await svc.ledger.audit.verify())["ok"]
++
++
++async def test_ledger_never_holds_a_secret_or_a_confirm_token(tmp_path):
++    from openterm import redact
++
++    redact.register(["sk-live-SECRETVALUE123456"])
++    svc = await make(tmp_path, FakeBroker(fail_submit=OrderError("broker_rejected", "ALPACA: bad key sk-live-SECRETVALUE123456")))
++    tok = await confirmed(svc)
++    with pytest.raises(OrderError):
++        await svc.submit(body(), tok)
++    dump = str(await svc.ledger.audit.entries(100))
++    assert "SECRETVALUE" not in dump and tok not in dump
++    redact.unregister(["sk-live-SECRETVALUE123456"])
++
++
++async def test_refusals_are_ledgered_with_their_reason(tmp_path):
++    svc = await make(tmp_path)
++    await svc.kill()
++    with pytest.raises(OrderError):
++        await svc.preview(body())
++    refused = [e for e in await ledger_events(svc) if e["manifest"]["event"] == "refused"]
++    assert refused and refused[0]["meta"]["kind"] == "kill_switch" and "KILL SWITCH" in refused[0]["meta"]["reason"]

@@ -40,6 +40,39 @@ DRIVERS_THEMES = {
     "risk": "risks could adversely affect materially harm supply competition regulation customers dependence",
 }
 
+# `AI FILING <SYM> GUIDANCE` and `AI FILING <SYM> CHAIN`: built like DRIVERS (fixed question, several retrieval themes, same grounding and quote check).
+# The extra system text only narrows what to extract; the quote rules are unchanged.
+GUIDANCE_QUESTION = "What forward-looking guidance, outlook, targets or expected trends does management state in this filing?"
+GUIDANCE_THEMES = {
+    "outlook": "we expect we anticipate outlook going forward next fiscal year expected to continue trends",
+    "plans": "capital expenditures plans liquidity sufficient to fund next twelve months commitments repurchase dividend investment",
+    "targets": "target goal guidance forecast expect revenue growth range approximately fiscal year expect to incur",
+}
+GUIDANCE_SYSTEM = """
+This is a GUIDANCE request. Return only statements in which management itself states an expectation, outlook, plan or target for the future
+(MD&A outlook, liquidity and capital expenditure plans, stated targets, expected trends). Each quote must be management's own forward-looking wording.
+Do not infer, project or compute guidance. If the passages contain no numeric guidance, say so in one point whose quote is the filing's own wording
+about what it expects or does not provide, or return {{"points": []}}. These are statements by management, not forecasts by OpenTerm."""
+
+CHAIN_QUESTION = "What does this filing disclose about the company's supply chain: named suppliers, sole or single sources, customer concentration, manufacturing and geographic dependencies?"
+CHAIN_THEMES = {
+    "suppliers": "suppliers sole source single source limited number of suppliers components outsourcing partners contract manufacturers",
+    "customers": "customers accounted for percent of net sales revenue concentration largest customer distributors resellers",
+    "geography": "manufacturing located facilities Asia China Taiwan geographic concentration logistics tariffs supply disruption risk",
+}
+CHAIN_SYSTEM = """
+This is a SUPPLY CHAIN request. Return only what this filing itself discloses: named suppliers or manufacturers, single-source or sole-source
+dependencies, customer concentration (named customers, share of revenue), manufacturing or geographic dependencies and the related risk factors.
+Never add a supplier, customer or partner from outside the passages. If the passages name no counterparties, say so in one point quoting the closest
+wording (for example a limited number of suppliers without names), or return {{"points": []}}."""
+
+# mode -> (question, themes, extra system text). "drivers" keeps its original constants.
+PRESETS = {
+    "drivers": (DRIVERS_QUESTION, DRIVERS_THEMES, ""),
+    "guidance": (GUIDANCE_QUESTION, GUIDANCE_THEMES, GUIDANCE_SYSTEM),
+    "chain": (CHAIN_QUESTION, CHAIN_THEMES, CHAIN_SYSTEM),
+}
+
 # Words that carry no meaning for ranking (the shared document stop list plus question filler).
 FILLER = STOP | {"about", "company", "its", "their", "which", "has", "have", "had", "been", "any", "into", "per", "say", "says", "tell",
                  "me", "does", "according", "filing", "report", "latest", "main", "key", "there", "it", "be", "as", "not", "can", "will"}
@@ -244,9 +277,11 @@ Rules:
 - If the passages do not answer the question, return {{"points": []}}. Never use knowledge from outside the passages."""
 
 
-def build_messages(symbol: str, form: str, filed: str, question: str, hits: list[Hit], today: str) -> list[dict]:
+def build_messages(symbol: str, form: str, filed: str, question: str, hits: list[Hit], today: str, extra: str = "") -> list[dict]:
     body = "\n\n".join(f"[{h.pid}] {h.section}\n{h.text}" for h in hits)
     system = FILING_SYSTEM.format(today=today, symbol=symbol, form=form, filed=filed, max_points=MAX_POINTS)
+    if extra:
+        system += extra.format()
     return [{"role": "system", "content": system}, {"role": "user", "content": f"Question: {question}\n\nPassages:\n\n{body}"}]
 
 

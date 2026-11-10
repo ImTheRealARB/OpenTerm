@@ -118,6 +118,36 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Open portfolio", key: "Enter", when: "noargs", title: "Open the selected portfolio (Enter)" },
     { label: "Delete portfolio", key: "x", when: "noargs", title: "Delete the selected portfolio: press twice to confirm (X)" },
   ],
+  SYNC: [
+    { label: "Sync Kite", key: "k", title: "Read Zerodha Kite holdings into PORT (K)" },
+    { label: "Sync IBKR", key: "i", title: "Read Interactive Brokers positions into PORT (I)" },
+    { label: "Reload", key: "r", title: "Reload the last-sync status (R)" },
+  ],
+  JRNL: [
+    { label: "Round trips", key: "1", title: "FIFO round trips (1)" },
+    { label: "Stats", key: "2", title: "Statistics (2)" },
+    { label: "Findings", key: "3", title: "Behaviour findings: heuristics over your own history (3)" },
+    { label: "Shadow", key: "4", title: "Shadow Account: your entries with one fixed exit rule (4)" },
+    { label: "Import", key: "i", title: "Import a trades file (I)" },
+    { label: "Currency", key: "c", title: "Next currency (C)" },
+    { label: "Run shadow", key: "s", bandHidden: true, title: "Run the Shadow Account job (S, in the Shadow view)" },
+    { label: "Reload", key: "r", title: "Reload (R)" },
+  ],
+  ORD: [
+    { label: "Edit ticket", key: "e", title: "Edit the ticket: symbol, quantity, price (E)" },
+    { label: "Broker", key: "b", title: "Cycle paper / Alpaca live / Kite live (B)" },
+    { label: "Side", key: "s", bandHidden: true, title: "Buy or sell (S)" },
+    { label: "Type", key: "t", bandHidden: true, title: "Market, limit or stop (T)" },
+    { label: "Review", key: "Enter", title: "Review the order: mandate check and a one-time confirm token (Enter)" },
+    { label: "Send paper", key: "y", title: "Send the reviewed PAPER order (Y). A live order is confirmed by typing its symbol" },
+    { label: "KILL", key: "x", title: "Kill switch: cancel every open order and block new ones (X)" },
+    { label: "Release", key: "u", bandHidden: true, title: "Release the kill switch (U)" },
+    { label: "Live on/off", key: "l", title: "Switch live orders on (typed phrase) or off (L)" },
+    { label: "Mandate", key: "m", title: "Edit the mandate: symbols and limits (M)" },
+    { label: "Cancel order", key: "c", title: "Cancel the selected open order (C; Up/Down select)" },
+    { label: "Fills to PORT", key: "i", bandHidden: true, title: "Add today's fills to a portfolio (I)" },
+    { label: "Reload", key: "r", bandHidden: true, title: "Reload the blotter and ledger (R)" },
+  ],
   BT: [
     { label: "Run again", key: "r", title: "Run the backtest again (R)" },
     { label: "Cancel", key: "x", title: "Cancel the running backtest (X)" },
@@ -130,9 +160,16 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Monte Carlo", key: "m", title: "Monte Carlo robustness check (M)" },
     { label: "Walk-forward", key: "w", title: "Walk-forward validation (W)" },
     { label: "Pine", key: "p", title: "Export as a Pine script (P)" },
+    { label: "MT5", key: "q", title: "Export as a MetaTrader 5 Expert Advisor, rule strategies (Q)" },
+    { label: "PDF", key: "d", title: "Export a PDF report of this run (D)" },
+    { label: "Excel", key: "b", title: "Export an Excel workbook of this run (B)" },
     // Only in the strategy editor (BT EDIT <name>). The panel handles T only while the code box is not focused,
     // and a press from this button moves focus to the panel first, so it works from the mouse too.
     { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },
+  ],
+  // Third-party extensions: L shows the list from an extension panel; Enter / D on a list row enable / disable it (the panel's own keys).
+  EXT: [
+    { label: "List", key: "l", title: "Show the installed extensions (L)", when: "args" },
   ],
 };
 
