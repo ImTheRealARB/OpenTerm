@@ -1,13 +1,14 @@
 # Handoff
 
-Last updated 2026-11-10 (end of session). Live branch: `claude/admiring-archimedes-7ibeha`; the older copy of this file on
-`claude/gifted-galileo-w6y22a` is superseded.
+Last updated 2026-11-10 (end of session). Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
+from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and `claude/admiring-archimedes-7ibeha` are superseded.
 
 ## Resume here
 
-Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that is marked MERGED). Push there only; no PR unless asked.
+Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
+session's designated branch and open a PR only when the owner asks.
 
-**Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED** on `claude/admiring-archimedes-7ibeha` and pushed.
+**Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`.**
 - Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39
   (tick to pixel p95 42.2 ms). Docs done: CHANGELOG, ROADMAP, FEATURE_GAP, PERFORMANCE, README badge, RELEASE_NOTES, DESKTOP.
 - Local runs in this container need the preinstalled Chromium (`/opt/pw-browsers/chromium`): pass it as `executablePath` in a
@@ -17,9 +18,8 @@ Live branch: `claude/admiring-archimedes-7ibeha` (main + every patch below that 
   NSE MCP presets live-checked with the owner's approval (results in docs/MCP.md): 9 of 10 allowed tools answered, 1 got
   NSE's 403 from the cloud machine.
 - **What is left (owner decisions of 2026-11-10, end of session):**
-  1. **Merge to main.** Everything is on `claude/admiring-archimedes-7ibeha`, not on `main` yet. Open a PR from it (the owner asks
-     for one) and merge.
-  2. **First release `v0.1.0`.** After the merge, tag `main` `v0.1.0` (the app version in `desktop/package.json` and
+  1. ~~Merge to main~~: done (PR #40).
+  2. **First release `v0.1.0`.** Tag `main` `v0.1.0` (the app version in `desktop/package.json` and
      `tauri.conf.json` is already 0.1.0; `release.yml` refuses a tag that does not match) and push the tag. GitHub builds Linux,
      Windows and macOS into a DRAFT release; review and publish it. This workflow has never run, so check its logs the first time.
   3. **Updater signing key: later.** `npx tauri signer generate`, then the secrets `TAURI_SIGNING_PRIVATE_KEY` (+ password) in
