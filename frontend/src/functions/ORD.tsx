@@ -178,7 +178,7 @@ export default function ORD({ panelId, args }: FunctionProps) {
       if (kind === "live") {
         const on = !st?.live_enabled;
         await ordersApi.setLive(on, on ? editText : undefined);
-        setMsg({ text: on ? "LIVE ORDERS ARE ON: REAL MONEY" : "LIVE ORDERS ARE OFF", cls: on ? "err" : "up" });
+        setMsg({ text: on ? "LIVE ORDERS ARE ON: REAL MONEY" : "LIVE ORDERS ARE OFF", cls: on ? "warn" : "up" });
       } else if (kind === "mandate" && st) {
         const m = parseMandate(editText, st.mandate);
         if ("error" in m) return setMsg({ text: m.error, cls: "warn" });

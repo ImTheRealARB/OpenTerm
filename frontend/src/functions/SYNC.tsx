@@ -138,7 +138,7 @@ function BrokerBlock({ broker, st, fresh, failure, busy, now, target, fallback }
           <div>{countsLine(rec)}</div>
           {rec.diff && (noDifference(rec.diff) ? <div className="dim">NO DIFFERENCE FROM THE PREVIOUS SYNC</div> : <div className="dim">DIFFERENCE FROM THE PREVIOUS SYNC</div>)}
           {diffLines(rec.diff).map((l) => (
-            <div key={l} className={l.startsWith("+") ? "up" : l.startsWith("-") ? "err" : ""}>{l}</div>
+            <div key={l} className={l.startsWith("+") ? "up" : l.startsWith("-") ? "warn" : ""}>{l}</div>
           ))}
           {rec.conflicts.map((c) => (
             <div key={c} className="warn">CONFLICT {c}</div>

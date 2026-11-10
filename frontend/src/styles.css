@@ -228,16 +228,16 @@ h2 { font-size: inherit; font-weight: bold; color: var(--val); background: var(-
 
 /* ORD (Phase 18): the paper / live banner must be impossible to miss; live is red and heavy, paper is calm. */
 .ord-banner { padding: 2px 6px; margin: 2px 0; font-weight: bold; letter-spacing: 0.08em; }
-.ord-paper { background: var(--up); color: var(--bg); }
-.ord-live { background: var(--err); color: var(--bg); text-transform: uppercase; animation: none; }
+.ord-paper { background: var(--bar-hi, var(--bar)); color: var(--val); border: 1px solid var(--line); } /* calm: --up is only for prices that went up (DESIGN.md) */
+.ord-live { background: var(--warn); color: var(--bg); text-transform: uppercase; animation: none; } /* a hazard, not an error: --err stays for errors only */
 .ord-ticket { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
-.ord-in { background: var(--bg); color: var(--fg); border: 1px solid var(--fg-dim); font: inherit; padding: 0 4px; text-transform: uppercase; }
+.ord-in { background: var(--field); color: var(--field-fg); border: 1px solid var(--field); font: inherit; padding: 0 4px; text-transform: uppercase; }
 .ord-in:focus { border-color: var(--accent); }
 .ord-btn { border: 1px solid var(--fg-dim); padding: 0 8px; cursor: pointer; }
 .ord-btn:disabled { opacity: 0.4; cursor: default; }
-.ord-btn-live { border-color: var(--err); color: var(--err); }
+.ord-btn-live { border-color: var(--warn); color: var(--warn); }
 .ord-review { border: 1px solid var(--fg-dim); padding: 2px 6px; margin: 4px 0; }
-.ord-live-box { border: 2px solid var(--err); }
+.ord-live-box { border: 2px solid var(--warn); }
 .ord-edit { margin: 4px 0; }
 .ord-h { margin-top: 6px; }
-.ord-sel { background: var(--menu); color: var(--menu-fg); }
+.ord-sel { background: var(--sel); color: var(--val); }
