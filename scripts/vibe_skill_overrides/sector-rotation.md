@@ -1,0 +1,81 @@
+---
+name: sector-rotation
+description: Sector rotation analysis: sector business-cycle scoring, sector momentum ranking, supply-chain transmission, and valuation, earnings and flow comparison, ending in overweight and underweight calls.
+category: asset-class
+port_note: Translated from Chinese. The Shenwan industry list, A-share ETF codes, northbound-flow and policy-driven notes replaced by the 11 GICS sectors and US sector ETFs; framework, scoring and signals kept.
+---
+# Sector Rotation Analysis
+
+## Overview
+
+Compare sectors on four dimensions: business-cycle strength (score), momentum, valuation and flows, then give overweight, market-weight or underweight calls. Express the view with sector ETFs (for example the SPDR sector funds) rather than single stocks to avoid stock-specific risk.
+
+## Sector map (GICS, 11 sectors)
+
+| Group | Sectors | ETF example |
+|---|---|---|
+| Upstream, cyclical | Energy, Materials | XLE, XLB |
+| Midstream, industrial | Industrials | XLI |
+| Consumer | Consumer Discretionary, Consumer Staples, Health Care | XLY, XLP, XLV |
+| Technology and communication | Information Technology, Communication Services | XLK, XLC |
+| Financial and property | Financials, Real Estate | XLF, XLRE |
+| Defensive and utilities | Utilities | XLU |
+
+| Type | Sectors | Traits | Drivers |
+|---|---|---|---|
+| Strong cycle | Energy, Materials, Industrials | Volatile earnings, tied to the macro cycle | PMI, commodity prices, capex |
+| Weak cycle | Staples, Health Care, Utilities | Stable earnings, defensive | Inflation, consumer data |
+| Growth | Technology, Communication | High PE and growth, sensitive to rates and regulation | Adoption, capex, policy |
+| Financial | Banks, insurers | Spread driven, positively linked to rates | Rates, credit, loan growth |
+
+## Cycle scoring (100 points)
+
+| Dimension | Weight | Indicator | Scoring rule |
+|---|---|---|---|
+| Earnings growth | 30% | Net income year over year | above 30% = 30; 15% to 30% = 22; 0% to 15% = 15; negative = 5 |
+| Earnings trend | 20% | Quarters of acceleration | 3+ quarters = 20; 2 = 14; slowing = -5 |
+| Cycle indicators | 20% | PMI, utilisation, prices | high and rising = 20; high and falling = 12; low = 5 |
+| Policy | 15% | Policy support | clearly favourable = 15; neutral = 8; adverse = 2 |
+| Valuation safety | 15% | PE percentile versus own history | below 30th percentile = 15; 30th to 50th = 10; above 70th = 3 |
+
+Upturn signals (overweight): sector PMI above 50 for 2 months and improving; leader orders or revenue accelerating; product prices rising; utilisation above 80% and rising; policy catalysts (subsidies, onshoring). Downturn signals (underweight): PMI below 50 for 2 months; inventory days rising; prices falling; overcapacity (utilisation below 60%); tighter regulation or procurement.
+
+## Momentum ranking
+
+Price momentum: cumulative return over a lookback (for example 60 days) skipping the latest few days (for example 5) to avoid short-term reversal, then rank sectors. Get prices with `history` for each sector ETF.
+
+Earnings momentum: change in year-on-year ROE this quarter minus last quarter; positive means accelerating (overweight signal), negative means decelerating.
+
+Composite rank: `0.4 x price momentum rank + 0.3 x earnings momentum rank + 0.3 x flow rank`; overweight the top 3 to 5 sectors and underweight the bottom 3 to 5. Test the rule with `backtest_run` before trusting it.
+
+## Supply-chain transmission
+
+Upstream (raw materials) to midstream (manufacturing) to downstream (consumer or end use). Examples: batteries (lithium to cathode material to cells to electric vehicles: a lithium price rise lifts cost and squeezes carmaker margins); semiconductors (equipment and materials to wafers to packaging to consumer electronics: phone demand drives packaging orders, then fab utilisation, then equipment capex); housing (land and financing to development to sales: easier policy lifts sales first, then starts, then land purchases).
+
+| Pattern | Meaning | Investment implication |
+|---|---|---|
+| Demand flows bottom-up | End demand drives midstream orders and upstream materials | A demand turning point shows downstream first |
+| Cost flows top-down | Upstream price rises hit midstream cost, then downstream prices | Upstream price rise helps upstream, hurts midstream |
+| Inventory cycle | Active restocking, passive restocking, active destocking, passive destocking | Passive destocking is the buying point |
+| Lead and lag | Upstream leads midstream by 1 to 2 quarters, midstream leads downstream | Position early for the next link |
+
+## Comparison framework
+
+Valuation: P/E (distorted for cyclicals; a low P/E can be a peak); P/B (better for banks, property, cyclicals); P/E percentile versus 5 years; PEG (below 1 cheap, above 2 expensive); dividend yield (high yield means defensive).
+
+Earnings: ROE, change in ROE, gross margin (competitive structure), net income growth, cash flow to net income (quality).
+
+Flows: ETF net creations (institutional allocation, use `etf` and `history`), fund and 13F positioning changes (`holders`), short interest (`research` fn `si`), options positioning (`options_chain`).
+
+## Output format
+
+Cycle ranking of the top sectors (rank, sector, score, change, core reason); allocation table (overweight, market weight, underweight with suggested weights and reasons); supply-chain opportunities; risks. State the data date and the tools behind each number.
+
+## Cautions
+
+1. Cyclical valuation trap: a low P/E can mark peak earnings; use P/B or normalised earnings.
+2. Policy and regulation can dominate: a policy turn matters more than a fundamental turn.
+3. Thematic hype (for example an AI theme) can distort sector momentum: separate theme from earnings cycle.
+4. Reported earnings lag by 1 to 2 months; high-frequency data (PMI, utilisation, prices) is timelier.
+5. Prefer sector ETFs to single stocks for sector exposure.
+6. Do not rotate too often: monthly or quarterly review is enough.
