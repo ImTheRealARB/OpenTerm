@@ -460,7 +460,7 @@ parameter so none is a cache hit. Data: SYN names in fixture + synthetic mode, a
 | PORT OPT HRP, 20 names, p95 | 400 ms | 12.8 ms | n=12, `rf` varies |
 | PORT OPT RP, 20 names, p95 | 400 ms | 33.2 ms | n=12, `rf` varies |
 | CORR REGIME, 20 names x 2 years, p95 | 300 ms | 90.9 ms | n=12, `edge` varies |
-| ALPHA, SYN 100 names x 2 years, all 29 factors | 8000 ms | 1289.9 ms | n=3 (slowest), `h` varies, after one warm-up scan |
+| ALPHA, SYN 100 names x 2 years, the 29 `core` factors (the default family) | 8000 ms | 1289.9 ms | n=3 (slowest), `h` varies, after one warm-up scan |
 
 **Result (2026-10-18): 28 of 29 pass.** The one miss is the old BT 10-year rule run: 322.9 ms against 300. The same bench on the Phase 14 commit
 (`edb3292`) read **322.3 ms** on the same machine the same hour (a rested run, nothing else running), so the miss is the machine reading slower today than in
