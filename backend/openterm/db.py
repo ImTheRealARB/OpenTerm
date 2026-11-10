@@ -73,7 +73,7 @@ MIGRATIONS: list[str | list[str]] = [
     ],
     # 17: optional prompt / answer text of AI runs (`ai.storeText`), keyed by ledger seq. A side table: the ledger hash never covers it, so purging text keeps the chain valid
     "CREATE TABLE ai_ledger_text (seq INTEGER PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL, stored_at REAL NOT NULL)",
-    # 18 here (MUST become 19 after orders' 18): trade journal (JRNL). dkey is the de-duplication key (a broker trade id, or a hash of the fill); time is the file's wall clock
+    # 18: trade journal (JRNL). dkey is the de-duplication key (a broker trade id, or a hash of the fill); time is the file's wall clock
     [
         (
             "CREATE TABLE journal_trades (id INTEGER PRIMARY KEY AUTOINCREMENT, dkey TEXT NOT NULL UNIQUE, ts REAL NOT NULL, time TEXT NOT NULL,"

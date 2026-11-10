@@ -1,4 +1,4 @@
-"""SQLite store for the journal (tables `journal_trades`, `journal_imports`; migration 18 here, 19 after merge) and the analysis built from it."""
+"""SQLite store for the journal (tables `journal_trades`, `journal_imports`; migration 18) and the analysis built from it."""
 
 from __future__ import annotations
 
