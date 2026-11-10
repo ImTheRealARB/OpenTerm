@@ -112,8 +112,8 @@ Both are unofficial community projects, not affiliated with or endorsed by NSE I
 
 | Project | Run as | Licence |
 |---|---|---|
-| [stock-nse-india](https://github.com/hi-imcodeman/stock-nse-india) (hi-imcodeman) | `npx -y stock-nse-india mcp` | MIT |
-| [nse-mcp](https://github.com/jugaad-py/nse-mcp) (jugaad-py), built on jugaad-data | `uvx nse-mcp` | see its repository (not verified here) |
+| [stock-nse-india](https://github.com/hi-imcodeman/stock-nse-india) (hi-imcodeman) | `npx -y stock-nse-india mcp` | MIT (LICENSE in the repository, checked 2026-11-10) |
+| [nse-mcp](https://github.com/jugaad-py/nse-mcp) (jugaad-py), built on jugaad-data | `uvx nse-mcp` | **No licence stated** (no LICENSE file in the repository, no licence field on PyPI 0.1.1; checked 2026-11-10). Without a licence all rights are reserved by default: OpenTerm only names it as an opt-in preset and never bundles, copies or redistributes it. |
 
 Other runtime dependencies (React, FastAPI, httpx, orjson, aiosqlite, apscheduler, websockets, keyring, XlsxWriter) are MIT, BSD or
 Apache-2.0 packages used unmodified through their package managers; their licences ship inside `node_modules/` and the

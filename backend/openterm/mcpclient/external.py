@@ -66,7 +66,7 @@ PRESETS: dict[str, Preset] = {p.name: p for p in (
     Preset("stock-nse-india", "stock-nse-india", "npx", ("-y", "stock-nse-india", "mcp"), "Node.js (npx)", "github.com/hi-imcodeman/stock-nse-india", "MIT",
            ("get_equity_details", "get_equity_historical_data", "get_equity_option_chain", "get_index_option_chain", "get_market_status",
             "get_gainers_and_losers_by_index")),
-    Preset("nse-mcp", "nse-mcp", "uvx", ("nse-mcp",), "uv (uvx)", "github.com/jugaad-py/nse-mcp", "see the repository (built on jugaad-data)",
+    Preset("nse-mcp", "nse-mcp", "uvx", ("nse-mcp",), "uv (uvx)", "github.com/jugaad-py/nse-mcp", "NO LICENCE STATED: no LICENSE file in the repository and none on PyPI, checked 2026-11-10, so all rights are reserved by default; built on jugaad-data",
            ("stock_quote", "stock_history", "index_option_chain", "market_status")),
 )}
 
