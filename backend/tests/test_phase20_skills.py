@@ -318,7 +318,7 @@ def test_chinese_reference_files_are_ported_from_their_english_translations():
     # elliott-wave, harmonic and ichimoku have Chinese `references/`; the English translations in vibe_skill_overrides/references/<skill>/ become
     # `## Reference: ...` sections, and no Chinese text and no "not included" note is left in the playbook.
     wanted = {"elliott-wave": ["fibonacci wave relationships", "wave structure"], "harmonic": ["prz trading", "xabcd patterns"],
-              "ichimoku": ["five line calculation", "signal system"]}
+              "ichimoku": ["five line calculation", "signal system"], "smc": ["break of structure", "order blocks and fvg"]}
     for name, titles in wanted.items():
         text = skills.get(name)
         for t in titles:

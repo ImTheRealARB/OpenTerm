@@ -482,7 +482,7 @@ def skipped_doc(skipped: list[Result], ported: list[Result], total: int) -> str:
 def third_party_row() -> str:
     return (f"| `openterm/ai/skills/*.md` (ported ones start with `<!-- {MARK}`) | `agent/src/skills/<name>/SKILL.md` and its English `references/*.md` "
             f"(frontmatter dropped; shell, file and Vibe-only tool steps cut; Vibe tool names renamed to OpenTerm tools, web steps marked opt-in; one header comment added; "
-            f"Chinese-language skills, and the Chinese `references/*.md` of elliott-wave, harmonic and ichimoku, ported from English translations in `scripts/vibe_skill_overrides/`; "
+            f"Chinese-language skills, and the Chinese `references/*.md` of elliott-wave, harmonic, ichimoku and smc, ported from English translations in `scripts/vibe_skill_overrides/`; "
             f"list in `docs/PHASE_20_SKIPPED.md`) | {SOURCE} @ `{COMMIT}` | MIT. NOTICE: \"Vibe-Trading, Copyright 2026 HKUDS contributors. "
             f"This product includes software developed at HKUDS (https://github.com/HKUDS).\" |")
 
