@@ -22,7 +22,13 @@ session's designated branch and open a PR only when the owner asks.
    v0.1.0" (not published; the owner publishes): https://github.com/ImTheRealARB/OpenTerm/releases (draft URL
    `.../releases/tag/untagged-c4bd050b3216247fc1ca`). Assets: `OpenTerm_0.1.0_aarch64.dmg`, `OpenTerm_0.1.0_x64.dmg`,
    `OpenTerm_0.1.0_amd64.deb`, `OpenTerm_0.1.0_x64_en-US.msi`.
-   **Gaps found (NOT fixed):** (a) the NSIS `OpenTerm_0.1.0_x64-setup.exe` was BUILT (log: 83.65 MiB) but never uploaded;
+   **UPDATE (owner said "fix uploads"):** root cause = tauri-action v0.5.17 attached ONE installer per job (Linux built
+   AppImage + deb, uploaded only the deb; Windows built setup.exe + msi, uploaded only the msi). The macOS `.app.tar.gz` is
+   an updater-only file, absent by design without the signing key. **PR #47 MERGED** (`2f9d882`): a step after
+   tauri-action runs `gh release upload --clobber` on every installer, and `uploadUpdaterJson` -> `includeUpdaterJson`.
+   The first draft was DELETED and `v0.1.0` MOVED to `2f9d882`; new release run `43733121873` (check it: all 4 jobs
+   green and the draft lists setup.exe, msi, AppImage, deb, two dmg). The old notes below describe the first run.
+   **Gaps found in the first run:** (a) the NSIS `OpenTerm_0.1.0_x64-setup.exe` was BUILT (log: 83.65 MiB) but never uploaded;
    the Linux AppImage and the macOS `.app.tar.gz` are missing too. tauri-action v0.5.17 logged only "Uploading ...msi".
    Cause not found. Simplest robust fix: a step after tauri-action that runs `gh release upload` on the bundle folder
    (needs a re-run: delete the draft, move the tag). (b) `release.yml` passes `uploadUpdaterJson`, which tauri-action does
