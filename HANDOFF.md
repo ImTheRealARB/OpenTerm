@@ -26,8 +26,13 @@ session's designated branch and open a PR only when the owner asks.
    AppImage + deb, uploaded only the deb; Windows built setup.exe + msi, uploaded only the msi). The macOS `.app.tar.gz` is
    an updater-only file, absent by design without the signing key. **PR #47 MERGED** (`2f9d882`): a step after
    tauri-action runs `gh release upload --clobber` on every installer, and `uploadUpdaterJson` -> `includeUpdaterJson`.
-   The first draft was DELETED and `v0.1.0` MOVED to `2f9d882`; new release run `43733121873` (check it: all 4 jobs
-   green and the draft lists setup.exe, msi, AppImage, deb, two dmg). The old notes below describe the first run.
+   Run 2 (`43733121873`, tag on `2f9d882`) FAILED on macOS: bash 3.2 there has no `globstar` ("shopt: globstar: invalid
+   shell option name"). **PR #48 MERGED** (`c637f68`): the step lists installers with `find` (tested on a fake tree).
+   Run 2 cancelled, its draft deleted, **`v0.1.0` now on `c637f68`, run 3 = `43733799577`.** NEXT SESSION: check run 3:
+   all 4 jobs green AND the draft lists `*-setup.exe`, `.msi`, `.AppImage`, `.deb`, two `.dmg`. If a job fails: fix on a
+   branch + PR, merge, delete the draft (`gh release delete v0.1.0 --yes`), move the tag (`git push origin --delete
+   v0.1.0`, `git tag -d v0.1.0`, re-tag main, push). The owner approved fixing the uploads this way. Never publish.
+   The old notes below describe the first run.
    **Gaps found in the first run:** (a) the NSIS `OpenTerm_0.1.0_x64-setup.exe` was BUILT (log: 83.65 MiB) but never uploaded;
    the Linux AppImage and the macOS `.app.tar.gz` are missing too. tauri-action v0.5.17 logged only "Uploading ...msi".
    Cause not found. Simplest robust fix: a step after tauri-action that runs `gh release upload` on the bundle folder
