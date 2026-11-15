@@ -36,14 +36,26 @@ def no_tesseract(monkeypatch):
     monkeypatch.setattr(doc.shutil, "which", lambda name: None)
 
 
+def install_fake_tesseract(bin_dir, body: str, monkeypatch) -> None:
+    """Put a fake `tesseract` program (the Python `body`) first on PATH.
+    POSIX runs a `#!` script directly. Windows cannot run `#!` scripts (subprocess raises OSError), so there the body
+    goes into tesseract.py and a tesseract.cmd wrapper (found through PATHEXT) runs it with this Python."""
+    bin_dir.mkdir(exist_ok=True)
+    if os.name == "nt":
+        (bin_dir / "tesseract.py").write_text(body, encoding="utf-8")
+        (bin_dir / "tesseract.cmd").write_text(f'@"{sys.executable}" "%~dp0tesseract.py" %*\r\n', encoding="utf-8")
+    else:
+        exe = bin_dir / "tesseract"
+        exe.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+        exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ["PATH"])
+
+
 @pytest.fixture
 def fake_tesseract(tmp_path, monkeypatch):
-    """A script named `tesseract` first on PATH: reads the PGM from stdin and prints one line saying how big the page was."""
-    exe = tmp_path / "bin" / "tesseract"
-    exe.parent.mkdir()
-    exe.write_text(f"#!{sys.executable}\nimport sys\nd = sys.stdin.buffer.read()\nassert d.startswith(b'P5')\nprint('Scanned revenue was 42 million, page of', len(d), 'bytes')\n")
-    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
-    monkeypatch.setenv("PATH", str(exe.parent) + os.pathsep + os.environ["PATH"])
+    """A fake `tesseract` first on PATH: reads the PGM from stdin and prints one line saying how big the page was."""
+    body = "import sys\nd = sys.stdin.buffer.read()\nassert d.startswith(b'P5')\nprint('Scanned revenue was 42 million, page of', len(d), 'bytes')\n"
+    install_fake_tesseract(tmp_path / "bin", body, monkeypatch)
 
 
 def test_scanned_pdf_without_tesseract_says_how_to_install_it(no_tesseract):
@@ -78,14 +90,10 @@ def test_missing_renderer_names_the_optional_extra(fake_tesseract, monkeypatch):
 
 
 def test_tesseract_failure_and_empty_output_are_errors_not_empty_documents(tmp_path, renderer, monkeypatch):
-    exe = tmp_path / "bin" / "tesseract"
-    exe.parent.mkdir()
-    exe.write_text(f"#!{sys.executable}\nimport sys\nsys.stderr.write('boom')\nsys.exit(3)\n")
-    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
-    monkeypatch.setenv("PATH", str(exe.parent) + os.pathsep + os.environ["PATH"])
+    install_fake_tesseract(tmp_path / "bin", "import sys\nsys.stderr.write('boom')\nsys.exit(3)\n", monkeypatch)
     with pytest.raises(ValueError, match="TESSERACT FAILED ON PAGE 1: boom"):
         doc.extract_text("scan.pdf", scanned_pdf())
-    exe.write_text(f"#!{sys.executable}\nimport sys\nsys.stdin.buffer.read()\n")
+    install_fake_tesseract(tmp_path / "bin", "import sys\nsys.stdin.buffer.read()\n", monkeypatch)
     with pytest.raises(ValueError, match="OCR FOUND NO TEXT"):
         doc.extract_text("scan.pdf", scanned_pdf())
 
