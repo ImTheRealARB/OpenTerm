@@ -8,6 +8,18 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
 session's designated branch and open a PR only when the owner asks.
 
+**Update 2026-11-15 (branch `claude/openterm-v0-1-0-testing-f934c4`, commit `4c7a7a4`, pushed, NO PR yet):**
+- Checked: tag `v0.1.0` is NOT on GitHub, no release exists, `release.yml` has never run.
+- Pre-fixed a sure Windows failure: `tauri-build` stops with "`icons/icon.ico` not found" and the repo had only a 256 px
+  `icon.png`. Generated the desktop icon set (`32x32`, `128x128`, `128x128@2x`, `icon.icns`, `icon.ico`) with
+  `npx tauri icon` and listed them in `tauri.conf.json`. Not compiled here (no Rust on the owner's Windows machine).
+  **This must reach `main` before the tag is pushed**, or the tagged commit lacks the fix.
+- Live AI tests (step 6 below): waiting for the owner to enter `OPENCODE_API_KEY` in APIKEYS (Claude may not type a real key)
+  and to approve spending Go quota on AI, AI AUTO, SWARM and AI BT CODE.
+- Bench on GitHub CI: "BT 10-year daily rule run p95" read 300.0 / 298.2 / 233.5 ms (budget 300) on the last runs
+  (`42905425073` main, `42918339742`, `42916274254`). p95 of n=12 is in effect the slowest run. Proposed, not done: split
+  queue/dispatch vs engine time from the job timestamps, raise n, then decide between a speed fix and a CI-only budget.
+
 **Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`. Next: the owner pushes tag `v0.1.0` (step 2 below).**
 - Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39
   (tick to pixel p95 42.2 ms). Docs done: CHANGELOG, ROADMAP, FEATURE_GAP, PERFORMANCE, README badge, RELEASE_NOTES, DESKTOP.
