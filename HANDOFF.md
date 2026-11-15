@@ -8,6 +8,12 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
 session's designated branch and open a PR only when the owner asks.
 
+**RELEASE SESSION 2026-11-15 evening (local, branch `claude/openterm-v0-1-0-release-d0dda1`; owner's 7-step list):**
+1. DONE: PR #45 merged (`82ca963` = main HEAD). Main folder pulled to `82ca963`. Its old untracked HANDOFF.md and its
+   CLAUDE.md are backed up in `Documents\OpenTerm-local-backup-2026-11-15`. `.worktreeinclude` already listed only
+   `CLAUDE.md`; `.git/info/exclude` has no HANDOFF line. Main's CLAUDE.md was already the newest copy (same hash).
+2. IN PROGRESS: full local gates on `82ca963` (port 8000 was free: the owner's app was not running).
+
 **Update 2026-11-15 (branch `claude/openterm-v0-1-0-testing-f934c4`, commit `4c7a7a4`, pushed, NO PR yet):**
 - Checked: tag `v0.1.0` is NOT on GitHub, no release exists, `release.yml` has never run.
 - Pre-fixed a sure Windows failure: `tauri-build` stops with "`icons/icon.ico` not found" and the repo had only a 256 px
