@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated 2026-11-10 (end of session). Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
+Last updated 2026-11-15 (end of session; see "Update 2026-11-15" below). Before that: 2026-11-10. Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
 from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and `claude/admiring-archimedes-7ibeha` are superseded.
 
 ## Resume here
@@ -19,6 +19,58 @@ session's designated branch and open a PR only when the owner asks.
 - Bench on GitHub CI: "BT 10-year daily rule run p95" read 300.0 / 298.2 / 233.5 ms (budget 300) on the last runs
   (`42905425073` main, `42918339742`, `42916274254`). p95 of n=12 is in effect the slowest run. Proposed, not done: split
   queue/dispatch vs engine time from the job timestamps, raise n, then decide between a speed fix and a CI-only budget.
+
+**Update 2026-11-15, later (same branch; PR #43 with the icon fix MERGED to main as `8fa00df`):**
+- Owner decision: **HANDOFF.md is public on `main`.** The owner removes `/HANDOFF.md` from `.git/info/exclude` and
+  `HANDOFF.md` from `.worktreeinclude` in the main folder (a session cannot edit the base checkout); until then the
+  pre-push hook blocks any push that touches HANDOFF.md.
+- Bench headroom: the BT 10-year time is all inside the worker (POST ~5 ms, queue ~0 ms). Profiling showed `frame.loc[ts]`
+  per bar = ~45% of the run; `_bar_row` now builds the same Series from a numpy copy (`b399dcf`, `test_bt_rowcache.py`,
+  226 BT tests pass). Gain is modest (row lookup ~20% cheaper); A/B timing still to do on a quiet machine.
+- DONE and merged into this branch (reviewed, gated): desktop sidecar (frozen backend via `desktop/sidecar/freeze.py`,
+  Tauri shell plugin in `main.rs`, `externalBin` + resources, app-data DB, free-port fallback, `OPENTERM_CONFIG_PATH`,
+  `OPENTERM_PARENT_PID`; notes `desktop/SIDECAR_NOTES.md`; new `.github/workflows/desktop-check.yml` + shared
+  `.github/actions/build-sidecar`); settings per-field merge (`field_times`, server merge under a lock, `test_settings_merge.py`);
+  English references for elliott-wave, harmonic, ichimoku and smc (no other skill has untranslated references);
+  Windows skip of two POSIX file-mode asserts (`test_remote.py`, `test_mcp_client.py`).
+- Gates on this branch (2026-11-15, Windows): ruff, tsc, eslint, vitest clean; pytest 4036 passed (after the file-mode fix);
+  Playwright 342/354 with a fixture backend on :8100, the 12 failures all pass with NO backend (the documented setup;
+  a live backend keeps settings between tests). Full bench NOT rerun (owner's app holds :8000); BT A/B in PERFORMANCE.md.
+- NOT verified: the Rust shell has never compiled (no Rust here). `desktop-check.yml` is its first compile and runs on a PR
+  touching `desktop/`. `Cargo.lock` was not regenerated: commit the lock the first build produces. macOS/Linux frozen
+  builds untried. One-file start takes 8-20 s with no splash.
+- **PR #44 OPEN** (https://github.com/ImTheRealARB/OpenTerm/pull/44, branch `claude/openterm-v0-1-0-testing-f934c4`).
+  At hand-over CI was running: static and sdk passed; pytest, vitest, e2e and `desktop-check` (shell on windows / macos /
+  ubuntu) pending. Auto-fix was on in the old session only; a new session must check CI itself (`gh pr checks 44`).
+- **Next, in order:**
+  1. Get PR #44 green. Most likely failure: `desktop-check` (first Rust compile ever). Read the job log
+     (`gh run view <id> --log-failed`), fix `desktop/src-tauri/src/main.rs` / `Cargo.toml`. A local session on the
+     owner's laptop pushes to the same branch. **A cloud session can push only to its own designated branch:** start
+     it from this branch (`git fetch origin claude/openterm-v0-1-0-testing-f934c4` and `git merge --ff-only FETCH_HEAD`
+     into the session branch), push fixes there, and when the owner asks, open a PR from it that replaces #44 (then close
+     #44 with a comment pointing to the new PR). If the box has cargo, `cargo check` in `desktop/src-tauri` catches Rust
+     errors before CI (Linux needs the webkit packages listed in `release.yml`).
+     After the first green compile, commit the `Cargo.lock` the build produced (regenerate with `cargo generate-lockfile`
+     on a machine with Rust) if it changed.
+  2. Owner says merge: `gh pr merge <N> --merge` (local gate green is the bar; CI is extra).
+  3. Owner tags `v0.1.0` on the Windows laptop (commands under step 2 below) and checks the "release" workflow.
+  4. Owner-only, later: OpenCode Go live AI tests (owner types `OPENCODE_API_KEY` in APIKEYS, approves quota use, then
+     run AI, AI AUTO, SWARM, AI BT CODE once each), macOS run on the MacBook Air, updater signing key, Kite / Alpaca /
+     IBKR live tests once those accounts exist.
+  5. Optional: more BT 10-year headroom on CI (now ~10% faster; the rest is the ported engine's per-bar Python loop;
+     options in `docs/PERFORMANCE.md`), a splash window for the 8-20 s desktop start-up.
+- **Cloud session 2026-11-15 (branch `claude/openterm-v0-1-0-testing-i4jf7x`, fast-forwarded from #44's branch):**
+  step 1 result: PR #44 at `45ec69a` was ALL GREEN (15 checks: static, pytest, sdk, vitest, e2e, bench on both push and
+  PR runs; `desktop-check` shell on windows-latest, macos-latest, ubuntu-22.04 = first Rust compile passed, no code fix
+  needed). Only follow-up: `Cargo.lock` lacked `tauri-plugin-shell`; added with `cargo metadata` (minimal resolve:
+  additions only, `tauri-plugin-shell 2.6.0` + its deps, no existing pin changed). Local `cargo check` not possible here
+  (no webkit2gtk dev packages); the new PR's `desktop-check` compiles with the committed lock.
+  Step 2 (owner approved): **PR #45 OPEN** (https://github.com/ImTheRealARB/OpenTerm/pull/45, replaces #44, which is
+  closed with a pointer). #45 CI ALL GREEN at `c65f14a` (15 checks incl. `desktop-check` on 3 OSes with the new
+  `Cargo.lock`), mergeable, no reviews. NOT merged: next is step 2 (owner says merge: `gh pr merge 45 --merge`).
+- Owner's local folder (`C:\Users\Asus\Documents\OpenTerm`): `/HANDOFF.md` is out of `.git/info/exclude` (done
+  2026-11-15). Still to do there: drop `HANDOFF.md` from `.worktreeinclude`, copy this worktree's `CLAUDE.md` over the
+  main one, then `git pull origin main` after merges (back up / remove the old untracked HANDOFF.md first if git complains).
 
 **Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`. Next: the owner pushes tag `v0.1.0` (step 2 below).**
 - Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39

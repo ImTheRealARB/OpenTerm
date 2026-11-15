@@ -516,7 +516,10 @@ async def put_settings_doc(request: Request):
         body = await json_object(request)
         if "settings" not in body:
             raise UserDataError("bad_request", "BODY NEEDS settings")
-        doc = await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION))
+        # `field_times` asks for the per-field merge (see settings_store). Without it (an older client) the document is replaced.
+        if "field_times" in body and body["field_times"] is None:
+            raise UserDataError("bad_request", "SETTINGS: field_times MUST BE AN OBJECT {field: epoch seconds}")
+        doc = await SettingsStore(user(request).db).put(body["settings"], body.get("version", VERSION), body.get("field_times"))
         svc(request).router.prefs = source_prefs(doc["settings"])
         return doc
     except UserDataError as e:

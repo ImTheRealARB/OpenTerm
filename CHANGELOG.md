@@ -2,6 +2,14 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Standalone desktop app, per-field settings sync, translated skill references (2026-11-15)
+- Desktop: the backend is frozen into one executable (PyInstaller, `desktop/sidecar/`) and shipped inside the Tauri app as a sidecar, with the built frontend and `config.yaml` as bundle resources; the database and `.env` live in the per-user app data folder; a busy port 8765 falls back to a free one; the backend exits when the window's process dies. The frozen backend is smoke-tested on Windows (health, frontend, quote, BT rule and Python-strategy jobs, quant jobs, AI desks). The Rust shell has not been compiled yet: the new `desktop-check` workflow compiles it on Windows, macOS and Linux for pull requests that touch `desktop/`. Start-up takes 8 to 20 s with no splash screen.
+- Release builds: the full desktop icon set (`.ico`, `.icns`); Windows builds failed without `icons/icon.ico`.
+- Settings sync merges per field: each setting carries its own change time, so edits to different settings on two devices both survive (before, the newer whole document won). Old saved settings load as before.
+- AI skills: the Chinese reference files of `elliott-wave`, `harmonic`, `ichimoku` and `smc` are translated into English and appended as reference sections.
+- BT: per-bar rows are built from a numpy copy of the price frame instead of `frame.loc`: a 10-year daily run went from about 165 to 148 ms in-process (about 10%); results are unchanged (the Vibe cross-checks pass).
+- Tests: the POSIX file-mode checks for the remote token and `mcp_servers.yaml` are skipped on Windows, which has no mode bits.
+
 ## Orders, broker sync, journal, MCP client, extensions, web tools, alpha zoo (2026-11-10)
 - `ORD` orders (Phase 18 step 1): paper by default (Alpaca paper); Alpaca live and Kite live only after the key, `L` plus a typed phrase, a mandate that allows the symbol and size (default allows nothing), and typing the symbol again. Every order gets a one-time confirm token (60 s, bound to that exact order); `X` kill switch cancels everything and blocks new orders across restarts; a hash-chained order ledger (migration 19); paper vs live decided by the broker host, never a flag. `I` adds fills to PORT as labelled lots. The AI cannot place, change or cancel orders.
 - `SYNC` / `PORT SYNC` (Phase 18 step 2): read-only Kite holdings (and day positions) and IBKR through the Client Portal Gateway on this machine into a PORT portfolio; re-syncs replace only that broker's lots, manual lots are never touched (shown as CONFLICT). Not yet tried against real accounts.

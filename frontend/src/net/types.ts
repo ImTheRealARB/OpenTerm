@@ -472,6 +472,8 @@ export interface SettingsDoc {
   /** null until the first save. */
   settings: Record<string, unknown> | null;
   updated_at: number | null;
+  /** Epoch seconds of each field's last change (a field left out of `settings` with a time here was reset to its default). Absent from an old server. */
+  field_times?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------

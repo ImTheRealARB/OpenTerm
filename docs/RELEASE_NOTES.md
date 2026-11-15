@@ -9,7 +9,7 @@ uses `FRED_API_KEY`, the keyless FRED CSV is used otherwise).
   opens the browser). For development with hot reload: `.\scripts\dev.ps1` and <http://localhost:5173>.
   Commands to try: [COMMANDS.md](COMMANDS.md).
 - **Docker** (built and run under compose 2026-11-10, see `docs/DESKTOP.md`): `docker compose up --build`, then <http://localhost:8000>.
-- **Desktop** (Linux deb / AppImage built 2026-11-10, unsigned; Windows and macOS untested; see `docs/DESKTOP.md`): Tauri window around the same backend, which it starts from a repository checkout (the backend is not bundled yet).
+- **Desktop** (Linux deb / AppImage built 2026-11-10, unsigned; Windows and macOS untested; see `docs/DESKTOP.md`): Tauri window around the same backend. The backend is now bundled as a frozen executable (sidecar, 2026-11-15; the frozen backend was tested on Windows, the Rust shell not yet), so no repository checkout is needed.
 
 ## What is in it
 ### Phase 1: shell
@@ -66,5 +66,5 @@ table (adjusted close when available), and CSV export from every table panel (`E
 ## Known limits
 - Docker image and Tauri shell are written but not built or run (no Docker or Rust on the build machine).
 - Free sources throttle: GDELT answers slowly and rate-limits; Yahoo needs a cookie and crumb. See `docs/DATA_LIMITS.md`.
-- Settings sync is last-write-wins by `updated_at` (single user, one backend).
+- Settings sync merges per top-level field by change time (two devices editing different settings both keep their edit; the same field is last-write-wins). Each field is one unit, so `keys`, `poll`, `ai` and `chart` are replaced whole. It trusts each device's clock: the server refuses a time more than a day ahead of its own.
 - No auto-update, no signed installers.

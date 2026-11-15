@@ -884,3 +884,11 @@ Branch `claude/admiring-archimedes-7ibeha`, Linux cloud container, `node scripts
 15.0 ms (11.2 ms under load), cold start 153 ms, layout load 63.8 ms, BT 10-year run 276.4 ms (budget 300), ALPHA 29 core factors
 850.9 ms, initial bundle 125.2 KB gz. The new panels are lazy chunks; the initial bundle grew 1.6 KB. The ALPHA row measures the
 default `core` family; `FAMILY=ALL` (435 factors) on 200 names takes about 36 s as a job and is not gated.
+
+### BT 10-year run: where the time goes (2026-11-15, Windows, fixture backend)
+Split of "BT 10-year daily rule run" from job timestamps (n=30, while other builds were running): POST server time p50 4.5 ms,
+queue wait 0 ms, worker run p50 370 ms. All of it is the backtest itself. cProfile: `frame.loc[ts]` once per bar (~2,500 calls)
+was about 45% of the engine time. `_bar_row` now builds the same Series from a numpy copy of the frame. In-process A/B on a quiet
+machine (10 runs each, two rounds): before 156-181 ms (median ~163), after 140-186 ms (median ~148), about 10% faster. On GitHub
+CI the line read 300.0 / 298.2 / 233.5 ms in the last three runs; this buys roughly 25-30 ms there, not a full fix. The rest is
+the ported engine's per-bar Python loop. The full bench was not rerun here (port 8000 held by the owner's app).

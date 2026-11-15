@@ -312,3 +312,18 @@ def test_translated_skills_are_ported_from_the_overrides_and_say_so():
     for n in tr:
         assert (ROOT / "scripts" / "vibe_skill_overrides" / f"{n}.md").exists() and not porter.CJK.search(skills.get(n)), n
     assert "`journal`" in skills.get("trade-journal") and "analyze_trade_journal" not in skills.get("trade-journal")
+
+
+def test_chinese_reference_files_are_ported_from_their_english_translations():
+    # elliott-wave, harmonic and ichimoku have Chinese `references/`; the English translations in vibe_skill_overrides/references/<skill>/ become
+    # `## Reference: ...` sections, and no Chinese text and no "not included" note is left in the playbook.
+    wanted = {"elliott-wave": ["fibonacci wave relationships", "wave structure"], "harmonic": ["prz trading", "xabcd patterns"],
+              "ichimoku": ["five line calculation", "signal system"], "smc": ["break of structure", "order blocks and fvg"]}
+    for name, titles in wanted.items():
+        text = skills.get(name)
+        for t in titles:
+            assert f"## Reference: {t}" in text, (name, t)
+        head, body = text.split("\n", 1)
+        assert "Chinese-language reference" not in text and not porter.CJK.search(body), name  # only the header comment names the Chinese originals
+        assert f"agent/src/skills/{name}/references/" in head
+    assert "1.618 × wave 1" in skills.get("elliott-wave") and "D = 0.886 × XA" in skills.get("harmonic") and "At least 78 candles" in skills.get("ichimoku")

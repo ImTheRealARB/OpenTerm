@@ -1,3 +1,6 @@
 node_modules/
 src-tauri/target/
 src-tauri/gen/
+# The frozen backend and its PyInstaller scratch folder are build outputs (desktop/sidecar/freeze.py).
+src-tauri/binaries/
+sidecar/build/

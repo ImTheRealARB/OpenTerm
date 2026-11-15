@@ -80,6 +80,14 @@ def test_poll_bounds_match_the_backend():
     assert found == ss.POLL_BOUNDS
 
 
+def test_settings_fields_match_the_backend():
+    """The fields that sync independently (per-field times) are the keys of DEFAULTS in schema.ts and FIELDS in settings_store.py."""
+    ts = _ts("settings/schema.ts")
+    m = re.search(r"export const DEFAULTS: Settings = Object\.freeze\(\{\n(.*?)\n\}\) as Settings;", ts, re.DOTALL)
+    assert m, "DEFAULTS not found"
+    assert set(re.findall(r"^  (\w+):", m.group(1), re.MULTILINE)) == set(ss.FIELDS)
+
+
 def test_gp_range_days_match_ranges_py():
     ts = _ts("functions/gpArgs.ts")
     m = re.search(r"\bRANGE_DAYS\b[^=\n]*=\s*\{(.*?)\};", ts, re.DOTALL)
