@@ -66,7 +66,8 @@ session's designated branch and open a PR only when the owner asks.
   additions only, `tauri-plugin-shell 2.6.0` + its deps, no existing pin changed). Local `cargo check` not possible here
   (no webkit2gtk dev packages); the new PR's `desktop-check` compiles with the committed lock.
   Step 2 (owner approved): **PR #45 OPEN** (https://github.com/ImTheRealARB/OpenTerm/pull/45, replaces #44, which is
-  closed with a pointer). The cloud session watches #45's CI (auto-fix) until green. NOT merged: merge only when the owner says.
+  closed with a pointer). #45 CI ALL GREEN at `c65f14a` (15 checks incl. `desktop-check` on 3 OSes with the new
+  `Cargo.lock`), mergeable, no reviews. NOT merged: next is step 2 (owner says merge: `gh pr merge 45 --merge`).
 - Owner's local folder (`C:\Users\Asus\Documents\OpenTerm`): `/HANDOFF.md` is out of `.git/info/exclude` (done
   2026-11-15). Still to do there: drop `HANDOFF.md` from `.worktreeinclude`, copy this worktree's `CLAUDE.md` over the
   main one, then `git pull origin main` after merges (back up / remove the old untracked HANDOFF.md first if git complains).
