@@ -1,12 +1,93 @@
 # Handoff
 
-Last updated 2026-11-15 (end of session; see "Update 2026-11-15" below). Before that: 2026-11-10. Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
+Last updated 2026-11-15 night (release session: see "RELEASE SESSION 2026-11-15 night" under "Resume here"). Before that: 2026-11-15 (see "Update 2026-11-15" below). Before that: 2026-11-10. Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
 from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and `claude/admiring-archimedes-7ibeha` are superseded.
 
 ## Resume here
 
 Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
 session's designated branch and open a PR only when the owner asks.
+
+**RELEASE SESSION 2026-11-15 night (local worktree `openterm-v0-1-0-release-3a8487`, pushed to `claude/openterm-v0-1-0-release-d0dda1`):**
+1. DONE: PR #46 merged (`e135184` = main HEAD) after all 12 CI checks passed (static, pytest, sdk, vitest, e2e, bench x2).
+   Main merged into the session branch.
+2. DONE (owner said go): live AI tests on OpenCode Go. App started from this worktree (`start.ps1 -NoBrowser`, port 8000,
+   its own fresh `backend/data/openterm.db`, so the owner's everyday settings are untouched; the key came from the Windows
+   keyring, where the owner had typed it in APIKEYS). APIKEYS key test: OK. Go's model list (free GET) has `deepseek-v4-pro`
+   (Go ids have no `deepseek/` prefix, so the OpenRouter-style default would not work there). Typed in the app:
+   `SETTINGS AI PROVIDER OPENCODEGO`, `SETTINGS AI MODEL deepseek-v4-pro`. Recorder: new `scripts/record_live_ai.py`
+   (sends the panels' own requests to the app's routes; refuses unless the app's provider matches; drops a recording that
+   contains the key). Recordings: `docs/live-runs/2026-11-15-opencodego/{ai,btcode,auto,swarm}.sse.txt`, each labelled
+   LIVE in its first SSE comment lines. Evidence only: no test reads them. Results:
+   - AI "AAPL price and today's move": PASS, 18 s, `quote` tool, grounded ("$356.27, +0.39%").
+   - AI BT CODE 20/50 SMA cross: PASS, 14 s, draft `sma_20_50_cross` passed the sandbox check first time (no repair).
+   - AI AUTO "SPY above its 200-day vs buy-and-hold, 10 years": PASS, 41 s, 5 tool calls, 2 backtest runs, evidence note
+     HISTORICAL SIMULATION, NOT A FORECAST.
+   - SWARM COMMITTEE AAPL: FINISHED, PARTIAL, 361 s. Technical, risk and chair done and grounded; the fundamental analyst
+     timed out twice at the 120 s per-role cap (`ROLE_TIMEOUT_S`, `ai/swarm.py:34`) after about 7 tool calls per try.
+     The chair's summary says the desk failed. Not changed: the owner decides whether reasoning models get a longer cap.
+   Cost: Go is flat-fee, so every role logged cost 0.0.
+3. DONE: this write-up + CHANGELOG "v0.1.0 release run"; PR with the session branch (see below).
+   Owner-only, still open: macOS run on the MacBook Air, updater signing key, real MSI install (double-click, UAC, Start
+   menu), Docker (skipped), Kite / Alpaca / IBKR live tests (need accounts), publishing the DRAFT release, and the SWARM
+   per-role timeout decision.
+
+**RELEASE SESSION 2026-11-15 evening (local, branch `claude/openterm-v0-1-0-release-d0dda1`; owner's 7-step list):**
+1. DONE: PR #45 merged (`82ca963` = main HEAD). Main folder pulled to `82ca963`. Its old untracked HANDOFF.md and its
+   CLAUDE.md are backed up in `Documents\OpenTerm-local-backup-2026-11-15`. `.worktreeinclude` already listed only
+   `CLAUDE.md`; `.git/info/exclude` has no HANDOFF line. Main's CLAUDE.md was already the newest copy (same hash).
+2. DONE: gates on `82ca963` (Windows, `uv sync --extra ocr`): ruff, tsc, eslint clean; vitest pass; Playwright 354/354;
+   pytest 4036 passed, 3 FAILED, all in `test_ai_doc_ocr.py`. Cause: test-only. The fake `tesseract` was a `#!` script,
+   which Windows cannot start (OSError); those tests only run with the ocr extra, so CI (Linux) never saw it. Fix:
+   **PR #46** (`claude/ocr-tests-windows`, Windows writes `tesseract.py` + a `tesseract.cmd` wrapper; file: 7 passed,
+   1 skipped). PR #46 is OPEN, not merged.
+3. DONE: tag `v0.1.0` pushed on `82ca963` (the #45 merge commit, owner's instruction). Release run `43726929524` ALL
+   GREEN on its first run (macOS arm64 6 min, Windows 8 min, Linux 6.5 min, macOS Intel 18 min). DRAFT release "OpenTerm
+   v0.1.0" (not published; the owner publishes): https://github.com/ImTheRealARB/OpenTerm/releases (draft URL
+   `.../releases/tag/untagged-c4bd050b3216247fc1ca`). Assets: `OpenTerm_0.1.0_aarch64.dmg`, `OpenTerm_0.1.0_x64.dmg`,
+   `OpenTerm_0.1.0_amd64.deb`, `OpenTerm_0.1.0_x64_en-US.msi`.
+   **UPDATE (owner said "fix uploads"):** root cause = tauri-action v0.5.17 attached ONE installer per job (Linux built
+   AppImage + deb, uploaded only the deb; Windows built setup.exe + msi, uploaded only the msi). The macOS `.app.tar.gz` is
+   an updater-only file, absent by design without the signing key. **PR #47 MERGED** (`2f9d882`): a step after
+   tauri-action runs `gh release upload --clobber` on every installer, and `uploadUpdaterJson` -> `includeUpdaterJson`.
+   Run 2 (`43733121873`, tag on `2f9d882`) FAILED on macOS: bash 3.2 there has no `globstar` ("shopt: globstar: invalid
+   shell option name"). **PR #48 MERGED** (`c637f68`): the step lists installers with `find` (tested on a fake tree).
+   Run 2 cancelled, its draft deleted, **`v0.1.0` now on `c637f68`, run 3 = `43733799577`: ALL GREEN.** The DRAFT
+   (`.../releases/tag/untagged-787645599752a41e18e5`, not published) has all 6 installers: `OpenTerm_0.1.0_x64-setup.exe`
+   (84 MB), `OpenTerm_0.1.0_x64_en-US.msi`, `OpenTerm_0.1.0_amd64.AppImage` (190 MB), `OpenTerm_0.1.0_amd64.deb`,
+   `OpenTerm_0.1.0_aarch64.dmg`, `OpenTerm_0.1.0_x64.dmg`. Step 4 was checked on run 1's MSI (same app code).
+   The old notes below describe the first run.
+   **Gaps found in the first run:** (a) the NSIS `OpenTerm_0.1.0_x64-setup.exe` was BUILT (log: 83.65 MiB) but never uploaded;
+   the Linux AppImage and the macOS `.app.tar.gz` are missing too. tauri-action v0.5.17 logged only "Uploading ...msi".
+   Cause not found. Simplest robust fix: a step after tauri-action that runs `gh release upload` on the bundle folder
+   (needs a re-run: delete the draft, move the tag). (b) `release.yml` passes `uploadUpdaterJson`, which tauri-action does
+   not know (warning); the input is `includeUpdaterJson`. Harmless until the updater key exists. (c) Node 20 deprecation
+   warnings on all pinned actions (still run, forced onto Node 24).
+4. DONE (with one caveat): the MSI was EXTRACTED (`msiexec /a`, no install), not installed: a real install needs a UAC
+   click and the owner was away. Ran the extracted `openterm-desktop.exe`: window "OpenTerm" opened and responded; the
+   sidecar (`openterm-backend.exe`, 81 MB, 2 processes = PyInstaller one-file loader + child) answered `/api/health` on
+   port 8765 after ~57 s on this first launch (slower than the documented 8-20 s; first unpack + Defender scan likely);
+   live AAPL quote loaded from Yahoo. Closing the window: no `openterm-backend` process left (checked at 8 s and 15 s).
+   Owner, later: double-click the MSI once to check the real install + Start menu entry.
+5. SKIPPED by the owner ("do it later"): Docker. Docker Desktop is NOT installed (`winget install -e --id
+   Docker.DockerDesktop`, needs a UAC click, likely a reboot + WSL2, ~6-10 GB disk with the image).
+6. DONE in the night session above (live AI runs on OpenCode Go).
+7. PARTLY DONE: this section + CHANGELOG "v0.1.0 release run". Still owner-only: macOS run on the MacBook Air, updater
+   signing key, Kite / Alpaca / IBKR live tests (need accounts), Docker (skipped), real MSI install, publish the draft,
+   merge PR #46.
+   Network note: the session sandbox blocked github.com once ("socket forbidden"); rerun gh/git push unsandboxed. `release.yml`
+   looked sane on read (tag must equal `tauri.conf.json` version 0.1.0; draft release; 4 runners incl. `macos-15-intel`).
+   Live AI tests still need the OWNER to type `OPENCODE_API_KEY` in APIKEYS: a session never types it.
+   Owner rule this session: pause at 97% of the 5-hour window, update this file, give a handoff prompt.
+
+**Handoff prompt for a new session (paste as is):**
+> Continue OpenTerm in my local folder (C:\Users\Asus\Documents\OpenTerm). Work in a fresh worktree from `main`.
+> Read HANDOFF.md "RELEASE SESSION 2026-11-15 night" first, then CLAUDE.md. State: v0.1.0 tag on `c637f68`, DRAFT release
+> has all 6 installers (I publish it myself, never you); PR #46 merged; live AI on OpenCode Go passed for AI, AI AUTO and
+> AI BT CODE; SWARM COMMITTEE finished with 3 of 4 roles (fundamental analyst hit the 120 s per-role cap twice). The
+> session PR with the write-up may still be open: merge it only when I say. Open items are owner-only (macOS run, updater
+> key, real MSI install, Docker, broker live tests) plus my decision on the SWARM per-role timeout. Plain English, lead
+> with the result.
 
 **Update 2026-11-15 (branch `claude/openterm-v0-1-0-testing-f934c4`, commit `4c7a7a4`, pushed, NO PR yet):**
 - Checked: tag `v0.1.0` is NOT on GitHub, no release exists, `release.yml` has never run.
