@@ -40,8 +40,9 @@ next to the binary, which is fine for a developer install but not for distributi
   in `tauri.conf.json` under `bundle.externalBin`; replace `spawn_backend` with the sidecar API.
 - Copy `frontend/dist` and `config.yaml` into the bundle `resources` and point `OPENTERM_STATIC_DIR` at them.
 - Put the SQLite file in the per-user app data directory (`OPENTERM_DB_PATH`), not the repo's `data/`.
-- Generate the real icon set from a source image: `npx tauri icon path/to/icon.png`. `icons/icon.png` is a plain
-  placeholder (amber prompt on black).
+- Replace the placeholder icon (amber prompt on black, 256 px source). The set in `src-tauri/icons/` (`.ico` for the
+  Windows build, which fails without it; `.icns` for macOS) was made with `npx tauri icon <square png> -o src-tauri/icons`
+  (2026-11-15); rerun that on a square 1024 px source for sharp icons and keep only the files `tauri.conf.json` lists.
 - Code-sign the installers (Windows Authenticode, macOS notarisation).
 - A port collision on 8765 currently fails startup with a message. Choose a free port at launch if that matters.
 
