@@ -27,9 +27,19 @@ session's designated branch and open a PR only when the owner asks.
 - Bench headroom: the BT 10-year time is all inside the worker (POST ~5 ms, queue ~0 ms). Profiling showed `frame.loc[ts]`
   per bar = ~45% of the run; `_bar_row` now builds the same Series from a numpy copy (`b399dcf`, `test_bt_rowcache.py`,
   226 BT tests pass). Gain is modest (row lookup ~20% cheaper); A/B timing still to do on a quiet machine.
-- Running (Sonnet, own worktrees): desktop sidecar (PyInstaller backend + Tauri externalBin + `desktop-check.yml`),
-  settings per-field merge, English translation of the elliott-wave / harmonic / ichimoku references. Their branches
-  get merged into this branch after review.
+- DONE and merged into this branch (reviewed, gated): desktop sidecar (frozen backend via `desktop/sidecar/freeze.py`,
+  Tauri shell plugin in `main.rs`, `externalBin` + resources, app-data DB, free-port fallback, `OPENTERM_CONFIG_PATH`,
+  `OPENTERM_PARENT_PID`; notes `desktop/SIDECAR_NOTES.md`; new `.github/workflows/desktop-check.yml` + shared
+  `.github/actions/build-sidecar`); settings per-field merge (`field_times`, server merge under a lock, `test_settings_merge.py`);
+  English references for elliott-wave, harmonic, ichimoku and smc (no other skill has untranslated references);
+  Windows skip of two POSIX file-mode asserts (`test_remote.py`, `test_mcp_client.py`).
+- Gates on this branch (2026-11-15, Windows): ruff, tsc, eslint, vitest clean; pytest 4036 passed (after the file-mode fix);
+  Playwright 342/354 with a fixture backend on :8100, the 12 failures all pass with NO backend (the documented setup;
+  a live backend keeps settings between tests). Full bench NOT rerun (owner's app holds :8000); BT A/B in PERFORMANCE.md.
+- NOT verified: the Rust shell has never compiled (no Rust here). `desktop-check.yml` is its first compile and runs on a PR
+  touching `desktop/`. `Cargo.lock` was not regenerated: commit the lock the first build produces. macOS/Linux frozen
+  builds untried. One-file start takes 8-20 s with no splash.
+- Next: open a PR from this branch (owner asks), watch `desktop-check`, fix compile errors, merge, then tag `v0.1.0`.
 
 **Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`. Next: the owner pushes tag `v0.1.0` (step 2 below).**
 - Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39
