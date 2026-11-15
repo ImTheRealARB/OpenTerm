@@ -1,0 +1,40 @@
+# Builds everything the desktop shell needs BEFORE `tauri build` runs, on the current runner:
+#   1. the frontend (frontend/dist, shipped as a bundle resource),
+#   2. the backend frozen into one executable, placed at desktop/src-tauri/binaries/openterm-backend-<target triple>[.exe]
+#      (tauri.conf.json: bundle.externalBin; Tauri refuses to build without that file),
+#   3. a smoke test of that executable (starts it, hits /api/health and "/", runs a quote, a backtest and a quant job in
+#      worker processes, checks it stops when its parent dies). No network, no keys: it uses the built-in SYN instruments.
+# Shared by release.yml and desktop-check.yml so the two cannot drift apart. The caller has already checked out the
+# repository and set up Node (22).
+name: Build the backend sidecar
+description: Frontend build, PyInstaller freeze of the backend and a smoke test of the frozen executable.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      with:
+        python-version: "3.12"
+    - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+    - name: Build the frontend
+      shell: bash
+      working-directory: frontend
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build
+
+    - name: Freeze the backend (PyInstaller)
+      shell: bash
+      working-directory: backend
+      run: |
+        # --no-dev: no test tools; --group freeze: PyInstaller (an optional group, never a runtime dependency).
+        uv sync --no-dev --group freeze
+        uv run --no-dev --group freeze python ../desktop/sidecar/freeze.py
+
+    - name: Smoke-test the frozen backend
+      shell: bash
+      working-directory: backend
+      run: |
+        exe="$(ls ../desktop/src-tauri/binaries/openterm-backend-* | head -n 1)"
+        ls -l "$exe"
+        uv run --no-dev python ../desktop/sidecar/smoke.py "$exe" --mode synthetic
