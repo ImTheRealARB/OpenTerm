@@ -6,6 +6,7 @@ nothing touches the network.
 
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -254,7 +255,8 @@ def test_enabling_a_preset_gives_the_notice_and_a_read_only_allow_list(tmp_path)
     saved = yaml.safe_load((tmp_path / "mcp_servers.yaml").read_text())["servers"]
     assert saved["stock-nse-india"]["enabled"] is True and "nse-mcp" not in saved  # the other preset stays out of the file
     assert "uv" in ext.PRESETS["nse-mcp"].notice
-    assert oct((tmp_path / "mcp_servers.yaml").stat().st_mode & 0o777) == oct(0o600)
+    if os.name != "nt":  # Windows has no POSIX mode bits (stat always reports 0o666)
+        assert oct((tmp_path / "mcp_servers.yaml").stat().st_mode & 0o777) == oct(0o600)
     for p in ext.PRESETS.values():
         assert not any(mc.order_like(t) for t in p.allow)
 

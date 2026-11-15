@@ -1,6 +1,7 @@
 """Self-hosted remote mode (openterm/remote.py). The trap: behind the same-host proxy every request comes from 127.0.0.1."""
 
 import inspect
+import os
 import re
 import stat
 
@@ -79,7 +80,8 @@ def test_the_token_is_made_once_printed_once_and_stored_only_hashed(tmp_path, ca
     assert token and len(token) >= 43  # token_urlsafe(32)
     assert a.ensure_token() is None  # second start: nothing new, nothing shown
     f = tmp_path / remote.TOKEN_FILE
-    assert stat.S_IMODE(f.stat().st_mode) == 0o600
+    if os.name != "nt":  # Windows has no POSIX mode bits (stat always reports 0o666); its per-user ACL keeps the file private
+        assert stat.S_IMODE(f.stat().st_mode) == 0o600
     assert token not in f.read_text()
     assert a.login(token) and a.login("wrong") is None
     remote.announce(token, f)
