@@ -20,6 +20,17 @@ session's designated branch and open a PR only when the owner asks.
   (`42905425073` main, `42918339742`, `42916274254`). p95 of n=12 is in effect the slowest run. Proposed, not done: split
   queue/dispatch vs engine time from the job timestamps, raise n, then decide between a speed fix and a CI-only budget.
 
+**Update 2026-11-15, later (same branch; PR #43 with the icon fix MERGED to main as `8fa00df`):**
+- Owner decision: **HANDOFF.md is public on `main`.** The owner removes `/HANDOFF.md` from `.git/info/exclude` and
+  `HANDOFF.md` from `.worktreeinclude` in the main folder (a session cannot edit the base checkout); until then the
+  pre-push hook blocks any push that touches HANDOFF.md.
+- Bench headroom: the BT 10-year time is all inside the worker (POST ~5 ms, queue ~0 ms). Profiling showed `frame.loc[ts]`
+  per bar = ~45% of the run; `_bar_row` now builds the same Series from a numpy copy (`b399dcf`, `test_bt_rowcache.py`,
+  226 BT tests pass). Gain is modest (row lookup ~20% cheaper); A/B timing still to do on a quiet machine.
+- Running (Sonnet, own worktrees): desktop sidecar (PyInstaller backend + Tauri externalBin + `desktop-check.yml`),
+  settings per-field merge, English translation of the elliott-wave / harmonic / ichimoku references. Their branches
+  get merged into this branch after review.
+
 **Status (2026-11-10, end of session): ALL 13 WORKSTREAMS MERGED TO `main`. Next: the owner pushes tag `v0.1.0` (step 2 below).**
 - Gates on the tip: ruff clean, pytest 4005 passed, typecheck + lint clean, vitest 1479 passed, Playwright 354/354, bench 39/39
   (tick to pixel p95 42.2 ms). Docs done: CHANGELOG, ROADMAP, FEATURE_GAP, PERFORMANCE, README badge, RELEASE_NOTES, DESKTOP.
