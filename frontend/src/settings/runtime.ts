@@ -6,9 +6,9 @@
 import { setNumberFormat } from "../format";
 import { setKeyOverrides } from "../keys/keys";
 import { createStore, loadJSON, saveJSON } from "../state/store";
-import { DEFAULTS, diffFromDefaults, normalize, type Mode, type PollKey, type Settings } from "./schema";
+import { DEFAULTS, diffFromDefaults, effectiveTimes, normalize, reconcile, stampChanges, type FieldTimes, type Mode, type PollKey, type Settings } from "./schema";
 import { applyFont } from "./font";
-import { parseMirror, sameMirror, type Mirror } from "./mirror";
+import { parseFieldTimes, parseMirror, sameMirror, type Mirror } from "./mirror";
 import { applyTheme } from "./themes";
 
 const MIRROR = "openterm.settings";
@@ -18,6 +18,7 @@ const mirror: Mirror = {
   settings: saved?.settings ?? {},
   updatedAt: typeof saved?.updatedAt === "number" ? saved.updatedAt : 0,
   dirty: saved?.dirty === true,
+  fieldTimes: parseFieldTimes(saved?.fieldTimes), // undefined for a mirror saved before per-field sync: schema.ts treats it as "all fields changed at updatedAt"
 };
 
 // No mirror in localStorage at all = a brand-new user: pass `undefined` so `normalize` picks the default mode (gui).
@@ -76,8 +77,14 @@ function persist(): void {
 /** A user edit: applies at once, mirrors locally, and asks sync.ts to store it on the backend. */
 export function updateSettings(fn: (s: Settings) => Settings): Settings {
   const next = normalize(diffFromDefaults(fn(settingsStore.get()))).settings;
-  mirror.settings = diffFromDefaults(next);
-  mirror.updatedAt = Date.now() / 1000;
+  const now = Date.now() / 1000;
+  const after = diffFromDefaults(next);
+  // Only the fields this edit changed get a new time (compared with what was saved, not with the running settings: a brand-new
+  // user's `mode: "gui"` is not in the mirror yet, and must be stamped now or it would never reach the backend). A field reset to
+  // its default is absent from `after` but changed, so it is stamped too: that is how a reset syncs.
+  mirror.fieldTimes = stampChanges(mirror.settings, after, effectiveTimes(mirror.fieldTimes, mirror.updatedAt), now);
+  mirror.settings = after;
+  mirror.updatedAt = now;
   mirror.dirty = true;
   persist();
   settingsStore.set(() => next);
@@ -106,14 +113,36 @@ export function setLocalChangeListener(fn: () => void): void {
   onLocalChange = fn;
 }
 
-/** Backend copy wins (startup reconcile). */
-export function adoptRemote(raw: unknown, updatedAt: number): void {
-  const next = normalize(raw).settings;
-  mirror.settings = diffFromDefaults(next);
-  mirror.updatedAt = updatedAt;
-  mirror.dirty = false;
+/** What sync.ts sends: our settings (stored form) and the change time of every field. */
+export function pushPayload(): { settings: Record<string, unknown>; fieldTimes: FieldTimes } {
+  return { settings: { ...mirror.settings }, fieldTimes: effectiveTimes(mirror.fieldTimes, mirror.updatedAt) };
+}
+
+/** What the backend holds: its settings (null = nothing saved yet), the time it stored them and, per field, its change time. */
+export interface RemoteDoc {
+  settings: Record<string, unknown> | null;
+  updated_at: number | null;
+  field_times?: FieldTimes;
+}
+
+/**
+ * Merges the backend copy into the mirror field by field (schema.ts `reconcile`): the later change wins for each field, so edits
+ * made on another device to OTHER fields are kept along with ours. Used at startup (GET) and on the answer to every PUT (the answer
+ * is the merged document, so a field another device changed meanwhile arrives here). Returns true when we hold a newer change
+ * than the backend (the caller should push); nothing is touched when there is nothing to merge, so a brand-new user's mirror stays absent.
+ */
+export function mergeRemote(remote: RemoteDoc): boolean {
+  const r = reconcile(mirror, remote);
+  const timesChanged = JSON.stringify(effectiveTimes(mirror.fieldTimes, mirror.updatedAt)) !== JSON.stringify(r.times);
+  if (!r.changed && !r.push && !timesChanged && !mirror.dirty) return false;
+  mirror.settings = r.settings;
+  mirror.fieldTimes = r.times;
+  mirror.dirty = r.push;
+  // `updatedAt` is only the legacy whole-document time now. Synced = the backend's time; still ahead of the backend = keep ours.
+  mirror.updatedAt = r.push ? Math.max(mirror.updatedAt, remote.updated_at ?? 0) : (remote.updated_at ?? mirror.updatedAt);
   persist();
-  settingsStore.set(() => next);
+  if (r.changed) settingsStore.set(() => normalize(r.settings).settings);
+  return r.push;
 }
 
 /**
@@ -127,13 +156,6 @@ export function adoptFromOtherTab(raw: string | null): void {
   mirror.settings = other.settings;
   mirror.updatedAt = other.updatedAt;
   mirror.dirty = other.dirty;
+  mirror.fieldTimes = other.fieldTimes;
   settingsStore.set(() => normalize(other.settings).settings);
-}
-
-/** The backend stored our copy. Edits made while the request was in flight stay dirty. */
-export function markSynced(sent: string, updatedAt: number): void {
-  if (JSON.stringify(mirror.settings) !== sent) return;
-  mirror.updatedAt = updatedAt;
-  mirror.dirty = false;
-  persist();
 }

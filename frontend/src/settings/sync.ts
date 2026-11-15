@@ -1,18 +1,18 @@
 /** Backend side of settings: reconcile once after the first paint, then store each edit (debounced). */
 import { info } from "../command/status";
 import { settingsApi } from "../net/settingsApi";
-import { adoptRemote, markSynced, mirrorState, setLocalChangeListener } from "./runtime";
-import { reconcile } from "./schema";
+import { mergeRemote, pushPayload, setLocalChangeListener } from "./runtime";
 
 const PUSH_DELAY_MS = 300;
 let timer = 0;
 let pushing: Promise<void> | null = null;
 
 async function push(): Promise<void> {
-  const sent = JSON.stringify(mirrorState().settings);
+  const { settings, fieldTimes } = pushPayload();
   try {
-    const doc = await settingsApi.put(JSON.parse(sent));
-    markSynced(sent, doc.updated_at);
+    // The answer is the merged document: fields another device changed later than ours come back and are merged in. An edit made while
+    // the request was in flight stays dirty (it is newer than the answer) and its own push is already scheduled.
+    mergeRemote(await settingsApi.put(settings, fieldTimes));
   } catch (e) {
     // Backend down or rejected: the local mirror keeps the change (dirty) and is retried at next start.
     const msg = (e as Error).message;
@@ -35,8 +35,5 @@ export async function startSettingsSync(): Promise<void> {
   } catch {
     return; // backend down: keep the mirror, push on the next edit or start
   }
-  const m = mirrorState();
-  const decision = reconcile(m, remote);
-  if (decision === "push") schedule();
-  else if (decision === "adopt") adoptRemote(remote.settings ?? {}, remote.updated_at ?? 0);
+  if (mergeRemote(remote)) schedule(); // we hold a change the backend lacks
 }

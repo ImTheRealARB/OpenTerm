@@ -3,10 +3,18 @@
 The frontend owns the defaults and applies settings from its localStorage mirror at cold start; this module only
 validates and persists. Every field is optional (a missing field means "use the default"); unknown fields are
 rejected so typos never get stored silently.
+
+Sync between devices is a per-field merge, not "newest whole document wins": the document carries `field_times`
+({top-level field: epoch seconds of its last change}) and a PUT keeps, per field, whichever side changed it later. So two
+browsers editing different fields both keep their edit. A field's time also covers "reset to default" (the field is
+absent from `settings` but has a time: a tombstone), so a reset on one device is not undone by a stale copy on another.
 """
 
+import asyncio
+import math
 import re
 import time
+import weakref
 
 import aiosqlite
 import orjson
@@ -36,6 +44,9 @@ ACTION_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,39}\Z")
 CHORD_RE = re.compile(r"^(?:(?:Ctrl|Alt|Shift)\+){0,3}[^\s+]{1,12}\Z|^(?:(?:Ctrl|Alt|Shift)\+){1,3}\+\Z")
 MAX_ACTIONS = 64
 MAX_CHORDS = 4
+# A field time may run ahead of this server's clock by at most this much (a device with a wrong clock would otherwise win
+# every field for good). Beyond it the PUT is refused with a message, so the owner learns about the bad clock.
+MAX_CLOCK_SKEW_S = 86_400
 
 
 def _bad(msg: str) -> UserDataError:
@@ -234,25 +245,110 @@ def migrate(doc: dict) -> dict:
     return doc
 
 
+def validate_times(raw, settings: dict, now: float) -> dict[str, float]:
+    """Checks the `field_times` of a PUT. Keys are settings fields; values are finite epoch seconds, not in the far future.
+
+    Every field present in `settings` must have a time (it may be 0 = "never set"); extra times are tombstones for fields
+    the client reset to their default, which is why `settings` may lack them.
+    """
+    if not isinstance(raw, dict):
+        raise _bad("field_times MUST BE AN OBJECT {field: epoch seconds}")
+    unknown = sorted(set(raw) - set(FIELDS))
+    if unknown:
+        raise _bad(f"UNKNOWN FIELD {unknown[0][:40]!r} IN field_times")
+    out: dict[str, float] = {}
+    for k, v in raw.items():
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0:
+            raise _bad(f"field_times.{k} MUST BE A TIME IN EPOCH SECONDS")
+        if v > now + MAX_CLOCK_SKEW_S:
+            raise _bad(f"field_times.{k} IS IN THE FUTURE (CHECK THIS DEVICE'S CLOCK)")
+        out[k] = float(v)
+    missing = sorted(set(settings) - set(out))
+    if missing:
+        raise _bad(f"field_times HAS NO TIME FOR {missing[0]!r}")
+    return out
+
+
+def effective_times(doc: dict) -> dict[str, float]:
+    """The change time of every field of a stored document (0 = never set).
+
+    A legacy document (saved before per-field times existed) has no `field_times`: all its fields, including the ones left
+    out because they were at their default, count as changed when the document was saved. That is what whole-document
+    last-write-wins meant, so old data behaves as before.
+    """
+    stored = doc.get("field_times")
+    if stored is None:
+        at = doc.get("updated_at") or 0
+        return {f: float(at) for f in FIELDS}
+    return {f: float(stored.get(f, 0)) for f in FIELDS}
+
+
+def merge(cur_settings: dict, cur_times: dict[str, float], new_settings: dict, new_times: dict[str, float]):
+    """Per field, the later change wins; the stored copy keeps a tie (so a never-set field, time 0, never overwrites anything).
+
+    `new_*` is the incoming PUT, `cur_*` the stored document. A field the incoming side has no time for is untouched.
+    Returns (settings, times) with times only for fields that were ever set.
+    """
+    settings: dict = {}
+    times: dict[str, float] = {}
+    for f in FIELDS:
+        incoming_wins = new_times.get(f, 0) > cur_times.get(f, 0)
+        src_settings, src_times = (new_settings, new_times) if incoming_wins else (cur_settings, cur_times)
+        if f in src_settings:  # absent on the winning side = reset to default
+            settings[f] = src_settings[f]
+        if src_times.get(f, 0) > 0:
+            times[f] = src_times[f]
+    return settings, times
+
+
+# One lock per database connection: put() reads the stored document, merges and writes it back, and two concurrent PUTs
+# (two devices) must not interleave there or the later write would silently drop the earlier one's fields.
+# SettingsStore is built per request, so the lock cannot live on it. Weak keys: a closed connection takes its lock with it.
+_LOCKS: "weakref.WeakKeyDictionary[aiosqlite.Connection, asyncio.Lock]" = weakref.WeakKeyDictionary()
+
+
 class SettingsStore:
     def __init__(self, db: aiosqlite.Connection):
         self.db = db
 
-    async def get(self) -> dict:
+    async def _load(self) -> dict | None:
         async with self.db.execute("SELECT value FROM kv WHERE key=?", (KEY,)) as cur:
             row = await cur.fetchone()
-        if not row:
-            return {"version": VERSION, "settings": None, "updated_at": None}
-        doc = migrate(orjson.loads(row[0]))
-        return {"version": VERSION, "settings": doc.get("settings") or {}, "updated_at": doc.get("updated_at")}
+        return migrate(orjson.loads(row[0])) if row else None
 
-    async def put(self, settings, version=VERSION) -> dict:
+    async def get(self) -> dict:
+        doc = await self._load()
+        if doc is None:
+            return {"version": VERSION, "settings": None, "updated_at": None, "field_times": {}}
+        return {
+            "version": VERSION,
+            "settings": doc.get("settings") or {},
+            "updated_at": doc.get("updated_at"),
+            "field_times": effective_times(doc),
+        }
+
+    async def put(self, settings, version=VERSION, field_times=None) -> dict:
+        """Stores settings and returns the document that is now stored (callers must adopt it: it may hold fields the
+        other side changed later).
+
+        `field_times` given: a per-field merge into the stored document (see the module docstring).
+        `field_times` None (an older client): the whole document is replaced, as before; every field counts as changed now.
+        """
         clean = validate(settings, version)
         now = time.time()
-        doc = {"version": VERSION, "settings": clean, "updated_at": now}
-        await self.db.execute(
-            "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            (KEY, orjson.dumps(doc)),
-        )
-        await self.db.commit()
+        lock = _LOCKS.setdefault(self.db, asyncio.Lock())
+        async with lock:
+            if field_times is None:
+                merged, times = clean, {f: now for f in FIELDS}
+            else:
+                incoming = validate_times(field_times, clean, now)
+                cur = await self._load()
+                cur_settings, cur_times = (cur.get("settings") or {}, effective_times(cur)) if cur else ({}, {})
+                merged, times = merge(cur_settings, cur_times, clean, incoming)
+            doc = {"version": VERSION, "settings": merged, "updated_at": now, "field_times": times}
+            await self.db.execute(
+                "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (KEY, orjson.dumps(doc)),
+            )
+            await self.db.commit()
         return doc

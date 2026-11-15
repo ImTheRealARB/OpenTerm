@@ -259,13 +259,87 @@ export function stepPoll(key: PollKey, value: number, dir: 1 | -1): number {
   return Math.min(hi, Math.max(lo, step));
 }
 
-/** Reconcile the localStorage mirror with the backend copy at startup. */
+// --- Per-field sync ---------------------------------------------------------------------------
+// Two devices editing DIFFERENT settings must both keep their edit, so every top-level field carries its own last-change
+// time instead of the whole document having one. The backend (settings_store.py) merges the same way; keep the two in step.
+// A time also covers "reset to default": the field is absent from the stored settings but has a time (a tombstone), so a
+// reset on one device is not undone by an older copy on another. A time of 0 means "never set" and never beats anything.
+
+/** Epoch seconds of the last change of each top-level settings field. */
+export type FieldTimes = Record<string, number>;
+/** The top-level fields that sync independently (the same list the backend accepts). */
+export const SETTING_FIELDS = Object.keys(DEFAULTS) as (keyof Settings)[];
+
+const goodTime = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+
+/**
+ * The change time of every field. `fieldTimes` undefined = a copy saved before per-field times existed (an old localStorage
+ * mirror, an old server document): every field, even one left out because it was at its default, counts as changed when
+ * that whole copy was saved (`docTime`), which is exactly what whole-document last-write-wins meant. A copy that has
+ * `fieldTimes` does NOT fall back to `docTime`: a field it has no time for was never set.
+ */
+export function effectiveTimes(fieldTimes: FieldTimes | undefined, docTime: number): FieldTimes {
+  const out: FieldTimes = {};
+  for (const f of SETTING_FIELDS) out[f] = fieldTimes ? (goodTime(fieldTimes[f]) ? fieldTimes[f] : 0) : goodTime(docTime) ? docTime : 0;
+  return out;
+}
+
+/** Times after a local edit: every field whose stored form changed (value, added or removed) gets `now`; the rest keep theirs. */
+export function stampChanges(before: Record<string, unknown>, after: Record<string, unknown>, times: FieldTimes, now: number): FieldTimes {
+  const out = { ...times };
+  for (const f of SETTING_FIELDS) if (!same(before[f], after[f])) out[f] = now;
+  return out;
+}
+
+/** A settings copy in stored form (fields at their default are left out) with its field times (see `effectiveTimes`). */
+export interface FieldDoc {
+  settings: Record<string, unknown>;
+  times: FieldTimes;
+}
+export interface MergeResult {
+  settings: Record<string, unknown>;
+  times: FieldTimes;
+  /** The local copy changed a field later than the remote one: the remote copy has to be sent ours. */
+  push: boolean;
+  /** At least one field took the remote value, so the running settings must be re-applied. */
+  changed: boolean;
+}
+
+/**
+ * Per field, the later change wins. Remote wins a tie, but only when it was ever set: two zeros mean nobody set the field,
+ * and then the local value stays (a default, or a seed) and nothing is sent for it.
+ */
+export function mergeFields(local: FieldDoc, remote: FieldDoc): MergeResult {
+  const settings: Record<string, unknown> = {};
+  const times: FieldTimes = {};
+  let push = false;
+  let changed = false;
+  for (const f of SETTING_FIELDS) {
+    const lt = local.times[f] ?? 0;
+    const rt = remote.times[f] ?? 0;
+    const takeRemote = rt > 0 && rt >= lt;
+    const from = takeRemote ? remote : local;
+    if (f in from.settings) settings[f] = from.settings[f]; // absent on the winning side = reset to default
+    times[f] = takeRemote ? rt : lt;
+    if (lt > rt) push = true;
+    if (takeRemote && !same(local.settings[f], remote.settings[f])) changed = true;
+  }
+  return { settings, times, push, changed };
+}
+
+/**
+ * Reconcile the localStorage mirror with the backend copy (at startup, and with the answer to every PUT).
+ * `remote.settings` null = the backend has nothing saved yet: all its times are 0, so anything we ever set is pushed.
+ * `remote.field_times` missing (an old server) = the legacy rule of `effectiveTimes`.
+ */
 export function reconcile(
-  local: { updatedAt: number; dirty: boolean },
-  remote: { settings: unknown; updated_at: number | null },
-): "push" | "adopt" | "keep" {
-  if (remote.settings == null) return local.dirty || local.updatedAt > 0 ? "push" : "keep";
-  const rAt = remote.updated_at ?? 0;
-  if (local.dirty && local.updatedAt > rAt) return "push";
-  return rAt === local.updatedAt && !local.dirty ? "keep" : "adopt";
+  local: { settings: Record<string, unknown>; updatedAt: number; fieldTimes?: FieldTimes },
+  remote: { settings: Record<string, unknown> | null; updated_at: number | null; field_times?: FieldTimes },
+): MergeResult {
+  const localDoc: FieldDoc = { settings: local.settings, times: effectiveTimes(local.fieldTimes, local.updatedAt) };
+  const remoteDoc: FieldDoc =
+    remote.settings == null
+      ? { settings: {}, times: effectiveTimes({}, 0) }
+      : { settings: remote.settings, times: effectiveTimes(remote.field_times, remote.updated_at ?? 0) };
+  return mergeFields(localDoc, remoteDoc);
 }
