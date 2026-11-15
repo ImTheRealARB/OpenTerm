@@ -1,5 +1,5 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/base.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths, loaders/run card/artifacts removed, run_backtest -> run(); ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change); per-bar row cache `_bar_row` (OpenTerm perf: same rows, built once per bar).
+# Changes: import paths, loaders/run card/artifacts removed, run_backtest -> run(); ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change); per-bar row cache `_bar_row` (OpenTerm perf: same rows, built once per bar) built by `_row_from_values` from a numpy copy of the frame (2026-11-15).
 """Base backtest engine with shared bar-by-bar execution loop.
 
 All market engines inherit from BaseEngine and override market-rule methods.
@@ -615,9 +615,28 @@ class BaseEngine(ABC):
         key = id(frame)
         if key in self._row_cache:
             return self._row_cache[key]
-        row = frame.loc[ts] if ts in frame.index else None
+        row = self._row_from_values(frame, ts)
         self._row_cache[key] = row
         return row
+
+    def _row_from_values(self, frame: pd.DataFrame, ts: pd.Timestamp):
+        """Same Series as ``frame.loc[ts]`` (values, dtype, index, name), built from a numpy copy of the frame
+        made once per run (OpenTerm perf, 2026-11-15): ``.loc`` cost ~100 us per bar and was ~45% of a 10-year
+        daily run. The copy is rebuilt when the frame's columns or length change; engines only read frames.
+        A non-unique index makes ``.loc`` return a DataFrame, so that case keeps using ``.loc``."""
+        if ts not in frame.index:
+            return None
+        cache = self.__dict__.setdefault("_frame_values", {})
+        hit = cache.get(id(frame))
+        # Keep the frame itself in the entry: an id() can be reused by a new object after the old one is freed.
+        if hit is None or hit[0] is not frame or hit[1] is not frame.columns or hit[2] != len(frame):
+            unique = frame.index.is_unique
+            hit = (frame, frame.columns, len(frame), frame.to_numpy() if unique else None)
+            cache[id(frame)] = hit
+        values = hit[3]
+        if values is None:
+            return frame.loc[ts]
+        return pd.Series(values[frame.index.get_loc(ts)], index=frame.columns, name=ts)
 
     def _plan_rejection_metrics(self) -> dict[str, Any]:
         """Summarise opening plans the engine wanted but could not take.
