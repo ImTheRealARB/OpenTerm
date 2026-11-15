@@ -12,10 +12,17 @@ session's designated branch and open a PR only when the owner asks.
 1. DONE: PR #45 merged (`82ca963` = main HEAD). Main folder pulled to `82ca963`. Its old untracked HANDOFF.md and its
    CLAUDE.md are backed up in `Documents\OpenTerm-local-backup-2026-11-15`. `.worktreeinclude` already listed only
    `CLAUDE.md`; `.git/info/exclude` has no HANDOFF line. Main's CLAUDE.md was already the newest copy (same hash).
-2. IN PROGRESS: full local gates on `82ca963` (port 8000 was free: the owner's app was not running). Run from this
-   worktree after `uv sync --extra ocr` + `npm ci`; log at the session scratchpad `gates-main.log` (lost on reboot: rerun).
-3-7. NOT STARTED. Facts for them: Docker Desktop is NOT installed on the laptop (owner gave blanket consent 2026-11-15 to
-   install it; `winget install -e --id Docker.DockerDesktop` needs a UAC click and likely a reboot + WSL2). `release.yml`
+2. DONE: gates on `82ca963` (Windows, `uv sync --extra ocr`): ruff, tsc, eslint clean; vitest pass; Playwright 354/354;
+   pytest 4036 passed, 3 FAILED, all in `test_ai_doc_ocr.py`. Cause: test-only. The fake `tesseract` was a `#!` script,
+   which Windows cannot start (OSError); those tests only run with the ocr extra, so CI (Linux) never saw it. Fix:
+   **PR #46** (`claude/ocr-tests-windows`, Windows writes `tesseract.py` + a `tesseract.cmd` wrapper; file: 7 passed,
+   1 skipped). PR #46 is OPEN, not merged.
+3. IN PROGRESS: tag `v0.1.0` pushed on `82ca963` (the #45 merge commit, owner's instruction). Release run `43726929524`
+   (`gh run view 43726929524`). Result: see below once known. Never publish the draft: the owner does.
+5. SKIPPED by the owner ("do it later"): Docker. Docker Desktop is NOT installed (`winget install -e --id
+   Docker.DockerDesktop`, needs a UAC click, likely a reboot + WSL2, ~6-10 GB disk with the image).
+4, 6, 7. NOT STARTED.
+   Network note: the session sandbox blocked github.com once ("socket forbidden"); rerun gh/git push unsandboxed. `release.yml`
    looked sane on read (tag must equal `tauri.conf.json` version 0.1.0; draft release; 4 runners incl. `macos-15-intel`).
    Live AI tests still need the OWNER to type `OPENCODE_API_KEY` in APIKEYS: a session never types it.
    Owner rule this session: pause at 97% of the 5-hour window, update this file, give a handoff prompt.
