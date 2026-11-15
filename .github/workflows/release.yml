@@ -131,18 +131,19 @@ jobs:
 
       # The first release run (2026-11-15) showed tauri-action attaching only ONE installer per job: the NSIS setup.exe
       # and the AppImage were built but never uploaded. So we attach every installer ourselves. `--clobber` replaces a
-      # file tauri-action already uploaded, which makes this safe to rerun. The `**` covers both target/release/bundle
-      # and target/<triple>/release/bundle (macOS jobs pass --target). No installer found = fail loudly.
+      # file tauri-action already uploaded, which makes this safe to rerun. `find` covers both target/release/bundle and
+      # target/<triple>/release/bundle (macOS jobs pass --target). It is used instead of bash `**` globs because macOS
+      # runners ship bash 3.2, which has no `globstar` (the second release run failed on that). No installer = fail loudly.
       - name: Attach every installer to the draft release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s nullglob globstar
           b=desktop/src-tauri/target
-          files=( "$b"/**/release/bundle/nsis/*.exe "$b"/**/release/bundle/msi/*.msi \
-                  "$b"/**/release/bundle/appimage/*.AppImage "$b"/**/release/bundle/deb/*.deb \
-                  "$b"/**/release/bundle/dmg/*.dmg )
+          files=()
+          while IFS= read -r f; do files+=("$f"); done < <(
+            find "$b" -type f -path '*/release/bundle/*' \
+              \( -name '*-setup.exe' -o -name '*.msi' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.dmg' \))
           if [ "${#files[@]}" -eq 0 ]; then echo "no installers found under $b" >&2; exit 1; fi
           printf 'attaching %s\n' "${files[@]}"
           gh release upload "${GITHUB_REF_NAME}" "${files[@]}" --clobber
