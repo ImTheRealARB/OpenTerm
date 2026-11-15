@@ -12,7 +12,28 @@ session's designated branch and open a PR only when the owner asks.
 1. DONE: PR #45 merged (`82ca963` = main HEAD). Main folder pulled to `82ca963`. Its old untracked HANDOFF.md and its
    CLAUDE.md are backed up in `Documents\OpenTerm-local-backup-2026-11-15`. `.worktreeinclude` already listed only
    `CLAUDE.md`; `.git/info/exclude` has no HANDOFF line. Main's CLAUDE.md was already the newest copy (same hash).
-2. IN PROGRESS: full local gates on `82ca963` (port 8000 was free: the owner's app was not running).
+2. IN PROGRESS: full local gates on `82ca963` (port 8000 was free: the owner's app was not running). Run from this
+   worktree after `uv sync --extra ocr` + `npm ci`; log at the session scratchpad `gates-main.log` (lost on reboot: rerun).
+3-7. NOT STARTED. Facts for them: Docker Desktop is NOT installed on the laptop (owner gave blanket consent 2026-11-15 to
+   install it; `winget install -e --id Docker.DockerDesktop` needs a UAC click and likely a reboot + WSL2). `release.yml`
+   looked sane on read (tag must equal `tauri.conf.json` version 0.1.0; draft release; 4 runners incl. `macos-15-intel`).
+   Live AI tests still need the OWNER to type `OPENCODE_API_KEY` in APIKEYS: a session never types it.
+   Owner rule this session: pause at 97% of the 5-hour window, update this file, give a handoff prompt.
+
+**Handoff prompt for a new session (paste as is):**
+> Continue OpenTerm release + verification in my local folder (worktree branch `claude/openterm-v0-1-0-release-d0dda1`,
+> or a fresh worktree from `main`). Read HANDOFF.md "RELEASE SESSION 2026-11-15 evening" first, then CLAUDE.md,
+> docs/DESKTOP.md, desktop/SIDECAR_NOTES.md. Do the first step not marked DONE, in order: (2) full local gates on main
+> `node scripts/gates.mjs` with nothing on :8000, report pass/fail per gate, fix failures on a branch + PR (never push to
+> main); (3) check main HEAD is `82ca963` or a later merge, `git tag -a v0.1.0 -m "OpenTerm v0.1.0"`, `git push origin
+> v0.1.0`, watch `gh run list --workflow release.yml` / `gh run watch`; on failure read `--log-failed`, fix on a branch +
+> PR, merge, move the tag (I approve); tell me where the DRAFT release is, never publish it; (4) install the Windows
+> installer from the draft, check app opens, backend starts (8-20 s), a quote loads, no openterm-backend process after
+> close; (5) Docker Desktop (I approve installing it) then `docker compose build` + `up`, load a quote; (6) live AI tests
+> only after I type OPENCODE_API_KEY in APIKEYS myself: `SETTINGS AI PROVIDER OPENCODEGO`, run AI, AI AUTO, SWARM,
+> AI BT CODE once each, record + label; (7) write up passed / failed / owner-only in HANDOFF.md and CHANGELOG.md.
+> Update HANDOFF.md after each step and commit + push the session branch. Max 3 Sonnet subagents. Pause at 97% of the
+> 5-hour window with an updated HANDOFF and a new handoff prompt. Plain English, lead with the result.
 
 **Update 2026-11-15 (branch `claude/openterm-v0-1-0-testing-f934c4`, commit `4c7a7a4`, pushed, NO PR yet):**
 - Checked: tag `v0.1.0` is NOT on GitHub, no release exists, `release.yml` has never run.
