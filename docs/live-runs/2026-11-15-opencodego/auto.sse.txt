@@ -1,0 +1,258 @@
+: LIVE RECORDING (not a fixture, not synthetic) of OpenTerm AUTO on 2026-11-15 23:15:29 +0530
+: provider opencodego | model deepseek-v4-pro | route POST /api/ai/auto | HTTP 200
+: request body {"hypothesis": "Holding SPY only while it closes above its 200-day moving average beat buy-and-hold over the last 10 years.", "model": "deepseek-v4-pro", "provider": "opencodego"}
+: first byte 33 ms | total 41.1 s | events 126 | finished True | error None
+: recorded by scripts/record_live_ai.py; model output is model output, not data
+
+data: {"type":"start","model":"deepseek-v4-pro","provider":"opencodego","started":"2026-11-15T17:44:48+00:00","fixtures":false}
+
+data: {"type":"usage","prompt_tokens":1405,"completion_tokens":361,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":1405,"completion_tokens":361,"cost":0.0}
+
+data: {"type":"tool_call","id":"T1","name":"skills","args":{"query":"strategy backtest moving average"}}
+
+data: {"type":"tool_result","id":"T1","name":"skills","ok":true,"empty":false,"source":"openterm","age_s":0.0,"stale":false,"bytes":1084,"summary":"{\"query\":\"strategy backtest moving average\",\"total\":62,\"matches\":[{\"name\":\"options-strategy\",\"about\":\"Options strategy framework supporting Black-Scholes pricing, Greeks...\",\"sections\":14},{\"name\":\"he"}
+
+data: {"type":"usage","prompt_tokens":1719,"completion_tokens":233,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":1719,"completion_tokens":233,"cost":0.0}
+
+data: {"type":"tool_call","id":"T2","name":"history","args":{"symbol":"SPY","range":"10Y"}}
+
+data: {"type":"tool_result","id":"T2","name":"history","ok":true,"empty":false,"source":"yahoo","age_s":0.0,"stale":false,"bytes":795,"summary":"{\"symbol\":\"SPY\",\"range\":\"10y\",\"interval\":\"1mo\",\"currency\":\"USD\",\"n_bars\":121,\"first\":{\"date\":\"2016-12-01\",\"close\":223.52999877929688},\"last\":{\"date\":\"2026-11-13\",\"close\":754.3699951171875},\"period_ret"}
+
+data: {"type":"tool_call","id":"T3","name":"strategy_check","args":{"rule":"CLOSE > SMA200"}}
+
+data: {"type":"tool_result","id":"T3","name":"strategy_check","ok":true,"empty":false,"source":"openterm","age_s":0.0,"stale":false,"bytes":56,"summary":"{\"valid\":true,\"rule\":\"CLOSE > SMA200\",\"warmup_bars\":200}"}
+
+data: {"type":"usage","prompt_tokens":2161,"completion_tokens":222,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":2161,"completion_tokens":222,"cost":0.0}
+
+data: {"type":"tool_call","id":"T4","name":"backtest_run","args":{"symbols":["SPY"],"rule":"CLOSE > SMA200","range":"10Y"}}
+
+data: {"type":"tool_result","id":"T4","name":"backtest_run","ok":true,"empty":false,"source":null,"age_s":null,"stale":false,"bytes":5243,"summary":"{\"id\":\"a4f971dfe86a049d\",\"rule\":\"CLOSE > SMA200\",\"strategy\":null,\"symbols\":[\"SPY\"],\"interval\":\"1D\",\"range\":\"10Y\",\"engine\":\"us\",\"labels\":{\"headline\":\"HISTORICAL SIMULATION, NOT A FORECAST\",\"engine\":\"us"}
+
+data: {"type":"tool_call","id":"T5","name":"backtest_run","args":{"symbols":["SPY"],"rule":"CLOSE > 0","range":"10Y"}}
+
+data: {"type":"tool_result","id":"T5","name":"backtest_run","ok":true,"empty":false,"source":null,"age_s":null,"stale":false,"bytes":2215,"summary":"{\"id\":\"2fc3039ee1f4fedd\",\"rule\":\"CLOSE > 0\",\"strategy\":null,\"symbols\":[\"SPY\"],\"interval\":\"1D\",\"range\":\"10Y\",\"engine\":\"us\",\"labels\":{\"headline\":\"HISTORICAL SIMULATION, NOT A FORECAST\",\"engine\":\"us\",\"fe"}
+
+data: {"type":"token","text":"Evidence"}
+
+data: {"type":"token","text":" report\n\n"}
+
+data: {"type":"token","text":"Hypothesis: Holding"}
+
+data: {"type":"token","text":" SPY only while"}
+
+data: {"type":"token","text":" it closes above its 200"}
+
+data: {"type":"token","text":"-day moving"}
+
+data: {"type":"token","text":" average beat buy"}
+
+data: {"type":"token","text":"-and-hold over the last"}
+
+data: {"type":"token","text":" 10 years.\n\nRule tested"}
+
+data: {"type":"token","text":": \""}
+
+data: {"type":"token","text":"CLOSE > SMA200\""}
+
+data: {"type":"token","text":" (long SP"}
+
+data: {"type":"token","text":"Y when close is"}
+
+data: {"type":"token","text":" above its 200-day SMA"}
+
+data: {"type":"token","text":", out"}
+
+data: {"type":"token","text":" otherwise). Validated by"}
+
+data: {"type":"token","text":" the parser [T2"}
+
+data: {"type":"token","text":"]. Data window"}
+
+data: {"type":"token","text":": SP"}
+
+data: {"type":"token","text":"Y daily,"}
+
+data: {"type":"token","text":" 2016-11-"}
+
+data: {"type":"token","text":"15 to 2026-"}
+
+data: {"type":"token","text":"11-13 (10Y"}
+
+data: {"type":"token","text":") [T1"}
+
+data: {"type":"token","text":", T"}
+
+data: {"type":"token","text":"3].\n\nResult: The"}
+
+data: {"type":"token","text":" timing"}
+
+data: {"type":"token","text":" rule returned"}
+
+data: {"type":"token","text":" +142"}
+
+data: {"type":"token","text":".6% (final value"}
+
+data: {"type":"token","text":" $242"}
+
+data: {"type":"token","text":",628),"}
+
+data: {"type":"token","text":" annual"}
+
+data: {"type":"token","text":" +"}
+
+data: {"type":"token","text":"9.29"}
+
+data: {"type":"token","text":"%, max drawdown -"}
+
+data: {"type":"token","text":"19.5%, Sharpe"}
+
+data: {"type":"token","text":" 0.80"}
+
+data: {"type":"token","text":", 26 trades. Buy"}
+
+data: {"type":"token","text":"-and-hold over the"}
+
+data: {"type":"token","text":" same window"}
+
+data: {"type":"token","text":" returned +306"}
+
+data: {"type":"token","text":".6% (final value"}
+
+data: {"type":"token","text":" $406,584), annual"}
+
+data: {"type":"token","text":" +15.10"}
+
+data: {"type":"token","text":"%, max drawdown -33"}
+
+data: {"type":"token","text":".7% ["}
+
+data: {"type":"token","text":"T3, T4"}
+
+data: {"type":"token","text":"]."}
+
+data: {"type":"token","text":" The rule under"}
+
+data: {"type":"token","text":"performed buy-and-hold"}
+
+data: {"type":"token","text":" by -165"}
+
+data: {"type":"token","text":".2 percentage points"}
+
+data: {"type":"token","text":" (excess return -"}
+
+data: {"type":"token","text":"1.65"}
+
+data: {"type":"token","text":") [T"}
+
+data: {"type":"token","text":"3].\n\nWhat this"}
+
+data: {"type":"token","text":" shows: the "}
+
+data: {"type":"token","text":"200-day filter"}
+
+data: {"type":"token","text":" did cut"}
+
+data: {"type":"token","text":" the"}
+
+data: {"type":"token","text":" worst drawdown (-"}
+
+data: {"type":"token","text":"19"}
+
+data: {"type":"token","text":".5% vs -33"}
+
+data: {"type":"token","text":".7%), but it"}
+
+data: {"type":"token","text":" gave up far"}
+
+data: {"type":"token","text":" more upside"}
+
+data: {"type":"token","text":","}
+
+data: {"type":"token","text":" so"}
+
+data: {"type":"token","text":" it did"}
+
+data: {"type":"token","text":" not beat buy-and-hold"}
+
+data: {"type":"token","text":" in total"}
+
+data: {"type":"token","text":" return over this"}
+
+data: {"type":"token","text":" window.\n\n"}
+
+data: {"type":"token","text":"What it does"}
+
+data: {"type":"token","text":" not show: this"}
+
+data: {"type":"token","text":" is one"}
+
+data: {"type":"token","text":" historical simulation with"}
+
+data: {"type":"token","text":" no commissions"}
+
+data: {"type":"token","text":", "}
+
+data: {"type":"token","text":"5 b"}
+
+data: {"type":"token","text":"ps slippage, and no"}
+
+data: {"type":"token","text":" forecast;"}
+
+data: {"type":"token","text":" it says"}
+
+data: {"type":"token","text":" nothing about future"}
+
+data: {"type":"token","text":" performance"}
+
+data: {"type":"token","text":" or other assets"}
+
+data: {"type":"token","text":"/windows.\n\nWhat would fals"}
+
+data: {"type":"token","text":"ify/"}
+
+data: {"type":"token","text":"confirm: the hypothesis"}
+
+data: {"type":"token","text":" is"}
+
+data: {"type":"token","text":" already falsified on"}
+
+data: {"type":"token","text":" this exact"}
+
+data: {"type":"token","text":" window; it"}
+
+data: {"type":"token","text":" would be"}
+
+data: {"type":"token","text":" supported only if a"}
+
+data: {"type":"token","text":" different run"}
+
+data: {"type":"token","text":" showed"}
+
+data: {"type":"token","text":" the"}
+
+data: {"type":"token","text":" SMA200 rule"}
+
+data: {"type":"token","text":"'s total return exceeding"}
+
+data: {"type":"token","text":" buy-and-hold after"}
+
+data: {"type":"token","text":" costs"}
+
+data: {"type":"token","text":"."}
+
+data: {"type":"usage","prompt_tokens":5225,"completion_tokens":530,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":5225,"completion_tokens":530,"cost":0.0}
+
+data: {"type":"evidence","runs":["a4f971dfe86a049d","2fc3039ee1f4fedd"],"tested":true,"note":"HISTORICAL SIMULATION, NOT A FORECAST"}
+
+data: {"type":"saved","run_id":"1630cb131f3a"}
+
+data: {"type":"done","answer":"Evidence report\n\nHypothesis: Holding SPY only while it closes above its 200-day moving average beat buy-and-hold over the last 10 years.\n\nRule tested: \"CLOSE > SMA200\" (long SPY when close is above its 200-day SMA, out otherwise). Validated by the parser [T2]. Data window: SPY daily, 2016-11-15 to 2026-11-13 (10Y) [T1, T3].\n\nResult: The timing rule returned +142.6% (final value $242,628), annual +9.29%, max drawdown -19.5%, Sharpe 0.80, 26 trades. Buy-and-hold over the same window returned +306.6% (final value $406,584), annual +15.10%, max drawdown -33.7% [T3, T4]. The rule underperformed buy-and-hold by -165.2 percentage points (excess return -1.65) [T3].\n\nWhat this shows: the 200-day filter did cut the worst drawdown (-19.5% vs -33.7%), but it gave up far more upside, so it did not beat buy-and-hold in total return over this window.\n\nWhat it does not show: this is one historical simulation with no commissions, 5 bps slippage, and no forecast; it says nothing about future performance or other assets/windows.\n\nWhat would falsify/confirm: the hypothesis is already falsified on this exact window; it would be supported only if a different run showed the SMA200 rule's total return exceeding buy-and-hold after costs.","grounded":true,"label":null,"unsourced":["-165.2"],"tool_calls":5,"cost":0.0,"stopped":null}
+

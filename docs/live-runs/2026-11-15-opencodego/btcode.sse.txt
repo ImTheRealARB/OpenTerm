@@ -1,0 +1,182 @@
+: LIVE RECORDING (not a fixture, not synthetic) of OpenTerm BTCODE on 2026-11-15 23:14:35 +0530
+: provider opencodego | model deepseek-v4-pro | route POST /api/ai/bt_code | HTTP 200
+: request body {"idea": "Buy when the 20-day SMA crosses above the 50-day SMA; sell when it crosses back below.", "model": "deepseek-v4-pro", "provider": "opencodego"}
+: first byte 38 ms | total 14.3 s | events 88 | finished True | error None
+: recorded by scripts/record_live_ai.py; model output is model output, not data
+
+data: {"type":"start","model":"deepseek-v4-pro","provider":"opencodego","started":"2026-11-15T17:44:21+00:00","fixtures":false}
+
+data: {"type":"token","text":"```"}
+
+data: {"type":"token","text":"python"}
+
+data: {"type":"token","text":"\n"}
+
+data: {"type":"token","text":"import numpy as np\nimport"}
+
+data: {"type":"token","text":" pandas as pd\n\n\nclass Signal"}
+
+data: {"type":"token","text":"Engine:\n    # Golden cross"}
+
+data: {"type":"token","text":" / death"}
+
+data: {"type":"token","text":" cross: long when the "}
+
+data: {"type":"token","text":"20-day SMA crosses above\n"}
+
+data: {"type":"token","text":"    # the 50-day"}
+
+data: {"type":"token","text":" SMA, flat when it crosses"}
+
+data: {"type":"token","text":" back below.\n"}
+
+data: {"type":"token","text":"    def generate(self, data"}
+
+data: {"type":"token","text":"_map):\n        out = {}\n"}
+
+data: {"type":"token","text":"        for sym, df in"}
+
+data: {"type":"token","text":" data_map.items():\n            sm"}
+
+data: {"type":"token","text":"a_f"}
+
+data: {"type":"token","text":"ast = df[\"close\"]."}
+
+data: {"type":"token","text":"rolling(20).mean()\n"}
+
+data: {"type":"token","text":"            sma_slow ="}
+
+data: {"type":"token","text":" df[\"close\"].rolling("}
+
+data: {"type":"token","text":"50).mean()\n\n            #"}
+
+data: {"type":"token","text":" Cross"}
+
+data: {"type":"token","text":" events"}
+
+data: {"type":"token","text":" are detected"}
+
+data: {"type":"token","text":" with"}
+
+data: {"type":"token","text":" the previous"}
+
+data: {"type":"token","text":" bar only (shift"}
+
+data: {"type":"token","text":"(1) is a\n"}
+
+data: {"type":"token","text":"            # past value"}
+
+data: {"type":"token","text":", never a lookahead"}
+
+data: {"type":"token","text":"). The engine fills"}
+
+data: {"type":"token","text":" on the next open"}
+
+data: {"type":"token","text":".\n            cross"}
+
+data: {"type":"token","text":"_up = ("}
+
+data: {"type":"token","text":"sma_fast > sm"}
+
+data: {"type":"token","text":"a_slow) & ("}
+
+data: {"type":"token","text":"sma_fast.shift"}
+
+data: {"type":"token","text":"(1) <= sma"}
+
+data: {"type":"token","text":"_slow.shift(1"}
+
+data: {"type":"token","text":"))\n            cross_down = ("}
+
+data: {"type":"token","text":"sma_fast < sm"}
+
+data: {"type":"token","text":"a_slow) & ("}
+
+data: {"type":"token","text":"sma_fast.shift"}
+
+data: {"type":"token","text":"(1) >= sma"}
+
+data: {"type":"token","text":"_slow.shift(1"}
+
+data: {"type":"token","text":"))\n\n            pos = pd.S"}
+
+data: {"type":"token","text":"eries(np.nan, index"}
+
+data: {"type":"token","text":"=df.index)\n            pos"}
+
+data: {"type":"token","text":"[cross_up] = "}
+
+data: {"type":"token","text":"1.0    # enter"}
+
+data: {"type":"token","text":" long\n            pos[cross"}
+
+data: {"type":"token","text":"_down] = 0."}
+
+data: {"type":"token","text":"0  # exit to"}
+
+data: {"type":"token","text":" flat\n\n            # Hold the"}
+
+data: {"type":"token","text":" last decision forward"}
+
+data: {"type":"token","text":"; before"}
+
+data: {"type":"token","text":" the first"}
+
+data: {"type":"token","text":" cross ("}
+
+data: {"type":"token","text":"or before\n"}
+
+data: {"type":"token","text":"            # enough history for"}
+
+data: {"type":"token","text":" both"}
+
+data: {"type":"token","text":" SMAs) we are"}
+
+data: {"type":"token","text":" flat.\n            out[sym"}
+
+data: {"type":"token","text":"] = pos.ffill"}
+
+data: {"type":"token","text":"().fillna(0."}
+
+data: {"type":"token","text":"0)\n        return out\n"}
+
+data: {"type":"token","text":"```\n\nRational"}
+
+data: {"type":"token","text":"e: a"}
+
+data: {"type":"token","text":" simple trend-f"}
+
+data: {"type":"token","text":"ollowing long/fl"}
+
+data: {"type":"token","text":"at strategy using the"}
+
+data: {"type":"token","text":" classic 20/50"}
+
+data: {"type":"token","text":" SMA crossover"}
+
+data: {"type":"token","text":", with no"}
+
+data: {"type":"token","text":" lookahead"}
+
+data: {"type":"token","text":" and flat during"}
+
+data: {"type":"token","text":" the"}
+
+data: {"type":"token","text":" warm"}
+
+data: {"type":"token","text":"-up period.\n\nBT_CODE"}
+
+data: {"type":"token","text":"_NAME sm"}
+
+data: {"type":"token","text":"a_20_50_c"}
+
+data: {"type":"token","text":"ross"}
+
+data: {"type":"usage","prompt_tokens":1410,"completion_tokens":802,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":1410,"completion_tokens":802,"cost":0.0}
+
+data: {"type":"code_draft","draft":{"code":"import numpy as np\nimport pandas as pd\n\n\nclass SignalEngine:\n    # Golden cross / death cross: long when the 20-day SMA crosses above\n    # the 50-day SMA, flat when it crosses back below.\n    def generate(self, data_map):\n        out = {}\n        for sym, df in data_map.items():\n            sma_fast = df[\"close\"].rolling(20).mean()\n            sma_slow = df[\"close\"].rolling(50).mean()\n\n            # Cross events are detected with the previous bar only (shift(1) is a\n            # past value, never a lookahead). The engine fills on the next open.\n            cross_up = (sma_fast > sma_slow) & (sma_fast.shift(1) <= sma_slow.shift(1))\n            cross_down = (sma_fast < sma_slow) & (sma_fast.shift(1) >= sma_slow.shift(1))\n\n            pos = pd.Series(np.nan, index=df.index)\n            pos[cross_up] = 1.0    # enter long\n            pos[cross_down] = 0.0  # exit to flat\n\n            # Hold the last decision forward; before the first cross (or before\n            # enough history for both SMAs) we are flat.\n            out[sym] = pos.ffill().fillna(0.0)\n        return out\n","name":"sma_20_50_cross","ok":true,"error":null,"line":null,"repaired":false,"note":"DRAFT FROM A MODEL, NOT RUN AND NOT SAVED: READ THE CODE, OPEN IT IN BT EDIT AND SAVE IT YOURSELF (CTRL+S). A BACKTEST IS A HISTORICAL SIMULATION, NOT A FORECAST"}}
+
+data: {"type":"done","answer":"Rationale: a simple trend-following long/flat strategy using the classic 20/50 SMA crossover, with no lookahead and flat during the warm-up period.","grounded":true,"label":null,"unsourced":[],"tool_calls":0,"cost":0.0,"stopped":null}
+

@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated 2026-11-15 (end of session; see "Update 2026-11-15" below). Before that: 2026-11-10. Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
+Last updated 2026-11-15 night (release session: see "RELEASE SESSION 2026-11-15 night" under "Resume here"). Before that: 2026-11-15 (see "Update 2026-11-15" below). Before that: 2026-11-10. Everything is merged to `main` (PR #40, merge commit `6d1f172`); start new work
 from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and `claude/admiring-archimedes-7ibeha` are superseded.
 
 ## Resume here
@@ -11,9 +11,26 @@ session's designated branch and open a PR only when the owner asks.
 **RELEASE SESSION 2026-11-15 night (local worktree `openterm-v0-1-0-release-3a8487`, pushed to `claude/openterm-v0-1-0-release-d0dda1`):**
 1. DONE: PR #46 merged (`e135184` = main HEAD) after all 12 CI checks passed (static, pytest, sdk, vitest, e2e, bench x2).
    Main merged into the session branch.
-2. IN PROGRESS: live AI tests on OpenCode Go. App started from this worktree (`start.ps1 -NoBrowser`, port 8000, its own
-   fresh `backend/data/openterm.db`, so the owner's everyday settings are untouched; keys come from the shared Windows keyring).
-3. TODO: HANDOFF + CHANGELOG write-up, PR with the session branch.
+2. DONE (owner said go): live AI tests on OpenCode Go. App started from this worktree (`start.ps1 -NoBrowser`, port 8000,
+   its own fresh `backend/data/openterm.db`, so the owner's everyday settings are untouched; the key came from the Windows
+   keyring, where the owner had typed it in APIKEYS). APIKEYS key test: OK. Go's model list (free GET) has `deepseek-v4-pro`
+   (Go ids have no `deepseek/` prefix, so the OpenRouter-style default would not work there). Typed in the app:
+   `SETTINGS AI PROVIDER OPENCODEGO`, `SETTINGS AI MODEL deepseek-v4-pro`. Recorder: new `scripts/record_live_ai.py`
+   (sends the panels' own requests to the app's routes; refuses unless the app's provider matches; drops a recording that
+   contains the key). Recordings: `docs/live-runs/2026-11-15-opencodego/{ai,btcode,auto,swarm}.sse.txt`, each labelled
+   LIVE in its first SSE comment lines. Evidence only: no test reads them. Results:
+   - AI "AAPL price and today's move": PASS, 18 s, `quote` tool, grounded ("$356.27, +0.39%").
+   - AI BT CODE 20/50 SMA cross: PASS, 14 s, draft `sma_20_50_cross` passed the sandbox check first time (no repair).
+   - AI AUTO "SPY above its 200-day vs buy-and-hold, 10 years": PASS, 41 s, 5 tool calls, 2 backtest runs, evidence note
+     HISTORICAL SIMULATION, NOT A FORECAST.
+   - SWARM COMMITTEE AAPL: FINISHED, PARTIAL, 361 s. Technical, risk and chair done and grounded; the fundamental analyst
+     timed out twice at the 120 s per-role cap (`ROLE_TIMEOUT_S`, `ai/swarm.py:34`) after about 7 tool calls per try.
+     The chair's summary says the desk failed. Not changed: the owner decides whether reasoning models get a longer cap.
+   Cost: Go is flat-fee, so every role logged cost 0.0.
+3. DONE: this write-up + CHANGELOG "v0.1.0 release run"; PR with the session branch (see below).
+   Owner-only, still open: macOS run on the MacBook Air, updater signing key, real MSI install (double-click, UAC, Start
+   menu), Docker (skipped), Kite / Alpaca / IBKR live tests (need accounts), publishing the DRAFT release, and the SWARM
+   per-role timeout decision.
 
 **RELEASE SESSION 2026-11-15 evening (local, branch `claude/openterm-v0-1-0-release-d0dda1`; owner's 7-step list):**
 1. DONE: PR #45 merged (`82ca963` = main HEAD). Main folder pulled to `82ca963`. Its old untracked HANDOFF.md and its
@@ -54,7 +71,7 @@ session's designated branch and open a PR only when the owner asks.
    Owner, later: double-click the MSI once to check the real install + Start menu entry.
 5. SKIPPED by the owner ("do it later"): Docker. Docker Desktop is NOT installed (`winget install -e --id
    Docker.DockerDesktop`, needs a UAC click, likely a reboot + WSL2, ~6-10 GB disk with the image).
-6. WAITING FOR THE OWNER: type `OPENCODE_API_KEY` in APIKEYS, then say go.
+6. DONE in the night session above (live AI runs on OpenCode Go).
 7. PARTLY DONE: this section + CHANGELOG "v0.1.0 release run". Still owner-only: macOS run on the MacBook Air, updater
    signing key, Kite / Alpaca / IBKR live tests (need accounts), Docker (skipped), real MSI install, publish the draft,
    merge PR #46.
@@ -64,18 +81,13 @@ session's designated branch and open a PR only when the owner asks.
    Owner rule this session: pause at 97% of the 5-hour window, update this file, give a handoff prompt.
 
 **Handoff prompt for a new session (paste as is):**
-> Continue OpenTerm in my local folder (C:\Users\Asus\Documents\OpenTerm). Work in a fresh worktree from `main`, or on
-> branch `claude/openterm-v0-1-0-release-d0dda1` (it holds the newest HANDOFF.md; merge it into main via a PR when I say).
-> Read HANDOFF.md "RELEASE SESSION 2026-11-15 evening" first, then CLAUDE.md. State: v0.1.0 tag on `c637f68`, release
-> run 3 all green, DRAFT release has all 6 installers (I publish it myself, never you). Gates on main passed except 3
-> Windows-only OCR tests, fixed in PR #46 (open). Docker is skipped for now. Do, in order: (1) merge PR #46 if CI is
-> green (I approve); (2) live AI tests: wait until I say I have typed OPENCODE_API_KEY in APIKEYS (never type or log it),
-> then `SETTINGS AI PROVIDER OPENCODEGO` and run AI, AI AUTO, SWARM, AI BT CODE once each, record with the recorder
-> scripts and label the recordings; tell me before anything that uses paid quota; (3) finish the HANDOFF.md and
-> CHANGELOG.md write-up (passed / failed / owner-only: macOS run on my MacBook Air, updater signing key, real MSI
-> install, Docker, Kite/Alpaca/IBKR live tests) and open a PR with the session branch. Update HANDOFF.md after each step,
-> commit + push. Max 3 Sonnet subagents. Pause at 97% of the 5-hour window with an updated HANDOFF and a new handoff
-> prompt. Plain English, lead with the result.
+> Continue OpenTerm in my local folder (C:\Users\Asus\Documents\OpenTerm). Work in a fresh worktree from `main`.
+> Read HANDOFF.md "RELEASE SESSION 2026-11-15 night" first, then CLAUDE.md. State: v0.1.0 tag on `c637f68`, DRAFT release
+> has all 6 installers (I publish it myself, never you); PR #46 merged; live AI on OpenCode Go passed for AI, AI AUTO and
+> AI BT CODE; SWARM COMMITTEE finished with 3 of 4 roles (fundamental analyst hit the 120 s per-role cap twice). The
+> session PR with the write-up may still be open: merge it only when I say. Open items are owner-only (macOS run, updater
+> key, real MSI install, Docker, broker live tests) plus my decision on the SWARM per-role timeout. Plain English, lead
+> with the result.
 
 **Update 2026-11-15 (branch `claude/openterm-v0-1-0-testing-f934c4`, commit `4c7a7a4`, pushed, NO PR yet):**
 - Checked: tag `v0.1.0` is NOT on GitHub, no release exists, `release.yml` has never run.

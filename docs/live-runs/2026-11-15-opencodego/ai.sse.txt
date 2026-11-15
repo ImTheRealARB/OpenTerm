@@ -1,0 +1,36 @@
+: LIVE RECORDING (not a fixture, not synthetic) of OpenTerm AI on 2026-11-15 23:14:14 +0530
+: provider opencodego | model deepseek-v4-pro | route POST /api/ai/chat | HTTP 200
+: request body {"question": "What is AAPL trading at, and how much did it move today?", "history": [], "model": "deepseek-v4-pro", "provider": "opencodego"}
+: first byte 154 ms | total 18.1 s | events 15 | finished True | error None
+: recorded by scripts/record_live_ai.py; model output is model output, not data
+
+data: {"type":"start","model":"deepseek-v4-pro","provider":"opencodego","started":"2026-11-15T17:43:56+00:00","fixtures":false}
+
+data: {"type":"usage","prompt_tokens":2485,"completion_tokens":65,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":2485,"completion_tokens":65,"cost":0.0}
+
+data: {"type":"tool_call","id":"T1","name":"quote","args":{"symbols":"AAPL"}}
+
+data: {"type":"tool_result","id":"T1","name":"quote","ok":true,"empty":false,"source":"yahoo","age_s":0.0,"stale":false,"bytes":247,"summary":"{\"AAPL\":{\"symbol\":\"AAPL\",\"name\":\"Apple Inc.\",\"currency\":\"USD\",\"price\":356.27,\"prev_close\":354.88,\"change\":1.3899999999999864,\"change_pct\":0.3916816952209159,\"high\":360.83,\"low\":355.755,\"volume\":400274"}
+
+data: {"type":"token","text":"AAPL is trading at $"}
+
+data: {"type":"token","text":"356.27, up $"}
+
+data: {"type":"token","text":"1.39 (+"}
+
+data: {"type":"token","text":"0.39%) today ["}
+
+data: {"type":"token","text":"T"}
+
+data: {"type":"token","text":"1"}
+
+data: {"type":"token","text":"]."}
+
+data: {"type":"usage","prompt_tokens":2632,"completion_tokens":26,"cost":0.0}
+
+data: {"type":"usage","prompt_tokens":2632,"completion_tokens":26,"cost":0.0}
+
+data: {"type":"done","answer":"AAPL is trading at $356.27, up $1.39 (+0.39%) today [T1].","grounded":true,"label":null,"unsourced":[],"tool_calls":1,"cost":0.0,"stopped":null}
+
