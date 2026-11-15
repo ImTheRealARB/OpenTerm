@@ -59,6 +59,13 @@ session's designated branch and open a PR only when the owner asks.
      IBKR live tests once those accounts exist.
   5. Optional: more BT 10-year headroom on CI (now ~10% faster; the rest is the ported engine's per-bar Python loop;
      options in `docs/PERFORMANCE.md`), a splash window for the 8-20 s desktop start-up.
+- **Cloud session 2026-11-15 (branch `claude/openterm-v0-1-0-testing-i4jf7x`, fast-forwarded from #44's branch):**
+  step 1 result: PR #44 at `45ec69a` was ALL GREEN (15 checks: static, pytest, sdk, vitest, e2e, bench on both push and
+  PR runs; `desktop-check` shell on windows-latest, macos-latest, ubuntu-22.04 = first Rust compile passed, no code fix
+  needed). Only follow-up: `Cargo.lock` lacked `tauri-plugin-shell`; added with `cargo metadata` (minimal resolve:
+  additions only, `tauri-plugin-shell 2.6.0` + its deps, no existing pin changed). Local `cargo check` not possible here
+  (no webkit2gtk dev packages); the new PR's `desktop-check` compiles with the committed lock.
+  Step 2 (owner approved): replacement PR from this branch, #44 closed pointing to it, CI watched until green. NOT merged.
 - Owner's local folder (`C:\Users\Asus\Documents\OpenTerm`): `/HANDOFF.md` is out of `.git/info/exclude` (done
   2026-11-15). Still to do there: drop `HANDOFF.md` from `.worktreeinclude`, copy this worktree's `CLAUDE.md` over the
   main one, then `git pull origin main` after merges (back up / remove the old untracked HANDOFF.md first if git complains).
