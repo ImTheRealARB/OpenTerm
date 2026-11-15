@@ -44,10 +44,15 @@ session's designated branch and open a PR only when the owner asks.
   ubuntu) pending. Auto-fix was on in the old session only; a new session must check CI itself (`gh pr checks 44`).
 - **Next, in order:**
   1. Get PR #44 green. Most likely failure: `desktop-check` (first Rust compile ever). Read the job log
-     (`gh run view <id> --log-failed`), fix `desktop/src-tauri/src/main.rs` / `Cargo.toml`, push to the same branch.
-     After the first green compile, commit the `Cargo.lock` the build produced (download it from the job or regenerate
-     with `cargo generate-lockfile` on a machine with Rust) if CI shows it changed.
-  2. Owner says merge: `gh pr merge 44 --merge` (local gate green is the bar; CI is extra).
+     (`gh run view <id> --log-failed`), fix `desktop/src-tauri/src/main.rs` / `Cargo.toml`. A local session on the
+     owner's laptop pushes to the same branch. **A cloud session can push only to its own designated branch:** start
+     it from this branch (`git fetch origin claude/openterm-v0-1-0-testing-f934c4` and `git merge --ff-only FETCH_HEAD`
+     into the session branch), push fixes there, and when the owner asks, open a PR from it that replaces #44 (then close
+     #44 with a comment pointing to the new PR). If the box has cargo, `cargo check` in `desktop/src-tauri` catches Rust
+     errors before CI (Linux needs the webkit packages listed in `release.yml`).
+     After the first green compile, commit the `Cargo.lock` the build produced (regenerate with `cargo generate-lockfile`
+     on a machine with Rust) if it changed.
+  2. Owner says merge: `gh pr merge <N> --merge` (local gate green is the bar; CI is extra).
   3. Owner tags `v0.1.0` on the Windows laptop (commands under step 2 below) and checks the "release" workflow.
   4. Owner-only, later: OpenCode Go live AI tests (owner types `OPENCODE_API_KEY` in APIKEYS, approves quota use, then
      run AI, AI AUTO, SWARM, AI BT CODE once each), macOS run on the MacBook Air, updater signing key, Kite / Alpaca /
