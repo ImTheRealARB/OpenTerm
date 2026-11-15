@@ -28,10 +28,10 @@ session's designated branch and open a PR only when the owner asks.
    tauri-action runs `gh release upload --clobber` on every installer, and `uploadUpdaterJson` -> `includeUpdaterJson`.
    Run 2 (`43733121873`, tag on `2f9d882`) FAILED on macOS: bash 3.2 there has no `globstar` ("shopt: globstar: invalid
    shell option name"). **PR #48 MERGED** (`c637f68`): the step lists installers with `find` (tested on a fake tree).
-   Run 2 cancelled, its draft deleted, **`v0.1.0` now on `c637f68`, run 3 = `43733799577`.** NEXT SESSION: check run 3:
-   all 4 jobs green AND the draft lists `*-setup.exe`, `.msi`, `.AppImage`, `.deb`, two `.dmg`. If a job fails: fix on a
-   branch + PR, merge, delete the draft (`gh release delete v0.1.0 --yes`), move the tag (`git push origin --delete
-   v0.1.0`, `git tag -d v0.1.0`, re-tag main, push). The owner approved fixing the uploads this way. Never publish.
+   Run 2 cancelled, its draft deleted, **`v0.1.0` now on `c637f68`, run 3 = `43733799577`: ALL GREEN.** The DRAFT
+   (`.../releases/tag/untagged-787645599752a41e18e5`, not published) has all 6 installers: `OpenTerm_0.1.0_x64-setup.exe`
+   (84 MB), `OpenTerm_0.1.0_x64_en-US.msi`, `OpenTerm_0.1.0_amd64.AppImage` (190 MB), `OpenTerm_0.1.0_amd64.deb`,
+   `OpenTerm_0.1.0_aarch64.dmg`, `OpenTerm_0.1.0_x64.dmg`. Step 4 was checked on run 1's MSI (same app code).
    The old notes below describe the first run.
    **Gaps found in the first run:** (a) the NSIS `OpenTerm_0.1.0_x64-setup.exe` was BUILT (log: 83.65 MiB) but never uploaded;
    the Linux AppImage and the macOS `.app.tar.gz` are missing too. tauri-action v0.5.17 logged only "Uploading ...msi".
@@ -57,19 +57,18 @@ session's designated branch and open a PR only when the owner asks.
    Owner rule this session: pause at 97% of the 5-hour window, update this file, give a handoff prompt.
 
 **Handoff prompt for a new session (paste as is):**
-> Continue OpenTerm release + verification in my local folder (worktree branch `claude/openterm-v0-1-0-release-d0dda1`,
-> or a fresh worktree from `main`). Read HANDOFF.md "RELEASE SESSION 2026-11-15 evening" first, then CLAUDE.md,
-> docs/DESKTOP.md, desktop/SIDECAR_NOTES.md. Do the first step not marked DONE, in order: (2) full local gates on main
-> `node scripts/gates.mjs` with nothing on :8000, report pass/fail per gate, fix failures on a branch + PR (never push to
-> main); (3) check main HEAD is `82ca963` or a later merge, `git tag -a v0.1.0 -m "OpenTerm v0.1.0"`, `git push origin
-> v0.1.0`, watch `gh run list --workflow release.yml` / `gh run watch`; on failure read `--log-failed`, fix on a branch +
-> PR, merge, move the tag (I approve); tell me where the DRAFT release is, never publish it; (4) install the Windows
-> installer from the draft, check app opens, backend starts (8-20 s), a quote loads, no openterm-backend process after
-> close; (5) Docker Desktop (I approve installing it) then `docker compose build` + `up`, load a quote; (6) live AI tests
-> only after I type OPENCODE_API_KEY in APIKEYS myself: `SETTINGS AI PROVIDER OPENCODEGO`, run AI, AI AUTO, SWARM,
-> AI BT CODE once each, record + label; (7) write up passed / failed / owner-only in HANDOFF.md and CHANGELOG.md.
-> Update HANDOFF.md after each step and commit + push the session branch. Max 3 Sonnet subagents. Pause at 97% of the
-> 5-hour window with an updated HANDOFF and a new handoff prompt. Plain English, lead with the result.
+> Continue OpenTerm in my local folder (C:\Users\Asus\Documents\OpenTerm). Work in a fresh worktree from `main`, or on
+> branch `claude/openterm-v0-1-0-release-d0dda1` (it holds the newest HANDOFF.md; merge it into main via a PR when I say).
+> Read HANDOFF.md "RELEASE SESSION 2026-11-15 evening" first, then CLAUDE.md. State: v0.1.0 tag on `c637f68`, release
+> run 3 all green, DRAFT release has all 6 installers (I publish it myself, never you). Gates on main passed except 3
+> Windows-only OCR tests, fixed in PR #46 (open). Docker is skipped for now. Do, in order: (1) merge PR #46 if CI is
+> green (I approve); (2) live AI tests: wait until I say I have typed OPENCODE_API_KEY in APIKEYS (never type or log it),
+> then `SETTINGS AI PROVIDER OPENCODEGO` and run AI, AI AUTO, SWARM, AI BT CODE once each, record with the recorder
+> scripts and label the recordings; tell me before anything that uses paid quota; (3) finish the HANDOFF.md and
+> CHANGELOG.md write-up (passed / failed / owner-only: macOS run on my MacBook Air, updater signing key, real MSI
+> install, Docker, Kite/Alpaca/IBKR live tests) and open a PR with the session branch. Update HANDOFF.md after each step,
+> commit + push. Max 3 Sonnet subagents. Pause at 97% of the 5-hour window with an updated HANDOFF and a new handoff
+> prompt. Plain English, lead with the result.
 
 **Update 2026-11-15 (branch `claude/openterm-v0-1-0-testing-f934c4`, commit `4c7a7a4`, pushed, NO PR yet):**
 - Checked: tag `v0.1.0` is NOT on GitHub, no release exists, `release.yml` has never run.

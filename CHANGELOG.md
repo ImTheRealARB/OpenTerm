@@ -3,7 +3,7 @@
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
 ## v0.1.0 release run (2026-11-15)
-- Tag `v0.1.0` on `82ca963`. The release workflow ran for the first time and passed on all four runners (Linux, Windows, macOS arm64, macOS Intel). Draft release assets: two macOS `.dmg`, a Linux `.deb` and a Windows `.msi`. The NSIS `setup.exe`, the Linux AppImage and the macOS `.app` archives were built or expected but not uploaded (open item).
+- Tag `v0.1.0` on `82ca963`. The release workflow ran for the first time and passed on all four runners (Linux, Windows, macOS arm64, macOS Intel). tauri-action v0.5.17 attached only one installer per job, so the workflow now uploads every installer itself (PR #47; PR #48 replaced a bash `globstar` glob that macOS's bash 3.2 rejects). The tag moved to `c637f68`; the third run passed and the draft release has six installers: Windows `setup.exe` and `.msi`, Linux AppImage and `.deb`, and macOS `.dmg` for Apple silicon and Intel.
 - Windows check: the app from the MSI opens, its bundled backend answers on port 8765 (about 57 s on the first launch), a live quote loads, and closing the window leaves no backend process. The MSI was extracted for this check, not installed.
 - Local gates on Windows: ruff, tsc, eslint, vitest clean; Playwright 354/354; pytest 4036 passed and 3 OCR tests failed on Windows only (their fake `tesseract` was a `#!` script). Fixed in PR #46.
 - Not verified yet: macOS run, Docker build, live AI runs on OpenCode Go, broker live tests, the updater (no signing key).
