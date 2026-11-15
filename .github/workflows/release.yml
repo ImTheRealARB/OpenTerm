@@ -8,6 +8,7 @@
 #   secrets  APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
 #            macOS code signing and notarisation
 #   secrets  WINDOWS_CERTIFICATE (base64 .pfx), WINDOWS_CERTIFICATE_PASSWORD   Windows Authenticode (see docs/DESKTOP.md)
+# Each bundle contains the backend as a frozen executable (sidecar), built by .github/actions/build-sidecar.
 # This repository ships no Python wheel (the backend runs from source or the Docker image), so there is no wheel job.
 name: release
 
@@ -101,6 +102,12 @@ jobs:
           fi
           echo "NOTICE: Windows bundles are UNSIGNED unless a signing command is configured (docs/DESKTOP.md)." >> "$GITHUB_STEP_SUMMARY"
           echo "args=$args" >> "$GITHUB_OUTPUT"
+
+      # Frontend build + the frozen backend (the sidecar) in desktop/src-tauri/binaries/, smoke-tested. Tauri needs both
+      # (bundle.resources and bundle.externalBin in tauri.conf.json) before it can build. The sidecar is built on the
+      # same runner it runs on, so the matrix `target` and the sidecar's target triple agree (arm64 macOS runner = aarch64,
+      # macos-15-intel = x86_64).
+      - uses: ./.github/actions/build-sidecar
 
       - name: Install desktop CLI
         working-directory: desktop

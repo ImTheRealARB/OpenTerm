@@ -1,0 +1,59 @@
+# Compiles the desktop shell on GitHub without tagging a release: same build as release.yml (frontend, frozen backend
+# sidecar + smoke test, Rust shell) but `tauri build --debug --no-bundle`, so no installer is made and nothing is published
+# or signed. This is the only place the Rust code (desktop/src-tauri) is compiled on all three systems before a tag.
+# Run it by hand (Actions tab > desktop-check > Run workflow) or let it run on a pull request that touches the desktop files.
+name: desktop-check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "desktop/**"
+      - ".github/actions/build-sidecar/**"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/desktop-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shell:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Linux system packages
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf
+
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: ./.github/actions/build-sidecar
+
+      - name: Install desktop CLI
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+
+      # --debug: skips the slow optimised (LTO) release profile, we only want to know that it compiles and that the
+      # resources / sidecar paths in tauri.conf.json resolve. --no-bundle: no installer.
+      - name: Compile the shell
+        working-directory: desktop
+        run: npx tauri build --debug --no-bundle

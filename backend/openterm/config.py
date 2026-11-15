@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Serve a built frontend (frontend/dist) from the backend at "/". Empty = off (dev mode uses Vite).
     # Docker and the desktop build set it.
     openterm_static_dir: str = ""
+    # Desktop build: the frozen backend has no repo checkout, so the Tauri shell points at the config.yaml it ships
+    # as a bundle resource. Empty = <repo>/config.yaml. A path that is set but missing is an error (no silent default).
+    openterm_config_path: str = ""
 
     # --- Phase 11 ---
     # Key store backend: auto (OS keyring if one exists, else .env) | memory (tests) | none (.env only).
@@ -50,7 +53,10 @@ class Settings(BaseSettings):
 
 @lru_cache
 def load_yaml() -> dict:
-    path = ROOT / "config.yaml"
+    configured = get_settings().openterm_config_path
+    path = Path(configured) if configured else ROOT / "config.yaml"
+    if configured and not path.is_file():
+        raise FileNotFoundError(f"OPENTERM_CONFIG_PATH {path} does not exist")
     if not path.exists():
         return {}
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}

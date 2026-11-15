@@ -45,6 +45,11 @@ dev = [
     "pytest-xdist>=3.8.0",
     "ruff>=0.6",
 ]
+# Only for building the desktop app's backend executable (desktop/sidecar/freeze.py). Not in the default groups, so a
+# normal `uv sync` and the Docker image never install it: `uv sync --group freeze` / `uv run --group freeze ...`.
+freeze = [
+    "pyinstaller>=6.10",
+]
 
 [build-system]
 requires = ["hatchling"]
