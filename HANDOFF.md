@@ -17,11 +17,29 @@ session's designated branch and open a PR only when the owner asks.
    which Windows cannot start (OSError); those tests only run with the ocr extra, so CI (Linux) never saw it. Fix:
    **PR #46** (`claude/ocr-tests-windows`, Windows writes `tesseract.py` + a `tesseract.cmd` wrapper; file: 7 passed,
    1 skipped). PR #46 is OPEN, not merged.
-3. IN PROGRESS: tag `v0.1.0` pushed on `82ca963` (the #45 merge commit, owner's instruction). Release run `43726929524`
-   (`gh run view 43726929524`). Result: see below once known. Never publish the draft: the owner does.
+3. DONE: tag `v0.1.0` pushed on `82ca963` (the #45 merge commit, owner's instruction). Release run `43726929524` ALL
+   GREEN on its first run (macOS arm64 6 min, Windows 8 min, Linux 6.5 min, macOS Intel 18 min). DRAFT release "OpenTerm
+   v0.1.0" (not published; the owner publishes): https://github.com/ImTheRealARB/OpenTerm/releases (draft URL
+   `.../releases/tag/untagged-c4bd050b3216247fc1ca`). Assets: `OpenTerm_0.1.0_aarch64.dmg`, `OpenTerm_0.1.0_x64.dmg`,
+   `OpenTerm_0.1.0_amd64.deb`, `OpenTerm_0.1.0_x64_en-US.msi`.
+   **Gaps found (NOT fixed):** (a) the NSIS `OpenTerm_0.1.0_x64-setup.exe` was BUILT (log: 83.65 MiB) but never uploaded;
+   the Linux AppImage and the macOS `.app.tar.gz` are missing too. tauri-action v0.5.17 logged only "Uploading ...msi".
+   Cause not found. Simplest robust fix: a step after tauri-action that runs `gh release upload` on the bundle folder
+   (needs a re-run: delete the draft, move the tag). (b) `release.yml` passes `uploadUpdaterJson`, which tauri-action does
+   not know (warning); the input is `includeUpdaterJson`. Harmless until the updater key exists. (c) Node 20 deprecation
+   warnings on all pinned actions (still run, forced onto Node 24).
+4. DONE (with one caveat): the MSI was EXTRACTED (`msiexec /a`, no install), not installed: a real install needs a UAC
+   click and the owner was away. Ran the extracted `openterm-desktop.exe`: window "OpenTerm" opened and responded; the
+   sidecar (`openterm-backend.exe`, 81 MB, 2 processes = PyInstaller one-file loader + child) answered `/api/health` on
+   port 8765 after ~57 s on this first launch (slower than the documented 8-20 s; first unpack + Defender scan likely);
+   live AAPL quote loaded from Yahoo. Closing the window: no `openterm-backend` process left (checked at 8 s and 15 s).
+   Owner, later: double-click the MSI once to check the real install + Start menu entry.
 5. SKIPPED by the owner ("do it later"): Docker. Docker Desktop is NOT installed (`winget install -e --id
    Docker.DockerDesktop`, needs a UAC click, likely a reboot + WSL2, ~6-10 GB disk with the image).
-4, 6, 7. NOT STARTED.
+6. WAITING FOR THE OWNER: type `OPENCODE_API_KEY` in APIKEYS, then say go.
+7. PARTLY DONE: this section + CHANGELOG "v0.1.0 release run". Still owner-only: macOS run on the MacBook Air, updater
+   signing key, Kite / Alpaca / IBKR live tests (need accounts), Docker (skipped), real MSI install, publish the draft,
+   merge PR #46.
    Network note: the session sandbox blocked github.com once ("socket forbidden"); rerun gh/git push unsandboxed. `release.yml`
    looked sane on read (tag must equal `tauri.conf.json` version 0.1.0; draft release; 4 runners incl. `macos-15-intel`).
    Live AI tests still need the OWNER to type `OPENCODE_API_KEY` in APIKEYS: a session never types it.

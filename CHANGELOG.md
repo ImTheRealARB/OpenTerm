@@ -2,6 +2,12 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## v0.1.0 release run (2026-11-15)
+- Tag `v0.1.0` on `82ca963`. The release workflow ran for the first time and passed on all four runners (Linux, Windows, macOS arm64, macOS Intel). Draft release assets: two macOS `.dmg`, a Linux `.deb` and a Windows `.msi`. The NSIS `setup.exe`, the Linux AppImage and the macOS `.app` archives were built or expected but not uploaded (open item).
+- Windows check: the app from the MSI opens, its bundled backend answers on port 8765 (about 57 s on the first launch), a live quote loads, and closing the window leaves no backend process. The MSI was extracted for this check, not installed.
+- Local gates on Windows: ruff, tsc, eslint, vitest clean; Playwright 354/354; pytest 4036 passed and 3 OCR tests failed on Windows only (their fake `tesseract` was a `#!` script). Fixed in PR #46.
+- Not verified yet: macOS run, Docker build, live AI runs on OpenCode Go, broker live tests, the updater (no signing key).
+
 ## Standalone desktop app, per-field settings sync, translated skill references (2026-11-15)
 - Desktop: the backend is frozen into one executable (PyInstaller, `desktop/sidecar/`) and shipped inside the Tauri app as a sidecar, with the built frontend and `config.yaml` as bundle resources; the database and `.env` live in the per-user app data folder; a busy port 8765 falls back to a free one; the backend exits when the window's process dies. The frozen backend is smoke-tested on Windows (health, frontend, quote, BT rule and Python-strategy jobs, quant jobs, AI desks). The Rust shell has not been compiled yet: the new `desktop-check` workflow compiles it on Windows, macOS and Linux for pull requests that touch `desktop/`. Start-up takes 8 to 20 s with no splash screen.
 - Release builds: the full desktop icon set (`.ico`, `.icns`); Windows builds failed without `icons/icon.ico`.
