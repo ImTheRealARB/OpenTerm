@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULTS, POLL_BOUNDS, cycle, diffFromDefaults, isZone, normalize, reconcile, stepPoll, CHART_RANGES } from "./schema";
+import { DEFAULTS, POLL_BOUNDS, SETTING_FIELDS, cycle, diffFromDefaults, effectiveTimes, isZone, normalize, reconcile, stampChanges, stepPoll, CHART_RANGES } from "./schema";
 import { settingsArgs, themeArgs } from "./commands";
 
 describe("normalize", () => {
@@ -131,14 +131,117 @@ describe("cycle and stepPoll", () => {
   });
 });
 
-describe("reconcile", () => {
-  it("decides between push, adopt and keep", () => {
-    expect(reconcile({ updatedAt: 0, dirty: false }, { settings: null, updated_at: null })).toBe("keep");
-    expect(reconcile({ updatedAt: 5, dirty: false }, { settings: null, updated_at: null })).toBe("push");
-    expect(reconcile({ updatedAt: 9, dirty: true }, { settings: {}, updated_at: 5 })).toBe("push");
-    expect(reconcile({ updatedAt: 3, dirty: true }, { settings: {}, updated_at: 5 })).toBe("adopt");
-    expect(reconcile({ updatedAt: 5, dirty: false }, { settings: {}, updated_at: 5 })).toBe("keep");
-    expect(reconcile({ updatedAt: 2, dirty: false }, { settings: {}, updated_at: 5 })).toBe("adopt");
+describe("per-field sync: effectiveTimes / stampChanges", () => {
+  it("a legacy copy (no field times) counts every field as changed when the copy was saved", () => {
+    const t = effectiveTimes(undefined, 50);
+    expect(Object.keys(t).sort()).toEqual([...SETTING_FIELDS].sort());
+    expect(Object.values(t).every((v) => v === 50)).toBe(true);
+  });
+  it("a copy WITH field times does not fall back to the copy's time: a field it has no time for was never set", () => {
+    const t = effectiveTimes({ theme: 7 }, 50);
+    expect(t.theme).toBe(7);
+    expect(t.vim).toBe(0);
+  });
+  it("junk times count as never set", () => {
+    const t = effectiveTimes({ theme: -1, vim: Number.NaN, font: "now" as unknown as number }, 50);
+    expect([t.theme, t.vim, t.font]).toEqual([0, 0, 0]);
+    expect(effectiveTimes(undefined, Number.NaN).theme).toBe(0);
+  });
+  it("stampChanges stamps changed, added and removed (reset) fields only", () => {
+    const before = { theme: "green", vim: true, font: "Consolas" };
+    const after = { theme: "white", font: "Consolas", tape: true }; // theme changed, vim removed (reset), tape added, font same
+    const out = stampChanges(before, after, { theme: 1, vim: 1, font: 1, tape: 0 }, 99);
+    expect(out).toMatchObject({ theme: 99, vim: 99, tape: 99, font: 1 });
+    expect(out.startup).toBeUndefined(); // untouched fields get no entry
+  });
+});
+
+describe("per-field sync: reconcile (the merge)", () => {
+  const nothing = { settings: null, updated_at: null };
+
+  it("different fields edited on two devices: both survive, in both directions", () => {
+    // Remote (device A) changed theme at 10; local (device B) changed vim at 20 and has not seen A's edit.
+    const r = reconcile(
+      { settings: { vim: true }, updatedAt: 20, fieldTimes: { vim: 20 } },
+      { settings: { theme: "green" }, updated_at: 10, field_times: { theme: 10 } },
+    );
+    expect(r.settings).toEqual({ theme: "green", vim: true });
+    expect(r.times.theme).toBe(10);
+    expect(r.times.vim).toBe(20);
+    expect(r.changed).toBe(true); // theme came from the remote copy
+    expect(r.push).toBe(true); // vim is ours and the remote lacks it
+  });
+
+  it("the same field: the later change wins", () => {
+    const local = { settings: { theme: "white" }, updatedAt: 20, fieldTimes: { theme: 20 } };
+    const newerLocal = reconcile(local, { settings: { theme: "green" }, updated_at: 10, field_times: { theme: 10 } });
+    expect(newerLocal.settings).toEqual({ theme: "white" });
+    expect(newerLocal).toMatchObject({ push: true, changed: false });
+    const newerRemote = reconcile(local, { settings: { theme: "green" }, updated_at: 30, field_times: { theme: 30 } });
+    expect(newerRemote.settings).toEqual({ theme: "green" });
+    expect(newerRemote).toMatchObject({ push: false, changed: true });
+  });
+
+  it("a reset (field absent but timed) beats an older value, and loses to a newer one", () => {
+    const resetRemote = reconcile({ settings: { theme: "green" }, updatedAt: 5, fieldTimes: { theme: 5 } }, { settings: {}, updated_at: 9, field_times: { theme: 9 } });
+    expect(resetRemote.settings).toEqual({});
+    expect(resetRemote.changed).toBe(true);
+    const resetLocal = reconcile({ settings: {}, updatedAt: 9, fieldTimes: { theme: 9 } }, { settings: { theme: "green" }, updated_at: 5, field_times: { theme: 5 } });
+    expect(resetLocal.settings).toEqual({});
+    expect(resetLocal.push).toBe(true);
+  });
+
+  it("a field nobody ever set (time 0 on both sides) keeps the local value and is never sent", () => {
+    const r = reconcile({ settings: { startup: "layout" }, updatedAt: 0 }, { settings: { theme: "green" }, updated_at: 10, field_times: { theme: 10 } });
+    expect(r.settings).toEqual({ startup: "layout", theme: "green" }); // the seed stays
+    expect(r.push).toBe(false); // lt 0 is not newer than rt 0
+    expect(r.times.startup).toBe(0);
+  });
+
+  it("a default (never set here) is not newer than a remote edit", () => {
+    const r = reconcile({ settings: {}, updatedAt: 0 }, { settings: { theme: "green" }, updated_at: 10, field_times: { theme: 10 } });
+    expect(r.settings).toEqual({ theme: "green" });
+    expect(r).toMatchObject({ push: false, changed: true });
+  });
+
+  it("an equal time that was really set takes the remote copy; identical values change nothing", () => {
+    const tie = reconcile({ settings: { theme: "white" }, updatedAt: 5, fieldTimes: { theme: 5 } }, { settings: { theme: "green" }, updated_at: 5, field_times: { theme: 5 } });
+    expect(tie.settings).toEqual({ theme: "green" });
+    const sameValue = reconcile({ settings: { theme: "green" }, updatedAt: 5, fieldTimes: { theme: 5 } }, { settings: { theme: "green" }, updated_at: 5, field_times: { theme: 5 } });
+    expect(sameValue).toMatchObject({ push: false, changed: false });
+  });
+
+  it("nothing saved on the backend: anything we ever set is pushed, an untouched mirror is left alone", () => {
+    expect(reconcile({ settings: {}, updatedAt: 0 }, nothing)).toMatchObject({ push: false, changed: false });
+    const edited = reconcile({ settings: { theme: "green" }, updatedAt: 5, fieldTimes: { theme: 5 } }, nothing);
+    expect(edited).toMatchObject({ push: true, changed: false });
+    expect(edited.settings).toEqual({ theme: "green" });
+  });
+
+  it("legacy copies behave like whole-document last-write-wins", () => {
+    // Old local mirror (no field times) vs old server document (no field_times): each is one time for every field.
+    const legacyLocalNewer = reconcile({ settings: { theme: "white" }, updatedAt: 9 }, { settings: { theme: "green", vim: true }, updated_at: 5 });
+    expect(legacyLocalNewer.settings).toEqual({ theme: "white" }); // the older remote vim is dropped, as a whole-doc replace would
+    expect(legacyLocalNewer.push).toBe(true);
+    const legacyRemoteNewer = reconcile({ settings: { theme: "white" }, updatedAt: 3 }, { settings: { theme: "green", vim: true }, updated_at: 5 });
+    expect(legacyRemoteNewer.settings).toEqual({ theme: "green", vim: true });
+    expect(legacyRemoteNewer).toMatchObject({ push: false, changed: true });
+    const inSync = reconcile({ settings: { theme: "green" }, updatedAt: 5 }, { settings: { theme: "green" }, updated_at: 5 });
+    expect(inSync).toMatchObject({ push: false, changed: false });
+  });
+
+  it("an old mirror meets a new server document: the new per-field times decide", () => {
+    // Local mirror saved by the old code at 5 (all fields at 5); the server has theme edited at 8 and never had vim.
+    const r = reconcile({ settings: { theme: "white", vim: true }, updatedAt: 5 }, { settings: { theme: "green" }, updated_at: 8, field_times: { theme: 8 } });
+    expect(r.settings).toEqual({ theme: "green", vim: true }); // theme: remote newer; vim: remote never set (0), local 5 wins
+    expect(r.push).toBe(true);
+  });
+
+  it("the merged settings still normalize (a merge never produces a bad document)", () => {
+    const r = reconcile({ settings: { vim: true }, updatedAt: 20, fieldTimes: { vim: 20 } }, { settings: { theme: "green" }, updated_at: 10, field_times: { theme: 10 } });
+    const { settings, errors } = normalize(r.settings);
+    expect(errors).toEqual([]);
+    expect(settings).toMatchObject({ theme: "green", vim: true });
   });
 });
 

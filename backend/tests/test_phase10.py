@@ -25,7 +25,7 @@ FULL = {
 def test_settings_empty_then_roundtrip(client):
     r = client.get("/api/settings")
     assert r.status_code == 200
-    assert r.json() == {"version": 1, "settings": None, "updated_at": None}
+    assert r.json() == {"version": 1, "settings": None, "updated_at": None, "field_times": {}}
 
     r = client.put("/api/settings", json={"version": 1, "settings": FULL})
     assert r.status_code == 200, r.text

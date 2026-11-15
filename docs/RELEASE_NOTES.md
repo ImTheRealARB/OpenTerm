@@ -66,5 +66,5 @@ table (adjusted close when available), and CSV export from every table panel (`E
 ## Known limits
 - Docker image and Tauri shell are written but not built or run (no Docker or Rust on the build machine).
 - Free sources throttle: GDELT answers slowly and rate-limits; Yahoo needs a cookie and crumb. See `docs/DATA_LIMITS.md`.
-- Settings sync is last-write-wins by `updated_at` (single user, one backend).
+- Settings sync merges per top-level field by change time (two devices editing different settings both keep their edit; the same field is last-write-wins). Each field is one unit, so `keys`, `poll`, `ai` and `chart` are replaced whole. It trusts each device's clock: the server refuses a time more than a day ahead of its own.
 - No auto-update, no signed installers.
