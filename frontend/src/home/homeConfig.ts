@@ -70,6 +70,22 @@ export const BLOCKS: readonly HomeBlock[] = [
   { kind: "news", id: "cc", title: "COMMODITIES · CRYPTO", sections: ["commodities", "crypto"], limit: 6 },
 ];
 
+/**
+ * The `CODE >` drill link in each block's tile header (components/Tile.tsx): the code shown, and the command it runs.
+ * A block with no entry (FX, commodities and crypto share one block, so no single function is "its" function) has no link.
+ */
+export const BLOCK_DRILL: Readonly<Record<string, { code: string; run: string }>> = {
+  indices: { code: "WEI", run: "WEI" },
+  rates: { code: "RATES", run: "RATES" },
+  top: { code: "N", run: "N" },
+  markets: { code: "N", run: "N MARKETS" },
+  economy: { code: "N", run: "N ECONOMY" },
+  companies: { code: "N", run: "N COMPANIES" },
+  tech: { code: "N", run: "N TECH" },
+  india: { code: "N", run: "N INDIA" },
+  cc: { code: "N", run: "N COMMODITIES" },
+};
+
 /** The quote block symbols, in order, without repeats. */
 export function blockSymbols(blocks: readonly HomeBlock[] = BLOCKS): string[] {
   const out: string[] = [];

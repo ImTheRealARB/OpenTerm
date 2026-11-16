@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TAPE_DEFAULT, TAPE_SYMBOL_RE } from "../settings/schema";
-import { BLOCKS, NEWS_SECTIONS, blockSymbols, homeSymbols, mergeNews, newsQuery, tapeLabel } from "./homeConfig";
+import { newsQuery as newsArgs } from "../functions/newsArgs";
+import { BLOCKS, BLOCK_DRILL, NEWS_SECTIONS, blockSymbols, homeSymbols, mergeNews, newsQuery, tapeLabel } from "./homeConfig";
 
 describe("home blocks", () => {
   it("every symbol is a valid tape-style symbol and appears once", () => {
@@ -22,6 +23,17 @@ describe("home blocks", () => {
     expect(all.filter((s) => s === "^GSPC").length).toBe(1);
     expect(all).toContain("AAPL");
     expect(all).toContain("^NSEI");
+  });
+});
+
+describe("block drill links", () => {
+  it("name real blocks, run their own code, and every news run is a command the N function accepts", () => {
+    const ids = BLOCKS.map((b) => b.id);
+    for (const [id, d] of Object.entries(BLOCK_DRILL)) {
+      expect(ids, id).toContain(id);
+      expect(d.run.split(" ")[0]).toBe(d.code);
+      if (d.code === "N") expect(newsArgs(d.run.split(" ").slice(1)).kind, d.run).not.toBe("error");
+    }
   });
 });
 

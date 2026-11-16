@@ -1,0 +1,15 @@
+/* Section tiles (components/Tile.tsx). Terminal look: flat, square, 1px line border, no hover. Colour only for meaning:
+   the header strip is the dark-grey bar token, the drill link is the accent colour. */
+.tile { min-width: 0; border: 1px solid var(--line); margin: 0 0 4px; }
+.tile-h { display: flex; align-items: baseline; gap: 8px; padding: 0 6px; background: var(--bar-hi); color: var(--hdr); font-weight: bold; white-space: nowrap; overflow: hidden; }
+/* The title takes the free space, so the meta text and the link sit at the right edge. */
+.tile-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tile-h .hb-meta { flex: none; font-weight: normal; }
+.tile-go { flex: none; padding: 0 2px; font: inherit; font-weight: bold; color: var(--accent); background: none; border: 0; cursor: pointer; white-space: nowrap; }
+/* Keyboard focus = the same blue as a selected row. Terminal has no :hover (DESIGN.md), only focus. */
+.tile-go:focus-visible { background: var(--sel); color: var(--val); outline: none; }
+
+/* GUI mode only: radius and hover are allowed here (and nowhere in terminal mode). */
+:root[data-mode="gui"] .tile { border-radius: 3px; overflow: hidden; }
+:root[data-mode="gui"] .tile-go { border-radius: 2px; }
+:root[data-mode="gui"] .tile-go:hover { background: var(--sel); color: var(--val); }

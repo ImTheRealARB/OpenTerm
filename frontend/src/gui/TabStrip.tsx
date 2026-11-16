@@ -1,14 +1,14 @@
-import { showsSecurity } from "../functions/registry";
+import { FUNCTIONS, showsSecurity } from "../functions/registry";
 import { MAX_PANELS } from "../state/layoutState";
 import { useStore } from "../state/store";
 import { closePanel, currentView, focusPanel, panelOrder, split, workspace, type PanelState } from "../state/workspace";
 import { chromeKeyDown, focusCommandLine } from "./chrome";
+import { tabParts, type TabParts } from "./tabLabel";
 
-/** What a tab says: "AAPL GP" (ticker only when the function uses one, like the panel title), the function alone, or "New tab". */
-function tabLabel(p: PanelState): string {
+/** What a tab says: a function badge ("GP") plus the ticker (when the function uses one) or its plain title; see gui/tabLabel.ts. */
+function tabLabel(p: PanelState): TabParts {
   const v = currentView(p);
-  const parts = [showsSecurity(v) ? v.security?.symbol : undefined, v.fn].filter(Boolean);
-  return parts.length ? parts.join(" ") : "New tab";
+  return tabParts(v.fn, v.security?.symbol, showsSecurity(v), v.fn ? FUNCTIONS.get(v.fn)?.title : undefined);
 }
 
 /**
@@ -28,12 +28,18 @@ export function TabStrip() {
       {order.map((id) => {
         const p = panels[id];
         if (!p) return null;
+        const label = tabLabel(p);
         return (
           <span key={id} className={"gt-tab" + (id === focus ? " on" : "")} data-panel-tab={id}>
             <button type="button" role="tab" aria-selected={id === focus} className="gt-name" onClick={() => focusPanel(id)} title={`Panel ${id}`}>
-              {tabLabel(p)}
+              {label.badge && (
+                <span className="gt-fn" data-testid="tab-fn">
+                  {label.badge}
+                </span>
+              )}
+              <span className="gt-title">{label.title}</span>
             </button>
-            <button type="button" className="gt-x" aria-label={`Close tab ${tabLabel(p)}`} title="Close this tab" onClick={() => closePanel(id)}>
+            <button type="button" className="gt-x" aria-label={`Close tab ${label.full}`} title="Close this tab" onClick={() => closePanel(id)}>
               ×
             </button>
           </span>

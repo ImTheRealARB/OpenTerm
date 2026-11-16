@@ -33,6 +33,9 @@ export type Mode = (typeof MODES)[number];
 /** What a fresh session opens: the HOME page, or the layout that was open last time (see home/startup.ts). */
 export const STARTUPS = ["home", "layout"] as const;
 export type Startup = (typeof STARTUPS)[number];
+/** Row-number gutter on the quote grids (1) 2) 3) ...). "auto" = on in Terminal, off in GUI; one field cannot have a mode-dependent default, so the default is the word "auto". */
+export const ROW_NUMBERS = ["auto", "on", "off"] as const;
+export type RowNumbers = (typeof ROW_NUMBERS)[number];
 /** The ticker tape (HOME and the optional global bar). At most this many symbols; each must look like a Yahoo-style symbol. */
 export const TAPE_MAX = 30;
 export const TAPE_SYMBOL_RE = /^[A-Z0-9^][A-Z0-9.\-=^&]{0,19}$/;
@@ -64,6 +67,8 @@ export interface Settings {
   ai: { model: string; visionModel: string; provider: (typeof AI_PROVIDERS)[number]; /** Keep the redacted question and answer of each AI run next to the audit ledger (local only; off by default). */ storeText: boolean; web: boolean; webProvider: (typeof AI_WEB_PROVIDERS)[number] };
   /** "home" = a new session opens the HOME page; "layout" = it restores the saved workspace as before. */
   startup: Startup;
+  /** Row-number gutter on Q, WL, WEI, FX and CMDTY (type a number, Enter): auto = Terminal on, GUI off. */
+  rowNumbers: RowNumbers;
   /** Also show the ticker tape in the global top bar on every screen (HOME always has its own). */
   tape: boolean;
   /** Symbols on the tape, in order (TAPE ADD / TAPE DEL / TAPE RESET). */
@@ -84,6 +89,7 @@ export const DEFAULTS: Settings = Object.freeze({
   keys: {},
   ai: { model: "deepseek/deepseek-v4-pro", visionModel: "deepseek/deepseek-v4.1-flash", provider: "openrouter", storeText: false, web: false, webProvider: "brave" },
   startup: "home",
+  rowNumbers: "auto",
   tape: false,
   tapeSymbols: [...TAPE_DEFAULT],
   sources: {},
@@ -216,6 +222,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
       keys,
       ai: aiOut,
       startup: pick("startup", oneOf(STARTUPS, r.startup), r.startup as Startup, d.startup),
+      rowNumbers: pick("rowNumbers", oneOf(ROW_NUMBERS, r.rowNumbers), r.rowNumbers as RowNumbers, d.rowNumbers),
       tape: pick("tape", typeof r.tape === "boolean", r.tape as boolean, d.tape),
       tapeSymbols: pick("tapeSymbols", tapeOk, (r.tapeSymbols as string[])?.slice(), [...d.tapeSymbols]),
       sources: sourcesOut,

@@ -10,6 +10,7 @@ import { DEFAULTS, diffFromDefaults, effectiveTimes, normalize, reconcile, stamp
 import { applyFont } from "./font";
 import { parseFieldTimes, parseMirror, sameMirror, type Mirror } from "./mirror";
 import { applyTheme } from "./themes";
+import { rowNumbersEffective } from "../keys/rowJump";
 
 const MIRROR = "openterm.settings";
 
@@ -46,6 +47,8 @@ function apply(next: Settings): void {
     setNumberFormat(next.numberFormat.thousands, next.numberFormat.decimal);
     display = true;
   }
+  // The row-number gutter is drawn on the canvas, so grids must repaint when its effective state flips (setting or mode changed).
+  if (prev && rowNumbersEffective(prev.rowNumbers, prev.mode) !== rowNumbersEffective(next.rowNumbers, next.mode)) display = true;
   // CSS scopes the GUI-only look with :root[data-mode="gui"], so the attribute must always be present.
   if ((!prev || prev.mode !== next.mode) && typeof document !== "undefined") document.documentElement.dataset.mode = next.mode;
   if (!prev || JSON.stringify(prev.keys) !== JSON.stringify(next.keys)) setKeyOverrides(next.keys);

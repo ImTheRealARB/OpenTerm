@@ -345,3 +345,24 @@ describe("AI settings", () => {
     expect(r && r.ok && r.next.ai).toEqual(DEFAULTS.ai);
   });
 });
+
+describe("rowNumbers (row-number gutter on the quote grids)", () => {
+  it("defaults to auto and is not written to the backend until changed", () => {
+    expect(DEFAULTS.rowNumbers).toBe("auto");
+    expect(diffFromDefaults(DEFAULTS).rowNumbers).toBeUndefined();
+    expect(diffFromDefaults({ ...DEFAULTS, rowNumbers: "on" }).rowNumbers).toBe("on");
+  });
+  it("accepts auto, on, off and falls back to auto with an error for anything else", () => {
+    for (const v of ["auto", "on", "off"]) expect(normalize({ mode: "terminal", rowNumbers: v }).settings.rowNumbers).toBe(v);
+    const bad = normalize({ mode: "terminal", rowNumbers: "yes" });
+    expect(bad.settings.rowNumbers).toBe("auto");
+    expect(bad.errors).toContain("rowNumbers");
+  });
+  it("SETTINGS ROWNUMBERS AUTO|ON|OFF", () => {
+    expect(settingsArgs(["ROWNUMBERS", "on"], DEFAULTS)).toMatchObject({ ok: true, next: { rowNumbers: "on" } });
+    expect(settingsArgs(["ROWNUMBERS", "OFF"], DEFAULTS)).toMatchObject({ ok: true, next: { rowNumbers: "off" } });
+    expect(settingsArgs(["ROWNUMBERS", "auto"], { ...DEFAULTS, rowNumbers: "on" })).toMatchObject({ ok: true, next: { rowNumbers: "auto" } });
+    expect(settingsArgs(["ROWNUMBERS", "maybe"], DEFAULTS)).toMatchObject({ ok: false });
+    expect(settingsArgs(["ROWNUMBERS"], DEFAULTS)).toMatchObject({ ok: false });
+  });
+});

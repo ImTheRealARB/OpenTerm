@@ -27,6 +27,7 @@ MAX_BYTES = 16_000
 
 MODES = ("terminal", "gui")  # which shell the frontend shows; a saved object with no `mode` means "terminal"
 STARTUPS = ("home", "layout")  # what a new session opens: the HOME page, or the saved workspace
+ROW_NUMBERS = ("auto", "on", "off")  # gutter of 1) 2) 3) on the quote grids; auto = on in Terminal, off in GUI
 TAPE_MAX = 30  # ticker tape symbols
 TAPE_SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9.\-=^&]{0,19}\Z")  # same rule as frontend settings/schema.ts
 THEMES = ("amber", "green", "white", "light")
@@ -218,6 +219,7 @@ FIELDS = {
     "keys": _keys,
     "ai": _ai,
     "startup": lambda v: _choice(v, STARTUPS, "startup"),
+    "rowNumbers": lambda v: _choice(v, ROW_NUMBERS, "rowNumbers"),
     "tape": _tape,
     "tapeSymbols": _tape_symbols,
 }

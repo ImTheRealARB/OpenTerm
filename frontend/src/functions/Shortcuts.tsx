@@ -29,6 +29,10 @@ export default function Shortcuts() {
             <td>COMMAND LINE: HISTORY OR SUGGESTIONS / ACCEPT / RUN / RUN IN NEW PANEL</td>
           </tr>
           <tr>
+            <td className="acc">HELP &lt;FN&gt;</td>
+            <td>HELP FOR ONE FUNCTION, E.G. HELP GP (THE ? BUTTON ON A PANEL'S TITLE BAR DOES THE SAME)</td>
+          </tr>
+          <tr>
             <td className="acc">J K ↑ ↓ PGUP PGDN G SHIFT+G</td>
             <td>TABLES: MOVE / PAGE / TOP / BOTTOM</td>
           </tr>

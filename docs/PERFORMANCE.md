@@ -892,3 +892,24 @@ was about 45% of the engine time. `_bar_row` now builds the same Series from a n
 machine (10 runs each, two rounds): before 156-181 ms (median ~163), after 140-186 ms (median ~148), about 10% faster. On GitHub
 CI the line read 300.0 / 298.2 / 233.5 ms in the last three runs; this buys roughly 25-30 ms there, not a full fix. The rest is
 the ported engine's per-bar Python loop. The full bench was not rerun here (port 8000 held by the owner's app).
+
+## UI parity pass (2026-11-16, Windows 11, 20 threads, branch `claude/ui-parity-pass`, uncommitted)
+Same sitting, port 8000 free. **Before** (base `origin/main` e135184, rested): **39/39**. **After** (all nine changes, run right
+after the full gate): **39/39**.
+
+| Line | Before | After | Budget |
+|---|---|---|---|
+| Initial JS+CSS bundle (gzip) | 125.5 KB | 127.1 KB | 400 KB |
+| Cold start to usable command line | 90.3 ms | 95.2 ms | 1500 ms |
+| Keystroke to echo p95 | 14.9 ms | 15.2 ms | 16.7 ms |
+| Keystroke echo p95, streaming load | 9.4 ms | 15.4 ms | 16.7 ms |
+| Tick received to pixel p95, streaming load | 36.7 ms | 38.0 ms | 50 ms |
+| Frame time p95, 10k-row grid scroll | 16.7 ms | 16.7 ms | 20 ms |
+| Layout load to paint p95 | 58.0 ms | 46.1 ms | 100 ms |
+| BT 10-year daily rule run p95 | 154.4 ms | 155.6 ms | 300 ms |
+
+The bundle grew 1.6 KB gz. The new code that has to load at startup: suggestion grouping (`command/groupSuggestions.ts`, ~2.2 KB raw),
+the panel-header Related and `?` buttons (`Panel.tsx`), the tab badge (`gui/tabLabel.ts`), the `rowNumbers` setting and the
+sparks client (`net/marketApi.ts`). Grid.tsx and the board graphics are not in the entry chunk. Keystroke echo under streaming
+load read 15.4 ms (was 9.4) with the machine still warm from the gate; a rested rerun read **39/39** with 10.9 ms (keystroke echo
+14.9 ms, tick to pixel 41.9 ms, 10k-row grid scroll 16.8 ms, bundle 127.1 KB), so that was machine heat, not the code.

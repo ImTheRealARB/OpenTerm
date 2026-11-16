@@ -103,7 +103,8 @@ def _route_base(request: httpx.Request) -> httpx.Response:
     if p == "/api/company/AAPL/company-profile":
         return _load("nasdaq_profile_aapl")
     if p == "/v7/finance/spark":
-        rec = json.loads((FIXTURES / "yahoo_spark.json").read_text(encoding="utf-8"))
+        # range=2d is the board sparkline call (a real recording, 30 minute closes); the one-day call carries the quotes.
+        rec = json.loads((FIXTURES / ("yahoo_spark_2d.json" if q.get("range") == "2d" else "yahoo_spark.json")).read_text(encoding="utf-8"))
         wanted = set(q.get("symbols", "").split(","))
         rec["body"]["spark"]["result"] = [r for r in rec["body"]["spark"]["result"] if r["symbol"] in wanted]
         return httpx.Response(200, json=rec["body"])

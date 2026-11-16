@@ -25,6 +25,11 @@ export interface ToolbarButton {
    * The key itself still works from the keyboard.
    */
   bandHidden?: boolean;
+  /**
+   * A true on/off setting (GP Log). The panel toolbar draws it as a CHECKBOX in the orange control row under the band, not as a
+   * band button. The checkbox state is read from the view's args by PanelToolbar, so only add this where that is possible.
+   */
+  toggle?: boolean;
   /** Press the key with Shift held (BT: `V` goes to the previous view). */
   shift?: boolean;
   /** Tooltip and help-drawer text. */
@@ -71,7 +76,7 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "1Y", key: "6", title: "Range 1 year (6)" },
     { label: "5Y", key: "7", title: "Range 5 years (7)" },
     { label: "MAX", key: "8", title: "Range maximum (8)" },
-    { label: "Log", key: "l", title: "Toggle the logarithmic price scale (L)" },
+    { label: "Log", key: "l", toggle: true, title: "Toggle the logarithmic price scale (L)" },
     { label: "Indicators", key: "i", title: "Pick indicators (I); then press the letter shown next to each one" },
     { label: "Indicators…", key: "i", open: "IND", bandHidden: true, title: "Indicator library: search, write a formula, Enter adds it to this chart" },
     { label: "Crosshair", key: "x", bandHidden: true, title: "Toggle the crosshair (X)" },

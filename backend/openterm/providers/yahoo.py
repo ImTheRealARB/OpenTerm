@@ -8,11 +8,12 @@ import httpx
 
 from ..models import Bars, Profile, Quote, SearchHit
 from ..ranges import range_days
-from .base import HISTORY, PROFILE, QUOTES, SEARCH, Provider, ProviderError
+from .base import HISTORY, PROFILE, QUOTES, SEARCH, SPARKS, Provider, ProviderError
 from .http import BASE, SEARCH_BASE, UA
 
 SPARK_CHUNK = 20  # symbols per spark request (never above 100: Yahoo refuses long URLs / flags big batches)
 SPARK_PARALLEL = 2  # at most this many spark requests in flight at once
+SPARK_POINTS = 64  # at most this many closes per symbol in a sparkline (a cell is ~60 px wide; more points are never visible)
 SPARK_GAP_S = 0.15  # pause after each chunk, so 160+ symbols do not arrive as one burst and trip the rate limit
 
 
@@ -24,6 +25,19 @@ def day_range(v: float | None) -> float | None:
     so 0 means "not sent". Passing it on put 0.000000 on the WEI board as if it were data.
     """
     return v if v is not None and v > 0 else None
+
+
+def spark_closes(response: dict[str, Any], cap: int = SPARK_POINTS) -> list[float]:
+    """The close prices of one `v7/spark` response for a two-session range, in time order, with gaps (null closes) dropped.
+
+    More than `cap` points are thinned by an even stride that always keeps the FIRST and the LAST point, so the line still starts and
+    ends where the data does. An empty list means Yahoo sent no points: the cell stays blank (never a made-up line)."""
+    quote = ((response.get("indicators") or {}).get("quote") or [{}])[0]
+    closes = [float(c) for c in (quote.get("close") or []) if isinstance(c, (int, float)) and not isinstance(c, bool)]
+    if len(closes) <= cap:
+        return closes
+    step = (len(closes) - 1) / (cap - 1)
+    return [closes[round(i * step)] for i in range(cap)]
 
 
 def quote_from_meta(meta: dict[str, Any], source: str, as_of: float, day_open: float | None = None) -> Quote:
@@ -136,7 +150,7 @@ class YahooProvider(Provider):
     # Yahoo's intraday lookback (days). Daily and longer candles reach back about 20 years and are not listed.
     intraday_days: ClassVar[dict[str, int]] = {"1m": 7, "2m": 60, "5m": 60, "15m": 60, "30m": 60, "60m": 730, "90m": 60}
     label = "Yahoo Finance (unofficial)"
-    capabilities = frozenset({QUOTES, HISTORY, SEARCH, PROFILE})
+    capabilities = frozenset({QUOTES, HISTORY, SEARCH, PROFILE, SPARKS})
     markets = "Global equities/ETFs (suffixes .NS .BO .L .T .HK ...), indices (^), FX (=X), crypto (-USD)"
     terms = "Unofficial endpoints; personal use. Data delayed per exchange. May break or block without notice."
     rate = (4.0, 8)
@@ -214,6 +228,36 @@ class YahooProvider(Provider):
             if resp and resp[0].get("meta", {}).get("regularMarketPrice") is not None:
                 out.append(quote_from_meta(resp[0]["meta"], self.source, as_of))
         return out
+
+    async def sparks(self, symbols: list[str]) -> dict[str, list[float]]:
+        """Closes of the last two sessions (30 minute candles) per symbol, for the 2DAY sparkline on the boards.
+
+        The same batched `v7/spark` endpoint and pacing as `quotes`, one request per 20 symbols (never one per symbol). A separate call
+        from `quotes` on purpose: a multi-day range moves `chartPreviousClose` to the close BEFORE the window, so the quote's change
+        must keep coming from the one-day call. A symbol Yahoo sends no points for is simply missing from the answer."""
+        chunks = [symbols[i : i + SPARK_CHUNK] for i in range(0, len(symbols), SPARK_CHUNK)]
+        gate = asyncio.Semaphore(SPARK_PARALLEL)
+
+        async def one(chunk: list[str]) -> dict[str, list[float]]:
+            async with gate:
+                try:
+                    body = await self.get_json(
+                        f"{BASE}/v7/finance/spark", {"symbols": ",".join(chunk), "range": "2d", "interval": "30m"}
+                    )
+                finally:
+                    await asyncio.sleep(SPARK_GAP_S)
+            out: dict[str, list[float]] = {}
+            for item in (body.get("spark") or {}).get("result") or []:
+                resp = (item.get("response") or [None])[0]
+                closes = spark_closes(resp) if isinstance(resp, dict) else []
+                if item.get("symbol") and closes:
+                    out[item["symbol"]] = closes
+            return out
+
+        merged: dict[str, list[float]] = {}
+        for part in await asyncio.gather(*(one(c) for c in chunks)):
+            merged.update(part)
+        return merged
 
     async def _quote_via_chart(self, symbol: str) -> Quote | None:
         try:

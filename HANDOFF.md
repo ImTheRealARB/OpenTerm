@@ -5,6 +5,24 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
+**Update 2026-11-16: UI parity pass (branch `claude/ui-parity-pass` from `origin/main` e135184, committed as `ec261e4` and pushed; PR #50 into `main` opened 2026-11-16, NOT merged: merge when the owner says):**
+nine look-and-feel changes taken from the reference terminal's conventions (no names, assets or wording copied):
+1 GUI band colour `#7e001e`; 2 grouped command-line suggestions with More rows; 3 GUI "Related functions" button (the RELATED
+window menu already existed); 4 yellow `?` help on every panel header; 5 row-number gutter + `rowNumbers` setting (the
+digits-then-Enter jump already existed app-wide as number-select, so no second buffer was built); 6 board FLAG / change BAR /
+`2DAY` sparkline (new `GET /api/sparks`, real fixture `yahoo_spark_2d.json`); 7 `Tile` component on HOME and DES; 8 GUI control
+row under the band (dropdowns, ask field, Log checkbox); 9 light-grey GUI tab strip with function badge. Details: CLAUDE.md
+"UI parity pass" (local-only file; summary of where each change lives: `command/groupSuggestions.ts`, `components/Panel.tsx`,
+`components/Grid.tsx` + `microGraphics.ts` + `functions/boardGraphics.ts`, `GET /api/sparks`, `components/Tile.tsx`,
+`gui/PanelToolbar.tsx` + `gui/toolbars.ts`, `gui/TabStrip.tsx` + `gui/tabLabel.ts`). Gate (CI=1, 2026-11-16): ALL PASS (pytest 4053, vitest, e2e 369/369). Bench 39/39 before and after
+(`docs/PERFORMANCE.md` "UI parity pass"); startup bundle +1.6 KB gz (125.5 -> 127.1), accepted by the owner 2026-11-16.
+Next: owner reviews the PR (and `docs/review/ui-before-after/index.html`, local only), then says merge.
+Open design points: Grid decides the gutter by reading the registry and workspace itself (a `rowNumbers` prop from each panel
+would be cleaner); in GUI the "Related functions" button and `RELATED ▾` sit side by side and do the same thing; the compact
+`gp-range` dropdown now appears only in narrower panels (`wraps()` measures the band only); the Board legend does not mention
+typing a row number. Why `2DAY` uses its own `/api/sparks` call: asking the quote call for `range=2d` would change
+`chartPreviousClose`, which every change % is computed from.
+
 Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
 session's designated branch and open a PR only when the owner asks.
 

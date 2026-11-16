@@ -11,7 +11,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { execute } from "../command/execute";
 import { fmtAge } from "../format";
-import { BLOCKS, homeSymbols, mergeNews, newsQuery, type NewsBlock, type QuoteBlock, type QuoteItem } from "../home/homeConfig";
+import { Tile } from "../components/Tile";
+import { BLOCKS, BLOCK_DRILL, homeSymbols, mergeNews, newsQuery, type NewsBlock, type QuoteBlock, type QuoteItem } from "../home/homeConfig";
 import { firstBlock, moveNav, type Pos } from "../home/homeNav";
 import { LiveCell, quoteFlag } from "../home/liveCells";
 import { TickerTape } from "../home/TickerTape";
@@ -204,24 +205,33 @@ export default function HOME({ panelId }: FunctionProps) {
       <div className="home-grid" ref={grid}>
         {BLOCKS.map((b, bi) => {
           const n = b.kind === "news" ? (news[b.id] ?? LOADING) : null;
+          const drill = BLOCK_DRILL[b.id];
+          // Every block is a tile: title (and the source + age of a news block) in the header strip, `CODE >` link to the bigger function.
           return (
-            <section key={b.id} className={"hb" + (cur.b === bi ? " on" : "")} data-testid={`home-block-${b.id}`}>
-              <div className="hb-h">
-                <span>{b.title}</span>
-                {n && !n.loading && !n.error && (
+            <Tile
+              key={b.id}
+              panelId={panelId}
+              title={b.title}
+              code={drill?.code}
+              run={drill?.run}
+              className={"hb" + (cur.b === bi ? " on" : "")}
+              testId={`home-block-${b.id}`}
+              meta={
+                n && !n.loading && !n.error ? (
                   <span className="hb-meta dim">
                     {n.source} {fmtAge(n.ageS)}
                     {n.stale && <span className="warn"> STALE</span>}
                     {n.failed.length > 0 && <span className="err"> ERR {n.failed.join(",").toUpperCase()}</span>}
                   </span>
-                )}
-              </div>
+                ) : undefined
+              }
+            >
               {b.kind === "quotes" ? (
                 <QuoteRows block={b} quotes={quotes} bi={bi} pos={cur} pick={pick} />
               ) : (
                 <NewsRows s={n!} bi={bi} pos={cur} pick={pick} />
               )}
-            </section>
+            </Tile>
           );
         })}
       </div>

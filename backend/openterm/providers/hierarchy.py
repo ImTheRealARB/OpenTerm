@@ -127,6 +127,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "history": order_for("history"),
     "search": ["yahoo", "twelvedata", "polygon", "fmp"],  # keyed free-tier fallbacks, inert without a key; US names or mapped exchanges only
     "profile": ["yahoo", "nasdaq"],
+    "sparks": ["yahoo"],  # board 2DAY sparkline: two sessions of 30 minute closes (only Yahoo's batched spark endpoint gives them keyless)
     "movers": ["nasdaq"],
     "screener": ["nasdaq_screener"],
     "peers": ["yahoo_peers"],

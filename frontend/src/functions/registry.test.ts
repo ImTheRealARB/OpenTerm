@@ -30,6 +30,12 @@ describe("registry flags", () => {
     expect(relatedCodes(false)).toEqual(["WEI", "MOV", "FX", "CMDTY", "CRYP", "RATES", "ECO", "N"]);
   });
 
+  it("only lists real functions in the RELATED menu (the GUI Related functions button opens the same list)", () => {
+    for (const withSecurity of [true, false]) {
+      for (const code of relatedCodes(withSecurity)) expect(FUNCTIONS.has(code), `${code} (security=${withSecurity})`).toBe(true);
+    }
+  });
+
   it("gives each RELATED rank to one function only", () => {
     for (const kind of ["security", "market"] as const) {
       const ranks = FUNCTION_LIST.map((f) => f.related?.[kind]).filter((r) => r !== undefined);

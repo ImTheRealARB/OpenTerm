@@ -36,6 +36,12 @@ export interface FunctionDef {
    * `market`: offered when it has none. Order lives here (not in windowMenu.ts) so a function's whole record is in one line.
    */
   related?: { security?: number; market?: number };
+  /**
+   * The function's grid may show the row-number gutter (1) 2) 3) ...) and take "type a number, Enter". Set only where no digit key is
+   * already taken: GP (1-8 pick the chart range) and MOV (1-5 switch tabs) must NOT set it. Whether the gutter is actually drawn also
+   * depends on the `rowNumbers` setting (see keys/rowJump.ts).
+   */
+  rowNumbers?: boolean;
 }
 
 const defs: FunctionDef[] = [
@@ -48,11 +54,11 @@ const defs: FunctionDef[] = [
   { code: "SHORTCUTS", title: "Keyboard shortcuts", needsSecurity: false, load: () => import("./Shortcuts") },
   { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]", prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
   { code: "DES", title: "Security description", needsSecurity: true, leadsWithPrice: true, related: { security: 1 }, load: () => import("./DES") },
-  { code: "Q", title: "Quote monitor (live)", needsSecurity: false, argsSchema: "[SYM...]", load: () => import("./Q") },
+  { code: "Q", title: "Quote monitor (live)", needsSecurity: false, argsSchema: "[SYM...]", load: () => import("./Q"), rowNumbers: true },
   { code: "QR", title: "Quote recap (live)", needsSecurity: true, leadsWithPrice: true, related: { security: 3 }, load: () => import("./QR") },
   { code: "N", title: "News", needsSecurity: false, argsSchema: "[TOP | keywords]", securityWhenBare: true, related: { security: 5, market: 8 }, load: () => import("./N") },
-  { code: "WL", title: "Watchlists", needsSecurity: false, argsSchema: "[NAME] [ADD|RM SYM...] | DEL NAME", load: () => import("./WL") },
-  { code: "WEI", title: "World equity indices", needsSecurity: false, related: { market: 1 }, load: () => import("./WEI") },
+  { code: "WL", title: "Watchlists", needsSecurity: false, argsSchema: "[NAME] [ADD|RM SYM...] | DEL NAME", load: () => import("./WL"), rowNumbers: true },
+  { code: "WEI", title: "World equity indices", needsSecurity: false, related: { market: 1 }, load: () => import("./WEI"), rowNumbers: true },
   // P1
   { code: "FA", title: "Financial analysis", needsSecurity: true, argsSchema: "[A|Q] [IS|BS|CF]", related: { security: 4 }, load: () => import("./FA") },
   { code: "FIL", title: "SEC filings", needsSecurity: true, argsSchema: "[FORM]", load: () => import("./FIL") },
@@ -68,10 +74,10 @@ const defs: FunctionDef[] = [
   { code: "ALRT", title: "Price / percent alerts", needsSecurity: false, argsSchema: "[SYM > PRICE | SYM < PRICE | SYM +PCT% | SYM -PCT% | DEL ID | REARM ID | CLEAR]", load: () => import("./ALRT") },
   // P2
   { code: "MOV", title: "Top movers", needsSecurity: false, argsSchema: "[GAINERS|LOSERS|ACTIVE|DOLLAR|NDX100]", related: { market: 2 }, load: () => import("./MOV") },
-  { code: "FX", title: "Currency rates", needsSecurity: false, related: { market: 3 }, load: () => import("./FX") },
+  { code: "FX", title: "Currency rates", needsSecurity: false, related: { market: 3 }, load: () => import("./FX"), rowNumbers: true },
   { code: "FXC", title: "Currency cross matrix", needsSecurity: false, argsSchema: "[CCY ...]", load: () => import("./FXC") },
   { code: "CRYP", title: "Crypto board", needsSecurity: false, argsSchema: "[USD|INR|EUR ...]", related: { market: 5 }, load: () => import("./CRYP") },
-  { code: "CMDTY", title: "Commodities", needsSecurity: false, related: { market: 4 }, load: () => import("./CMDTY") },
+  { code: "CMDTY", title: "Commodities", needsSecurity: false, related: { market: 4 }, load: () => import("./CMDTY"), rowNumbers: true },
   { code: "RATES", title: "Yield curve", needsSecurity: false, argsSchema: "[EUR|GBP|CAD|JPY|SPRD|AUCT|NS <ccy>]", related: { market: 6 }, load: () => import("./RATES") },
   { code: "ERN", title: "Earnings calendar", needsSecurity: false, argsSchema: "[TODAY|TOMORROW|+N|-N|YYYY-MM-DD]", load: () => import("./ERN") },
   { code: "HDS", title: "Holders (13F)", needsSecurity: true, related: { security: 6 }, load: () => import("./HDS") },

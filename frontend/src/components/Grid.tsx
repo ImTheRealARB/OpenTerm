@@ -3,9 +3,12 @@
  * (no text measuring in hot paths), imperative partial repaints for ticks. No DOM per cell.
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { displayVersion } from "../settings/runtime";
+import { displayVersion, settingsStore } from "../settings/runtime";
 import { registerPanelKeys } from "../keys/panelKeys";
+import { buildNumbering, gutterChars, rowNumbersEffective } from "../keys/rowJump";
+import { FUNCTIONS } from "../functions/registry";
 import { usePanelId } from "../state/panelContext";
+import { currentView, workspace } from "../state/workspace";
 import type { TipCtx } from "../gui/gridTips";
 import { bitClear, bitGrow, bitHas, bitSet } from "../state/bitset";
 import { wheelTop } from "../state/gridScroll";
@@ -23,6 +26,14 @@ export interface Column<R> {
   color?: (row: R) => CellColor;
   /** Returns a colour when this cell changed in `frame` (one-frame tick highlight). */
   flash?: (row: R, frame: number) => CellColor | null;
+  /**
+   * Draw this cell yourself on the canvas instead of text (sparkline, change bar). `x`,`y`,`w`,`h` are the cell box in CSS px
+   * (`w` includes the column padding); `colors` are the theme's CSS-token colours. Called per visible row on every repaint, so
+   * keep it allocation-free. Use only fillRect / one stroked path with the default line width, and never leave other state set.
+   */
+  draw?: (ctx: CanvasRenderingContext2D, row: R, x: number, y: number, w: number, h: number, colors: Record<CellColor, string>) => void;
+  /** Helper column (graphic, status flag): left out of the screen-reader summary (`.sr`) and of CSV export. */
+  aux?: boolean;
 }
 
 export interface GridHandle {
@@ -50,6 +61,8 @@ interface Props<R> {
 /** Terminal row height; GUI mode raises it through the CSS variable `--row` (read into the theme, see `rowH`). */
 const DEFAULT_ROW_H = 16;
 const PAD = 6;
+/** Shared empty numbering (gutter off): no allocation per grid. */
+const NO_NUMBERS = new Int32Array(0);
 
 interface Theme {
   bg: string;
@@ -93,7 +106,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const sr = useRef<HTMLDivElement>(null);
-  const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[] });
+  const st = useRef({ top: 0, sel: initialSelected, w: 0, h: 0, cw: 7, theme: null as Theme | null, ctx: null as CanvasRenderingContext2D | null, xs: [] as number[], rn: false, nums: NO_NUMBERS as Int32Array, gutter: 0 });
   // Current row height. A function, not a constant: the theme (and so the height) is re-read when the display settings change.
   const ROW_H_NOW = () => st.current.theme?.rowH ?? DEFAULT_ROW_H;
   const data = useRef({ columns, rows, band });
@@ -121,7 +134,18 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
 
   const layout = () => {
     const s = st.current;
-    let x = 0;
+    // Row-number gutter: only for functions that declare `rowNumbers` in the registry (not GP, not MOV: their digits are keys), and only
+    // when the setting says so (auto = Terminal on, GUI off). Numbers are rebuilt here (rows changed), never per paint.
+    const view = workspace.get().panels[panelId];
+    const fn = view ? currentView(view).fn : undefined;
+    const set = settingsStore.get();
+    s.rn = !!fn && !!FUNCTIONS.get(fn)?.rowNumbers && rowNumbersEffective(set.rowNumbers, set.mode);
+    const { rows: rs, band: isBand } = data.current;
+    s.nums = s.rn ? buildNumbering(rs.length, (i) => !!isBand && rs[i] !== undefined && isBand(rs[i])) : NO_NUMBERS;
+    const gc = s.rn ? gutterChars(s.nums) : 0;
+    s.gutter = gc ? gc * s.cw + PAD * 2 : 0;
+    box.current?.setAttribute("data-gutter", String(gc)); // characters the row-number gutter uses (0 = off): canvas is invisible to the DOM, so tests read this
+    let x = s.gutter;
     s.xs = data.current.columns.map((c) => {
       const at = x;
       x += c.width * s.cw + PAD * 2;
@@ -157,10 +181,23 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
       ctx.fillText(clip(cols[0]?.text(row) ?? "", Math.max(1, Math.floor((s.w - PAD * 2) / s.cw))), (s.xs[0] ?? 0) + PAD, y + ROW_H_NOW() / 2 + 1);
       return;
     }
+    if (s.gutter > 0) {
+      // Row number "12)" right-aligned in the gutter; header rows (number 0) get none and do not use one up.
+      const n = s.nums[i];
+      if (n > 0) {
+        const t = `${n})`;
+        ctx.fillStyle = th.colors.dim;
+        ctx.fillText(t, s.gutter - PAD - t.length * s.cw, y + ROW_H_NOW() / 2 + 1);
+      }
+    }
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const x = s.xs[c];
       const cwPx = col.width * s.cw + PAD * 2;
+      if (col.draw) {
+        col.draw(ctx, row, x, y, cwPx, ROW_H_NOW(), th.colors);
+        continue;
+      }
       const hl = frame >= 0 && col.flash ? col.flash(row, frame) : null;
       if (hl) {
         ctx.fillStyle = th.colors[hl];
@@ -178,7 +215,7 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
     const el = sr.current;
     const row = data.current.rows[st.current.sel];
     if (!el) return;
-    const text = row === undefined ? "" : data.current.columns.map((c) => `${c.title} ${c.text(row)}`.trim()).join(" · ");
+    const text = row === undefined ? "" : data.current.columns.filter((c) => !c.aux).map((c) => `${c.title} ${c.text(row)}`.trim()).join(" · ");
     if (el.textContent !== text) el.textContent = text; // identical text would still re-announce in the live region
   };
 
@@ -391,8 +428,10 @@ function GridInner<R>({ columns, rows, initialSelected = 0, onSelect, band }: Pr
   // eslint-disable-next-line react-hooks/exhaustive-deps -- helpers read only refs; effect must run only when rows/columns change
   }, [rows, columns]);
 
+  // The canvas is invisible to the DOM: publish the header words so tests (and agents) can see which columns a grid has.
+  const colTitles = columns.map((c) => c.title).join(",");
   return (
-    <div ref={box} className="grid" data-rows={rows.length}>
+    <div ref={box} className="grid" data-rows={rows.length} data-cols={colTitles}>
       <canvas ref={canvas} aria-hidden="true" />
       <div ref={sr} className="sr" role="status" aria-live="polite" />
     </div>
