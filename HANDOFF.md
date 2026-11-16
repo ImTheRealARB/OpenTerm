@@ -5,7 +5,7 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
-**Update 2026-11-16: UI parity pass (branch `claude/ui-parity-pass` from `origin/main` e135184, committed as `ec261e4` and pushed; PR into `main` opened 2026-11-16, NOT merged: merge when the owner says):**
+**Update 2026-11-16: UI parity pass (branch `claude/ui-parity-pass` from `origin/main` e135184, committed as `ec261e4` and pushed; PR #50 into `main` opened 2026-11-16, NOT merged: merge when the owner says):**
 nine look-and-feel changes taken from the reference terminal's conventions (no names, assets or wording copied):
 1 GUI band colour `#7e001e`; 2 grouped command-line suggestions with More rows; 3 GUI "Related functions" button (the RELATED
 window menu already existed); 4 yellow `?` help on every panel header; 5 row-number gutter + `rowNumbers` setting (the
