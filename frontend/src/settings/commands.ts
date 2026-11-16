@@ -1,7 +1,7 @@
 /**
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
- *   SETTINGS STARTUP HOME|LAYOUT | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
+ *   SETTINGS STARTUP HOME|LAYOUT | ROWNUMBERS AUTO|ON|OFF | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
  *            | SOURCE <capability> <source>|DEFAULT | SOURCE RESET | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER|STORETEXT ... | KEYS RESET | RESET
  */
 import {
@@ -39,6 +39,10 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
     case "STARTUP":
       if (word !== "HOME" && word !== "LAYOUT") return fail("SETTINGS STARTUP HOME|LAYOUT (HOME = NEW SESSIONS OPEN THE HOME PAGE, LAYOUT = THEY RESTORE YOUR PANELS)");
       return { ok: true, next: { ...cur, startup: word.toLowerCase() as Settings["startup"] }, message: `STARTUP ${word}` };
+    case "ROWNUMBERS":
+    case "ROWS":
+      if (word !== "AUTO" && word !== "ON" && word !== "OFF") return fail("SETTINGS ROWNUMBERS AUTO|ON|OFF (NUMBERS 1) 2) 3) DOWN THE LEFT OF Q, WL, WEI, FX AND CMDTY. TYPE A NUMBER, THEN ENTER. AUTO = ON IN TERMINAL, OFF IN GUI)");
+      return { ok: true, next: { ...cur, rowNumbers: word.toLowerCase() as Settings["rowNumbers"] }, message: `ROW NUMBERS ${word}` };
     case "TAPE":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS TAPE ON|OFF (SHOW THE TICKER TAPE IN THE TOP BAR; TAPE ADD|DEL|RESET EDITS IT)");
       return { ok: true, next: { ...cur, tape: word === "ON" }, message: `TICKER TAPE IN THE TOP BAR ${word}` };

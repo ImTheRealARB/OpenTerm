@@ -5,6 +5,20 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
+**Update 2026-11-16: UI parity pass (branch `claude/ui-parity-pass` from `origin/main` e135184, NOT committed, owner decides):**
+nine look-and-feel changes taken from the reference terminal's conventions (no names, assets or wording copied):
+1 GUI band colour `#7e001e`; 2 grouped command-line suggestions with More rows; 3 GUI "Related functions" button (the RELATED
+window menu already existed); 4 yellow `?` help on every panel header; 5 row-number gutter + `rowNumbers` setting (the
+digits-then-Enter jump already existed app-wide as number-select, so no second buffer was built); 6 board FLAG / change BAR /
+`2DAY` sparkline (new `GET /api/sparks`, real fixture `yahoo_spark_2d.json`); 7 `Tile` component on HOME and DES; 8 GUI control
+row under the band (dropdowns, ask field, Log checkbox); 9 light-grey GUI tab strip with function badge. Details: CLAUDE.md
+"UI parity pass". Gate (CI=1, 2026-11-16): ALL PASS (pytest 4053, vitest, e2e 369/369). Bench 39/39 before and after
+(`docs/PERFORMANCE.md` "UI parity pass"); startup bundle +1.6 KB gz (125.5 -> 127.1), accepted by the owner 2026-11-16.
+Next: owner reviews `docs/review/ui-before-after/index.html` (local only), then commit / PR when the owner says.
+Open design points: Grid decides the gutter by reading the registry and workspace itself (a `rowNumbers` prop from each panel
+would be cleaner); the compact `gp-range` dropdown now appears only in narrower panels (`wraps()` measures the band only);
+the Board legend does not mention typing a row number.
+
 Everything below is on `main` (merged through PR #40 after CI was green: static, pytest, sdk, vitest, e2e, bench). Work on the
 session's designated branch and open a PR only when the owner asks.
 

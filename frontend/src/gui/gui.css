@@ -68,18 +68,25 @@
 /* --- Buttons shared by the panel toolbar, banner, drawer, welcome card and tour: small radius + hover highlight (GUI-only exception) --- */
 :root[data-mode="gui"] .pt-b { height: 16px; padding: 0 7px; color: var(--hdr); background: var(--bar); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; white-space: nowrap; }
 :root[data-mode="gui"] .pt-b:hover:not(:disabled), :root[data-mode="gui"] .pt-b:focus-visible { background: var(--bar-hi); color: var(--val); }
-/* Browser-style tabs: a strip above the one visible panel. */
-:root[data-mode="gui"] .gt { display: flex; align-items: flex-end; gap: 2px; height: 22px; flex: none; padding: 0 4px; background: var(--bar); border-bottom: 1px solid var(--line); overflow: hidden; }
-:root[data-mode="gui"] .gt-tab { display: flex; align-items: center; height: 20px; max-width: 200px; min-width: 0; background: var(--bg); color: var(--fg-dim); border: 1px solid var(--line); border-bottom: 0; border-radius: 4px 4px 0 0; }
-:root[data-mode="gui"] .gt-tab.on { color: var(--val); border-color: var(--fg); background: var(--bar-hi); font-weight: bold; }
-:root[data-mode="gui"] .gt-name { padding: 0 6px 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; cursor: pointer; text-transform: uppercase; }
-:root[data-mode="gui"] .gt-x, :root[data-mode="gui"] .gt-new, :root[data-mode="gui"] .gt-mode { color: var(--fg-dim); cursor: pointer; }
+/* Browser-style tabs: a light-grey strip above the one visible panel. The chrome tokens are GUI-only and the same in every theme
+   (a light bar with dark text reads on black and on white bodies); the Light theme gets a darker edge so the strip does not vanish into
+   its white body. --chrome-hi is the active tab. */
+:root[data-mode="gui"] { --chrome-bg: #e6e6e6; --chrome-fg: #1a1a1a; --chrome-line: #bdbdbd; --chrome-hi: #f5f5f5; }
+:root[data-mode="gui"][data-theme="light"] { --chrome-line: #8c8c8c; }
+:root[data-mode="gui"] .gt { display: flex; align-items: flex-end; gap: 2px; height: 22px; flex: none; padding: 0 4px; background: var(--chrome-bg); color: var(--chrome-fg); border-bottom: 1px solid var(--chrome-line); overflow: hidden; }
+:root[data-mode="gui"] .gt-tab { display: flex; align-items: center; height: 20px; max-width: 200px; min-width: 0; background: var(--chrome-bg); color: var(--chrome-fg); border: 1px solid var(--chrome-line); border-bottom: 0; border-radius: 4px 4px 0 0; }
+:root[data-mode="gui"] .gt-tab.on { border-color: var(--chrome-fg); background: var(--chrome-hi); font-weight: bold; }
+:root[data-mode="gui"] .gt-name { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 0 6px 0 8px; color: inherit; cursor: pointer; }
+:root[data-mode="gui"] .gt-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+/* The function-code badge: small, bold, filled with the chrome text colour so it reads as a label, not as part of the title. */
+:root[data-mode="gui"] .gt-fn { flex: none; padding: 0 4px; font-size: 10px; font-weight: bold; line-height: 14px; background: var(--chrome-fg); color: var(--chrome-hi); border-radius: 2px; }
+:root[data-mode="gui"] .gt-x, :root[data-mode="gui"] .gt-new, :root[data-mode="gui"] .gt-mode { color: var(--chrome-fg); cursor: pointer; }
 :root[data-mode="gui"] .gt-x { padding: 0 6px 0 2px; }
 :root[data-mode="gui"] .gt-new { height: 18px; padding: 0 8px; border-radius: 3px; align-self: center; }
 :root[data-mode="gui"] .gt-new:disabled { opacity: 0.4; cursor: default; }
 :root[data-mode="gui"] .gt-mode { height: 18px; padding: 0 8px; border-radius: 3px; align-self: center; }
 :root[data-mode="gui"] .gt-fill { flex: 1 1 auto; }
-:root[data-mode="gui"] .gt-x:hover, :root[data-mode="gui"] .gt-new:hover:not(:disabled), :root[data-mode="gui"] .gt-mode:hover, :root[data-mode="gui"] .gt-name:hover { background: var(--bar-hi); color: var(--val); }
+:root[data-mode="gui"] .gt-x:hover, :root[data-mode="gui"] .gt-new:hover:not(:disabled), :root[data-mode="gui"] .gt-mode:hover, :root[data-mode="gui"] .gt-name:hover { background: var(--chrome-hi); color: var(--chrome-fg); }
 :root[data-mode="gui"] .pt-sel { padding: 0 2px; font: inherit; }
 :root[data-mode="gui"] .pt-b:disabled { color: var(--fg-dim); cursor: default; }
 :root[data-mode="gui"] .pt-sp { flex: 1 1 auto; }
@@ -160,7 +167,8 @@
 :root[data-mode="gui"]:not([data-theme="green"]):not([data-theme="white"]):not([data-theme="light"]) {
   --fg: #ffa028; --fg-dim: #a8a8a8; --val: #ffffff; --hdr: #e0e0e0;
   --bar: #1a1a1a; --bar-hi: #2b2b2b; --line: #333333; --sel: #1f5fa9;
-  --menu: #8b1a12; --menu-fg: #ffffff;
+  /* Same cool crimson as Terminal's styles.css, so both modes show one band colour. White on it is ~11:1 contrast. */
+  --menu: #7e001e; --menu-fg: #ffffff;
   --field: #ffa028; --field-fg: #000000; --go: #2fb344; --go-fg: #000000;
 }
 
@@ -232,6 +240,10 @@
 :root[data-mode="gui"] .ph .id { min-width: 22px; text-align: center; }
 :root[data-mode="gui"] .ph-plain { color: var(--hdr); text-transform: none; font-weight: normal; overflow: hidden; text-overflow: ellipsis; }
 :root[data-mode="gui"] .wm { top: 22px; max-height: calc(100% - 22px); }
+:root[data-mode="gui"] .ph .ph-help { height: 18px; line-height: 18px; border-radius: 3px; }
+:root[data-mode="gui"] .ph .ph-help:hover, :root[data-mode="gui"] .ph .ph-help:focus-visible { filter: brightness(1.15); }
+:root[data-mode="gui"] .ph .ph-rel { display: inline-block; flex: none; align-self: center; height: 18px; line-height: 18px; padding: 0 8px; color: var(--hdr); font-weight: normal; text-transform: none; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+:root[data-mode="gui"] .ph .ph-rel:hover, :root[data-mode="gui"] .ph .ph-rel.on, :root[data-mode="gui"] .ph .ph-rel:focus-visible { background: var(--bar-hi); color: var(--val); }
 :root[data-mode="gui"] .panel.focus .ph { border-bottom-color: var(--fg); }
 
 /* --- Function band: the panel's buttons on the dark red menu colour, white labels. The letter before a label is the key it presses. --- */
@@ -254,6 +266,23 @@
 :root[data-mode="gui"] .pt-ask-l { color: var(--warn); }
 :root[data-mode="gui"] .pt-ask { height: 20px; background: var(--field); border-color: var(--field); color: var(--field-fg); font-weight: bold; }
 :root[data-mode="gui"] .pt-ask::placeholder { color: var(--field-fg); opacity: 0.65; font-weight: normal; }
+
+/* --- Control row: directly under the crimson band (same parent, no margin, so its top edge is the band's bottom edge). It holds the
+   panel's SETTINGS: dropdowns and the inline ask box as filled orange fields, on/off toggles as checkboxes, all left-aligned. Rendered only
+   when the panel has at least one setting. The band keeps its own 1px bottom border, so the two rows are separated by a hairline. --- */
+:root[data-mode="gui"] .pt-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: none; min-height: 24px; padding: 2px 6px; background: var(--bar); border-bottom: 1px solid var(--line); }
+:root[data-mode="gui"] .pt-ctl .pt-b { height: 20px; padding: 0 8px; }
+:root[data-mode="gui"] .pt-ctl select.pt-b { padding: 0 4px; background: var(--field); color: var(--field-fg); border-color: var(--field); font-weight: bold; }
+:root[data-mode="gui"] .pt-ctl select.pt-b:hover:not(:disabled) { background: var(--field); color: var(--field-fg); border-color: var(--val); }
+:root[data-mode="gui"] .pt-ctl select.pt-b option { background: var(--bg); color: var(--fg); }
+/* Run / Cancel next to the ask box: ordinary bar buttons (the box itself is the orange field). */
+:root[data-mode="gui"] .pt-ctl button.pt-b { color: var(--val); background: var(--bar-hi); }
+:root[data-mode="gui"] .pt-ctl button.pt-b:hover:not(:disabled), :root[data-mode="gui"] .pt-ctl button.pt-b:focus-visible { border-color: var(--val); }
+/* A checkbox for an on/off setting: orange when ticked (accent-color), label in the data-value colour. */
+:root[data-mode="gui"] .pt-chk { display: inline-flex; align-items: center; gap: 4px; color: var(--val); cursor: pointer; white-space: nowrap; }
+:root[data-mode="gui"] .pt-chk input { margin: 0; accent-color: var(--field); cursor: pointer; }
+:root[data-mode="gui"] .pt-chk:focus-within { outline: 1px solid var(--field); outline-offset: 2px; }
+:root[data-mode="gui"] .pt-chk .pt-k { color: var(--hdr); font-weight: normal; }
 
 /* --- Quote strip: one line under the function band (gui/QuoteStrip.tsx). Price large, change green / red, the rest white / grey. --- */
 :root[data-mode="gui"] .qs { display: flex; align-items: center; gap: 14px; flex: none; height: 28px; padding: 0 8px; overflow: hidden; white-space: nowrap; color: var(--val); background: var(--bg); border-bottom: 1px solid var(--line); }

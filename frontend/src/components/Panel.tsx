@@ -1,6 +1,8 @@
 import { Component, Profiler, useEffect, useReducer, type ReactNode } from "react";
+import { execute } from "../command/execute";
 import { FUNCTIONS, loadModule, loadedModule, showsSecurity } from "../functions/registry";
 import { panelPainted, recordPanelRender } from "../perf/metrics";
+import { openHelp } from "../gui/helpState";
 import { LazyPanelToolbar } from "../gui/LazyPanelToolbar";
 import { LazyQuoteStrip } from "../gui/LazyQuoteStrip";
 import { shortTitle } from "../gui/titleText";
@@ -115,6 +117,24 @@ export function Panel({ id }: { id: number }) {
         {plainTitle && <span className="ph-plain">{"· " + plainTitle}</span>}
         {panel.views.length > 1 && <span className="dim ph-pos">{panel.pos + 1}/{panel.views.length}</span>}
         <span className="wm-sp" />
+        {/* GUI only: the same RELATED menu as the "RELATED ▾" item below, but as a plain-words button a beginner can find.
+            It opens/closes menu 1 through the shared window-menu state, so there is one menu and one set of keys (1-9, arrows, Enter, Esc). */}
+        {gui && (
+          <button
+            type="button"
+            className={"ph-rel" + (menu?.menu === 1 ? " on" : "")}
+            data-testid="related-btn"
+            aria-haspopup="menu"
+            aria-expanded={menu?.menu === 1}
+            onMouseDown={(e) => {
+              e.stopPropagation(); // same pattern as the menu titles: the panel's own mousedown must not close what this opens
+              if (menu?.menu === 1) closeWindowMenu();
+              else openWindowMenu(id, 1);
+            }}
+          >
+            Related functions
+          </button>
+        )}
         {MENUS.map((m, i) => (gui && m === "RECENT" ? null : (
           <span
             key={m}
@@ -128,6 +148,23 @@ export function Panel({ id }: { id: number }) {
             {m} ▾
           </span>
         )))}
+        {/* Help for this panel's function. GUI: the help drawer scoped to this panel. Terminal: the HELP <FN> command, which
+            shows the same help as a panel. Keyboard route is that command (the "?" key is already the shortcut sheet). */}
+        <button
+          type="button"
+          className="ph-help"
+          data-testid="panel-help"
+          aria-label={fnPart ? `Help for ${fnPart}` : "Help"}
+          title={fnPart ? `Help for ${fnPart}` : "Help"}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            focusPanel(id);
+            if (gui) openHelp(id, e.currentTarget);
+            else execute(fnPart ? `HELP ${fnPart}` : "HELP");
+          }}
+        >
+          ?
+        </button>
       </header>
       {menu && <WindowMenu id={id} />}
       {gui && <LazyPanelToolbar id={id} fn={view.fn} args={view.args} symbol={view.security?.symbol} />}

@@ -58,6 +58,38 @@ test("GP toolbar: a range button changes the range, like pressing the number key
   expect(errors).toEqual([]);
 });
 
+// UI parity: the crimson band holds actions; the settings (dropdowns, the Log checkbox) sit in an orange control row directly under it.
+test("GP: the control row is directly under the band and holds the dropdowns and the Log checkbox", async ({ page }) => {
+  await setup(page);
+  await run(page, "AAPL GP 1Y");
+  const p = panel(page);
+  await expect(p.locator(".chart canvas").first()).toBeVisible();
+  const band = p.locator(".pt");
+  const ctl = p.getByTestId("pt-ctl-1");
+  await expect(ctl).toBeVisible();
+  // Adjacent: the row's top edge is the band's bottom edge (within 1 px), same left edge.
+  const b = (await band.boundingBox())!;
+  const c = (await ctl.boundingBox())!;
+  expect(Math.abs(c.y - (b.y + b.height))).toBeLessThanOrEqual(1);
+  expect(Math.abs(c.x - b.x)).toBeLessThanOrEqual(1);
+  // The dropdowns live in the control row, not in the band.
+  await expect(ctl.getByTestId("gp-type")).toBeVisible();
+  await expect(ctl.getByTestId("gp-interval")).toBeVisible();
+  await expect(band.getByTestId("gp-type")).toHaveCount(0);
+  // Log is a checkbox (an on/off setting). Ticking it presses L and puts LOG in the view.
+  const log = ctl.getByRole("checkbox", { name: /Log/ });
+  await expect(log).not.toBeChecked();
+  await expect(async () => {
+    await log.click();
+    await expect(p.locator(".line").first()).toContainText("LOG", { timeout: 500 });
+  }).toPass();
+  await expect(log).toBeChecked();
+  // A panel with no setting has the band alone: no empty row.
+  await run(page, "AAPL DES");
+  await expect(panel(page).locator(".pt")).toBeVisible();
+  await expect(panel(page).getByTestId("pt-ctl-1")).toHaveCount(0);
+});
+
 test("generic toolbar buttons: Max toggles to Restore", async ({ page }) => {
   await setup(page);
   const bar = panel(page).locator(".pt");

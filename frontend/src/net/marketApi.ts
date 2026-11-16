@@ -8,6 +8,9 @@ export const marketApi = {
   // `source` pins one data source (SRC=): the backend asks only that source and names it in an error.
   quotes: (symbols: string[], source?: string) =>
     get<{ results: Record<string, QuoteResult> }>("/api/quote", { symbols: symbols.join(","), source }, TTL.s2),
+  /** Closes of the last two sessions per symbol (30 minute candles), for the boards' 2DAY sparkline. A symbol with no points is absent. */
+  sparks: (symbols: string[], fresh = false) =>
+    get<Envelope<Record<string, number[]>>>("/api/sparks", { symbols: symbols.join(",") }, TTL.m1, fresh),
   history: (symbol: string, range?: string, interval?: string, fresh = false, source?: string) =>
     get<Envelope<BarsAdj>>("/api/history", { symbol, range, interval, source }, TTL.m1, fresh),
   /** How many days back each minute candle length reaches for this symbol right now (the deepest source that is on decides). */

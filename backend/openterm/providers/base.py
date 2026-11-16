@@ -12,6 +12,7 @@ QUOTES = "quotes"
 HISTORY = "history"
 SEARCH = "search"
 PROFILE = "profile"
+SPARKS = "sparks"  # closes of the last two sessions per symbol (board sparkline)
 NEWS_TOP = "news_top"
 NEWS_SYMBOL = "news_symbol"
 NEWS_KEYWORD = "news_keyword"

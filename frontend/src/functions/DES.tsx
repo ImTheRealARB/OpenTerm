@@ -3,6 +3,7 @@ import { LivePrice } from "../components/LivePrice";
 import { fmtAge, fmtBig, fmtNum, fmtPct, fmtPrice } from "../format";
 import { fallbackText } from "./fallbackText";
 import { PanelNote, plainLine, type NoteAction } from "../components/PanelNote";
+import { Tile } from "../components/Tile";
 import { isKeyRequired, KeyRequiredLine } from "./KeyRequiredLine";
 import { termProps } from "../gui/term";
 import { runCommand } from "../gui/run";
@@ -193,39 +194,50 @@ export default function DES({ panelId, security, source }: FunctionProps) {
           {[p?.exchange ?? q?.exchange, p?.quote_type, p?.currency ?? q?.currency].filter(Boolean).join(" · ")}
         </span>
       </h2>
-      {q && quote.env && <LivePrice quote={q} stale={quote.env.stale} ageS={quote.env.age_s} />}
-      {quote.env?.fallback_from.length ? <div className="warn">QUOTE: {fallbackText(quote.env.fallback_from, quote.env.fallback_notes)}</div> : null}
-      {quote.keyError && <KeyRequiredLine error={quote.keyError} />}
-      {quote.error && !quote.keyError && <div className="err">QUOTE: {quote.error}</div>}
-      {gui && quote.error && !unknown && prof.error && (
-        <PanelNote kind="error" plain={plainLine("error", `${quote.error} ${prof.error}`)} onRetry={() => setReload((n) => n + 1)}>
-          Could not load this stock.
-        </PanelNote>
-      )}
-      {!q && !quote.error && <div className="dim">LOADING QUOTE…</div>}
-      {p?.delay_min ? (
-        gui ? <div className="des-delay dim">Prices from the exchange are delayed {p.delay_min} min (per source).</div> : <div className="warn">EXCHANGE DATA DELAYED {p.delay_min} MIN (PER SOURCE)</div>
-      ) : null}
-
-      {p && (
-        <>
-          <div>
-            {[p.sector, p.industry, p.country].filter(Boolean).join(" · ")}
-            {p.website && <span className="acc"> · {p.website}</span>}
-          </div>
+      {/* The page is three tiles, each with a header strip. Price: the live quote and the 52-week range, drills to the chart (GP).
+          Key figures: the ratios grid; its forward P/E and EPS come from analyst estimates, so it drills to EE (we show no estimate
+          numbers of our own here). Company: what the company is and does. A tile whose data is missing is simply not drawn. */}
+      <Tile title={gui ? "Price" : "PRICE"} code="GP" security={symbol} panelId={panelId} testId="des-tile-price">
+        {q && quote.env && <LivePrice quote={q} stale={quote.env.stale} ageS={quote.env.age_s} />}
+        {quote.env?.fallback_from.length ? <div className="warn">QUOTE: {fallbackText(quote.env.fallback_from, quote.env.fallback_notes)}</div> : null}
+        {quote.keyError && <KeyRequiredLine error={quote.keyError} />}
+        {quote.error && !quote.keyError && <div className="err">QUOTE: {quote.error}</div>}
+        {gui && quote.error && !unknown && prof.error && (
+          <PanelNote kind="error" plain={plainLine("error", `${quote.error} ${prof.error}`)} onRetry={() => setReload((n) => n + 1)}>
+            Could not load this stock.
+          </PanelNote>
+        )}
+        {!q && !quote.error && <div className="dim">LOADING QUOTE…</div>}
+        {p?.delay_min ? (
+          gui ? <div className="des-delay dim">Prices from the exchange are delayed {p.delay_min} min (per source).</div> : <div className="warn">EXCHANGE DATA DELAYED {p.delay_min} MIN (PER SOURCE)</div>
+        ) : null}
+        {p && (
           <div style={{ margin: "4px 0" }}>
             <span className="dim" {...termProps("52-WEEK RANGE", gui)}>{gui ? "52-week range " : "52W RANGE "}</span>
             <Range52 lo={p.low_52w ?? q?.low_52w ?? null} hi={p.high_52w ?? q?.high_52w ?? null} px={q?.price ?? null} />
           </div>
-          <div className="kv">
-            {kv.map(([k, v]) => (
-              <div key={k}>
-                <span {...(TERM_OF[k] ? termProps(TERM_OF[k], gui) : {})}>{gui ? (GUI_LABEL[k] ?? k) : k}</span>
-                <span>{v}</span>
-              </div>
-            ))}
-          </div>
-          {p.description && <Description text={p.description} gui={gui} />}
+        )}
+      </Tile>
+
+      {p && (
+        <>
+          <Tile title={gui ? "Key figures" : "KEY FIGURES"} code="EE" security={symbol} panelId={panelId} testId="des-tile-figures">
+            <div className="kv">
+              {kv.map(([k, v]) => (
+                <div key={k}>
+                  <span {...(TERM_OF[k] ? termProps(TERM_OF[k], gui) : {})}>{gui ? (GUI_LABEL[k] ?? k) : k}</span>
+                  <span>{v}</span>
+                </div>
+              ))}
+            </div>
+          </Tile>
+          <Tile title={gui ? "Company" : "COMPANY"} panelId={panelId} testId="des-tile-company">
+            <div>
+              {[p.sector, p.industry, p.country].filter(Boolean).join(" · ")}
+              {p.website && <span className="acc"> · {p.website}</span>}
+            </div>
+            {p.description && <Description text={p.description} gui={gui} />}
+          </Tile>
         </>
       )}
       {prof.keyError && !quote.keyError && <KeyRequiredLine error={prof.keyError} />}

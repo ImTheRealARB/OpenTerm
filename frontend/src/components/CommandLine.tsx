@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { execute, statusMsg } from "../command/execute";
 import { needsNatural } from "../command/nlRun";
 import type { Suggestion, Ui } from "../command/cmdExtras";
 import { fuzzyRank } from "../command/fuzzy";
+import { defaultLimits, expand, groupSuggestions, moreLabel, sectorWord, type Group, type Limits } from "../command/groupSuggestions";
 import { history } from "../command/history";
 import { layoutList, refreshLayouts } from "../command/layouts";
 import { refreshWatchlists, watchlistList } from "../command/watchlists";
@@ -103,13 +104,19 @@ function merge(token: string, securitySlot: boolean, hits: SearchHit[] = []): Su
       kind: "SEC",
     }));
   const fnFirst = token.length <= 4 && fns.some((f) => f.value.startsWith(token.toUpperCase()));
-  return (fnFirst ? [...fns.slice(0, 4), ...recent, ...secs] : [...recent, ...secs, ...fns]).slice(0, 10);
+  // Up to 8 functions + 4 recent + 6 securities (18). The list on screen shows 4 per group (`GROUP_CAP` in
+  // command/groupSuggestions.ts); the rest is the "More Functions..." / "More Securities..." page, so it is kept here.
+  return fnFirst ? [...fns, ...recent, ...secs] : [...recent, ...secs, ...fns];
 }
 
 export function CommandLine() {
   const input = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<Suggestion[]>([]);
+  // `sel` is a position among the rows you can land on, in ON-SCREEN order (headers skipped; see `selectable` below),
+  // not an index into `items`: grouping can reorder the pipeline's list.
   const [sel, setSel] = useState(-1);
+  // How many rows each group (FUNCTIONS / SECURITIES) shows; "More ..." raises one. Reset whenever the typed text changes.
+  const [limits, setLimits] = useState<Limits>(defaultLimits);
   const [focused, setFocused] = useState(false);
   const [, startTransition] = useTransition();
   const searchSeq = useRef(0);
@@ -138,11 +145,23 @@ export function CommandLine() {
     else if (!vimMod) void import("../command/vim").then((m) => (vimMod = m));
   }, [vimOn]);
 
+  // The rows to draw (headers, items, "More ..." rows) and the subset the keyboard can land on. One linear pass over <= ~12 items.
+  const { rows, selectable } = useMemo(() => groupSuggestions(items, limits), [items, limits]);
+  /** The suggestion highlighted on screen, or undefined for none / a "More ..." row. */
+  const picked = (() => {
+    const r = selectable[sel];
+    return r?.type === "item" ? r.s : undefined;
+  })();
+  /** "More Functions..." / "More Securities...": show the next page of that group. Cancels a pending typing preview like UP/DOWN does. */
+  const showMore = (g: Group) => {
+    extrasMod?.cancelPreview();
+    setLimits((l) => expand(l, g));
+  };
+
   // Predictive prefetch: a highlighted security will most likely be charted or quoted next.
   useEffect(() => {
-    const s = items[sel];
-    if (s && (s.kind === "RECENT" || s.kind === "SEC")) prefetch(s.value);
-  }, [items, sel]);
+    if (picked && (picked.kind === "RECENT" || picked.kind === "SEC")) prefetch(picked.value);
+  }, [picked]);
 
   const searchSecurities = (text: string, token: string) => {
     clearTimeout(searchTimer.current);
@@ -174,6 +193,7 @@ export function CommandLine() {
     setValue(v);
     setItems([]);
     setSel(-1);
+    setLimits(defaultLimits());
     nlItems.current = [];
     extras((m) => m.updateHint(v, ui));
   };
@@ -182,6 +202,7 @@ export function CommandLine() {
     setValue("");
     setItems([]);
     setSel(-1);
+    setLimits(defaultLimits());
     setHint(null);
     nlItems.current = [];
     if (vimOn) setVim("insert");
@@ -204,8 +225,9 @@ export function CommandLine() {
   /** What Enter does with the line, also run by the GO button (GUI): a picked reading, plain English, or a plain command. */
   const submit = (newPanel: boolean) => {
     const text = input.current?.value ?? "";
-    const picked = items[sel];
-    if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, text, newPanel);
+    const row = selectable[sel];
+    if (row?.type === "more") showMore(row.group); // Enter on a "More ..." row opens it; it never runs the typed text
+    else if (picked && (picked.kind === "NL" || picked.kind === "MEAN")) runNl(picked.value, text, newPanel);
     else if (needsNatural(text)) viaNatural(text, newPanel);
     else if (execute(text, { newPanel, keepFn: gui })) finish();
   };
@@ -243,18 +265,20 @@ export function CommandLine() {
     if (e.key === "Enter") {
       e.preventDefault();
       submit(e.shiftKey);
-    } else if (e.key === "Tab" && !e.shiftKey && items.length) {
+    } else if (e.key === "Tab" && !e.shiftKey && selectable.length) {
       e.preventDefault();
-      accept(items[Math.max(0, sel)]);
+      const row = selectable[Math.max(0, sel)];
+      if (row.type === "more") showMore(row.group);
+      else accept(row.s);
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const dir = e.key === "ArrowDown" ? 1 : -1;
-      if (items.length && (sel >= 0 || dir === 1) && el.value) {
+      if (selectable.length && (sel >= 0 || dir === 1) && el.value) {
         // The user is picking from the list they see: a typing preview that answers after this would replace the list and
         // reset the highlight, so Enter would run nothing picked (CI run 42317373717, natural.spec "ambiguous name").
         // No extras chunk yet means no preview can be pending, so there is nothing to cancel and nothing to load.
         extrasMod?.cancelPreview();
-        setSel((i) => Math.min(items.length - 1, Math.max(-1, i + dir)));
+        setSel((i) => Math.min(selectable.length - 1, Math.max(-1, i + dir)));
       } else {
         const h = history.step(dir === 1 ? 1 : -1);
         setValue(h ?? "");
@@ -307,6 +331,7 @@ export function CommandLine() {
     }
     const { token, securitySlot } = lastToken(v);
     nlItems.current = [];
+    setLimits(defaultLimits());
     startTransition(() => {
       setItems(merge(token, securitySlot));
       setSel(-1);
@@ -385,27 +410,56 @@ export function CommandLine() {
       {focused && items.length === 0 && hint}
       {focused && items.length > 0 && (
         <div className="ac" role="listbox">
-          {items.map((s, i) => (
-            <div
-              key={s.kind + s.value}
-              className={i === sel ? "on" : ""}
-              role="option"
-              aria-selected={i === sel}
-              onMouseDown={(e) => {
-                e.preventDefault(); // keep the focus in the command line
-                if (s.kind === "NL" || s.kind === "MEAN") runNl(s.value, input.current?.value ?? "", false);
-                else if (gui && (s.kind === "SEC" || s.kind === "RECENT")) {
-                  // GUI: clicking a company runs it (the typed text with its last word swapped for the symbol), like
-                  // Enter would. Terminal mode only fills the line so the user can add a function code before Enter.
-                  if (execute((input.current?.value ?? "").replace(/\S*$/, s.value), { keepFn: true })) finish();
-                } else accept(s);
-              }}
-            >
-              <span>{s.value}</span>
-              <span className="dim">{s.label}</span>
-              <span className="k">{s.kind}</span>
-            </div>
-          ))}
+          {rows.map((r) => {
+            // Group title: not an option, so keys skip it and screen readers do not count it as a choice.
+            if (r.type === "header")
+              return (
+                <div key={"h" + r.label} className="ac-h" role="presentation">
+                  {r.label}
+                </div>
+              );
+            // "More Functions..." / "More Securities...": a dim, selectable row; choosing it shows the group's next page.
+            if (r.type === "more")
+              return (
+                <div
+                  key={"m" + r.group}
+                  className={"ac-more" + (r.pos === sel ? " on" : "")}
+                  role="option"
+                  aria-selected={r.pos === sel}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // keep the focus in the command line
+                    showMore(r.group);
+                  }}
+                >
+                  <span>{moreLabel(r.group)}</span>
+                </div>
+              );
+            const s = r.s;
+            const isSec = s.kind === "SEC" || s.kind === "RECENT";
+            // Functions: code white, title amber, no kind tag. Securities: symbol white, name amber, dim market-sector word.
+            const cls = (r.pos === sel ? "on " : "") + (s.kind === "FUNC" ? "ac-fn" : isSec ? "ac-sec" : "");
+            return (
+              <div
+                key={s.kind + s.value}
+                className={cls.trim()}
+                role="option"
+                aria-selected={r.pos === sel}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // keep the focus in the command line
+                  if (s.kind === "NL" || s.kind === "MEAN") runNl(s.value, input.current?.value ?? "", false);
+                  else if (gui && isSec) {
+                    // GUI: clicking a company runs it (the typed text with its last word swapped for the symbol), like
+                    // Enter would. Terminal mode only fills the line so the user can add a function code before Enter.
+                    if (execute((input.current?.value ?? "").replace(/\S*$/, s.value), { keepFn: true })) finish();
+                  } else accept(s);
+                }}
+              >
+                <span>{s.value}</span>
+                <span className={s.kind === "FUNC" || isSec ? undefined : "dim"}>{s.label}</span>
+                {isSec ? <span className="k">{sectorWord(s.value)}</span> : s.kind === "FUNC" ? null : <span className="k">{s.kind}</span>}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

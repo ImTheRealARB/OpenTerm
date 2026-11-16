@@ -110,7 +110,7 @@ export const QUOTE_COLUMNS: Column<QRow>[] = [
 /** GUI header words for the quote grids (Terminal keeps its short codes). Glossary tips still work: see ALIAS in gui/gridTips.ts. */
 const GUI_TITLE: Readonly<Record<string, string>> = {
   SECURITY: "Ticker", SRC: "Source", NAME: "Name", LAST: "Price", CHG: "Change", "%CHG": "Change %",
-  VOLUME: "Volume", HIGH: "High", LOW: "Low", TIME: "Time", CCY: "Currency",
+  VOLUME: "Volume", HIGH: "High", LOW: "Low", TIME: "Time", CCY: "Currency", "2DAY": "2 days",
 };
 /** The plain-word header for a column title, or the title itself when there is no plain word for it. */
 export const guiTitle = (title: string): string => GUI_TITLE[title] ?? title;

@@ -11,12 +11,20 @@ Prefixes in use elsewhere (still built next to the code that owns the data, list
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Iterable
 
 
 def quote(symbol: str) -> str:
     """The latest quote for a resolved symbol. Ticks are folded into this entry (`DataService.apply_tick`)."""
     return f"q:{symbol}"
+
+
+def spark_batch(symbols: Iterable[str]) -> str:
+    """The two-session closes (board sparkline) of a SET of resolved symbols: a board asks for the same set every time, so the whole
+    answer is one entry. The set is hashed to keep the key short."""
+    digest = hashlib.sha1(",".join(sorted(symbols)).encode(), usedforsecurity=False).hexdigest()[:16]
+    return f"sp:{digest}"
 
 
 def history(symbol: str, range_: str, interval: str, gated: Iterable[str] = ()) -> str:

@@ -76,6 +76,14 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .ac div { display: grid; grid-template-columns: 110px 1fr 70px; padding: 0 6px; white-space: nowrap; overflow: hidden; }
 .ac div.on { background: var(--sel); color: var(--val); }
 .ac .k { color: var(--fg-dim); text-align: right; }
+/* Grouped suggestions (command/groupSuggestions.ts): FUNCTIONS and SECURITIES titles, rows with a white code and an amber title,
+   and a dim "More ..." row. Both modes; no radius or hover here (the GUI adds its own in gui.css). */
+.ac .ac-h { display: block; color: var(--fg-dim); font-size: 0.85em; letter-spacing: 0.06em; border-top: 1px solid var(--line); }
+.ac .ac-h:first-child { border-top: 0; }
+.ac .ac-fn > :first-child, .ac .ac-sec > :first-child { color: var(--val); }
+.ac .ac-fn > :nth-child(2), .ac .ac-sec > :nth-child(2) { color: var(--fg); }
+.ac .ac-fn { grid-template-columns: 110px 1fr; }
+.ac .ac-more { display: block; color: var(--fg-dim); }
 .msg { padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
 .msg.err { color: var(--err); }
 .msg.info { color: var(--accent); }
@@ -105,6 +113,11 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .ph .wm-sp { flex: 1; }
 .ph .wm-t { color: var(--hdr); font-weight: normal; cursor: default; }
 .ph .wm-t.on { color: var(--bg); background: var(--fg); padding: 0 4px; }
+/* "?" help key at the far right of every panel title bar: the yellow (--warn) command-entry colour, text in the ground colour like GO.
+   Square, no hover (Terminal rule); the GUI adds a radius and a hover in gui.css. */
+.ph .ph-help { flex: none; align-self: center; height: 14px; line-height: 14px; padding: 0 6px; background: var(--warn); color: var(--bg); font-weight: bold; text-transform: none; cursor: pointer; }
+/* GUI-only "Related functions" button; hidden in Terminal (it is only rendered in GUI, this keeps the class inert anywhere else). */
+.ph .ph-rel { display: none; }
 .wm { position: absolute; top: 16px; right: 0; z-index: 10; min-width: 260px; max-height: calc(100% - 16px); overflow-y: auto; background: var(--bg); border: 1px solid var(--fg); }
 .wm div { padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wm div.on { background: var(--sel); color: var(--val); }

@@ -335,6 +335,29 @@ class DataService:
     def _qkey(self, symbol: str) -> str:
         return self._scope(ck.quote(symbol))
 
+    SPARK_TTL: ClassVar[float] = 300.0  # two sessions of 30 minute closes barely change in 5 minutes
+
+    async def sparks(self, raw_symbols: list[str]) -> dict:
+        """Closes of the last two sessions per symbol (the boards' 2DAY sparkline), as the standard envelope.
+
+        `data` maps each REQUESTED symbol to its closes in time order; a symbol the source sent no points for is left out (blank cell,
+        never a made-up line). One cached batch per distinct symbol set (a board always asks for the same set), fetched with ONE batched
+        upstream call per 20 symbols, never one per symbol."""
+        resolved = {raw: resolve(raw) for raw in raw_symbols}
+        symbols = sorted(set(resolved.values()))
+
+        async def fetch() -> dict:
+            async def one(p) -> dict:
+                return {"data": await p.sparks(symbols), "source": p.source}
+
+            value, failed = await self.router.call("sparks", one)
+            return {**value, "fallback_from": failed}
+
+        env = await self.swr(ck.spark_batch(symbols), self.SPARK_TTL, fetch)
+        by_symbol = env["data"]
+        env["data"] = {raw: by_symbol[s] for raw, s in resolved.items() if s in by_symbol}  # a new dict: the cached one is never edited
+        return env
+
     async def quotes(self, raw_symbols: list[str]) -> dict[str, dict[str, Any]]:
         """Returns {requested symbol: envelope | {"error", "kind"}}. Missing/stale ones are batched upstream."""
         symbols = {raw: resolve(raw) for raw in raw_symbols}

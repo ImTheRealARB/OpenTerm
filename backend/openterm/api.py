@@ -31,6 +31,16 @@ from .userdata import UserDataError
 router = APIRouter(prefix="/api", route_class=OrjsonRoute)
 
 
+@router.get("/sparks")
+@data_errors
+async def sparks(request: Request, symbols: str = Query(..., max_length=2000)):
+    """Closes of the last two sessions per symbol (the boards' 2DAY sparkline). One batched upstream call per 20 symbols, cached 5 minutes."""
+    wanted = [s for s in (x.strip() for x in symbols.split(",")) if s][:200]
+    if not wanted:
+        return error(DataError("bad_request", "NO SYMBOLS"))
+    return await svc(request).sparks(wanted)
+
+
 @router.get("/quote")
 async def quote(request: Request, symbols: str = Query(..., max_length=2000)):
     wanted = [s for s in (x.strip() for x in symbols.split(",")) if s][:200]

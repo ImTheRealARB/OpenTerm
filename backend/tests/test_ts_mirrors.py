@@ -49,6 +49,7 @@ def test_settings_lists_match_the_backend():
     ts = _ts("settings/schema.ts")
     assert _strings(ts, "MODES") == list(ss.MODES)
     assert _strings(ts, "STARTUPS") == list(ss.STARTUPS)
+    assert _strings(ts, "ROW_NUMBERS") == list(ss.ROW_NUMBERS)
     assert _strings(ts, "THOUSANDS") == list(ss.THOUSANDS)
     assert _strings(ts, "DECIMALS") == list(ss.DECIMALS)
     assert _strings(ts, "AI_PROVIDERS") == list(ss.AI_PROVIDERS)

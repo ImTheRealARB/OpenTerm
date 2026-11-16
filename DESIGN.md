@@ -25,10 +25,12 @@ user, the developer and the agent that edits it next; a change has to serve all 
 | `--up` / `--down` | green / red | price moved up / down. Nothing else |
 | `--err` | red | errors only |
 | `--sel` | `#1f5fa9` | the selected row, the active choice (range, tab) |
-| `--menu` / `--menu-fg` | `#8b1a12` / white | the function band (panel toolbar) |
+| `--menu` / `--menu-fg` | `#7e001e` / white | the function band (panel toolbar) |
 | `--field` / `--field-fg` | amber / black | anything you type into or pick from (inputs, dropdowns) |
 | `--go` / `--go-fg` | green / black | the run key (GO) |
-| `--bar` / `--bar-hi` / `--line` | `#1a1a1a` / `#2b2b2b` / `#333333` | window bars, the focused bar, rules |
+| `--bar` / `--bar-hi` / `--line` | `#1a1a1a` / `#2b2b2b` / `#333333` | window bars, the focused bar, rules, tile header strips |
+| `--chrome-bg` / `--chrome-fg` / `--chrome-line` | `#e6e6e6` / `#1a1a1a` / `#bdbdbd` | GUI only: the light-grey tab strip above the dark workspace |
+| `--warn` | yellow | the `?` help button on every panel header |
 
 Themes (`THEME AMBER|GREEN|WHITE|LIGHT`) redefine every token; a new token must get a value in every theme.
 
@@ -37,11 +39,12 @@ One monospace family from `--font` (never hard-code a family). GUI: 13 px text, 
 12 px and 16 px. Canvas grids and charts read these variables, so change them in CSS, not in code.
 
 ## Screen anatomy (GUI, top to bottom)
-1. Tab strip (optional): one tab per panel, the active one amber.
+1. Tab strip (optional): light-grey chrome, one tab per panel with a bold function-code badge, the active one lighter.
 2. Command bar: brand, command line (takes companies, codes and plain-English questions), GO, HELP, market clocks.
 3. Menu bar: categories; each dropdown shows plain-word groups that open a side flyout of `CODE  description` rows.
 4. Panel title bar: `1  AAPL | GP · Price chart` (number, security, code, plain title).
 5. Function band: the panel's buttons on the dark red band, each prefixed with its key (`A) Add`); help, CSV, refresh and close on the right.
+   Directly under it (no gap), only when the panel has settings: the control row with the orange fields (dropdowns, the ask box) and checkboxes for on/off toggles (GP `Log`).
 6. Quote strip (panels about one security): ticker, name, price, change, open, high, low, volume, source and time.
 7. The panel body.
 

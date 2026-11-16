@@ -20,11 +20,12 @@
 
 /* --- HOME blocks --- */
 .home-date { color: var(--accent); }
-.home-grid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-content: start; }
-.hb { min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.hb-h { display: flex; gap: 8px; padding: 0 6px; background: var(--bar); color: var(--hdr); font-weight: bold; white-space: nowrap; overflow: hidden; }
-.hb-h .hb-meta { margin-left: auto; font-weight: normal; }
-.hb.on .hb-h { background: var(--bar-hi); color: var(--val); }
+/* Each block is a tile (components/Tile.tsx: border, header strip, `CODE >` link); the grid only places them. */
+.home-grid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 4px; padding: 4px 0; align-content: start; }
+.home-grid .tile { margin: 0; }
+/* The block the keyboard cursor is in: its header strip turns the selection blue (same colour as the selected row). */
+.hb.on .tile-h { background: var(--sel); color: var(--val); }
+.hb.on .tile-go { color: var(--val); }
 .hb-sub { padding: 0 6px; color: var(--fg-dim); }
 .hb-note { padding: 0 6px; }
 .hr { display: flex; gap: 8px; padding: 0 6px; white-space: nowrap; overflow: hidden; cursor: pointer; }

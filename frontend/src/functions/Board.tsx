@@ -12,10 +12,12 @@ import { chg, dirColor, guiTitle, high, low, lastColor, lastFlash, pct, price, q
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import { QuoteErrors } from "./QuoteErrors";
+import { drawChangeBar, drawSpark, flagColor, flagText, type SparkRow } from "./boardGraphics";
+import { useSparks } from "./useSparks";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 
-interface BRow extends QRow {
+interface BRow extends QRow, SparkRow {
   label: string;
   unit?: string;
   /** Set on section header rows (no symbol). */
@@ -28,26 +30,30 @@ const liveOf = (r: BRow) => (r.section || r.error ? undefined : r.symbol);
 function columns(def: BoardDef, gui = false): Column<BRow>[] {
   const num = def.rates ? fmtRate : fmtPrice;
   const signed = (v: number | null) => (v == null ? fmtChg(v) : (v > 0 ? "+" : "") + num(v));
-  const cols: Column<BRow>[] = [
-    { title: "NAME", width: 20, text: (r) => r.section ?? r.label, color: () => "fg" },
-    { title: "SECURITY", width: 11, text: (r) => r.symbol, color: (r) => (r.error ? "err" : "dim") },
-    { title: "SRC", width: 9, text: srcText, color: srcColor },
-    { title: "LAST", width: 12, align: "right", text: (r) => num(price(r)), color: lastColor, flash: lastFlash },
-    { title: "CHG", width: 10, align: "right", text: (r) => signed(chg(r)), color: (r) => dirColor(chg(r)) },
-    { title: "%CHG", width: 8, align: "right", text: (r) => fmtPct(pct(r)), color: (r) => dirColor(pct(r)) },
-    { title: "HIGH", width: 11, align: "right", text: (r) => num(high(r)) },
-    { title: "LOW", width: 11, align: "right", text: (r) => num(low(r)) },
-    { title: "TIME", width: 8, align: "right", text: (r) => fmtTime(quoteTime(r)) },
-  ];
-  if (def.sections.some((s) => s.items.some((i) => i.unit))) cols.push({ title: "UNIT", width: 9, text: (r) => r.unit ?? "", color: () => "dim" });
-  // GUI mode: the numbers a beginner wants come first (NAME, LAST, CHG, %CHG) so %CHG is never clipped at the panel edge,
+  const col = {
+    name: { title: "NAME", width: 20, text: (r) => r.section ?? r.label, color: () => "fg" },
+    security: { title: "SECURITY", width: 11, text: (r) => r.symbol, color: (r) => (r.error ? "err" : "dim") },
+    src: { title: "SRC", width: 9, text: srcText, color: srcColor },
+    last: { title: "LAST", width: 12, align: "right", text: (r) => num(price(r)), color: lastColor, flash: lastFlash },
+    // One-letter data status after the last value: d = delayed, c = close, blank = real time or unknown (rules: components/microGraphics.ts).
+    flag: { title: "", width: 1, aux: true, text: flagText, color: flagColor },
+    chg: { title: "CHG", width: 10, align: "right", text: (r) => signed(chg(r)), color: (r) => dirColor(chg(r)) },
+    pct: { title: "%CHG", width: 8, align: "right", text: (r) => fmtPct(pct(r)), color: (r) => dirColor(pct(r)) },
+    // The change bar and the 2DAY sparkline are drawn on the canvas (Column.draw); their text is empty and `aux` keeps them out of .sr and CSV.
+    bar: { title: "", width: 7, aux: true, text: () => "", draw: drawChangeBar },
+    spark: { title: "2DAY", width: 9, aux: true, text: () => "", draw: drawSpark },
+    high: { title: "HIGH", width: 11, align: "right", text: (r) => num(high(r)) },
+    low: { title: "LOW", width: 11, align: "right", text: (r) => num(low(r)) },
+    time: { title: "TIME", width: 8, align: "right", text: (r) => fmtTime(quoteTime(r)) },
+  } satisfies Record<string, Column<BRow>>;
+  const unit: Column<BRow>[] = def.sections.some((s) => s.items.some((i) => i.unit))
+    ? [{ title: "UNIT", width: 9, text: (r) => r.unit ?? "", color: () => "dim" }]
+    : [];
+  // Terminal order. GUI mode: the numbers a beginner wants come first (NAME, LAST, CHG, %CHG) so %CHG is never clipped at the panel edge,
   // and SRC (the data source) moves to the far right. The error text rides in the SECURITY column there.
-  if (gui) {
-    const by = (t: string) => cols.find((c) => c.title === t)!;
-    const order = ["NAME", "LAST", "CHG", "%CHG", "SECURITY", "HIGH", "LOW", "TIME", "SRC"];
-    const rest = cols.filter((c) => !order.includes(c.title));
-    cols.splice(0, cols.length, ...order.map((t) => (t === "SECURITY" ? { ...by(t), width: 16 } : by(t))), ...rest);
-  }
+  const cols: Column<BRow>[] = gui
+    ? [col.name, col.last, col.flag, col.chg, col.pct, col.bar, col.spark, { ...col.security, width: 16 }, col.high, col.low, col.time, col.src, ...unit]
+    : [col.name, col.security, col.src, col.last, col.flag, col.chg, col.pct, col.bar, col.spark, col.high, col.low, col.time, ...unit];
   const errCol = gui ? "SECURITY" : "SRC";
   // Header rows show only their title; errors replace the numbers on their own row.
   return cols.map((c, i) => ({
@@ -66,6 +72,7 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
   const cols = useMemo(() => columns(def, gui), [def, gui]);
   const [reload, setReload] = useState(0);
   const { rows: quotes, loading } = useQuotes(inputs, reload);
+  const sparks = useSparks(inputs, reload);
   const grid = useRef<GridHandle>(null);
 
   const rows = useMemo(() => {
@@ -73,12 +80,12 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
     const out: BRow[] = [];
     for (const s of def.sections) {
       out.push({ input: "", symbol: "", label: "", section: s.title, fetchedAt: 0, ageAtFetch: 0 });
-      for (const it of s.items) out.push({ ...(by.get(it.symbol) ?? { input: it.symbol, symbol: it.symbol, fetchedAt: 0, ageAtFetch: 0 }), label: it.label, unit: it.unit });
+      for (const it of s.items) out.push({ ...(by.get(it.symbol) ?? { input: it.symbol, symbol: it.symbol, fetchedAt: 0, ageAtFetch: 0 }), label: it.label, unit: it.unit, spark: sparks.by[it.symbol] });
     }
     return out;
-  }, [quotes, def]);
+  }, [quotes, def, sparks]);
   const latest = useLatest(rows);
-  useCsvExport(panelId, () => gridCsv(def.code, cols, rows.filter((r) => !r.section)));
+  useCsvExport(panelId, () => gridCsv(def.code, cols.filter((c) => !c.aux), rows.filter((r) => !r.section)));
 
   useLiveRows(rows, grid, liveOf);
 
@@ -106,6 +113,7 @@ export function Board({ panelId, def }: FunctionProps & { def: BoardDef }) {
       <div className="line">
         <span className="acc">{def.title}</span> <b className="pv">{inputs.length}</b> {def.noun}
         {loading && <span className="dim"> · LOADING…</span>}
+        {sparks.error && <span className="warn"> · 2DAY LINES: {sparks.error}</span>}
         <span className="dim legend"> · J/K MOVE · ENTER CHART · E CSV · F5 REFRESH</span>
       </div>
       <QuoteErrors rows={rows.filter((r) => !r.section)} onRetry={() => setReload((n) => n + 1)} />
