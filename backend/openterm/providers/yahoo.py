@@ -7,7 +7,7 @@ from typing import Any, ClassVar
 import httpx
 
 from ..models import Bars, Profile, Quote, SearchHit
-from ..ranges import range_days
+from ..ranges import YAHOO_INTERVALS, range_days
 from .base import HISTORY, PROFILE, QUOTES, SEARCH, SPARKS, Provider, ProviderError
 from .http import BASE, SEARCH_BASE, UA
 
@@ -208,6 +208,9 @@ class YahooProvider(Provider):
         return chart["result"][0]
 
     async def history(self, symbol: str, range_: str, interval: str) -> Bars:
+        if interval not in YAHOO_INTERVALS:
+            # e.g. 1s (Binance spot only). Without this the length is sent to Yahoo, which answers an error that counts as an outage.
+            raise ProviderError("unsupported", f"yahoo: no {interval} candles")
         limit = self.intraday_days.get(interval)
         if limit is not None and range_days(range_) > limit:
             # A deeper source higher in the hierarchy may still answer; if none does, this message reaches the user (HTTP 400).

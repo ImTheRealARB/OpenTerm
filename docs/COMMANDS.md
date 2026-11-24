@@ -268,6 +268,15 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - `SECF axis bluechip` : also lists Indian mutual fund schemes from AMFI NAV; `M` switches to the fund rows. `RELIANCE.NS GP 1Y` : when Yahoo cannot answer, daily bars come from the NSE archive (labelled, raw prices).
 
 
+## Phase 21: chart depth
+
+- `AAPL GP 1Y RENKO` / `KAGI` / `PNF` / `LINEBREAK` / `RANGE` : brick charts (time axis not linear; built from the bars shown, labelled). `BOX=2.5` fixes the box / reversal / range size (default ATR 14), `REV=3` the point and figure reversal. Indicators, compare and drawings are off on a brick chart.
+- `AAPL GP 1Y COLUMNS` / `HIGHLOW` / `STEP` / `VOLCANDLE` : columns of closes, high-low-close bars, step line, candles as wide as their volume.
+- `AAPL GP 1M 4H` (also `2H 3H 6H 8H 12H`), `AAPL GP 2Y 2D` (`3D`), `AAPL GP 10Y 2W`, `AAPL GP 20Y Q` (quarterly), `AAPL GP MAX YEARLY` : candles glued from smaller ones; hour candles start at the market open (09:30 US, 09:15 India).
+- `BTCUSDT GP 1D 1S` : one-second crypto candles (Binance spot, about the last 3.3 hours).
+- `AAPL GP 1Y PAT:GEO` : double tops / bottoms, head and shoulders, triangles, wedges, flags from swing pivots. PATTERN RULE, NOT A SIGNAL.
+- GP drawing tools: `W` opens the tool picker (30 tools: rays, extended / vertical / cross lines, channels, regression channel, shapes, path, text, notes, arrows, measures, fib extension / time zones / fan, pitchfork, Gann fan, long / short position planner, XABCD, Elliott labels). Move the crosshair, `Enter` places each anchor (`Shift+Enter` ends a path), text tools then ask for their words. `E` re-places the selected drawing, `O` opens the object tree (`V` hide, `D` remove, `R` rename, `L` lock).
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

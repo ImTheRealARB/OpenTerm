@@ -3,6 +3,7 @@
  * Web Worker in the app and directly in unit tests.
  */
 import { candlePatterns, smc, smcZonesFlat } from "./patterns";
+import { geoFlat, geoPatterns } from "./geoPatterns";
 import { adx, atr, cci, donchian, ichimoku, keltner, mfi, obv, psar, stoch, supertrend, willr } from "./studies";
 
 export function sma(src: Float64Array, n: number): Float64Array {
@@ -108,6 +109,7 @@ export const INDICATORS = [
   "PAT:CANDLE", "PAT:SMC",
   // Added at the END on purpose: GP's indicator picker toggles by position (key 1 = first), so older keys keep their meaning.
   "SMA100", "SMA200", "EMA50", "EMA200",
+  "PAT:GEO", // Phase 21: chart shapes from swing pivots (geoPatterns.ts)
 ] as const;
 export type IndicatorName = (typeof INDICATORS)[number];
 
@@ -210,6 +212,9 @@ export function compute(s: Series, which: IndicatorName[]): Record<string, Float
       out.SMC_SWING = swing;
       out.SMC_BOS = bos;
       out.SMC_ZONES = smcZonesFlat(r.zones, st);
+    } else if (w === "PAT:GEO") {
+      const st = Math.max(0, s.c.length - PATTERN_MAX_BARS);
+      out.GEO = geoFlat(geoPatterns(s.h.subarray(st), s.l.subarray(st), s.c.subarray(st)), st);
     }
   }
   return out;

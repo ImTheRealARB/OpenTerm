@@ -35,7 +35,7 @@ describe("syntax hint", () => {
     expect(h.token).toBe("");
   });
   it("moves on once a slot is used", () => {
-    expect(activeText("AAPL GP 5Y ")).toBe("[D|W|MO|5MIN|1H]");
+    expect(activeText("AAPL GP 5Y ")).toBe("[D|W|MO|5MIN|1H|4H|2D|2W|Q|YEARLY|1S]"); // Phase 21 candle lengths
     expect(activeText("AAPL FA ")).toBe("[A|Q]");
     expect(activeText("AAPL FA Q ")).toBe("[IS|BS|CF]");
   });

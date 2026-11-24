@@ -5,6 +5,22 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
+**RESUME HERE: Phases 21-32 build (started 2026-11-24, branch `claude/phases-21-32-build-2c2ded`, local commits, NOT pushed).**
+- Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
+  it) under the MINIMAL TEST BAR (local `docs/specs/PHASES_21-33.md` "How to run a phase" step 3) and the 95% 5-hour guard.
+  The pick list is the whole of local `docs/specs/BUILD_PICKS_21-33.md`; no paste needed.
+- Shared smoke spec: `frontend/e2e/smoke_new_functions.spec.ts` starts its OWN fixture backend on :8766 and forwards the
+  page's `/api` calls to it (never :8000). Add one `CASES` line per new function / GP mode. `SMOKE_SHOTS=<dir>` saves a
+  screenshot per case.
+- **Phase 21 (chart depth I): DONE** (spec `docs/specs/PHASE_21.md`): 30 drawing tools + object tree + drawing schema 2,
+  nine chart types (bricks, columns, high-low, step, volume candles), resampled candle lengths 2h..12mo + Binance 1s,
+  PAT:GEO. Smoke 13/13. Gate and bench results: see the Phase 21 line in "Progress" below.
+- Owner decisions to confirm later (defaults used, no blocking): HIGHLOW is drawn as high-low-close bars (the library
+  always draws a close tick); COLUMNS start just under the lowest close, not at zero.
+
+Progress (one line per phase; newest last):
+- Phase 21: built 2026-11-24.
+
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):
   `docs/specs/FEATURE_GAP_PRO.md` (OpenTerm vs the professional terminals and charting platforms the owner named, feature by

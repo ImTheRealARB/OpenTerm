@@ -12,8 +12,9 @@ from .perf import percentile
 from .pin import PIN
 from .providers.base import Provider, ProviderError
 from .providers.hierarchy import rank_of
+from .resample import RESAMPLED
 
-log = logging.getLogger("openterm.router")
+log =logging.getLogger("openterm.router")
 T = TypeVar("T")
 
 TRIP_AFTER = 3
@@ -227,6 +228,11 @@ class Router:
             for interval, days in (p.intraday_days or {}).items():
                 if interval not in best or days > best[interval][0]:
                     best[interval] = (days, p.name)
+        # Phase 21: a length built from a smaller candle (4h from 60m) reaches exactly as far as the candle it is built from.
+        # The daily-based ones (2d, 2wk, quarterly ...) have no base entry, so they stay absent, i.e. not limited, like daily.
+        for target, (base, _rule) in RESAMPLED.items():
+            if base in best:
+                best[target] = best[base]
         sources = {name for _, name in best.values()}
         return {"symbol": symbol, "intraday_days": {i: d for i, (d, _) in best.items()}, "source": sorted(sources)}
 

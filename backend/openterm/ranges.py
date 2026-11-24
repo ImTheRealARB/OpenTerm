@@ -8,11 +8,21 @@ RANGES = {
 }
 YAHOO_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1d", "1wk", "1mo"}
 # Case-insensitive aliases. "1M" is deliberately absent: it is the one-month RANGE.
+# Phase 21 candle lengths (none of these words is a RANGE id, so a range token and an interval token never clash):
+#   1s                      one second, Binance spot only (crypto.py); every other source answers "unsupported"
+#   2h 3h 4h 6h 8h 12h      built from 60m bars,  2d 3d from 1d,  2wk from 1wk,  3mo (quarter) and 12mo (year) from 1mo
+#                           -> openterm/resample.py `RESAMPLED` says how, DataService.history does it
 INTERVALS = {
     "1MIN": "1m", "2MIN": "2m", "5MIN": "5m", "15MIN": "15m", "30MIN": "30m",
     "1H": "60m", "60MIN": "60m", "90MIN": "90m",
     "D": "1d", "1D": "1d", "DAILY": "1d", "W": "1wk", "1W": "1wk", "1WK": "1wk", "WEEKLY": "1wk",
     "MO": "1mo", "1MO": "1mo", "MONTHLY": "1mo",
+    "1S": "1s", "1SEC": "1s",
+    "2H": "2h", "3H": "3h", "4H": "4h", "6H": "6h", "8H": "8h", "12H": "12h",
+    "2D": "2d", "3D": "3d",
+    "2W": "2wk", "2WK": "2wk",
+    "Q": "3mo", "3MO": "3mo", "QUARTERLY": "3mo",
+    "12MO": "12mo", "YEARLY": "12mo",
 }
 DEFAULT_INTERVAL = {
     "1d": "5m", "5d": "15m", "1mo": "60m", "3mo": "1d", "6mo": "1d", "ytd": "1d",

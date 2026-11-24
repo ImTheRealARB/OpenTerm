@@ -334,7 +334,8 @@ def test_a_range_too_deep_for_every_source_is_a_bad_request_with_the_reason():
 def test_history_limits_report_reflects_the_declared_depth():
     router = Router({"coinbase": provider(CoinbaseProvider), "kraken": provider(KrakenProvider)}, {"history": ["coinbase", "kraken"]})
     lim = router.history_limits("BTC-USD")["intraday_days"]
-    assert lim == {"1m": 2, "5m": 13, "15m": 41, "60m": 166, "30m": 15}  # the deepest declared per length (Kraken alone has 30m)
+    hours = {h: 166 for h in ("2h", "3h", "4h", "6h", "8h", "12h")}  # Phase 21: built from 60m, so they reach as far as 60m
+    assert lim == {"1m": 2, "5m": 13, "15m": 41, "60m": 166, "30m": 15, **hours}  # the deepest declared per length (Kraken alone has 30m)
 
 
 # --- through the real app (fixture mode): Binance knocked out by hand ----------------------------------------------------------------

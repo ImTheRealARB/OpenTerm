@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { depthLimitFromError, intervalFits, limitText, longestRangeWithin, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
+import { depthLimitFromError, intervalFits, intervalToken, limitText, longestRangeWithin, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
 
 describe("candle-length limits (reported by the backend per symbol)", () => {
   const yahoo = { "1m": 7, "5m": 60, "15m": 60, "60m": 730 };
@@ -23,6 +23,14 @@ describe("candle-length limits (reported by the backend per symbol)", () => {
     expect(intervalFits("1Y", "15min", yahoo)).toBe(false);
     expect(intervalFits("5D", "1MIN", yahoo)).toBe(true);
     expect(intervalFits("1M", "1MIN", yahoo)).toBe(false);
+  });
+  it("knows the Phase 21 lengths, ties hours to the 60m reach, and never mistakes them for a range", () => {
+    expect(["4H", "Q", "yearly", "2wk", "1sec"].map(intervalToken)).toEqual(["4h", "3mo", "12mo", "2wk", "1s"]);
+    expect(intervalFits("1Y", "4h", yahoo)).toBe(true); // the server reports 4h with the reach of 60m
+    expect(intervalFits("2Y", "4h", { ...yahoo, "4h": 730 })).toBe(false);
+    expect(parseGpArgs(["1Y", "4H"])).toMatchObject({ range: "1Y", interval: "4H" });
+    expect(parseGpArgs(["3M", "3mo"])).toMatchObject({ range: "3M", interval: "3mo" }); // 3M is the range, 3mo the quarterly candle
+    expect(parseGpArgs(["VS", "MSFT", "Q"])).toMatchObject({ compare: ["MSFT"], interval: "Q" }); // VS stops at an interval word
   });
   it("names the longest range that fits and words the depth", () => {
     expect(longestRangeWithin(7)).toBe("5D");

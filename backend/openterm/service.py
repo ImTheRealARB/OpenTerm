@@ -17,6 +17,7 @@ from .bt.localdata import LocalData, LocalError
 from .cache import Cache
 from .config import load_yaml
 from .errors import DataError
+from .models import Bars
 from .news_tags import Filters, item_matches, validate
 from .pin import PIN
 from .providers import macro as _macro
@@ -25,13 +26,14 @@ from .providers.crypto import VS
 from .providers.news import merge
 from .providers.sec import US_ONLY, sec_ticker, store_from  # Phase 6
 from .ranges import normalize
+from .resample import RESAMPLED, ResampleError, resample
 from .router import AllFailed, Router
 from .streaming.tick import QUOTE_SOURCES
 from .symbols import resolve
 
 log = logging.getLogger("openterm.service")
 
-INTRADAY = {"1m", "2m", "5m", "15m", "30m", "60m", "90m"}
+INTRADAY = {"1s", "1m", "2m", "5m", "15m", "30m", "60m", "90m"}  # candles that go stale within minutes: the short cache lifetime
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
@@ -136,6 +138,8 @@ class DataService:
             r, i = normalize(range_, interval)
         except ValueError as e:
             raise DataError("bad_request", str(e)) from e
+        if i in RESAMPLED:  # Phase 21: 4h, 2d, quarterly ... are built from a smaller candle (the base goes through this method again)
+            return await self._history_resampled(raw_symbol, range_, symbol, r, i)
         if self.local is not None and symbol in self.local.symbols and PIN.get() in (None, "local"):  # IMPORT: the user's own bars win, labelled LOCAL DATA
             try:
                 data, imported_at = await self.local.history(symbol, r, i)
@@ -145,14 +149,50 @@ class DataService:
         ttl = self.ttl["intraday"] if i in INTRADAY else self.ttl["daily"]
 
         async def fetch() -> dict:
-            bars, failed = await self.router.call("history", lambda p: p.history(symbol, r, i), symbol)
+            try:
+                bars, failed = await self.router.call("history", lambda p: p.history(symbol, r, i), symbol)
+            except AllFailed as e:
+                # Only Binance spot has 1 second candles. Every other source says "unsupported", which the router would turn into
+                # "NO DATA FOR SYMBOL" (wrong: AAPL has data, just not per second). Say what is really the matter.
+                if i == "1s" and e.kind == K.NOT_FOUND and not e.pinned:
+                    raise DataError(K.BAD_REQUEST, "1 SECOND CANDLES ARE ONLY AVAILABLE FOR BINANCE SPOT USDT PAIRS (E.G. BTCUSDT)") from e
+                raise
             return {"data": bars.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
 
-        # A Kite login changes who answers Indian symbols, so the cache key names the key-gated sources that
-        # are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
-        # Only a source that can really answer counts: an expired login must not share a cache key with a valid one (audit A-3).
-        gated = [p.name for p in self.router.candidates("history", symbol) if p.name in ("kite",) and p.why_down() is None]
-        return await self.swr(ck.history(symbol, r, i, gated), ttl, fetch)
+        return await self.swr(ck.history(symbol, r, i, self._kite_gate(symbol)), ttl, fetch)
+
+    def _kite_gate(self, symbol: str) -> list[str]:
+        """The key-gated history sources that can answer `symbol` right now (for the cache key).
+
+        A Kite login changes who answers Indian symbols, so the cache key names the key-gated sources that
+        are in the chain right now (otherwise Yahoo's cached bars would be served for an hour after adding a key).
+        Only a source that can really answer counts: an expired login must not share a cache key with a valid one (audit A-3)."""
+        return [p.name for p in self.router.candidates("history", symbol) if p.name in ("kite",) and p.why_down() is None]
+
+    async def _history_resampled(self, raw_symbol: str, range_: str | None, symbol: str, r: str, target: str) -> dict:
+        """Candles the sources do not sell (2h..12h, 2d, 3d, 2wk, quarterly, yearly): fetch the base candle, fold it (`resample.py`).
+
+        The base call is the ordinary `history` for the base interval, so it keeps its own cache entry, the source hierarchy, the
+        fallbacks, the IMPORT local-data branch and every error (a depth limit still says "INTERVAL 60m ONLY AVAILABLE FOR THE LAST
+        730 DAYS"). The envelope that comes back (source, as_of, age, stale, fallback notes) is the BASE answer's, with only `data` swapped.
+
+        The folded bars are cached under a key that names the TARGET interval (`cachekeys.history`). They are not given a lifetime of
+        their own: the entry records the `as_of` of the base answer it was built from and is reused while the base answer is the
+        same one. A refreshed base (or a re-imported local file) has a new `as_of`, so the fold is redone, and folded bars can
+        never be older than, or contradict, the base they claim to come from."""
+        base = RESAMPLED[target][0]
+        env = await self.history(raw_symbol, range_, base)
+        key = self._scope(ck.history(symbol, r, target, self._kite_gate(symbol)))
+        hit = await self.cache.get(key)
+        if hit is not None and hit[0].get("base_as_of") == env["as_of"]:
+            data = hit[0]["data"]
+        else:
+            try:
+                data = resample(Bars.model_construct(**env["data"]), target).model_dump()
+            except ResampleError as e:
+                raise DataError(K.BAD_REQUEST, f"{target.upper()} CANDLES NOT AVAILABLE: {e}") from e
+            self.cache.put(key, {"data": data, "base_as_of": env["as_of"]})
+        return {**env, "data": data}
 
     async def profile(self, raw_symbol: str) -> dict:
         symbol = resolve(raw_symbol)

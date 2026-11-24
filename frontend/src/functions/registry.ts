@@ -52,7 +52,7 @@ const defs: FunctionDef[] = [
   { code: "TAPE", title: "Ticker tape settings", needsSecurity: false, argsSchema: "[ADD SYM | DEL SYM | RESET | ON | OFF]", load: () => import("./HOME") },
   { code: "PERF", title: "Performance monitor", needsSecurity: false, argsSchema: "[GRID rows | CHART bars | CALC]", load: () => import("./Perf") },
   { code: "SHORTCUTS", title: "Keyboard shortcuts", needsSecurity: false, load: () => import("./Shortcuts") },
-  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H] [VS SYM] [CANDLE|OHLC|LINE|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]", prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
+  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H|4H|2D|2W|Q|YEARLY|1S] [VS SYM] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|LINEBREAK|RANGE|COLUMNS|HIGHLOW|STEP|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200]", prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
   { code: "DES", title: "Security description", needsSecurity: true, leadsWithPrice: true, related: { security: 1 }, load: () => import("./DES") },
   { code: "Q", title: "Quote monitor (live)", needsSecurity: false, argsSchema: "[SYM...]", load: () => import("./Q"), rowNumbers: true },
   { code: "QR", title: "Quote recap (live)", needsSecurity: true, leadsWithPrice: true, related: { security: 3 }, load: () => import("./QR") },

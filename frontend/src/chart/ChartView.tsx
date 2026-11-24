@@ -11,7 +11,7 @@
 import "../components/dataColors.css";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import {
-  AreaSeries, BarSeries, BaselineSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries,
+  AreaSeries, BarSeries, BaselineSeries, CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineType,
   PriceScaleMode, TickMarkType, createChart,
   type IChartApi, type ISeriesApi, type SeriesType, type Time,
 } from "lightweight-charts";
@@ -22,7 +22,9 @@ import { useStore } from "../state/store";
 import { toTime, themeColors, type BarData } from "./chartBase";
 import { useGpLayer, type GpLayerProps, type GpOps } from "./gpLayer";
 
-import { CHART_TYPES, isOhlcType, type ChartType } from "./chartTypes";
+import { brickCount, brickDir, brickPrice, brickText, brickTime, buildBricks, type BrickResult } from "./bricks";
+import { CHART_TYPES, brickNote, isBrickType, isOhlcType, volCandleNote, type ChartType } from "./chartTypes";
+import { PnfView, VolCandleView, type PnfData, type VolCandleData } from "./customSeries";
 import { heikinAshi } from "./heikin";
 
 export { CHART_TYPES };
@@ -59,12 +61,33 @@ interface Props {
   lowerPane?: { title: string; v: Float64Array } | null;
   /** GP only: indicators, drawings, markers, extra panes, alert lines, click-to-pick. Leave out for a plain chart. */
   gp?: GpLayerProps;
+  /** Brick types (RENKO KAGI PNF RANGE): the box / reversal / range in price units. Absent = ATR(14) of the source bars. */
+  brickBox?: number;
+  /** PNF: boxes of reversal that start a new column (default 3). */
+  brickRev?: number;
+  /**
+   * Called after every rebuild with the line to show on screen about how the chart was drawn (brick box used, volume-candle
+   * caveats), or null for the other types. Passing a state setter is fine: it only re-renders when the text changes.
+   */
+  onNote?: (note: string | null) => void;
 }
+
+/** Types whose bars are not the source bars, or are rebuilt from history: a live tick cannot be applied in place, they refresh with the next history load. */
+const skipsLiveTicks = (t: ChartType): boolean => t === "HEIKIN" || t === "VOLCANDLE" || isBrickType(t);
 
 export const INTERVAL_S: Record<string, number> = {
   "1s": 1, "5s": 5, "15s": 15, "1m": 60, "2m": 120, "5m": 300, "15m": 900, "30m": 1800, "60m": 3600, "90m": 5400,
   "1d": 86400, "1wk": 7 * 86400, "1mo": 31 * 86400,
+  // Phase 21 lengths the server builds from a smaller candle (backend resample.py). Nominal sizes: hour buckets restart each
+  // trading day and a quarter / year is a calendar span, so these are the usual length, which is all the readout and live ticks need.
+  "2h": 2 * 3600, "3h": 3 * 3600, "4h": 4 * 3600, "6h": 6 * 3600, "8h": 8 * 3600, "12h": 12 * 3600,
+  "2d": 2 * 86400, "3d": 3 * 86400, "2wk": 14 * 86400, "3mo": 92 * 86400, "12mo": 366 * 86400,
 };
+
+/** The calendar date of an epoch second in an exchange's time zone (used only when a live tick starts a new bucket: rare). */
+function localDay(t: number, tz: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz || "UTC" }).format(t * 1000);
+}
 
 function formatters(tz: string, intraday: boolean, seconds = false) {
   const opts = { timeZone: tz } as const;
@@ -82,7 +105,38 @@ function formatters(tz: string, intraday: boolean, seconds = false) {
   };
 }
 
-function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp }: Props, ref: React.Ref<ChartHandle>) {
+type Colors = ReturnType<typeof themeColors>;
+
+/**
+ * Adds the series that draws a brick result and fills it with the marks.
+ *  - Renko / three line break / range bars: the library's candles. Renko and line breaks have no wicks (the brick is the body).
+ *  - Kagi: a line series drawn with steps (a sideways hop at each turn, then the vertical run). Each point carries the colour of the
+ *    line that ends there: up colour = yang (thick on paper), down colour = yin. Thickness cannot change per point, so colour carries it.
+ *  - Point and figure: the custom series in customSeries.ts, which draws a real X or O in every box.
+ */
+function addBrickSeries(chart: IChartApi, br: BrickResult, type: ChartType, c: Colors): ISeriesApi<SeriesType> {
+  if (br.kind === "ohlc") {
+    const s = chart.addSeries(CandlestickSeries, { upColor: c.cup, downColor: c.cdown, borderVisible: false, wickVisible: type === "RANGE", wickUpColor: c.cup, wickDownColor: c.cdown });
+    const rows = new Array(br.t.length);
+    for (let i = 0; i < rows.length; i++) rows[i] = { time: toTime(br.t[i]), open: br.o[i], high: br.h[i], low: br.l[i], close: br.c[i] };
+    s.setData(rows);
+    return s;
+  }
+  if (br.kind === "kagi") {
+    const s = chart.addSeries(LineSeries, { color: c.cline, lineWidth: 2, lineType: LineType.WithSteps, priceLineVisible: false });
+    const rows = new Array(br.t.length);
+    for (let i = 0; i < rows.length; i++) rows[i] = { time: toTime(br.t[i]), value: br.v[i], color: br.yang[i] ? c.cup : c.cdown };
+    s.setData(rows);
+    return s;
+  }
+  const s = chart.addCustomSeries(new PnfView(), { upColor: c.cup, downColor: c.cdown, box: br.box.size, priceLineVisible: false, lastValueVisible: false });
+  const rows: PnfData[] = new Array(br.t.length);
+  for (let i = 0; i < rows.length; i++) rows[i] = { time: toTime(br.t[i]), lo: br.lo[i], hi: br.hi[i], up: br.up[i] };
+  s.setData(rows);
+  return s;
+}
+
+function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp, brickBox, brickRev, onNote }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -96,6 +150,11 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
   const vol = useRef<ISeriesApi<"Histogram"> | null>(null);
   const extra = useRef<ISeriesApi<SeriesType>[]>([]);
   const last = useRef<{ t: number; o: number; h: number; l: number; c: number; v: number } | null>(null);
+  // Set while a brick chart is drawn: the chart then shows bricks, not the source bars, so the crosshair and readout must
+  // index into the bricks (a bar index would point at the wrong mark). Null for every other type.
+  const bricks = useRef<BrickResult | null>(null);
+  const noteRef = useRef(onNote);
+  noteRef.current = onNote;
   const cross = useRef({ on: false, idx: -1 });
   const hovering = useRef(false); // the mouse crosshair is over the chart
   const fmt = useRef(formatters(data.tz, (INTERVAL_S[data.interval] ?? 86400) < 86400, (INTERVAL_S[data.interval] ?? 86400) < 60));
@@ -114,8 +173,19 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
   const ver = useStore(displayVersion, (v) => v);
   const seenVer = useRef(ver);
 
+  /** How many marks the chart shows: bricks on a brick chart, else the source bars. */
+  const shownCount = () => (bricks.current ? brickCount(bricks.current) : data.c.length);
+
   const writeReadout = (i: number) => {
     const el = readout.current;
+    const br = bricks.current;
+    if (el && br) {
+      if (i < 0 || i >= brickCount(br)) return;
+      const dir = brickDir(br, i);
+      el.textContent = `${fmt.current.full(toTime(brickTime(br, i)))}  ${brickText(br, i, fmtPrice)}`;
+      el.className = "line " + (dir > 0 ? "up" : "down");
+      return;
+    }
     if (!el || i < 0 || i >= data.c.length) return;
     // The newest bar follows live ticks: `last` holds its running values (`data` is the history snapshot).
     // A new intraday bucket (last.t is later than the final history bar) is measured against that final bar's close.
@@ -214,13 +284,32 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
     const n = data.c.length;
     const kind: ChartType = compare ? "LINE" : type;
     let s: ISeriesApi<SeriesType>;
-    if (isOhlcType(kind)) {
+    let br: BrickResult | null = null; // the bricks drawn, when the type is a brick type
+    let note: string | null = null; // the on-screen line about how this chart was drawn (handed to `onNote`)
+    if (isBrickType(kind)) {
+      // Brick types make their own marks from price moves (bricks.ts) and have their own, non-linear, time axis.
+      br = buildBricks(kind, data, { box: brickBox, rev: brickRev });
+      if (!br) throw new Error(`no brick transform for chart type ${kind}`);
+      s = addBrickSeries(chart, br, kind, c);
+      note = brickNote(kind, data.interval, br.box, { count: brickCount(br), capped: br.capped });
+    } else if (kind === "VOLCANDLE") {
+      // Candles whose body width follows volume: a custom series (customSeries.ts) because the library's candles have one width.
+      const rows: VolCandleData[] = new Array(n);
+      for (let i = 0; i < n; i++) rows[i] = { time: toTime(data.t[i]), open: data.o[i], high: data.h[i], low: data.l[i], close: data.c[i], vol: data.v[i] };
+      const vs = chart.addCustomSeries(new VolCandleView(), { upColor: c.cup, downColor: c.cdown, priceLineVisible: false, lastValueVisible: false });
+      vs.setData(rows);
+      s = vs;
+      note = volCandleNote(data.v);
+    } else if (isOhlcType(kind)) {
       // Heikin Ashi draws smoothed bars (heikin.ts); every other OHLC type draws the real ones.
       const src = kind === "HEIKIN" ? heikinAshi(data.o, data.h, data.l, data.c) : data;
       const ohlc = new Array(n);
       for (let i = 0; i < n; i++) ohlc[i] = { time: toTime(data.t[i]), open: src.o[i], high: src.h[i], low: src.l[i], close: src.c[i] };
       s = kind === "OHLC"
         ? chart.addSeries(BarSeries, { upColor: c.cup, downColor: c.cdown, thinBars: true })
+        : kind === "HIGHLOW"
+          // High-low-close bars: the library cannot draw a bar without a tick, so the open tick is hidden and the REAL close tick stays.
+          ? chart.addSeries(BarSeries, { upColor: c.cup, downColor: c.cdown, thinBars: true, openVisible: false })
         : kind === "HOLLOW"
           // Hollow candles: rising bodies are empty outlines, falling ones are filled.
           ? chart.addSeries(CandlestickSeries, { upColor: "rgba(0,0,0,0)", downColor: c.cdown, borderUpColor: c.cup, borderDownColor: c.cdown, wickUpColor: c.cup, wickDownColor: c.cdown, borderVisible: true })
@@ -231,21 +320,42 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
       for (let i = 0; i < n; i++) pts[i] = { time: toTime(data.t[i]), value: data.c[i] };
       // Baseline: green above the first close of the range, red below it.
       const base = n ? data.c[0] : 0;
-      s = kind === "AREA"
-        ? chart.addSeries(AreaSeries, { lineColor: c.cline, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
-        : kind === "BASELINE"
-          ? chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: base }, lineWidth: 1, topLineColor: c.cup, bottomLineColor: c.cdown, topFillColor1: c.cup + "55", topFillColor2: c.cup + "05", bottomFillColor1: c.cdown + "05", bottomFillColor2: c.cdown + "55" })
-          : chart.addSeries(LineSeries, { color: c.cline, lineWidth: 1 });
+      if (kind === "COLUMNS") {
+        // Columns of closes, coloured like the volume bars (the bar closed up or down). The columns start just under the lowest
+        // close (a visual floor, not zero): a price from 150 to 170 drawn from 0 would be a wall of identical columns.
+        let lo = Infinity;
+        let hi = -Infinity;
+        for (let i = 0; i < n; i++) {
+          pts[i].color = data.c[i] >= data.o[i] ? c.up : c.down;
+          if (data.c[i] < lo) lo = data.c[i];
+          if (data.c[i] > hi) hi = data.c[i];
+        }
+        const pad = (hi - lo) * 0.05 || Math.abs(lo) * 0.05 || 1;
+        let floor = lo - pad;
+        if (lo > 0 && floor <= 0) floor = lo * 0.9; // keep a log price scale legal
+        s = chart.addSeries(HistogramSeries, { base: n ? floor : 0, color: c.up });
+      } else {
+        s = kind === "AREA"
+          ? chart.addSeries(AreaSeries, { lineColor: c.cline, topColor: c.sel, bottomColor: c.bg, lineWidth: 1 })
+          : kind === "BASELINE"
+            ? chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: base }, lineWidth: 1, topLineColor: c.cup, bottomLineColor: c.cdown, topFillColor1: c.cup + "55", topFillColor2: c.cup + "05", bottomFillColor1: c.cdown + "05", bottomFillColor2: c.cdown + "55" })
+            : kind === "STEP"
+              // Step line: each close is held flat until the next close (no slope between bars that the data does not have).
+              ? chart.addSeries(LineSeries, { color: c.cline, lineWidth: 1, lineType: LineType.WithSteps })
+              : chart.addSeries(LineSeries, { color: c.cline, lineWidth: 1 });
+      }
       s.setData(pts);
     }
     main.current = s;
+    bricks.current = br; // from here on the crosshair and readout index into the bricks (null = the source bars)
     gpRef.current?.afterMain(s); // marker plugin (GP only)
     last.current = n ? { t: data.t[n - 1], o: data.o[n - 1], h: data.h[n - 1], l: data.l[n - 1], c: data.c[n - 1], v: data.v[n - 1] } : null;
 
     // Series without volume (FRED, indices on some feeds) get no histogram: zero bars draw as a flat line.
     let hasVolume = false;
     for (let i = 0; i < n && !hasVolume; i++) hasVolume = data.v[i] > 0;
-    if (!compare && hasVolume) {
+    // Brick charts get no volume bars either: those would sit at the source bars' times, not the bricks'.
+    if (!compare && hasVolume && !br) {
       const v = chart.addSeries(HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       const bars = new Array(n);
@@ -272,13 +382,15 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
       mode: compare ? PriceScaleMode.Percentage : log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
     });
     chart.timeScale().fitContent();
-    writeReadout(n - 1);
+    writeReadout(shownCount() - 1);
 
     gauges.set("chart.rebuilds", (gauges.get("chart.rebuilds") ?? 0) + 1);
+    gauges.set("chart.bricks", br ? brickCount(br) : 0); // e2e reads this: the canvas is invisible to the DOM
     publish();
+    noteRef.current?.(note);
   // Rebuilding the chart is expensive: it must happen only for these inputs, never because writeReadout is a new function each render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only on data/compare/type/log/panes/theme; writeReadout is re-created every render
-  }, [data, compare, type, log, lowerPane, comparePanes, ver]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only on data/compare/type/log/panes/theme/brick box; writeReadout is re-created every render
+  }, [data, compare, type, log, lowerPane, comparePanes, ver, brickBox, brickRev]);
 
   /** Refreshes the gauges that e2e reads (the canvas is invisible to the DOM). */
   function publish() {
@@ -333,31 +445,34 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
       if (!chart || !main.current) return;
       if (!on) {
         chart.clearCrosshairPosition();
-        writeReadout(data.c.length - 1);
+        writeReadout(shownCount() - 1);
         return;
       }
-      cross.current.idx = data.c.length - 1;
+      cross.current.idx = shownCount() - 1;
       this.crosshairStep(0);
     },
     crosshairStep(delta) {
       const chart = chartRef.current;
       if (!chart || !main.current || !cross.current.on) return;
-      const i = Math.max(0, Math.min(data.c.length - 1, cross.current.idx + delta));
+      const br = bricks.current;
+      const i = Math.max(0, Math.min(shownCount() - 1, cross.current.idx + delta));
       cross.current.idx = i;
-      chart.setCrosshairPosition(data.c[i], toTime(data.t[i]), main.current);
+      // On a brick chart the keyboard crosshair walks the bricks, at the brick's own time and price.
+      chart.setCrosshairPosition(br ? brickPrice(br, i) : data.c[i], toTime(br ? brickTime(br, i) : data.t[i]), main.current);
       writeReadout(i);
     },
     lastPrice() {
       return last.current && Number.isFinite(last.current.c) ? last.current.c : null;
     },
     alertPrice() {
-      const px = cross.current.on ? data.c[cross.current.idx] : last.current?.c;
+      const br = bricks.current;
+      const px = cross.current.on ? (br ? brickPrice(br, cross.current.idx) : data.c[cross.current.idx]) : last.current?.c;
       return px !== undefined && Number.isFinite(px) ? px : null;
     },
     live(price, timeMs, dayVolume) {
       const s = main.current;
       const b = last.current;
-      if (!s || !b || compare || type === "HEIKIN") return; // Heikin Ashi bars chain from the previous bar: they refresh with the next history load
+      if (!s || !b || compare || skipsLiveTicks(type)) return; // Heikin Ashi, brick and volume-candle charts refresh with the next history load
       const iv = INTERVAL_S[data.interval] ?? 86400;
       const ts = Math.floor(timeMs / 1000);
       if (ts < b.t) return;
@@ -370,12 +485,17 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp 
       } else if (iv < 86400) {
         // New intraday bucket, aligned to the interval grid.
         const t = b.t + Math.floor((ts - b.t) / iv) * iv;
+        // Resampled hour candles (2h..12h) restart at each session's open (backend/openterm/resample.py), so the grid only holds
+        // inside one local day; a 24-hour UTC market whose day divides evenly is the exception. Otherwise the new session's
+        // first candle arrives with the next history load instead of being guessed on the wrong grid.
+        if (iv > 3600 && !(data.tz === "UTC" && 86400 % iv === 0) && localDay(t, data.tz) !== localDay(b.t, data.tz)) return;
         Object.assign(b, { t, o: price, h: price, l: price, c: price, v: 0 });
       } else {
         return; // new daily+ bar: arrives with the next history refresh rather than guessed here
       }
       const time = toTime(b.t);
       if (isOhlcType(type)) s.update({ time, open: b.o, high: b.h, low: b.l, close: b.c });
+      else if (type === "COLUMNS") s.update({ time, value: b.c, color: b.c >= b.o ? colors.current.up : colors.current.down });
       else s.update({ time, value: b.c });
       // The volume bar under the candle follows too (same up / down colour rule as at build time).
       // A new intraday bucket gets its own bar; its volume is 0 until the next history load.

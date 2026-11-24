@@ -167,7 +167,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
+| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H\|4H\|2D\|2W\|Q\|YEARLY\|1S] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA\|RENKO\|KAGI\|PNF\|LINEBREAK\|RANGE\|COLUMNS\|HIGHLOW\|STEP\|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
 | `IND` | Indicator library, formulas and presets for GP |  | `[search]` | `IND` |
 | `GIP` | Intraday tick chart (candles built from the live ticks seen since the session began) | yes | `[1S\|5S\|15S\|1M]` | `AAPL GIP` |
 | `HIST` | Historical price table | yes | `[1M..MAX] [D\|W\|MO]` | `AAPL HIST` |

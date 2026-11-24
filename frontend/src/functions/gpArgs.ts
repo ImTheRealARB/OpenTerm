@@ -1,5 +1,5 @@
 /**
- * GP command arguments (pure, so vitest can run it): [range] [interval] [VS SYM...] [PANE] [EVT] [CANDLE|OHLC|LINE|AREA] [LOG] [studies...].
+ * GP command arguments (pure, so vitest can run it): [range] [interval] [VS SYM...] [PANE] [EVT] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|...] [BOX=n] [REV=n] [LOG] [studies...].
  * Order is free. `VS` takes up to three symbols; with `PANE` each gets its own pane, without it the first one is overlaid (rebased to %).
  */
 import { CHART_TYPES, type ChartType } from "../chart/chartTypes";
@@ -10,7 +10,20 @@ import { INDICATORS, type IndicatorName } from "../chart/indicators";
 export const RANGES = GP_RANGES;
 /** Number keys 1..8 jump to these. */
 export const KEY_RANGES = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"];
-const INTERVAL_WORDS = new Set(["1MIN", "2MIN", "5MIN", "15MIN", "30MIN", "60MIN", "90MIN", "1H", "D", "1D", "DAILY", "W", "1W", "1WK", "WEEKLY", "MO", "1MO", "MONTHLY"]);
+/**
+ * Phase 21 candle lengths, typed word (UPPER CASE) -> the id the server uses. Mirror of the new aliases in backend `ranges.py` INTERVALS.
+ * 2h..12h are built by the server from 60 minute candles, 2d / 3d from daily, 2wk from weekly, 3mo (quarter) / 12mo (year) from monthly;
+ * 1s is Binance spot only. None of these words is a range (`RANGES`), so a range token and an interval token never clash.
+ */
+const LONG_WORDS: Readonly<Record<string, string>> = {
+  "1S": "1s", "1SEC": "1s",
+  "2H": "2h", "3H": "3h", "4H": "4h", "6H": "6h", "8H": "8h", "12H": "12h",
+  "2D": "2d", "3D": "3d",
+  "2W": "2wk", "2WK": "2wk",
+  Q: "3mo", "3MO": "3mo", QUARTERLY: "3mo",
+  "12MO": "12mo", YEARLY: "12mo",
+};
+const INTERVAL_WORDS = new Set(["1MIN", "2MIN", "5MIN", "15MIN", "30MIN", "60MIN", "90MIN", "1H", "D", "1D", "DAILY", "W", "1W", "1WK", "WEEKLY", "MO", "1MO", "MONTHLY", ...Object.keys(LONG_WORDS)]);
 const YAHOO_INTERVALS = new Set(["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1d", "1wk", "1mo"]);
 export const MAX_COMPARE = 3;
 
@@ -92,16 +105,38 @@ export interface GpParsed {
   pane: boolean;
   evt: boolean;
   type: ChartType;
+  /** `BOX=<number>`: box size / kagi reversal / range-bar range in price units for the brick types. Absent = ATR(14) of the source bars. */
+  box?: number;
+  /** `REV=<n>`: point and figure reversal in boxes (whole number, default 3). */
+  rev?: number;
   log: boolean;
   indicators: IndicatorName[];
   /** Library indicators and formulas, in the order given (at most MAX_CUSTOM). */
   custom: CustomInd[];
 }
 
+/** `BOX=2.5` -> 2.5 (positive, plain decimal); anything else -> null. */
+const BOX_TOKEN = /^BOX=(\d+\.?\d*|\.\d+)$/i;
+/** `REV=3` -> 3 (a whole number from 1 to 20); anything else -> null. */
+const REV_TOKEN = /^REV=(\d{1,2})$/i;
+
+function parseBox(raw: string): number | null {
+  const m = BOX_TOKEN.exec(raw);
+  const v = m ? Number(m[1]) : NaN;
+  return v > 0 && Number.isFinite(v) ? v : null;
+}
+
+function parseRev(raw: string): number | null {
+  const m = REV_TOKEN.exec(raw);
+  const v = m ? Number(m[1]) : NaN;
+  return v >= 1 && v <= 20 ? v : null;
+}
+
 function isKeyword(raw: string): boolean {
   const a = raw.toUpperCase();
   return (
     a === "VS" || a === "PANE" || a === "EVT" || a === "LOG" || a === "PAT:ICHI" || RANGES.includes(a) || YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a) ||
+    parseBox(raw) !== null || parseRev(raw) !== null ||
     (CHART_TYPES as string[]).includes(a) || (INDICATORS as readonly string[]).includes(a) || parseCustomToken(raw) !== null
   );
 }
@@ -121,7 +156,14 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
     else if (RANGES.includes(a)) p.range = a;
     else if (YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a)) p.interval = raw;
     else if ((CHART_TYPES as string[]).includes(a)) p.type = a as ChartType;
-    else if (a === "LOG") p.log = true;
+    else if (BOX_TOKEN.test(raw)) {
+      // A BOX= that is not a positive number is ignored (the brick types then use ATR(14), and the on-screen note says so).
+      const v = parseBox(raw);
+      if (v !== null) p.box = v;
+    } else if (REV_TOKEN.test(raw)) {
+      const v = parseRev(raw);
+      if (v !== null) p.rev = v;
+    } else if (a === "LOG") p.log = true;
     else if (a === "PAT:ICHI" && !p.indicators.includes("ICHIMOKU")) p.indicators.push("ICHIMOKU");
     else if ((INDICATORS as readonly string[]).includes(a)) {
       if (!p.indicators.includes(a as IndicatorName)) p.indicators.push(a as IndicatorName);
@@ -136,7 +178,9 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
 
 /** The candle lengths the GUI dropdown offers: [label, token]. An empty token means "Auto" (the range picks the interval). */
 export const INTERVAL_CHOICES: readonly (readonly [string, string])[] = [
-  ["Auto", ""], ["5 min", "5m"], ["15 min", "15m"], ["30 min", "30m"], ["1 hour", "60m"], ["Daily", "1d"], ["Weekly", "1wk"], ["Monthly", "1mo"],
+  ["Auto", ""], ["1 second", "1s"], ["5 min", "5m"], ["15 min", "15m"], ["30 min", "30m"], ["1 hour", "60m"],
+  ["2 hours", "2h"], ["3 hours", "3h"], ["4 hours", "4h"], ["6 hours", "6h"], ["8 hours", "8h"], ["12 hours", "12h"],
+  ["Daily", "1d"], ["2 days", "2d"], ["3 days", "3d"], ["Weekly", "1wk"], ["2 weeks", "2wk"], ["Monthly", "1mo"], ["Quarterly", "3mo"], ["Yearly", "12mo"],
 ];
 
 /**
@@ -153,7 +197,7 @@ const MINUTE_WORDS: Readonly<Record<string, string>> = { "1MIN": "1m", "2MIN": "
 
 /** The Yahoo token for a candle length typed either way ("15min" and "15m" both give "15m"). */
 export function intervalToken(raw: string): string {
-  return YAHOO_INTERVALS.has(raw) ? raw : (MINUTE_WORDS[raw.toUpperCase()] ?? raw.toLowerCase());
+  return YAHOO_INTERVALS.has(raw) ? raw : (MINUTE_WORDS[raw.toUpperCase()] ?? LONG_WORDS[raw.toUpperCase()] ?? raw.toLowerCase());
 }
 
 /** Does this candle length reach back far enough for this range? (Daily and longer, or limits not known yet: yes.) */
@@ -200,6 +244,8 @@ export function serializeGp(p: GpParsed, defaultType: ChartType = "CANDLE"): str
     ...(p.pane ? ["PANE"] : []),
     ...(p.evt ? ["EVT"] : []),
     ...(p.type !== defaultType ? [p.type] : []),
+    ...(p.box !== undefined ? [`BOX=${p.box}`] : []),
+    ...(p.rev !== undefined ? [`REV=${p.rev}`] : []),
     ...(p.log ? ["LOG"] : []),
     ...p.indicators,
     ...p.custom.map((c) => c.token),

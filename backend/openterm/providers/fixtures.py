@@ -121,6 +121,16 @@ def fixture_transport() -> httpx.MockTransport:
     return httpx.MockTransport(_handler)
 
 
+# --- Phase 21: Binance 1 second candles (spot host only; a REAL recording of 120 seconds of BTCUSDT, taken 2026-11-24) ---
+def _route_binance_1s(request: httpx.Request) -> httpx.Response | None:
+    """The `BINANCE_KLINES` route above answers every interval with the 1 day recording; 1 second asks get this one instead.
+    BTCUSDT only, like the others (any other symbol is Binance's own 400 for an unknown pair, never invented data)."""
+    q = request.url.params
+    if request.url.path != "/api/v3/klines" or q.get("interval") != "1s":
+        return None
+    return _load("binance_spot_klines_btcusdt_1s_real") if q.get("symbol") == "BTCUSDT" else httpx.Response(400, json={"code": -1121})
+
+
 # --- Phase 6: SEC EDGAR + Yahoo ownership ---
 # sec_facts_*: us-gaap tags in sec_parse.TAGS only, 10-K/10-Q facts ending 2014 or later.
 # sec_subs_*: filings.recent cut to the first 60 entries. sec_company_tickers: AAPL, MSFT, BRK-B only.
@@ -1114,7 +1124,8 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
-    _route_usgov,       # US government data: USASpending, Federal Register, OpenFEC, Congress.gov
+    _route_binance_1s,  # Binance 1 second candles (before `_route_base`, which would answer them with daily ones)
+    _route_usgov,      # US government data: USASpending, Federal Register, OpenFEC, Congress.gov
     _route_opensky,     # FLT: OpenSky aircraft
     _route_cryptoex,    # Kraken and Coinbase Exchange
     _route_mf,          # MFapi.in mutual funds

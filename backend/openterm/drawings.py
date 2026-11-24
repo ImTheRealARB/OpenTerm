@@ -1,4 +1,5 @@
-"""GP drawings (Phase 19): trend line, horizontal line, fib retracement, stored per symbol in `kv` under `drawings:<SYMBOL>`.
+"""GP drawings (Phase 19 trend line / horizontal line / fib; Phase 21 the full toolbox), stored per symbol in `kv` under
+`drawings:<SYMBOL>`.
 
 A drawing is anchored in (time, price), never in pixels or bar numbers, so it survives a change of range or interval. Strict
 validation: unknown fields are refused so a typo is never stored silently.
@@ -15,8 +16,25 @@ from .symbols import resolve
 from .userdata import UserDataError
 
 MAX_DRAWINGS = 200
-POINTS = {"TREND": 2, "HLINE": 1, "FIB": 2}
+# Anchors each tool takes, as (fewest, most): only PATH varies. Mirrors `TOOLS` in frontend/src/chart/drawings.ts
+# (test_ts_mirrors-style check in test_phase21_drawings.py keeps the two lists equal).
+POINTS: dict[str, tuple[int, int]] = {
+    "TREND": (2, 2), "HLINE": (1, 1), "FIB": (2, 2),
+    "RAY": (2, 2), "XLINE": (2, 2), "VLINE": (1, 1), "CROSS": (1, 1),
+    "PCHAN": (3, 3), "REGCH": (2, 2), "RECT": (2, 2), "ELLIPSE": (2, 2), "TRI": (3, 3), "PATH": (2, 10),
+    "TEXT": (1, 1), "NOTE": (1, 1), "ARROWUP": (1, 1), "ARROWDN": (1, 1),
+    "PRANGE": (2, 2), "DRANGE": (2, 2), "MEASURE": (2, 2),
+    "FIBEXT": (3, 3), "FIBTIME": (2, 2), "FIBFAN": (2, 2), "PITCHFORK": (3, 3), "GANNFAN": (2, 2),
+    "LONG": (3, 3), "SHORT": (3, 3),
+    "XABCD": (5, 5), "ELLIOTT5": (6, 6), "ELLIOTTABC": (4, 4),
+}
 ID_MAX = 24
+LABEL_MAX = 200
+# Phase 21: the stored document says which drawing schema wrote it (1 = Phase 19 id/kind/pts only, 2 = adds the optional
+# label / hidden / locked fields). Old documents have no "v" and read as 1; they need no change.
+SCHEMA_VERSION = 2
+_REQUIRED = {"id", "kind", "pts"}
+_OPTIONAL = {"label", "hidden", "locked"}
 
 
 def _bad(msg: str) -> UserDataError:
@@ -35,8 +53,9 @@ def validate(raw) -> list[dict]:
     out: list[dict] = []
     seen: set[str] = set()
     for d in raw:
-        if not isinstance(d, dict) or set(d) != {"id", "kind", "pts"}:
-            raise _bad("EACH DRAWING NEEDS id, kind AND pts ONLY")
+        # Unknown fields are refused (a typo is never stored silently); label / hidden / locked are optional.
+        if not isinstance(d, dict) or not _REQUIRED <= set(d) or set(d) - _REQUIRED - _OPTIONAL:
+            raise _bad("EACH DRAWING NEEDS id, kind AND pts (label, hidden, locked OPTIONAL)")
         did, kind, pts = d["id"], d["kind"], d["pts"]
         if not isinstance(did, str) or not 1 <= len(did) <= ID_MAX:
             raise _bad(f"id MUST BE 1-{ID_MAX} CHARACTERS")
@@ -45,14 +64,25 @@ def validate(raw) -> list[dict]:
         seen.add(did)
         if kind not in POINTS:
             raise _bad(f"kind MUST BE ONE OF {' '.join(POINTS)}")
-        if not isinstance(pts, list) or len(pts) != POINTS[kind]:
-            raise _bad(f"{kind} NEEDS {POINTS[kind]} POINT(S)")
+        lo, hi = POINTS[kind]
+        if not isinstance(pts, list) or not lo <= len(pts) <= hi:
+            raise _bad(f"{kind} NEEDS {lo if lo == hi else f'{lo}-{hi}'} POINT(S)")
         clean = []
         for p in pts:
             if not isinstance(p, dict) or set(p) != {"t", "p"} or not _num(p["t"]) or not _num(p["p"]) or p["t"] < 0:
                 raise _bad("EACH POINT NEEDS FINITE t (EPOCH SECONDS >= 0) AND p")
             clean.append({"t": p["t"], "p": p["p"]})
-        out.append({"id": did, "kind": kind, "pts": clean})
+        item: dict = {"id": did, "kind": kind, "pts": clean}
+        if "label" in d:
+            if not isinstance(d["label"], str) or len(d["label"]) > LABEL_MAX:
+                raise _bad(f"label MUST BE TEXT OF AT MOST {LABEL_MAX} CHARACTERS")
+            item["label"] = d["label"]
+        for flag in ("hidden", "locked"):
+            if flag in d:
+                if not isinstance(d[flag], bool):
+                    raise _bad(f"{flag} MUST BE true OR false")
+                item[flag] = d[flag]
+        out.append(item)
     return out
 
 
@@ -79,7 +109,7 @@ class DrawingsStore:
     async def put(self, raw_symbol: str, drawings) -> dict:
         symbol = key_of(raw_symbol)
         clean = validate(drawings)
-        doc = {"drawings": clean, "updated_at": time.time()}
+        doc = {"v": SCHEMA_VERSION, "drawings": clean, "updated_at": time.time()}
         await self.db.execute(
             "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
             (f"drawings:{symbol}", orjson.dumps(doc)),

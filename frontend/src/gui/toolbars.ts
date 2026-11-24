@@ -81,6 +81,8 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Indicators…", key: "i", open: "IND", bandHidden: true, title: "Indicator library: search, write a formula, Enter adds it to this chart" },
     { label: "Crosshair", key: "x", bandHidden: true, title: "Toggle the crosshair (X)" },
     { label: "Price alert", key: "A", shift: true, title: "Click the chart at the price for an alert (Shift+A; A uses the crosshair)" },
+    { label: "Draw", key: "w", title: "Drawing tools (W): pick a tool, move the crosshair, Enter places each anchor" },
+    { label: "Objects", key: "o", title: "Object tree (O): hide, remove, rename or lock drawings and indicators" },
     { label: "Zoom +", key: "+", bandHidden: true, title: "Zoom in (+)" },
     { label: "Zoom -", key: "-", bandHidden: true, title: "Zoom out (-)" },
     { label: "<", key: "ArrowLeft", bandHidden: true, title: "Pan left, or move the crosshair when it is on (Left arrow)" },
