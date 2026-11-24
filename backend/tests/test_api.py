@@ -34,6 +34,7 @@ def test_search_and_sources(client):
         "opensky",  # FLT
             "twelvedata", "polygon", "fmp", "alphavantage",  # keyed market data (workstream 07)
         "usaspending", "federalregister", "openfec", "congressgov",  # USASP, FEDREG, FEC, CONGRESS
+        "nasdaq_trader", "yahoo_funds",  # FSRC (ETF screener)
     }
     assert s["fixtures"] is True
     keyed = {k["name"]: k["status"] for k in s["keyed"]}

@@ -23,6 +23,7 @@ from .crypto import BinanceKlinesProvider, BinanceProvider, CoinGeckoProvider
 from .defillama import DefiLlamaProvider
 from .deribit import DeribitProvider
 from .ecb import EcbProvider
+from .etf import NasdaqTraderProvider, YahooFundsProvider
 from .etherscan import EtherscanProvider
 from .finnhub import FinnhubProvider
 from .finra import FinraProvider
@@ -130,6 +131,8 @@ ADAPTERS: dict[str, type[Provider]] = {
     "twelvedata": TwelveDataProvider, "polygon": PolygonProvider, "fmp": FmpProvider, "alphavantage": AlphaVantageProvider,
     # FLT: live aircraft from the OpenSky Network (works with no key; an optional free account raises the daily credits)
     "opensky": OpenSkyProvider,
+    # FSRC: the list of US ETFs (Nasdaq Trader symbol file) and one fund's fee / size / category (Yahoo quoteSummary)
+    "nasdaq_trader": NasdaqTraderProvider, "yahoo_funds": YahooFundsProvider,
 }
 
 # Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a

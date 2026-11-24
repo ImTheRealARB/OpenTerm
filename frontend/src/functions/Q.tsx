@@ -14,16 +14,21 @@ import { settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
+import { splitCols } from "./indCols";
+import { useIndCols } from "./useIndCols";
 
 export const DEFAULT_LIST = ["SPY", "QQQ", "DIA", "^NSEI", "^BSESN", "AAPL", "MSFT", "RELIANCE.NS", "INFY.NS", "BTC-USD", "EURUSD=X", "GC=F", "CL=F"];
 
-export default function Q({ panelId, args, security, source }: FunctionProps) {
+export default function Q({ panelId, args: allArgs, security, source }: FunctionProps) {
+  // `COLS=RSI14,PCT_SMA200` adds indicator columns (Phase 27); the other args are the symbols.
+  const { args, cols } = useMemo(() => splitCols(allArgs), [allArgs]);
   const inputs = useMemo(() => {
     const list = args.map((a) => a.toUpperCase()).filter(Boolean);
     if (list.length) return list;
     return security ? [security.symbol] : DEFAULT_LIST;
   }, [args, security]);
   const usingDefault = !args.length && !security;
+  const colsArg = cols ? [`COLS=${cols}`] : [];
 
   const gui = useStore(settingsStore, (st) => st.mode === "gui");
   const COLUMNS = gui ? QUOTE_COLUMNS_GUI : QUOTE_COLUMNS;
@@ -31,7 +36,9 @@ export default function Q({ panelId, args, security, source }: FunctionProps) {
   const { rows, setRows, loading } = useQuotes(inputs, reload, source);
   const [sort, setSort] = useState<Sort>("INPUT");
   const grid = useRef<GridHandle>(null);
-  const latest = useLatest({ rows, sort });
+  const latest = useLatest({ rows, sort, colsArg });
+  const ind = useIndCols<(typeof rows)[number]>(useMemo(() => rows.map((r) => r.symbol), [rows]), cols);
+  const columns = useMemo(() => [...COLUMNS, ...ind.columns], [COLUMNS, ind.columns]);
 
   useLiveRows(rows, grid, liveSymbol);
   // Says why a source was skipped (e.g. KITE LOGIN EXPIRED) when any row came from a fallback; empty otherwise.
@@ -43,7 +50,7 @@ export default function Q({ panelId, args, security, source }: FunctionProps) {
     () =>
       registerPanelKeys(panelId, (e) => {
         const g = grid.current;
-        const { rows: cur, sort: curSort } = latest.current;
+        const { rows: cur, sort: curSort, colsArg: keep } = latest.current;
         if (navKey(e, g, cur.length)) return true;
         const sel = g?.selected() ?? 0;
         switch (e.key) {
@@ -55,14 +62,14 @@ export default function Q({ panelId, args, security, source }: FunctionProps) {
           case "d": {
             if (!cur[sel]) return true;
             const next = cur.filter((_, i) => i !== sel).map((x) => x.input);
-            replaceView(panelId, (v) => ({ ...v, args: next.length ? next : ["SPY"] }));
+            replaceView(panelId, (v) => ({ ...v, args: [...(next.length ? next : ["SPY"]), ...keep] }));
             return true;
           }
           case "a": {
             const el = commandInputRef.current;
             if (el) {
               el.focus();
-              el.value = `${panelId}: Q ${cur.map((x) => x.input).join(" ")} `;
+              el.value = `${panelId}: Q ${[...cur.map((x) => x.input), ...keep].join(" ")} `;
             }
             return true;
           }
@@ -93,6 +100,7 @@ export default function Q({ panelId, args, security, source }: FunctionProps) {
         )}
         {loading && <span className="dim"> · LOADING…</span>}
         {fallbackLine && <span className="warn"> · {fallbackLine}</span>}
+        {ind.note && <span className={ind.failed ? "err" : "dim"} data-testid="ind-cols-note"> · {ind.note}</span>}
         <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D DEL · S SORT · E CSV · F5 REFRESH</span>
       </div>
       {/* Only reachable if there are no inputs at all: say what to do instead of showing a blank grid. */}
@@ -102,7 +110,7 @@ export default function Q({ panelId, args, security, source }: FunctionProps) {
         </PanelNote>
       )}
       <QuoteErrors rows={rows} onRetry={() => setReload((n) => n + 1)} />
-      <Grid ref={grid} columns={COLUMNS} rows={rows} />
+      <Grid ref={grid} columns={columns} rows={rows} />
     </div>
   );
 }

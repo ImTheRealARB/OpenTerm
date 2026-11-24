@@ -96,6 +96,8 @@ class AlertsEngine:
         self._stopping = False  # set by stop(): fire tasks finishing during shutdown skip the database (audit C-1)
         self._news_task: asyncio.Task | None = None
         self._skipped: dict[str, dict] = {}  # "price:3" -> matches we refused to act on, with the reason
+        self._draw: dict[str, list[dict]] = {}  # Phase 27: symbol -> active drawing alerts (smart_alerts.check_tick)
+        self.app = None  # set by main.py; drawing alerts fire through smart_alerts, which needs it
         self.last_tick_at: float | None = None
         self.last_news_poll_at: float | None = None
         self.running = False
@@ -135,9 +137,17 @@ class AlertsEngine:
         for a in await self.news.all():
             if a["status"] == "active":
                 live.add(f"news:{a['id']}")
+        from .smart_alerts import drawing_alerts
+
+        draw: dict[str, list[dict]] = {}
+        for a in await drawing_alerts(self.db):
+            if a["status"] == "active":
+                draw.setdefault(a["symbol"], []).append(a)
+                live.add(f"draw:{a['id']}")
+        self._draw = draw
         for key in [k for k in self._skipped if k not in live]:
             del self._skipped[key]  # a deleted or already-triggered alert has nothing left to explain
-        want, have = set(rules), set(self._seat.symbols)
+        want, have = set(rules) | set(draw), set(self._seat.symbols)
         if want - have:
             await self.hub.subscribe(self._seat, sorted(want - have))
         if have - want:
@@ -146,6 +156,14 @@ class AlertsEngine:
     # ------------------------------------------------------------ price alerts (the hub calls this for every tick)
     def on_tick(self, tick) -> None:
         """Synchronous and cheap: one dict lookup for symbols nobody watches. It must never raise into the hub."""
+        draws = self._draw.get(tick.symbol)
+        if draws and self.app is not None:
+            try:
+                from .smart_alerts import check_tick
+
+                check_tick(self, draws, tick)
+            except Exception:  # a bug here must not stop the price stream the hub is delivering
+                log.exception("drawing alert check failed for %s", tick.symbol)
         rules = self._rules.get(tick.symbol)
         if not rules:
             return

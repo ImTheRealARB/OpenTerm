@@ -29,6 +29,8 @@ export function parseWl(args: string[], explicit?: SecurityRef): WlAction {
   }
   if (!LAYOUT_NAME_RE.test(first)) return { kind: "error", message: NAME_ERR };
   if (args.length === 1) return { kind: "view", name: first };
+  // Phase 27: `WL TECH COLS=RSI14,PCT_SMA200` opens the list with indicator columns (the panel reads COLS= itself).
+  if (args.length === 2 && /^COLS=/i.test(args[1])) return { kind: "view", name: first };
   const verb = args[1].toUpperCase();
   // Phase 22: `WL TECH FLAG AAPL RED` (OFF removes) and `WL TECH SECTION JPM Banks and brokers` (no title removes the header).
   if (verb === "FLAG" || verb === "SECTION") {

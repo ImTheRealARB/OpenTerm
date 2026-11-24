@@ -23,6 +23,8 @@ import { useLatest } from "../state/useLatest";
 import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
+import { splitCols } from "./indCols";
+import { useIndCols } from "./useIndCols";
 import { listNav } from "./listNav";
 import type { WlMeta } from "../net/types";
 import { applyMetaChange, buildRows, EMPTY_META, flagColumn, isSection, nextFilter, nextFlag, sectionColumns, type FlagColor, type MetaChange } from "./wlFlags";
@@ -42,10 +44,11 @@ export default function WL({ panelId, args }: FunctionProps) {
         WATCHLIST NAME: 1-32 OF A-Z 0-9 _ . -
       </PanelNote>
     );
-  return <WatchlistView key={name} panelId={panelId} name={name} />;
+  // `WL TECH COLS=RSI14,PCT_SMA200` adds indicator columns (Phase 27).
+  return <WatchlistView key={name} panelId={panelId} name={name} cols={splitCols(args.slice(1)).cols} />;
 }
 
-function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
+function WatchlistView({ panelId, name, cols }: { panelId: number; name: string; cols: string | null }) {
   const version = useStore(watchlistVersion, (v) => v);
   const [symbols, setSymbols] = useState<string[] | null>(null);
   const [missing, setMissing] = useState(false);
@@ -88,7 +91,11 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   const { rows, setRows, loading } = useQuotes(inputs, reload);
   // What the grid shows: the quote rows plus section bands (list order only), narrowed by the colour filter.
   const shown = useMemo(() => buildRows(rows, meta, (r) => r.input, filter, sort === "INPUT"), [rows, meta, filter, sort]);
-  const columns = useMemo(() => [flagColumn<(typeof rows)[number]>(meta, (r) => r.input), ...sectionColumns(COLUMNS)], [meta, COLUMNS]);
+  const ind = useIndCols<(typeof rows)[number]>(useMemo(() => rows.map((r) => r.symbol), [rows]), cols);
+  const columns = useMemo(
+    () => [flagColumn<(typeof rows)[number]>(meta, (r) => r.input), ...sectionColumns([...COLUMNS, ...ind.columns])],
+    [meta, COLUMNS, ind.columns],
+  );
   const latest = useLatest({ rows, sort, symbols, shown, meta, filter });
 
   useLiveRows(shown, grid, (r) => (isSection(r) ? undefined : liveSymbol(r)));
@@ -166,6 +173,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
         {(loading || (symbols === null && !err)) && <span className="dim"> · LOADING…</span>}
         {/* With a list on screen the error means the data is old; with none, the PanelNote below carries it. */}
         {err && symbols !== null && <span className="err"> · STALE: {err}</span>}
+        {ind.note && <span className={ind.failed ? "err" : "dim"} data-testid="ind-cols-note"> · {ind.note}</span>}
         <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D REMOVE · U UNDO · S SORT · F FLAG · SHIFT+F FILTER · H SECTION · E CSV · F5 REFRESH</span>
       </div>
       {err && symbols === null && (

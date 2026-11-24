@@ -34,7 +34,7 @@ export const SUB_LOOK = "Look and layout";
 /** category -> its subgroups, in menu order. */
 export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
   Markets: [
-    { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "SECF", "MF"] },
+    { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "FSRC", "SCAN", "MRR", "SECF", "MF"] },
     { name: "Calendars", codes: ["ECO", "ERN", "IPO", "CENB"] },
     { name: "Currencies", codes: ["FX", "FXC", "FXFA"] },
     { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "ADDR", "TAS", "BIGT", "FOOT", "DOM", "LIQH"] },

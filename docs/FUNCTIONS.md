@@ -89,6 +89,9 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `WEI` | World equity indices |  |  | `WEI` |
 | `MOV` | Top movers |  | `[GAINERS\|LOSERS\|ACTIVE\|DOLLAR\|NDX100]` | `MOV` |
 | `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]` | `EQS` |
+| `FSRC` | ETF screener: fee, size, category (US ETFs; loads in the background, PARTIAL until complete) |  | `[FEE<0.2] [AUM>1B] [CAT=LARGE] [SORT=FEE\|AUM\|SYMBOL\|NAME\|CAT]` | `FSRC` |
+| `SCAN` | Scan a list of symbols against a rule (RSI, averages, ATR...) |  | `<UNIVERSE> <RULE> \| SAVE NAME UNIVERSE RULE [DAILY=HH:MM] \| SAVED \| RUN\|DEL NAME` | `SCAN` |
+| `MRR` | Index movers: members ranked by return and contribution |  | `<UNIVERSE> [1D\|1W\|1M\|3M\|YTD\|1Y]` | `MRR` |
 | `SECF` | Security finder (fuzzy name or ticker search; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI) |  | `<text \| ISIN \| CUSIP \| SEDOL \| FIGI:id ...>` | `SECF` |
 | `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
 
@@ -178,7 +181,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `HIST` | Historical price table | yes | `[1M..MAX] [D\|W\|MO]` | `AAPL HIST` |
 | `SEAS` | Seasonality (average return by month, weekday, day of month, ISO week) | yes | `[MONTH\|WEEKDAY\|DOM\|WOY]` | `AAPL SEAS` |
 | `TPO` | Market profile (TPO): letters per time bracket, POC, value area, initial balance |  | `[SYMBOL] [DAYS 1-20] [BRACKET=30]` | `TPO` |
-| `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]` | `IMAP` |
+| `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY\|CRYPTO\|ETF] [N=3000] [EQS / FSRC filter]` | `IMAP` |
 | `FRED` | Plot a FRED series |  | `SERIES_ID [1Y\|2Y\|5Y\|10Y\|20Y\|MAX]` | `FRED` |
 
 ### News

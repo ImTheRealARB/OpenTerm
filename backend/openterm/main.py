@@ -31,6 +31,7 @@ from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
 from .delivery.routes import router as delivery_router
+from .etf_routes import router as etf_router
 from .extensions.routes import router as ext_router
 from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
@@ -46,7 +47,9 @@ from .remote import RemoteAuthMiddleware
 from .remote_routes import router as remote_router
 from .responses import Orjson, OrjsonRoute
 from .router import Router
+from .scanner.routes import router as scan_router
 from .service import DataService
+from .smart_alerts import router as smart_alerts_router
 from .streaming.hub import Client, Hub
 from .streaming.upstream import NullStream, Poller, SyntheticStream, YahooStream
 from .symbols import resolve
@@ -215,6 +218,10 @@ async def lifespan(app: FastAPI):
     # Phase 26: paper forward tests advance on new bars while the server runs (play money, OpenTerm's own book).
     sched.add_job(bt_lab_routes.step_all, "interval", minutes=bt_lab_routes.FWD_EVERY_MIN, args=[app], id="bt_fwd",
                   max_instances=1, coalesce=True)
+    # Phase 27: saved scans with DAILY=HH:MM run on weekdays and send their matches through DELIVERY.
+    from .scanner import routes as scan_routes
+
+    scan_routes.schedule_saved(app, await scan_routes.saved_all(db))
     # --- Phase 20: server-side alerts. The engine watches active alerts through the hub and fires them with no browser open.
     # `deliver` is the Phase 17 background sender; `news_for_alerts` reads the same cached news the N panel shows.
     # `deliver_spawn` = delivery.spawn plus the per-alert VIA channels (alert_channels.py)
@@ -226,7 +233,13 @@ async def lifespan(app: FastAPI):
 
     app.state.alerts_engine = engine = AlertsEngine(
         db, hub, lambda *a, **kw: deliver_spawn(app, *a, **kw), news_for_alerts, fixtures=settings.openterm_fixtures)
+    engine.app = app  # Phase 27: drawing alerts fire through smart_alerts, which needs the app (delivery, kv)
     await engine.start()
+    # Phase 27: indicator alerts are checked on completed daily bars every few minutes while the server runs.
+    from . import smart_alerts
+
+    sched.add_job(smart_alerts.check_all, "interval", minutes=smart_alerts.CHECK_EVERY_MIN, args=[app], id="smart_alerts",
+                  max_instances=1, coalesce=True)
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
@@ -269,6 +282,8 @@ app.include_router(quant_router)
 app.include_router(world_router)
 app.include_router(recorder_router)
 app.include_router(bt_lab_routes.router)
+app.include_router(scan_router)
+app.include_router(smart_alerts_router)
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)
@@ -280,6 +295,7 @@ app.include_router(mcp_client_router)
 app.include_router(routes_run.theses_router)
 app.include_router(journal_router)
 app.include_router(ext_router)
+app.include_router(etf_router)
 app.include_router(remote_router)
 
 

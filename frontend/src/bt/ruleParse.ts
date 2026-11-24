@@ -4,12 +4,12 @@
  * bad rule before anything is sent. The backend validates again; it is the authority.
  *
  *   rule := and_expr ("OR" and_expr)* ; and_expr := cmp ("AND" cmp)* ; cmp := term op term
- *   term := CLOSE | OPEN | HIGH | LOW | VOLUME | SMA<n> | EMA<n> | RSI<n> | HIGH<n> | LOW<n> | RET<n> | number
+ *   term := CLOSE | OPEN | HIGH | LOW | VOLUME | SMA<n> | EMA<n> | RSI<n> | ATR<n> | HIGH<n> | LOW<n> | RET<n> | number
  */
 
 export const MAX_PERIOD = 1000;
 const FIELDS = new Set(["CLOSE", "OPEN", "HIGH", "LOW", "VOLUME"]);
-const INDICATORS = new Set(["SMA", "EMA", "RSI", "HIGH", "LOW", "RET"]);
+const INDICATORS = new Set(["SMA", "EMA", "RSI", "ATR", "HIGH", "LOW", "RET"]);
 export const INTERVALS = ["1D", "1W"];
 const RANGE_RE = /^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$/;
 const TOKEN_RE = /\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))/iy;

@@ -1060,6 +1060,22 @@ def _route_cryptoex(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
+# --- FSRC: the ETF list (Nasdaq Trader symbol file) and one fund's profile (Yahoo quoteSummary fundProfile + summaryDetail) ---
+# Both are REAL recordings, trimmed (scripts/record_fsrc.py): 30 ETFs of the symbol file, and each one's real Yahoo answer. A fund that is not
+# among the 30 is Yahoo's own "Quote not found" 404. The modules string must equal providers/etf.py FUND_MODULES.
+def _route_fsrc(request: httpx.Request) -> httpx.Response | None:
+    p, q = request.url.path, request.url.params
+    if request.url.host == "www.nasdaqtrader.com" and p == "/dynamic/SymDir/nasdaqtraded.txt":
+        return _load("nasdaqtrader_etf_trimmed")
+    if p.startswith("/v10/finance/quoteSummary/") and q.get("modules") == "fundProfile,summaryDetail":
+        profiles = json.loads((FIXTURES / "yahoo_fundprofile_etf.json").read_text(encoding="utf-8"))["body"]
+        sym = p.rsplit("/", 1)[1]
+        if sym in profiles:
+            return httpx.Response(200, json=profiles[sym])
+        return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found", "description": f"Quote not found for symbol: {sym}"}}})
+    return None
+
+
 # --- FLT: OpenSky aircraft. DOC-SHAPED, NOT A RECORDING (OpenSky refused every connection from the build machine on 2026-11-05) ---
 # `states/all` returns the invented aircraft of opensky_docshape_states.json that lie inside the requested lamin/lomin/lamax/lomax box (all of them with no box,
 # as the real service does), `states: null` when none do, and the remaining-credits header the docs describe. The token endpoint accepts any client except one whose
@@ -1142,6 +1158,7 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
+    _route_fsrc,        # FSRC: Nasdaq Trader ETF list, Yahoo fund profiles
     _route_aggtrades,   # Binance spot aggregated trades (order flow)
     _route_binance_1s,  # Binance 1 second candles (before `_route_base`, which would answer them with daily ones)
     _route_usgov,      # US government data: USASpending, Federal Register, OpenFEC, Congress.gov

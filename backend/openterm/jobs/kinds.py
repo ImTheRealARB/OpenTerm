@@ -184,6 +184,41 @@ def bt_fwdsig_job(params: dict, progress: Callable[[float, str], None]) -> dict:
 KINDS["bt.opt"] = Kind("bt.opt", "1", "BT OPTIMISE", bt_opt_job, validate_opt, time_limit_s=3600.0,
                        fingerprint=lambda p: p["data_sha"], internal=True,
                        hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
+def validate_scan(params: dict) -> dict:
+    from ..scanner.job import validate  # pure module; lazy because it imports BadParams from here
+
+    return validate(params)
+
+
+def scan_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..scanner.job import run  # pandas loads here, in the worker
+
+    return run(params, progress)
+
+
+# Phase 27: SCAN (built by POST /api/scan). The labels carry the data source note only: not part of the identity.
+KINDS["scan.run"] = Kind("scan.run", "1", "SCAN", scan_job, validate_scan, time_limit_s=300.0, fingerprint=lambda p: p["data_sha"],
+                         internal=True, hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
+def validate_cols(params: dict) -> dict:
+    from ..scanner.job import validate_cols as v
+
+    return v(params)
+
+
+def cols_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..scanner.job import cols_run  # pandas loads here, in the worker
+
+    return cols_run(params, progress)
+
+
+# Indicator columns in WL / Q (`COLS=`, built by POST /api/scan/cols).
+KINDS["scan.cols"] = Kind("scan.cols", "1", "INDICATOR COLUMNS", cols_job, validate_cols, time_limit_s=120.0,
+                          fingerprint=lambda p: p["data_sha"], internal=True,
+                          hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
+# Indicator alerts (Phase 27, smart_alerts.py): the scanner's evaluator on one symbol; its own kind so its on-done hook
+# (fire the alert) is separate from SCAN's.
+KINDS["alerts.ind"] = Kind("alerts.ind", "1", "INDICATOR ALERT", scan_job, validate_scan, time_limit_s=60.0,
+                           fingerprint=lambda p: p["data_sha"], internal=True)
 KINDS["bt.fwdsig"] = Kind("bt.fwdsig", "1", "FORWARD TEST", bt_fwdsig_job, validate_fwdsig, time_limit_s=60.0, internal=True,
                           fingerprint=lambda p: p["data_sha"])
 

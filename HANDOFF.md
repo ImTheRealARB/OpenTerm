@@ -7,8 +7,9 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
 `claude/phases-21-32-build-resume-0f4977` (worktree `.claude/worktrees/phases-21-32-build-resume-0f4977`; fast-forwarded from
-`...-61e1cd`, which holds 21-24). Phases 21, 22, 23, 24 and 26 are DONE. NEXT: Phase 27 (scanners, indicator columns, smart
-alerts); Phase 25 stays deferred.**
+`...-61e1cd`, which holds 21-24). Phases 21, 22, 23, 24 and 26 are DONE. Phase 27 is mostly built and committed as WIP
+(paused at the 5-hour guard; what is left is in the Phase 27 bullet below). NEXT: finish Phase 27 (gate, bench, the open
+items), then Phase 28. Phase 25 stays deferred.**
 - Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): this session's `CLAUDE.md` and
   `docs/TEST_CHECKLIST.md` (new section 31) live in the worktree; copy both over the main checkout's files.
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
@@ -67,12 +68,39 @@ alerts); Phase 25 stays deferred.**
   human confirm token per order and automating that would bypass the confirm step; fitness formulas over metrics were not built
   (fixed FIT= list); script strategies are out (Phase 25 deferred).
 
+- **Phase 27 (scanners, indicator columns, smart alerts): MOSTLY BUILT 2026-11-24, paused at the 5-hour guard** (spec
+  `docs/specs/PHASE_27.md`). One rule engine: `bt/rules.py` gained `ATR<n>` (Pine / MQL5 exports map it). `SCAN` = universe
+  words (`scanner/universe.py`: SPX NDX DJI RUT MID via MEMB, `MEMB:` `WL:` `LIST:`, NIFTY50 / NIFTY500 from
+  `providers/nseindices.py`) -> server bar download with progress (task in `app.state.scan_tasks`, polled at
+  `/api/scan/task/{id}`) -> `scan.run` job (`scanner/job.py`); saved / scheduled scans in kv `scansaved:<NAME>` (cron
+  `scan:<NAME>`, weekdays, sent through DELIVERY). Indicator columns `Q ... COLS=` / `WL NAME COLS=` (`scanner/cols.py`,
+  `scan.cols` job, `/api/scan/cols`; frontend `functions/indCols.ts` + `useIndCols.ts`). Smart alerts `smart_alerts.py`:
+  indicator alerts (`ALRT AAPL RSI14<30`, completed daily bars, `alerts.ind` job every 15 min, never fired in fixture mode) and
+  drawing alerts (`ALRT AAPL LINE [N]`, checked per tick in `alerts_engine.py`); listed in ALRT as `S<id>`. `MRR` (index movers,
+  contribution = weight x return, pure Python in `scanner/routes.py`). Frontend: `SCAN.tsx`, `MRR.tsx`, `useTaskPoll.ts`,
+  `scanArgs.ts`, `net/scanApi.ts`, `net/smartAlertsApi.ts`. Tests: `test_phase27.py` (10), vitest `scanArgs` + `indCols`,
+  smoke cases SCAN / MRR / ALRT / Q COLS= all pass. ETF screener `FSRC` (built by a helper agent): `providers/etf.py` +
+  `etf_parse.py` (Nasdaq Trader symbol file, Yahoo fundProfile), `etf_screen.py` (paced background load, 3 profiles a second,
+  progress saved, a restart resumes; a full live load is ~5,829 ETFs, ~37 min), `etf_routes.py`; frontend `FSRC.tsx`,
+  `fsrcFilter.ts`, `fsrcData.ts`, `useFsrc.ts`, `net/etfApi.ts`, `net/etfTypes.ts`. `IMAP CRYPTO` / `IMAP ETF`: `IMAP.tsx` now has
+  three data components on a shared `ImapBoard.tsx` (`imapUniverses.ts`, `useQuotePct.ts`); the US map is unchanged (phase19b
+  IMAP e2e pass). Real trimmed fixtures `nasdaqtrader_etf_trimmed.json`, `yahoo_fundprofile_etf.json` (`scripts/record_fsrc.py`);
+  tests `test_phase27_fsrc.py` (4) + vitest; smoke FSRC x2, IMAP CRYPTO, IMAP ETF pass.
+  **Left for the next session:** (1) run the full gate (`CI=1 node scripts/gates.mjs`) and the Phase 27 bench; checked so far:
+  tsc, vitest 1658/1658, ruff, the Phase 27 pytest files, 8 Phase 27 smoke cases; (2) `IMAP NIFTY` (a word + builder in
+  `imapUniverses.ts`, a data component in `IMAP.tsx`); (3) docs: `docs/COMMANDS.md` Phase 27 section (SCAN, MRR, ALRT indicator /
+  drawing alerts, COLS=, FSRC grammar, `IMAP CRYPTO [N=50]`, `IMAP ETF [N=150] [FSRC filter]`), `docs/DATA_SOURCES.md` (Nasdaq
+  Trader, Yahoo fund profile, NSE Indices CSV), the worktree's `docs/TEST_CHECKLIST.md`; (4) never seen in a browser: the FSRC
+  PARTIAL (still loading) screen, FSRC keys Enter / C / E, two late wording fixes ("NO QUOTE" note, "1 FUND HAS"); (5) no GUI
+  toolbar entry for FSRC. Then commit "Phase 27 (finish)" and start Phase 28.
+
 Progress (one line per phase; newest last):
 - Phase 21: built 2026-11-24.
 - Phase 22: built 2026-11-24 (gate green after one smoke fix).
 - Phase 23: built 2026-11-24.
 - Phase 24: built 2026-11-24 (committed together with 23; gate and bench in the commit message).
 - Phase 26: built 2026-11-24 (gate result in the commit message; no bench this phase per the plan).
+- Phase 27: mostly built 2026-11-24, WIP commit at the 5-hour guard (92%); full gate and bench NOT run yet.
 
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):

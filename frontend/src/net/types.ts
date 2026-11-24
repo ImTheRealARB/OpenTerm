@@ -588,6 +588,92 @@ export interface BtOptResult {
   labels: BtLabels;
 }
 
+/** Phase 27: a SCAN or MRR task (POST starts it; GET .../task/{id} polls it). */
+export interface ScanTask<R> {
+  id: string;
+  kind: "scan" | "mrr" | "cols";
+  state: "fetching" | "running" | "done" | "error";
+  done: number;
+  total: number;
+  error: string | null;
+  result: R | null;
+  universe?: string;
+  source: string;
+  rule?: string;
+  period?: string;
+  cols?: string;
+}
+
+/** WL / Q indicator columns (`COLS=RSI14,PCT_SMA200<0`): the newest daily bar's value of each column, per symbol. */
+export interface ColsResult {
+  cols: { label: string; op: "<" | ">" | "<=" | ">=" | null; num: number | null }[];
+  rows: Record<string, { date: string | null; values: Record<string, number | null>; note: string }>;
+  labels: Record<string, string>;
+}
+
+export interface ScanRow {
+  symbol: string;
+  matched: boolean;
+  valid: boolean;
+  date: string | null;
+  close: number | null;
+  values: Record<string, number | null>;
+  note: string;
+}
+
+export interface ScanResult {
+  rule: string;
+  terms: string[];
+  rows: ScanRow[];
+  matched: number;
+  checked: number;
+  failed: number;
+  labels: Record<string, string>;
+}
+
+export interface ScanSaved {
+  name: string;
+  universe: string;
+  rule: string;
+  daily: string | null;
+}
+
+export interface MrrRow {
+  symbol: string;
+  return: number | null;
+  weight: number | null;
+  contrib: number | null;
+  last: number | null;
+  note?: string;
+}
+
+export interface MrrResult {
+  rows: MrrRow[];
+  weighted: boolean;
+  sum_contrib: number | null;
+  up: number;
+  down: number;
+  failed: number;
+  fixtures: boolean;
+}
+
+/** Phase 27 indicator (`type: "ind"`) or drawing (`type: "draw"`) alert. */
+export interface SmartAlert {
+  id: string;
+  type: "ind" | "draw";
+  symbol: string;
+  rule?: string;
+  kind?: string;
+  drawing_id?: string;
+  status: "active" | "triggered";
+  created: number;
+  checked?: number | null;
+  triggered_at?: number;
+  bar?: string | null;
+  values?: Record<string, number | null>;
+  note: string;
+}
+
 /** Phase 26 paper forward test: list row (GET /api/bt/fwd). */
 export interface BtFwdSummary {
   id: string;

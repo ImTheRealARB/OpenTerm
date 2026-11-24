@@ -59,6 +59,15 @@ const CASES: Case[] = [
   { cmd: "BT OPT AAPL SMA{10..30:10}>SMA{50..100:50} 1D 10Y", want: /PROB\. OF BACKTEST OVERFITTING/ },
   { cmd: "BT LIVE", want: /PAPER FORWARD TESTS/ },
   { cmd: "BT AAPL SMA20>SMA50 1D 10Y STOP=5 TARGET=10", want: /EXITS: STOP 5% TARGET 10%/ },
+  // Phase 27 (LIST: universes, so the fixture backend has bars for every member; a LIST has no index weights)
+  { cmd: "SCAN LIST:AAPL,SYN0001,SYN0002 RSI14<101", want: /MATCH OF \d+ CHECKED/ },
+  { cmd: "MRR LIST:AAPL,SYN0001,SYN0002 1M", want: /NO INDEX WEIGHTS FOR THIS LIST/ },
+  { cmd: "ALRT", want: /INDICATOR ALERTS: ALRT AAPL RSI14<30/ },
+  { cmd: "Q AAPL SYN0001 COLS=RSI14<101,PCT_SMA20,REL_VOL", want: /COLS: NEWEST DAILY BAR \(TO / },
+  { cmd: "FSRC", want: /29 OF 30 US ETFS LOADED/ },
+  { cmd: "FSRC FEE<0.2 AUM>1B CAT=LARGE", want: /8 MATCH/ },
+  { cmd: "IMAP CRYPTO", want: /IMAP CRYPTO/ },
+  { cmd: "IMAP ETF", want: /TOTAL ASSETS/ },
 ];
 
 let backend: ChildProcess | null = null;

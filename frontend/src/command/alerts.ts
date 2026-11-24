@@ -15,6 +15,7 @@ import { fmtPrice } from "../format";
 import { marketApi } from "../net/marketApi";
 import { newsAlertsApi } from "../net/newsAlertsApi";
 import { priceAlertsApi } from "../net/priceAlertsApi";
+import { smartAlertsApi } from "../net/smartAlertsApi";
 import type { Alert, AlertEngineState, NewsAlert, NewsItem } from "../net/types";
 import { onAlertFrame, subscribe } from "../net/socket";
 import { createStore } from "../state/store";
@@ -329,6 +330,18 @@ export function alrtCommand(args: string[], security?: SecurityRef): boolean | s
     }
     case "clear":
       void clearAlerts();
+      return [];
+    // Phase 27: indicator and drawing alerts live on the server (checked there, fired once, sent through DELIVERY).
+    case "createInd":
+      void act(`INDICATOR ALERT ${a.symbol} ${a.rule} NOT SAVED`, () => smartAlertsApi.addIndicator(a.symbol, a.rule),
+        `INDICATOR ALERT SET: ${a.symbol} ${a.rule} (COMPLETED DAILY BARS, CHECKED EVERY 15 MIN BY THE OPENTERM SERVER)`);
+      return [];
+    case "createDraw":
+      void act(`DRAWING ALERT ${a.symbol} NOT SAVED`, () => smartAlertsApi.addDrawing(a.symbol, a.n),
+        `DRAWING ALERT SET: ${a.symbol} ${a.n ? `DRAWING ${a.n}` : "NEWEST LINE"} (CHECKED ON EVERY LIVE TICK BY THE OPENTERM SERVER)`);
+      return [];
+    case "deleteSmart":
+      void act(`ALERT S${a.id} NOT DELETED`, () => smartAlertsApi.delete(a.id), `ALERT S${a.id} DELETED`);
       return [];
     case "create": {
       askNotifyPermission(); // synchronously, inside the keypress that ran the command
