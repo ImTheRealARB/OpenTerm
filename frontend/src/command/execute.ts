@@ -38,7 +38,7 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   const parsed = parseCommand(input, isFunction);
   if (!parsed.ok) return fail(parsed.error);
   if (!opts.replay) history.push(parsed.raw.toUpperCase());
-  // An alias (WCRS, MOST ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
+  // An alias (MOST, PRTU ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
   if (parsed.fn) parsed.fn = FUNCTIONS.get(parsed.fn)?.code ?? parsed.fn;
 
   // LAYOUT and its twin (MONITOR, see TWINS) share the layout command handling.

@@ -6,10 +6,10 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 ## Resume here
 
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
-`claude/phases-21-32-build-resume-8ff923` (worktree `.claude/worktrees/phases-21-32-build-resume-8ff923`; fast-forwarded from
-`...-0f4977`). Phases 21-24 and 26-29 are DONE (Phase 29 gate 2026-11-24: pytest 4167, e2e 431; OIB needs a live Kite login to check). Phase 29 not built: EQS live-screener formula columns (only EQS BT has the fields), SIC grouping in IBQ, BIO boards from DEF 14A, EU ETS, MA deal values; CourtListener is doc-shaped (never run with a key). Next: Phase 30 (macro, rates and commodities depth). Phase 25 stays deferred.**
-- Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): this session's `CLAUDE.md` and
-  `docs/TEST_CHECKLIST.md` (new section 31) live in the worktree; copy both over the main checkout's files.
+`claude/phases-21-32-build-resume-f09808` (worktree `.claude/worktrees/phases-21-32-build-resume-f09808`; fast-forwarded from
+`...-8ff923` at 4565a3f). Phases 21-24 and 26-30 are DONE (Phase 29 gate 2026-11-24: pytest 4167, e2e 431; OIB needs a live Kite login to check). Phase 29 not built: EQS live-screener formula columns (only EQS BT has the fields), SIC grouping in IBQ, BIO boards from DEF 14A, EU ETS, MA deal values; CourtListener is doc-shaped (never run with a key). Phase 30: see its entry below. Next: Phase 31 (query language QRY / FLD, Excel bridge, notebooks NB), then Phase 32 (AI inside functions). Phase 25 stays deferred.**
+- Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): `CLAUDE.md` and `docs/TEST_CHECKLIST.md` (both local only;
+  checklist sections 31-35; newest copy in worktree `phases-21-32-build-resume-f09808`) goes over the main checkout's file.
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
   it) under the MINIMAL TEST BAR (local `docs/specs/PHASES_21-33.md` "How to run a phase" step 3) and the 95% 5-hour guard.
   The pick list is the whole of local `docs/specs/BUILD_PICKS_21-33.md`; no paste needed.
@@ -98,6 +98,23 @@ Progress (one line per phase; newest last):
 - Phase 24: built 2026-11-24 (committed together with 23; gate and bench in the commit message).
 - Phase 26: built 2026-11-24 (gate result in the commit message; no bench this phase per the plan).
 - Phase 27: DONE 2026-11-24 (finish pass in worktree `phases-21-32-build-resume-8ff923`; gate green apart from load flakes, bench = main).
+- Phase 28: built 2026-11-24 (commit 99d8241). Phase 29: built 2026-11-24 (commit 4565a3f).
+- Phase 30: built 2026-11-24 in worktree `phases-21-32-build-resume-f09808` (gate result in the commit message).
+
+- **Phase 30 (macro, rates and commodities depth): BUILT 2026-11-24.** All 17 items. Backend package `openterm/macrod/`: `parse.py` (pure
+  parsers: NY Fed, ECB ESTR, BoE SONIA, GDPNow and SPF workbooks, IMF DataMapper, OECD SDMX CSV, FOMC statement + word diff, TreasuryDirect,
+  WASDE XML, EIA v2, NASS, Yahoo ETF valuation), `xlsx.py` (stdlib-only .xlsx reader; no openpyxl), `curves.py` (FWCV bootstrap, WIRP
+  hike/hold/cut odds), `calendars.py` (CTM rules table, CDR hours mirror of `markets/hours.ts`), `boards.py` (every FRED id / ETF / country
+  list), `service.py` (one async function per board). Providers `providers/macrod.py` (nyfed, ecb_estr, boe_sonia, atlfed, philfed, imf_dm,
+  oecd_eo, fed_web, td_secs, wasde; eia and nass keyed + doc-shaped); `fx_panel` on Frankfurter, `etf_valuation` on yahoo_funds. Routes
+  `macrod_routes.py` under `/api/macrod/<fn>`; WIRP odds are a new section of `/api/deriv/wirp`. Fixtures: `scripts/record_phase30.py`
+  (REAL recordings, trimmed where noted; EIA / NASS doc-shaped) + `tests/fixtures/phase30_manifest.json` routed by
+  `providers/macrod_fixtures.py` (first in ROUTE_TABLE). New key spec `nass` (NASS_API_KEY). Frontend: 16 ResearchPanel files
+  (`api: "macro"`), `macroRowKey.ts` (row `go_fn` / `go_args` / `go_sym` jumps: CTM->CT, TSYS->YAS, WPE->DES). Tests `test_phase30.py` (14) +
+  18 smoke cases. Deviations (owner to confirm): WCRS was an alias of FXC and is now its own function (alias removed); NY Fed Staff Nowcast
+  not shipped (no clean download); Zillow not used (terms not checked); several OECD-on-FRED series stopped (India 10Y and policy rate,
+  Japan policy rate and CPI, UK CPI): BTMM says so per row and uses the RATES curves / CENB policy source where the app has them; WPE ratios
+  are Yahoo's holdings ratios, which Yahoo prints as reciprocals (inverted, test pins it); NRGF and AGRI crop condition never ran with a key.
 
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):

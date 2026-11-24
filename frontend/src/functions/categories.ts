@@ -34,13 +34,13 @@ export const SUB_LOOK = "Look and layout";
 /** category -> its subgroups, in menu order. */
 export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
   Markets: [
-    { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "FSRC", "SCAN", "MRR", "SECF", "MF"] },
-    { name: "Calendars", codes: ["ECO", "ERN", "IPO", "CENB"] },
-    { name: "Currencies", codes: ["FX", "FXC", "FXFA"] },
+    { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "FSRC", "SCAN", "MRR", "SECF", "MF", "WPE"] },
+    { name: "Calendars", codes: ["ECO", "ERN", "IPO", "CENB", "FOMC", "CDR"] },
+    { name: "Currencies", codes: ["FX", "FXC", "FXFA", "WCRS"] },
     { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "ADDR", "TAS", "BIGT", "FOOT", "DOM", "LIQH"] },
-    { name: "Commodities and energy", codes: ["CMDTY", "NRG", "WETR", "CT", "COT"] },
-    { name: "Rates and bonds", codes: ["RATES", "WIRP", "YAS", "SWPM", "CDSW"] },
-    { name: "Economy", codes: ["MACRO", "USMAC", "WECO", "ECST", "DBSRCH", "TRADE", "PRED"] },
+    { name: "Commodities and energy", codes: ["CMDTY", "NRG", "NRGF", "AGRI", "WETR", "CT", "CTM", "COT"] },
+    { name: "Rates and bonds", codes: ["RATES", "WIRP", "MMR", "WB", "CRPR", "FWCV", "TSYS", "YAS", "SWPM", "CDSW"] },
+    { name: "Economy", codes: ["MACRO", "USMAC", "NOWC", "ECFC", "BTMM", "RE", "WECO", "ECST", "DBSRCH", "TRADE", "PRED"] },
     { name: "Ships, flights and maps", codes: ["MAP", "SHIP", "PORTS", "AIS", "FLT"] },
   ],
   Charts: [{ name: "Charts", codes: ["GP", "IND", "GIP", "HIST", "SEAS", "TPO", "IMAP", "FRED"] }],
@@ -51,7 +51,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Fundamentals", codes: ["GF", "EM", "DDIS", "SCORE", "REVS", "FRM", "IBQ"] },
     { name: "Filings and owners", codes: ["FIL", "OWN", "HDS", "MGR", "SI", "ETF", "MEMB", "FTS", "MA", "BIO", "RELS"] },
     { name: "Options", codes: ["OMON", "PCR", "OV", "OSA", "OVDV", "SKEW", "HIVG", "OSCAN", "OREC", "EMOV", "OIB", "PGRK"] },
-    { name: "Statistics", codes: ["CORR", "TRA", "BETA", "REGIME", "FACT", "QL", "ALPHA"] },
+    { name: "Statistics", codes: ["QRY", "FLD", "NB", "CORR", "TRA", "BETA", "REGIME", "FACT", "QL", "ALPHA"] },
     { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT", "MCP"] },
     { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO", "LEGAL", "ESG"] },
   ],

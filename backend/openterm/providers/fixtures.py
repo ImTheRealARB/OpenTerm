@@ -14,6 +14,7 @@ from pathlib import Path
 import httpx
 
 from .filings_fixtures import route_filings  # Phase 29: FTS, MA, LEGAL, BIO, RELS, ESG
+from .macrod_fixtures import route_macrod  # Phase 30: macro, rates and commodities depth
 
 FIXTURES = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
 
@@ -1174,6 +1175,7 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
+    route_macrod,       # Phase 30: NY Fed, ESTR, SONIA, GDPNow, SPF, IMF, OECD, FOMC statements, TreasuryDirect, WASDE, EIA, NASS, WPE, WCRS
     route_filings,      # Phase 29: SEC full-text search + enforcement feeds + ticker file, OpenFIGI tickers, CourtListener, EPA GHGRP
     _route_nseindices,  # NIFTY constituent lists (doc-shaped)
     _route_fsrc,        # FSRC: Nasdaq Trader ETF list, Yahoo fund profiles

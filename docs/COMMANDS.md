@@ -361,6 +361,30 @@ All six read public filings and registers. Each row names its source; a source t
 | `GOOGL RELS` | Other tickers filed under the issuer's CIK (SEC company_tickers_exchange) and every listing of the ticker (OpenFIGI, its own exchange codes). |
 | `AA ESG [YEAR=2023] [NAME=<company>]` | EMISSIONS ONLY, NO SCORE. US EPA greenhouse-gas reports of facilities whose parent-company text matches the name (`NAME MATCH`), tonnes CO2e per facility and, where EPA states an ownership share for that exact name, the weighted tonnes. US facilities over 25,000 t only; no scope 2/3, no EU ETS. |
 
+## Phase 30: macro, rates and commodities depth
+
+Every board is a table panel: J/K move, V / Shift+V switch tables, C cycles the chart (where there is one), E exports, F5 refreshes. Rows that point at another function open it with Enter (CTM to CT, TSYS to YAS, WPE to DES); FOMC rows open the Fed page. A missing series shows its reason on its own row; the rest of the board still draws.
+
+| Command | What it shows |
+|---|---|
+| `MMR` | Overnight reference rates: SOFR, TGCR, BGCR, EFFR, OBFR (NY Fed, with 1st / 99th percentiles and volume), ESTR (ECB), SONIA (Bank of England); changes in bp; chart of the last ~60 publications. |
+| `NOWC` | Atlanta Fed GDPNow: the current quarter's nowcast after each data release, and past quarters' first and final nowcasts against the BEA advance estimate. A model estimate, not a forecast. The NY Fed Staff Nowcast is not shown (no clean download). |
+| `ECFC` | Forecasts as published: IMF WEO (GDP, inflation, unemployment, this year and next), OECD Economic Outlook (adds the long-term rate), Philadelphia Fed SPF medians (GDP, CPI, unemployment, 10Y yield), FOMC SEP medians with the participants' range. |
+| `FOMC` | Meeting calendar (Enter opens the statement; minutes and press-conference links), the latest statement, its word-level diff against the previous one, and the SEP fed funds dots (median, lowest, highest). |
+| `WIRP` | Unchanged path, plus a new MEETING ODDS table (V): P(cut), P(hold), P(hike) and P(50 bp+) per meeting by the standard 25 bp-step method, chained across meetings. `MARKET-IMPLIED, NOT A FORECAST`. |
+| `WB` | Government bond yields: US 2Y / 10Y (daily), euro AAA, UK and Japan from the RATES curves (daily), and OECD monthly 10Y yields for 15 more countries; the frequency is shown per row, with the spread to US 10Y. |
+| `CRPR` | ICE BofA option-adjusted spreads (US IG by rating, US HY by rating, euro HY, EM) in bp with 1W / 1M / 1Y changes and the percentile over the history FRED serves (the last 3 years only, said on screen). |
+| `FWCV` | Forward rates bootstrapped from the US Treasury par curve: 1y1y, 1y2y, 2y1y, 2y3y, 3y2y, 5y5y, 10y10y, 20y10y, the zero curve and a chart of par, zero and 1-year forwards. |
+| `BTMM [US\|IN\|UK\|EA\|JP]` | One-country monitor: policy rate, 2Y / 10Y, FX, main index, CPI y/y, real GDP growth; next US releases from ECO. Items with no free source say so; a series that stopped updating is flagged. |
+| `WCRS [SORT=1W\|1M\|3M\|6M\|YTD\|1Y]` | About 30 currencies ranked by return against USD and against INR (ECB reference rates). WCRS used to be an alias of FXC; type FXC for the cross matrix. |
+| `CDR [YEAR]` | Exchange calendar for NY, LN, IN, TK, HK: closures and early closes (next 12 months, or one year) and regular hours, from the same tables the market lights use. |
+| `CTM [ROOT]` | Futures contract table (default CL): each listed contract's last trade and first notice day from a reviewed rules table, days left, cash or physical; a list of the 20 roots. Dates are estimated (NYSE holiday calendar); the exchange is the authority. Enter opens CT. |
+| `TSYS [BILL\|NOTE\|BOND\|TIPS\|FRN\|CMB]` | US Treasury securities auctioned in the last 90 days (CUSIP, term, coupon, maturity, high yield or discount rate, bid-to-cover, size) and announced auctions (TreasuryDirect). Enter opens YAS with the coupon, maturity and yield. |
+| `NRGF` | EIA weekly petroleum status (crude ex-SPR, Cushing, SPR, gasoline, distillate, refinery utilisation, production) and gas storage, with w/w, vs a year ago and 2-year range. Needs the free `EIA_API_KEY` (KEY REQUIRED without it). Doc-shaped: not yet run with a live key. |
+| `AGRI` | WASDE US wheat, corn and soybean supply and use (latest report, from the Cornell library copy) and, with the free `NASS_API_KEY`, weekly crop condition. Without the key the WASDE tables still show. |
+| `RE` | US housing from FRED: Case-Shiller, FHFA, median price, starts, permits, completions, new-home sales and supply, 30Y / 15Y mortgage rates, rental vacancy, homeownership. Zillow data is not used. |
+| `WPE` | Index valuation through index ETFs (18 markets): P/E, P/B, P/S of the holdings and the fund's yield, each row labelled `PROXY: <ETF>`. Enter opens DES for the ETF. |
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

@@ -94,6 +94,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `MRR` | Index movers: members ranked by return and contribution |  | `<UNIVERSE> [1D\|1W\|1M\|3M\|YTD\|1Y]` | `MRR` |
 | `SECF` | Security finder (fuzzy name or ticker search; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI) |  | `<text \| ISIN \| CUSIP \| SEDOL \| FIGI:id ...>` | `SECF` |
 | `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
+| `WPE` | World index valuation via index ETFs: P/E, P/B, P/S, yield (PROXY) |  |  | `WPE` |
 
 ### Markets: Calendars
 
@@ -103,6 +104,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `ERN` | Earnings calendar |  | `[TODAY\|TOMORROW\|+N\|-N\|YYYY-MM-DD]` | `ERN` |
 | `IPO` | IPO calendar: upcoming, priced, filed, withdrawn |  | `[YYYY-MM]` | `IPO` |
 | `CENB` | Central bank calendar: policy rates and rate-decision dates (Fed, ECB, BoE, BoJ, BoC, RBA, RBI, SNB) |  |  | `CENB` |
+| `FOMC` | FOMC: calendar, statement word diff, SEP dots, links to minutes |  |  | `FOMC` |
+| `CDR` | Exchange calendar: holidays, early closes, regular hours |  | `[YEAR]` | `CDR` |
 
 ### Markets: Currencies
 
@@ -111,6 +114,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `FX` | Currency rates |  |  | `FX` |
 | `FXC` | Currency cross matrix |  | `[CCY ...]` | `FXC` |
 | `FXFA` | FX forward estimate by covered interest parity (not a dealer quote) |  | `<PAIR> [1W,1M,3M,6M,1Y] [R1= R2=]` | `FXFA` |
+| `WCRS` | Currencies ranked by return vs USD and vs INR |  | `[SORT=1W\|1M\|3M\|6M\|YTD\|1Y]` | `WCRS` |
 
 ### Markets: Crypto
 
@@ -135,8 +139,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `CMDTY` | Commodities |  |  | `CMDTY` |
 | `NRG` | Energy board: crude, natural gas, refined products, retail fuel (FRED CSV, prices only) |  | `[WTI\|BRENT\|HH\|GASNY\|GASGC\|ULSD\|HEAT\|JET\|PROPANE\|GASRET\|DIESELRET]` | `NRG` |
+| `NRGF` | Energy fundamentals: EIA weekly petroleum status and gas storage (free key) |  |  | `NRGF` |
+| `AGRI` | Crops: WASDE supply and use, NASS crop condition (free key) |  |  | `AGRI` |
 | `WETR` | Weather for commodities: degree-day basket, place forecast, NWS alerts (Open-Meteo) |  | `[<place> \| <lat,lon>]` | `WETR` |
 | `CT` | Futures term structure: contango/backwardation, spread to front, roll yield (month spacing) |  | `<ROOT: CL NG GC ES ZN ZQ ...>` | `CT` |
+| `CTM` | Futures contract table: last trade and first notice per contract (rules) |  | `[ROOT]` | `CTM` |
 | `COT` | CFTC Commitments of Traders: positions, weekly change, 3-year net history and percentile |  | `<MARKET: ES CL GC ZN EUR ... or name>` | `COT` |
 
 ### Markets: Rates and bonds
@@ -145,6 +152,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `RATES` | Yield curve |  | `[EUR\|GBP\|CAD\|JPY\|SPRD\|AUCT\|NS <ccy>]` | `RATES` |
 | `WIRP` | Implied fed funds path across FOMC meetings from ZQ futures (not a probability forecast) |  |  | `WIRP` |
+| `MMR` | Money market rates: SOFR, TGCR, BGCR, EFFR, OBFR, ESTR, SONIA with history |  |  | `MMR` |
+| `WB` | World government bond yields (10Y, 2Y where free; daily or monthly per row) |  |  | `WB` |
+| `CRPR` | Credit spreads: ICE BofA OAS (US IG / HY, euro HY, EM) from FRED |  |  | `CRPR` |
+| `FWCV` | Forward curve bootstrapped from the Treasury par curve (1y1y, 5y5y ...) |  |  | `FWCV` |
+| `TSYS` | US Treasury securities: CUSIPs, coupons, maturities, auction results |  | `[BILL\|NOTE\|BOND\|TIPS\|FRN\|CMB]` | `TSYS` |
 | `YAS` | Bond yield analysis from terms: price/yield, accrued, duration, convexity, DV01, key-rate durations |  | `CPN= MAT= PX=\|YLD= [FREQ= SETTLE= DAYS= FACE=]` | `YAS` |
 | `SWPM` | Vanilla swap valuation on the Treasury par curve (discount proxy, not SOFR) or a flat curve |  | `N= FIXED= TENOR= DIR=PAY\|REC [FREQ= CURVE=TSY\|FLAT:4.2]` | `SWPM` |
 | `CDSW` | CDS valuation, flat hazard (credit triangle), user inputs only |  | `SPREAD= REC= TENOR= RF= COUPON= N= [FREQ=]` | `CDSW` |
@@ -155,6 +167,10 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `MACRO` | FRED series browser |  | `[query]` | `MACRO` |
 | `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
+| `NOWC` | GDP nowcast: Atlanta Fed GDPNow path and past quarters vs BEA |  |  | `NOWC` |
+| `ECFC` | Economic forecasts: IMF WEO, OECD Outlook, Philadelphia Fed SPF, FOMC SEP |  |  | `ECFC` |
+| `BTMM` | Country monitor: policy rate, 2Y/10Y, FX, index, CPI, GDP, next releases |  | `[US\|IN\|UK\|EA\|JP]` | `BTMM` |
+| `RE` | US housing board: prices, starts, sales, mortgage rates (FRED) |  |  | `RE` |
 | `WECO` | World economies: G20 growth, inflation, unemployment, debt, current account (each cell with its data year) |  |  | `WECO` |
 | `ECST` | World statistics: one indicator for one country (World Bank, DBnomics IMF) |  | `<COUNTRY> <GDP\|GDPG\|GDPPC\|CPI\|UNEMP\|POP\|DEBT\|CA\|TRADE> \| DBN:<provider>/<dataset>/<series>` | `ECST` |
 | `DBSRCH` | Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST |  | `<WORDS> \| DS:<PROVIDER>/<DATASET> [WORDS]` | `DBSRCH` |
@@ -267,6 +283,9 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
+| `QRY` | Query fields over universes and dates (also via SDK and Excel) |  | `<fields> FOR <universe> [WHERE ..] [SORT ..] [LIMIT n] \| <fields> FOR <symbols> DATES -1Y..0 [FREQ D\|W\|M]` | `QRY` |
+| `FLD` | Field catalog for QRY: source, unit, frequency, key |  | `[words]` | `FLD` |
+| `NB` | Local JupyterLab with openterm-sdk and example notebooks |  |  | `NB` |
 | `CORR` | Correlation matrix |  | `SYM SYM... [1M..MAX]` | `CORR` |
 | `TRA` | Total return vs a benchmark (price + dividends, annualised, excess over a benchmark) |  | `SYM[,SYM...] [1M..MAX] [VS BENCHMARK]` | `TRA` |
 | `BETA` | Beta, alpha and R-squared of a security against a benchmark |  | `[SYM] [VS BENCHMARK] [1M..MAX] [D\|W\|M] [WIN=60]` | `BETA` |

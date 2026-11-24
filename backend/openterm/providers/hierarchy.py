@@ -244,6 +244,10 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "sec_tickers_x": ["sec_filings"],
     "court_dockets": ["courtlistener"],  # free key; no key = KEY REQUIRED
     "ghg_facilities": ["epa_ghgrp"],
+    # Phase 30 macro depth (one source each; EIA and NASS need a free key, no key = KEY REQUIRED)
+    "nyfed_rates": ["nyfed"], "estr": ["ecb_estr"], "sonia": ["boe_sonia"], "gdpnow": ["atlfed"], "spf": ["philfed"],
+    "imf_weo": ["imf_dm"], "oecd_eo": ["oecd_eo"], "fomc_statement": ["fed_web"], "tsy_securities": ["td_secs"], "wasde": ["wasde"],
+    "eia_series": ["eia"], "nass_crop": ["nass"], "etf_valuation": ["yahoo_funds"], "fx_panel": ["frankfurter"],
 }
 
 # Test data: with OPENTERM_SYNTHETIC=1 the SYN0000-SYN9999 provider answers for these two capabilities (last in line, so real

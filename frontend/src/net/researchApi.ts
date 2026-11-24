@@ -21,6 +21,12 @@ export const researchApi = {
   fund: (fn: string, params: Params, fresh = false) => get<Envelope<TablePayload>>(`/api/fund/${fn}`, params, TTL.m2, fresh),
   /** Phase 29 filings: FTS MA LEGAL BIO RELS ESG (`/api/filings/<fn>`, the client lives in filingsApi.ts). */
   filings: filingsApi.get,
+  /** Phase 30 macro depth: MMR NOWC ECFC FOMC WB CRPR FWCV BTMM WCRS CDR CTM TSYS NRGF AGRI RE WPE (`/api/macrod/<fn>`). */
+  macro: (fn: string, params: Params, fresh = false) => get<Envelope<TablePayload>>(`/api/macrod/${fn}`, params, TTL.m2, fresh),
+  /** Phase 31 QRY (`/api/query?q=`): the same answer the SDK and the Excel bridge read. Short client cache: a query is cheap to repeat. */
+  query: (q: string, fresh = false) => get<Envelope<TablePayload>>("/api/query", { q }, TTL.s30, fresh),
+  /** Phase 31 FLD: the QRY field catalog searched by words. */
+  fields: (q: string) => get<Envelope<TablePayload>>("/api/query/fields", { q }, TTL.m2),
   /** Non-US curves, credit spreads and auctions (RATES views). */
   rates: (fn: string, params: Params, fresh = false) => get<Envelope<TablePayload>>(`/api/rates/${fn}`, params, TTL.m1, fresh),
 };

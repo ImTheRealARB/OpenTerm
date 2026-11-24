@@ -46,6 +46,20 @@ from .macro import (
     NasdaqEarningsProvider,
     TreasuryProvider,
 )
+from .macrod import (
+    AtlFedProvider,
+    BoeSoniaProvider,
+    EcbEstrProvider,
+    EiaProvider,
+    FedWebProvider,
+    ImfDmProvider,
+    NassProvider,
+    NyFedProvider,
+    OecdEoProvider,
+    PhilFedProvider,
+    TdSecuritiesProvider,
+    WasdeProvider,
+)
 from .marketaux import MarketauxProvider
 from .mfapi import MfapiProvider
 from .mof import MofProvider
@@ -141,6 +155,10 @@ ADAPTERS: dict[str, type[Provider]] = {
     "nseindices": NseIndicesProvider,
     # Phase 29 filings: SEC full-text search / enforcement feeds / ticker-by-exchange file, CourtListener (free key), EPA GHGRP emissions
     "sec_filings": SecFilingsProvider, "courtlistener": CourtListenerProvider, "epa_ghgrp": EpaGhgrpProvider,
+    # Phase 30 macro depth: money-market rates, GDPNow, forecasts, FOMC statements, Treasury securities, WASDE (keyless); EIA, NASS (free keys)
+    "nyfed": NyFedProvider, "ecb_estr": EcbEstrProvider, "boe_sonia": BoeSoniaProvider, "atlfed": AtlFedProvider, "philfed": PhilFedProvider,
+    "imf_dm": ImfDmProvider, "oecd_eo": OecdEoProvider, "fed_web": FedWebProvider, "td_secs": TdSecuritiesProvider, "wasde": WasdeProvider,
+    "eia": EiaProvider, "nass": NassProvider,
 }
 
 # Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a

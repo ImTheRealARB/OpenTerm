@@ -96,6 +96,25 @@ const CASES: Case[] = [
   { cmd: "BIO 1214156 FROM=2023-01-01 TO=2025-12-31", want: /BOARDS FROM DEF 14A: NOT BUILT/ },
   { cmd: "GOOGL RELS", want: /SAME-CIK TICKERS/ },
   { cmd: "AA ESG", want: /EMISSIONS ONLY, NO SCORE/ },
+  // Phase 30: macro, rates and commodities depth
+  { cmd: "MMR", want: /P1 \/ P99 = 1ST AND 99TH PERCENTILE/ },
+  { cmd: "NOWC", want: /GDPNOW IS A MODEL ESTIMATE/ },
+  { cmd: "ECFC", want: /NOT OPENTERM'S/ },
+  { cmd: "FOMC", want: /federalreserve\.gov \(CALENDAR, STATEMENTS\)/ },
+  { cmd: "WIRP", want: /MARKET-IMPLIED, NOT A FORECAST/ },
+  { cmd: "WB", want: /EURO AREA ROW IS THE ECB AAA SPOT CURVE/ },
+  { cmd: "CRPR", want: /LAST 3 YEARS OF THE ICE BOFA SERIES/ },
+  { cmd: "FWCV", want: /IT INCLUDES TERM PREMIUM/ },
+  { cmd: "BTMM", want: /INDEX QUOTES THROUGH THE NORMAL QUOTE CHAIN/ },
+  { cmd: "BTMM JP", want: /ONLY THE US CALENDAR \(BLS, BEA\) IS WIRED/ },
+  { cmd: "WCRS", want: /CROSSES VS INR ARE COMPUTED/ },
+  { cmd: "CDR", want: /FESTIVALS MISSING/ },
+  { cmd: "CTM NG", want: /THE EXCHANGE'S OWN CALENDAR IS THE AUTHORITY/ },
+  { cmd: "TSYS", want: /BUREAU OF THE FISCAL SERVICE/ },
+  { cmd: "NRGF", want: /KEY REQUIRED: set EIA_API_KEY in APIKEYS/ },
+  { cmd: "AGRI", want: /CORNELL MANN LIBRARY/ },
+  { cmd: "RE", want: /ZILLOW RESEARCH DATA: NOT USED/ },
+  { cmd: "WPE", want: /VALUES AS YAHOO FINANCE REPORTS THEM/ },
 ];
 
 let backend: ChildProcess | null = null;

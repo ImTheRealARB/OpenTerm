@@ -36,6 +36,7 @@ from .extensions.routes import router as ext_router
 from .filings_routes import router as filings_router
 from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
+from .macrod_routes import router as macrod_router
 from .mcp.routes import router as mcp_router
 from .mcpclient.routes import router as mcp_client_router
 from .options_rec_routes import router as options_rec_router
@@ -44,6 +45,7 @@ from .origin import OriginGuardMiddleware
 from .pin import SourcePinMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
+from .query_routes import router as query_router
 from .recorder_routes import router as recorder_router
 from .remote import RemoteAuthMiddleware
 from .remote_routes import router as remote_router
@@ -165,6 +167,9 @@ async def lifespan(app: FastAPI):
         return (await SettingsStore(db).get())["settings"] or {}
 
     app.state.recorder = Recorder(rec_root, service, _stored_settings, DEFAULT_POLL_S)
+    from .query.notebook import NotebookServer  # Phase 31 NB: nothing starts until the user asks
+
+    app.state.nb = NotebookServer(settings.openterm_db_path, settings.openterm_port)
 
     # --- Phase 11: key store. Key tests use the fixture transport in fixture mode. ---
     redact.install()
@@ -269,6 +274,7 @@ async def lifespan(app: FastAPI):
         if (mcpm := getattr(app.state, "mcp_manager", None)) is not None:
             await mcpm.close_all()  # third-party MCP servers: kill their processes
         await app.state.recorder.aclose()  # end every running recording cleanly (its last line is written)
+        app.state.nb.stop()  # a JupyterLab started by NB ends with OpenTerm
         await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
@@ -296,6 +302,8 @@ app.include_router(scan_router)
 app.include_router(options_rec_router)
 app.include_router(smart_alerts_router)
 app.include_router(filings_router)
+app.include_router(macrod_router)  # Phase 30 macro depth
+app.include_router(query_router)  # Phase 31 QRY, FLD, Excel bridge
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)

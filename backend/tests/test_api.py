@@ -37,6 +37,7 @@ def test_search_and_sources(client):
         "nasdaq_trader", "yahoo_funds",  # FSRC (ETF screener)
         "nseindices",  # SCAN / MRR / IMAP NIFTY member lists
         "sec_filings", "courtlistener", "epa_ghgrp",  # Phase 29: FTS / MA / BIO / RELS, LEGAL, ESG
+        "nyfed", "ecb_estr", "boe_sonia", "atlfed", "philfed", "imf_dm", "oecd_eo", "fed_web", "td_secs", "wasde", "eia", "nass",  # Phase 30
     }
     assert s["fixtures"] is True
     keyed = {k["name"]: k["status"] for k in s["keyed"]}

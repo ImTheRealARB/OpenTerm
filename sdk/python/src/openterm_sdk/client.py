@@ -198,6 +198,34 @@ class OpenTerm:
 
     financials = fundamentals
 
+    # --- QRY (Phase 31) -----------------------------------------------------------------------------------
+    def query(self, text: str) -> pd.DataFrame:
+        """Run a QRY, exactly as the QRY panel does (the same server code answers both), for example
+        `ot.query("QRY last, pe, mcap FOR MEMB:SPY WHERE pe<20 SORT mcap LIMIT 50")` (one row per symbol, indexed by symbol) or
+        `ot.query("QRY close FOR AAPL,MSFT,FRED:DGS10 DATES -2Y..0 FREQ M")` (one row per date, a column per symbol and field).
+        Column names are the field names (snapshot) or "<SYMBOL> <FIELD>" (DATES). `df.attrs["notes"]` carries the panel's notes:
+        symbols with no value, sources used. Ratios stay ratios (divy 0.012 = 1.2%); `pct` is in percent as the quote gives it."""
+        env = self._get("/api/query", {"q": text}, pin=False)
+        d = env["data"]
+        sec = d["sections"][0]
+        keys = [c["key"] for c in sec["columns"]]
+        names = {c["key"]: c["title"] for c in sec["columns"]}
+        df = pd.DataFrame([{k: r.get(k) for k in keys} for r in sec["rows"]], columns=keys)
+        if sec["id"] == "series":
+            df = df.rename(columns={k: names[k] for k in keys if k != "date"})
+            df["date"] = pd.to_datetime(df["date"])
+            df = df.set_index("date").sort_index()
+        else:
+            df = df.set_index("symbol")
+        df.attrs.update(self._meta(env), title=d.get("title"), notes=list(d.get("notes") or []),
+                        headline={h["label"]: h["value"] for h in d.get("headline") or []})
+        return df
+
+    def fields(self, words: str = "") -> pd.DataFrame:
+        """FLD: the QRY field catalog (name, what, mode, source, unit, update frequency, key), optionally searched by words."""
+        env = self._get("/api/query/fields", {"q": words}, pin=False)
+        return pd.DataFrame(env["data"]["sections"][0]["rows"]).set_index("name")
+
     def sources(self) -> dict[str, Any]:
         """OpenTerm's `/api/sources`: which providers exist (the valid `source=` names), their health, which keys are set."""
         return self._get("/api/sources", pin=False)

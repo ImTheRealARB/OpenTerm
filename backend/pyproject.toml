@@ -37,6 +37,8 @@ openterm-mcp = "openterm.mcp.__main__:main"
 # `uv sync --extra ocr` adds the PDF page renderer for AI DOC OCR of scanned PDFs (Tesseract itself is a separate program on PATH).
 [project.optional-dependencies]
 ocr = ["pypdfium2>=4.30"]
+# `uv sync --extra notebook` (NB starts it on demand with `uv run --extra notebook`): JupyterLab plus the SDK from this checkout.
+notebook = ["jupyterlab>=4.2", "openterm-sdk"]
 
 [dependency-groups]
 dev = [
@@ -54,6 +56,9 @@ freeze = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+openterm-sdk = { path = "../sdk/python" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["openterm"]

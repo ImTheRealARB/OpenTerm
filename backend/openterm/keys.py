@@ -78,7 +78,7 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "https://polygon.io/dashboard/signup"),
     KeySpec("fred", ("FRED_API_KEY",), 7, "FRED API: series titles/units, MACRO search, ECO fallback. "
             "Values work keyless via fred_csv", "https://fred.stlouisfed.org/docs/api/api_key.html"),
-    KeySpec("eia", ("EIA_API_KEY",), 19, "Energy inventories and production (NRG)", "https://www.eia.gov/opendata/register.php"),
+    KeySpec("eia", ("EIA_API_KEY",), 19, "Energy inventories and storage (NRGF weekly petroleum status and gas storage)", "https://www.eia.gov/opendata/register.php"),
     KeySpec("openfigi", ("OPENFIGI_API_KEY",), 19, "Identifier mapping (SECF), higher rate limit",
             "https://www.openfigi.com/api"),
     KeySpec("tradier", ("TRADIER_TOKEN",), 14, "Options chain with Greeks (fallback)", "https://developer.tradier.com/"),
@@ -102,6 +102,9 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
     # LEGAL (Phase 29): federal court dockets from CourtListener. Without the key LEGAL still shows the SEC enforcement rows.
     KeySpec("courtlistener", ("COURTLISTENER_API_KEY",), 29, "CourtListener (free): US federal court dockets matched by company name, added to LEGAL",
             "https://www.courtlistener.com/help/api/rest/"),
+    # AGRI (Phase 30): USDA NASS QuickStats crop condition. Without the key AGRI still shows the WASDE tables.
+    KeySpec("nass", ("NASS_API_KEY",), 30, "USDA NASS QuickStats (free): weekly crop condition for corn, soybeans and wheat (AGRI)",
+            "https://quickstats.nass.usda.gov/api"),
     # Trade + US macro family (free, read-only). Panels TRADE (Comtrade) and USMAC (BLS, BEA, Census).
     KeySpec("comtrade", ("UN_COMTRADE_KEY",), 19, "UN Comtrade (free): trade flows between two countries by HS product (TRADE)",
             "https://comtradedeveloper.un.org/"),
@@ -460,6 +463,7 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
     # CourtListener: `Authorization: Token <key>`. The courts list is the cheapest call (doc-shaped, never run against a live key).
     "courtlistener": lambda k: ("GET", "https://www.courtlistener.com/api/rest/v4/courts/", {"page_size": "1"},
                                 {"Authorization": f"Token {k['COURTLISTENER_API_KEY']}"}, None),
+    "nass": lambda k: ("GET", "https://quickstats.nass.usda.gov/api/get_counts/", {"key": k["NASS_API_KEY"], "commodity_desc": "CORN", "year": "2024"}, None, None),
     # Marketaux has no free "who am I" call: one article is the cheapest, and it does spend one of the ~100 daily requests.
     "marketaux": lambda k: ("GET", "https://api.marketaux.com/v1/news/all", {"api_token": k["MARKETAUX_KEY"], "limit": "1", "language": "en"}, None, None),
     # Etherscan answers HTTP 200 with status "0" for a bad key; classify() reads "Invalid API Key" out of the body.

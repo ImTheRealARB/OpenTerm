@@ -218,3 +218,26 @@ def test_no_key_or_secret_is_ever_sent():
     ot.history("TEST")
     assert set(calls[0].headers) <= {"host", "accept", "accept-encoding", "connection", "user-agent"}
     assert json.dumps(dict(calls[0].url.params)).lower().find("key") == -1
+
+
+def _table(sid, cols, rows, notes=()):
+    return {"title": "QRY TEST", "headline": [{"label": "MATCHED", "value": "2 OF 3"}], "notes": list(notes),
+            "sections": [{"id": sid, "title": "T", "note": None, "rows": rows,
+                          "columns": [{"key": k, "title": t, "kind": "num", "align": "right"} for k, t in cols]}]}
+
+
+def test_query_snapshot_is_indexed_by_symbol_and_keeps_missing_values_missing():
+    body = env(_table("result", [("symbol", "SYMBOL"), ("pe", "P/E")], [{"symbol": "AAA", "pe": 12.5}, {"symbol": "BBB", "pe": None}],
+                      ["NO KEY STATISTICS FOR 1 SYMBOL(S)"]))
+    ot, calls = make(reply(body))
+    df = ot.query("QRY pe FOR AAA,BBB")
+    assert list(df.index) == ["AAA", "BBB"] and df.loc["AAA", "pe"] == 12.5 and pd.isna(df.loc["BBB", "pe"])
+    assert df.attrs["notes"] == ["NO KEY STATISTICS FOR 1 SYMBOL(S)"] and df.attrs["headline"]["MATCHED"] == "2 OF 3"
+    assert calls[0].url.path == "/api/query" and calls[0].url.params["q"] == "QRY pe FOR AAA,BBB"
+
+
+def test_query_dates_is_a_time_series_with_symbol_field_columns():
+    body = env(_table("series", [("date", "DATE"), ("c0", "AAA CLOSE")], [{"date": "2026-02-01", "c0": 2.0}, {"date": "2026-01-01", "c0": 1.0}]))
+    ot, _ = make(reply(body))
+    df = ot.query("QRY close FOR AAA DATES -2M..0 FREQ M")
+    assert list(df.columns) == ["AAA CLOSE"] and df.index[0] == pd.Timestamp("2026-01-01") and df["AAA CLOSE"].iloc[-1] == 2.0

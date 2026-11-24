@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from ..macrod import parse as mp
 from ..ratelimit import TokenBucket
 from .base import Provider, ProviderError
 from .etf_parse import fund_from_summary, parse_symbol_file
@@ -30,6 +31,8 @@ FUND_PROFILE = "fund_profile"
 SYMBOL_FILE_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqtraded.txt"
 # The two quoteSummary modules FSRC reads. Kept in one place because the fixture router matches on this exact string.
 FUND_MODULES = "fundProfile,summaryDetail"
+# WPE (Phase 30): the fund's own P/E and yield plus its holdings' P/E, P/B, P/S
+VALUATION_MODULES = "summaryDetail,topHoldings"
 
 
 class NasdaqTraderProvider(Provider):
@@ -61,8 +64,8 @@ class NasdaqTraderProvider(Provider):
 class YahooFundsProvider(YahooOwnProvider):
     name = "yahoo_funds"
     label = "Yahoo Finance fund profiles (unofficial)"
-    capabilities = frozenset({FUND_PROFILE})
-    markets = "US-listed ETFs and funds: expense ratio, total assets, category, fund family"
+    capabilities = frozenset({FUND_PROFILE, "etf_valuation"})
+    markets = "US-listed ETFs and funds: expense ratio, total assets, category, fund family; holdings valuation (WPE)"
     terms = "Unofficial quoteSummary modules; personal use. Fees and assets are as Yahoo reports them (fund companies update them slowly)."
     rate = (3.0, 3)
     max_wait = 6.0  # a call queues for its slot instead of failing: the engine starts a few at once and the bucket spreads them
@@ -79,6 +82,14 @@ class YahooFundsProvider(YahooOwnProvider):
         if row is None:
             raise ProviderError("not_found", "no fund data")
         return row
+
+    async def etf_valuation(self, symbol: str) -> dict:
+        """WPE: {pe, pb, ps, yield, price} for one index ETF, as Yahoo reports them (P/E, P/B, P/S of the holdings when given)."""
+        result = await self._summary(symbol, VALUATION_MODULES)
+        try:
+            return mp.etf_valuation({"quoteSummary": {"result": [result]}})
+        except mp.ParseError as e:
+            raise ProviderError("unavailable", str(e)) from e
 
     async def probe(self) -> None:
         await self.fund_profile("SPY")

@@ -211,6 +211,27 @@ const defs: FunctionDef[] = [
   { code: "FRM", title: "One XBRL concept for every filer, point in time", needsSecurity: false, argsSchema: "<TAG> [CY2024] [ASOF=YYYY-MM-DD]", load: () => import("./FRM") },
   { code: "IBQ", title: "Industry roll-ups: median margins, growth, valuation", needsSecurity: false, argsSchema: "[YEAR] [INDUSTRY]", load: () => import("./IBQ") },
   { code: "REVS", title: "Estimate revision score (inputs shown)", needsSecurity: true, load: () => import("./REVS") },
+  // Phase 30: macro, rates and commodities depth (server: /api/macrod/...)
+  { code: "MMR", title: "Money market rates: SOFR, TGCR, BGCR, EFFR, OBFR, ESTR, SONIA with history", needsSecurity: false, load: () => import("./MMR") },
+  { code: "NOWC", title: "GDP nowcast: Atlanta Fed GDPNow path and past quarters vs BEA", needsSecurity: false, load: () => import("./NOWC") },
+  { code: "ECFC", title: "Economic forecasts: IMF WEO, OECD Outlook, Philadelphia Fed SPF, FOMC SEP", needsSecurity: false, load: () => import("./ECFC") },
+  { code: "FOMC", title: "FOMC: calendar, statement word diff, SEP dots, links to minutes", needsSecurity: false, load: () => import("./FOMC") },
+  { code: "WB", title: "World government bond yields (10Y, 2Y where free; daily or monthly per row)", needsSecurity: false, load: () => import("./WB") },
+  { code: "CRPR", title: "Credit spreads: ICE BofA OAS (US IG / HY, euro HY, EM) from FRED", needsSecurity: false, load: () => import("./CRPR") },
+  { code: "FWCV", title: "Forward curve bootstrapped from the Treasury par curve (1y1y, 5y5y ...)", needsSecurity: false, load: () => import("./FWCV") },
+  { code: "BTMM", title: "Country monitor: policy rate, 2Y/10Y, FX, index, CPI, GDP, next releases", needsSecurity: false, argsSchema: "[US|IN|UK|EA|JP]", load: () => import("./BTMM") },
+  { code: "WCRS", title: "Currencies ranked by return vs USD and vs INR", needsSecurity: false, argsSchema: "[SORT=1W|1M|3M|6M|YTD|1Y]", load: () => import("./WCRS") },
+  { code: "CDR", title: "Exchange calendar: holidays, early closes, regular hours", needsSecurity: false, argsSchema: "[YEAR]", load: () => import("./CDR") },
+  { code: "CTM", title: "Futures contract table: last trade and first notice per contract (rules)", needsSecurity: false, argsSchema: "[ROOT]", load: () => import("./CTM") },
+  { code: "TSYS", title: "US Treasury securities: CUSIPs, coupons, maturities, auction results", needsSecurity: false, argsSchema: "[BILL|NOTE|BOND|TIPS|FRN|CMB]", load: () => import("./TSYS") },
+  { code: "NRGF", title: "Energy fundamentals: EIA weekly petroleum status and gas storage (free key)", needsSecurity: false, load: () => import("./NRGF") },
+  { code: "AGRI", title: "Crops: WASDE supply and use, NASS crop condition (free key)", needsSecurity: false, load: () => import("./AGRI") },
+  { code: "RE", title: "US housing board: prices, starts, sales, mortgage rates (FRED)", needsSecurity: false, load: () => import("./RE") },
+  { code: "WPE", title: "World index valuation via index ETFs: P/E, P/B, P/S, yield (PROXY)", needsSecurity: false, load: () => import("./WPE") },
+  // Phase 31: query language, field catalog, notebooks (server: /api/query, /api/query/fields, /api/nb; Excel bridge /api/xl)
+  { code: "QRY", title: "Query fields over universes and dates (also via SDK and Excel)", needsSecurity: false, argsSchema: "<fields> FOR <universe> [WHERE ..] [SORT ..] [LIMIT n] | <fields> FOR <symbols> DATES -1Y..0 [FREQ D|W|M]", load: () => import("./QRY") },
+  { code: "FLD", title: "Field catalog for QRY: source, unit, frequency, key", needsSecurity: false, argsSchema: "[words]", load: () => import("./FLD") },
+  { code: "NB", title: "Local JupyterLab with openterm-sdk and example notebooks", needsSecurity: false, load: () => import("./NB") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

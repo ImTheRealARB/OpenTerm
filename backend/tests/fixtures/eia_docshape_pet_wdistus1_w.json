@@ -1,0 +1,639 @@
+{
+ "status": 200,
+ "note": "DOC-SHAPED, NOT A RECORDING: written from the API documentation on 2026-11-24; the values are invented. Record a real answer with the first key.",
+ "body": {
+  "response": {
+   "total": 104,
+   "frequency": "weekly",
+   "data": [
+    {
+     "period": "2026-11-13",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-11-06",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-10-30",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-10-23",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-10-16",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-10-09",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-10-02",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-09-25",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-09-18",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-09-11",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-09-04",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-08-28",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-08-21",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-08-14",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-08-07",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-07-31",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-07-24",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-07-17",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-07-10",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-07-03",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-06-26",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-06-19",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-06-12",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-06-05",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-05-29",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-05-22",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-05-15",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-05-08",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-05-01",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-04-24",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-04-17",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-04-10",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-04-03",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-03-27",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-03-20",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-03-13",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-03-06",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-02-27",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-02-20",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-02-13",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-02-06",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-01-30",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-01-23",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-01-16",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-01-09",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2026-01-02",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-12-26",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-12-19",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-12-12",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-12-05",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-11-28",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-11-21",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-11-14",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-11-07",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-10-31",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-10-24",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-10-17",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-10-10",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-10-03",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-09-26",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-09-19",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-09-12",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-09-05",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-08-29",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-08-22",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-08-15",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-08-08",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-08-01",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-07-25",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-07-18",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-07-11",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-07-04",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-06-27",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-06-20",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-06-13",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-06-06",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-05-30",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-05-23",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-05-16",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-05-09",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-05-02",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-04-25",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-04-18",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-04-11",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-04-04",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-03-28",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-03-21",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-03-14",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-03-07",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-02-28",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-02-21",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-02-14",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-02-07",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-01-31",
+     "series-description": "Distillate Stocks",
+     "value": 113965.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-01-24",
+     "series-description": "Distillate Stocks",
+     "value": 116380.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-01-17",
+     "series-description": "Distillate Stocks",
+     "value": 115000.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-01-10",
+     "series-description": "Distillate Stocks",
+     "value": 113620.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2025-01-03",
+     "series-description": "Distillate Stocks",
+     "value": 116035.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2024-12-27",
+     "series-description": "Distillate Stocks",
+     "value": 114655.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2024-12-20",
+     "series-description": "Distillate Stocks",
+     "value": 113275.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2024-12-13",
+     "series-description": "Distillate Stocks",
+     "value": 115690.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2024-12-06",
+     "series-description": "Distillate Stocks",
+     "value": 114310.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2024-11-29",
+     "series-description": "Distillate Stocks",
+     "value": 116725.0,
+     "units": "MBBL"
+    },
+    {
+     "period": "2024-11-22",
+     "series-description": "Distillate Stocks",
+     "value": 115345.0,
+     "units": "MBBL"
+    }
+   ]
+  },
+  "request": {
+   "command": "/v2/seriesid/PET.WDISTUS1.W"
+  }
+ }
+}

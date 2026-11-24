@@ -33,7 +33,7 @@ QUOTE_LOOKBACK_DAYS = 10  # enough to find the last two fixes across a long week
 class FrankfurterProvider(Provider):
     name = "frankfurter"
     label = "Frankfurter (ECB reference rates)"
-    capabilities = frozenset({HISTORY, QUOTES})
+    capabilities = frozenset({HISTORY, QUOTES, "fx_panel"})  # fx_panel: WCRS (Phase 30)
     markets = "FX pairs the ECB publishes: one daily reference rate per business day, back to 1999 (no intraday, no high/low)"
     terms = "Free, keyless API (frankfurter.dev) serving ECB reference rates. Rate limited against abuse; no quota stated."
     rate = (2.0, 4)
@@ -51,6 +51,13 @@ class FrankfurterProvider(Provider):
 
     async def _rates(self, start: date, base: str, quotes: list[str]) -> list:
         return await self.get_json(f"{BASE}/rates", {"from": start.isoformat(), "base": base, "quotes": ",".join(quotes), "providers": "ecb"})
+
+    async def fx_panel(self, start: date, quotes: list[str]) -> dict:
+        """WCRS: every daily USD-based ECB fix since `start` for `quotes`, as rows {date, base, quote, rate}."""
+        rows = await self._rates(start, "USD", quotes)
+        if not isinstance(rows, list) or not rows:
+            raise ProviderError("not_found", "no ECB rates for these currencies")
+        return {"rows": rows, "source": self.source}
 
     async def history(self, symbol: str, range_: str, interval: str) -> Bars:
         pair = fp.pair_of(symbol)
