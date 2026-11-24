@@ -26,6 +26,7 @@ import {
 import { fmtPrice } from "../format";
 import { gauges } from "../perf/metrics";
 import type { IndicatorName } from "./indicators";
+import { coneVertices, type ConePoint } from "./cone";
 import { OVERLAY_STUDIES, paintOverlayStudies, type OverlayStudy } from "./profileOverlay";
 import { diffIndicators } from "./indicatorDiff";
 import { NEEDED, hitTest, pendingPrims, prims, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo, type Prim } from "./drawings";
@@ -76,6 +77,8 @@ export interface GpLayerProps {
   custom?: CustomItem[];
   /** Worker errors per custom key ("FORMULA ERROR: ... AT 12"); called when the set of errors changes. */
   onCustomErrors?: (errors: Record<string, string>) => void;
+  /** Phase 28 `GP ... CONE`: model price ranges per expiry (chart/cone.ts), drawn past the last bar. */
+  cone?: ConePoint[];
 }
 
 /** The parts of ChartView's state the layer reads. All refs, so reading them is always current. */
@@ -167,6 +170,8 @@ export function useGpLayer(
   eventsRef.current = events;
   const drawRef = useRef<DrawState | undefined>(draw);
   drawRef.current = draw;
+  const coneRef = useRef<ConePoint[] | undefined>(gp?.cone);
+  coneRef.current = gp?.cone;
   const pickRef = useRef({ armed: false, cb: gp?.onPickPrice });
   pickRef.current = { armed: !!gp?.pickArmed, cb: gp?.onPickPrice };
   const compareOn = useRef(false);
@@ -635,6 +640,29 @@ export function useGpLayer(
         ctx, bars, geo, colors: colors.current, studies, drawings: d?.drawings ?? [],
         visible: vis ? [Math.max(0, Math.floor(vis.from)), Math.ceil(vis.to) + 1] : [0, bars.t.length],
       }));
+      // Phase 28: the probability cone (1 SD solid, 2 SD dashed), from the last close out to each expiry.
+      const coneV = coneRef.current && !compareOn.current && bars.t.length ? coneVertices(coneRef.current, bars.t, bars.c[bars.c.length - 1]) : [];
+      gauges.set("chart.cone", coneV.length);
+      if (coneV.length) {
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (const [key, col, dash] of [["1", colors.current.acc, [] as number[]], ["2", colors.current.dim, [4, 3]]] as [string, string, number[]][]) {
+          ctx.strokeStyle = col;
+          ctx.setLineDash(dash);
+          for (const side of ["lo", "hi"] as const) {
+            ctx.beginPath();
+            coneV.forEach((v, j) => {
+              const x = geo.xOfLogical?.(v.x) ?? null;
+              const y = geo.toY(v[`${side}${key}` as "lo1"]);
+              if (x === null || y === null) return;
+              if (j === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
       if (!d || compareOn.current || (!d.drawings.length && !d.pending)) {
         gauges.set("chart.drawSegs", 0);
         return;
@@ -716,7 +744,7 @@ export function useGpLayer(
       paintRef.current();
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- repaint when the drawings or the chart's inputs change
-  }, [draw, data, indicators, comparePanes, compare, ver]);
+  }, [draw, data, indicators, comparePanes, compare, ver, gp?.cone]);
 
   return { overlay };
 }

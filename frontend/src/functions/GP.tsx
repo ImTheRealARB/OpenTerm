@@ -32,6 +32,8 @@ import { KEY_RANGES, MAX_CUSTOM, depthLimitFromError, formulaInd, libraryInd, li
 import { fallbackText } from "./fallbackText";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
+import type { ConePoint } from "../chart/cone";
+import { researchApi } from "../net/researchApi";
 
 export { parseGpArgs };
 
@@ -294,6 +296,22 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
     .map((a) => a.value)
     .sort((a, b) => a - b)
     .join(",");
+  // Phase 28: `CONE` loads the options' per-expiry ranges once per symbol; an error is shown, never a made-up cone.
+  const [cone, setCone] = useState<{ points: ConePoint[]; label: string } | { error: string } | null>(null);
+  useEffect(() => {
+    if (!p.cone) {
+      setCone(null);
+      return;
+    }
+    let alive = true;
+    researchApi
+      .cone(symbol)
+      .then((e) => alive && setCone({ points: e.data.points, label: e.data.label }))
+      .catch((e: ApiError) => alive && setCone({ error: e.message }));
+    return () => {
+      alive = false;
+    };
+  }, [p.cone, symbol]);
   const alertLevels = useMemo(() => (alertKey ? alertKey.split(",").map(Number) : []), [alertKey]);
   const placeAlert = (raw: number | null) => {
     const sym = L?.bars.symbol ?? symbol;
@@ -621,6 +639,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
         {L?.stale && <span className="warn"> · STALE</span>}
         {L?.formula && <FormulaNote f={L.formula} />}
         {rp.active && <ReplayLine r={rp} />}
+        {cone && <span data-testid="gp-cone" className={"error" in cone ? "err" : "dim"}> · CONE: {"error" in cone ? cone.error : cone.label}</span>}
         {L?.fallback.length ? <span className="warn"> · {fallbackText(L.fallback, L.fallbackNotes)}</span> : null}
         {L?.compareErrors.map((m) => (
           <span className="err" key={m}> · {m}</span>
@@ -739,6 +758,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
             events: brick ? undefined : markers,
             onPick: (id) => setSelected(id),
             alertLevels,
+            cone: cone && "points" in cone ? cone.points : undefined,
             pickArmed: armed,
             onPickPrice: (px) => {
               setArmed(false);

@@ -37,6 +37,7 @@ from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
 from .mcpclient.routes import router as mcp_client_router
+from .options_rec_routes import router as options_rec_router
 from .orders.routes import router as orders_router
 from .origin import OriginGuardMiddleware
 from .pin import SourcePinMiddleware
@@ -240,6 +241,9 @@ async def lifespan(app: FastAPI):
 
     sched.add_job(smart_alerts.check_all, "interval", minutes=smart_alerts.CHECK_EVERY_MIN, args=[app], id="smart_alerts",
                   max_instances=1, coalesce=True)
+    # Phase 28: the chain recorder snapshots its watchlist once per weekday after the US close; never in fixture mode.
+    if not settings.openterm_fixtures:
+        scheduler.schedule_chain_recorder(sched, app)
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
@@ -283,6 +287,7 @@ app.include_router(world_router)
 app.include_router(recorder_router)
 app.include_router(bt_lab_routes.router)
 app.include_router(scan_router)
+app.include_router(options_rec_router)
 app.include_router(smart_alerts_router)
 app.include_router(kite_router)
 app.include_router(brokers_router)

@@ -124,6 +124,7 @@ class OvInputs:
     heston: dict = field(default_factory=dict)
     barrier: dict = field(default_factory=dict)
     missing: list[str] = field(default_factory=list)
+    fx: bool = False                 # RF= typed: Garman-Kohlhagen labelling (Phase 28)
 
 
 def pctxt(v: float | None, digits: int = 4) -> str:
@@ -139,8 +140,9 @@ def ov_models(i: OvInputs) -> tuple[list[dict], list[dict]]:
     S, K, T, r, sig, q, kind = i.spot, i.k, i.T, i.r, i.iv, i.q, i.kind
     rows = []
     g = qo.bs_greeks(S, K, T, r, sig, kind, q)
-    rows.append({"model": "BS", "price": qo.bs_price(S, K, T, r, sig, kind, q), **g,
-                 "note": "BLACK-SCHOLES-MERTON, EUROPEAN, CONTINUOUS DIVIDEND YIELD"})
+    rows.append({"model": "GK" if i.fx else "BS", "price": qo.bs_price(S, K, T, r, sig, kind, q), **g,
+                 "note": "GARMAN-KOHLHAGEN (FX), EUROPEAN: DOMESTIC RATE R, FOREIGN RATE IN PLACE OF THE DIVIDEND YIELD" if i.fx
+                 else "BLACK-SCHOLES-MERTON, EUROPEAN, CONTINUOUS DIVIDEND YIELD"})
     for label, american in (("BIN EU", False), ("BIN AM", True)):
         px = qb.binomial_price(S, K, T, r, sig, kind, american=american, steps=i.steps, q=q)
         gb = qb.binomial_greeks(S, K, T, r, sig, kind, american=american, steps=i.steps, q=q)
@@ -199,6 +201,8 @@ def ov_payload(symbol: str, i: OvInputs, source: str) -> dict:
         sections.append(section("ivsolve", "IMPLIED VOL FROM PRICE", [col("price", "PRICE", "price"), col("iv", "IV", "pct"),
                                                                         col("status", "STATUS")], solve))
     head_rows = [head("SPOT", "-" if i.spot is None else f"{i.spot:,.2f}", i.spot)]
+    if i.fx:
+        head_rows.append(head("MODEL", "GARMAN-KOHLHAGEN (FX): FOREIGN RATE AS q"))
     notes = ["EVERY INPUT SHOWS WHERE IT CAME FROM; IV IS AN OPINION AND IS NEVER DEFAULTED",
              "THETA PER CALENDAR DAY; VEGA AND RHO PER 1 POINT. HESTON AND BARRIER RUN ONLY WITH THEIR INPUTS (V0 KAPPA THETA SIGMAV RHO | H BARR)"]
     return payload(symbol, f"OV {symbol}", head_rows, sections, notes, source, status=status)
@@ -213,7 +217,10 @@ def spot_grid(strikes: list[float], spot: float, points: int = 41) -> list[float
 
 
 def osa_payload(symbol: str, legs: list[dict], spot: float, spot_basis: str, T: float | None, iv: float | None, iv_basis: str,
-                r: float | None, r_basis: str, mult: float, comm: float, source: str, missing: list[str]) -> dict:
+                r: float | None, r_basis: str, mult: float, comm: float, source: str, missing: list[str],
+                days: float = 0.0, iv_shift: float = 0.0) -> dict:
+    """`days` = how far forward the AT DATE curve sits (DAYS=, keys D / Shift+D); `iv_shift` = IV change for the curves before
+    expiry (IVSHIFT= in vol points, keys V / Shift+V). Phase 28 risk profile."""
     status = "RUNNABLE" if not missing else "NOT RUNNABLE: " + ", ".join(missing)
     inputs = [
         {"name": "SPOT", "value": f"{spot:,.2f}", "basis": spot_basis},
@@ -272,11 +279,26 @@ def osa_payload(symbol: str, legs: list[dict], spot: float, spot_basis: str, T: 
                 [{"name": k.upper(), "value": v} for k, v in net_greeks.items()]),
         section("inputs", "INPUTS", INPUT_COLUMNS, inputs),
     ]
-    chart = {"id": "payoff", "title": "P&L AT EXPIRY", "xlabel": "SPOT", "ylabel": "P&L",
-             "series": [{"name": "P&L", "points": [[s, p] for s, p in zip(rep.spot_grid, rep.payoff, strict=True)]}],
+    from . import analytics as an
+
+    days = max(0.0, min(days, T * 365.0))
+    curve = an.pl_curves(legs, premiums, spot_grid([x["strike"] for x in legs], spot, 200), T, r, iv, mult, days, iv_shift)
+    pop = an.prob_profit(curve, spot, T, r, iv)
+    headline.append(head("P(PROFIT)", "-" if pop is None else f"{pop * 100:.1f}%", pop))
+    headline.append(head("AT DATE", f"+{days:g} DAYS, IV {(iv + iv_shift) * 100:.1f}%", days))
+    sections.insert(2, section("profile", "RISK PROFILE (TODAY, AT DATE, AT EXPIRY) AND GREEKS ALONG THE CURVE", [
+        col("spot", "SPOT", "price"), col("today", "TODAY", "money"), col("at_date", f"+{days:g}D", "money"),
+        col("expiry", "EXPIRY", "money"), col("delta", "DELTA", "num4"), col("gamma", "GAMMA", "num4")], curve[::5]))
+    chart = {"id": "payoff", "title": f"P&L: TODAY, +{days:g} DAYS, AT EXPIRY (IV SHIFT {iv_shift * 100:+.0f} PTS)", "xlabel": "SPOT",
+             "ylabel": "P&L",
+             "series": [{"name": "EXPIRY", "points": [[c["spot"], c["expiry"]] for c in curve]},
+                        {"name": "TODAY", "points": [[c["spot"], c["today"]] for c in curve]},
+                        {"name": f"+{days:g}D", "points": [[c["spot"], c["at_date"]] for c in curve]}],
              "marks": [{"x": spot, "label": "SPOT"}, *({"x": b, "label": "BE"} for b in be)]}
     heat = {"id": "scenario", "title": "MARK-TO-MARKET P&L: SPOT (ACROSS) x IV (DOWN), TIME UNCHANGED", "xlabel": "SPOT", "ylabel": "IV",
             "x": [round(s, 2) for s in spots], "y": [f"{v * 100:.1f}%" for v in iv_axis], "z": z, "unit": "money"}
     notes = ["PREMIUMS WITHOUT @PREMIUM ARE BLACK-SCHOLES AT THE ENTRY IV; PAYOFF IS AT EXPIRY, EUROPEAN, NO EXIT FEES",
-             "HISTORICAL OR HYPOTHETICAL PAYOFF, NOT A FORECAST"]
+             "HISTORICAL OR HYPOTHETICAL PAYOFF, NOT A FORECAST",
+             "P(PROFIT) = MODEL PROBABILITY, LOGNORMAL AT THE ENTRY IV, OF A POSITIVE P&L AT EXPIRY",
+             "KEYS: D / SHIFT+D MOVE THE DATE CURVE 7 DAYS; V / SHIFT+V SHIFT IV 5 POINTS"]
     return payload(symbol, f"OSA {symbol}", headline, sections, notes, source, status=status, charts=[chart], heat=heat)

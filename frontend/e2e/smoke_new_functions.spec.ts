@@ -23,6 +23,8 @@ interface Case {
   cmd: string;
   /** Text the panel must show once loaded. */
   want: RegExp;
+  /** Wait longer than the default 15 s (a job that starts a cold worker process: BT OPT: its overfitting step imports scipy cold in the worker, slow under suite load). */
+  timeout?: number;
 }
 const CASES: Case[] = [
   // Phase 21: chart types, candle lengths, patterns
@@ -56,12 +58,21 @@ const CASES: Case[] = [
   { cmd: "REC", want: /OFF BY DEFAULT/ },
   { cmd: "AAPL GP 1Y REPLAY", want: /REPLAY .* BAR \d+\/\d+ PAUSED/ },
   // Phase 26
-  { cmd: "BT OPT AAPL SMA{10..30:10}>SMA{50..100:50} 1D 10Y", want: /PROB\. OF BACKTEST OVERFITTING/ },
+  { cmd: "BT OPT AAPL SMA{10..30:10}>SMA{50..100:50} 1D 10Y", want: /PROB\. OF BACKTEST OVERFITTING/, timeout: 90_000 },
   { cmd: "BT LIVE", want: /PAPER FORWARD TESTS/ },
   { cmd: "BT AAPL SMA20>SMA50 1D 10Y STOP=5 TARGET=10", want: /EXITS: STOP 5% TARGET 10%/ },
   // Phase 27 (LIST: universes, so the fixture backend has bars for every member; a LIST has no index weights)
   { cmd: "SCAN LIST:AAPL,SYN0001,SYN0002 RSI14<101", want: /MATCH OF \d+ CHECKED/ },
   { cmd: "MRR LIST:AAPL,SYN0001,SYN0002 1M", want: /NO INDEX WEIGHTS FOR THIS LIST/ },
+  // Phase 28 chain recorder (off by default: nothing is recorded in a fresh database)
+  { cmd: "OSCAN LIST:AAPL,SYN0001 IVR>50", want: /NOT RECORDED/ },
+  { cmd: "AAPL OREC", want: /TURNS IT ON/ },
+  { cmd: "AAPL EMOV", want: /AVG ACTUAL MOVE/ },
+  { cmd: "AAPL GP 1Y CONE", want: /CONE: MODEL RANGE/ },
+  { cmd: "PGRK NOSUCH", want: /NO PORTFOLIO NOSUCH/ },
+  { cmd: "AAPL OSA STRAT=BULLCALL,270,290 T=0.3 IV=25 DAYS=14", want: /RISK PROFILE/ },
+  { cmd: "AAPL OMON", want: /MAX PAIN/ },
+  { cmd: "EURUSD=X OV K=1.1 TYPE=C T=0.5 IV=8 RF=3 RD=4", want: /GARMAN-KOHLHAGEN/ },
   { cmd: "ALRT", want: /INDICATOR ALERTS: ALRT AAPL RSI14<30/ },
   { cmd: "Q AAPL SYN0001 COLS=RSI14<101,PCT_SMA20,REL_VOL", want: /COLS: NEWEST DAILY BAR \(TO / },
   { cmd: "FSRC", want: /29 OF 30 US ETFS LOADED/ },
@@ -132,7 +143,7 @@ for (const c of CASES) {
     const errors = await connect(page);
     await run(page, c.cmd);
     const p = panel(page);
-    await expect(p).toContainText(c.want, { timeout: 15_000 });
+    await expect(p).toContainText(c.want, { timeout: c.timeout ?? 15_000 });
     await expect(p).not.toContainText(BAD);
     if (SHOTS) await page.screenshot({ path: join(SHOTS, `${c.cmd.replace(/[^A-Z0-9]+/gi, "_")}.png`) });
     expect(errors).toEqual([]);

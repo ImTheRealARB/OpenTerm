@@ -94,6 +94,15 @@ MIGRATIONS: list[str | list[str]] = [
         ("CREATE TABLE orders_imported (broker TEXT NOT NULL, fill_id TEXT NOT NULL, portfolio TEXT NOT NULL, order_id TEXT NOT NULL,"
          " at REAL NOT NULL, PRIMARY KEY (broker, fill_id))"),
     ],
+    # 20: the option chain recorder (Phase 28): one row per day, symbol, expiry, side and strike, plus the ATM numbers per expiry
+    [
+        ("CREATE TABLE chain_snaps (day TEXT NOT NULL, symbol TEXT NOT NULL, expiry INTEGER NOT NULL, kind TEXT NOT NULL,"
+         " strike REAL NOT NULL, iv REAL, oi INTEGER, volume INTEGER, PRIMARY KEY (day, symbol, expiry, kind, strike))"),
+        "CREATE INDEX chain_snaps_sym ON chain_snaps (symbol, expiry, day)",
+        ("CREATE TABLE chain_atm (day TEXT NOT NULL, symbol TEXT NOT NULL, expiry INTEGER NOT NULL, spot REAL NOT NULL,"
+         " atm_iv REAL, em_pct REAL, PRIMARY KEY (day, symbol, expiry))"),
+        "CREATE INDEX chain_atm_sym ON chain_atm (symbol, day)",
+    ],
 ]
 
 

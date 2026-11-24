@@ -7,7 +7,7 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
 `claude/phases-21-32-build-resume-8ff923` (worktree `.claude/worktrees/phases-21-32-build-resume-8ff923`; fast-forwarded from
-`...-0f4977`). Phases 21-24, 26 and 27 are DONE. Phase 28 is in progress (see its bullet). Phase 25 stays deferred.**
+`...-0f4977`). Phases 21-24 and 26-28 are DONE (Phase 28 gate 2026-11-24: pytest 4151, vitest 1668, e2e 417; OIB checked only against the fixture message, it needs a live Kite login). Next: Phase 29 (SEC fundamentals depth). Phase 25 stays deferred.**
 - Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): this session's `CLAUDE.md` and
   `docs/TEST_CHECKLIST.md` (new section 31) live in the worktree; copy both over the main checkout's files.
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on

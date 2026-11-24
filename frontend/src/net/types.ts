@@ -1600,3 +1600,47 @@ export interface Brief {
   sections: BriefSection[];
   watchlist?: string;
 }
+
+// --- Phase 28: option chain recorder (OREC) and option scan (OSCAN), `backend/openterm/options_rec_routes.py` ---
+export interface OptionRecStatus {
+  watchlist: string | null;
+  last: { watchlist: string; day: string; recorded: string[]; failed: { symbol: string; error: string }[]; at: number } | null;
+  first_day: string | null;
+  label: string;
+  schedule: string;
+}
+export interface OptionRecTermPoint { expiry: number; days: number; atm_iv: number | null }
+export interface OptionRecStats {
+  symbol: string;
+  day: string;
+  spot: number;
+  atm_iv: number | null;
+  iv_rank: number | null;
+  iv_percentile: number | null;
+  rank_days: number;
+  days_recorded: number;
+  em_pct: number | null;
+  oi: number;
+  call_oi: number;
+  put_oi: number;
+  pcr: number | null;
+  first_day: string;
+}
+export interface OptionRecSymbol extends Partial<OptionRecStats> {
+  symbol: string;
+  recorded: boolean;
+  label: string;
+  message?: string;
+  rank_note?: string;
+  term?: { day: string; points: OptionRecTermPoint[] }[];
+}
+export interface OptionScanResult {
+  universe: string;
+  filter: string;
+  checked: number;
+  matched: number;
+  rows: OptionRecStats[];
+  not_recorded: string[];
+  label: string;
+  note: string;
+}

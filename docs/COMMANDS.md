@@ -322,6 +322,17 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - `FSRC FEE<0.2 AUM>1B CAT=LARGE SORT=AUM`: the ETF screener (FEE in percent a year, AUM with K/M/B/T, CAT a category prefix). The first full load takes about 40 minutes in the background and resumes after a restart; until then the table says PARTIAL. Enter opens DES, C opens GP, E CSV.
 - Heat maps: `IMAP CRYPTO [N=50]` (size = market cap, colour = 24 hour change), `IMAP ETF [N=150] [FSRC filter]` (size = total assets), `IMAP NIFTY` / `IMAP NIFTY500` (equal tiles, because NSE's list has no weights; grouped by industry).
 
+## Phase 28: options analytics II
+
+- `AAPL OMON` now also shows, per contract, P(ITM), P(OTM), P(TOUCH) (model probabilities from each contract's IV), BREAKEVEN, EXTRINSIC and OI CHG (since the chain recorder's last snapshot), and in the headline the expected move both ways (ATM straddle and IV x sqrt(T)), MAX PAIN and the call / put walls. The OI AND VOLUME BY STRIKE section lists both sides per strike.
+- `AAPL OSA STRAT=BULLCALL,270,290 T=0.3 IV=25` adds a risk profile: P&L today, at a chosen date and at expiry, with delta and gamma along the curve and P(PROFIT). `D` / `Shift+D` move the date curve 7 days, `V` / `Shift+V` shift IV 5 points (also `DAYS=14 IVSHIFT=-5`).
+- `AAPL GP 1Y CONE` draws the 1 and 2 standard-deviation price ranges to each listed expiry from the chain's ATM IV.
+- `AAPL EMOV`: the nearest expiry's implied move against the stock's moves on its last 12 earnings reports (8-K item 2.02 dates; US filers).
+- `OREC TECH` records the option chains of watchlist TECH every weekday after the US close (off by default); `AAPL OREC` shows the recorded IV rank, percentile and term history. `OSCAN SPX IVR>50 EM>5 OI>1000 PCR>1.2` filters underlyings on those recordings.
+- `NIFTY26NOVFUT.NFO OIB 1M 1d` (Kite login needed): open interest per bar with the long buildup / short buildup / short covering / long unwinding reading.
+- FX options: `EURUSD=X OV K=1.1 TYPE=C T=0.5 IV=8 RF=3 RD=4` prices with Garman-Kohlhagen (RF = foreign rate, RD = domestic rate, both percent).
+- `PGRK <PORTFOLIO> [VS=SPY]`: Greeks of the OCC option positions in a portfolio (`AAPL260116C00200000`) and the beta-weighted delta to an index.
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

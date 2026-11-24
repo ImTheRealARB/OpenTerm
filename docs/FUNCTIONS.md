@@ -241,6 +241,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `OVDV` | Implied-vol surface: expiry x moneyness heat map and fitted smiles (equity from the chain, crypto from Deribit) | yes |  | `AAPL OVDV` |
 | `SKEW` | Skew by expiry: ATM IV, 25-delta risk reversal and butterfly, slope, term structure | yes |  | `AAPL SKEW` |
 | `HIVG` | Realized vs implied vol, variance risk premium, rolling RV, local IV rank | yes |  | `AAPL HIVG` |
+| `OSCAN` | Option scan: IV rank, expected move, OI, put/call ratio |  | `<UNIVERSE> [IVR>50] [EM>5]` | `OSCAN` |
+| `OREC` | Option chain recorder and IV rank | yes | `[WATCHLIST\|OFF]` | `AAPL OREC` |
+| `EMOV` | Earnings move: implied vs past reports | yes |  | `AAPL EMOV` |
+| `OIB` | Open interest buildup (India F&O) | yes |  | `AAPL OIB` |
+| `PGRK` | Portfolio option Greeks |  | `<PORTFOLIO> [VS=SPY]` | `PGRK` |
 
 ### Research: Statistics
 

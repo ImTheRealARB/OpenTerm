@@ -20,6 +20,7 @@ from ..options import chain as ch
 from ..options import ivstore
 from ..options import market as mk
 from ..options import pricer as pr
+from ..options import recorder as rec
 from ..options import surface as sf
 from ..options import surface_tables as st
 from ..options import tables as ot
@@ -31,6 +32,7 @@ from ..symbols import resolve
 from . import freshness
 from .calc_service import CalcMixin
 from .fut_service import FuturesMixin
+from .phase28 import Phase28Mixin
 
 if TYPE_CHECKING:
     from ..service import DataService
@@ -39,7 +41,7 @@ if TYPE_CHECKING:
 FIXTURE_NOW = datetime(2026, 10, 18, tzinfo=UTC)
 
 
-class Derivs(FuturesMixin, CalcMixin):
+class Derivs(FuturesMixin, CalcMixin, Phase28Mixin):
     TTL: ClassVar[dict[str, float]] = {
         "chain": 120.0, "omon": 120.0, "pcr": 120.0, "surface": 300.0, "hivg": 300.0,
     }
@@ -162,7 +164,9 @@ class Derivs(FuturesMixin, CalcMixin):
         chain = env["data"]
         T = ch.years_to_expiry(chain["expiry"], self.now())
         r, par, cdate, qv, note = await self.rate_and_yield(sym, T, q_typed)
-        data = ot.omon_payload(chain, T, r, par, cdate, qv, note, m, self.tradier_missing())
+        # Phase 28: open interest change since the chain recorder's last snapshot of this expiry (None when it never recorded one)
+        prev, prev_day = (None, None) if self.db is None else await rec.prev_oi(self.db, sym, chain["expiry"], self.today().isoformat())
+        data = ot.omon_payload(chain, T, r, par, cdate, qv, note, m, self.tradier_missing(), prev_oi=prev, prev_day=prev_day)
         return {**env, "data": data, "source": chain["source"]}
 
     async def kite_omon(self, sym: str, day: str | None, moneyness: str, q_typed: float | None, r_text: str | None) -> dict:
@@ -263,6 +267,13 @@ class Derivs(FuturesMixin, CalcMixin):
                 found = await self.atm_iv(sym, target, pr.pct(params, "q"))
                 if found:
                     i.iv, i.iv_basis = found[0], f"ATM IV FROM CHAIN, EXP {found[1]}"
+            # Phase 28: FX options (Garman-Kohlhagen) = Black-Scholes with the FOREIGN rate in the dividend-yield slot.
+            # `RF=` is the foreign rate (percent), `RD=` optionally overrides the domestic rate; both typed, never guessed.
+            rf, rd = pr.pct(params, "rf"), pr.pct(params, "rd")
+            if rf is not None:
+                i.q, i.q_basis, i.fx = rf, "FOREIGN RATE, typed (RF=)", True
+            if rd is not None:
+                i.r, i.r_basis = rd, "DOMESTIC RATE, typed (RD=)"
             i.price = pr.num(params, "price")
             steps = pr.num(params, "steps")
             if steps is not None:
@@ -317,8 +328,13 @@ class Derivs(FuturesMixin, CalcMixin):
         except pr.ParamError as e:
             raise DataError("bad_request", str(e)) from e
         missing = [name for name, val in (("EXP OR T", T), ("IV", iv)) if val is None]
+        try:
+            days = pr.num(params, "days") or 0.0
+            iv_shift = pr.pct(params, "ivshift") or 0.0
+        except pr.ParamError as e:
+            raise DataError("bad_request", str(e)) from e
         data = pr.osa_payload(sym, legs, spot, spot_basis, T, iv, iv_basis if iv is not None else "", r, r_basis, mult, comm,
-                              "quote + yahoo_options + treasury", missing)
+                              "quote + yahoo_options + treasury", missing, days, iv_shift)
         return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
 
     # --- surface: OVDV, SKEW, HIVG --------------------------------------------------------------

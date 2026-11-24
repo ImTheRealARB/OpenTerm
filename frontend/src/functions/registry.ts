@@ -192,6 +192,11 @@ const defs: FunctionDef[] = [
   { code: "DOM", title: "Depth ladder, read only: asks above, bids below (crypto)", needsSecurity: false, argsSchema: "[PAIR] [LEVELS 5-50]", load: () => import("./DOM") },
   { code: "LIQH", title: "Liquidity heatmap: order book depth over time while the panel is open (crypto)", needsSecurity: false, argsSchema: "[PAIR]", load: () => import("./LIQH") },
   { code: "REC", title: "Recorder: crypto trades and order book kept on this computer", needsSecurity: false, argsSchema: "[SYMBOL ON|OFF]", load: () => import("./REC") },
+  { code: "OSCAN", title: "Option scan: IV rank, expected move, OI, put/call ratio", needsSecurity: false, argsSchema: "<UNIVERSE> [IVR>50] [EM>5]", load: () => import("./OSCAN") },
+  { code: "OREC", title: "Option chain recorder and IV rank", needsSecurity: true, argsSchema: "[WATCHLIST|OFF]", load: () => import("./OREC") },
+  { code: "EMOV", title: "Earnings move: implied vs past reports", needsSecurity: true, load: () => import("./EMOV") },
+  { code: "OIB", title: "Open interest buildup (India F&O)", needsSecurity: true, load: () => import("./OIB") },
+  { code: "PGRK", title: "Portfolio option Greeks", needsSecurity: false, argsSchema: "<PORTFOLIO> [VS=SPY]", load: () => import("./PGRK") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));
