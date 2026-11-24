@@ -5,6 +5,23 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
+**Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
+- A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):
+  `docs/specs/FEATURE_GAP_PRO.md` (OpenTerm vs the professional terminals and charting platforms the owner named, feature by
+  feature, with data source and confidence) and `docs/specs/PHASES_21-33.md` (12 phases after Phase 33 was dropped 2026-11-24 under the NO LIVE ORDERS rule: chart depth, linked panels, volume and
+  order flow, replay, a scripting language, strategy optimisation, scanners and smart alerts, options analytics, SEC
+  fundamentals depth, macro and rates depth, query / Excel / notebooks, and AI inside functions).
+  Both are hidden by `.git/info/exclude`. **The owner picks feature by feature** (no bloat): the pick
+  list is `docs/specs/BUILD_PICKS_21-33.html` (local only, 107 tick boxes, one per feature, built from the `.md` beside it).
+  Ticks stay in the owner's browser; the owner presses "Copy my picks" and pastes the list into a session. Build only
+  what was pasted: write its tracked `docs/specs/PHASE_NN.md` without product names, and build as in Phases 11 to 20.
+- **NO LIVE ORDERS (owner decision 2026-11-24, in CLAUDE.md Non-negotiables):** Phase 33 is gone from the plan and the pick list. The live order code from Phase 18 step 1 was REMOVED on branch `claude/handoff-remaining-work-ac2782` (owner said so 2026-11-24): no `alpaca-live` or `kite` order broker, no `PUT /api/orders/live`, no `ALPACA_LIVE_*` key slot, the Kite client is GET-only, a live Alpaca host or a non-paper account is refused, `ORD ALPACA|KITE|LIVE` says `ORD PLACES PAPER ORDERS ONLY`. Kept: paper ORD, mandate, kill switch, ledger, read-only `SYNC`, JRNL. Every phase build checks the 5-hour limit and hands off at 95% (`PHASES_21-33.md` "How to run a phase" step 5).
+- The test checklist (`docs/TEST_CHECKLIST.md` + its page `docs/TEST_CHECKLIST.html`, local only; rebuild the page with
+  `python docs/build_checklist_page.py`) now has section 27 for the 2026-11-16 look-and-feel pass (216 items) and lists the
+  Phase 21 to 33 plan under "Not built".
+- State checked 2026-11-24: tag `v0.1.0` is on GitHub; the release is still a **DRAFT** with six installers (Windows `.msi` +
+  `.exe`, two macOS `.dmg`, Linux `.deb` + `.AppImage`); PR #45 is merged; PR #49 (live AI run write-up) is open.
+
 **Update 2026-11-16: UI parity pass (branch `claude/ui-parity-pass` from `origin/main` e135184, committed as `ec261e4` and pushed; MERGED to `main` 2026-11-16 as PR #50, merge commit `63c22f1`):**
 nine look-and-feel changes taken from the reference terminal's conventions (no names, assets or wording copied):
 1 GUI band colour `#7e001e`; 2 grouped command-line suggestions with More rows; 3 GUI "Related functions" button (the RELATED

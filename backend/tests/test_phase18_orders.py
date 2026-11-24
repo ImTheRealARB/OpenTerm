@@ -13,9 +13,10 @@ from openterm.orders.confirm import ConfirmTokens
 from openterm.orders.errors import OrderError
 from openterm.orders.ledger import OrderLedger
 from openterm.orders.model import Order, fingerprint
-from openterm.orders.service import LIVE_PHRASE, OrderService
+from openterm.orders.service import OrderService
 
-PAPER, LIVE = "alpaca-paper", "alpaca-live"
+PAPER = "alpaca-paper"
+LIVE = "alpaca-live"  # no longer a broker: used only to prove a live id or account is refused
 
 
 class FakeBroker(Broker):
@@ -106,7 +107,7 @@ def test_order_validation():
     o = Order.from_body(body(type="limit", limit_price=190.5, symbol=" aapl "))
     assert (o.symbol, o.limit_price, o.type) == ("AAPL", 190.5, "limit")
     for bad in ({"side": "hold"}, {"qty": 0}, {"qty": -1}, {"qty": float("nan")}, {"qty": True}, {"type": "limit"}, {"type": "stop"},
-                {"limit_price": 5}, {"tif": "forever"}, {"symbol": "A B"}, {"broker": "ibkr"}, {"product": "CNC"}, {"qty": 1.0000001}):
+                {"limit_price": 5}, {"tif": "forever"}, {"symbol": "A B"}, {"broker": "ibkr"}, {"broker": "alpaca-live"}, {"broker": "kite"}, {"product": "CNC"}, {"qty": 1.0000001}):
         with pytest.raises(OrderError) as e:
             Order.from_body(body(**bad))
         assert e.value.kind == "bad_request", bad
@@ -117,14 +118,6 @@ def test_a_request_can_never_set_paper_or_live(word):
     with pytest.raises(OrderError) as e:
         Order.from_body(body(**{word: "live"}))
     assert "NEVER SET BY A REQUEST" in str(e.value)
-
-
-def test_kite_orders_need_whole_shares_a_suffix_and_no_gtc():
-    ok = Order.from_body({"broker": "kite", "symbol": "RELIANCE.NS", "side": "buy", "qty": 3, "type": "limit", "limit_price": 2400, "product": "CNC"})
-    assert ok.product == "CNC"
-    for bad in ({"qty": 1.5}, {"symbol": "RELIANCE"}, {"tif": "gtc"}, {"product": "XYZ"}):
-        with pytest.raises(OrderError):
-            Order.from_body({"broker": "kite", "symbol": "RELIANCE.NS", "side": "buy", "qty": 3, **bad})
 
 
 def test_fingerprint_binds_every_field_and_the_mode():
@@ -269,13 +262,13 @@ async def test_a_broker_refusal_still_counts_and_is_ledgered(tmp_path):
 
 
 async def test_kill_switch_blocks_new_orders_and_cancels_everything(tmp_path):
-    paper, live, off = FakeBroker(), FakeBroker(LIVE, "live"), FakeBroker("kite", "live", ready=False)
-    svc = await make(tmp_path, paper, live, off)
+    paper, off = FakeBroker(), FakeBroker("other", "paper", ready=False)
+    svc = await make(tmp_path, paper, off)
     await svc.submit(body(), await confirmed(svc))
     tok = await confirmed(svc)  # a token minted before the kill must be dead after it
     res = await svc.kill()
-    assert res["kill"]["on"] and paper.cancel_all_calls == 1 and live.cancel_all_calls == 1 and off.cancel_all_calls == 0
-    assert res["brokers"][PAPER]["cancelled"] == 1 and res["brokers"]["kite"]["ok"] is None
+    assert res["kill"]["on"] and paper.cancel_all_calls == 1 and off.cancel_all_calls == 0
+    assert res["brokers"][PAPER]["cancelled"] == 1 and res["brokers"]["other"]["ok"] is None
     with pytest.raises(OrderError) as e:
         await svc.submit(body(), tok)
     assert e.value.kind == "kill_switch"
@@ -303,30 +296,21 @@ async def test_kill_reports_a_broker_that_fails_and_still_blocks(tmp_path):
         async def cancel_all(self):
             raise OrderError("unavailable", "ALPACA TIMEOUT")
 
-    svc = await make(tmp_path, Boom(), FakeBroker(LIVE, "live"))
+    svc = await make(tmp_path, Boom(), FakeBroker("other", "paper"))
     res = await svc.kill()
-    assert res["brokers"][PAPER]["ok"] is False and "TIMEOUT" in res["brokers"][PAPER]["detail"] and res["brokers"][LIVE]["ok"]
+    assert res["brokers"][PAPER]["ok"] is False and "TIMEOUT" in res["brokers"][PAPER]["detail"] and res["brokers"]["other"]["ok"]
     assert (await svc.status())["kill"]["on"]
 
 
-async def test_live_is_structural_off_by_default_and_needs_a_typed_phrase(tmp_path):
+async def test_no_live_orders_ever(tmp_path):
+    """Owner decision 2026-11-24: even a broker registered under a live id, reporting a live account, gets nothing sent."""
     live = FakeBroker(LIVE, "live")
     svc = await make(tmp_path, FakeBroker(), live)
-    lb = body(broker=LIVE)
-    with pytest.raises(OrderError) as e:
-        await svc.preview(lb)
-    assert e.value.kind == "live_off"
-    with pytest.raises(OrderError, match="TYPE"):
-        await svc.set_live(True, "yes")
-    await svc.set_live(True, LIVE_PHRASE)
-    pre = await svc.preview(lb)
-    assert pre["mode"] == "live" and pre["token"]
-    await svc.submit(lb, pre["token"])
-    assert len(live.sent) == 1
-    await svc.set_live(False, None)
-    with pytest.raises(OrderError) as e:
-        await svc.submit(lb, svc.tokens.issue("x")[0])
-    assert e.value.kind == "live_off"
+    with pytest.raises(OrderError):
+        Order.from_body(body(broker=LIVE))  # not a valid broker id at all
+    assert not hasattr(svc, "set_live") and "live_enabled" not in await svc.status()
+    assert {r["slot_mode"] for r in (await svc.status())["brokers"] if r["id"] == PAPER} == {"paper"}
+    assert not live.sent
 
 
 async def test_mode_comes_from_the_broker_not_the_request(tmp_path):
@@ -391,10 +375,9 @@ async def test_every_order_event_is_in_the_verified_hash_chain(tmp_path):
     await svc.cancel(PAPER, "B1")
     await svc.kill()
     await svc.unkill()
-    await svc.set_live(True, LIVE_PHRASE)
     events = await ledger_events(svc)
     assert [e["manifest"]["event"] for e in events] == [
-        "mandate_changed", "refused", "confirm_issued", "submitted", "accepted", "refused", "cancel", "kill_on", "kill_cancel_all", "kill_off", "live_on"]
+        "mandate_changed", "refused", "confirm_issued", "submitted", "accepted", "refused", "cancel", "kill_on", "kill_cancel_all", "kill_off"]
     assert all(e["kind"] == "order" for e in events)
     sub = next(e for e in events if e["manifest"]["event"] == "submitted")
     assert sub["meta"]["order"]["symbol"] == "AAPL" and sub["model"] == "alpaca-paper:paper" and sub["ref"].startswith("OT")

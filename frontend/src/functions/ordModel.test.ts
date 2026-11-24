@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confirmReady, confirmWord, EMPTY_DRAFT, mandateText, parseMandate, parseOrdArgs, toBody, type Draft } from "./ordModel";
+import { EMPTY_DRAFT, mandateText, NO_LIVE, parseMandate, parseOrdArgs, toBody, type Draft } from "./ordModel";
 import type { Mandate } from "../net/ordersApi";
 
 const M: Mandate = { symbols: ["AAPL"], max_shares: 100, max_notional: 5000, max_gross: 25000, max_trades_per_day: 10 };
@@ -11,9 +11,13 @@ describe("ORD command words", () => {
     expect(parseOrdArgs(["AAPL", "BUY", "10"])).toMatchObject({ broker: "alpaca-paper", symbol: "AAPL", side: "buy", qty: "10", type: "market" });
   });
 
-  it("reads broker, side, quantity, symbol, limit price and time in force in any order", () => {
-    expect(parseOrdArgs(["alpaca", "sell", "5", "msft", "lmt", "421.5", "gtc"])).toMatchObject({ broker: "alpaca-live", side: "sell", qty: "5", symbol: "MSFT", type: "limit", price: "421.5", tif: "gtc" });
-    expect(parseOrdArgs(["KITE", "RELIANCE.NS", "STP", "2900"])).toMatchObject({ broker: "kite", symbol: "RELIANCE.NS", type: "stop", price: "2900" });
+  it("reads side, quantity, symbol, limit price and time in force in any order", () => {
+    expect(parseOrdArgs(["paper", "sell", "5", "msft", "lmt", "421.5", "gtc"])).toMatchObject({ broker: "alpaca-paper", side: "sell", qty: "5", symbol: "MSFT", type: "limit", price: "421.5", tif: "gtc" });
+    expect(parseOrdArgs(["AAPL", "STP", "180"])).toMatchObject({ broker: "alpaca-paper", symbol: "AAPL", type: "stop", price: "180" });
+  });
+
+  it("never picks a live account (no live orders, ever)", () => {
+    for (const w of ["ALPACA", "kite", "LIVE"]) expect(parseOrdArgs([w, "AAPL", "BUY", "1"])).toEqual({ error: NO_LIVE });
   });
 
   it("rejects what it cannot read", () => {
@@ -40,14 +44,6 @@ describe("ORD ticket", () => {
     expect(toBody({ ...ok, type: "limit" })).toMatchObject({ error: expect.stringContaining("NEEDS A PRICE") });
   });
 
-  it("makes a live order a typed confirm and a paper order a single key", () => {
-    expect(confirmWord("paper", "AAPL")).toBeNull();
-    expect(confirmReady("paper", "AAPL", "")).toBe(true);
-    expect(confirmWord("live", "aapl")).toBe("AAPL");
-    expect(confirmReady("live", "AAPL", "")).toBe(false);
-    expect(confirmReady("live", "AAPL", " aapl ")).toBe(true);
-    expect(confirmReady("live", "AAPL", "MSFT")).toBe(false);
-  });
 });
 
 describe("ORD mandate text", () => {

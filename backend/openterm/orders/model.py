@@ -1,7 +1,8 @@
 """The order a user typed, validated. Pure: no network, no database.
 
-`Order.from_body` accepts exactly the fields below. A request can name a broker (`alpaca-paper`, `alpaca-live`, `kite`) but can never
-say "paper" or "live": those words are refused as fields, because the mode comes from the broker account (brokers/*.detect_mode).
+`Order.from_body` accepts exactly the fields below. The only broker is `alpaca-paper`: OpenTerm NEVER places live orders (owner
+decision 2026-11-24, CLAUDE.md). A request can never say "paper" or "live": those words are refused as fields, because the mode
+comes from the broker account (brokers/alpaca.detect_mode), and a live account is refused there.
 """
 
 from __future__ import annotations
@@ -15,13 +16,11 @@ import orjson
 
 from .errors import OrderError
 
-BROKERS = ("alpaca-paper", "alpaca-live", "kite")
+BROKERS = ("alpaca-paper",)
 SIDES = ("buy", "sell")
 TYPES = ("market", "limit", "stop")
 TIFS = ("day", "gtc", "ioc")
-KITE_PRODUCTS = ("CNC", "MIS", "NRML")
-KITE_SUFFIXES = ("NS", "BO", "NFO", "MCX")
-FIELDS = {"broker", "symbol", "side", "qty", "type", "tif", "limit_price", "stop_price", "product"}
+FIELDS = {"broker", "symbol", "side", "qty", "type", "tif", "limit_price", "stop_price"}
 SYMBOL_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-&]{0,19}\Z")
 MAX_QTY = 1e9
 MAX_PRICE = 1e9
@@ -52,7 +51,6 @@ class Order:
     tif: str
     limit_price: float | None = None
     stop_price: float | None = None
-    product: str | None = None
 
     @classmethod
     def from_body(cls, body) -> Order:
@@ -81,7 +79,7 @@ class Order:
         tif = body.get("tif", "day")
         if tif not in TIFS:
             raise OrderError("bad_request", "tif MUST BE day, gtc OR ioc")
-        qty = number(body.get("qty"), "qty", integer=broker == "kite")
+        qty = number(body.get("qty"), "qty")
         if not 0 < qty <= MAX_QTY:
             raise OrderError("bad_request", "qty MUST BE ABOVE 0")
         if round(qty, 6) != qty:
@@ -98,17 +96,7 @@ class Order:
         for name, v in (("limit_price", limit), ("stop_price", stop)):
             if v is not None and not 0 < v <= MAX_PRICE:
                 raise OrderError("bad_request", f"{name} MUST BE ABOVE 0")
-        product = body.get("product")
-        if broker == "kite":
-            if tif == "gtc":
-                raise OrderError("bad_request", "KITE HAS NO GTC: USE day OR ioc")
-            if "." not in sym or sym.rsplit(".", 1)[-1] not in KITE_SUFFIXES:
-                raise OrderError("bad_request", "KITE SYMBOL NEEDS A SUFFIX: RELIANCE.NS, TCS.BO, <X>.NFO OR <X>.MCX")
-            if product is not None and product not in KITE_PRODUCTS:
-                raise OrderError("bad_request", f"product MUST BE ONE OF {', '.join(KITE_PRODUCTS)}")
-        elif product is not None:
-            raise OrderError("bad_request", "product IS ONLY FOR kite")
-        return cls(broker, sym, side, qty, typ, tif, limit, stop, product)
+        return cls(broker, sym, side, qty, typ, tif, limit, stop)
 
     def ref_price(self) -> float | None:
         """The price the order itself names (limit, else stop); None for a market order, whose price must come from a quote."""
@@ -116,7 +104,7 @@ class Order:
 
     def public(self) -> dict:
         return {"broker": self.broker, "symbol": self.symbol, "side": self.side, "qty": self.qty, "type": self.type, "tif": self.tif,
-                "limit_price": self.limit_price, "stop_price": self.stop_price, "product": self.product}
+                "limit_price": self.limit_price, "stop_price": self.stop_price}
 
     def line(self) -> str:
         px = f" @ {self.limit_price:g}" if self.limit_price is not None else f" STOP {self.stop_price:g}" if self.stop_price is not None else ""

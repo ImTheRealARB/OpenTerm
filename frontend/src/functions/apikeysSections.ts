@@ -12,7 +12,7 @@ export const SECTIONS: readonly { title: string; names: readonly string[] }[] = 
   { title: "Crypto and on-chain", names: ["etherscan"] },
   { title: "Shipping and flights", names: ["aisstream", "opensky"] },
   { title: "Alerts and delivery", names: ["telegram", "smtp", "webhook"] },
-  { title: "Trading accounts (ORD)", names: ["alpaca_paper", "alpaca_live"] },
+  { title: "Trading accounts (ORD)", names: ["alpaca_paper"] },
   { title: "AI web search (opt-in)", names: ["brave", "tavily", "searxng"] },
 ];
 

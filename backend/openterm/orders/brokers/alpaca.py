@@ -1,10 +1,10 @@
-"""Alpaca trading API v2 (paper and live). Shapes are from the Alpaca Trading API documentation; the fixtures that replay them are
+"""Alpaca trading API v2, PAPER ACCOUNT ONLY (OpenTerm never places live orders: owner decision 2026-11-24). Shapes are from the Alpaca Trading API documentation; the fixtures that replay them are
 labelled doc-shaped and NOT A RECORDING.
 
-PAPER OR LIVE IS STRUCTURAL. Each adapter instance is built for one key slot (`alpaca_paper` or `alpaca_live`, keys.py) and talks to one
-host from `HOSTS`. `detect_mode(host, account_number)` derives the mode from that host and refuses a live host that answers with a
-paper-looking account number (Alpaca paper account numbers start with PA; checked against the docs, not against a live account). Nothing
-in a request, the settings or the AI can change the host. Keys travel in the APCA-API-* headers only.
+PAPER IS STRUCTURAL. The adapter has one key slot (`alpaca_paper`, keys.py) and one host, `HOSTS["paper"]`. `detect_mode(host,
+account_number)` derives the mode from the host and REFUSES anything that is not paper: the live host, an unknown host, or an
+account number that does not look like a paper one (Alpaca paper account numbers start with PA, per the docs). Nothing in a
+request, the settings or the AI can change the host. Keys travel in the APCA-API-* headers only.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from ..errors import OrderError
 from ..model import Order, qty_text
 from .base import OPEN_STATES, Broker, fnum
 
-HOSTS = {"paper": "https://paper-api.alpaca.markets", "live": "https://api.alpaca.markets"}
+HOSTS = {"paper": "https://paper-api.alpaca.markets"}
 HOST_MODE = {"paper-api.alpaca.markets": "paper", "api.alpaca.markets": "live"}
 ID_RE = re.compile(r"^[A-Za-z0-9\-]{8,64}\Z")
 NY = ZoneInfo("America/New_York")
@@ -33,13 +33,14 @@ STATUS = {"new": "NEW", "accepted": "NEW", "accepted_for_bidding": "NEW", "held"
 
 
 def detect_mode(host: str, account_number: str | None) -> str:
-    """paper | live from the host the adapter talks to; OrderError if the host is unknown or the account contradicts it."""
+    """Always "paper"; OrderError for the live host, an unknown host, or an account number that is not a paper one."""
     mode = HOST_MODE.get(urlparse(host).hostname or "")
     if mode is None:
         raise OrderError("mode_mismatch", "UNKNOWN ALPACA HOST: ORDERS REFUSED")
-    acct = (account_number or "").upper()
-    if mode == "live" and acct.startswith("PA"):
-        raise OrderError("mode_mismatch", "THE LIVE HOST ANSWERED WITH A PAPER ACCOUNT NUMBER: ORDERS REFUSED, CHECK THE LIVE KEY")
+    if mode == "live":
+        raise OrderError("mode_mismatch", "LIVE ALPACA HOST: OPENTERM NEVER PLACES LIVE ORDERS")
+    if not (account_number or "").upper().startswith("PA"):
+        raise OrderError("mode_mismatch", "THE PAPER HOST ANSWERED WITH A NON-PAPER ACCOUNT NUMBER: ORDERS REFUSED, CHECK THE PAPER KEY")
     return mode
 
 
@@ -110,7 +111,7 @@ class AlpacaTrading(Broker):
         return {"broker": self.id, "id": a.get("account_number") or "", "mode": mode, "currency": a.get("currency") or "USD",
                 "equity": fnum(a.get("equity")), "cash": fnum(a.get("cash")), "buying_power": fnum(a.get("buying_power")),
                 "status": a.get("status"), "trading_blocked": bool(a.get("trading_blocked")), "host": urlparse(self.host).hostname,
-                "note": "PAPER ACCOUNT: PLAY MONEY" if mode == "paper" else "LIVE ACCOUNT: REAL MONEY"}
+                "note": "PAPER ACCOUNT: PLAY MONEY"}  # detect_mode refuses every other mode
 
     async def positions(self) -> list[dict]:
         out = []

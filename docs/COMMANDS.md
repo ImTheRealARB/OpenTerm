@@ -292,13 +292,13 @@ JRNL STATS EUR                 one currency at a time (nothing is ever converted
 - The AI can read the statistics and findings (tool `journal`, never the individual trades). Import and delete answer this machine only.
 
 ## Phase 18 step 1: orders (`ORD`)
-Paper by default. The AI cannot place, change or cancel orders; every order needs your confirm. Loopback only.
-- `ORD [PAPER|ALPACA|KITE] [BUY|SELL] [QTY] [SYMBOL] [LMT PRICE | STP PRICE] [DAY|GTC|IOC]` opens the ticket, filled from the words (`ORD AAPL BUY 10 LMT 190.5`). `PAPER` (default) is the Alpaca paper account, `ALPACA` the Alpaca LIVE account, `KITE` Zerodha Kite (always live; Kite has no paper mode). The banner says PAPER PLAY MONEY or LIVE REAL MONEY.
-- Keys: `E` edit the ticket, `B` broker, `S` side, `T` type, `G` time in force, `Enter` review (mandate check and a one-time confirm token), `Y` send a reviewed PAPER order, `Esc` drop the review, `R` reload.
-- A LIVE order is sent only after: its key is set (`ALPACA_LIVE_KEY_ID` / `ALPACA_LIVE_SECRET_KEY`, or the Kite login), live orders are switched on (`L`, then type `I UNDERSTAND LIVE ORDERS USE REAL MONEY`), the mandate allows it, and you type the symbol again at the review. The token works once and expires after 60 seconds; changing anything on the ticket voids it.
+PAPER ONLY: OpenTerm never places live orders (owner decision 2026-11-24). Broker connections are read-only (Kite data, `SYNC`). The AI cannot place, change or cancel orders; every order needs your confirm. Loopback only.
+- `ORD [PAPER] [BUY|SELL] [QTY] [SYMBOL] [LMT PRICE | STP PRICE] [DAY|GTC|IOC]` opens the ticket on the Alpaca paper account (play money), filled from the words (`ORD AAPL BUY 10 LMT 190.5`). `ORD ALPACA`, `ORD KITE` and `ORD LIVE` are refused: `ORD PLACES PAPER ORDERS ONLY`. The server also refuses any account that is not a paper one.
+- Keys: `E` edit the ticket, `S` side, `T` type, `G` time in force, `Enter` review (mandate check and a one-time confirm token), `Y` send a reviewed PAPER order, `Esc` drop the review, `R` reload.
+- The token works once and expires after 60 seconds; changing anything on the ticket voids it.
 - `M` mandate: `AAPL,MSFT SHARES=100 NOTIONAL=5000 GROSS=25000 TRADES=10` (allowed symbols, max shares and max notional per order, max gross exposure, max orders per day). The default allows nothing.
 - `X` kill switch: blocks new orders (survives a restart) and cancels every open order at every connected broker; `U` releases it. `C` cancels the selected open order (Up/Down select).
-- `I` adds today's fills to a portfolio as lots labelled `paper`, `alpaca` or `kite-orders` (keep paper fills in a portfolio of their own). `SYNC` never removes them.
+- `I` adds today's fills to a portfolio as lots labelled `paper` (keep paper fills in a portfolio of their own). `SYNC` never removes them.
 - The panel also lists the blotter (account, open orders, fills, positions) and the order ledger with its hash-chain check. Zero keys shows `KEY REQUIRED` with the key to set.
 
 ## Extensions (`EXT`)

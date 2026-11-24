@@ -124,13 +124,10 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
             "Zerodha Kite Connect (read-only): NSE/BSE/NFO/MCX bars, ticks, option chains with open interest. Paid developer app, daily login",
             "https://developers.kite.trade/", hidden_fields=("KITE_ACCESS_TOKEN", "KITE_LOGIN_AT", "KITE_USER_ID"),
             hidden_secret=("KITE_ACCESS_TOKEN",)),
-    # Phase 18 (trading): account-specific keys, one slot per account type. The slot decides the broker host (orders/brokers/alpaca.py), never a request.
+    # Phase 18 (trading): the PAPER account only (no live orders, owner decision 2026-11-24). The slot decides the broker host (orders/brokers/alpaca.py), never a request.
     KeySpec("alpaca_paper", ("ALPACA_PAPER_KEY_ID", "ALPACA_PAPER_SECRET_KEY"), 18,
             "Alpaca PAPER trading account (play money): paper orders, positions, account (ORD). Separate from the data key above",
             "https://app.alpaca.markets/paper/dashboard/overview", secret_fields=("ALPACA_PAPER_SECRET_KEY",)),
-    KeySpec("alpaca_live", ("ALPACA_LIVE_KEY_ID", "ALPACA_LIVE_SECRET_KEY"), 18,
-            "Alpaca LIVE trading account (REAL MONEY): live orders (ORD) once you switch them on in ORD. Needs a funded account",
-            "https://app.alpaca.markets/brokerage/dashboard/overview", secret_fields=("ALPACA_LIVE_SECRET_KEY",)),
 ]}
 
 class KeyStoreError(Exception):
@@ -477,11 +474,9 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
                          {"get": "cell_value", "time": "2024-01", "category_code": "44X72", "data_type_code": "SM", "seasonally_adj": "no",  # seasonally_adj is a REQUIRED variable here: without it Census answers 400 and TEST showed ERROR for a good key (checked live 2026-11-05)
                           "key": k["CENSUS_API_KEY"]},
                          None, None),
-    # Phase 18: the read-only account call on each trading host (never an order).
+    # Phase 18: the read-only account call on the paper trading host (never an order).
     "alpaca_paper": lambda k: ("GET", "https://paper-api.alpaca.markets/v2/account", None,
                                {"APCA-API-KEY-ID": k["ALPACA_PAPER_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_PAPER_SECRET_KEY"]}, None),
-    "alpaca_live": lambda k: ("GET", "https://api.alpaca.markets/v2/account", None,
-                              {"APCA-API-KEY-ID": k["ALPACA_LIVE_KEY_ID"], "APCA-API-SECRET-KEY": k["ALPACA_LIVE_SECRET_KEY"]}, None),
     # Web search keys: one tiny query each (Brave and Tavily spend one of the free-tier searches). SearXNG is the user's own server.
     "brave": lambda k: ("GET", "https://api.search.brave.com/res/v1/web/search", {"q": "openterm", "count": "1"},
                         {"X-Subscription-Token": k["BRAVE_SEARCH_API_KEY"], "Accept": "application/json"}, None),

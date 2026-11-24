@@ -1,14 +1,13 @@
 /** Pure logic of the ORD panel: command words, the ticket draft, the mandate text. No React, no network. */
-import type { Mandate, OrderBody, OrderBroker, OrderMode } from "../net/ordersApi";
+import type { Mandate, OrderBody, OrderBroker } from "../net/ordersApi";
 
-export const ORD_USAGE = "USAGE: ORD [PAPER|ALPACA|KITE] [BUY|SELL] [QTY] [SYMBOL] [LMT PRICE | STP PRICE] [DAY|GTC|IOC]   e.g. ORD AAPL BUY 10 LMT 190.5";
+export const ORD_USAGE = "USAGE: ORD [BUY|SELL] [QTY] [SYMBOL] [LMT PRICE | STP PRICE] [DAY|GTC|IOC]   e.g. ORD AAPL BUY 10 LMT 190.5";
 
-/** PAPER is the default. ALPACA is the LIVE Alpaca account and KITE is always live (Kite has no paper mode). */
-export const BROKER_WORDS: Record<string, OrderBroker> = { PAPER: "alpaca-paper", ALPACA: "alpaca-live", KITE: "kite" };
-export const BROKER_ORDER: OrderBroker[] = ["alpaca-paper", "alpaca-live", "kite"];
-export const BROKER_NAME: Record<OrderBroker, string> = { "alpaca-paper": "ALPACA PAPER", "alpaca-live": "ALPACA LIVE", kite: "ZERODHA KITE" };
-/** What each slot is, for the loud banner. Mirrors the server's slot table only for display; the server decides what is real. */
-export const SLOT_MODE: Record<OrderBroker, OrderMode> = { "alpaca-paper": "paper", "alpaca-live": "live", kite: "live" };
+/** ORD is PAPER ONLY: OpenTerm never places live orders (owner decision 2026-11-24). `PAPER` is accepted as a no-op word. */
+export const BROKER_NAME: Record<OrderBroker, string> = { "alpaca-paper": "ALPACA PAPER" };
+/** Words that used to pick a live account: refused with a clear reason instead of being read as a symbol. */
+const LIVE_WORDS = new Set(["ALPACA", "KITE", "LIVE"]);
+export const NO_LIVE = "ORD PLACES PAPER ORDERS ONLY: OPENTERM NEVER PLACES LIVE ORDERS";
 
 export interface Draft {
   broker: OrderBroker;
@@ -30,8 +29,9 @@ export function parseOrdArgs(args: string[]): Draft | { error: string } {
   let sawSymbol = false;
   for (let i = 0; i < words.length; i++) {
     const w = words[i];
-    if (w in BROKER_WORDS) d.broker = BROKER_WORDS[w];
-    else if (w === "BUY" || w === "SELL") d.side = w.toLowerCase() as Draft["side"];
+    if (w === "PAPER") continue;
+    if (LIVE_WORDS.has(w)) return { error: NO_LIVE };
+    if (w === "BUY" || w === "SELL") d.side = w.toLowerCase() as Draft["side"];
     else if (w === "DAY" || w === "GTC" || w === "IOC") d.tif = w.toLowerCase() as Draft["tif"];
     else if (w === "LMT" || w === "LIMIT" || w === "STP" || w === "STOP") {
       const px = words[i + 1];
@@ -64,15 +64,6 @@ export function toBody(d: Draft): OrderBody | { error: string } {
   return body;
 }
 
-/** Two-step confirm: for a live order the user must also type the symbol (so Enter cannot be held down into a real order). */
-export function confirmWord(mode: OrderMode, symbol: string): string | null {
-  return mode === "live" ? symbol.toUpperCase() : null;
-}
-
-export function confirmReady(mode: OrderMode, symbol: string, typed: string): boolean {
-  const need = confirmWord(mode, symbol);
-  return need === null || typed.trim().toUpperCase() === need;
-}
 
 // --- mandate as one line of text: "AAPL,MSFT SHARES=100 NOTIONAL=5000 GROSS=25000 TRADES=10" ---
 export function mandateText(m: Mandate): string {

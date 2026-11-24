@@ -1,12 +1,12 @@
 /**
- * Orders (Phase 18 step 1), loopback only. There is NO `mode`, `live` or `paper` field in any request: paper or live is decided by the
- * backend from the broker slot (alpaca-paper, alpaca-live, kite), and every order needs the one-time `token` the server issued for exactly
+ * Orders (Phase 18 step 1), loopback only, PAPER ONLY: OpenTerm never places live orders (owner decision 2026-11-24). There is NO `mode`,
+ * `live` or `paper` field in any request: the server checks the broker account is a paper one, and every order needs the one-time `token` the server issued for exactly
  * that order in `preview`. The AI has no route to any of this.
  */
 import { send } from "./core";
 
-export type OrderBroker = "alpaca-paper" | "alpaca-live" | "kite";
-export type OrderMode = "paper" | "live";
+export type OrderBroker = "alpaca-paper";
+export type OrderMode = "paper";
 
 export interface OrderBody {
   broker: OrderBroker;
@@ -39,7 +39,6 @@ export interface BrokerRow {
 
 export interface OrdersStatus {
   kill: { on: boolean; at: number | null };
-  live_enabled: boolean;
   mandate: Mandate;
   trades_today: number;
   brokers: BrokerRow[];
@@ -136,8 +135,6 @@ export interface LedgerView {
   verify: { ok: boolean; count: number; broken_at: number | null; reason: string | null };
 }
 
-export const LIVE_PHRASE = "I UNDERSTAND LIVE ORDERS USE REAL MONEY";
-
 export const ordersApi = {
   status: () => send<OrdersStatus>("GET", "/api/orders/status"),
   blotter: (broker: OrderBroker) => send<Blotter>("GET", `/api/orders/blotter?broker=${encodeURIComponent(broker)}`),
@@ -147,7 +144,6 @@ export const ordersApi = {
   cancel: (broker: OrderBroker, order_id: string) => send<{ cancelled: string }>("POST", "/api/orders/cancel", { broker, order_id }),
   kill: () => send<KillResult>("POST", "/api/orders/kill"),
   unkill: () => send<{ kill: { on: boolean } }>("POST", "/api/orders/unkill"),
-  setLive: (on: boolean, phrase?: string) => send<{ live_enabled: boolean }>("PUT", "/api/orders/live", { on, phrase }),
   setMandate: (m: Mandate) => send<Mandate>("PUT", "/api/orders/mandate", m),
   importFills: (broker: OrderBroker, portfolio: string) => send<{ added: number; portfolio: string; detail: string }>("POST", "/api/orders/import", { broker, portfolio }),
 };
