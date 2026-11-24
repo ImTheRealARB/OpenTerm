@@ -188,6 +188,35 @@ async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length
     return await cdep(svc(request), pair)
 
 
+@router.get("/flow/trades")
+@data_errors
+async def flow_trades(request: Request, sym: str = Query("BTCUSDT", max_length=24), limit: int = Query(200, ge=1, le=1000)):
+    """TAS: newest Binance spot aggregated trades (exact aggressor side). Crypto only (400 otherwise)."""
+    from .world.flow import trades
+
+    return await trades(svc(request), sym, limit)
+
+
+@router.get("/flow/bigtrades")
+@data_errors
+async def flow_bigtrades(request: Request, sym: str = Query("BTCUSDT", max_length=24), min_qty: float | None = Query(None, alias="min", gt=0),
+                         usd: float | None = Query(None, gt=0)):
+    """BIGT: trades of at least `min` coins or `usd` dollars among the newest <= 5,000 Binance spot trades."""
+    from .world.flow import bigtrades
+
+    return await bigtrades(svc(request), sym, min_qty, usd)
+
+
+@router.get("/flow/footprint")
+@data_errors
+async def flow_footprint(request: Request, sym: str = Query("BTCUSDT", max_length=24), interval: str = Query("1m", max_length=3),
+                         bars: int = Query(30, ge=3, le=120), step: float | None = Query(None, gt=0)):
+    """FOOT: footprint of the newest `bars` bars (bid x ask volume per price level, delta, cumulative delta) from Binance spot trades."""
+    from .world.flow import footprint
+
+    return await footprint(svc(request), sym, interval, bars, step)
+
+
 @router.get("/fund")
 @data_errors
 async def crypto_funding(request: Request, sym: str = Query("", max_length=24)):

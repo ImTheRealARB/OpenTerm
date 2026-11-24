@@ -37,13 +37,13 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Stocks and funds", codes: ["Q", "QR", "WL", "WEI", "MOV", "EQS", "SECF", "MF"] },
     { name: "Calendars", codes: ["ECO", "ERN", "IPO", "CENB"] },
     { name: "Currencies", codes: ["FX", "FXC", "FXFA"] },
-    { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "ADDR"] },
+    { name: "Crypto", codes: ["CRYP", "CDEP", "FUND", "LIQ", "STBL", "DEFI", "ADDR", "TAS", "BIGT", "FOOT", "DOM", "LIQH"] },
     { name: "Commodities and energy", codes: ["CMDTY", "NRG", "WETR", "CT", "COT"] },
     { name: "Rates and bonds", codes: ["RATES", "WIRP", "YAS", "SWPM", "CDSW"] },
     { name: "Economy", codes: ["MACRO", "USMAC", "WECO", "ECST", "DBSRCH", "TRADE", "PRED"] },
     { name: "Ships, flights and maps", codes: ["MAP", "SHIP", "PORTS", "AIS", "FLT"] },
   ],
-  Charts: [{ name: "Charts", codes: ["GP", "IND", "GIP", "HIST", "SEAS", "IMAP", "FRED"] }],
+  Charts: [{ name: "Charts", codes: ["GP", "IND", "GIP", "HIST", "SEAS", "TPO", "IMAP", "FRED"] }],
   News: [{ name: "News", codes: ["HOME", "N", "CN", "EVTS", "BRIEF"] }],
   Research: [
     { name: "Company", codes: ["DES", "FA", "COMP", "MGMT", "DVD", "SPLT", "CACS"] },
@@ -60,7 +60,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
     { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL", "LINK", "GRAB"] },
     { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
-    { name: "System", codes: ["JOBS", "PERF", "LOG", "EXT"] },
+    { name: "System", codes: ["JOBS", "PERF", "LOG", "EXT", "REC"] },
   ],
 };
 

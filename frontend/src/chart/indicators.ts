@@ -5,6 +5,7 @@
 import { candlePatterns, smc, smcZonesFlat } from "./patterns";
 import { geoFlat, geoPatterns } from "./geoPatterns";
 import { adx, atr, cci, donchian, ichimoku, keltner, mfi, obv, psar, stoch, supertrend, willr } from "./studies";
+import { avwap } from "./avwap";
 
 export function sma(src: Float64Array, n: number): Float64Array {
   const out = new Float64Array(src.length).fill(NaN);
@@ -110,6 +111,9 @@ export const INDICATORS = [
   // Added at the END on purpose: GP's indicator picker toggles by position (key 1 = first), so older keys keep their meaning.
   "SMA100", "SMA200", "EMA50", "EMA200",
   "PAT:GEO", // Phase 21: chart shapes from swing pivots (geoPatterns.ts)
+  // Phase 23: VWAP with 1-3 standard deviation bands per session / week / month (avwap.ts); the profiles and the anchored
+  // VWAP are painted on the overlay instead (profileOverlay.ts), so the worker computes nothing for them.
+  "AVWAP", "AVWAP:W", "AVWAP:M", "VP", "VP:S", "VP:A", "AVWAP:A",
 ] as const;
 export type IndicatorName = (typeof INDICATORS)[number];
 
@@ -159,6 +163,16 @@ export function compute(s: Series, which: IndicatorName[]): Record<string, Float
       out.MACD_SIG = m.signal;
       out.MACD_HIST = m.hist;
     } else if (w === "VWAP") out.VWAP = vwap(s.t, s.h, s.l, s.c, s.v);
+    else if (w === "AVWAP" || w === "AVWAP:W" || w === "AVWAP:M") {
+      const b = avwap(s.t, s.h, s.l, s.c, s.v, w === "AVWAP" ? "SESSION" : w === "AVWAP:W" ? "WEEK" : "MONTH");
+      out.AV_MID = b.mid;
+      out.AV_U1 = b.up1;
+      out.AV_L1 = b.lo1;
+      out.AV_U2 = b.up2;
+      out.AV_L2 = b.lo2;
+      out.AV_U3 = b.up3;
+      out.AV_L3 = b.lo3;
+    }
     else if (w === "ATR") out.ATR = atr(s.h, s.l, s.c, 14);
     else if (w === "STOCH") {
       const k = stoch(s.h, s.l, s.c, 14, 3);

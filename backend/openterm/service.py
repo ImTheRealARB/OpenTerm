@@ -34,6 +34,7 @@ from .symbols import resolve
 
 log = logging.getLogger("openterm.service")
 
+MAX_SYMBOL_CHARS = 32  # the other routes' `max_length` for a symbol
 INTRADAY = {"1s", "1m", "2m", "5m", "15m", "30m", "60m", "90m"}  # candles that go stale within minutes: the short cache lifetime
 
 
@@ -146,6 +147,9 @@ class DataService:
             expr = symmath.parse_formula(self.local.synth[name], resolve)
         if expr is not None:
             return await self._history_formula(expr, stored, range_, interval)
+        # The route allows 200 characters for formulas; a plain symbol keeps the old 32-character bound (no source has longer ones).
+        if len(raw_symbol) > MAX_SYMBOL_CHARS:
+            raise DataError(K.BAD_REQUEST, f"SYMBOL OVER {MAX_SYMBOL_CHARS} CHARACTERS")
         symbol = resolve(raw_symbol)
         try:
             r, i = normalize(range_, interval)

@@ -1,11 +1,11 @@
 /**
  * Command-line settings (pure; unit-tested):
  *   THEME [AMBER|GREEN|WHITE|LIGHT]
- *   SETTINGS STARTUP HOME|LAYOUT | ROWNUMBERS AUTO|ON|OFF | TAPE ON|OFF | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
+ *   SETTINGS STARTUP HOME|LAYOUT | ROWNUMBERS AUTO|ON|OFF | TAPE ON|OFF | RECORDER CAP <MB>|DAYS <n> | MODE GUI|TERMINAL | THEME name | FONT name|DEFAULT | VIM ON|OFF | CLOCKS zone... | CHART [range] [type] | THOUSANDS COMMA|DOT|SPACE|APOS|NONE
  *            | SOURCE <capability> <source>|DEFAULT | SOURCE RESET | DECIMAL DOT|COMMA | POLL NEWS|MOVERS|CRYPTO|SOURCES seconds | AI MODEL|VISION|PROVIDER|STORETEXT ... | KEYS RESET | RESET
  */
 import {
-  AI_MODEL_RE, AI_PROVIDERS, AI_WEB_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, SOURCE_NAME_RE, isZone, type PollKey, type Settings,
+  AI_MODEL_RE, AI_PROVIDERS, AI_WEB_PROVIDERS, CHART_RANGES, CHART_TYPES, DEFAULTS, MAX_CLOCKS, POLL_BOUNDS, REC_BOUNDS, SOURCE_NAME_RE, isZone, type PollKey, type Settings,
 } from "./schema";
 import { FONT_NAME_RE } from "./font";
 import { FONT_PRESETS, cyclePreset, findPreset, type FontPreset } from "./fontPresets";
@@ -51,6 +51,16 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
         return fail("SETTINGS LINK CROSSHAIR|RANGE|INTERVAL ON|OFF (WHAT CHARTS IN ONE LINK GROUP SHARE)");
       }
       return { ok: true, next: { ...cur, link: { ...cur.link, [part]: on === "ON" } }, message: `LINKED CHARTS SHARE ${word}: ${on}` };
+    }
+    case "RECORDER": {
+      // Phase 24: SETTINGS RECORDER CAP <MB> | DAYS <n>: limits of the optional crypto recorder (REC). It stays OFF until REC <SYMBOL> ON.
+      const field = word === "CAP" ? "capMb" : word === "DAYS" ? "retentionDays" : null;
+      const raw = args[2] ?? "";
+      const n = /^\d{1,6}$/.test(raw) ? Number(raw) : NaN;
+      if (!field || !(n >= REC_BOUNDS[field][0] && n <= REC_BOUNDS[field][1])) {
+        return fail(`SETTINGS RECORDER CAP ${REC_BOUNDS.capMb[0]}-${REC_BOUNDS.capMb[1]} (MB OF DISK) | DAYS ${REC_BOUNDS.retentionDays[0]}-${REC_BOUNDS.retentionDays[1]} (HOW LONG A SESSION IS KEPT)`);
+      }
+      return { ok: true, next: { ...cur, recorder: { ...cur.recorder, [field]: n } }, message: `RECORDER ${field === "capMb" ? `DISK CAP ${n} MB` : `KEEPS SESSIONS ${n} DAYS`}` };
     }
     case "TAPE":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS TAPE ON|OFF (SHOW THE TICKER TAPE IN THE TOP BAR; TAPE ADD|DEL|RESET EDITS IT)");

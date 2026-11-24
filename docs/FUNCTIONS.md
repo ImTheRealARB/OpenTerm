@@ -120,6 +120,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `STBL` | Stablecoin supply by coin and chain (DefiLlama) |  | `[CHAIN]` | `STBL` |
 | `DEFI` | DeFi yield pools over US$1M TVL by chain or project (DefiLlama) |  | `[CHAIN\|PROJECT]` | `DEFI` |
 | `ADDR` | EVM address balance, recent transactions and gas price on Ethereum or L2s (Etherscan, free key ETHERSCAN_KEY; read only) |  | `[0xADDRESS\|GAS] [ETH\|ARB\|OP\|BASE\|POLY\|BSC]` | `ADDR` |
+| `TAS` | Time and sales: every trade with its buy or sell side, newest first (crypto, exact) |  | `[SYMBOL]` | `TAS` |
+| `BIGT` | Big trades: the largest recent trades, buys and sells (crypto, exact) |  | `[SYMBOL] [MIN=COINS\|USD=AMOUNT]` | `BIGT` |
+| `FOOT` | Footprint: bid x ask volume per price level per bar, delta, cumulative delta (crypto, exact) |  | `[SYMBOL] [INTERVAL] [BARS]` | `FOOT` |
+| `DOM` | Depth ladder, read only: asks above, bids below (crypto) |  | `[PAIR] [LEVELS 5-50]` | `DOM` |
+| `LIQH` | Liquidity heatmap: order book depth over time while the panel is open (crypto) |  | `[PAIR]` | `LIQH` |
 
 ### Markets: Commodities and energy
 
@@ -167,11 +172,12 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H\|4H\|2D\|2W\|Q\|YEARLY\|1S] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA\|RENKO\|KAGI\|PNF\|LINEBREAK\|RANGE\|COLUMNS\|HIGHLOW\|STEP\|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
+| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H\|4H\|2D\|2W\|Q\|YEARLY\|1S] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA\|RENKO\|KAGI\|PNF\|LINEBREAK\|RANGE\|COLUMNS\|HIGHLOW\|STEP\|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200 AVWAP AVWAP:W AVWAP:M VP VP:S VP:A AVWAP:A]` | `AAPL GP` |
 | `IND` | Indicator library, formulas and presets for GP |  | `[search]` | `IND` |
 | `GIP` | Intraday tick chart (candles built from the live ticks seen since the session began) | yes | `[1S\|5S\|15S\|1M]` | `AAPL GIP` |
 | `HIST` | Historical price table | yes | `[1M..MAX] [D\|W\|MO]` | `AAPL HIST` |
 | `SEAS` | Seasonality (average return by month, weekday, day of month, ISO week) | yes | `[MONTH\|WEEKDAY\|DOM\|WOY]` | `AAPL SEAS` |
+| `TPO` | Market profile (TPO): letters per time bracket, POC, value area, initial balance |  | `[SYMBOL] [DAYS 1-20] [BRACKET=30]` | `TPO` |
 | `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]` | `IMAP` |
 | `FRED` | Plot a FRED series |  | `SERIES_ID [1Y\|2Y\|5Y\|10Y\|20Y\|MAX]` | `FRED` |
 
@@ -323,6 +329,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
 | `LOG` | Backend log |  |  | `LOG` |
 | `EXT` | Third-party extensions: list, enable, run (their code runs with your permissions) |  | `[LIST \| ENABLE name \| DISABLE name \| name [route] [args]]` | `EXT` |
+| `REC` | Recorder: crypto trades and order book kept on this computer |  | `[SYMBOL ON\|OFF]` | `REC` |
 
 ## Global keyboard shortcuts
 

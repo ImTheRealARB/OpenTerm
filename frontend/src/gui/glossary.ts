@@ -63,6 +63,10 @@ export const GLOSSARY: Readonly<Record<string, string>> = {
   "NAV": "Net asset value: what one unit of a fund is worth, from the total value of everything the fund holds divided by its units.",
   "APY": "Annual percentage yield: the yearly return including interest earned on interest.",
   "DURATION":"How sensitive a bond's price is to interest rates, in years. A duration of 5 means roughly a 5% price drop if rates rise 1 point.",
+  "AGGRESSOR": "In every trade one side was waiting (a resting order) and the other crossed the gap to trade right away. The one who crossed is the aggressor: a BUY aggressor paid the ask, a SELL aggressor hit the bid.",
+  "DELTA": "Coins bought at the ask minus coins sold at the bid in the same period. Positive means buyers were the more aggressive side. The cumulative delta adds the deltas up bar after bar.",
+  "IMBALANCE": "One side traded at least three times as much as the other at neighbouring prices (buyers against the bid one level below, sellers against the ask one level above). It marks where one side was pushing hard.",
+  "FOOTPRINT": "A chart that shows, for every price inside every bar, how much was bought at the ask and sold at the bid, instead of only the bar's open, high, low and close.",
 };
 
 /** The line for a term (case-insensitive), or null when we have none. */

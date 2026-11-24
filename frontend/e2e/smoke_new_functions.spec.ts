@@ -43,6 +43,18 @@ const CASES: Case[] = [
   { cmd: "GP 2*SYN0001-SYN0002 1Y", want: /2\*SYN0001 - SYN0002/ },
   { cmd: "TRA SYN0001 1Y VS SYN0002", want: /SYN0002/ },
   { cmd: "BETA SYN0001 VS SYN0002 1Y", want: /SYN0002/ },
+  // Phase 23 (TPO uses the recorded RELIANCE.NS 5-minute day; DOM / LIQH the recorded BTCUSDT book)
+  { cmd: "AAPL GP 1Y VP VP:S", want: /VP:S/ },
+  { cmd: "AAPL GP 1Y AVWAP AVWAP:W", want: /AVWAP:W/ },
+  { cmd: "TPO RELIANCE.NS 1", want: /POC/ },
+  { cmd: "DOM BTCUSDT", want: /MID/ },
+  { cmd: "LIQH BTCUSDT", want: /SNAPSHOTS/ },
+  { cmd: "TAS BTCUSDT", want: /EXACT/ },
+  { cmd: "BIGT BTCUSDT USD=1000", want: /EXACT/ },
+  { cmd: "FOOT BTCUSDT", want: /EXACT/ },
+  // Phase 24
+  { cmd: "REC", want: /OFF BY DEFAULT/ },
+  { cmd: "AAPL GP 1Y REPLAY", want: /REPLAY .* BAR \d+\/\d+ PAUSED/ },
 ];
 
 let backend: ChildProcess | null = null;
@@ -161,8 +173,10 @@ test("smoke: LINK A makes a second panel follow a new security", async ({ page }
   await page.keyboard.press("Control+\\"); // panel 2, focused
   await run(page, "IBM DES");
   await run(page, "LINK A");
-  await run(page, "MSFT DES"); // a new security in panel 2 reaches panel 1 (same group)
-  await expect(panel(page, 1)).toContainText(/MSFT/, { timeout: 15_000 });
+  // A new security in panel 2 reaches panel 1 (same group). SYN0002 (synthetic) has bars in the fixture backend; MSFT does
+  // not, so panel 1 would end on NO DATA FOR SYMBOL a moment later and make this test flaky.
+  await run(page, "SYN0002 DES");
+  await expect(panel(page, 1)).toContainText(/SYN0002 1Y/, { timeout: 15_000 });
   await expect(panel(page, 1)).not.toContainText(BAD);
   expect(errors).toEqual([]);
 });

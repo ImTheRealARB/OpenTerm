@@ -26,6 +26,7 @@ import {
 import { fmtPrice } from "../format";
 import { gauges } from "../perf/metrics";
 import type { IndicatorName } from "./indicators";
+import { OVERLAY_STUDIES, paintOverlayStudies, type OverlayStudy } from "./profileOverlay";
 import { diffIndicators } from "./indicatorDiff";
 import { NEEDED, hitTest, pendingPrims, prims, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo, type Prim } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
@@ -470,6 +471,11 @@ export function useGpLayer(
       line(r.BB_LO, c.dim, 0);
     }
     if (r.VWAP) line(r.VWAP, c.warn, 0, "VWAP");
+    // Phase 23: VWAP bands (avwap.ts). Each indicator draws from its own result group, so the keys can repeat across AVWAP / :W / :M.
+    if (r.AV_MID) {
+      line(r.AV_MID, c.warn, 0, name);
+      for (const k of ["AV_U1", "AV_L1", "AV_U2", "AV_L2", "AV_U3", "AV_L3"]) line(r[k], c.dim, 0);
+    }
     if (r.RSI) {
       const rs = line(r.RSI, c.acc, pane, "RSI14");
       rs.createPriceLine({ price: 70, color: c.line, lineWidth: 1, axisLabelVisible: false });
@@ -622,6 +628,13 @@ export function useGpLayer(
         xOfLogical: (l) => ts.logicalToCoordinate(l as Logical),
       };
       geoRef.current = geo;
+      // Phase 23: volume profiles and the anchored VWAP (profileOverlay.ts) sit under the drawings.
+      const studies = (indicators ?? []).filter((x): x is OverlayStudy => (OVERLAY_STUDIES as readonly string[]).includes(x));
+      const vis = ts.getVisibleLogicalRange();
+      gauges.set("chart.profiles", compareOn.current ? 0 : paintOverlayStudies({
+        ctx, bars, geo, colors: colors.current, studies, drawings: d?.drawings ?? [],
+        visible: vis ? [Math.max(0, Math.floor(vis.from)), Math.ceil(vis.to) + 1] : [0, bars.t.length],
+      }));
       if (!d || compareOn.current || (!d.drawings.length && !d.pending)) {
         gauges.set("chart.drawSegs", 0);
         return;

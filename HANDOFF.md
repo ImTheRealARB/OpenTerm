@@ -5,7 +5,10 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
-**RESUME HERE: Phases 21-32 build (started 2026-11-24, branch `claude/phases-21-32-build-2c2ded`, local commits, NOT pushed).**
+**RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
+`claude/phases-21-32-build-resume-61e1cd` (worktree `.claude/worktrees/phases-21-32-build-resume-61e1cd`; it contains the old
+`claude/phases-21-32-build-2c2ded`). Phases 21, 22, 23 and 24 are DONE. NEXT: Phase 26 (strategy lab); Phase 25 stays deferred.
+Paused 2026-11-24 ~10:00 UTC at 80%+ of the 5-hour window, after the Phase 23+24 commit (nothing in flight).**
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
   it) under the MINIMAL TEST BAR (local `docs/specs/PHASES_21-33.md` "How to run a phase" step 3) and the 95% 5-hour guard.
   The pick list is the whole of local `docs/specs/BUILD_PICKS_21-33.md`; no paste needed.
@@ -31,9 +34,28 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
   fixed and the smoke spec rerun 18/18. The final full rerun is folded into Phase 23's gate (the tree already held Phase 23
   work). No bench for Phase 22 (plan: bench after 21, 23, 27, 32). Deferred: none of the items; owner checks by hand.
 
+- **Phase 23 (volume and order flow): BUILT 2026-11-24** (spec `docs/specs/PHASE_23.md`). GP studies `VP VP:S VP:A AVWAP AVWAP:W
+  AVWAP:M AVWAP:A` (maths `chart/volumeProfile.ts`, `chart/avwap.ts`; painter `chart/profileOverlay.ts`, called from the GP overlay in
+  `chart/gpLayer.ts`; anchors = the user's VLINE drawings; gauge `chart.profiles`), `TPO` (`functions/tpoMath.ts`, 5-minute bars),
+  `DOM` / `LIQH` (`functions/domMath.ts`, reuse `/api/world/cdep`; LIQH memory only, 1,440 snapshots), crypto order flow
+  `TAS BIGT FOOT` (Binance spot aggTrades: `world/orderflow.py`, `world/flow.py`, `/api/world/flow/{trades,bigtrades,footprint}`,
+  capability `crypto_trades`, REAL fixture `binance_aggtrades_btcusdt.json`, recorder `scripts/record_phase23.py`).
+  Deferred (owner to decide): India DOM from Kite depth and the Kite tick-rule TAS (`orderflow.tick_rule` exists + tested, not
+  wired: needs a `/ws` subscription filtered on source `k`); volume profiles use the chart's own bars (labelled ESTIMATED FROM
+  <interval> BARS), not finer bars fetched separately; the recorder stays off (owner decision 1 pending).
+
+- **Phase 24 (replay and practice): BUILT 2026-11-24** (spec `docs/specs/PHASE_24.md`). `GP ... REPLAY [date]` (`chart/replay.ts`,
+  `functions/useReplay.ts`; ChartView gets only the revealed bars; no-look-ahead test over every indicator), practice book (Shift+B/S/F,
+  fills at the next bar's open, Shift+J saves to JRNL through the generic CSV import), linked replay (link-bus kind `replay`), recorder
+  `REC SYM ON|OFF` (`recorder.py`, `recorder_routes.py` under `/api/recorder`, files in `<db dir>/recordings/`, SETTINGS RECORDER
+  CAP|DAYS, off by default, loopback-only writes; `FOOT|TAS|DOM SYM REC=<id>` replay a session). Deviations: the practice book is
+  per panel, not an ORD paper account, and has no stop / target orders (Phase 26 brings the intrabar rule); Kite tick recording not built.
+
 Progress (one line per phase; newest last):
 - Phase 21: built 2026-11-24.
 - Phase 22: built 2026-11-24 (gate green after one smoke fix).
+- Phase 23: built 2026-11-24.
+- Phase 24: built 2026-11-24 (committed together with 23; gate and bench in the commit message).
 
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):

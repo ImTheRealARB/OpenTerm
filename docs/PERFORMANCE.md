@@ -913,3 +913,11 @@ the panel-header Related and `?` buttons (`Panel.tsx`), the tab badge (`gui/tabL
 sparks client (`net/marketApi.ts`). Grid.tsx and the board graphics are not in the entry chunk. Keystroke echo under streaming
 load read 15.4 ms (was 9.4) with the machine still warm from the gate; a rested rerun read **39/39** with 10.9 ms (keystroke echo
 14.9 ms, tick to pixel 41.9 ms, 10k-row grid scroll 16.8 ms, bundle 127.1 KB), so that was machine heat, not the code.
+
+## Phases 22-24 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-61e1cd`)
+
+Bench after Phase 23 (with Phase 24 in the tree): **39/39 PASS**. Startup bundle 129.9 KB gz (UI parity pass: 127.1; Phase 21 left it
+within +0.5 KB of that), so Phases 22-24 added about 2.3 KB at startup: the link chip and link groups in `Panel.tsx` / `state/linkGroups.ts`,
+the GRAB binding, formula detection in `command/markets.ts` and the watchlist FLAG / SECTION grammar (`command/watchlistArgs.ts` imports
+`functions/wlFlags.ts`). Tick to pixel 36.2 ms (budget 50), AI first event 23.1 ms (60). The new Phase 23 / 24 budgets (volume profile of
+95k bars <= 40 ms, footprint render <= 16 ms, replay step <= 16 ms) are proposed in the phase specs and not yet gated.

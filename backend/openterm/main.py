@@ -30,6 +30,7 @@ from .origin import OriginGuardMiddleware
 from .pin import SourcePinMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
+from .recorder_routes import router as recorder_router
 from .remote import RemoteAuthMiddleware
 from .remote_routes import router as remote_router
 from .responses import Orjson, OrjsonRoute
@@ -134,6 +135,16 @@ async def lifespan(app: FastAPI):
     app.state.hub = hub
     app.state.userdata = UserData(db)
 
+    # --- Phase 24: the optional recorder (OFF by default: nothing records until a user starts it). Files live beside the database. ---
+    from .recorder import DEFAULT_POLL_S, Recorder
+
+    rec_root = None if str(db_path) == ":memory:" else (db_path if db_path.is_absolute() else ROOT / db_path).parent / "recordings"
+
+    async def _stored_settings() -> dict:
+        return (await SettingsStore(db).get())["settings"] or {}
+
+    app.state.recorder = Recorder(rec_root, service, _stored_settings, DEFAULT_POLL_S)
+
     # --- Phase 11: key store. Key tests use the fixture transport in fixture mode. ---
     redact.install()
     app.state.keys = store
@@ -220,6 +231,7 @@ async def lifespan(app: FastAPI):
             await asyncio.gather(*pending, return_exceptions=True)
         if (mcpm := getattr(app.state, "mcp_manager", None)) is not None:
             await mcpm.close_all()  # third-party MCP servers: kill their processes
+        await app.state.recorder.aclose()  # end every running recording cleanly (its last line is written)
         await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
@@ -241,6 +253,7 @@ app.add_middleware(RemoteAuthMiddleware)  # outermost; inert unless OPENTERM_REM
 app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)
+app.include_router(recorder_router)
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)

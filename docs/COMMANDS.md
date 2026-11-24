@@ -289,6 +289,19 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - `IMPORT ES5 TZ=America/New_York` takes intraday bars too: a file where a date repeats with times is read as minute bars (1 to 90 min, spacing read from the data). Times need an offset (`-05:00`, `Z`) or the `TZ=` zone. Chart them with that candle length: `ES5 GP 5D 5MIN`.
 - `GRAB` copies the focused panel to the clipboard as a picture (charts and grids included), `GRAB SAVE` downloads it as a PNG, `GRAB VIA TG,EMAIL` sends it through the delivery channels set in `DLVR` (fixture mode never sends). Shortcut Alt+P.
 
+## Phase 23: volume and order flow
+
+- GP studies: `VP` (volume profile of the bars on screen), `VP:S` (one per session), `VP:A` (from your last vertical line, or between the last two), `AVWAP` / `AVWAP:W` / `AVWAP:M` (VWAP with 1, 2 and 3 standard deviation bands, restarting each session / week / month), `AVWAP:A` (anchored at your last vertical line). Profiles are estimated from the chart's bars (each bar's volume spread over its range) and say so on the chart.
+- `TPO AAPL 5 BRACKET=30`: market profile of the last 5 days from 5-minute bars: letters per 30-minute bracket, POC, value area, initial balance, single prints, poor highs / lows.
+- `TAS BTCUSDT`, `BIGT BTCUSDT USD=100000`, `FOOT BTCUSDT`: time and sales, big trades and footprint from the exchange's own trades (exact, crypto only).
+- `DOM BTCUSDT [LEVELS]`: read-only depth ladder (asks above, bids below). `LIQH BTCUSDT`: liquidity heatmap of the book while the panel is open (memory only, at most 2 hours).
+
+## Phase 24: replay and practice
+
+- `AAPL GP 1Y REPLAY 2024-03-01` hides every bar after that day (no date: the last 100 bars). `.` next bar, `,` back, Space play / pause, `s` speed (1, 2, 5, 10 bars a second). Indicators and studies only ever see the revealed bars.
+- Practice while replaying: Shift+B buys 100, Shift+S sells 100, Shift+F flattens; each fills at the next bar's open. Shift+J saves the session's trades to JRNL as `REPLAY <SYMBOL> <date>`. Nothing is ever sent to a broker.
+- Linked GP panels (`LINK A`) that are also replaying follow the same clock.
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

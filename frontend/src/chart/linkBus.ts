@@ -6,7 +6,9 @@
 export type LinkMsg =
   | { group: string; from: number; kind: "cross"; t: number | null }
   | { group: string; from: number; kind: "range"; a: number; b: number }
-  | { group: string; from: number; kind: "interval"; interval: string | undefined };
+  | { group: string; from: number; kind: "interval"; interval: string | undefined }
+  // Phase 24: the replay clock (time of the last revealed bar); only panels that are replaying follow it.
+  | { group: string; from: number; kind: "replay"; t: number };
 
 const subs = new Set<(m: LinkMsg) => void>();
 

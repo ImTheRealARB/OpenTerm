@@ -143,6 +143,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "crypto_options": ["deribit"],
     # Crypto depth (Binance first; OKX when Binance fails, e.g. HTTP 451), funding, liquidations (OKX only), DefiLlama
     "crypto_depth": ["binance_deriv", "okx", "kraken", "coinbase"],
+    "crypto_trades": ["binance_deriv"],  # Phase 23 order flow: exact aggressor side exists only in Binance spot aggTrades here (no fallback built)
     "crypto_funding": ["binance_deriv", "okx"],
     "crypto_funding_detail": ["binance_deriv", "okx"],
     "crypto_liq": ["okx"],

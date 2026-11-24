@@ -192,6 +192,22 @@ def _link(raw) -> dict:
     return {k: raw.get(k, True) for k in LINK_SYNC}
 
 
+REC_FIELDS = {"capMb": (1, 100_000), "retentionDays": (1, 3650)}  # Phase 24 recorder: disk cap in MB, days to keep a session
+
+
+def _recorder(raw) -> dict:
+    """Phase 24 recorder limits: `{capMb, retentionDays}`, whole numbers in range. Missing keys take the defaults (500 MB, 14 days)."""
+    if not isinstance(raw, dict) or set(raw) - set(REC_FIELDS):
+        raise _bad("recorder MUST BE {capMb, retentionDays}")
+    out = {"capMb": 500, "retentionDays": 14}
+    for k, v in raw.items():
+        lo, hi = REC_FIELDS[k]
+        if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+            raise _bad(f"recorder.{k} MUST BE A WHOLE NUMBER FROM {lo} TO {hi}")
+        out[k] = v
+    return out
+
+
 def _vim(raw) -> bool:
     if not isinstance(raw, bool):
         raise _bad("vim MUST BE true OR false")
@@ -237,6 +253,7 @@ FIELDS = {
     "tape": _tape,
     "tapeSymbols": _tape_symbols,
     "link": _link,
+    "recorder": _recorder,
 }
 
 

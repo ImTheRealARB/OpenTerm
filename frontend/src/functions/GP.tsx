@@ -3,6 +3,8 @@ import { registerChartShot } from "../chart/shot";
 import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent, type CustomItem } from "../chart/ChartView";
 import { isBrickType } from "../chart/brickNote";
 import { onLink, publishLink } from "../chart/linkBus";
+import { REPLAY_QTY, useReplay } from "./useReplay";
+import { unrealized } from "../chart/replay";
 import { onIndicatorRequest, setChartIndicators, type IndicatorRequest } from "../chart/indicatorBus";
 import { alertDirection, fmtAlertPrice, roundAlertPrice } from "../chart/alertPrice";
 import { createDrawSaver } from "../chart/drawSave";
@@ -197,7 +199,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
   }, [symbol, p.range, p.interval, compareKey, reload, source]);
 
   // Live: extend the last bar from ticks.
-  const resolved = state.loaded?.source === "formula" ? undefined : state.loaded?.bars.symbol;
+  const resolved = state.loaded?.source === "formula" || p.replay ? undefined : state.loaded?.bars.symbol;
   useEffect(() => {
     if (!resolved) return;
     const unsub = subscribe([resolved]);
@@ -272,6 +274,8 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
   }, [symbol, p.evt, reload]);
 
   const L = state.loaded;
+  // Phase 24: bar replay. The chart is given only the revealed bars (`rp.shown`), so no study can see a hidden one.
+  const rp = useReplay(panelId, L?.bars, p.replay, linkGroupForReplay(panelId), symbol);
   const markers = useMemo<ChartMarkerEvent[] | undefined>(() => {
     if (!L || !p.evt || !events?.env) return undefined;
     const iv = INTERVAL_S[L.bars.interval] ?? 86400;
@@ -616,6 +620,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
         )}
         {L?.stale && <span className="warn"> · STALE</span>}
         {L?.formula && <FormulaNote f={L.formula} />}
+        {rp.active && <ReplayLine r={rp} />}
         {L?.fallback.length ? <span className="warn"> · {fallbackText(L.fallback, L.fallbackNotes)}</span> : null}
         {L?.compareErrors.map((m) => (
           <span className="err" key={m}> · {m}</span>
@@ -716,7 +721,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
       {L && (
         <ChartView
           ref={chart}
-          data={L.bars}
+          data={rp.shown ?? L.bars}
           compare={brick ? null : overlayCompare}
           type={p.type}
           log={p.log}
@@ -806,6 +811,29 @@ function FormulaNote({ f }: { f: FormulaInfo }) {
         </span>
       )}
       {f.utc_fallback.length > 0 && <span className="warn"> · {f.utc_fallback.join(" ")} ZONE UNKNOWN: JOINED ON UTC DATES</span>}
+    </span>
+  );
+}
+
+/** The panel's link group, read once per render for the replay clock (the full link logic lives further down in GP). */
+function linkGroupForReplay(panelId: number): string | undefined {
+  return workspace.get().panels[panelId]?.link;
+}
+
+/** Phase 24: where the replay is and what the practice book holds. */
+function ReplayLine({ r }: { r: ReturnType<typeof useReplay> }) {
+  const b = r.book;
+  const t = r.shown && r.shown.t.length ? new Date(r.shown.t[r.shown.t.length - 1] * 1000).toISOString().slice(0, 10) : "";
+  const pnl = b.realized + unrealized(b, r.last);
+  return (
+    <span data-testid="gp-replay">
+      <span className="warn"> · REPLAY {t} BAR {r.n}/{r.total} {r.playing ? `PLAYING ${r.speed}/S` : "PAUSED"}</span>
+      <span className="dim">
+        {" "}· PRACTICE {b.qty > 0 ? "+" : ""}{b.qty}{b.qty ? ` @ ${b.avg.toFixed(2)}` : ""}
+        {b.pending.length ? ` · ${b.pending.length} ORDER(S) AT NEXT OPEN` : ""} · P&amp;L{" "}
+      </span>
+      <span className={pnl > 0 ? "up" : pnl < 0 ? "down" : "dim"}>{pnl.toFixed(2)}</span>
+      <span className="dim"> · . NEXT , BACK SPACE PLAY S SPEED · SHIFT+B BUY {REPLAY_QTY} SHIFT+S SELL SHIFT+F FLAT SHIFT+J SAVE TO JRNL</span>
     </span>
   );
 }

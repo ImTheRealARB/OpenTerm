@@ -131,6 +131,24 @@ def _route_binance_1s(request: httpx.Request) -> httpx.Response | None:
     return _load("binance_spot_klines_btcusdt_1s_real") if q.get("symbol") == "BTCUSDT" else httpx.Response(400, json={"code": -1121})
 
 
+# --- Phase 23: Binance spot aggregated trades (a REAL recording of the newest 1000 BTCUSDT trades, taken 2026-11-24 by scripts/record_phase23.py) ---
+def _route_aggtrades(request: httpx.Request) -> httpx.Response | None:
+    """BTCUSDT only (any other pair is Binance's own 400 for an unknown symbol, never invented trades). Binance's paging rules are
+    applied to the one recording: `fromId` = the first `limit` trades with id >= fromId, otherwise the newest `limit`."""
+    if request.url.host != "api.binance.com" or request.url.path != "/api/v3/aggTrades":
+        return None
+    q = request.url.params
+    if q.get("symbol") != "BTCUSDT":
+        return httpx.Response(400, json={"code": -1121, "msg": "Invalid symbol."})
+    rows = json.loads((FIXTURES / "binance_aggtrades_btcusdt.json").read_text(encoding="utf-8"))["body"]
+    limit = int(q.get("limit", "500"))
+    if "fromId" in q:
+        rows = [r for r in rows if r["a"] >= int(q["fromId"])][:limit]
+    else:
+        rows = rows[-limit:]
+    return httpx.Response(200, json=rows)
+
+
 # --- Phase 6: SEC EDGAR + Yahoo ownership ---
 # sec_facts_*: us-gaap tags in sec_parse.TAGS only, 10-K/10-Q facts ending 2014 or later.
 # sec_subs_*: filings.recent cut to the first 60 entries. sec_company_tickers: AAPL, MSFT, BRK-B only.
@@ -1124,6 +1142,7 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
+    _route_aggtrades,   # Binance spot aggregated trades (order flow)
     _route_binance_1s,  # Binance 1 second candles (before `_route_base`, which would answer them with daily ones)
     _route_usgov,      # US government data: USASpending, Federal Register, OpenFEC, Congress.gov
     _route_opensky,     # FLT: OpenSky aircraft

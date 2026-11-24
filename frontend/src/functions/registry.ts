@@ -55,7 +55,7 @@ const defs: FunctionDef[] = [
   { code: "GRAB", title: "Panel picture (PNG)", needsSecurity: false, argsSchema: "[SAVE | VIA TG,EMAIL]", load: () => import("./HOME") },
   { code: "PERF", title: "Performance monitor", needsSecurity: false, argsSchema: "[GRID rows | CHART bars | CALC]", load: () => import("./Perf") },
   { code: "SHORTCUTS", title: "Keyboard shortcuts", needsSecurity: false, load: () => import("./Shortcuts") },
-  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H|4H|2D|2W|Q|YEARLY|1S] [VS SYM] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|LINEBREAK|RANGE|COLUMNS|HIGHLOW|STEP|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200]", prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
+  { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H|4H|2D|2W|Q|YEARLY|1S] [VS SYM] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|LINEBREAK|RANGE|COLUMNS|HIGHLOW|STEP|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200 AVWAP AVWAP:W AVWAP:M VP VP:S VP:A AVWAP:A]", prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
   { code: "DES", title: "Security description", needsSecurity: true, leadsWithPrice: true, related: { security: 1 }, load: () => import("./DES") },
   { code: "Q", title: "Quote monitor (live)", needsSecurity: false, argsSchema: "[SYM...]", load: () => import("./Q"), rowNumbers: true },
   { code: "QR", title: "Quote recap (live)", needsSecurity: true, leadsWithPrice: true, related: { security: 3 }, load: () => import("./QR") },
@@ -181,6 +181,14 @@ const defs: FunctionDef[] = [
   { code: "CONGRESS", title: "US Congress bills: latest updated, title filter, one bill with its sponsor (Congress.gov API, free key CONGRESS_API_KEY)", needsSecurity: false, argsSchema: "[<WORDS> | HR 1234]", load: () => import("./CONGRESS") },
   { code: "TRA", title: "Total return vs a benchmark (price + dividends, annualised, excess over a benchmark)", needsSecurity: false, argsSchema: "SYM[,SYM...] [1M..MAX] [VS BENCHMARK]", load: () => import("./TRA") },
   { code: "BETA", title: "Beta, alpha and R-squared of a security against a benchmark", needsSecurity: false, argsSchema: "[SYM] [VS BENCHMARK] [1M..MAX] [D|W|M] [WIN=60]", load: () => import("./BETA") },
+  { code: "TAS", title: "Time and sales: every trade with its buy or sell side, newest first (crypto, exact)", needsSecurity: false, argsSchema: "[SYMBOL]", load: () => import("./TAS") },
+  { code: "BIGT", title: "Big trades: the largest recent trades, buys and sells (crypto, exact)", needsSecurity: false, argsSchema: "[SYMBOL] [MIN=COINS|USD=AMOUNT]", load: () => import("./BIGT") },
+  { code: "FOOT", title: "Footprint: bid x ask volume per price level per bar, delta, cumulative delta (crypto, exact)", needsSecurity: false, argsSchema: "[SYMBOL] [INTERVAL] [BARS]", load: () => import("./FOOT") },
+  // Phase 23: market profile, read-only depth ladder, liquidity heatmap. Each reads its symbol from its args (falls back to the panel's).
+  { code: "TPO", title: "Market profile (TPO): letters per time bracket, POC, value area, initial balance", needsSecurity: false, argsSchema: "[SYMBOL] [DAYS 1-20] [BRACKET=30]", load: () => import("./TPO") },
+  { code: "DOM", title: "Depth ladder, read only: asks above, bids below (crypto)", needsSecurity: false, argsSchema: "[PAIR] [LEVELS 5-50]", load: () => import("./DOM") },
+  { code: "LIQH", title: "Liquidity heatmap: order book depth over time while the panel is open (crypto)", needsSecurity: false, argsSchema: "[PAIR]", load: () => import("./LIQH") },
+  { code: "REC", title: "Recorder: crypto trades and order book kept on this computer", needsSecurity: false, argsSchema: "[SYMBOL ON|OFF]", load: () => import("./REC") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

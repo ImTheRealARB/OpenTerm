@@ -113,7 +113,11 @@ export interface GpParsed {
   indicators: IndicatorName[];
   /** Library indicators and formulas, in the order given (at most MAX_CUSTOM). */
   custom: CustomInd[];
+  /** Phase 24: `REPLAY [YYYY-MM-DD]`: bar replay from that day (absent date = the last 100 bars are hidden). */
+  replay?: { start: string | null };
 }
+
+const DAY_TOKEN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** `BOX=2.5` -> 2.5 (positive, plain decimal); anything else -> null. */
 const BOX_TOKEN = /^BOX=(\d+\.?\d*|\.\d+)$/i;
@@ -135,7 +139,7 @@ function parseRev(raw: string): number | null {
 function isKeyword(raw: string): boolean {
   const a = raw.toUpperCase();
   return (
-    a === "VS" || a === "PANE" || a === "EVT" || a === "LOG" || a === "PAT:ICHI" || RANGES.includes(a) || YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a) ||
+    a === "VS" || a === "PANE" || a === "EVT" || a === "LOG" || a === "REPLAY" || a === "PAT:ICHI" || RANGES.includes(a) || YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a) ||
     parseBox(raw) !== null || parseRev(raw) !== null ||
     (CHART_TYPES as string[]).includes(a) || (INDICATORS as readonly string[]).includes(a) || parseCustomToken(raw) !== null
   );
@@ -164,6 +168,7 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
       const v = parseRev(raw);
       if (v !== null) p.rev = v;
     } else if (a === "LOG") p.log = true;
+    else if (a === "REPLAY") p.replay = { start: args[i + 1] && DAY_TOKEN.test(args[i + 1]) ? args[++i] : null };
     else if (a === "PAT:ICHI" && !p.indicators.includes("ICHIMOKU")) p.indicators.push("ICHIMOKU");
     else if ((INDICATORS as readonly string[]).includes(a)) {
       if (!p.indicators.includes(a as IndicatorName)) p.indicators.push(a as IndicatorName);
@@ -247,6 +252,7 @@ export function serializeGp(p: GpParsed, defaultType: ChartType = "CANDLE"): str
     ...(p.box !== undefined ? [`BOX=${p.box}`] : []),
     ...(p.rev !== undefined ? [`REV=${p.rev}`] : []),
     ...(p.log ? ["LOG"] : []),
+    ...(p.replay ? ["REPLAY", ...(p.replay.start ? [p.replay.start] : [])] : []),
     ...p.indicators,
     ...p.custom.map((c) => c.token),
   ];
