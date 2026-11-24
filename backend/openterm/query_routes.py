@@ -124,8 +124,11 @@ async def xl_query(request: Request, q: str = Query(..., min_length=3, max_lengt
 @router.get("/api/nb")
 @data_errors
 async def nb_status(request: Request):
-    """NB: is the notebook server running; the URL (with its token) only to this computer."""
-    return {"data": request.app.state.nb.status(loopback(request))}
+    """NB: is the notebook server running, and its URL with the token. Loopback only, like start and stop: the notebook runs Python on
+    this computer, so a remote viewer gets 403 instead of a status it could not act on."""
+    if not loopback(request):
+        raise HTTPException(403, "NB ANSWERS ONLY ON THIS COMPUTER (LOOPBACK): JUPYTERLAB RUNS PYTHON HERE")
+    return {"data": request.app.state.nb.status()}
 
 
 @router.post("/api/nb/start")

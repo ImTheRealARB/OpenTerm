@@ -7,7 +7,7 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
 `claude/phases-21-32-build-resume-f09808` (worktree `.claude/worktrees/phases-21-32-build-resume-f09808`; fast-forwarded from
-`...-8ff923` at 4565a3f). Phases 21-24 and 26-30 are DONE (Phase 29 gate 2026-11-24: pytest 4167, e2e 431; OIB needs a live Kite login to check). Phase 29 not built: EQS live-screener formula columns (only EQS BT has the fields), SIC grouping in IBQ, BIO boards from DEF 14A, EU ETS, MA deal values; CourtListener is doc-shaped (never run with a key). Phase 30: see its entry below. Next: Phase 31 (query language QRY / FLD, Excel bridge, notebooks NB), then Phase 32 (AI inside functions). Phase 25 stays deferred.**
+`...-8ff923` at 4565a3f). Phases 21-24 and 26-32 are DONE: Phase 25 deferred, so the 21-32 build is COMPLETE (Phase 29 gate 2026-11-24: pytest 4167, e2e 431; OIB needs a live Kite login to check). Phase 29 not built: EQS live-screener formula columns (only EQS BT has the fields), SIC grouping in IBQ, BIO boards from DEF 14A, EU ETS, MA deal values; CourtListener is doc-shaped (never run with a key). Phases 30-32: see their entries below. Next: the owner reviews, then push / PR (`main` has none of 21-32 yet); Phase 33 and Phase 25 are not started.**
 - Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): `CLAUDE.md` and `docs/TEST_CHECKLIST.md` (both local only;
   checklist sections 31-35; newest copy in worktree `phases-21-32-build-resume-f09808`) goes over the main checkout's file.
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
@@ -99,7 +99,36 @@ Progress (one line per phase; newest last):
 - Phase 26: built 2026-11-24 (gate result in the commit message; no bench this phase per the plan).
 - Phase 27: DONE 2026-11-24 (finish pass in worktree `phases-21-32-build-resume-8ff923`; gate green apart from load flakes, bench = main).
 - Phase 28: built 2026-11-24 (commit 99d8241). Phase 29: built 2026-11-24 (commit 4565a3f).
-- Phase 30: built 2026-11-24 in worktree `phases-21-32-build-resume-f09808` (gate result in the commit message).
+- Phase 30: built 2026-11-24 in worktree `phases-21-32-build-resume-f09808` (commit 6387245; gate: pytest 4181, e2e 449).
+- Phase 31: built 2026-11-24 (committed with Phase 30 in 6387245 and finished with 32; gate fix: `GET /api/nb` is loopback-only now, the QRY field `margin` is `netmargin`).
+- Phase 32: built 2026-11-24 (gate result in the commit message).
+
+- **Phase 32 (AI inside functions): BUILT 2026-11-24.** Question chips: `functions/chips.ts` (pure, `chipsFor` / `chipLine`) + `?` in
+  `ResearchPanel.tsx` (every table panel; while the list shows, 1-3 picks and Esc closes) -> `functions/askAi.ts` opens AI in a split with
+  the question as args. Each question names the tool that reads the panel's data: new AI tool `board` (`ai/tools.py` `BOARD_FNS` = the 16
+  Phase 30 boards + `res`), `qry`, `news`, `read_url`. CN digest = CN's first chip (headlines with time and source; lite: no dedicated card).
+  ERN earnings card: `A` in ERN opens `AI FILING <SYM> EARNINGS` (preset `earnings` in `ai/filings.py`; `routes_filing.load_filing(earnings=True)`
+  takes the newest Item 2.02 8-K, reads its EDGAR `<acc>-index.html` and picks the EX-99.1 row by TYPE (`filings.exhibit_991`; file names
+  failed for NVDA and KO in a live probe), parses the release as one section). Checked live on NVDA, KO, AAPL releases (parse + retrieval,
+  no model call). Revenue consensus is not shown (Nasdaq's calendar has EPS estimates only). Supply chain lite = the existing
+  `AI FILING <SYM> CHAIN`; every FILING answer now says `AI-EXTRACTED`. NOT built: XBRL customer-concentration facts (SEC companyfacts drops
+  dimensional facts, so the customer axis is not there). RES: `/api/macrod/res` (`macrod/service.res`, pure `res_filter`), provider
+  `research_feeds` (`providers/macrod.py`, feed list `macrod/boards.RES_FEEDS`: BIS x2, Fed FEDS / Notes / IFDP, ECB papers + blog, RBI,
+  arXiv q-fin), recorded by `scripts/record_phase30.py res` (fixtures `res_*.json`, manifest). `providers/news.py` now parses RSS 1.0
+  (BIS). IMF papers: 403 bot check, not included; NBER dropped. Tests: `backend/tests/test_phase32.py` (6), `chips.test.ts`, aiArgs test,
+  smoke case `RES SRC=BIS monetary`. No model call was made for any of this (AI answers need the owner's key).
+
+- **Phase 31 (query language, Excel, notebooks): BUILT 2026-11-24.** `openterm/query/lang.py` (pure QRY parser, FLD catalog `FIELDS`,
+  filter / sort / resample), `query/engine.py` (snapshot: universe -> screener fields -> quotes -> Yahoo key statistics, cheapest first,
+  cap 150 symbols for the per-symbol stats; DATES mode: history and `FRED:<ID>` series, outer-joined by date), `query/notebook.py`
+  (NB: `uv run --project backend --extra notebook jupyter lab`, 127.0.0.1, random token, notebooks in `<db dir>/notebooks`, repo
+  `notebooks/*.ipynb` copied once, stopped in the lifespan teardown). Routes `query_routes.py`: `/api/query`, `/api/query/fields`,
+  `/api/xl/{last,field,history.csv,query.csv}` (loopback only, GET), `/api/nb`, `POST /api/nb/{start,stop}` (loopback only).
+  Backend `pyproject.toml` gained the `notebook` extra (jupyterlab + openterm-sdk from `../sdk/python` via `[tool.uv.sources]`;
+  uv.lock grew by ~1,000 lines; a normal `uv sync` does not install it). SDK: `query()`, `fields()` (+2 tests). Excel: `docs/EXCEL.md`,
+  `scripts/make_excel_workbook.py` -> `docs/excel/OpenTerm_examples.xlsx` (stdlib writer; never opened in real Excel here). Frontend
+  `QRY.tsx`, `FLD.tsx` (ResearchPanel `loader`), `NB.tsx`, `qryArgs.ts`. Tests `test_phase31.py` (15) + vitest qryArgs + 4 smoke cases.
+  Not verified: NB starting a real JupyterLab (needs the first `uv` install of jupyterlab) and the workbook in Excel: owner checks.
 
 - **Phase 30 (macro, rates and commodities depth): BUILT 2026-11-24.** All 17 items. Backend package `openterm/macrod/`: `parse.py` (pure
   parsers: NY Fed, ECB ESTR, BoE SONIA, GDPNow and SPF workbooks, IMF DataMapper, OECD SDMX CSV, FOMC statement + word diff, TreasuryDirect,

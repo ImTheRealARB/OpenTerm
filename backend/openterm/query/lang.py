@@ -79,7 +79,7 @@ FIELDS: dict[str, Field] = {f.name: f for f in (
     _f("beta", "BETA", "stats", STATS_SRC, "X", "MONTHLY", "num", "risk market", ("summaryDetail", "beta")),
     _f("divy", "DIVIDEND YIELD", "stats", STATS_SRC, "RATIO", "DAILY", "pct", "dividend income", ("summaryDetail", "dividendYield")),
     _f("eps", "EPS (TRAILING)", "stats", STATS_SRC, "CCY", "QUARTERLY", "num", "earnings per share", ("defaultKeyStatistics", "trailingEps")),
-    _f("margin", "PROFIT MARGIN", "stats", STATS_SRC, "RATIO", "QUARTERLY", "pct", "net margin profitability", ("defaultKeyStatistics", "profitMargins")),
+    _f("netmargin", "NET PROFIT MARGIN", "stats", STATS_SRC, "RATIO", "QUARTERLY", "pct", "net margin profitability", ("defaultKeyStatistics", "profitMargins")),
     _f("shares", "SHARES OUTSTANDING", "stats", STATS_SRC, "SHARES", "QUARTERLY", "money", "", ("defaultKeyStatistics", "sharesOutstanding")),
     _f("short", "SHORT % OF FLOAT", "stats", STATS_SRC, "RATIO", "TWICE A MONTH", "pct", "short interest", ("defaultKeyStatistics", "shortPercentOfFloat")),
     _f("hi52", "52-WEEK HIGH", "stats", STATS_SRC, "CCY", "DAILY", "price", "high year", ("summaryDetail", "fiftyTwoWeekHigh")),

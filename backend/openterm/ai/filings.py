@@ -66,11 +66,25 @@ dependencies, customer concentration (named customers, share of revenue), manufa
 Never add a supplier, customer or partner from outside the passages. If the passages name no counterparties, say so in one point quoting the closest
 wording (for example a limited number of suppliers without names), or return {{"points": []}}."""
 
+# Phase 32 ERN earnings card: `AI FILING <SYM> EARNINGS` reads the newest results 8-K's Exhibit 99.1 (the press release), not a 10-K / 10-Q.
+EARNINGS_QUESTION = "What did the company report for revenue and earnings per share this quarter, and what guidance or outlook does the release give?"
+EARNINGS_THEMES = {
+    "revenue": "revenue net sales total revenues quarter compared year ago increase decrease percent record",
+    "eps": "diluted earnings per share net income GAAP non-GAAP adjusted per diluted share quarter",
+    "guidance": "outlook guidance expects expected next quarter fiscal year range approximately anticipate",
+}
+EARNINGS_SYSTEM = """
+This is an EARNINGS RELEASE request (an 8-K Exhibit 99.1 press release). Return, in this order where the passages contain them: reported revenue
+for the quarter (with its year-ago comparison), reported diluted EPS (GAAP, and non-GAAP if the release gives it), then each guidance or outlook
+sentence. Every number must appear in its quote exactly as the release prints it; never compute, convert or compare with estimates (OpenTerm shows
+the consensus comparison from its own data). If the release gives no guidance, say so in one point quoting the closest wording."""
+
 # mode -> (question, themes, extra system text). "drivers" keeps its original constants.
 PRESETS = {
     "drivers": (DRIVERS_QUESTION, DRIVERS_THEMES, ""),
     "guidance": (GUIDANCE_QUESTION, GUIDANCE_THEMES, GUIDANCE_SYSTEM),
     "chain": (CHAIN_QUESTION, CHAIN_THEMES, CHAIN_SYSTEM),
+    "earnings": (EARNINGS_QUESTION, EARNINGS_THEMES, EARNINGS_SYSTEM),
 }
 
 # Words that carry no meaning for ranking (the shared document stop list plus question filler).
@@ -358,5 +372,31 @@ def parse_filing(html: str, *, symbol: str, form: str, filed: str, accession: st
     text = filing_text(html)[:3_000_000]
     if not text.strip():
         raise FilingsError("THE FILING DOCUMENT HAS NO TEXT")
-    sections = split_sections(text, form)
+    # An earnings release (8-K Exhibit 99.1) is a press release, not an "Item N" report: it is one section, so quotes are located as
+    # "Exhibit 99.1" and the passage packer still cuts it into retrieval-sized pieces.
+    sections = [Section(RELEASE_LABEL, text)] if form == EARNINGS_FORM else split_sections(text, form)
     return ParsedFiling(symbol, form, filed, accession, url, fetched_at, sections, make_passages(sections), normalise(text))
+
+
+# --- Phase 32: the earnings release behind ERN ------------------------------------------------------------------------------------------
+EARNINGS_FORM = "8-K EX-99.1"
+RELEASE_LABEL = "Exhibit 99.1 (earnings release)"
+_ROW = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+_CELL = re.compile(r"<td[^>]*>(.*?)</td>", re.IGNORECASE | re.DOTALL)
+_HREF = re.compile(r'href="([^"]+)"', re.IGNORECASE)
+
+
+def is_earnings_8k(filing: dict) -> bool:
+    """An 8-K that reports results: SEC's item list carries 2.02 ("Results of Operations and Financial Condition")."""
+    return filing.get("form") == "8-K" and "2.02" in (filing.get("items") or "")
+
+
+def exhibit_991(index_html: str) -> str | None:
+    """The EX-99.1 document's path from an EDGAR `<accession>-index.html` page, or None. The page's document table has a Type column
+    (8-K, EX-99.1, EX-99.2, GRAPHIC ...); file names are no guide (NVDA's release is `q3fy27pr.htm`, KO's `...earningsreleaseex-9.htm`)."""
+    for row in _ROW.findall(index_html):
+        cells = [re.sub(r"<[^>]+>", "", c).strip().upper() for c in _CELL.findall(row)]
+        href = _HREF.search(row)
+        if href and "EX-99.1" in cells and href.group(1).lower().endswith((".htm", ".html", ".txt")):
+            return href.group(1)
+    return None

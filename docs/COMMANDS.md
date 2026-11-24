@@ -385,6 +385,27 @@ Every board is a table panel: J/K move, V / Shift+V switch tables, C cycles the 
 | `RE` | US housing from FRED: Case-Shiller, FHFA, median price, starts, permits, completions, new-home sales and supply, 30Y / 15Y mortgage rates, rental vacancy, homeownership. Zillow data is not used. |
 | `WPE` | Index valuation through index ETFs (18 markets): P/E, P/B, P/S of the holdings and the fund's yield, each row labelled `PROXY: <ETF>`. Enter opens DES for the ETF. |
 
+## Phase 31: query language, Excel and notebooks
+
+| Command | What it shows |
+|---|---|
+| `QRY last, pe, mcap FOR MEMB:SPY WHERE pe<20 AND sector=Technology SORT mcap DESC LIMIT 50` | A snapshot: one row per symbol. `FOR` takes SPX NDX DJI RUT MID, `MEMB:<ETF>`, `WL:<name>`, `LIST:A,B` (or just `A,B`), NIFTY50 / NIFTY500, or `US` (the whole US screener file). Conditions are joined by AND (`< <= > >= = !=`; text compares without case); a missing value fails its condition. Screener fields are applied first, then quotes, then Yahoo key statistics (one call per symbol, at most 150 symbols: narrow first with `mcap>...`). Enter opens DES. |
+| `QRY close, ret FOR AAPL,MSFT,FRED:DGS10 DATES -2Y..0 FREQ M` | A time series: one row per date, a column per symbol and field. Dates: `-30D -6M -1Y 0` or `YYYY-MM-DD`; `FREQ W` / `M` keep the last value of each week / month. FRED series as `FRED:<ID>` with the field `value`. At most 20 symbols. C shows the chart. |
+| `FLD [words]` | The field catalog: every field with its mode (snapshot or DATES), source, unit, update frequency and key. |
+| `NB` | A local JupyterLab with openterm-sdk and three example notebooks: S starts it (the first start installs JupyterLab with uv: a minute or two), Enter opens it, X stops it. Notebooks live in `<data folder>/notebooks`; it stops with OpenTerm. Needs a source checkout with uv. |
+
+Excel: `=VALUE(WEBSERVICE("http://127.0.0.1:8000/api/xl/last?s=AAPL"))`, `/api/xl/field?s=AAPL&f=pe`, `/api/xl/query.csv?q=<QRY>`, `/api/xl/history.csv?s=AAPL&range=1Y`. GET only, this computer only. Guide and Power Query templates: [EXCEL.md](EXCEL.md); example workbook `docs/excel/OpenTerm_examples.xlsx`. SDK: `ot.query("QRY ...")`, `ot.fields("valuation")`.
+
+## Phase 32: AI inside functions
+
+| Command / key | What it does |
+|---|---|
+| `?` in any table panel (the macro boards, QRY, CN, EE, RES ...) | Lists 2 or 3 suggested questions; 1-3 opens AI beside the panel with that question, Esc closes the list. Each question names the tool that reads the panel's own data (`board`, `qry`, `news`, `read_url`), so the answer cites it; nothing is sent until you pick. On CN the first question is the headline digest (each bullet with its headline's time and source). |
+| `A` in `ERN` | Earnings card: opens `AI FILING <SYM> EARNINGS` beside the calendar, so the row's EPS vs consensus and surprise stay in view. |
+| `AI FILING <SYM> EARNINGS` | Reads the newest results 8-K (Item 2.02) and its Exhibit 99.1 press release (found by the type column of the filing's EDGAR index, not by file name): revenue, EPS and every guidance sentence, each quoted and checked word for word. US SEC filers only. |
+| `AI FILING <SYM> CHAIN` | Supply chain lite (existing): named suppliers, customers and concentration, each with its quoted sentence. Every FILING answer is labelled `AI-EXTRACTED`. |
+| `RES [SRC=<source>] [DAYS=n] [words]` | Research library: BIS working papers and research hub, Fed FEDS / FEDS Notes / IFDP, ECB working papers and blog, RBI publications, arXiv q-fin. Newest first; every word must appear in the title or summary. Enter opens the paper; `?` asks AI to read and summarise the selected paper. Not included: IMF papers (its feed answers 403, a bot check), NBER (paywalled). |
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

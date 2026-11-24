@@ -61,19 +61,20 @@ class NotebookServer:
     def running(self) -> bool:
         return self.proc is not None and self.proc.poll() is None
 
-    def status(self, with_url: bool) -> dict[str, Any]:
+    def status(self) -> dict[str, Any]:
+        """Running or not, and (when up) the URL with its token: every NB route is loopback-only, so only this computer sees it."""
         up = self.running()
         out: dict[str, Any] = {"running": up, "dir": str(self.dir), "port": self.port if up else None,
                                "since": self.started_at if up else None, "examples": sorted(f.name for f in EXAMPLES.glob("*.ipynb"))}
         if self.proc is not None and not up:
             out["exit_code"] = self.proc.returncode
-        if up and with_url:
+        if up:
             out["url"] = f"http://127.0.0.1:{self.port}/lab?token={self.token}"
         return out
 
     def start(self) -> dict[str, Any]:
         if self.running():
-            return self.status(True)
+            return self.status()
         if getattr(sys, "frozen", False):
             raise NotebookError("NB NEEDS A SOURCE CHECKOUT WITH uv: THE DESKTOP APP CANNOT START JUPYTERLAB (pip install ./sdk/python jupyterlab INSTEAD)")
         uv = shutil.which("uv")
@@ -88,7 +89,7 @@ class NotebookServer:
         self.proc = subprocess.Popen(cmd, cwd=str(self.dir), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                      creationflags=flags)
         self.started_at = time.time()
-        return self.status(True)
+        return self.status()
 
     def stop(self) -> dict[str, Any]:
         if self.running():
@@ -101,4 +102,4 @@ class NotebookServer:
                 self.proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 self.proc.kill()
-        return self.status(False)
+        return self.status()

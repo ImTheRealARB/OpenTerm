@@ -22,7 +22,8 @@ MANIFEST = FIXTURES / "phase30_manifest.json"
 IGNORED = frozenset({"api_key", "key", "crumb", "Datefrom", "from", "cosd", "startDate", "endDate"})
 HOSTS = frozenset({"markets.newyorkfed.org", "data-api.ecb.europa.eu", "www.bankofengland.co.uk", "www.atlantafed.org",
                    "www.philadelphiafed.org", "www.imf.org", "sdmx.oecd.org", "www.federalreserve.gov", "www.treasurydirect.gov",
-                   "usda.library.cornell.edu", "api.eia.gov", "quickstats.nass.usda.gov", "api.frankfurter.dev"})
+                   "usda.library.cornell.edu", "api.eia.gov", "quickstats.nass.usda.gov", "api.frankfurter.dev",
+                   "www.bis.org", "www.ecb.europa.eu", "www.rbi.org.in", "rss.arxiv.org"})  # last line: Phase 32 RES feeds
 SHARED_HOSTS = frozenset({"api.frankfurter.dev", "www.bankofengland.co.uk", "www.federalreserve.gov", "data-api.ecb.europa.eu",
                           "www.treasurydirect.gov"})
 WPE_FILE ="yahoo_etfval_wpe"

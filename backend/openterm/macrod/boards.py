@@ -111,3 +111,19 @@ AGRI_CROPS = ("CORN", "SOYBEANS", "WHEAT")
 ALL_FRED = sorted({*(wb_id(cc) for _, cc in WB_MONTHLY), "DGS2", "DGS10", *(c[0] for c in CRPR), *(r[0] for r in RE),
                    *(v for c in BTMM.values() for k, v in c.items() if k in {f[0] for f in BTMM_FIELDS} and v and ":" not in v),
                    *(x for s in SEP for x in (s[0], s[2], s[3]))})
+
+
+# --- Phase 32 RES: free institutional research feeds (key -> publisher, feed URL). Checked live 2026-11-24 (status and parsed items).
+# Left out on purpose: IMF papers (imf.org's publications feed answers 403, a bot check: never bypassed) and NBER (paywalled, 3 free a year).
+# arXiv asks for at most 1 request per 3 s: RES makes one arXiv request per refresh (the q-fin listing), cached for hours.
+RES_FEEDS: dict[str, tuple[str, str]] = {
+    "BIS": ("BIS working papers", "https://www.bis.org/doclist/wppubls.rss"),
+    "BISHUB": ("BIS research hub papers", "https://www.bis.org/doclist/reshub_papers.rss"),
+    "FEDNOTES": ("Fed FEDS Notes", "https://www.federalreserve.gov/feeds/feds_notes.xml"),
+    "FEDS": ("Fed FEDS working papers", "https://www.federalreserve.gov/feeds/feds.xml"),
+    "IFDP": ("Fed International Finance Discussion Papers", "https://www.federalreserve.gov/feeds/ifdp.xml"),
+    "ECB": ("ECB working papers", "https://www.ecb.europa.eu/rss/wppub.html"),
+    "ECBBLOG": ("ECB blog", "https://www.ecb.europa.eu/rss/blog.html"),
+    "RBI": ("RBI publications", "https://www.rbi.org.in/Publication_rss.xml"),
+    "ARXIV": ("arXiv quantitative finance (q-fin)", "https://rss.arxiv.org/rss/q-fin"),
+}

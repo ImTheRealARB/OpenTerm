@@ -53,6 +53,18 @@ its normal source order (and your `SETTINGS SOURCE` preferences) and says in `fa
 `source=` applies to market data (quote, history, profile, search, news). `fundamentals` is SEC-only and portfolios and
 backtests are your own local data, so the pin is not sent for them.
 
+### QRY and the field catalog (Phase 31)
+
+```python
+screen = ot.query("QRY last, pe, mcap FOR MEMB:SPY WHERE pe<20 SORT mcap LIMIT 50")   # indexed by symbol
+screen.attrs["notes"]                     # e.g. symbols with no key statistics, the sources used
+ts = ot.query("QRY close FOR AAPL,MSFT,FRED:DGS10 DATES -2Y..0 FREQ M")               # indexed by date, columns "AAPL CLOSE" ...
+ot.fields("valuation")                    # FLD: name, what, mode, source, unit, update frequency, key
+```
+
+The same server code answers the QRY panel, the SDK and the Excel bridge, so the three always agree. The NB command starts a local
+JupyterLab with this SDK installed and three example notebooks (see COMMANDS.md).
+
 ## What is in `df.attrs`
 
 | field | meaning |

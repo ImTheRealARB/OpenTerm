@@ -57,6 +57,7 @@ from .macrod import (
     NyFedProvider,
     OecdEoProvider,
     PhilFedProvider,
+    ResearchFeedsProvider,
     TdSecuritiesProvider,
     WasdeProvider,
 )
@@ -157,7 +158,7 @@ ADAPTERS: dict[str, type[Provider]] = {
     "sec_filings": SecFilingsProvider, "courtlistener": CourtListenerProvider, "epa_ghgrp": EpaGhgrpProvider,
     # Phase 30 macro depth: money-market rates, GDPNow, forecasts, FOMC statements, Treasury securities, WASDE (keyless); EIA, NASS (free keys)
     "nyfed": NyFedProvider, "ecb_estr": EcbEstrProvider, "boe_sonia": BoeSoniaProvider, "atlfed": AtlFedProvider, "philfed": PhilFedProvider,
-    "imf_dm": ImfDmProvider, "oecd_eo": OecdEoProvider, "fed_web": FedWebProvider, "td_secs": TdSecuritiesProvider, "wasde": WasdeProvider,
+    "imf_dm": ImfDmProvider, "oecd_eo": OecdEoProvider, "fed_web": FedWebProvider, "td_secs": TdSecuritiesProvider, "wasde": WasdeProvider, "research_feeds": ResearchFeedsProvider,
     "eia": EiaProvider, "nass": NassProvider,
 }
 

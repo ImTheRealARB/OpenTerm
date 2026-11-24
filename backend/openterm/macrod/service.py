@@ -884,3 +884,54 @@ async def wpe(svc: Any) -> dict:
         return {"data": data, "source": "yahoo_funds", "fallback_from": []}
 
     return await svc.swr("md:wpe", TTL["wpe"], fetch)
+
+
+# --- RES (Phase 32): research library ---------------------------------------------------------------------------------------------
+
+RES_TTL = 6 * 3600.0  # papers appear a few times a day; arXiv asks for gentle polling
+
+
+def res_filter(rows: list[dict], words: str, days: int | None, today: date) -> list[dict]:
+    """Rows whose title or summary holds EVERY word (case-insensitive), dated within `days` of today when given. Pure."""
+    want = [w for w in re.split(r"\s+", words.lower()) if w]
+    cut = (today - timedelta(days=days)).isoformat() if days else ""
+    return [r for r in rows if (not cut or (r["date"] or "") >= cut)
+            and all(w in f"{r['title']} {r['summary']}".lower() for w in want)]
+
+
+async def res(svc: Any, src: str | None, words: str, days: int | None) -> dict:
+    keys = [src] if src else list(B.RES_FEEDS)
+
+    async def fetch() -> dict:
+        got = await asyncio.gather(*(_call(svc, "research_feeds", lambda p, k=k: p.feed(k)) for k in keys), return_exceptions=True)
+        rows, notes, sources = [], [], []
+        for k, g in zip(keys, got, strict=True):
+            if isinstance(g, AllFailed):
+                notes.append(f"{k} ({B.RES_FEEDS[k][0]}) UNAVAILABLE: {redact(str(g))[:80]}")
+                continue
+            if isinstance(g, BaseException):
+                raise g
+            d = g[0]
+            sources.append(d["source"])
+            for it in d["items"]:
+                ts = it.get("published")
+                rows.append({"date": datetime.fromtimestamp(ts, UTC).date().isoformat() if ts else None, "src": k, "publisher": d["publisher"],
+                             "title": it["title"], "summary": (it.get("summary") or "")[:400], "url": it["url"]})
+        if not rows:
+            raise DataError("unavailable", "NO RESEARCH FEED ANSWERED: " + "; ".join(notes))
+        rows.sort(key=lambda r: r["date"] or "", reverse=True)
+        return {"data": {"rows": rows, "notes": notes}, "source": " + ".join(sorted(set(sources))), "fallback_from": []}
+
+    env = await svc.swr(f"md:res:{src or 'ALL'}", RES_TTL, fetch)
+    rows = res_filter(env["data"]["rows"], words, days, _today())
+    scope = f"{src} ({B.RES_FEEDS[src][0]})" if src else "ALL SOURCES"
+    sec = section("papers", f"PAPERS · {scope}" + (f" · \"{words.upper()}\"" if words else "") + (f" · LAST {days} DAYS" if days else ""), [
+        col("date", "DATE", "date"), col("src", "SRC"), col("title", "TITLE"), col("publisher", "PUBLISHER")], rows,
+        "NO PAPER MATCHES: TRY FEWER WORDS, ANOTHER SOURCE OR MORE DAYS" if not rows else None)
+    notes = env["data"]["notes"] + [
+        "ENTER OPENS THE PAPER ON THE PUBLISHER'S SITE · ? ASKS AI TO READ AND SUMMARISE THE SELECTED PAPER (ON DEMAND, NOTHING IS SENT UNTIL YOU PICK)",
+        "SOURCES: " + ", ".join(f"{k} = {v[0]}" for k, v in B.RES_FEEDS.items()),
+        "NOT INCLUDED: IMF PAPERS (ITS FEED ANSWERS 403, A BOT CHECK OPENTERM DOES NOT BYPASS); NBER (PAYWALLED)"]
+    data = payload("RES", "RES RESEARCH LIBRARY", [head("PAPERS", str(len(rows)), len(rows)), head("NEWEST", rows[0]["date"] if rows else None)],
+                   [sec], notes, env["source"])
+    return {**env, "data": data}

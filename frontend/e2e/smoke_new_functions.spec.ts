@@ -115,6 +115,13 @@ const CASES: Case[] = [
   { cmd: "AGRI", want: /CORNELL MANN LIBRARY/ },
   { cmd: "RE", want: /ZILLOW RESEARCH DATA: NOT USED/ },
   { cmd: "WPE", want: /VALUES AS YAHOO FINANCE REPORTS THEM/ },
+  // Phase 31: query language, field catalog, notebooks
+  { cmd: "QRY last, mcap, sector FOR AAPL,MSFT WHERE mcap>1e12 SORT mcap", want: /A MISSING VALUE FAILS ITS WHERE CONDITION/ },
+  { cmd: "QRY close, ret FOR AAPL,FRED:DGS10 DATES -6M..0 FREQ M", want: /W AND M ROWS ARE THE LAST VALUE/ },
+  { cmd: "FLD valuation", want: /SNAPSHOT FIELDS GO WITHOUT DATES/ },
+  { cmd: "NB", want: /NOT RUNNING/ },
+  // Phase 32
+  { cmd: "RES SRC=BIS monetary", want: /NOT INCLUDED: IMF PAPERS/ },
 ];
 
 let backend: ChildProcess | null = null;

@@ -265,6 +265,32 @@ class WasdeProvider(_Base):
         await self.get_bytes(WASDE_PAGE, {"locale": "en"})
 
 
+class ResearchFeedsProvider(_Base):
+    """Phase 32 RES: central-bank and arXiv research listings (RSS 2.0 / RSS 1.0 / Atom, parsed by the news feed parser)."""
+    name = "research_feeds"
+    label = "Institutional research feeds (BIS, Fed, ECB, RBI, arXiv q-fin)"
+    capabilities = frozenset({"research_feeds"})
+    markets = "Working papers, notes and blogs: BIS, Federal Reserve Board (FEDS, FEDS Notes, IFDP), ECB, RBI publications, arXiv q-fin"
+    terms = "Public feeds, no key. Each row links to the publisher's page; summaries are the publisher's own feed text."
+    # One request per feed per refresh (RES caches 6 h), all nine at once on different hosts. arXiv's rule (at most 1 request per 3 s)
+    # holds because RES asks arXiv for exactly one listing per refresh.
+    rate = (5.0, 10)
+
+    async def feed(self, key: str) -> dict:
+        from ..macrod.boards import RES_FEEDS
+        from .news import parse_rss
+
+        publisher, url = RES_FEEDS[key]
+        items = parse_rss(await self.get_bytes(url), publisher, self.source)  # ProviderError("unavailable") when it is not XML
+        return {"key": key, "publisher": publisher, "url": url, "items": [i.model_dump() for i in items],
+                "source": self.source}
+
+    async def probe(self) -> None:
+        from ..macrod.boards import RES_FEEDS
+
+        await self.get_bytes(RES_FEEDS["FEDNOTES"][1])
+
+
 class EiaProvider(KeyedProvider):
     """EIA API v2, free key. DOC-SHAPED: written from the API v2 documentation (the `seriesid` route keeps the old series ids) and never
     run against a live key; the fixtures are `eia_docshape_*` (NOT A RECORDING). Record a real answer with the first key."""

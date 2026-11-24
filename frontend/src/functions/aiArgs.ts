@@ -1,9 +1,9 @@
-/** `AI [question...]`, `AI BT <idea>`, `AI BT CODE <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]`, `AI FILING <SYMBOL> [10-K|10-Q] <question | DRIVERS | GUIDANCE | CHAIN>` (pure, unit-tested).
+/** `AI [question...]`, `AI BT <idea>`, `AI BT CODE <idea>`, `AI AUTO <hypothesis>`, `AI CHART [hint]`, `AI FILING <SYMBOL> [10-K|10-Q] <question | DRIVERS | GUIDANCE | CHAIN>`, `AI FILING <SYMBOL> EARNINGS` (pure, unit-tested).
  * Only the first word picks a mode. */
 export type AiArgs =
   | { mode: "ask" | "bt" | "btcode" | "chart" | "doc" | "docoff" | "auto"; text: string }
   | { mode: "docfiling"; text: string; symbol: string; form: string }
-  | { mode: "filing"; text: string; symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" }
+  | { mode: "filing"; text: string; symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" | "earnings" }
   | { mode: "bad"; text: string; error: string };
 
 export function aiArgs(args: string[]): AiArgs {
@@ -32,7 +32,7 @@ export function aiArgs(args: string[]): AiArgs {
   return { mode: "ask", text: args.join(" ").trim() };
 }
 
-const FILING_USAGE = "USAGE: AI FILING <SYMBOL> [10-K|10-Q] <question> | AI FILING <SYMBOL> DRIVERS|GUIDANCE|CHAIN (US FILERS ONLY)";
+const FILING_USAGE = "USAGE: AI FILING <SYMBOL> [10-K|10-Q] <question> | AI FILING <SYMBOL> DRIVERS|GUIDANCE|CHAIN|EARNINGS (US FILERS ONLY)";
 
 /** `AAPL [10-K|10-Q] DRIVERS|GUIDANCE|CHAIN` or `AAPL [10-K|10-Q] <question words>`. The form is optional: without it the newest 10-K or 10-Q is used. */
 function filingArgs(rest: string[]): AiArgs {
@@ -43,6 +43,10 @@ function filingArgs(rest: string[]): AiArgs {
   const form = f === "10-K" || f === "10-Q" ? f : null;
   if (form) words = words.slice(1);
   if (words.length === 1 && words[0].toUpperCase() === "DRIVERS") return { mode: "filing", text: "DRIVERS", symbol, form, drivers: true };
+  // EARNINGS (Phase 32, the ERN card) reads the newest results 8-K's Exhibit 99.1 press release, so a 10-K / 10-Q form makes no sense with it.
+  if (words.length === 1 && words[0].toUpperCase() === "EARNINGS") {
+    return form ? { mode: "bad", text: "", error: FILING_USAGE } : { mode: "filing", text: "EARNINGS", symbol, form: null, drivers: false, preset: "earnings" };
+  }
   if (words.length === 1 && ["GUIDANCE", "CHAIN"].includes(words[0].toUpperCase())) {
     const w = words[0].toUpperCase();
     return { mode: "filing", text: w, symbol, form, drivers: false, preset: w === "GUIDANCE" ? "guidance" : "chain" };

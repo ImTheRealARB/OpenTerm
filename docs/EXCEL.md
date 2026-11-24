@@ -16,7 +16,7 @@ A ready workbook is in [docs/excel/OpenTerm_examples.xlsx](excel/OpenTerm_exampl
 | `http://127.0.0.1:8000/api/xl/query.csv?q=<QRY>` | Any `QRY` as CSV, the same rows the QRY panel shows (URL-encode the query). |
 | `http://127.0.0.1:8000/api/xl/history.csv?s=AAPL&range=1Y&interval=1d` | Bars as CSV: `date` (UTC), open, high, low, close, adj_close, volume. |
 
-Units: ratios stay ratios (`divy` 0.012 = 1.2%, `margin` 0.25 = 25%); `pct` (today's change) is in percent. A failed call answers
+Units: ratios stay ratios (`divy` 0.012 = 1.2%, `netmargin` 0.25 = 25%); `pct` (today's change) is in percent. A failed call answers
 with an HTTP error, which `WEBSERVICE()` shows as `#VALUE!`; wrap it in `IFERROR()` where a blank is better.
 
 ## Formulas (Excel for Windows 2013 and later)

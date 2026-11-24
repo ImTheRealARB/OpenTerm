@@ -209,6 +209,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `CN` | Company news from every source, keyword-scored (not a model) | yes |  | `AAPL CN` |
 | `EVTS` | Company events: SEC 8-K filings by item | yes |  | `AAPL EVTS` |
 | `BRIEF` | Daily brief |  |  | `BRIEF` |
+| `RES` | Research library: BIS, Fed, ECB, RBI and arXiv papers, AI summary on demand |  | `[SRC=BIS\|BISHUB\|FEDNOTES\|FEDS\|IFDP\|ECB\|ECBBLOG\|RBI\|ARXIV] [DAYS=n] [words]` | `RES` |
 
 ### Research: Company
 

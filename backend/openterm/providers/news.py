@@ -76,6 +76,7 @@ def domain(url: str) -> str | None:
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 DC_DATE = "{http://purl.org/dc/elements/1.1/}date"
+RSS1 = "{http://purl.org/rss/1.0/}"  # RSS 1.0 (RDF) puts its elements in this namespace: BIS publishes its feeds this way (Phase 32 RES)
 
 
 def iso8601(s: str | None) -> float | None:
@@ -90,9 +91,11 @@ def iso8601(s: str | None) -> float | None:
 
 
 def _entries(root: ET.Element):
-    """(title, url, date text, summary) for each RSS <item> or Atom <entry>."""
+    """(title, url, date text, summary) for each RSS 2.0 <item>, RSS 1.0 <item> or Atom <entry>."""
     for it in root.iter("item"):
         yield it.findtext("title"), (it.findtext("link") or "").strip(), (it.findtext("pubDate") or it.findtext(DC_DATE)), it.findtext("description")
+    for it in root.iter(RSS1 + "item"):
+        yield it.findtext(RSS1 + "title"), (it.findtext(RSS1 + "link") or "").strip(), it.findtext(DC_DATE), it.findtext(RSS1 + "description")
     for en in root.iter(ATOM + "entry"):
         # Atom puts the URL in an attribute; prefer the rel="alternate" (or unlabelled) link.
         link = next((lk.get("href", "") for lk in en.findall(ATOM + "link") if lk.get("rel", "alternate") == "alternate"), "")

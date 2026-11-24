@@ -121,3 +121,17 @@ async def agri(request: Request):
 async def wpe(request: Request):
     """WPE: world index valuation through index ETFs (P/E, P/B, P/S, yield), labelled PROXY."""
     return await S.wpe(svc(request))
+
+
+@router.get("/res")
+@data_errors
+async def res(request: Request, src: str | None = Query(None, max_length=10), q: str = Query("", max_length=80),
+              days: int | None = Query(None, ge=1, le=3650)):
+    """RES (Phase 32): free institutional research (BIS, Fed, ECB, RBI, arXiv q-fin), newest first, filtered by words and days."""
+    from .errors import DataError
+    from .macrod.boards import RES_FEEDS
+
+    key = (src or "").upper() or None
+    if key is not None and key not in RES_FEEDS:
+        raise DataError("bad_request", f"SOURCE MUST BE ONE OF {' '.join(RES_FEEDS)}")
+    return await S.res(svc(request), key, q.strip(), days)

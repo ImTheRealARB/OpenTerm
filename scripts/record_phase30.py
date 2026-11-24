@@ -219,8 +219,20 @@ def docshape() -> None:
         manifest[canonical(M.NASS_URL, params)] = name
 
 
+def res() -> None:
+    """Phase 32 RES: every research feed once (arXiv last, after a 3 s pause: its rule is 1 request per 3 s)."""
+    import time
+
+    from openterm.macrod.boards import RES_FEEDS
+
+    for key, (_, url) in RES_FEEDS.items():
+        if key == "ARXIV":
+            time.sleep(3)
+        rec_text(f"res_{key.lower()}", url)
+
+
 GROUPS = {"mmr": mmr, "nowc": nowc, "spf": spf, "imf": imf, "oecd": oecd, "fomc": fomc, "tsy": tsy, "wasde": wasde, "wpe": wpe,
-          "wcrs": wcrs, "fred": fred, "docshape": docshape}
+          "wcrs": wcrs, "fred": fred, "docshape": docshape, "res": res}
 
 if __name__ == "__main__":
     for g in sys.argv[1:] or list(GROUPS):

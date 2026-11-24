@@ -22,6 +22,8 @@ import { ErrorLine } from "./panelStatus";
 import { Header, openUrl, useEnvelope } from "./secPanel";
 import { KeyNeeded } from "./KeyRequiredLine";
 import { gridCsv, useCsvExport } from "./tableExport";
+import { chipLine, chipsFor } from "./chips";
+import { askAi } from "./askAi";
 
 export interface ResearchOptions {
   /** Backend route name under /api/research (or /api/valuation, /api/deriv, /api/rates, /api/fund for `api`). */
@@ -53,6 +55,8 @@ export function makeResearchPanel(opts: ResearchOptions) {
     const [vis, setVis] = useState(0);
     const [progress, setProgress] = useState<string | null>(null);
     const [flash, setFlash] = useState<string | null>(null);
+    // Phase 32 question chips: `?` lists 2-3 questions in the flash line; while they show, 1-n opens AI and Esc cancels.
+    const [chips, setChips] = useState<string[] | null>(null);
     const alive = useRef({ mounted: true, key });
     alive.current.key = key;
     useEffect(() => {
@@ -83,7 +87,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
     const rows: TableRow[] = section?.rows ?? [];
     const visuals = useMemo(() => [...(d?.charts ?? []).map((c) => ({ kind: "chart" as const, c })), ...(d?.heat ? [{ kind: "heat" as const, h: d.heat }] : [])], [d]);
     const visual = visuals[Math.min(vis, visuals.length - 1)];
-    const latest = useLatest({ rows, count: d?.sections.length ?? 0, visuals: visuals.length, heat: visual?.kind === "heat", d, props });
+    const latest = useLatest({ rows, count: d?.sections.length ?? 0, visuals: visuals.length, heat: visual?.kind === "heat", d, props, chips });
     useEffect(() => {
       if (d) opts.onData?.(d, props);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- props change identity every render; the payload is what matters
@@ -95,6 +99,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
       setSec(0);
       setVis(0);
       setFlash(null);
+      setChips(null);
     }, [key]);
     useEffect(() => {
       grid.current?.moveTo(0);
@@ -105,7 +110,28 @@ export function makeResearchPanel(opts: ResearchOptions) {
       () =>
         registerPanelKeys(panelId, (e) => {
           if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return false;
-          const { rows: cur, count, visuals: nvis, heat: heatShown, d: data, props: pp } = latest.current;
+          const { rows: cur, count, visuals: nvis, heat: heatShown, d: data, props: pp, chips: shown } = latest.current;
+          // Chips first: while they show, digits pick a question (not a section) and Esc closes them.
+          if (shown) {
+            const pick = Number(e.key);
+            if (pick >= 1 && pick <= shown.length) {
+              setChips(null);
+              setFlash(null);
+              askAi(shown[pick - 1], setFlash);
+              return true;
+            }
+            if (e.key === "Escape") {
+              setChips(null);
+              setFlash(null);
+              return true;
+            }
+          }
+          if (e.key === "?") {
+            const qs = chipsFor(opts.fn, pp.security?.symbol ?? null, data?.title ?? "", pp.args, cur[grid.current?.selected() ?? -1]);
+            setChips(qs);
+            setFlash(chipLine(qs));
+            return true;
+          }
           if (opts.onKey?.(e, pp, data, setFlash, cur[grid.current?.selected() ?? -1])) return true;
           if (heatShown && e.shiftKey && "HJKL".includes(e.key)) {
             heatRef.current?.move(e.key === "J" ? 1 : e.key === "K" ? -1 : 0, e.key === "L" ? 1 : e.key === "H" ? -1 : 0);
@@ -141,7 +167,7 @@ export function makeResearchPanel(opts: ResearchOptions) {
           title={d?.title ?? `${label}${props.security ? ` ${props.security.symbol}` : ""}`}
           env={env}
           loading={loading}
-          keys={`J/K MOVE · ${d && d.sections.length > 1 ? "V SECTION · " : ""}${visuals.length > 1 ? "C CHART · " : ""}E CSV · F5 REFRESH${opts.keys ? ` · ${opts.keys}` : ""}`}
+          keys={`J/K MOVE · ${d && d.sections.length > 1 ? "V SECTION · " : ""}${visuals.length > 1 ? "C CHART · " : ""}E CSV · ? ASK AI · F5 REFRESH${opts.keys ? ` · ${opts.keys}` : ""}`}
         />
         {d && d.headline.length > 0 && (
           <div className="line" data-testid="research-headline">

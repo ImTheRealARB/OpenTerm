@@ -228,6 +228,8 @@ const defs: FunctionDef[] = [
   { code: "AGRI", title: "Crops: WASDE supply and use, NASS crop condition (free key)", needsSecurity: false, load: () => import("./AGRI") },
   { code: "RE", title: "US housing board: prices, starts, sales, mortgage rates (FRED)", needsSecurity: false, load: () => import("./RE") },
   { code: "WPE", title: "World index valuation via index ETFs: P/E, P/B, P/S, yield (PROXY)", needsSecurity: false, load: () => import("./WPE") },
+  // Phase 32: research library (server: /api/macrod/res)
+  { code: "RES", title: "Research library: BIS, Fed, ECB, RBI and arXiv papers, AI summary on demand", needsSecurity: false, argsSchema: "[SRC=BIS|BISHUB|FEDNOTES|FEDS|IFDP|ECB|ECBBLOG|RBI|ARXIV] [DAYS=n] [words]", load: () => import("./RES") },
   // Phase 31: query language, field catalog, notebooks (server: /api/query, /api/query/fields, /api/nb; Excel bridge /api/xl)
   { code: "QRY", title: "Query fields over universes and dates (also via SDK and Excel)", needsSecurity: false, argsSchema: "<fields> FOR <universe> [WHERE ..] [SORT ..] [LIMIT n] | <fields> FOR <symbols> DATES -1Y..0 [FREQ D|W|M]", load: () => import("./QRY") },
   { code: "FLD", title: "Field catalog for QRY: source, unit, frequency, key", needsSecurity: false, argsSchema: "[words]", load: () => import("./FLD") },

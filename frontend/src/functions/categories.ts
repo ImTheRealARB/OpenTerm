@@ -44,7 +44,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Ships, flights and maps", codes: ["MAP", "SHIP", "PORTS", "AIS", "FLT"] },
   ],
   Charts: [{ name: "Charts", codes: ["GP", "IND", "GIP", "HIST", "SEAS", "TPO", "IMAP", "FRED"] }],
-  News: [{ name: "News", codes: ["HOME", "N", "CN", "EVTS", "BRIEF"] }],
+  News: [{ name: "News", codes: ["HOME", "N", "CN", "EVTS", "BRIEF", "RES"] }],
   Research: [
     { name: "Company", codes: ["DES", "FA", "COMP", "MGMT", "DVD", "SPLT", "CACS"] },
     { name: "Analysts and valuation", codes: ["ANR", "EE", "EEO", "DCF", "WACC", "RV"] },

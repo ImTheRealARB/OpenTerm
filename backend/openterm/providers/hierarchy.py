@@ -246,7 +246,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "ghg_facilities": ["epa_ghgrp"],
     # Phase 30 macro depth (one source each; EIA and NASS need a free key, no key = KEY REQUIRED)
     "nyfed_rates": ["nyfed"], "estr": ["ecb_estr"], "sonia": ["boe_sonia"], "gdpnow": ["atlfed"], "spf": ["philfed"],
-    "imf_weo": ["imf_dm"], "oecd_eo": ["oecd_eo"], "fomc_statement": ["fed_web"], "tsy_securities": ["td_secs"], "wasde": ["wasde"],
+    "imf_weo": ["imf_dm"], "oecd_eo": ["oecd_eo"], "fomc_statement": ["fed_web"], "tsy_securities": ["td_secs"], "wasde": ["wasde"], "research_feeds": ["research_feeds"],
     "eia_series": ["eia"], "nass_crop": ["nass"], "etf_valuation": ["yahoo_funds"], "fx_panel": ["frankfurter"],
 }
 
