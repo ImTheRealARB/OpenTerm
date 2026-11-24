@@ -302,6 +302,16 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - Practice while replaying: Shift+B buys 100, Shift+S sells 100, Shift+F flattens; each fills at the next bar's open. Shift+J saves the session's trades to JRNL as `REPLAY <SYMBOL> <date>`. Nothing is ever sent to a broker.
 - Linked GP panels (`LINK A`) that are also replaying follow the same clock.
 
+## Phase 26: strategy lab
+
+- `BT OPT AAPL SMA{10..50:5}>SMA{50..200:25} 1D 10Y` tries every combination of the ranges in braces (`{lo..hi:step}`, at most 2,000 runs) through the normal backtester and ranks them. `METHOD=RANDOM N=200` or `METHOD=GA POP=40 GEN=25` search a sample instead (`SEED=` repeats a search exactly). `FIT=SHARPE|SORTINO|CALMAR|PF|NET|RETURN` picks what "best" means.
+- A saved Python strategy keeps valid code: give its constants ranges on the command, `BT OPT AAPL @mystrat FAST={10..50:5} SLOW={50..200:25}` (the strategy needs one line `FAST = 20` per name).
+- Views (V / Shift+V, 1-4): TABLE (S changes the sort, Enter runs the selected set as a normal BT in a new panel, E saves a CSV), HEAT (two parameters as a colour map, X next pair), FRONT (annual return against max drawdown; the efficient runs joined), WF.
+- Above every view: number of trials, deflated Sharpe, probability of backtest overfitting, EDGE OF RANGE when the winner sits on a range end, and the best region (the winner's neighbours).
+- `WF=5` adds walk-forward optimisation (tune on one part of history, test on the next, slide forward; `ANCHORED` keeps the start fixed): the out-of-sample windows, their stitched equity and the walk-forward efficiency.
+- Exits on any BT or BT OPT: `STOP=5 TARGET=10` (percent from the entry). `FILL=INTRABAR` settles a daily bar that reached both from 60-minute bars (last two years); otherwise, or with no intraday bar, the stop counts first. The EXITS line says which rule settled how many bars.
+- `BT LIVE AAPL @mystrat [1D|1W] [CASH=n]` starts a paper forward test: play money in OpenTerm's own book, filled at the next bar's open, never sent anywhere. `BT LIVE` lists them next to a backtest of the same period on today's data (DIVERGED bars are a warning sign); Enter details, R check now, S stop; `BT LIVE STOP <id>`, `BT LIVE DEL <id>`.
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

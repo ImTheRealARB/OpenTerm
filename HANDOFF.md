@@ -6,9 +6,11 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 ## Resume here
 
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
-`claude/phases-21-32-build-resume-61e1cd` (worktree `.claude/worktrees/phases-21-32-build-resume-61e1cd`; it contains the old
-`claude/phases-21-32-build-2c2ded`). Phases 21, 22, 23 and 24 are DONE. NEXT: Phase 26 (strategy lab); Phase 25 stays deferred.
-Paused 2026-11-24 ~10:00 UTC at 80%+ of the 5-hour window, after the Phase 23+24 commit (nothing in flight).**
+`claude/phases-21-32-build-resume-0f4977` (worktree `.claude/worktrees/phases-21-32-build-resume-0f4977`; fast-forwarded from
+`...-61e1cd`, which holds 21-24). Phases 21, 22, 23, 24 and 26 are DONE. NEXT: Phase 27 (scanners, indicator columns, smart
+alerts); Phase 25 stays deferred.**
+- Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): this session's `CLAUDE.md` and
+  `docs/TEST_CHECKLIST.md` (new section 31) live in the worktree; copy both over the main checkout's files.
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
   it) under the MINIMAL TEST BAR (local `docs/specs/PHASES_21-33.md` "How to run a phase" step 3) and the 95% 5-hour guard.
   The pick list is the whole of local `docs/specs/BUILD_PICKS_21-33.md`; no paste needed.
@@ -51,11 +53,26 @@ Paused 2026-11-24 ~10:00 UTC at 80%+ of the 5-hour window, after the Phase 23+24
   CAP|DAYS, off by default, loopback-only writes; `FOOT|TAS|DOM SYM REC=<id>` replay a session). Deviations: the practice book is
   per panel, not an ORD paper account, and has no stop / target orders (Phase 26 brings the intrabar rule); Kite tick recording not built.
 
+- **Phase 26 (strategy lab): BUILT 2026-11-24** (spec `docs/specs/PHASE_26.md`). `BT OPT` = one `bt.opt` job running every
+  parameter set through the normal engine (`bt/opt_job.py`; ~0.1 s per run on 10Y daily, serial): ranges `{lo..hi:step}` in a rule,
+  or `NAME={..}` replacing a saved Python strategy's `NAME = 20` line (`bt/optspace.py`: parse, grid cap 2,000, seeded random and
+  GA); guards, walk-forward and the efficient front from the returns matrix (`bt/overfit.py`: CSCV PBO 10 blocks / 252 splits,
+  deflated Sharpe via `quantlib.multipletesting`, WF windows sliced from full-history runs, labelled). Exits `STOP= TARGET=
+  FILL=INTRABAR` for BT and BT OPT (`bt/stops.py`, installed on the engine instance through `on_bar` / `_plan_open_order` /
+  `_record_dropped_target_adjustments` hooks; ported engine files untouched; 60-minute bars for the last 2Y fetched by
+  `api._intraday_for`). `BT LIVE` paper forward tests (`bt/fwd.py` book + `bt.fwdsig` job; routes `bt_lab_routes.py` under
+  `/api/bt/opt` and `/api/bt/fwd`; state in kv `btfwd:<id>`; scheduler job `bt_fwd` every 15 min). Frontend: `functions/BtOpt.tsx`,
+  `BtLive.tsx`, `bt/optArgs.ts`, `bt/liveArgs.ts`, `btOpt.css`. Deviations (owner to confirm): the forward test keeps its OWN
+  paper book (fills at the next bar's open, raw prices, no fees) instead of ORD PAPER, because ORD needs Alpaca paper keys and a
+  human confirm token per order and automating that would bypass the confirm step; fitness formulas over metrics were not built
+  (fixed FIT= list); script strategies are out (Phase 25 deferred).
+
 Progress (one line per phase; newest last):
 - Phase 21: built 2026-11-24.
 - Phase 22: built 2026-11-24 (gate green after one smoke fix).
 - Phase 23: built 2026-11-24.
 - Phase 24: built 2026-11-24 (committed together with 23; gate and bench in the commit message).
+- Phase 26: built 2026-11-24 (gate result in the commit message; no bench this phase per the plan).
 
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):

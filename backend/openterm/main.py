@@ -9,7 +9,18 @@ import httpx
 import orjson
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, remote, scheduler
+from . import (
+    APP_NAME,
+    __version__,
+    bt_lab_routes,
+    keys,
+    logbuf,
+    perf,
+    providers,
+    redact,
+    remote,
+    scheduler,
+)
 from .ai import routes_filing, routes_run  # noqa: F401 - importing routes_filing registers POST /api/ai/filing on the shared AI router
 from .ai.routes import router as ai_router
 from .api import router as api_router
@@ -201,6 +212,9 @@ async def lifespan(app: FastAPI):
     from .delivery import settings as delivery_settings
 
     scheduler.schedule_brief(sched, app, (await delivery_settings.get(db))["brief"])  # Phase 17 C
+    # Phase 26: paper forward tests advance on new bars while the server runs (play money, OpenTerm's own book).
+    sched.add_job(bt_lab_routes.step_all, "interval", minutes=bt_lab_routes.FWD_EVERY_MIN, args=[app], id="bt_fwd",
+                  max_instances=1, coalesce=True)
     # --- Phase 20: server-side alerts. The engine watches active alerts through the hub and fires them with no browser open.
     # `deliver` is the Phase 17 background sender; `news_for_alerts` reads the same cached news the N panel shows.
     # `deliver_spawn` = delivery.spawn plus the per-alert VIA channels (alert_channels.py)
@@ -254,6 +268,7 @@ app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)
 app.include_router(recorder_router)
+app.include_router(bt_lab_routes.router)
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)

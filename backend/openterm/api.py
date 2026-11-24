@@ -815,6 +815,28 @@ def _opt_num(opts: dict, key: str, lo: float, hi: float, default=None):
     return v
 
 
+INTRADAY_INTERVAL, INTRADAY_RANGE = "60m", "2Y"  # FILL=INTRABAR: the deepest hourly history the free sources keep
+
+
+async def _intraday_for(s, symbols: list[str]) -> dict:
+    """FILL=INTRABAR (Phase 26): 60-minute bars for the run's last two years, per symbol, plus a note saying where they came
+    from and which symbols have none (those resolve a bar that reached both levels by the stop-first rule, as the label says)."""
+    got = await asyncio.gather(*(s.history(x, INTRADAY_RANGE, INTRADAY_INTERVAL) for x in symbols), return_exceptions=True)
+    bars, have, missing = {}, [], []
+    for sym, r in zip(symbols, got, strict=True):
+        if isinstance(r, DataError):
+            missing.append(f"{sym} ({redact(str(r))})")
+        elif isinstance(r, BaseException):
+            raise r
+        else:
+            bars[sym] = r["data"]
+            have.append(f"{sym} FROM {str(r.get('source') or '?').upper()}")
+    note = " · ".join(p for p in (
+        "60-MINUTE BARS (LAST 2 YEARS): " + ", ".join(have) if have else "",
+        "NO 60-MINUTE BARS FOR " + "; ".join(missing) + ": STOP FIRST THERE" if missing else "") if p)
+    return {"intraday": bars, "intraday_note": note}
+
+
 async def _bt_params(request: Request, body: dict) -> dict:
     import hashlib
 
@@ -838,6 +860,13 @@ async def _bt_params(request: Request, body: dict) -> dict:
     limit_s = _opt_num(opts, "time_limit_s", 1, 60, 60)
     mem_mb = _opt_num(opts, "memory_limit_mb", 64, 1024, 1024)
     warmup = _opt_num(opts, "warmup_bars", 0, 10_000)
+    # Phase 26: exits at a percentage from the entry price, and the intrabar rule for a bar that reaches both.
+    stop, target = _opt_num(opts, "stop_pct", 0.1, 99), _opt_num(opts, "target_pct", 0.1, 1000)
+    fill = str(opts.get("fill") or "").lower()
+    if fill not in ("", "intrabar"):
+        raise BtError("bad_request", "OPTION FILL MUST BE INTRABAR")
+    if fill and not (stop or target):
+        raise BtError("bad_request", "FILL=INTRABAR NEEDS STOP= OR TARGET=")
     short, adjusted = bool(opts.get("short", False)), bool(opts.get("adjusted", True))
     bench = opts.get("bench")
     if bench is not None and (not isinstance(bench, str) or not bench.strip()):
@@ -855,8 +884,8 @@ async def _bt_params(request: Request, body: dict) -> dict:
             raise BtError("bad_request", "NOT RUNNABLE: MISSING " + ", ".join(miss))
         if structure["exercise_style"] not in catalog.OPTIONS_STYLES:
             raise BtError("bad_request", f"NOT RUNNABLE: exercise_style MUST BE {' OR '.join(catalog.OPTIONS_STYLES)}")
-        if sources or short or slip is not None:
-            raise BtError("bad_request", "OPTIONS TAKES A STRUCTURE ONLY (NO RULE, CODE, SHORT OR SLIP)")
+        if sources or short or slip is not None or stop or target:
+            raise BtError("bad_request", "OPTIONS TAKES A STRUCTURE ONLY (NO RULE, CODE, SHORT, SLIP, STOP OR TARGET)")
         structure = {k: structure[k] for k in ("legs", "open_date", "close_date", "risk_free_rate", "contract_multiplier",
                                                "exercise_style") if structure.get(k) not in (None, "")}
         sources = ["structure"]
@@ -901,6 +930,8 @@ async def _bt_params(request: Request, body: dict) -> dict:
     envs = dict(zip(wanted, results, strict=True))
     payload = {"bars": {x: envs[x]["data"] for x in symbols}, "bench": envs[wanted[-1]]["data"] if bench else None,
                "bench_symbol": wanted[-1] if bench else None}
+    if fill == "intrabar":
+        payload.update(await _intraday_for(s, symbols))
     store = bt_of(request)
     sha, path = await asyncio.to_thread(store.write_data, payload)
 
@@ -933,13 +964,15 @@ async def _bt_params(request: Request, body: dict) -> dict:
             "LOCAL DATA (IMPORTED BY YOU, NOT FROM A MARKET SOURCE)" if any(
                 str(envs[x].get("source")) == "local" for x in wanted) else "") if n),
     }
+    stops = {"stop": stop, "target": target, "intrabar": fill == "intrabar"} if (stop or target) else None
     meta = {"rule": rule, "strategy": strategy, "code": code, "symbols": symbols, "interval": interval,
             "range": range_, "engine": engine, "short": short, "bench": wanted[-1] if bench else None,
-            **({"structure": structure} if is_opt else {})}
+            **({"structure": structure} if is_opt else {}), **({"stops": stops} if stops else {})}
     params = {"data_path": str(path), "data_sha": sha, "short": short, "engine": engine, "config": config,
               "bars_per_year": catalog.bars_per_year(engine, interval),
               "adjusted": adjusted, "time_limit_s": limit_s, "memory_limit_mb": int(mem_mb), "labels": labels,
-              "meta": meta, **({"structure": structure} if is_opt else {"rule": rule} if rule else {"code": code})}
+              "meta": meta, **({"structure": structure} if is_opt else {"rule": rule} if rule else {"code": code}),
+              **({"stops": stops} if stops else {})}
     stable = {k: v for k, v in params.items() if k != "labels"}  # labels carry data age: not part of the identity
     params["run_id"] = hashlib.sha256(orjson.dumps(stable, option=orjson.OPT_SORT_KEYS)).hexdigest()[:16]
     return params

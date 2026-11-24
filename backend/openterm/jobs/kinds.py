@@ -84,7 +84,7 @@ def sleep_job(params: dict, progress: Callable[[float, str], None]) -> dict:
 # --- bt.run: one backtest (Phase 12). Params are built by /api/bt/run; the data file hash is the fingerprint. ----
 
 BT_KEYS = {"data_path", "data_sha", "rule", "code", "short", "engine", "config", "bars_per_year", "adjusted",
-           "time_limit_s", "memory_limit_mb", "labels", "meta", "run_id", "structure"}
+           "time_limit_s", "memory_limit_mb", "labels", "meta", "run_id", "structure", "stops"}
 
 
 def validate_bt(params: dict) -> dict:
@@ -145,6 +145,47 @@ KINDS: dict[str, Kind] = {
     "bt.wf": Kind("bt.wf", "1", "WALK-FORWARD", bt_wf_job, validate_bt_val("bt.wf"), time_limit_s=60.0, internal=True,
                   hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"}),
 }
+
+
+# --- Phase 26: bt.opt (the optimiser, built by POST /api/bt/opt) and bt.fwdsig (a forward test's signals, built by
+# /api/bt/fwd). Both read a data file the server wrote, like bt.run. ------------------------------------------------------
+
+OPT_KEYS = {"opt_id", "data_path", "data_sha", "short", "engine", "config", "bars_per_year", "adjusted", "memory_limit_mb",
+            "labels", "meta", "stops", "template", "kind", "method", "fit", "seed", "n", "pop", "gen", "wf", "anchored", "budget"}
+
+
+def validate_opt(params: dict) -> dict:
+    need = {"opt_id", "data_path", "data_sha", "engine", "config", "template", "kind", "method", "fit", "seed", "budget", "meta"}
+    if not isinstance(params, dict) or set(params) - OPT_KEYS or not need <= set(params):
+        raise BadParams("BT.OPT PARAMS ARE BUILT BY /api/bt/opt")
+    return params
+
+
+def bt_opt_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..bt.opt_job import run  # pandas loads here, in the worker
+
+    return run(params, progress)
+
+
+def validate_fwdsig(params: dict) -> dict:
+    from ..bt.fwd import (
+        validate,  # pure module; imported lazily because it imports BadParams from here
+    )
+
+    return validate(params)
+
+
+def bt_fwdsig_job(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from ..bt.fwd import signals_job
+
+    return signals_job(params, progress)
+
+
+KINDS["bt.opt"] = Kind("bt.opt", "1", "BT OPTIMISE", bt_opt_job, validate_opt, time_limit_s=3600.0,
+                       fingerprint=lambda p: p["data_sha"], internal=True,
+                       hash_view=lambda p: {k: v for k, v in p.items() if k != "labels"})
+KINDS["bt.fwdsig"] = Kind("bt.fwdsig", "1", "FORWARD TEST", bt_fwdsig_job, validate_fwdsig, time_limit_s=60.0, internal=True,
+                          fingerprint=lambda p: p["data_sha"])
 
 
 # --- Phase 15: risk.run / opt.run / attr.run. Params are built by POST /api/quant/{fn} (spec decision B): the server fetches the bars and writes

@@ -55,6 +55,10 @@ const CASES: Case[] = [
   // Phase 24
   { cmd: "REC", want: /OFF BY DEFAULT/ },
   { cmd: "AAPL GP 1Y REPLAY", want: /REPLAY .* BAR \d+\/\d+ PAUSED/ },
+  // Phase 26
+  { cmd: "BT OPT AAPL SMA{10..30:10}>SMA{50..100:50} 1D 10Y", want: /PROB\. OF BACKTEST OVERFITTING/ },
+  { cmd: "BT LIVE", want: /PAPER FORWARD TESTS/ },
+  { cmd: "BT AAPL SMA20>SMA50 1D 10Y STOP=5 TARGET=10", want: /EXITS: STOP 5% TARGET 10%/ },
 ];
 
 let backend: ChildProcess | null = null;

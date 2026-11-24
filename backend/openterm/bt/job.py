@@ -96,13 +96,32 @@ def _run_options(params: dict, data_map: dict, adjusted: bool, progress: Callabl
     }
 
 
-def run(params: dict, progress: Callable[[float, str], None]) -> dict:
+def intraday_days(bars_by_symbol: dict | None) -> dict:
+    """FILL=INTRABAR (Phase 26): intraday bars -> {symbol: {local day: [(high, low), ...] in time order}}, the shape
+    `stops.decide` reads. The day is taken in the exchange's own zone, like `frames.from_bars` does for daily bars."""
+    import numpy as np
     import pandas as pd
 
-    from . import frames, limits, rules, sandbox
-    from .engine import backtest
+    out: dict = {}
+    for sym, b in (bars_by_symbol or {}).items():
+        if not b or not b.get("t"):
+            continue
+        t = pd.to_datetime(np.asarray(b["t"], dtype="int64"), unit="s", utc=True)
+        if b.get("tz"):
+            t = t.tz_convert(b["tz"])
+        days = t.tz_localize(None).floor("D")
+        per: dict = {}
+        for d, h, low in zip(days, b["h"], b["l"], strict=True):
+            if h is not None and low is not None:
+                per.setdefault(d, []).append((float(h), float(low)))
+        out[sym] = per
+    return out
 
-    progress(0.05, "LOADING DATA")
+
+def load_data(params: dict) -> tuple[dict, dict, bool]:
+    """The job's data file -> (payload, data_map of bar frames, adjusted?). Shared by bt.run, bt.opt and bt.fwdsig."""
+    from . import frames
+
     payload = msgpack.unpackb(Path(params["data_path"]).read_bytes(), raw=False)
     raw = {s: frames.from_bars(b) for s, b in payload["bars"].items()}
     adjusted = bool(params.get("adjusted", True)) and all(
@@ -111,22 +130,50 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     empty = [s for s, f in data_map.items() if len(f) < 2]
     if empty:
         raise ValueError(f"NOT ENOUGH BARS FOR {', '.join(empty)}")
+    return payload, data_map, adjusted
+
+
+def stops_config(params: dict, payload: dict) -> dict | None:
+    """`backtest(stops=...)` from the job params (STOP= / TARGET= / FILL=INTRABAR), or None when the run has no exits."""
+    st = params.get("stops")
+    if not st:
+        return None
+    return {"stop": st.get("stop"), "target": st.get("target"),
+            "intraday": intraday_days(payload.get("intraday")) if st.get("intrabar") else None}
+
+
+def signals_for(rule: str | None, code: str | None, data_map: dict, short: bool) -> dict:
+    """{symbol: signal Series} from a rule or from Python strategy code (run in the sandbox). Raises with a readable
+    message when the strategy returns nothing usable."""
+    import pandas as pd
+
+    from . import rules, sandbox
+
+    if rule:
+        return rules.signals(rules.parse(rule), data_map, short=short)
+    engine_obj = sandbox.load(code)
+    signal_map = engine_obj.generate({s: f.copy() for s, f in data_map.items()})
+    if not isinstance(signal_map, dict):
+        raise ValueError(f"generate() MUST RETURN A DICT OF SERIES, GOT {type(signal_map).__name__}")  # noqa: TRY004 - same type as before the move
+    signal_map = {s: v for s, v in signal_map.items() if s in data_map and isinstance(v, pd.Series)}
+    if not signal_map:
+        raise ValueError("NO SIGNALS: generate() returned no Series for the loaded symbols")
+    return signal_map
+
+
+def run(params: dict, progress: Callable[[float, str], None]) -> dict:
+    from . import frames, limits, stops
+    from .engine import backtest
+
+    progress(0.05, "LOADING DATA")
+    payload, data_map, adjusted = load_data(params)
 
     if params["engine"] == "options":
         return _run_options(params, data_map, adjusted, progress)
 
     progress(0.15, "SIGNALS")
     with limits.memory_cap(int(params.get("memory_limit_mb", 1024))):
-        if params.get("rule"):
-            signal_map = rules.signals(rules.parse(params["rule"]), data_map, short=bool(params.get("short")))
-        else:
-            engine_obj = sandbox.load(params["code"])
-            signal_map = engine_obj.generate({s: f.copy() for s, f in data_map.items()})
-            if not isinstance(signal_map, dict):
-                raise ValueError(f"generate() MUST RETURN A DICT OF SERIES, GOT {type(signal_map).__name__}")
-            signal_map = {s: v for s, v in signal_map.items() if s in data_map and isinstance(v, pd.Series)}
-        if not signal_map:
-            raise ValueError("NO SIGNALS: generate() returned no Series for the loaded symbols")
+        signal_map = signals_for(params.get("rule"), params.get("code"), data_map, bool(params.get("short")))
 
         progress(0.35, "SIMULATING")
         bench_ret, bench_meta = None, None
@@ -141,8 +188,10 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
             if len(window) >= 2:
                 bench_meta = {"benchmark_ticker": payload.get("bench_symbol"),
                               "benchmark_return": float(window.iloc[-1] / window.iloc[0] - 1)}
+        stops_cfg = stops_config(params, payload)
         res = backtest(data_map, signal_map, params["config"], engine=params["engine"],
-                       bars_per_year=params.get("bars_per_year"), bench_ret=bench_ret, benchmark_metadata=bench_meta)
+                       bars_per_year=params.get("bars_per_year"), bench_ret=bench_ret, benchmark_metadata=bench_meta,
+                       stops=stops_cfg)
 
     progress(0.9, "WRITING RESULT")
     cash = float(params["config"].get("initial_cash", 100_000))
@@ -155,6 +204,10 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     } for t in res.trades]
     labels = dict(params["labels"])
     labels["prices"] = "ADJ" if adjusted else "RAW"
+    if res.extra.get("stops") is not None:
+        st = params["stops"]
+        labels["stops"] = stops.label(st.get("stop"), st.get("target"), bool(st.get("intrabar")), res.extra["stops"],
+                                      payload.get("intraday_note", ""))
     if params.get("adjusted", True) and not adjusted:
         labels["data_note"] = (labels.get("data_note", "") + " RAW CLOSES: NO ADJUSTED CLOSES FROM THE SOURCE").strip()
     return {

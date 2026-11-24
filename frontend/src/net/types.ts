@@ -528,6 +528,94 @@ export interface BtLabels {
   sources: BtSource[];
   benchmark?: string;
   data_note?: string;
+  /** Phase 26: STOP= / TARGET= settings and which rule settled each exit (FILL=INTRABAR or stop first). */
+  stops?: string;
+  /** Phase 26 BT OPT: how the walk-forward windows were cut. */
+  wf?: string;
+}
+
+/** Phase 26: one parameter set of a BT OPT search. `i` = index of each value in its range. */
+export interface BtOptRun {
+  i: number[];
+  values: string[];
+  metrics?: Record<string, number | null>;
+  fitness: number | null;
+  front?: boolean;
+  error?: string;
+}
+
+export interface BtOptWindow {
+  window: number;
+  is_start: number;
+  is_end: number;
+  oos_start: number;
+  oos_end: number;
+  values: string[];
+  is_fitness: number | null;
+  is_annual: number | null;
+  oos_annual: number | null;
+  oos_return: number;
+}
+
+/** Result of a bt.opt job (POST /api/bt/opt). */
+export interface BtOptResult {
+  opt_id: string;
+  template: string;
+  shown: string;
+  kind: "rule" | "code";
+  method: "GRID" | "RANDOM" | "GA";
+  fit: string;
+  seed: number;
+  symbols: string[];
+  interval: string;
+  range: string;
+  strategy: string | null;
+  params: { name: string; values: string[]; where: string }[];
+  runs: BtOptRun[];
+  best: number | null;
+  guards: {
+    trials: number;
+    failed: number;
+    no_fitness: number;
+    edge: string[];
+    plateau: { neighbours: number; mean: number | null; best: number | null } | null;
+    pbo: { pbo: number; splits: number; blocks: number; median_logit: number } | null;
+    dsr: { dsr: number; expected_max_sharpe: number; observed_sharpe: number; trials: number } | null;
+  };
+  wf: { windows: BtOptWindow[]; equity: [number, number][]; oos_annual: number | null; is_annual_mean: number | null;
+    wfe: number | null; anchored: boolean; n_windows: number } | null;
+  bars: number;
+  labels: BtLabels;
+}
+
+/** Phase 26 paper forward test: list row (GET /api/bt/fwd). */
+export interface BtFwdSummary {
+  id: string;
+  symbol: string;
+  strategy: string;
+  interval: string;
+  cash0: number;
+  started: number;
+  status: "active" | "stopped";
+  pos: number;
+  checked: number | null;
+  error: string | null;
+  decisions: number;
+  late: number;
+  fills: number;
+  live_return: number | null;
+  bt_return: number | null;
+  n_diverged: number;
+}
+
+/** GET /api/bt/fwd/{id}: decisions [bar t, direction, catch-up], fills [t, side, qty, price]. */
+export interface BtFwdFull {
+  id: string;
+  decisions: [number, number, boolean][];
+  fills: [number, "BUY" | "SELL", number, number][];
+  summary: BtFwdSummary;
+  backtest: { equity: number | null; return: number | null; fills: number; decisions: number; diverged: [number, number, number][];
+    n_diverged: number; live_equity: number | null; live_return: number | null; price: number | null } | null;
 }
 
 export interface BtTrade {
@@ -573,7 +661,8 @@ export interface BtRunRequest {
   symbols: string[];
   interval: string;
   range: string;
-  options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string };
+  options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string;
+    stop_pct?: number; target_pct?: number; fill?: "intrabar" };
   /** Phase 14: MKT=options (an OSA structure instead of a rule). */
   structure?: Record<string, unknown>;
 }

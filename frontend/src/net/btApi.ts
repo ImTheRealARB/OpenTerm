@@ -4,7 +4,9 @@ import type { JobRec } from "./jobFrames";
 import type {
   BtSynth,
   BtCheck, BtCompare, BtImported, BtRunCard, BtRunFull, BtRunRequest, BtStrategy, BtStrategyCard, BtTemplate,
+  BtFwdFull, BtFwdSummary,
 } from "./types";
+import type { BtOptRequest } from "../bt/optArgs";
 
 export const btApi = {
   templates: () => send<{ templates: BtTemplate[] }>("GET", "/api/bt/templates"),
@@ -71,4 +73,14 @@ export const btApi = {
   /** The job, plus the id its run will be stored under (open it at once when the answer is cached). */
   run: (body: BtRunRequest) => send<JobRec & { run_id: string; run?: BtRunFull }>("POST", "/api/bt/run", body),
   get: (id: string) => send<BtRunFull>("GET", `/api/bt/runs/${encodeURIComponent(id)}`),
+  /** Phase 26: start an optimisation job (the result arrives as the job's result, see BtOptResult). */
+  opt: (body: BtOptRequest) => send<JobRec & { opt_id: string; budget: number }>("POST", "/api/bt/opt", body),
+  /** Phase 26 paper forward tests (play money in OpenTerm's own book; nothing reaches a broker). */
+  fwdList: () => send<{ tests: BtFwdSummary[] }>("GET", "/api/bt/fwd"),
+  fwdCreate: (body: { symbol: string; strategy: string; interval: string; cash?: number }) =>
+    send<{ test: BtFwdSummary; job: JobRec }>("POST", "/api/bt/fwd", body),
+  fwdGet: (id: string) => send<BtFwdFull>("GET", `/api/bt/fwd/${encodeURIComponent(id)}`),
+  fwdStep: (id: string) => send<JobRec>("POST", `/api/bt/fwd/${encodeURIComponent(id)}/step`, {}),
+  fwdStop: (id: string) => send<BtFwdSummary>("POST", `/api/bt/fwd/${encodeURIComponent(id)}/stop`, {}),
+  fwdDelete: (id: string) => send<{ deleted: string }>("DELETE", `/api/bt/fwd/${encodeURIComponent(id)}`),
 };
