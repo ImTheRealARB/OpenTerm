@@ -13,6 +13,8 @@ from pathlib import Path
 
 import httpx
 
+from .filings_fixtures import route_filings  # Phase 29: FTS, MA, LEGAL, BIO, RELS, ESG
+
 FIXTURES = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
 
 ROUTES = {
@@ -167,6 +169,13 @@ def _route_phase6(request: httpx.Request) -> httpx.Response | None:
             if p.startswith(prefix) and p.endswith(".json"):
                 cik = p[len(prefix):-5]
                 return _keyed({str(k): v for k, v in table.items()}, str(int(cik)) if cik.isdigit() else cik)
+        if p.startswith("/api/xbrl/frames/us-gaap/"):
+            # Phase 29 (IBQ, FRM, EQS BT): /api/xbrl/frames/us-gaap/<tag>/<unit>/<period>.json -> sec_frame_<tag>_<period>.json,
+            # REAL recordings (scripts/record_phase29_fund.py) trimmed to cik/accn/end/val/entityName.
+            parts = p[len("/api/xbrl/frames/us-gaap/"):].removesuffix(".json").split("/")
+            name = f"sec_frame_{parts[0]}_{parts[-1]}" if len(parts) == 3 else ""
+            if name and (FIXTURES / f"{name}.json").exists():
+                return _load(name)
         return httpx.Response(404, text="not recorded")
     if host == "www.sec.gov" and p.startswith("/Archives/edgar/data/"):
         parts = p.split("/")  # /Archives/edgar/data/<cik>/<accession without dashes>/<document>
@@ -1165,6 +1174,7 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
+    route_filings,      # Phase 29: SEC full-text search + enforcement feeds + ticker file, OpenFIGI tickers, CourtListener, EPA GHGRP
     _route_nseindices,  # NIFTY constituent lists (doc-shaped)
     _route_fsrc,        # FSRC: Nasdaq Trader ETF list, Yahoo fund profiles
     _route_aggtrades,   # Binance spot aggregated trades (order flow)

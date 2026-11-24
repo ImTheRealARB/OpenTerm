@@ -273,6 +273,14 @@ async def deriv(request: Request, fn: str):
     return await svc(request).derivs.run(fn, **params)
 
 
+# --- Phase 29: fundamentals depth (fund/service.py) ---
+@router.get("/fund/{fn}")
+@data_errors
+async def fund(request: Request, fn: str):
+    params = {k.lower(): v[:200] for k, v in request.query_params.items()}
+    return await svc(request).fund.run(fn, **params)
+
+
 # --- Phase 14 step 6: RATES views (the Treasury panel keeps GET /rates) ---
 @router.get("/rates/curve")
 @data_errors

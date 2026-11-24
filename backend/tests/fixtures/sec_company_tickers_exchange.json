@@ -1,0 +1,115 @@
+{
+ "status": 200,
+ "body": {
+  "fields": [
+   "cik",
+   "name",
+   "ticker",
+   "exchange"
+  ],
+  "data": [
+   [
+    320193,
+    "Apple Inc.",
+    "AAPL",
+    "Nasdaq"
+   ],
+   [
+    789019,
+    "MICROSOFT CORP",
+    "MSFT",
+    "Nasdaq"
+   ],
+   [
+    1652044,
+    "Alphabet Inc.",
+    "GOOGL",
+    "Nasdaq"
+   ],
+   [
+    1326801,
+    "Meta Platforms, Inc.",
+    "META",
+    "Nasdaq"
+   ],
+   [
+    1067983,
+    "BERKSHIRE HATHAWAY INC",
+    "BRK-B",
+    "NYSE"
+   ],
+   [
+    320187,
+    "NIKE, Inc.",
+    "NKE",
+    "NYSE"
+   ],
+   [
+    1754301,
+    "Fox Corp",
+    "FOXA",
+    "Nasdaq"
+   ],
+   [
+    920760,
+    "LENNAR CORP /NEW/",
+    "LEN",
+    "NYSE"
+   ],
+   [
+    1564708,
+    "NEWS CORP",
+    "NWSA",
+    "Nasdaq"
+   ],
+   [
+    1675149,
+    "Alcoa Corp",
+    "AA",
+    "NYSE"
+   ],
+   [
+    1336917,
+    "Under Armour, Inc.",
+    "UAA",
+    "NYSE"
+   ],
+   [
+    1652044,
+    "Alphabet Inc.",
+    "GOOG",
+    "Nasdaq"
+   ],
+   [
+    1067983,
+    "BERKSHIRE HATHAWAY INC",
+    "BRK-A",
+    "NYSE"
+   ],
+   [
+    920760,
+    "LENNAR CORP /NEW/",
+    "LEN-B",
+    "NYSE"
+   ],
+   [
+    1754301,
+    "Fox Corp",
+    "FOX",
+    "Nasdaq"
+   ],
+   [
+    1564708,
+    "NEWS CORP",
+    "NWS",
+    "Nasdaq"
+   ],
+   [
+    1336917,
+    "Under Armour, Inc.",
+    "UA",
+    "NYSE"
+   ]
+  ]
+ }
+}

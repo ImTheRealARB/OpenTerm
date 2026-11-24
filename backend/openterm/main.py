@@ -33,6 +33,7 @@ from .db import open_db
 from .delivery.routes import router as delivery_router
 from .etf_routes import router as etf_router
 from .extensions.routes import router as ext_router
+from .filings_routes import router as filings_router
 from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
 from .mcp.routes import router as mcp_router
@@ -97,6 +98,11 @@ async def lifespan(app: FastAPI):
     from .derivs.service import Derivs
 
     service.derivs = Derivs(service, settings.openterm_fixtures, db)
+
+    # --- Phase 29: fundamentals depth (GF EM DDIS SCORE FRM EQS BT IBQ REVS) ---
+    from .fund.service import Fund
+
+    service.fund = Fund(service)
 
     from .rates.service import RatesViews
 
@@ -289,6 +295,7 @@ app.include_router(bt_lab_routes.router)
 app.include_router(scan_router)
 app.include_router(options_rec_router)
 app.include_router(smart_alerts_router)
+app.include_router(filings_router)
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)

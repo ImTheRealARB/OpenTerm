@@ -24,6 +24,7 @@ HOLDERS = "holders"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 SUBS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
+FRAMES_URL = "https://data.sec.gov/api/xbrl/frames/us-gaap/{tag}/{unit}/{period}.json"  # Phase 29
 TICKERS_TTL_S = 86400.0
 SUBS_MEMO_S = 120.0
 FORM4_LIMIT = 20
@@ -171,6 +172,24 @@ class SecProvider(Provider):
             "symbol": symbol, "cik": cik, "name": subs["name"], "trades": trades, "filings_read": len(refs) - len(failed),
             "failed": failed, "source": self.source, "as_of": self.now(),
         }
+
+    async def frame(self, tag: str, unit: str, period: str) -> dict:
+        """Phase 29: one us-gaap concept for every filer in one calendar period (raw body; fund/frames.py parses it)."""
+        if not re.fullmatch(r"[A-Za-z]{2,120}", tag) or not re.fullmatch(r"[A-Za-z/]{1,20}", unit) or not re.fullmatch(r"CY\d{4}(Q[1-4]I?)?", period):
+            raise ProviderError("bad_request", "BAD FRAME: TAG LETTERS ONLY, UNIT USD|SHARES|USD/SHARES, PERIOD CY2023|CY2023Q4|CY2023Q4I")
+        body = await self._json(FRAMES_URL.format(tag=tag, unit=unit, period=period))
+        if not isinstance(body, dict) or "data" not in body:
+            raise ProviderError("not_found", f"no frame {tag} {period}")
+        return body
+
+    async def tickers_by_cik(self) -> dict[int, list[str]]:
+        """CIK -> every SEC ticker of that filer (loads the ticker file through cik())."""
+        if not self._ciks:
+            await self.cik("AAPL")
+        out: dict[int, list[str]] = {}
+        for t, c in self._ciks.items():
+            out.setdefault(c, []).append(t)
+        return out
 
     async def probe(self) -> None:
         await self._json(SUBS_URL.format(cik=320193))

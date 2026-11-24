@@ -15,10 +15,18 @@ import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
+import EqsBt from "./EqsBt";
+import { isEqsBt } from "./fundArgs";
 
 const USAGE = "EQS SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT";
 
-export default function EQS({ panelId, args }: FunctionProps) {
+/** `EQS BT ...` is the Phase 29 screen backtest (its own panel); anything else is the live screener below.
+ *  The split happens in this wrapper so neither component calls hooks conditionally. */
+export default function EQS(props: FunctionProps) {
+  return isEqsBt(props.args) ? <EqsBt {...props} /> : <EqsScreen {...props} />;
+}
+
+function EqsScreen({ panelId, args }: FunctionProps) {
   const [env, setEnv] = useState<Envelope<ScreenerPayload> | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);

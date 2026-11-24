@@ -217,6 +217,18 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `WACC` | Weighted average cost of capital (Vibe engine) | yes | `ERP=5.5 BASIS=CURRENT\|TARGET [EW= KD= RF= BETA= TAX=]` | `AAPL WACC` |
 | `RV` | Relative valuation: peer multiples from SEC filings (Vibe comps engine) | yes | `[PEERS=SYM,SYM]` | `AAPL RV` |
 
+### Research: Fundamentals
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `GF` | Fundamental metric over time (SEC filings, vs peers) | yes | `[METRIC] [Q] [VS=MSFT,GOOGL]` | `AAPL GF` |
+| `EM` | Earnings matrix: quarters x years, actual vs estimate | yes |  | `AAPL EM` |
+| `DDIS` | Debt maturity ladder from the 10-K | yes |  | `AAPL DDIS` |
+| `SCORE` | Formula scores: Altman, Piotroski, Beneish, Ohlson, Merton | yes |  | `AAPL SCORE` |
+| `REVS` | Estimate revision score (inputs shown) | yes |  | `AAPL REVS` |
+| `FRM` | One XBRL concept for every filer, point in time |  | `<TAG> [CY2024] [ASOF=YYYY-MM-DD]` | `FRM` |
+| `IBQ` | Industry roll-ups: median margins, growth, valuation |  | `[YEAR] [INDUSTRY]` | `IBQ` |
+
 ### Research: Filings and owners
 
 | Code | What it does | Security | Arguments | Example |
@@ -229,6 +241,10 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SI` | Short interest (FINRA) and daily short sale volume | yes |  | `AAPL SI` |
 | `ETF` | ETF profile, full N-PORT holdings and sector weights | yes |  | `AAPL ETF` |
 | `MEMB` | Index members and weights via the proxy ETF's N-PORT |  | `SPX\|NDX\|DJI\|RUT\|MID\|<ETF>` | `MEMB` |
+| `FTS` | SEC full-text search |  | `\"<WORDS>\" [FORM=10-K] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD] [TICKER]` | `FTS` |
+| `MA` | Deal filings: mergers, tender offers, material agreements |  | `[SYMBOL] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `MA` |
+| `BIO` | Insider biography: one owner's Form 3/4/5 filings |  | `<CIK \| \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `BIO` |
+| `RELS` | Related instruments: share classes and listings | yes |  | `AAPL RELS` |
 
 ### Research: Options
 
@@ -278,6 +294,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `FEC` | US campaign finance: candidate and committee search, receipts and disbursements by cycle (OpenFEC, free key FEC_API_KEY) |  | `<NAME> \| <FEC ID>` | `FEC` |
 | `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
 | `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
+| `LEGAL` | Litigation: SEC enforcement + court dockets (name match) | yes |  | `AAPL LEGAL` |
+| `ESG` | Emissions (EPA, US facilities; no score) |  | `<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]` | `ESG` |
 
 ### Portfolio
 

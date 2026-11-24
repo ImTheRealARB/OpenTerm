@@ -197,6 +197,20 @@ const defs: FunctionDef[] = [
   { code: "EMOV", title: "Earnings move: implied vs past reports", needsSecurity: true, load: () => import("./EMOV") },
   { code: "OIB", title: "Open interest buildup (India F&O)", needsSecurity: true, load: () => import("./OIB") },
   { code: "PGRK", title: "Portfolio option Greeks", needsSecurity: false, argsSchema: "<PORTFOLIO> [VS=SPY]", load: () => import("./PGRK") },
+  // Phase 29 filings: SEC full-text search, deal filings, litigation, a reporting owner's Form 3/4/5s, share classes, EPA emissions
+  { code: "FTS", title: "SEC full-text search", needsSecurity: false, argsSchema: "\"<WORDS>\" [FORM=10-K] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD] [TICKER]", load: () => import("./FTS") },
+  { code: "MA", title: "Deal filings: mergers, tender offers, material agreements", needsSecurity: false, argsSchema: "[SYMBOL] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]", load: () => import("./MA") },
+  { code: "LEGAL", title: "Litigation: SEC enforcement + court dockets (name match)", needsSecurity: true, load: () => import("./LEGAL") },
+  { code: "BIO", title: "Insider biography: one owner's Form 3/4/5 filings", needsSecurity: false, argsSchema: "<CIK | \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]", load: () => import("./BIO") },
+  { code: "RELS", title: "Related instruments: share classes and listings", needsSecurity: true, load: () => import("./RELS") },
+  { code: "ESG", title: "Emissions (EPA, US facilities; no score)", needsSecurity: false, argsSchema: "<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]", load: () => import("./ESG") },
+  { code: "GF", title: "Fundamental metric over time (SEC filings, vs peers)", needsSecurity: true, argsSchema: "[METRIC] [Q] [VS=MSFT,GOOGL]", load: () => import("./GF") },
+  { code: "EM", title: "Earnings matrix: quarters x years, actual vs estimate", needsSecurity: true, load: () => import("./EM") },
+  { code: "DDIS", title: "Debt maturity ladder from the 10-K", needsSecurity: true, load: () => import("./DDIS") },
+  { code: "SCORE", title: "Formula scores: Altman, Piotroski, Beneish, Ohlson, Merton", needsSecurity: true, load: () => import("./SCORE") },
+  { code: "FRM", title: "One XBRL concept for every filer, point in time", needsSecurity: false, argsSchema: "<TAG> [CY2024] [ASOF=YYYY-MM-DD]", load: () => import("./FRM") },
+  { code: "IBQ", title: "Industry roll-ups: median margins, growth, valuation", needsSecurity: false, argsSchema: "[YEAR] [INDUSTRY]", load: () => import("./IBQ") },
+  { code: "REVS", title: "Estimate revision score (inputs shown)", needsSecurity: true, load: () => import("./REVS") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

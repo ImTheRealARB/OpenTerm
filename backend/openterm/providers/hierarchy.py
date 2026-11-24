@@ -238,6 +238,12 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "etf_universe": ["nasdaq_trader"],
     "fund_profile": ["yahoo_funds"],
     "nifty_constituents": ["nseindices"],  # the only free source of the member lists
+    # Phase 29 filings: FTS / MA / BIO (SEC full-text search), LEGAL (SEC enforcement feeds + CourtListener), RELS / ESG / LEGAL (ticker file), ESG (EPA)
+    "sec_fts": ["sec_filings"],
+    "sec_rss": ["sec_filings"],
+    "sec_tickers_x": ["sec_filings"],
+    "court_dockets": ["courtlistener"],  # free key; no key = KEY REQUIRED
+    "ghg_facilities": ["epa_ghgrp"],
 }
 
 # Test data: with OPENTERM_SYNTHETIC=1 the SYN0000-SYN9999 provider answers for these two capabilities (last in line, so real

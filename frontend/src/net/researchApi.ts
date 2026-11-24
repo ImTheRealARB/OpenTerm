@@ -1,6 +1,7 @@
 /** Table-shaped research functions: one call per family, `fn` is the backend route name. `fresh` (F5) skips the client cache. */
 import type { TablePayload } from "../research/tablePayload";
 import { get, TTL } from "./core";
+import { filingsApi } from "./filingsApi";
 import type { ConePoint } from "../chart/cone";
 import type { Envelope } from "./types";
 
@@ -16,6 +17,10 @@ export const researchApi = {
   /** GP CONE (Phase 28): per-expiry 1 and 2 SD ranges from ATM IV. */
   cone: (symbol: string) =>
     get<Envelope<{ symbol: string; spot: number; label: string; points: ConePoint[] }>>("/api/deriv/cone", { symbol }, TTL.m1),
+  /** Phase 29 fundamentals depth: GF EM DDIS SCORE FRM EQSBT IBQ REVS (`/api/fund/<fn>`). Filings change slowly: 2 minutes. */
+  fund: (fn: string, params: Params, fresh = false) => get<Envelope<TablePayload>>(`/api/fund/${fn}`, params, TTL.m2, fresh),
+  /** Phase 29 filings: FTS MA LEGAL BIO RELS ESG (`/api/filings/<fn>`, the client lives in filingsApi.ts). */
+  filings: filingsApi.get,
   /** Non-US curves, credit spreads and auctions (RATES views). */
   rates: (fn: string, params: Params, fresh = false) => get<Envelope<TablePayload>>(`/api/rates/${fn}`, params, TTL.m1, fresh),
 };

@@ -1,0 +1,249 @@
+{
+ "status": 200,
+ "body": {
+  "GOOGL": {
+   "data": [
+    {
+     "figi": "BBG000QND791",
+     "name": "GOOGLE INC - CEDEAR",
+     "ticker": "GOOGL",
+     "exchCode": "AR",
+     "compositeFIGI": "BBG000QND791",
+     "securityType": "CEDEAR",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG001T96QK0",
+     "securityType2": "Depositary Receipt",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG000QND871",
+     "name": "GOOGLE INC - CEDEAR",
+     "ticker": "GOOGL",
+     "exchCode": "AF",
+     "compositeFIGI": "BBG000QND791",
+     "securityType": "CEDEAR",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG001T96QK0",
+     "securityType2": "Depositary Receipt",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S39JX6",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "US",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSH7",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UA",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSJ5",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UC",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSL2",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UN",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSM1",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UP",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSP8",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UB",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSR6",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UM",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSS5",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UX",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MSY8",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UD",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MT03",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UW",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MT12",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "UF",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MT21",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "VY",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MT30",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "VJ",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009S4MT49",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "VK",
+     "compositeFIGI": "BBG009S39JX6",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG009STMYC4",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "PE",
+     "compositeFIGI": "BBG009STMYB5",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG00B4YZB94",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "SW",
+     "compositeFIGI": "BBG00B4YZB94",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG00B4YZBC0",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "SE",
+     "compositeFIGI": "BBG00B4YZB94",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    },
+    {
+     "figi": "BBG00B4YZBH5",
+     "name": "ALPHABET INC-CL A",
+     "ticker": "GOOGL",
+     "exchCode": "BW",
+     "compositeFIGI": "BBG00B4YZB94",
+     "securityType": "Common Stock",
+     "marketSector": "Equity",
+     "shareClassFIGI": "BBG009S39JY5",
+     "securityType2": "Common Stock",
+     "securityDescription": "GOOGL"
+    }
+   ]
+  }
+ }
+}

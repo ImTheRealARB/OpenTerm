@@ -19,10 +19,12 @@ from .boc import BocProvider
 from .boe import BoeProvider
 from .coinbase import CoinbaseProvider
 from .companies_house import CompaniesHouseProvider
+from .courtlistener import CourtListenerProvider
 from .crypto import BinanceKlinesProvider, BinanceProvider, CoinGeckoProvider
 from .defillama import DefiLlamaProvider
 from .deribit import DeribitProvider
 from .ecb import EcbProvider
+from .epa_ghgrp import EpaGhgrpProvider
 from .etf import NasdaqTraderProvider, YahooFundsProvider
 from .etherscan import EtherscanProvider
 from .finnhub import FinnhubProvider
@@ -67,6 +69,7 @@ from .research_nasdaq import NasdaqResearchProvider
 from .research_yahoo import YahooResearchProvider
 from .screener import NasdaqScreenerProvider, YahooPeersProvider
 from .sec import SecProvider
+from .sec_filings import SecFilingsProvider
 from .sec_funds import Sec13fProvider, SecNportProvider
 from .synthetic import SyntheticProvider
 from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
@@ -136,6 +139,8 @@ ADAPTERS: dict[str, type[Provider]] = {
     "nasdaq_trader": NasdaqTraderProvider, "yahoo_funds": YahooFundsProvider,
     # SCAN / MRR / IMAP NIFTY universes: NSE Indices' constituent CSVs (downloaded on this computer, never shipped)
     "nseindices": NseIndicesProvider,
+    # Phase 29 filings: SEC full-text search / enforcement feeds / ticker-by-exchange file, CourtListener (free key), EPA GHGRP emissions
+    "sec_filings": SecFilingsProvider, "courtlistener": CourtListenerProvider, "epa_ghgrp": EpaGhgrpProvider,
 }
 
 # Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a

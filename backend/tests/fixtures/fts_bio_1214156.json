@@ -1,0 +1,785 @@
+{
+ "status": 200,
+ "body": {
+  "took": 714,
+  "timed_out": false,
+  "_shards": {
+   "total": 50,
+   "successful": 50,
+   "skipped": 0,
+   "failed": 0
+  },
+  "hits": {
+   "total": {
+    "value": 13,
+    "relation": "eq"
+   },
+   "max_score": null,
+   "hits": [
+    {
+     "_index": "edgar_file",
+     "_id": "0000320187-25-000146:form4.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320187"
+      ],
+      "period_ending": "2025-12-22",
+      "file_num": [
+       "001-10635"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "NIKE, Inc.  (CIK 0000320187)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2025-12-23",
+      "biz_states": [
+       "OR"
+      ],
+      "sics": [
+       "3021"
+      ],
+      "form": "4",
+      "adsh": "0000320187-25-000146",
+      "film_num": [
+       "251600951"
+      ],
+      "biz_locations": [
+       "",
+       "Beaverton, OR"
+      ],
+      "file_type": "4",
+      "file_description": "PRIMARY DOCUMENT",
+      "inc_states": [
+       "",
+       "OR"
+      ],
+      "items": []
+     },
+     "sort": [
+      1766448000000,
+      "0000320187-25-000146:form4.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001214156-25-000011:wk-form4_1759530830.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2025-10-01",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2025-10-03",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0001214156-25-000011",
+      "film_num": [
+       "251375302"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1759449600000,
+      "0001214156-25-000011:wk-form4_1759530830.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001214156-25-000009:wk-form4_1759271527.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2025-09-28",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2025-09-30",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0001214156-25-000009",
+      "film_num": [
+       "251361900"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1759190400000,
+      "0001214156-25-000009:wk-form4_1759271527.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320187-25-000076:form4.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320187"
+      ],
+      "period_ending": "2025-09-09",
+      "file_num": [
+       "001-10635"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "NIKE, Inc.  (CIK 0000320187)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2025-09-11",
+      "biz_states": [
+       "OR"
+      ],
+      "sics": [
+       "3021"
+      ],
+      "form": "4",
+      "adsh": "0000320187-25-000076",
+      "film_num": [
+       "251309101"
+      ],
+      "biz_locations": [
+       "",
+       "Beaverton, OR"
+      ],
+      "file_type": "4",
+      "file_description": "PRIMARY DOCUMENT",
+      "inc_states": [
+       "",
+       "OR"
+      ],
+      "items": []
+     },
+     "sort": [
+      1757548800000,
+      "0000320187-25-000076:form4.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320193-25-000043:wk-form4_1743719531.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2025-04-01",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2025-04-03",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0000320193-25-000043",
+      "film_num": [
+       "25811428"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1743638400000,
+      "0000320193-25-000043:wk-form4_1743719531.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320193-24-000109:wk-form4_1727994624.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2024-10-01",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2024-10-03",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0000320193-24-000109",
+      "film_num": [
+       "241352977"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1727913600000,
+      "0000320193-24-000109:wk-form4_1727994624.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320193-24-000101:wk-form4_1727822082.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2024-09-29",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2024-10-01",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0000320193-24-000101",
+      "film_num": [
+       "241344755"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1727740800000,
+      "0000320193-24-000101:wk-form4_1727822082.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001127602-24-023796:form4.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320187"
+      ],
+      "period_ending": "2024-09-10",
+      "file_num": [
+       "001-10635"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "NIKE, Inc.  (NKE)  (CIK 0000320187)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2024-09-11",
+      "biz_states": [
+       "OR"
+      ],
+      "sics": [
+       "3021"
+      ],
+      "form": "4",
+      "adsh": "0001127602-24-023796",
+      "film_num": [
+       "241293014"
+      ],
+      "biz_locations": [
+       "",
+       "Beaverton, OR"
+      ],
+      "file_type": "4",
+      "file_description": "PRIMARY DOCUMENT",
+      "inc_states": [
+       "",
+       "OR"
+      ],
+      "items": []
+     },
+     "sort": [
+      1726012800000,
+      "0001127602-24-023796:form4.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320193-24-000049:wk-form4_1712183493.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2024-04-01",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (AAPL)  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2024-04-03",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0000320193-24-000049",
+      "film_num": [
+       "24820694"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1712102400000,
+      "0000320193-24-000049:wk-form4_1712183493.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320193-23-000089:wk-form4_1696381457.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2023-10-01",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (AAPL)  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2023-10-03",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0000320193-23-000089",
+      "film_num": [
+       "231306389"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1696291200000,
+      "0000320193-23-000089:wk-form4_1696381457.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001127602-23-024189:form4.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320187"
+      ],
+      "period_ending": "2023-09-12",
+      "file_num": [
+       "001-10635"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "NIKE, Inc.  (NKE)  (CIK 0000320187)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2023-09-14",
+      "biz_states": [
+       "OR"
+      ],
+      "sics": [
+       "3021"
+      ],
+      "form": "4",
+      "adsh": "0001127602-23-024189",
+      "film_num": [
+       "231255554"
+      ],
+      "biz_locations": [
+       "",
+       "Beaverton, OR"
+      ],
+      "file_type": "4",
+      "file_description": "PRIMARY DOCUMENT",
+      "inc_states": [
+       "",
+       "OR"
+      ],
+      "items": []
+     },
+     "sort": [
+      1694649600000,
+      "0001127602-23-024189:form4.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001127602-23-023087:form4.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320187"
+      ],
+      "period_ending": "2023-08-21",
+      "file_num": [
+       "001-10635"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "NIKE, Inc.  (NKE)  (CIK 0000320187)"
+      ],
+      "xsl": "xslF345X05",
+      "schema_version": "X0508",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2023-08-22",
+      "biz_states": [
+       "OR"
+      ],
+      "sics": [
+       "3021"
+      ],
+      "form": "4",
+      "adsh": "0001127602-23-023087",
+      "film_num": [
+       "231194380"
+      ],
+      "biz_locations": [
+       "",
+       "Beaverton, OR"
+      ],
+      "file_type": "4",
+      "file_description": "PRIMARY DOCUMENT",
+      "inc_states": [
+       "",
+       "OR"
+      ],
+      "items": []
+     },
+     "sort": [
+      1692662400000,
+      "0001127602-23-023087:form4.xml"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0000320193-23-000048:wf-form4_168064750462974.xml",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001214156",
+       "0000320193"
+      ],
+      "period_ending": "2023-04-01",
+      "file_num": [
+       "001-36743"
+      ],
+      "display_names": [
+       "COOK TIMOTHY D  (CIK 0001214156)",
+       "Apple Inc.  (AAPL)  (CIK 0000320193)"
+      ],
+      "xsl": "xslF345X04",
+      "schema_version": "X0407",
+      "sequence": 1,
+      "root_forms": [
+       "4"
+      ],
+      "file_date": "2023-04-04",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "3571"
+      ],
+      "form": "4",
+      "adsh": "0000320193-23-000048",
+      "film_num": [
+       "23800179"
+      ],
+      "biz_locations": [
+       "",
+       "Cupertino, CA"
+      ],
+      "file_type": "4",
+      "file_description": "FORM 4",
+      "inc_states": [
+       "",
+       "CA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1680566400000,
+      "0000320193-23-000048:wf-form4_168064750462974.xml"
+     ]
+    }
+   ]
+  },
+  "query": {
+   "_source": {
+    "exclude": [
+     "doc_text"
+    ]
+   },
+   "query": {
+    "bool": {
+     "must": [],
+     "must_not": [],
+     "should": [],
+     "filter": [
+      {
+       "terms": {
+        "root_forms": [
+         "3",
+         "4",
+         "5"
+        ]
+       }
+      },
+      {
+       "terms": {
+        "ciks": [
+         "0001214156"
+        ]
+       }
+      },
+      {
+       "term": {
+        "sequence": {
+         "value": 1
+        }
+       }
+      },
+      {
+       "range": {
+        "file_date": {
+         "gte": "2023-01-01",
+         "lte": "2025-12-31"
+        }
+       }
+      }
+     ]
+    }
+   },
+   "from": 0,
+   "size": 100,
+   "aggregations": {
+    "form_filter": {
+     "terms": {
+      "field": "root_forms",
+      "size": 30
+     }
+    },
+    "entity_filter": {
+     "terms": {
+      "field": "display_names.raw",
+      "size": 30
+     }
+    },
+    "sic_filter": {
+     "terms": {
+      "field": "sics",
+      "size": 30
+     }
+    },
+    "biz_states_filter": {
+     "terms": {
+      "field": "biz_states",
+      "size": 30
+     }
+    }
+   },
+   "sort": [
+    {
+     "file_date": {
+      "order": "desc"
+     }
+    },
+    {
+     "_id": {
+      "order": "desc"
+     }
+    }
+   ]
+  }
+ }
+}

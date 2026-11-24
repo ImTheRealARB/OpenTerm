@@ -1,0 +1,5 @@
+{
+ "doc_shaped": "No account or key was available, so this answer was NOT recorded. CourtListener (Django REST framework) answers 401 for an unknown token; the body is the framework's usual text, only the status is read.",
+ "status": 401,
+ "body": {"detail": "Invalid token."}
+}

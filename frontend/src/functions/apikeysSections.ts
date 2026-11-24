@@ -7,7 +7,7 @@
 export const SECTIONS: readonly { title: string; names: readonly string[] }[] = [
   { title: "AI models", names: ["openrouter", "openai", "anthropic", "opencodego", "deepseek", "groq", "mistral", "xai", "together", "fireworks", "gemini"] },
   { title: "Market data", names: ["finnhub", "alpaca", "fmp", "twelvedata", "alphavantage", "polygon", "tradier", "openfigi", "marketaux"] },
-  { title: "Economic and official data", names: ["fred", "eia", "bls", "bea", "census", "comtrade", "companies_house", "openfec", "congressgov"] },
+  { title: "Economic and official data", names: ["fred", "eia", "bls", "bea", "census", "comtrade", "companies_house", "openfec", "congressgov", "courtlistener"] },
   { title: "India", names: ["kite"] },
   { title: "Crypto and on-chain", names: ["etherscan"] },
   { title: "Shipping and flights", names: ["aisstream", "opensky"] },

@@ -80,6 +80,22 @@ const CASES: Case[] = [
   { cmd: "IMAP CRYPTO", want: /IMAP CRYPTO/ },
   { cmd: "IMAP ETF", want: /TOTAL ASSETS/ },
   { cmd: "IMAP NIFTY", want: /NIFTY50 MEMBERS/ },
+  // Phase 29 fundamentals depth (real SEC recordings: AAPL facts, frames for the fixture's filers)
+  { cmd: "AAPL GF PE", want: /NO LOOK-AHEAD/ },
+  { cmd: "AAPL EM", want: /SEC EPS IS GAAP DILUTED/ },
+  { cmd: "AAPL DDIS", want: /PRINCIPAL AT FACE VALUE/ },
+  { cmd: "AAPL SCORE", want: /FORMULA SCORE, NOT A RATING/ },
+  { cmd: "AAPL REVS", want: /50 x BREADTH/ },
+  { cmd: "FRM NetIncomeLoss CY2024", want: /KNOWN DATE = PERIOD END/ },
+  { cmd: "IBQ 2024", want: /IQR = 75TH MINUS 25TH/ },
+  { cmd: "EQS BT MARGIN>0.1 UNIV=LIST:AAPL,MSFT FROM=2023", want: /SURVIVORSHIP BIAS/, timeout: 60_000 },
+  // Phase 29: filings (the SEC search is replayed only for the exact recorded query, so these carry the recorded dates)
+  { cmd: 'FTS "going concern" FORM=10-K FROM=2024-01-01 TO=2024-12-31', want: /SEC EDGAR FULL-TEXT SEARCH: THE SEC'S OWN INDEX/ },
+  { cmd: "MA FROM=2024-10-01 TO=2024-12-31", want: /VALUE: ONLY WHEN THE FILING STATES IT/ },
+  { cmd: "AAPL LEGAL", want: /KEY REQUIRED: set COURTLISTENER_API_KEY in APIKEYS/ },
+  { cmd: "BIO 1214156 FROM=2023-01-01 TO=2025-12-31", want: /BOARDS FROM DEF 14A: NOT BUILT/ },
+  { cmd: "GOOGL RELS", want: /SAME-CIK TICKERS/ },
+  { cmd: "AA ESG", want: /EMISSIONS ONLY, NO SCORE/ },
 ];
 
 let backend: ChildProcess | null = null;
@@ -135,6 +151,12 @@ async function connect(page: Page) {
   await openApp(page);
   return errors;
 }
+
+// A panel can still have a request in flight through the /api/** forwarder when its assertion passes (FTS fires a second
+// call); without this, that late route.fetch fails the finished test with "route.fetch: Test ended".
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
 
 const BAD = /UNKNOWN FUNCTION|EMPTY PANEL|PROVIDER DOWN|NO DATA FOR|BAD (RANGE|INTERVAL)|ONLY AVAILABLE FOR/;
 

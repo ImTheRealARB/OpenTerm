@@ -333,6 +333,34 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - FX options: `EURUSD=X OV K=1.1 TYPE=C T=0.5 IV=8 RF=3 RD=4` prices with Garman-Kohlhagen (RF = foreign rate, RD = domestic rate, both percent).
 - `PGRK <PORTFOLIO> [VS=SPY]`: Greeks of the OCC option positions in a portfolio (`AAPL260116C00200000`) and the beta-weighted delta to an index.
 
+## Phase 29: fundamentals depth (GF EM DDIS SCORE FRM IBQ REVS, EQS BT)
+
+All read SEC XBRL (company facts, as FA does, or the frames API: one concept for every filer). US SEC filers only.
+
+| Command | What it shows |
+|---|---|
+| `AAPL GF` / `AAPL GF PE` / `AAPL GF ROIC Q VS=MSFT,GOOGL` | A metric over time (REVENUE NI EPS FCF GM OM NM ROE ROIC DE, or the daily multiples PE PS PB EVEBITDA). Multiples use the newest period filed on or before each day (no look-ahead); splits are inferred from the share count and named. `Q` = quarterly (multiples on TTM). |
+| `AAPL EM` | Earnings matrix: quarters x fiscal years of SEC EPS and revenue, the consensus estimate and the surprise (heat map). SEC EPS is GAAP; the surprise compares Yahoo's actual with Yahoo's estimate. |
+| `AAPL DDIS` | Debt maturity ladder (next 12 months, years 2-5, after) from the latest 10-K that tags it, with the filing. Enter opens it. |
+| `AAPL SCORE` | Altman Z and Z'', Piotroski F, Beneish M, Ohlson O, Merton distance to default, each with inputs and formula. FORMULA SCORE, NOT A RATING. |
+| `FRM NetIncomeLoss CY2024 [ASOF=2025-02-01]` | One XBRL concept for every filer. `ASOF` keeps only values public by then: known date = period end + 90 days (annual) or 45 (quarter), because frames carry no filing date. |
+| `IBQ [2024] [INDUSTRY]` | Sector (or industry) medians of net and operating margin, revenue growth, P/S, P/E, with the interquartile range as dispersion. |
+| `AAPL REVS` | Estimate revision score, -100 to +100 = 50 x breadth + 50 x drift, inputs shown. |
+| `EQS BT MARGIN>0.15 GROWTH>5% UNIV=LIST:AAPL,MSFT,NVDA FROM=2021 [VS=SPY]` | Monthly screen backtest on frames data (fields MARGIN OPMARGIN ROE GROWTH DE MOM12), equal weight, vs a benchmark. Labelled SURVIVORSHIP BIAS and HISTORICAL SIMULATION. Universe up to 60 names. |
+
+## Phase 29: filings (FTS MA LEGAL BIO RELS ESG)
+
+All six read public filings and registers. Each row names its source; a source that is down says so, and nothing is filled in. Enter and `O` are the row keys of FTS, MA and BIO: Enter opens FIL for the row's company filtered to that form (FIL cannot jump to one filing, find the accession there), `O` opens the filing on sec.gov.
+
+| Command | What it shows |
+|---|---|
+| `FTS "going concern" FORM=10-K FROM=2024-01-01 TO=2024-12-31 [AAPL]` | SEC EDGAR full-text search (filings from 2001): date, form, company, file. Newest 100 hits, the total is in the header. `CO=AAPL` also names the company. A hit is a word match, not a finding. |
+| `MA` / `AAPL MA` / `MA FROM=2024-10-01 TO=2024-12-31` | Deal filings. With a symbol: that company's own filing list, keeping 8-K items 1.01 and 2.01, SC TO-T, DEFM14A, PREM14A, S-4, 425. With none: market-wide from the full-text search (SC TO-T, DEFM14A, S-4, 425; default the last 90 days). The stated-value column stays empty: `VALUE: ONLY WHEN THE FILING STATES IT (NOT PARSED)`. A deal form is a filing, not a closed deal. |
+| `AAPL LEGAL` | SEC litigation releases and administrative proceedings whose title names the company (`NAME MATCH`; the SEC's feeds hold only the latest 25 items each) and, with a free `COURTLISTENER_API_KEY` in `APIKEYS`, federal court dockets by case name. Without the key the court section says `KEY REQUIRED` and the SEC rows still show. The CourtListener part is doc-shaped and has not run against a live key. |
+| `BIO 1214156` / `BIO "COOK TIMOTHY" [FROM=..] [TO=..]` | A reporting owner's Form 3, 4 and 5 filings across every company they file for (owner and issuer both come from the SEC search). A CIK is exact; a name searches filing text and can match several people. `BOARDS FROM DEF 14A: NOT BUILT`. |
+| `GOOGL RELS` | Other tickers filed under the issuer's CIK (SEC company_tickers_exchange) and every listing of the ticker (OpenFIGI, its own exchange codes). |
+| `AA ESG [YEAR=2023] [NAME=<company>]` | EMISSIONS ONLY, NO SCORE. US EPA greenhouse-gas reports of facilities whose parent-company text matches the name (`NAME MATCH`), tonnes CO2e per facility and, where EPA states an ownership share for that exact name, the weighted tonnes. US facilities over 25,000 t only; no scope 2/3, no EU ETS. |
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

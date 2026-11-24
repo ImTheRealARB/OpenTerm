@@ -24,10 +24,10 @@ import { KeyNeeded } from "./KeyRequiredLine";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 export interface ResearchOptions {
-  /** Backend route name under /api/research (or /api/valuation, /api/deriv, /api/rates for `api`). */
+  /** Backend route name under /api/research (or /api/valuation, /api/deriv, /api/rates, /api/fund for `api`). */
   fn: string;
   valuation?: boolean;
-  api?: "deriv" | "rates";
+  api?: "deriv" | "rates" | "fund" | "filings";
   /** Query parameters from the panel props; defaults to {symbol}. Return null to show `usage` instead of loading. */
   params?: (p: FunctionProps) => Record<string, string | string[]> | null;
   usage?: string;

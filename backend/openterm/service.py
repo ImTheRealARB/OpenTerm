@@ -573,9 +573,9 @@ class DataService:
         if period not in ("A", "Q"):
             raise DataError("bad_request", "PERIOD: A (ANNUAL) OR Q (QUARTERLY)")
         symbol = resolve(raw_symbol)
-        env = await self._sec(f"fa:{symbol}", "facts", "fundamentals", symbol, lambda p: p.fundamentals(symbol))
+        env = await self._sec(f"fa2:{symbol}", "facts", "fundamentals", symbol, lambda p: p.fundamentals(symbol))
         d = env["data"]
-        view = {k: v for k, v in d.items() if k not in ("A", "Q")}
+        view = {k: v for k, v in d.items() if k not in ("A", "Q", "extra")}  # extra = Phase 29 SCORE/DDIS inputs
         return {**env, "data": {**view, "period": period, **d[period]}}
 
     async def filings(self, raw_symbol: str, form: str | None = None) -> dict:

@@ -99,6 +99,9 @@ KEY_SPECS: dict[str, KeySpec] = {s.name: s for s in [
     # FLT (OpenSky): OPTIONAL. The panel works with no login (400 credits a day); a free account's API client raises that to 4000.
     KeySpec("opensky", ("OPENSKY_CLIENT_ID", "OPENSKY_CLIENT_SECRET"), 20, "OpenSky (optional, free account): more daily credits for live aircraft (FLT). Works without it, limited to 400 credits a day",
             "https://opensky-network.org/my-opensky/account", secret_fields=("OPENSKY_CLIENT_SECRET",)),
+    # LEGAL (Phase 29): federal court dockets from CourtListener. Without the key LEGAL still shows the SEC enforcement rows.
+    KeySpec("courtlistener", ("COURTLISTENER_API_KEY",), 29, "CourtListener (free): US federal court dockets matched by company name, added to LEGAL",
+            "https://www.courtlistener.com/help/api/rest/"),
     # Trade + US macro family (free, read-only). Panels TRADE (Comtrade) and USMAC (BLS, BEA, Census).
     KeySpec("comtrade", ("UN_COMTRADE_KEY",), 19, "UN Comtrade (free): trade flows between two countries by HS product (TRADE)",
             "https://comtradedeveloper.un.org/"),
@@ -454,6 +457,9 @@ TESTS: dict[str, Callable[[dict], tuple]] = {
     # Companies House: HTTP basic auth, the key is the user name and the password is empty. A search for one company is the cheapest call.
     "companies_house": lambda k: ("GET", "https://api.company-information.service.gov.uk/search/companies", {"q": "tesco", "items_per_page": "1"},
                                  {"Authorization": "Basic " + base64.b64encode(f"{k['COMPANIES_HOUSE_KEY']}:".encode()).decode("ascii")}, None),
+    # CourtListener: `Authorization: Token <key>`. The courts list is the cheapest call (doc-shaped, never run against a live key).
+    "courtlistener": lambda k: ("GET", "https://www.courtlistener.com/api/rest/v4/courts/", {"page_size": "1"},
+                                {"Authorization": f"Token {k['COURTLISTENER_API_KEY']}"}, None),
     # Marketaux has no free "who am I" call: one article is the cheapest, and it does spend one of the ~100 daily requests.
     "marketaux": lambda k: ("GET", "https://api.marketaux.com/v1/news/all", {"api_token": k["MARKETAUX_KEY"], "limit": "1", "language": "en"}, None, None),
     # Etherscan answers HTTP 200 with status "0" for a bad key; classify() reads "Invalid API Key" out of the body.

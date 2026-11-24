@@ -1,0 +1,1554 @@
+{
+ "status": 200,
+ "body": {
+  "took": 829,
+  "timed_out": false,
+  "_shards": {
+   "total": 50,
+   "successful": 50,
+   "skipped": 0,
+   "failed": 0
+  },
+  "hits": {
+   "total": {
+    "value": 852,
+    "relation": "eq"
+   },
+   "max_score": null,
+   "hits": [
+    {
+     "_index": "edgar_file",
+     "_id": "0001839882-24-048207:tci_sctota-123024.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0000949961",
+       "0000733590"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "005-45693"
+      ],
+      "display_names": [
+       "INCOME OPPORTUNITY REALTY INVESTORS INC /TX/  (IOR)  (CIK 0000949961)",
+       "TRANSCONTINENTAL REALTY INVESTORS INC  (CIK 0000733590)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "SC TO-T"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX"
+      ],
+      "sics": [
+       "6798",
+       "6798"
+      ],
+      "form": "SC TO-T/A",
+      "adsh": "0001839882-24-048207",
+      "film_num": [
+       "241591114"
+      ],
+      "biz_locations": [
+       "Dallas, TX",
+       "Dallas, TX"
+      ],
+      "file_type": "SC TO-T/A",
+      "file_description": "AMENDMENT NO.1 TO SCHEDULE TO-T",
+      "inc_states": [
+       "NV",
+       "NV"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001839882-24-048207:tci_sctota-123024.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001829126-24-008666:globalstar_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001922331"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-41506"
+      ],
+      "display_names": [
+       "Global Star Acquisition Inc.  (GLST, GLSTR, GLSTU, GLSTW)  (CIK 0001922331)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "VA"
+      ],
+      "sics": [
+       "6770"
+      ],
+      "form": "425",
+      "adsh": "0001829126-24-008666",
+      "film_num": [
+       "241593246"
+      ],
+      "biz_locations": [
+       "Mclean, VA"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001829126-24-008666:globalstar_425.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001493152-24-052709:forms-4a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001970371"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "333-273753"
+      ],
+      "display_names": [
+       "Broad Capital Acquisition Ltd  (CIK 0001970371)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "S-4"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "C3"
+      ],
+      "sics": [
+       "6211"
+      ],
+      "form": "S-4/A",
+      "adsh": "0001493152-24-052709",
+      "film_num": [
+       "241593274"
+      ],
+      "biz_locations": [
+       "Sydney, C3"
+      ],
+      "file_type": "S-4/A",
+      "file_description": null,
+      "inc_states": [
+       "C3"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001493152-24-052709:forms-4a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001437749-24-038595:nexsof20241212_s4.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001356115"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "333-284099"
+      ],
+      "display_names": [
+       "NEXPOINT DIVERSIFIED REAL ESTATE TRUST  (NXDT, NXDT-PA)  (CIK 0001356115)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "S-4"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX"
+      ],
+      "sics": [
+       "6798"
+      ],
+      "form": "S-4",
+      "adsh": "0001437749-24-038595",
+      "film_num": [
+       "241592964"
+      ],
+      "biz_locations": [
+       "Dallas, TX"
+      ],
+      "file_type": "S-4",
+      "file_description": "FORM S-4",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001437749-24-038595:nexsof20241212_s4.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113974:ea0226155-8k425_aspac3.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001890361"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-42401"
+      ],
+      "display_names": [
+       "ASPAC III Acquisition Corp.  (ASPC, ASPCU)  (CIK 0001890361)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "K3"
+      ],
+      "sics": [
+       "6770"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113974",
+      "film_num": [
+       "241593006"
+      ],
+      "biz_locations": [
+       "Wanchai, K3"
+      ],
+      "file_type": "425",
+      "file_description": "CURRENT REPORT",
+      "inc_states": [
+       "D8"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001213900-24-113974:ea0226155-8k425_aspac3.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113678:ea022639201-425_oneok.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001592000",
+       "0001039684"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-36336"
+      ],
+      "display_names": [
+       "EnLink Midstream, LLC  (ENLC)  (CIK 0001592000)",
+       "ONEOK INC /NEW/  (CIK 0001039684)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX",
+       "OK"
+      ],
+      "sics": [
+       "4922",
+       "4923"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113678",
+      "film_num": [
+       "241591213"
+      ],
+      "biz_locations": [
+       "Dallas, TX",
+       "Tulsa, OK"
+      ],
+      "file_type": "425",
+      "file_description": "FORM 425",
+      "inc_states": [
+       "DE",
+       "OK"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001213900-24-113678:ea022639201-425_oneok.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113677:ea022639202-425_oneok.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001592000",
+       "0001039684"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-36336"
+      ],
+      "display_names": [
+       "EnLink Midstream, LLC  (ENLC)  (CIK 0001592000)",
+       "ONEOK INC /NEW/  (CIK 0001039684)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX",
+       "OK"
+      ],
+      "sics": [
+       "4922",
+       "4923"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113677",
+      "film_num": [
+       "241591212"
+      ],
+      "biz_locations": [
+       "Dallas, TX",
+       "Tulsa, OK"
+      ],
+      "file_type": "425",
+      "file_description": "FORM 425",
+      "inc_states": [
+       "DE",
+       "OK"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001213900-24-113677:ea022639202-425_oneok.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113666:ea0226385-8k425_oneok.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001039684"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-13643"
+      ],
+      "display_names": [
+       "ONEOK INC /NEW/  (OKE)  (CIK 0001039684)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "OK"
+      ],
+      "sics": [
+       "4923"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113666",
+      "film_num": [
+       "241591194"
+      ],
+      "biz_locations": [
+       "Tulsa, OK"
+      ],
+      "file_type": "425",
+      "file_description": "CURRENT REPORT",
+      "inc_states": [
+       "OK"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001213900-24-113666:ea0226385-8k425_oneok.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113605:ea0223893-04.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001592000"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-36336"
+      ],
+      "display_names": [
+       "EnLink Midstream, LLC  (ENLC)  (CIK 0001592000)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX"
+      ],
+      "sics": [
+       "4922"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001213900-24-113605",
+      "film_num": [
+       "241590924"
+      ],
+      "biz_locations": [
+       "Dallas, TX"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "PROXY STATEMENT",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001213900-24-113605:ea0223893-04.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001193125-24-287171:d765772ddefm14a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001423774"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-38451"
+      ],
+      "display_names": [
+       "ZUORA INC  (ZUO)  (CIK 0001423774)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "CA"
+      ],
+      "sics": [
+       "7372"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001193125-24-287171",
+      "film_num": [
+       "241593007"
+      ],
+      "biz_locations": [
+       "Redwood City, CA"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "DEFM14A",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001193125-24-287171:d765772ddefm14a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001193125-24-287096:d860983ds4a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0000929351",
+       "0002040106"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "333-282630",
+       "333-282630-01"
+      ],
+      "display_names": [
+       "LIONS GATE ENTERTAINMENT CORP /CN/  (LGF-A, LGF-B)  (CIK 0000929351)",
+       "Lionsgate Studios Holding Corp.  (CIK 0002040106)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "S-4"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "CA",
+       "A1"
+      ],
+      "sics": [
+       "7812"
+      ],
+      "form": "S-4/A",
+      "adsh": "0001193125-24-287096",
+      "film_num": [
+       "241591354",
+       "241591355"
+      ],
+      "biz_locations": [
+       "Santa Monica, CA",
+       "Vancouver, A1"
+      ],
+      "file_type": "S-4/A",
+      "file_description": "S-4/A",
+      "inc_states": [
+       "A1",
+       "A1"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001193125-24-287096:d860983ds4a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001193125-24-287076:d902047ddefm14a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001313275"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-35429"
+      ],
+      "display_names": [
+       "BRIGHTCOVE INC  (BCOV)  (CIK 0001313275)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "MA"
+      ],
+      "sics": [
+       "7374"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001193125-24-287076",
+      "film_num": [
+       "241591204"
+      ],
+      "biz_locations": [
+       "Boston, MA"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "DEFM14A",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001193125-24-287076:d902047ddefm14a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001104659-24-132871:wavs-20240930xs4a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001868419"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "333-269724"
+      ],
+      "display_names": [
+       "Western Acquisition Ventures Corp.  (WAVS, WAVSU, WAVSW)  (CIK 0001868419)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "S-4"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "NY"
+      ],
+      "sics": [
+       "7371"
+      ],
+      "form": "S-4/A",
+      "adsh": "0001104659-24-132871",
+      "film_num": [
+       "241593319"
+      ],
+      "biz_locations": [
+       "New York, NY"
+      ],
+      "file_type": "S-4/A",
+      "file_description": "FORM S-4/A",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001104659-24-132871:wavs-20240930xs4a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001104659-24-132717:tm2430419-7_defm14a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0000740663"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-32964"
+      ],
+      "display_names": [
+       "FIRST OF LONG ISLAND CORP  (FLIC)  (CIK 0000740663)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "NY"
+      ],
+      "sics": [
+       "6021"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001104659-24-132717",
+      "film_num": [
+       "241591278"
+      ],
+      "biz_locations": [
+       "Melville, NY"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "DEFM14A",
+      "inc_states": [
+       "NY"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001104659-24-132717:tm2430419-7_defm14a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001104659-24-132701:tm2432309d2_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001592000"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-36336"
+      ],
+      "display_names": [
+       "EnLink Midstream, LLC  (ENLC)  (CIK 0001592000)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX"
+      ],
+      "sics": [
+       "4922"
+      ],
+      "form": "425",
+      "adsh": "0001104659-24-132701",
+      "film_num": [
+       "241591210"
+      ],
+      "biz_locations": [
+       "Dallas, TX"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001104659-24-132701:tm2432309d2_425.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001104659-24-132700:tm2432309d1_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001592000"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-36336"
+      ],
+      "display_names": [
+       "EnLink Midstream, LLC  (ENLC)  (CIK 0001592000)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "TX"
+      ],
+      "sics": [
+       "4922"
+      ],
+      "form": "425",
+      "adsh": "0001104659-24-132700",
+      "film_num": [
+       "241591206"
+      ],
+      "biz_locations": [
+       "Dallas, TX"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001104659-24-132700:tm2432309d1_425.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001104659-24-132616:tm2432019-1_defm14a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001847607"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-41332"
+      ],
+      "display_names": [
+       "RF Acquisition Corp.  (RFAC, RFACR, RFACU, RFACW)  (CIK 0001847607)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-31",
+      "biz_states": [
+       "U0"
+      ],
+      "sics": [
+       "6770"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001104659-24-132616",
+      "film_num": [
+       "241591009"
+      ],
+      "biz_locations": [
+       "Singapore, U0"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "DEFM14A",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735603200000,
+      "0001104659-24-132616:tm2432019-1_defm14a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001929980-24-000687:hspo_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001946021",
+       "0002033684"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-41578"
+      ],
+      "display_names": [
+       "Horizon Space Acquisition I Corp.  (HSPO, HSPOR, HSPOU, HSPOW)  (CIK 0001946021)",
+       "Squirrel Enlivened International Co., Ltd  (CIK 0002033684)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "NY",
+       "E9"
+      ],
+      "sics": [
+       "6770",
+       "7311"
+      ],
+      "form": "425",
+      "adsh": "0001929980-24-000687",
+      "film_num": [
+       "241590187"
+      ],
+      "biz_locations": [
+       "New York, NY",
+       "Cayman Islands, E9"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "E9",
+       "E9"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001929980-24-000687:hspo_425.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001929980-24-000686:hspo_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001946021"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-41578"
+      ],
+      "display_names": [
+       "Horizon Space Acquisition I Corp.  (HSPO, HSPOR, HSPOU, HSPOW)  (CIK 0001946021)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "NY"
+      ],
+      "sics": [
+       "6770"
+      ],
+      "form": "425",
+      "adsh": "0001929980-24-000686",
+      "film_num": [
+       "241590178"
+      ],
+      "biz_locations": [
+       "New York, NY"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "E9"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001929980-24-000686:hspo_425.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001628280-24-052588:obdc-8xk123024.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001807427",
+       "0001655888"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "814-01345"
+      ],
+      "display_names": [
+       "Blue Owl Capital Corp III  (OBDE)  (CIK 0001807427)",
+       "Blue Owl Capital Corp  (CIK 0001655888)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "NY"
+      ],
+      "sics": [],
+      "form": "425",
+      "adsh": "0001628280-24-052588",
+      "film_num": [
+       "241590342"
+      ],
+      "biz_locations": [
+       "New York, NY",
+       "New York, NY"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "MD",
+       "MD"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001628280-24-052588:obdc-8xk123024.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001628280-24-052586:obde-8xk123024.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001807427"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "814-01345"
+      ],
+      "display_names": [
+       "Blue Owl Capital Corp III  (OBDE)  (CIK 0001807427)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "NY"
+      ],
+      "sics": [],
+      "form": "425",
+      "adsh": "0001628280-24-052586",
+      "film_num": [
+       "241590307"
+      ],
+      "biz_locations": [
+       "New York, NY"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "MD"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001628280-24-052586:obde-8xk123024.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113562:ea0226329-8k425_breeze.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001817640"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-39718"
+      ],
+      "display_names": [
+       "Breeze Holdings Acquisition Corp.  (BRZH, BRZHR, BRZHW)  (CIK 0001817640)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "TX"
+      ],
+      "sics": [
+       "6770"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113562",
+      "film_num": [
+       "241590663"
+      ],
+      "biz_locations": [
+       "Irving, TX"
+      ],
+      "file_type": "425",
+      "file_description": "CURRENT REPORT",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001213900-24-113562:ea0226329-8k425_breeze.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113482:ea0226159-8k425_slam.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0002011277",
+       "0001838162"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "333-277071-01"
+      ],
+      "display_names": [
+       "Lynk Global Holdings, Inc.  (CIK 0002011277)",
+       "Slam Corp.  (CIK 0001838162)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "VA",
+       "NY"
+      ],
+      "sics": [
+       "4899",
+       "4899"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113482",
+      "film_num": [
+       "241589806"
+      ],
+      "biz_locations": [
+       "Falls Church, VA",
+       "New York, NY"
+      ],
+      "file_type": "425",
+      "file_description": "CURRENT REPORT",
+      "inc_states": [
+       "DE",
+       "E9"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001213900-24-113482:ea0226159-8k425_slam.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113440:ea0201351-15.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001945422"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "333-280240"
+      ],
+      "display_names": [
+       "Oak Woods Acquisition Corp  (OAKU, OAKUR, OAKUU, OAKUW)  (CIK 0001945422)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "S-4"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "Z4"
+      ],
+      "sics": [
+       "8090"
+      ],
+      "form": "S-4/A",
+      "adsh": "0001213900-24-113440",
+      "film_num": [
+       "241589369"
+      ],
+      "biz_locations": [
+       "Nepean, Z4"
+      ],
+      "file_type": "S-4/A",
+      "file_description": "REGISTRATION STATEMENT",
+      "inc_states": [
+       "Z4"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001213900-24-113440:ea0201351-15.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113298:ea0226264-425_ftac.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001889123"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-41168"
+      ],
+      "display_names": [
+       "FTAC Emerald Acquisition Corp.  (FLD, FLDD, FLDDU, FLDDW)  (CIK 0001889123)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "PA"
+      ],
+      "sics": [
+       "6199"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113298",
+      "film_num": [
+       "241587280"
+      ],
+      "biz_locations": [
+       "Philadelphia, PA"
+      ],
+      "file_type": "425",
+      "file_description": "FORM 425",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001213900-24-113298:ea0226264-425_ftac.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001213900-24-113272:ea0226253-425_nlspharma.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001783036"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-39957"
+      ],
+      "display_names": [
+       "NLS Pharmaceutics Ltd.  (NLSP, NLSPW)  (CIK 0001783036)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "V8"
+      ],
+      "sics": [
+       "2834"
+      ],
+      "form": "425",
+      "adsh": "0001213900-24-113272",
+      "film_num": [
+       "241587029"
+      ],
+      "biz_locations": [
+       "Zurich, V8"
+      ],
+      "file_type": "425",
+      "file_description": "FORM 425",
+      "inc_states": [
+       "V8"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001213900-24-113272:ea0226253-425_nlspharma.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001140361-24-050613:ny20036778x6_defm14a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0000215466"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-08641"
+      ],
+      "display_names": [
+       "Coeur Mining, Inc.  (CDE)  (CIK 0000215466)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "IL"
+      ],
+      "sics": [
+       "1040"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001140361-24-050613",
+      "film_num": [
+       "241590613"
+      ],
+      "biz_locations": [
+       "Chicago, IL"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "DEFM14A",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001140361-24-050613:ny20036778x6_defm14a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001140361-24-050610:ny20039353x2_defm14a.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001621563"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-36873"
+      ],
+      "display_names": [
+       "Summit Materials, Inc.  (SUM)  (CIK 0001621563)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "DEFM14A"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "CO"
+      ],
+      "sics": [
+       "1400"
+      ],
+      "form": "DEFM14A",
+      "adsh": "0001140361-24-050610",
+      "film_num": [
+       "241590548"
+      ],
+      "biz_locations": [
+       "Denver, CO"
+      ],
+      "file_type": "DEFM14A",
+      "file_description": "DEFM14A",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001140361-24-050610:ny20039353x2_defm14a.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001140361-24-050508:ef20040768_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0001851612"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-40868"
+      ],
+      "display_names": [
+       "Focus Impact BH3 Acquisition Co  (BHAC, BHACU, BHACW)  (CIK 0001851612)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "NY"
+      ],
+      "sics": [
+       "6770"
+      ],
+      "form": "425",
+      "adsh": "0001140361-24-050508",
+      "film_num": [
+       "241586800"
+      ],
+      "biz_locations": [
+       "New York, NY"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "DE"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001140361-24-050508:ef20040768_425.htm"
+     ]
+    },
+    {
+     "_index": "edgar_file",
+     "_id": "0001104659-24-132563:tm2432197-4_425.htm",
+     "_score": null,
+     "_source": {
+      "ciks": [
+       "0002028293",
+       "0002029067"
+      ],
+      "period_ending": null,
+      "file_num": [
+       "001-42460"
+      ],
+      "display_names": [
+       "Rain Enhancement Technologies Holdco, Inc.  (RAIN)  (CIK 0002028293)",
+       "Rain Enhancement Technologies, Inc.  (CIK 0002029067)"
+      ],
+      "xsl": null,
+      "sequence": 1,
+      "root_forms": [
+       "425"
+      ],
+      "file_date": "2024-12-30",
+      "biz_states": [
+       "MA"
+      ],
+      "sics": [
+       "3590",
+       "3590"
+      ],
+      "form": "425",
+      "adsh": "0001104659-24-132563",
+      "film_num": [
+       "241590602"
+      ],
+      "biz_locations": [
+       "Newburyport, MA",
+       "Newburyport, MA"
+      ],
+      "file_type": "425",
+      "file_description": "425",
+      "inc_states": [
+       "MA",
+       "MA"
+      ],
+      "items": []
+     },
+     "sort": [
+      1735516800000,
+      "0001104659-24-132563:tm2432197-4_425.htm"
+     ]
+    }
+   ]
+  },
+  "query": {
+   "_source": {
+    "exclude": [
+     "doc_text"
+    ]
+   },
+   "query": {
+    "bool": {
+     "must": [],
+     "must_not": [],
+     "should": [],
+     "filter": [
+      {
+       "terms": {
+        "root_forms": [
+         "SC TO-T",
+         "DEFM14A",
+         "S-4",
+         "425"
+        ]
+       }
+      },
+      {
+       "term": {
+        "sequence": {
+         "value": 1
+        }
+       }
+      },
+      {
+       "range": {
+        "file_date": {
+         "gte": "2024-10-01",
+         "lte": "2024-12-31"
+        }
+       }
+      }
+     ]
+    }
+   },
+   "from": 0,
+   "size": 100,
+   "aggregations": {
+    "form_filter": {
+     "terms": {
+      "field": "root_forms",
+      "size": 30
+     }
+    },
+    "entity_filter": {
+     "terms": {
+      "field": "display_names.raw",
+      "size": 30
+     }
+    },
+    "sic_filter": {
+     "terms": {
+      "field": "sics",
+      "size": 30
+     }
+    },
+    "biz_states_filter": {
+     "terms": {
+      "field": "biz_states",
+      "size": 30
+     }
+    }
+   },
+   "sort": [
+    {
+     "file_date": {
+      "order": "desc"
+     }
+    },
+    {
+     "_id": {
+      "order": "desc"
+     }
+    }
+   ]
+  }
+ }
+}

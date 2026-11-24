@@ -17,7 +17,7 @@ from openterm.providers.ownership import (
 )
 from openterm.providers.sec import US_ONLY, SecProvider, default_user_agent, sec_ticker, store_from
 from openterm.providers.sec_parse import (
-    TAGS,
+    ALL_TAGS,
     describe,
     form4_xml_url,
     parse_companyfacts,
@@ -107,7 +107,7 @@ async def test_cik_lookup_and_caching(http):
 # --- company facts ---------------------------------------------------------------------------
 def test_fixture_is_trimmed_to_mapped_tags():
     tags = set(body("sec_facts_aapl")["facts"]["us-gaap"])
-    assert tags <= set(TAGS) and "RevenueFromContractWithCustomerExcludingAssessedTax" in tags
+    assert tags <= set(ALL_TAGS) and "RevenueFromContractWithCustomerExcludingAssessedTax" in tags
 
 
 def test_annual_fiscal_years_not_calendar(aapl, msft):
