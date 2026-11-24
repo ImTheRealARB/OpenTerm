@@ -939,3 +939,7 @@ Both miss the same five lines by similar amounts, so the misses are the machine'
 "bench the base commit in the same sitting"). An earlier run of this tree taken right after another bench also missed SEAS (26 ms)
 and streaming frames (33 ms); rested, both passed (7.0 ms, 16.8 ms). Phase 27 has no bench lines of its own: SCAN, MRR and FSRC are
 network-bound tasks shown with progress.
+
+## Phase 32 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-f09808`)
+First run 38/39: SEAS 10,000-bar calc 16.1 ms against 15 ms (Phase 32 does not touch SEAS). Rerun straight after: **39/39 PASS**,
+SEAS 7.9 ms, BT 10-year daily rule run 165.5 ms (budget 300). The miss was machine noise (see the "lone bench miss" note in CLAUDE.md).

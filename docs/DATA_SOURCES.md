@@ -196,6 +196,13 @@ Details that matter: RBI sends dates without a zone (local time), so a date late
 - **Yahoo fund profile** (keyless, `quoteSummary` fundProfile): fee, total assets and category per ETF, loaded in the background at 3 profiles a second (a full load is about 5,800 funds, about 37 minutes), progress saved so a restart resumes.
 - **NSE Indices constituent CSV** (keyless, `providers/nseindices.py`): NIFTY 50 / NIFTY 500 members with company name and industry, no weights. Downloaded on this computer, never shipped; the test fixture is doc-shaped (NOT A RECORDING).
 
+## Phase 29-32 sources (2026-11-24)
+
+- **SEC EDGAR full-text search, frames and filing indexes** (keyless, needs `SEC_USER_AGENT`): `FTS`, the Phase 29 fundamentals, and the earnings card, which reads a results 8-K's `<accession>-index.html` page to find its Exhibit 99.1 by document type.
+- **CourtListener** (`LEGAL`, key `COURTLISTENER_API_KEY`, free): fixtures are doc-shaped; never run with a key. **EPA GHGRP** (`ESG`, keyless).
+- **Phase 30 macro hosts** (all keyless unless noted): NY Fed reference rates, ECB data portal (ESTR, curves), Bank of England (SONIA), Atlanta Fed GDPNow workbook, Philadelphia Fed SPF, IMF DataMapper, OECD Economic Outlook, federalreserve.gov FOMC statements, TreasuryDirect, USDA WASDE (Cornell library copy), FRED CSV, Frankfurter. EIA (`EIA_API_KEY`) and USDA NASS (`NASS_API_KEY`) are free keys; their fixtures are doc-shaped. Recorder: `scripts/record_phase30.py`, manifest `tests/fixtures/phase30_manifest.json`.
+- **RES research feeds** (keyless, `providers/macrod.py` `research_feeds`, list in `macrod/boards.py` `RES_FEEDS`): BIS working papers and research hub (RSS 1.0), Fed FEDS / FEDS Notes / IFDP, ECB working papers and blog, RBI publications, arXiv q-fin (one request per refresh, cached 6 hours; arXiv asks for at most one request per 3 seconds). Real recordings `res_*.json` (`record_phase30.py res`). Not included: IMF papers (the feed answers 403, a bot check) and NBER (paywalled).
+
 ## Honest limits of what is built
 
 Upstox was built and then removed (2026-11-05): the owner could not get a token and will use paid Kite instead. Kite is the Indian source.

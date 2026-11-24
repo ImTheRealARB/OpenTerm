@@ -2,6 +2,20 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phases 21-32: charts, order flow, replay, strategy lab, scanners, options, fundamentals, macro, query language, AI in functions (2026-11-24)
+Commands and keys for all of these: [docs/COMMANDS.md](docs/COMMANDS.md). Phase 25 (a script language) is deferred.
+- Charts (21): 30 drawing tools with an object tree, 16 chart types (adds Renko, Kagi, point and figure, line break, range, columns, high-low, step, volume candles), candle lengths from 2 hours to 12 months, Binance 1-second bars.
+- Linked panels and symbol math (22): link groups, formulas as securities (`AAPL/MSFT GP`, `2*GLD-SLV`), stored synthetics, intraday CSV import, `TRA` and `BETA`, watchlist flags and sections.
+- Volume and order flow (23): volume profiles and anchored VWAP on GP, `TPO`, `DOM` / `LIQH` depth, crypto tape `TAS`, big trades `BIGT`, footprint `FOOT`.
+- Replay and practice (24): `GP ... REPLAY [date]` with a practice book saved to JRNL, linked replay, an opt-in tick recorder (`REC`).
+- Strategy lab (26): `BT OPT` (grid, random and genetic search) with overfitting checks (PBO, deflated Sharpe), walk-forward, stop / target exits, `BT LIVE` paper forward tests. Paper only: OpenTerm never sends a real order.
+- Scanners (27): `SCAN` over index, ETF, watchlist and NIFTY universes, indicator columns `Q ... COLS=`, indicator and drawing alerts, `MRR` index movers, ETF screener `FSRC`, `IMAP CRYPTO|ETF|NIFTY`.
+- Options (28): probabilities, expected move, max pain, P/L curves, IV cone and rank, OI build-up, `OSCAN`, an opt-in chain recorder `OREC`.
+- Fundamentals and filings (29): `GF EM DDIS SCORE FRM IBQ REVS`, `EQS BT`, full-text filing search `FTS`, `LEGAL`, `ESG`, `MA`, `BIO`, `RELS`.
+- Macro, rates and commodities (30): `MMR NOWC ECFC FOMC WB CRPR FWCV BTMM WCRS CDR CTM TSYS NRGF AGRI RE WPE`, WIRP meeting odds.
+- Query language and notebooks (31): `QRY` / `FLD`, the same queries from the Python SDK and from Excel (`/api/xl/...`, this computer only), local JupyterLab `NB`.
+- AI inside functions (32): `?` in every table panel suggests questions that open AI with that panel's data, the `ERN` earnings card (`A`, from the 8-K press release), `AI FILING <SYM> EARNINGS`, `AI-EXTRACTED` labels, the `RES` research library (BIS, Fed, ECB, RBI, arXiv q-fin).
+
 ## Standalone desktop app, per-field settings sync, translated skill references (2026-11-15)
 - Desktop: the backend is frozen into one executable (PyInstaller, `desktop/sidecar/`) and shipped inside the Tauri app as a sidecar, with the built frontend and `config.yaml` as bundle resources; the database and `.env` live in the per-user app data folder; a busy port 8765 falls back to a free one; the backend exits when the window's process dies. The frozen backend is smoke-tested on Windows (health, frontend, quote, BT rule and Python-strategy jobs, quant jobs, AI desks). The Rust shell has not been compiled yet: the new `desktop-check` workflow compiles it on Windows, macOS and Linux for pull requests that touch `desktop/`. Start-up takes 8 to 20 s with no splash screen.
 - Release builds: the full desktop icon set (`.ico`, `.icns`); Windows builds failed without `icons/icon.ico`.

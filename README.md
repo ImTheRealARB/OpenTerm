@@ -161,15 +161,15 @@ fits several companies it asks "did you mean", and exact codes such as `AAPL GP`
 
 | | |
 |---|---|
-| **Charts and quotes** | Seven chart types, 109 indicators (`IND`) including your own formulas, drawings, event markers, comparisons and price alerts. Live boards for stocks, indices, currencies, commodities and crypto. |
-| **Companies** | Profile, financial statements and filings from SEC EDGAR, insider trades, holders, estimates, peers and a DCF valuation. |
-| **Screening** | The whole US stock universe, peer comparison, correlation, a sector heat map and seasonality. |
-| **Macro** | FRED series, the Treasury yield curve, earnings and economic calendars, central banks and world statistics. |
+| **Charts and quotes** | Sixteen chart types, 109 indicators (`IND`) including your own formulas, 30 drawing tools, volume profiles and anchored VWAP, bar replay with a practice book, formulas as securities (`AAPL/MSFT`), event markers and alerts on prices, indicators and drawn lines. Live boards for stocks, indices, currencies, commodities and crypto. |
+| **Companies** | Profile, financial statements and filings from SEC EDGAR (with full-text search), insider trades, holders, estimates, peers, a DCF valuation, quality scores and long-run fundamentals. |
+| **Screening and queries** | The whole US stock universe, an ETF screener, indicator scans over index, NIFTY and watchlist universes, a query language (`QRY`) that also works from Python and Excel, peer comparison, correlation, heat maps and seasonality. |
+| **Macro** | FRED series, yield curves and forward rates, money-market rates, GDP nowcasts and forecasts, FOMC statement changes, rate-move odds, Treasury auctions, credit spreads, energy and crop reports, earnings and economic calendars, world statistics and a central-bank research library (`RES`). |
 | **India** | NSE and BSE shares, indices, futures and options, MCX and currency futures. Free Yahoo data by default; with a paid [Zerodha Kite Connect](https://kite.trade/) app, real-time quotes, minute bars back to 2015 and option chains. Read-only. |
-| **Derivatives and crypto** | Option chains and pricing, implied volatility, futures, order books, funding rates, DeFi yields. |
+| **Derivatives and crypto** | Option chains and pricing, probabilities, expected moves and P/L curves, implied volatility, futures and their expiry calendars, order books, crypto trade tape and footprint, funding rates, DeFi yields. |
 | **World and trade** | A world map with ships, ports, chokepoints and earthquakes (`MAP`), shipping and port activity, trade flows, US and UK official data. |
-| **Portfolio and backtesting** | Positions with live profit and loss, CSV import. Backtests with fees, slippage, Monte Carlo and walk-forward checks, built as a sentence or written in Python (`BT EDIT`). |
-| **Risk, quant and AI** | Value at Risk, portfolio optimisation, factor analysis. Optional AI answers that show which data they used, and an MCP server for Claude and other assistants (read-only, never orders). |
+| **Portfolio and backtesting** | Positions with live profit and loss, CSV import. Backtests with fees, slippage, Monte Carlo and walk-forward checks, built as a sentence or written in Python (`BT EDIT`); parameter search with overfitting checks (`BT OPT`) and paper forward tests (`BT LIVE`). |
+| **Risk, quant and AI** | Value at Risk, portfolio optimisation, factor analysis, local JupyterLab notebooks (`NB`). Optional AI answers that show which data they used, suggested questions in every table (`?`), filing and earnings-release summaries whose quotes are checked word for word, and an MCP server for Claude and other assistants (read-only, never orders). |
 
 Every function is listed in [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 
@@ -251,7 +251,7 @@ holds setup, start, benchmarks and recorders. Tests never touch the network: the
 ### Docs
 
 - [Every function, key and feature](docs/FUNCTIONS.md) · [Commands to try](docs/COMMANDS.md) · [Data sources](docs/DATA_SOURCES.md) · [Data limits](docs/DATA_LIMITS.md)
-- [Performance](docs/PERFORMANCE.md) · [Adding a function](docs/ADDING_A_FUNCTION.md) · [Adding a provider](docs/ADDING_A_PROVIDER.md) · [MCP server](docs/MCP.md)
+- [Performance](docs/PERFORMANCE.md) · [Adding a function](docs/ADDING_A_FUNCTION.md) · [Adding a provider](docs/ADDING_A_PROVIDER.md) · [MCP server](docs/MCP.md) · [Python SDK](docs/SDK.md) · [Excel](docs/EXCEL.md)
 - [Release notes](docs/RELEASE_NOTES.md) · [Changelog](CHANGELOG.md) · [Third-party code and licences](THIRD_PARTY.md)
 
 ## Credits and licence

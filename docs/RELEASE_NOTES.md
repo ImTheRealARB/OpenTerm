@@ -52,6 +52,12 @@ table (adjusted close when available), and CSV export from every table panel (`E
   `Ctrl+1..9`) and the fixed `Esc` / panel-focus keys are refused with a reason. `SHORTCUTS` shows the effective keys.
 - **Packaging:** `Dockerfile`, `docker-compose.yml`, static frontend serving via `OPENTERM_STATIC_DIR`, Tauri scaffold in `desktop/`.
 
+## Phases 21-32 (2026-11-24, branch `claude/phases-21-32-build-resume-f09808`, not yet on `main`)
+Charts depth, linked panels and symbol math, volume and order flow, replay and practice, a strategy lab (paper only), scanners and
+smart alerts, options analytics, fundamentals and filings depth, macro / rates / commodities boards, the `QRY` query language with
+Python and Excel access, local notebooks, and AI inside functions (suggested questions, the earnings card, the `RES` research
+library). The list is in [CHANGELOG.md](../CHANGELOG.md); commands in [COMMANDS.md](COMMANDS.md). Phase 25 (script language) is deferred.
+
 ## New since 0.1.0 (2026-11-02 to 2026-11-03, on `main`)
 - **GUI mode:** one app, two shells. A new user starts in GUI mode (menu bar, sidebar with search, symbol picker, a toolbar on each panel,
   `Alt+H` help drawer, welcome card and a 2-minute tour). Switch with the `TERMINAL | GUI` status-bar control, `Alt+G` or `SETTINGS MODE`.
