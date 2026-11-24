@@ -3,6 +3,8 @@
  * rows are checked as you paste (bt/csvImport.ts, the same rules as the backend), Ctrl+Enter stores them. A stored symbol
  * answers GP, BT and every history request from then on, labelled LOCAL DATA, and shadows a real ticker of the same
  * name. `IMPORT` (or `IMPORT LIST`) lists what is stored; `IMPORT DEL <SYMBOL>` or D twice removes one.
+ * Phase 22: intraday CSVs (`IMPORT ES5 TZ=America/New_York` when the times carry no offset) and stored synthetic symbols
+ * (`IMPORT SYNTH PAIR = AAPL/MSFT`, then `PAIR GP`); the argument grammar lives in `importArgs.ts`.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseBarsCsv } from "../bt/csvImport";
@@ -10,7 +12,8 @@ import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtAge, fmtNum } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { btApi } from "../net/btApi";
-import type { BtImported } from "../net/types";
+import type { BtImported, BtSynth } from "../net/types";
+import { parseImportArgs } from "./importArgs";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -28,25 +31,57 @@ const COLS: Column<BtImported>[] = [
 ];
 
 export default function IMPORT({ panelId, args }: FunctionProps) {
-  const first = args[0]?.toUpperCase();
-  const listMode = !first || first === "LIST";
-  const del = first === "DEL" ? args[1]?.toUpperCase() : undefined;
-  const symbol = !listMode && first !== "DEL" ? first : undefined;
-  return symbol ? <Paste symbol={symbol} /> : <Stored panelId={panelId} del={first === "DEL" ? (del ?? "") : undefined} />;
+  const act = parseImportArgs(args);
+  if (act.kind === "paste") return <Paste symbol={act.symbol} tz={act.tz} />;
+  if (act.kind === "list") return <Stored panelId={panelId} del={act.del} />;
+  return <Synth act={act} />;
+}
+
+/** IMPORT SYNTH ...: one store or delete call, then its answer (the server validates the name and the formula). */
+function Synth({ act }: { act: Exclude<ReturnType<typeof parseImportArgs>, { kind: "paste" | "list" }> }) {
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(act.kind === "error" ? { ok: false, text: act.message } : null);
+  const key = JSON.stringify(act);
+  useEffect(() => {
+    if (act.kind === "synth")
+      btApi
+        .synthPut(act.name, act.formula)
+        .then((r) => setMsg({ ok: true, text: `STORED ${r.name} = ${r.formula} · TRY ${r.name} GP` }))
+        .catch((e) => setMsg({ ok: false, text: `ERR: ${errText(e)}` }));
+    else if (act.kind === "synthDel")
+      btApi
+        .synthDelete(act.name)
+        .then((r) => setMsg({ ok: true, text: `DELETED ${r.deleted}` }))
+        .catch((e) => setMsg({ ok: false, text: `ERR: ${errText(e)}` }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per command (`key` is the command)
+  }, [key]);
+  return (
+    <div className="fn">
+      <div className="line">
+        <span className="acc">IMPORT SYNTH</span> <span className="dim">· A STORED FORMULA CHARTS LIKE A TICKER, LABELLED WITH ITS FORMULA</span>
+      </div>
+      <div className={msg ? (msg.ok ? "" : "err") : "dim"}>{msg ? msg.text : "STORING…"}</div>
+    </div>
+  );
 }
 
 function Stored({ panelId, del }: { panelId: number; del?: string }) {
   const [rows, setRows] = useState<BtImported[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [synth, setSynth] = useState<BtSynth[] | null>(null);
   const grid = useRef<GridHandle>(null);
   const latest = useLatest({ rows, confirm });
 
-  const reload = () =>
+  const reload = () => {
     btApi
+      .synthList()
+      .then((r) => setSynth(r.synth))
+      .catch((e) => setMsg(`ERR: ${errText(e)}`));
+    return btApi
       .imports()
       .then((r) => setRows(r.symbols))
       .catch((e) => setMsg(`ERR: ${errText(e)}`));
+  };
   const remove = (sym: string) =>
     btApi
       .deleteImport(sym)
@@ -96,13 +131,25 @@ function Stored({ panelId, del }: { panelId: number; del?: string }) {
       {msg && <div className="dim">{msg}</div>}
       {rows && rows.length > 0 && <Grid ref={grid} columns={COLS} rows={rows} />}
       {rows && !rows.length && <div className="dim">NOTHING IMPORTED YET</div>}
+      {synth && synth.length > 0 && (
+        <div data-testid="import-synth">
+          <div className="line">
+            <span className="acc">SYNTHETICS</span> <span className="dim">· IMPORT SYNTH &lt;NAME&gt; = &lt;FORMULA&gt; ADDS · IMPORT SYNTH DEL &lt;NAME&gt; REMOVES</span>
+          </div>
+          {synth.map((x) => (
+            <div key={x.name}>
+              <span className="acc">{x.name}</span> = {x.formula} <span className="warn">{x.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function Paste({ symbol }: { symbol: string }) {
+function Paste({ symbol, tz }: { symbol: string; tz?: string }) {
   const [text, setText] = useState("");
-  const [state, setState] = useState<{ k: "idle" } | { k: "saving" } | { k: "done"; rows: number; first: string; last: string } | { k: "failed"; error: string }>({ k: "idle" });
+  const [state, setState] = useState<{ k: "idle" } | { k: "saving" } | { k: "done"; rows: number; first: string; last: string; interval?: string } | { k: "failed"; error: string }>({ k: "idle" });
   const box = useRef<HTMLTextAreaElement>(null);
   const file = useRef<HTMLInputElement>(null);
   const parsed = useMemo(() => (text.trim() ? parseBarsCsv(text) : null), [text]);
@@ -120,8 +167,8 @@ function Paste({ symbol }: { symbol: string }) {
     if (!p || p.errors.length || p.bars.length < 2) return;
     setState({ k: "saving" });
     btApi
-      .importBars(symbol, body)
-      .then((r) => setState({ k: "done", rows: r.rows, first: r.first_date, last: r.last_date }))
+      .importBars(symbol, body, tz)
+      .then((r) => setState({ k: "done", rows: r.rows, first: r.first_date, last: r.last_date, interval: r.interval }))
       .catch((e) => setState({ k: "failed", error: errText(e) }));
   };
 
@@ -149,7 +196,7 @@ function Paste({ symbol }: { symbol: string }) {
     <div className="fn">
       <div className="line">
         <span className="acc">IMPORT {symbol}</span>{" "}
-        <span className="dim">PASTE DAILY BARS BELOW (date,open,high,low,close[,volume]) · CTRL+ENTER STORES · CTRL+O CHOOSE FILE · ESC LEAVE THE BOX</span>
+        <span className="dim">PASTE DAILY OR INTRADAY BARS BELOW (date,open,high,low,close[,volume]) · CTRL+ENTER STORES · CTRL+O CHOOSE FILE · ESC LEAVE THE BOX{tz ? ` · TIMES WITHOUT AN OFFSET READ AS ${tz}` : " · INTRADAY TIMES NEED AN OFFSET (-05:00) OR TZ=<ZONE>"}</span>
       </div>
       {badSymbol && <div className="err">SYMBOL MUST BE 1-16 CHARACTERS: LETTERS, DIGITS AND . ^ = _ -</div>}
       <div className="import">
@@ -162,6 +209,7 @@ function Paste({ symbol }: { symbol: string }) {
             <>
               <div className="line">
                 <span className="acc">{preview.length} ROWS</span> · {preview[0].t} TO {preview[preview.length - 1].t} · VOLUME {parsed.hasVolume ? "YES" : "NO"}
+                {parsed.intraday && <span className="acc"> · INTRADAY (THE SERVER READS THE BAR LENGTH AND ZONE)</span>}
                 <span className="warn"> · WILL BE LABELLED LOCAL DATA</span>
               </div>
               <pre className="desc">
@@ -182,7 +230,8 @@ function Paste({ symbol }: { symbol: string }) {
       {state.k === "failed" && <div className="err">ERR: {state.error}</div>}
       {state.k === "done" && (
         <div className="line">
-          STORED <span className="acc">{symbol}</span>: {state.rows} ROWS {state.first} TO {state.last} · <span className="warn">LOCAL DATA</span> · TRY GP {symbol} OR BT {symbol} CLOSE&gt;SMA20
+          STORED <span className="acc">{symbol}</span>: {state.rows} ROWS {state.first} TO {state.last} · <span className="warn">LOCAL DATA</span>
+          {state.interval && state.interval !== "1d" ? ` · ${state.interval.toUpperCase()} BARS: TRY ${symbol} GP 5D ${state.interval.replace("m", "MIN")}` : ` · TRY GP ${symbol} OR BT ${symbol} CLOSE>SMA20`}
         </div>
       )}
     </div>

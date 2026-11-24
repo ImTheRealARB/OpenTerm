@@ -20,6 +20,7 @@
   "cheatsheet": ["?"],
   "perfHud": ["Ctrl+Shift+P"],
   "exportCsv": ["Alt+X"],
+  "grabPanel": ["Alt+P"],
   "windowMenu": ["Alt+M"],
   "toggleMode": ["Alt+G"],
   "helpDrawer": ["Alt+H"],

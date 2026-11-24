@@ -182,6 +182,16 @@ def _tape_symbols(raw) -> list[str]:
     return list(raw)
 
 
+LINK_SYNC = ("crosshair", "range", "interval")
+
+
+def _link(raw) -> dict:
+    """Phase 22 chart sync inside a link group: which of crosshair / visible range / candle length follow (each true or false)."""
+    if not isinstance(raw, dict) or set(raw) - set(LINK_SYNC) or not all(isinstance(raw[k], bool) for k in raw):
+        raise _bad("link MUST BE {crosshair, range, interval} EACH true OR false")
+    return {k: raw.get(k, True) for k in LINK_SYNC}
+
+
 def _vim(raw) -> bool:
     if not isinstance(raw, bool):
         raise _bad("vim MUST BE true OR false")
@@ -226,6 +236,7 @@ FIELDS = {
     "rowNumbers": lambda v: _choice(v, ROW_NUMBERS, "rowNumbers"),
     "tape": _tape,
     "tapeSymbols": _tape_symbols,
+    "link": _link,
 }
 
 

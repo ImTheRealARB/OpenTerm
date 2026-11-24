@@ -277,6 +277,18 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - `AAPL GP 1Y PAT:GEO` : double tops / bottoms, head and shoulders, triangles, wedges, flags from swing pivots. PATTERN RULE, NOT A SIGNAL.
 - GP drawing tools: `W` opens the tool picker (30 tools: rays, extended / vertical / cross lines, channels, regression channel, shapes, path, text, notes, arrows, measures, fib extension / time zones / fan, pitchfork, Gann fan, long / short position planner, XABCD, Elliott labels). Move the crosshair, `Enter` places each anchor (`Shift+Enter` ends a path), text tools then ask for their words. `E` re-places the selected drawing, `O` opens the object tree (`V` hide, `D` remove, `R` rename, `L` lock).
 
+## Phase 22: linked panels and symbol math
+
+- `LINK A` (or `B`, `C`, `D`) puts the focused panel in a colour group; `LINK OFF` takes it out; `LINK` alone shows the group. In GUI mode the chip in the panel header cycles the groups on click. Typing a new security into one panel of a group loads it in every other panel of that group that shows a security (watchlists and boards stay as they are). Groups are saved with the layout.
+- Linked charts share the crosshair time, the visible dates and the candle length. Each can be turned off: `SETTINGS LINK CROSSHAIR OFF`, `SETTINGS LINK RANGE OFF`, `SETTINGS LINK INTERVAL OFF` (`ON` turns it back on).
+- Symbol math: `AAPL/MSFT GP`, `GP 2*GLD-SLV`, `ES=F-NQ=F GP 1Y`, `(AAPL+MSFT)/2 GP` (one word, no spaces; `+ - * /` and brackets, up to 6 symbols). Each symbol's bars are fetched as usual, joined on the bar date (bars missing in any symbol are dropped and counted on screen) and computed per bar. The chart line names every symbol's source and age. A hyphen is part of a symbol only for share classes and currency pairs (`BRK-B`, `BTC-USD`); otherwise it is minus.
+- `IMPORT SYNTH PAIR = AAPL/MSFT` stores a formula under a name, so `PAIR GP` charts it; `IMPORT` lists synthetics under the imports; `IMPORT SYNTH DEL PAIR` removes one. A synthetic may not use another synthetic.
+- `TRA AAPL 5Y` total return (price plus dividends, annualised) against SPY; `TRA AAPL,MSFT,NVDA 3Y VS ^NSEI` for a list and another benchmark.
+- `BETA AAPL VS QQQ 5Y W WIN=26`: beta, alpha, R², standard error, adjusted beta, a scatter and a rolling beta line (D, W or M returns; P cycles them).
+- Watchlist flags and sections: in `WL TECH`, F cycles a colour flag on the row, Shift+F shows one colour only, H adds a section header above the row. Typed: `WL TECH FLAG AAPL RED` (`OFF` removes), `WL TECH SECTION JPM Banks` (no title removes).
+- `IMPORT ES5 TZ=America/New_York` takes intraday bars too: a file where a date repeats with times is read as minute bars (1 to 90 min, spacing read from the data). Times need an offset (`-05:00`, `Z`) or the `TZ=` zone. Chart them with that candle length: `ES5 GP 5D 5MIN`.
+- `GRAB` copies the focused panel to the clipboard as a picture (charts and grids included), `GRAB SAVE` downloads it as a PNG, `GRAB VIA TG,EMAIL` sends it through the delivery channels set in `DLVR` (fixture mode never sends). Shortcut Alt+P.
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

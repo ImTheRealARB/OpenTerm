@@ -38,6 +38,11 @@ const CASES: Case[] = [
   { cmd: "AAPL GP 1Y 2D", want: /AAPL 1Y 2d/ },
   { cmd: "BTCUSDT GP 1D 1S", want: /BTCUSDT .*1s/ },
   { cmd: "AAPL GP 1Y PAT:GEO", want: /PATTERN RULE, NOT A SIGNAL/ },
+  // Phase 22 (synthetic symbols: the fixture backend runs with OPENTERM_SYNTHETIC=1)
+  { cmd: "SYN0001/SYN0002 GP 1Y", want: /SYN0001\/SYN0002 1Y/ },
+  { cmd: "GP 2*SYN0001-SYN0002 1Y", want: /2\*SYN0001 - SYN0002/ },
+  { cmd: "TRA SYN0001 1Y VS SYN0002", want: /SYN0002/ },
+  { cmd: "BETA SYN0001 VS SYN0002 1Y", want: /SYN0002/ },
 ];
 
 let backend: ChildProcess | null = null;
@@ -144,5 +149,20 @@ test("smoke: drawings by keyboard (tool picker, anchors, text box, object tree) 
   await page.reload();
   await page.waitForFunction(() => window.__openterm_perf?.ready);
   await expect.poll(() => gauge(page, "chart.drawSegs"), { timeout: 15_000 }).toBeGreaterThan(1);
+  expect(errors).toEqual([]);
+});
+
+test("smoke: LINK A makes a second panel follow a new security", async ({ page }) => {
+  const errors = await connect(page);
+  await run(page, "AAPL GP 1Y");
+  await expect(panel(page, 1)).toContainText(/AAPL 1Y/, { timeout: 15_000 });
+  await run(page, "LINK A");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+\\"); // panel 2, focused
+  await run(page, "IBM DES");
+  await run(page, "LINK A");
+  await run(page, "MSFT DES"); // a new security in panel 2 reaches panel 1 (same group)
+  await expect(panel(page, 1)).toContainText(/MSFT/, { timeout: 15_000 });
+  await expect(panel(page, 1)).not.toContainText(BAD);
   expect(errors).toEqual([]);
 });

@@ -2,6 +2,7 @@
 import { ApiError, send } from "./core";
 import type { JobRec } from "./jobFrames";
 import type {
+  BtSynth,
   BtCheck, BtCompare, BtImported, BtRunCard, BtRunFull, BtRunRequest, BtStrategy, BtStrategyCard, BtTemplate,
 } from "./types";
 
@@ -18,10 +19,11 @@ export const btApi = {
   imports: () => send<{ symbols: BtImported[] }>("GET", "/api/bt/import"),
   deleteImport: (symbol: string) => send<{ deleted: string }>("DELETE", `/api/bt/import/${encodeURIComponent(symbol)}`),
   /** Stores the CSV text as the symbol's daily bars (replaces an earlier import). */
-  importBars: async (symbol: string, csv: string): Promise<BtImported & { volume: boolean }> => {
+  importBars: async (symbol: string, csv: string, tz?: string): Promise<BtImported & { volume: boolean; interval?: string }> => {
     let res: Response;
+    const zone = tz ? `&tz=${encodeURIComponent(tz)}` : ""; // Phase 22: the zone of intraday times written without an offset
     try {
-      res = await fetch(`/api/bt/import?symbol=${encodeURIComponent(symbol)}`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: csv });
+      res = await fetch(`/api/bt/import?symbol=${encodeURIComponent(symbol)}${zone}`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: csv });
     } catch {
       throw new ApiError(0, "BACKEND DOWN");
     }
@@ -29,6 +31,10 @@ export const btApi = {
     if (!res.ok) throw new ApiError(res.status, json?.error ?? `HTTP ${res.status}`, json?.kind, json?.detail);
     return json;
   },
+  /** Phase 22 stored synthetic symbols: `IMPORT SYNTH NAME = AAPL/MSFT`. */
+  synthList: () => send<{ synth: BtSynth[] }>("GET", "/api/bt/synth"),
+  synthPut: (name: string, formula: string) => send<BtSynth>("POST", "/api/bt/synth", { name, formula }),
+  synthDelete: (name: string) => send<{ deleted: string }>("DELETE", `/api/bt/synth/${encodeURIComponent(name)}`),
   runs: () => send<{ runs: BtRunCard[] }>("GET", "/api/bt/runs"),
   compare: (a: string, b: string) => send<BtCompare>("GET", `/api/bt/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   /** The server-built export: a CSV part (`trades`, `equity`, `metrics`) or the Pine Script of a rule run. */

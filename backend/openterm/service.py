@@ -13,6 +13,7 @@ from typing import Any, ClassVar
 
 from . import cachekeys as ck
 from . import errkinds as K
+from . import symmath
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
 from .config import load_yaml
@@ -133,6 +134,18 @@ class DataService:
 
     # --- public API ---------------------------------------------------------------------------
     async def history(self, raw_symbol: str, range_: str | None, interval: str | None) -> dict:
+        # Phase 22: `AAPL/MSFT`, `2*GLD-SLV` or a stored synthetic name is a FORMULA: each leg goes through this method on its own
+        # (so every leg keeps its cache, source order, fallbacks and IMPORT branch), then the legs are joined and computed.
+        try:
+            expr = symmath.parse_formula(raw_symbol, resolve)
+        except symmath.SymMathError as e:
+            raise DataError(K.BAD_REQUEST, str(e)) from e
+        stored = None
+        if expr is None and self.local is not None and (name := raw_symbol.strip().upper()) in self.local.synth:
+            stored = name
+            expr = symmath.parse_formula(self.local.synth[name], resolve)
+        if expr is not None:
+            return await self._history_formula(expr, stored, range_, interval)
         symbol = resolve(raw_symbol)
         try:
             r, i = normalize(range_, interval)
@@ -160,6 +173,50 @@ class DataService:
             return {"data": bars.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
 
         return await self.swr(ck.history(symbol, r, i, self._kite_gate(symbol)), ttl, fetch)
+
+    async def _history_formula(self, expr: symmath.Expr, stored: str | None, range_: str | None, interval: str | None) -> dict:
+        """Phase 22 symbol math: fetch every leg (in parallel, each through `history`), join them on bar time, apply the formula.
+
+        Not cached itself: each leg is, and the join + arithmetic of two 10-year daily series costs a few milliseconds.
+        The envelope is honest about its parts: `as_of` is the OLDEST leg's, `stale` is true if any leg is stale, and the
+        `formula` block names every leg's source and age plus the bars the join dropped."""
+        legs = symmath.legs(expr)
+
+        async def one(leg: str) -> dict:
+            try:
+                return await self.history(leg, range_, interval)
+            except DataError as e:  # say WHICH leg failed: "MSFT: NO DATA" is actionable, "NO DATA" is not
+                raise DataError(e.kind, f"{leg}: {e}", e.detail, e.key) from e
+
+        envs = await asyncio.gather(*(one(leg) for leg in legs))
+        by_leg = dict(zip(legs, envs, strict=True))
+        r, i = envs[0]["data"]["range"], envs[0]["data"]["interval"]
+        try:
+            aligned = symmath.align({leg: symmath.Frame.of(env["data"]) for leg, env in by_leg.items()}, i)
+            out = symmath.apply(expr, aligned)
+        except symmath.SymMathError as e:
+            raise DataError(K.BAD_REQUEST, str(e)) from e
+        if not out.t:
+            raise DataError(K.BAD_REQUEST, "THE FORMULA GIVES NO VALID BARS (EVERY COMMON BAR DIVIDED BY ZERO)")
+        text = symmath.render(expr)
+        first = envs[0]["data"]
+        data = Bars.model_construct(
+            symbol=stored or text, range=r, interval=i,
+            # A ratio or a spread has no single currency: only a formula over legs that all share one keeps it (e.g. GLD-SLV in USD).
+            currency=first.get("currency") if len({e["data"].get("currency") for e in envs}) == 1 else None,
+            exchange="FORMULA", tz=first.get("tz"), t=out.t, o=out.o, h=out.h, l=out.l, c=out.c, v=[None] * len(out.t),
+            source="formula", as_of=min(e["as_of"] for e in envs),
+        ).model_dump()
+        formula = {
+            "text": text, "name": stored,
+            "legs": [{"symbol": leg, "source": env["source"], "age_s": env["age_s"], "stale": env["stale"],
+                      "bars": aligned.bars_per_leg[leg]} for leg, env in by_leg.items()],
+            "dropped_join": aligned.dropped_join, "incomplete": aligned.incomplete, "dropped_zero": out.dropped_zero,
+            "utc_fallback": aligned.utc_fallback,
+        }
+        env = envelope({"data": data, "source": "formula"}, min(e["as_of"] for e in envs), stale=any(e["stale"] for e in envs))
+        env["formula"] = formula
+        return env
 
     def _kite_gate(self, symbol: str) -> list[str]:
         """The key-gated history sources that can answer `symbol` right now (for the cache key).

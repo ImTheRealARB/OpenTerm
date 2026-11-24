@@ -9,7 +9,7 @@ Add a check here whenever you copy a backend constant into the frontend.
 import re
 from pathlib import Path
 
-from openterm import ranges
+from openterm import ranges, wlmeta
 from openterm import settings_store as ss
 from openterm.providers import news_feeds
 from openterm.world import energy
@@ -111,3 +111,8 @@ def test_energy_series_aliases_match_the_backend():
     assert m, "NRG_IDS not found"
     found = dict(re.findall(r'(\w+):\s*"([^"]+)"', m.group(1)))
     assert found == {s.alias: s.id for s in energy.SERIES}
+
+
+def test_watchlist_flag_colours():
+    """Phase 22: the F key cycles the frontend's colours; the server refuses any it does not know."""
+    assert _strings(_ts("functions/wlFlags.ts"), "FLAG_COLORS") == list(wlmeta.COLORS)

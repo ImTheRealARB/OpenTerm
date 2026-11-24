@@ -353,3 +353,23 @@ async def congress_bills(request: Request, q: str = Query("", max_length=120)):
     from .world.usgovsvc import congress_view
 
     return await congress_view(svc(request), q)
+
+
+@router.get("/tra")
+@data_errors
+async def total_return(request: Request, symbols: str = Query(..., max_length=300), vs: str = Query("SPY", max_length=24),
+                       range: str = Query("1Y", max_length=8)):
+    """TRA (Phase 22): price return, total return (dividends included), dividend part, annualised return and the excess over a benchmark, from daily adjusted closes. `symbols` is comma separated (at most 12)."""
+    from .world.returnssvc import tra
+
+    return await tra(svc(request), symbols.split(","), vs, range)
+
+
+@router.get("/beta")
+@data_errors
+async def beta_regression(request: Request, symbol: str = Query(..., max_length=24), vs: str = Query("SPY", max_length=24),
+                          range: str = Query("2Y", max_length=8), per: str = Query("D", max_length=1), win: int = Query(60, ge=5, le=1000)):
+    """BETA (Phase 22): least-squares regression of a security's returns on a benchmark's (D / W / M returns): beta, alpha, R-squared, standard error, adjusted beta, scatter points and a rolling beta over `win` returns."""
+    from .world.returnssvc import beta
+
+    return await beta(svc(request), symbol, vs, range, per, win)

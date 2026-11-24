@@ -50,7 +50,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Analysts and valuation", codes: ["ANR", "EE", "EEO", "DCF", "WACC", "RV"] },
     { name: "Filings and owners", codes: ["FIL", "OWN", "HDS", "MGR", "SI", "ETF", "MEMB"] },
     { name: "Options", codes: ["OMON", "PCR", "OV", "OSA", "OVDV", "SKEW", "HIVG"] },
-    { name: "Statistics", codes: ["CORR", "REGIME", "FACT", "QL", "ALPHA"] },
+    { name: "Statistics", codes: ["CORR", "TRA", "BETA", "REGIME", "FACT", "QL", "ALPHA"] },
     { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT", "MCP"] },
     { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO"] },
   ],
@@ -58,7 +58,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
   Backtest: [{ name: "Backtest", codes: ["BT", "IMPORT"] }],
   Settings: [
     { name: SUB_HELP, codes: ["HELP", "FUNC", "SHORTCUTS"] },
-    { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL"] },
+    { name: SUB_LOOK, codes: ["SETTINGS", "THEME", "TAPE", "LAYOUT", "TMPL", "LINK", "GRAB"] },
     { name: "Keys and connections", codes: ["APIKEYS", "SOURCES", "KITE", "DLVR"] },
     { name: "System", codes: ["JOBS", "PERF", "LOG", "EXT"] },
   ],

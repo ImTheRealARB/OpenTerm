@@ -5,8 +5,9 @@ import orjson
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
 
+from . import errkinds as K
 from . import keys as keystore
-from . import logbuf
+from . import logbuf, symmath
 from .alert_fired import announce, route_deliver
 from .errors import DataError
 from .http_util import (
@@ -51,16 +52,30 @@ async def quote(request: Request, symbols: str = Query(..., max_length=2000)):
 
 @router.get("/history")
 @data_errors
-async def history(request: Request, symbol: str = Query(..., max_length=32), range: str | None = None,
+async def history(request: Request, symbol: str = Query(..., max_length=symmath.MAX_FORMULA_CHARS), range: str | None = None,
                   interval: str | None = None):
+    """`symbol` may also be a formula (`AAPL/MSFT`, Phase 22 symbol math) or a stored synthetic name (`IMPORT SYNTH`)."""
     return await svc(request).history(symbol, range, interval)
 
 
 @router.get("/history/limits")
-async def history_limits(request: Request, symbol: str = Query(..., max_length=32)):
+async def history_limits(request: Request, symbol: str = Query(..., max_length=symmath.MAX_FORMULA_CHARS)):
     """How far back each intraday candle length reaches for this symbol, from the best source that can serve it right now
-    (so the chart offers only what will work: 5 min over 1 year is fine for a source with deep minute data, not for Yahoo)."""
-    return svc(request).router.history_limits(resolve(symbol))
+    (so the chart offers only what will work: 5 min over 1 year is fine for a source with deep minute data, not for Yahoo).
+    For a formula, a length reaches only as far as its SHALLOWEST leg (every leg needs the bar), and is absent if any leg lacks it."""
+    service = svc(request)
+    try:
+        expr = symmath.parse_formula(symbol, resolve)
+    except symmath.SymMathError as e:
+        return error(DataError(K.BAD_REQUEST, str(e)))
+    if expr is None and service.local is not None and symbol.strip().upper() in service.local.synth:
+        expr = symmath.parse_formula(service.local.synth[symbol.strip().upper()], resolve)
+    if expr is None:
+        return service.router.history_limits(resolve(symbol))
+    per_leg = [service.router.history_limits(leg) for leg in symmath.legs(expr)]
+    common = set.intersection(*(set(x["intraday_days"]) for x in per_leg))
+    return {"symbol": symbol, "intraday_days": {i: min(x["intraday_days"][i] for x in per_leg) for i in common},
+            "source": sorted({s for x in per_leg for s in x["source"]})}
 
 
 @router.get("/profile")
@@ -213,6 +228,15 @@ async def edit_watchlist(request: Request, name: str):
 async def delete_watchlist(request: Request, name: str):
     try:
         return {"deleted": await user(request).delete_watchlist(name)}
+    except UserDataError as e:
+        return error(e)
+
+
+@router.put("/watchlists/{name}/meta")
+async def save_watchlist_meta(request: Request, name: str):
+    """Phase 22: replace a list's colour flags and section headers (body `{"flags": {SYM: COLOUR}, "sections": [{"before": SYM, "title": TEXT}]}`)."""
+    try:
+        return await user(request).save_watchlist_meta(name, await json_object(request))
     except UserDataError as e:
         return error(e)
 
@@ -1010,8 +1034,10 @@ def local_of(request: Request):
 
 
 @router.post("/bt/import")
-async def bt_import(request: Request, symbol: str = ""):
-    """Body: the CSV text (date,open,high,low,close[,volume]). Replaces any earlier import of the symbol."""
+async def bt_import(request: Request, symbol: str = "", tz: str | None = Query(None, max_length=64)):
+    """Body: the CSV text (date,open,high,low,close[,volume]). Replaces any earlier import of the symbol.
+    Phase 22: an intraday file (a date on several rows, with times) is stored as minute bars; `tz` names the zone of times written
+    without an offset (`csvimport.py` docstring)."""
     from .bt import csvimport
     from .bt.store import BtError
 
@@ -1025,7 +1051,7 @@ async def bt_import(request: Request, symbol: str = ""):
         except UnicodeDecodeError:
             raise BtError("bad_request", "CSV REJECTED", detail="THE FILE IS NOT UTF-8 TEXT") from None
         try:
-            cols = csvimport.parse_bars(text)
+            cols = csvimport.parse_bars(text, tz)
         except csvimport.CsvError as e:
             raise BtError("bad_request", "CSV REJECTED", detail=str(e)) from None
     except csvimport.CsvError as e:
@@ -1047,6 +1073,37 @@ async def bt_import_delete(request: Request, symbol: str):
     if not await local_of(request).delete(symbol.strip().upper()):
         return bt_error(BtError("not_found", f"NO LOCAL DATA FOR {symbol.upper()}"))
     return {"deleted": symbol.upper()}
+
+
+# --- Phase 22: stored synthetic symbols (`IMPORT SYNTH NAME = AAPL/MSFT`) ---------------------------------------------
+@router.get("/bt/synth")
+async def bt_synth_list(request: Request):
+    return {"synth": await local_of(request).synth_list()}
+
+
+@router.post("/bt/synth")
+async def bt_synth_put(request: Request):
+    """Body `{"name": "PAIR", "formula": "AAPL/MSFT"}`. The name then charts like a ticker (GP PAIR), labelled with its formula."""
+    from .bt.localdata import LocalError
+    from .bt.store import BtError
+
+    try:
+        body = await json_object(request)
+    except UserDataError as e:
+        return error(e)
+    try:
+        return await local_of(request).synth_put(str(body.get("name") or ""), str(body.get("formula") or ""))
+    except LocalError as e:
+        return bt_error(BtError("bad_request", str(e)))
+
+
+@router.delete("/bt/synth/{name}")
+async def bt_synth_delete(request: Request, name: str):
+    from .bt.store import BtError
+
+    if not await local_of(request).synth_delete(name):
+        return bt_error(BtError("not_found", f"NO SYNTHETIC {name.upper()}"))
+    return {"deleted": name.upper()}
 
 
 @router.get("/bt/runs/{run_id}/export")

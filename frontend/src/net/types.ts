@@ -17,6 +17,25 @@ export interface Envelope<T> {
   fallback_from: string[];
   /** Why a skipped source was skipped, when worth saying (e.g. kite: "KITE LOGIN EXPIRED: run KITE LOGIN"). */
   fallback_notes?: Record<string, string>;
+  /** Phase 22: only on a history answer for a formula (`AAPL/MSFT`) or a stored synthetic: what it was built from. */
+  formula?: FormulaInfo;
+}
+
+/** Phase 22 symbol math (backend `service._history_formula`): the legs behind a computed series and what the join dropped. */
+export interface FormulaInfo {
+  /** The normalised formula, e.g. `2*GLD - SLV`. */
+  text: string;
+  /** The stored synthetic's name (`IMPORT SYNTH`), or null for a formula typed on the command line. */
+  name: string | null;
+  legs: { symbol: string; source: string | null; age_s: number; stale: boolean; bars: number }[];
+  /** Bars present in some leg but not in all of them (inner join). */
+  dropped_join: number;
+  /** Bars a leg had with an open, high, low or close missing. */
+  incomplete: number;
+  /** Common bars removed because the formula divided by zero there. */
+  dropped_zero: number;
+  /** Legs with an unknown time zone, joined on UTC dates. */
+  utc_fallback: string[];
 }
 
 export interface Quote {
@@ -120,10 +139,19 @@ export interface WatchlistInfo {
   updated_at: number;
 }
 
+/** Phase 22: colour flags and section headers of a watchlist (backend `wlmeta.py`). A list with neither has no `meta` at all. */
+export interface WlMeta {
+  /** Stored symbol -> one of the 7 flag colours (see `functions/wlFlags.ts`). */
+  flags: Record<string, string>;
+  /** A header row shown just above the symbol `before`. */
+  sections: { before: string; title: string }[];
+}
+
 export interface Watchlist {
   name: string;
   symbols: string[];
   updated_at: number;
+  meta?: WlMeta;
 }
 
 // ---------------------------------------------------------------------------
@@ -606,6 +634,14 @@ export interface BtImported {
   rows: number;
   first_date: string;
   last_date: string;
+  created_at: number;
+  label: string;
+}
+
+/** Phase 22: a stored synthetic symbol (`IMPORT SYNTH NAME = formula`), charted like a ticker. */
+export interface BtSynth {
+  name: string;
+  formula: string;
   created_at: number;
   label: string;
 }

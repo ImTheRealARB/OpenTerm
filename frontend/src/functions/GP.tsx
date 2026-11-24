@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { registerChartShot } from "../chart/shot";
 import { CHART_TYPES, INTERVAL_S, ChartView, toBarData, type BarData, type ChartHandle, type ChartMarkerEvent, type CustomItem } from "../chart/ChartView";
-import { isBrickType } from "../chart/chartTypes";
+import { isBrickType } from "../chart/brickNote";
+import { onLink, publishLink } from "../chart/linkBus";
 import { onIndicatorRequest, setChartIndicators, type IndicatorRequest } from "../chart/indicatorBus";
 import { alertDirection, fmtAlertPrice, roundAlertPrice } from "../chart/alertPrice";
 import { createDrawSaver } from "../chart/drawSave";
@@ -18,7 +19,7 @@ import { usePanelRefresh } from "./panelRefresh";
 import { chartApi } from "../net/chartApi";
 import { ApiError } from "../net/core";
 import { marketApi } from "../net/marketApi";
-import type { ChartEvents, Envelope } from "../net/types";
+import type { ChartEvents, Envelope, FormulaInfo } from "../net/types";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
 import { getLive, onTicks, SRC_LABEL } from "../state/ticks";
@@ -60,6 +61,7 @@ interface Loaded {
   stale: boolean;
   fallback: string[];
   fallbackNotes?: Record<string, string>;
+  formula?: FormulaInfo;
   compares: { symbol: string; t: Float64Array; c: Float64Array }[];
   compareErrors: string[];
 }
@@ -184,7 +186,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
         });
         setState({
           loading: false,
-          loaded: { bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, fallbackNotes: env.fallback_notes, compares, compareErrors },
+          loaded: { bars: toBarData(env.data), source: env.source, asOf: env.as_of, stale: env.stale, fallback: env.fallback_from, fallbackNotes: env.fallback_notes, formula: env.formula, compares, compareErrors },
         });
       })
       .catch((e: ApiError) => alive && setState({ loading: false, error: e.message, keyError: isKeyRequired(e) ? e : undefined }));
@@ -195,7 +197,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
   }, [symbol, p.range, p.interval, compareKey, reload, source]);
 
   // Live: extend the last bar from ticks.
-  const resolved = state.loaded?.bars.symbol;
+  const resolved = state.loaded?.source === "formula" ? undefined : state.loaded?.bars.symbol;
   useEffect(() => {
     if (!resolved) return;
     const unsub = subscribe([resolved]);
@@ -309,6 +311,32 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
   // symbols and drawings are anchored on the source bars' clock, so they are switched off there (and the panel says so).
   const brick = isBrickType(p.type);
   const [chartNote, setChartNote] = useState<string | null>(null);
+
+  // --- Phase 22: chart sync inside the panel's link group (LINK A..D; what is shared: SETTINGS LINK) ---
+  const linkGroup = useStore(workspace, (s) => s.panels[panelId]?.link);
+  const linkOn = useStore(settingsStore, (st) => st.link);
+  const sync = useMemo(
+    () => (linkGroup && !brick ? { group: linkGroup, panelId, crosshair: linkOn.crosshair, range: linkOn.range } : undefined),
+    [linkGroup, brick, panelId, linkOn.crosshair, linkOn.range],
+  );
+  // A candle-length change made HERE is sent to the group (not the first value on mount, or a layout load would reset everyone).
+  const sentInterval = useRef(p.interval);
+  useEffect(() => {
+    if (sentInterval.current === p.interval) return;
+    sentInterval.current = p.interval;
+    if (linkGroup && linkOn.interval) publishLink({ group: linkGroup, from: panelId, kind: "interval", interval: p.interval });
+  }, [p.interval, linkGroup, linkOn.interval, panelId]);
+  useEffect(
+    () =>
+      onLink((m) => {
+        if (m.kind !== "interval" || m.group !== linkGroup || m.from === panelId || !linkOn.interval) return;
+        if (m.interval === pRef.current.interval) return;
+        sentInterval.current = m.interval; // taken from the group: do not send it back
+        update((q) => ({ ...q, interval: m.interval }));
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `update` writes through pRef; re-subscribe only when the group or switch changes
+    [linkGroup, linkOn.interval, panelId],
+  );
   const live = useLatest({ drawings, selected, mode, bars: L?.bars, armed, placeAlert, overlayOn, treeItems, treeRow, brick });
 
   /**
@@ -474,7 +502,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
             return placeDrawing(modeRef.current, pts);
           }
         }
-        if (plain && !modeRef.current && st.brick && "thbwe".includes(k) && k.length === 1) return fail("DRAWINGS NEED A TIME-BASED CHART TYPE: PRESS C FOR THE NEXT TYPE");
+        if (plain && !modeRef.current && st.brick && "thbwe".includes(k) && k.length === 1) return !fail("DRAWINGS NEED A TIME-BASED CHART TYPE: PRESS C FOR THE NEXT TYPE"); // handled: the key must not fall through
         if (plain && !modeRef.current) {
           const start = (kind: DrawKind) => {
             if (!st.bars) return true;
@@ -505,14 +533,14 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
           }
           const sd = st.drawings.find((d) => d.id === st.selected);
           if ((k === "Delete" || k === "d") && sd) {
-            if (sd.locked) return fail("LOCKED: UNLOCK IT IN THE OBJECT TREE (O, THEN L)");
+            if (sd.locked) return !fail("LOCKED: UNLOCK IT IN THE OBJECT TREE (O, THEN L)");
             commit(st.drawings.filter((d) => d.id !== st.selected));
             setSelected(null);
             return true;
           }
           if (k === "e" && sd) {
             // Re-place the selected drawing's anchors with the crosshair, keeping its text, name and flags.
-            if (sd.locked) return fail("LOCKED: UNLOCK IT IN THE OBJECT TREE (O, THEN L)");
+            if (sd.locked) return !fail("LOCKED: UNLOCK IT IN THE OBJECT TREE (O, THEN L)");
             if (!crossOn) {
               chart.current?.crosshair(true);
               setCrossOn(true);
@@ -587,6 +615,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
           </span>
         )}
         {L?.stale && <span className="warn"> · STALE</span>}
+        {L?.formula && <FormulaNote f={L.formula} />}
         {L?.fallback.length ? <span className="warn"> · {fallbackText(L.fallback, L.fallbackNotes)}</span> : null}
         {L?.compareErrors.map((m) => (
           <span className="err" key={m}> · {m}</span>
@@ -694,6 +723,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
           brickBox={p.box}
           brickRev={p.rev}
           onNote={setChartNote}
+          sync={sync}
           // Everything only GP needs goes in one `gp` object (see chart/gpLayer.ts).
           gp={{
             indicators: brick ? [] : shownIndicators,
@@ -754,4 +784,28 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
 
 function pick(b: BarData) {
   return { t: b.t, c: b.c };
+}
+
+/** Phase 22: what a computed series (`AAPL/MSFT`) is made of: each leg's source and age, and every bar the join left out. */
+function FormulaNote({ f }: { f: FormulaInfo }) {
+  const dropped = f.dropped_join + f.incomplete + f.dropped_zero;
+  return (
+    <span className="dim" data-testid="gp-formula">
+      {" · "}
+      {f.name ? `${f.name} = ${f.text} · ` : ""}
+      {f.legs.map((l) => `${l.symbol} ${(l.source ?? "?").toUpperCase()} ${fmtAge(l.age_s)}${l.stale ? " STALE" : ""}`).join(" · ")}
+      {dropped > 0 && (
+        <span className="warn">
+          {" · "}
+          {[
+            f.dropped_join && `${f.dropped_join} BARS NOT IN EVERY LEG`,
+            f.incomplete && `${f.incomplete} INCOMPLETE`,
+            f.dropped_zero && `${f.dropped_zero} DIVIDED BY ZERO`,
+          ].filter(Boolean).join(", ")}{" "}
+          DROPPED
+        </span>
+      )}
+      {f.utc_fallback.length > 0 && <span className="warn"> · {f.utc_fallback.join(" ")} ZONE UNKNOWN: JOINED ON UTC DATES</span>}
+    </span>
+  );
 }

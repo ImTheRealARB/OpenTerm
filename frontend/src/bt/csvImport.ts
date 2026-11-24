@@ -19,6 +19,29 @@ export interface ParsedBars {
   /** One message per problem, `ROW n:` with n counting data rows from 1. Nothing is stored while there are errors. */
   errors: string[];
   hasVolume: boolean;
+  /**
+   * Phase 22: some date repeats AND the dates carry a time, so these are intraday bars (`t` is then the whole timestamp cell).
+   * The preview only checks prices; the server reads the zone, the bar spacing and duplicate times (`bt/csvimport.py`).
+   */
+  intraday: boolean;
+}
+
+const TIME_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/;
+
+/** The same test as the backend's `_is_intraday`: a repeated calendar date, and times on the date cells. */
+export function looksIntraday(dates: string[]): boolean {
+  const seen = new Set<string>();
+  let timed = false;
+  let repeated = false;
+  for (const cell of dates) {
+    const m = DATE_RE.exec(cell);
+    if (!m) continue;
+    timed ||= TIME_RE.test(cell);
+    const day = `${m[1]}-${m[2]}-${m[3]}`;
+    repeated ||= seen.has(day);
+    seen.add(day);
+  }
+  return timed && repeated;
 }
 
 export const REQUIRED = ["date", "open", "high", "low", "close"] as const;
@@ -40,7 +63,7 @@ function num(raw: string): number | null {
 
 export function parseBarsCsv(text: string): ParsedBars {
   const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim() !== "");
-  const out: ParsedBars = { bars: [], errors: [], hasVolume: false };
+  const out: ParsedBars = { bars: [], errors: [], hasVolume: false, intraday: false };
   if (!lines.length) {
     out.errors.push("EMPTY FILE");
     return out;
@@ -57,6 +80,7 @@ export function parseBarsCsv(text: string): ParsedBars {
   }
   const at = Object.fromEntries([...REQUIRED, "volume"].filter((c) => header.includes(c)).map((c) => [c, header.indexOf(c)]));
   out.hasVolume = "volume" in at;
+  out.intraday = looksIntraday(lines.slice(1).map((l) => (l.split(",")[at.date] ?? "").trim()));
   const seen = new Set<string>();
   const fail = (msg: string) => {
     if (out.errors.length < MAX_ERRORS) out.errors.push(msg);
@@ -73,7 +97,7 @@ export function parseBarsCsv(text: string): ParsedBars {
       continue;
     }
     const day = `${m[1]}-${m[2]}-${m[3]}`;
-    if (seen.has(day)) {
+    if (!out.intraday && seen.has(day)) {
       fail(`ROW ${n}: DUPLICATE DATE ${day}`);
       continue;
     }
@@ -98,7 +122,7 @@ export function parseBarsCsv(text: string): ParsedBars {
       fail(`ROW ${n}: HIGH BELOW LOW`);
       continue;
     }
-    const bar: CsvBar = { t: day, o: px.open, h: px.high, l: px.low, c: px.close };
+    const bar: CsvBar = { t: out.intraday ? cells[at.date] : day, o: px.open, h: px.high, l: px.low, c: px.close };
     if (out.hasVolume && cells[at.volume] !== "") {
       const v = num(cells[at.volume]);
       if (v === null) {

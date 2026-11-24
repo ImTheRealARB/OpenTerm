@@ -238,6 +238,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
 | `CORR` | Correlation matrix |  | `SYM SYM... [1M..MAX]` | `CORR` |
+| `TRA` | Total return vs a benchmark (price + dividends, annualised, excess over a benchmark) |  | `SYM[,SYM...] [1M..MAX] [VS BENCHMARK]` | `TRA` |
+| `BETA` | Beta, alpha and R-squared of a security against a benchmark |  | `[SYM] [VS BENCHMARK] [1M..MAX] [D\|W\|M] [WIN=60]` | `BETA` |
 | `REGIME` | Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list |  | `[WL:<NAME>\|LIST:A,B,C] [WIN=60] [EDGE=0.5]` | `REGIME` |
 | `FACT` | Factor regression (Fama-French / momentum / quality) of a symbol or portfolio; the factor data end date is shown |  | `<SYM\|PORTFOLIO> [RANGE=3y]` | `FACT` |
 | `QL` | Quant calculators on bars: GARCH OU COINT HEDGE COPULA ROLL AMIHUD KYLE VPIN EVENT DSR ADF HVAR |  | `<GARCH\|OU\|COINT\|HEDGE\|COPULA\|ROLL\|AMIHUD\|KYLE\|VPIN\|EVENT\|DSR\|ADF\|HVAR> [SYMBOLS] [KEY=VALUE]` | `QL` |
@@ -301,6 +303,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `LAYOUT` | Save / load named workspaces |  | `[SAVE\|LOAD\|DEL] name` | `LAYOUT` |
 | `MONITOR` | Alias of LAYOUT |  | `[SAVE\|LOAD\|DEL] name` | `MONITOR` |
 | `TMPL` | Workspace templates: Long-term, Day trader, Macro, India |  | `[LONGTERM\|DAY\|MACRO\|INDIA]` | `TMPL` |
+| `LINK` | Link panels by colour group |  | `[A\|B\|C\|D\|OFF]` | `LINK` |
+| `GRAB` | Panel picture (PNG) |  | `[SAVE \| VIA TG,EMAIL]` | `GRAB` |
 
 ### Settings: Keys and connections
 
@@ -347,6 +351,7 @@ Rebind any of these in `SETTINGS KEYS`.
 | `?` | Shortcut cheatsheet |
 | `Ctrl+Shift+P` | Toggle PERF HUD |
 | `Alt+X` | Export the focused panel's table to CSV (also E in tables) |
+| `Alt+P` | Copy a picture of the focused panel (GRAB; GRAB SAVE downloads it) |
 | `Alt+M` | Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter) |
 | `Alt+G` | Switch between TERMINAL and GUI mode |
 | `Alt+H` | Help drawer for the focused panel (GUI mode) |

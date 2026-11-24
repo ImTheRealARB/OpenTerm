@@ -23,7 +23,9 @@ import { toTime, themeColors, type BarData } from "./chartBase";
 import { useGpLayer, type GpLayerProps, type GpOps } from "./gpLayer";
 
 import { brickCount, brickDir, brickPrice, brickText, brickTime, buildBricks, type BrickResult } from "./bricks";
-import { CHART_TYPES, brickNote, isBrickType, isOhlcType, volCandleNote, type ChartType } from "./chartTypes";
+import { CHART_TYPES, isOhlcType, type ChartType } from "./chartTypes";
+import { brickNote, isBrickType, volCandleNote } from "./brickNote";
+import { onLink, publishLink } from "./linkBus";
 import { PnfView, VolCandleView, type PnfData, type VolCandleData } from "./customSeries";
 import { heikinAshi } from "./heikin";
 
@@ -70,6 +72,8 @@ interface Props {
    * caveats), or null for the other types. Passing a state setter is fine: it only re-renders when the text changes.
    */
   onNote?: (note: string | null) => void;
+  /** Phase 22: this chart is in a link group; share the crosshair and / or the visible dates with the group's other charts. */
+  sync?: { group: string; panelId: number; crosshair: boolean; range: boolean };
 }
 
 /** Types whose bars are not the source bars, or are rebuilt from history: a live tick cannot be applied in place, they refresh with the next history load. */
@@ -136,7 +140,7 @@ function addBrickSeries(chart: IChartApi, br: BrickResult, type: ChartType, c: C
   return s;
 }
 
-function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp, brickBox, brickRev, onNote }: Props, ref: React.Ref<ChartHandle>) {
+function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp, brickBox, brickRev, onNote, sync }: Props, ref: React.Ref<ChartHandle>) {
   const box = useRef<HTMLDivElement>(null);
   const readout = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -251,6 +255,64 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp,
   // Created once per panel. data.interval only seeds timeVisible here; the data effect re-applies it on interval change.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- chart is created once; later interval changes are applied via applyOptions in the data effect
   }, []);
+
+  // --- Phase 22: chart sync inside a link group (linkBus.ts) ---
+  // Out: a mouse crosshair move (the library marks those with `sourceEvent`; moves WE make from another chart's message have
+  // none, so they are never sent back) and visible-range changes. In: the same from the group's other charts. A range we
+  // just applied echoes back as a change event, so changes in the next 150 ms after applying one are not sent on.
+  const syncRef = useRef(sync);
+  syncRef.current = sync;
+  const quietUntil = useRef(0);
+  useEffect(() => {
+    const chart = chartRef.current;
+    const host = box.current;
+    if (!chart || !host || !sync) return;
+    const onCross = (p: { time?: Time; sourceEvent?: unknown }) => {
+      const s = syncRef.current;
+      if (s?.crosshair && p.sourceEvent && p.time !== undefined) publishLink({ group: s.group, from: s.panelId, kind: "cross", t: p.time as number });
+    };
+    const onLeave = () => {
+      const s = syncRef.current;
+      if (s?.crosshair) publishLink({ group: s.group, from: s.panelId, kind: "cross", t: null });
+    };
+    const onRange = () => {
+      const s = syncRef.current;
+      const r = chart.timeScale().getVisibleRange();
+      if (!s?.range || !r || performance.now() < quietUntil.current) return;
+      publishLink({ group: s.group, from: s.panelId, kind: "range", a: r.from as number, b: r.to as number });
+    };
+    chart.subscribeCrosshairMove(onCross);
+    chart.timeScale().subscribeVisibleTimeRangeChange(onRange);
+    host.addEventListener("mouseleave", onLeave);
+    const off = onLink((m) => {
+      const s = syncRef.current;
+      if (!s || m.group !== s.group || m.from === s.panelId || !main.current) return;
+      const t = dataRef.current.t;
+      if (m.kind === "cross" && s.crosshair && !cross.current.on) {
+        if (m.t === null || !t.length) return chart.clearCrosshairPosition();
+        // The last bar that opened at or before the other chart's time (another candle length or market can differ).
+        let lo = 0;
+        let hi = t.length - 1;
+        while (lo < hi) {
+          const mid = (lo + hi + 1) >> 1;
+          if (t[mid] <= m.t) lo = mid;
+          else hi = mid - 1;
+        }
+        chart.setCrosshairPosition(dataRef.current.c[lo], toTime(t[lo]), main.current);
+      } else if (m.kind === "range" && s.range) {
+        quietUntil.current = performance.now() + 150;
+        chart.timeScale().setVisibleRange({ from: toTime(m.a), to: toTime(m.b) });
+      }
+    });
+    return () => {
+      off();
+      chart.unsubscribeCrosshairMove(onCross);
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(onRange);
+      host.removeEventListener("mouseleave", onLeave);
+    };
+  // Only joining or leaving a group (or another panel) re-subscribes; the on/off switches are read live through syncRef.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync's switches are read through syncRef
+  }, [sync?.group, sync?.panelId]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -460,6 +522,9 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp,
       // On a brick chart the keyboard crosshair walks the bricks, at the brick's own time and price.
       chart.setCrosshairPosition(br ? brickPrice(br, i) : data.c[i], toTime(br ? brickTime(br, i) : data.t[i]), main.current);
       writeReadout(i);
+      // Phase 22: a keyboard crosshair move is shared with the link group like a mouse one.
+      const s = syncRef.current;
+      if (s?.crosshair && !br) publishLink({ group: s.group, from: s.panelId, kind: "cross", t: data.t[i] });
     },
     lastPrice() {
       return last.current && Number.isFinite(last.current.c) ? last.current.c : null;

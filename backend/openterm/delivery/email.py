@@ -52,23 +52,25 @@ def _close(s) -> None:
             pass
 
 
-def build_message(sender: str, to: str, subject: str, text: str) -> EmailMessage:
+def build_message(sender: str, to: str, subject: str, text: str, picture: tuple[str, bytes] | None = None) -> EmailMessage:
     msg = EmailMessage()
     msg["From"], msg["To"], msg["Subject"] = sender, to, subject.replace("\n", " ")
     msg.set_content(text)
+    if picture:  # Phase 22 GRAB: the panel picture as a PNG attachment
+        msg.add_attachment(picture[1], maintype="image", subtype="png", filename=picture[0])
     return msg
 
 
-def send_sync(values: dict, to: str, subject: str, text: str, connect=None) -> None:
+def send_sync(values: dict, to: str, subject: str, text: str, connect=None, picture: tuple[str, bytes] | None = None) -> None:
     """Blocking send. `connect` is injectable so tests can pass a fake SMTP; default is `smtp_connect`."""
     connect = connect or smtp_connect
     s = connect(values["SMTP_HOST"], int(values["SMTP_PORT"]), values["SMTP_USER"], values["SMTP_PASSWORD"], 10)
     try:
-        s.send_message(build_message(values["SMTP_USER"], to, subject, text))
+        s.send_message(build_message(values["SMTP_USER"], to, subject, text, picture))
     finally:
         _close(s)
 
 
 async def send(app, values: dict, cfg: dict, subject: str, text: str, extra: dict) -> None:
     # smtplib blocks, so it runs in a worker thread and the event loop stays free
-    await asyncio.to_thread(send_sync, values, cfg["email_to"], subject, text)
+    await asyncio.to_thread(send_sync, values, cfg["email_to"], subject, text, None, extra.get("picture"))

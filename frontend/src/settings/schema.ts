@@ -75,6 +75,8 @@ export interface Settings {
   tapeSymbols: string[];
   /** Preferred source per kind of data, tried first (SETTINGS SOURCE HISTORY NASDAQ): capability -> source name. The default order still backs it up. */
   sources: Record<string, string>;
+  /** Phase 22: inside a link group, which chart views follow each other (SETTINGS LINK CROSSHAIR|RANGE|INTERVAL ON|OFF). */
+  link: { crosshair: boolean; range: boolean; interval: boolean };
 }
 
 export const DEFAULTS: Settings = Object.freeze({
@@ -93,6 +95,7 @@ export const DEFAULTS: Settings = Object.freeze({
   tape: false,
   tapeSymbols: [...TAPE_DEFAULT],
   sources: {},
+  link: { crosshair: true, range: true, interval: true },
 }) as Settings;
 
 export const SOURCE_NAME_RE = /^[a-z][a-z0-9_]{0,39}$/;
@@ -209,6 +212,16 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
     }
   } else if (r.sources !== undefined) errors.push("sources");
 
+  // link: three on/off switches for chart sync inside a link group; a bad or missing switch keeps its default.
+  const lk = isObj(r.link) ? r.link : {};
+  const link = { ...d.link };
+  for (const k of ["crosshair", "range", "interval"] as const) {
+    if (lk[k] === undefined) continue;
+    if (typeof lk[k] === "boolean") link[k] = lk[k] as boolean;
+    else errors.push(`link.${k}`);
+  }
+  if (r.link !== undefined && !isObj(r.link)) errors.push("link");
+
   return {
     settings: {
       mode,
@@ -226,6 +239,7 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
       tape: pick("tape", typeof r.tape === "boolean", r.tape as boolean, d.tape),
       tapeSymbols: pick("tapeSymbols", tapeOk, (r.tapeSymbols as string[])?.slice(), [...d.tapeSymbols]),
       sources: sourcesOut,
+      link,
     },
     errors,
   };

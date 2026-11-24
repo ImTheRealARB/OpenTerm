@@ -108,6 +108,12 @@ input, button { font: inherit; color: inherit; background: none; border: 0; outl
 .panel.focus .ph { color: var(--val); font-weight: bold; }
 .ph .id { color: var(--bg); background: var(--fg-dim); padding: 0 5px; font-weight: bold; }
 .panel.focus .ph .id { background: var(--fg); }
+/* Phase 22 link group chip: dim dot when unlinked; each group its own colour (the colour IS the group). */
+.ph .ph-link { flex: none; font: inherit; border: 0; padding: 0 4px; background: none; color: var(--fg-dim); cursor: pointer; }
+.ph .ph-link.link-A { background: var(--accent); color: var(--bg); }
+.ph .ph-link.link-B { background: var(--up); color: var(--bg); }
+.ph .ph-link.link-C { background: var(--down); color: var(--bg); }
+.ph .ph-link.link-D { background: var(--sel); color: var(--fg); }
 /* Window-frame menus (RECENT / RELATED / OPTIONS, Alt+M) */
 .panel { position: relative; }
 .ph .wm-sp { flex: 1; }

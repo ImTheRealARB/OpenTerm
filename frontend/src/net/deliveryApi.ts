@@ -9,4 +9,7 @@ export const deliveryApi = {
   test: (channel: Exclude<DeliveryChannel, "desktop">) => send<{ results: DeliveryRow[] }>("POST", "/api/delivery/test", { channel }),
   pairStart: () => send<TelegramPairStart>("POST", "/api/delivery/telegram/pair/start", {}),
   pairCheck: () => send<TelegramPairCheck>("POST", "/api/delivery/telegram/pair/check", {}),
+  /** Phase 22 GRAB VIA: a panel picture (base64 PNG) to TG / EMAIL; answers one result row per channel. */
+  sendPicture: (channels: string[], name: string, pngBase64: string) =>
+    send<{ results: DeliveryRow[] }>("POST", "/api/delivery/picture", { channels, name, png_base64: pngBase64 }),
 };

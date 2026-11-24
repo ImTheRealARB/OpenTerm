@@ -50,6 +50,9 @@ const defs: FunctionDef[] = [
   { code: "HOME", title: "Home page: market numbers and headlines, with a scrolling ticker tape", needsSecurity: false, load: () => import("./HOME") },
   // TAPE edits the tape inside execute() (command/execute.ts) and never opens a panel; `load` only keeps a stray navigation harmless.
   { code: "TAPE", title: "Ticker tape settings", needsSecurity: false, argsSchema: "[ADD SYM | DEL SYM | RESET | ON | OFF]", load: () => import("./HOME") },
+  // Phase 22: commands that act on the focused panel and never open one (like TAPE): `load` is only the registry's required field.
+  { code: "LINK", title: "Link panels by colour group", needsSecurity: false, argsSchema: "[A|B|C|D|OFF]", load: () => import("./HOME") },
+  { code: "GRAB", title: "Panel picture (PNG)", needsSecurity: false, argsSchema: "[SAVE | VIA TG,EMAIL]", load: () => import("./HOME") },
   { code: "PERF", title: "Performance monitor", needsSecurity: false, argsSchema: "[GRID rows | CHART bars | CALC]", load: () => import("./Perf") },
   { code: "SHORTCUTS", title: "Keyboard shortcuts", needsSecurity: false, load: () => import("./Shortcuts") },
   { code: "GP", title: "Price chart", needsSecurity: true, argsSchema: "[1D..MAX] [D|W|MO|5MIN|1H|4H|2D|2W|Q|YEARLY|1S] [VS SYM] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|LINEBREAK|RANGE|COLUMNS|HIGHLOW|STEP|VOLCANDLE] [BOX=n] [REV=n] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200]", prefetchOnType: true, related: { security: 2 }, load: () => import("./GP"), idlePreload: false },
@@ -176,6 +179,8 @@ const defs: FunctionDef[] = [
   { code: "FEDREG", title: "US Federal Register: rules, proposed rules, notices and presidential documents, newest first (no key)", needsSecurity: false, argsSchema: "[RULE|PROPOSED|NOTICE|PRESDOC] [<WORDS>]", load: () => import("./FEDREG") },
   { code: "FEC", title: "US campaign finance: candidate and committee search, receipts and disbursements by cycle (OpenFEC, free key FEC_API_KEY)", needsSecurity: false, argsSchema: "<NAME> | <FEC ID>", load: () => import("./FEC") },
   { code: "CONGRESS", title: "US Congress bills: latest updated, title filter, one bill with its sponsor (Congress.gov API, free key CONGRESS_API_KEY)", needsSecurity: false, argsSchema: "[<WORDS> | HR 1234]", load: () => import("./CONGRESS") },
+  { code: "TRA", title: "Total return vs a benchmark (price + dividends, annualised, excess over a benchmark)", needsSecurity: false, argsSchema: "SYM[,SYM...] [1M..MAX] [VS BENCHMARK]", load: () => import("./TRA") },
+  { code: "BETA", title: "Beta, alpha and R-squared of a security against a benchmark", needsSecurity: false, argsSchema: "[SYM] [VS BENCHMARK] [1M..MAX] [D|W|M] [WIN=60]", load: () => import("./BETA") },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

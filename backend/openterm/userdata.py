@@ -5,6 +5,7 @@ import time
 import aiosqlite
 import orjson
 
+from . import wlmeta
 from .idents import STORED_NAME_RE, STORED_SYMBOL_RE
 from .symbols import resolve
 
@@ -138,7 +139,44 @@ class UserData:
             row = await cur.fetchone()
         if not row:
             raise UserDataError("not_found", f"NO WATCHLIST {name}")
-        return {"name": name, "symbols": orjson.loads(row[0]), "updated_at": row[1]}
+        symbols = orjson.loads(row[0])
+        out = {"name": name, "symbols": symbols, "updated_at": row[1]}
+        meta = await self._meta(name)
+        if meta is not None:  # Phase 22: only a list with flags or sections carries `meta`; absent means none
+            meta = wlmeta.prune(meta, symbols)
+            if not wlmeta.is_empty(meta):
+                out["meta"] = meta
+        return out
+
+    async def _meta(self, name: str) -> dict | None:
+        """The stored flags and sections of a list (kv `wlmeta:<NAME>`), or None when it has none."""
+        async with self.db.execute("SELECT value FROM kv WHERE key=?", (f"wlmeta:{name}",)) as cur:
+            row = await cur.fetchone()
+        return orjson.loads(row[0]) if row else None
+
+    async def save_watchlist_meta(self, raw_name: str, raw_meta) -> dict:
+        """Replaces a list's flags and sections (the whole document each time). Every symbol named must be in the list.
+        An empty document removes the stored entry. Returns `{"name", "meta"}` with the cleaned document."""
+        name = watchlist_name(raw_name)
+        symbols = await self._watchlist(name)
+        if symbols is None:
+            raise UserDataError("not_found", f"NO WATCHLIST {name}")
+        try:
+            meta = wlmeta.validate(raw_meta)
+        except wlmeta.WlMetaError as e:
+            raise UserDataError("bad_request", str(e)) from e
+        missing = wlmeta.members_error(meta, symbols)
+        if missing is not None:
+            raise UserDataError("bad_request", f"{missing} IS NOT IN WATCHLIST {name}")
+        if wlmeta.is_empty(meta):
+            await self.db.execute("DELETE FROM kv WHERE key=?", (f"wlmeta:{name}",))
+        else:
+            await self.db.execute(
+                "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (f"wlmeta:{name}", orjson.dumps(meta)),
+            )
+        await self.db.commit()
+        return {"name": name, "meta": meta}
 
     async def _store(self, name: str, symbols: list[str]) -> dict:
         now = time.time()
@@ -170,6 +208,7 @@ class UserData:
     async def delete_watchlist(self, raw_name: str) -> str:
         name = watchlist_name(raw_name)
         cur = await self.db.execute("DELETE FROM watchlists WHERE name=?", (name,))
+        await self.db.execute("DELETE FROM kv WHERE key=?", (f"wlmeta:{name}",))  # Phase 22: its flags and sections go with it
         await self.db.commit()
         if cur.rowcount == 0:
             raise UserDataError("not_found", f"NO WATCHLIST {name}")

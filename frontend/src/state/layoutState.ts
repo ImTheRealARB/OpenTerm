@@ -3,6 +3,7 @@
  * the workspace. Pure functions (no store, no network) so they are unit-tested directly.
  */
 import type { Layout, PanelState, View, WorkspaceState } from "./workspace";
+import { isLinkGroup } from "./linkGroups";
 
 export const MAX_PANELS = 9;
 export const LAYOUT_NAME_RE = /^[A-Z0-9][A-Z0-9_.-]{0,31}$/;
@@ -12,7 +13,7 @@ export function snapshot(s: WorkspaceState): Omit<WorkspaceState, "name"> {
   const panels: Record<number, PanelState> = {};
   for (const [id, p] of Object.entries(s.panels)) {
     const v = p.views[p.pos] ?? { args: [] };
-    panels[Number(id)] = { id: p.id, views: [v], pos: 0 };
+    panels[Number(id)] = { id: p.id, views: [v], pos: 0, ...(p.link ? { link: p.link } : {}) }; // the link group is part of the layout
   }
   return { layout: s.layout, panels, focus: s.focus, maximized: s.maximized };
 }
@@ -61,7 +62,8 @@ export function parseLayout(x: unknown, isFunction: (code: string) => boolean): 
     const p = x.panels[id];
     const raw = isObj(p) && Array.isArray(p.views) ? p.views : [];
     const pos = isObj(p) && typeof p.pos === "number" && raw[p.pos] !== undefined ? p.pos : raw.length - 1;
-    panels[id] = { id, views: [parseView(raw[pos], isFunction)], pos: 0 };
+    const link = isObj(p) && isLinkGroup(p.link) ? p.link : undefined;
+    panels[id] = { id, views: [parseView(raw[pos], isFunction)], pos: 0, ...(link ? { link } : {}) };
   }
   const focus = typeof x.focus === "number" && ids.includes(x.focus) ? x.focus : ids[0];
   const maximized = typeof x.maximized === "number" && ids.includes(x.maximized) ? x.maximized : null;

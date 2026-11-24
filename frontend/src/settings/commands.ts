@@ -43,6 +43,15 @@ export function settingsArgs(args: string[], cur: Settings): SettingsCommand | n
     case "ROWS":
       if (word !== "AUTO" && word !== "ON" && word !== "OFF") return fail("SETTINGS ROWNUMBERS AUTO|ON|OFF (NUMBERS 1) 2) 3) DOWN THE LEFT OF Q, WL, WEI, FX AND CMDTY. TYPE A NUMBER, THEN ENTER. AUTO = ON IN TERMINAL, OFF IN GUI)");
       return { ok: true, next: { ...cur, rowNumbers: word.toLowerCase() as Settings["rowNumbers"] }, message: `ROW NUMBERS ${word}` };
+    case "LINK": {
+      // Phase 22: SETTINGS LINK CROSSHAIR|RANGE|INTERVAL ON|OFF: what linked charts share (see LINK A|B|C|D).
+      const part = word.toLowerCase();
+      const on = (args[2] ?? "").toUpperCase();
+      if ((part !== "crosshair" && part !== "range" && part !== "interval") || (on !== "ON" && on !== "OFF")) {
+        return fail("SETTINGS LINK CROSSHAIR|RANGE|INTERVAL ON|OFF (WHAT CHARTS IN ONE LINK GROUP SHARE)");
+      }
+      return { ok: true, next: { ...cur, link: { ...cur.link, [part]: on === "ON" } }, message: `LINKED CHARTS SHARE ${word}: ${on}` };
+    }
     case "TAPE":
       if (word !== "ON" && word !== "OFF") return fail("SETTINGS TAPE ON|OFF (SHOW THE TICKER TAPE IN THE TOP BAR; TAPE ADD|DEL|RESET EDITS IT)");
       return { ok: true, next: { ...cur, tape: word === "ON" }, message: `TICKER TAPE IN THE TOP BAR ${word}` };

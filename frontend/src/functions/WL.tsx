@@ -1,9 +1,13 @@
-/** Watchlists: `WL` lists them, `WL NAME` shows one as a live quote grid. Stored in SQLite. */
+/**
+ * Watchlists: `WL` lists them, `WL NAME` shows one as a live quote grid. Stored in SQLite.
+ * Phase 22: a colour flag per symbol (F cycles it, Shift+F filters by colour) and section headers (H, or
+ * `WL NAME SECTION SYM Title`); the pure logic is `wlFlags.ts`, the server side `backend/openterm/wlmeta.py`.
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { prefillCommand } from "../components/CommandLine";
 import { PanelNote } from "../components/PanelNote";
 import { Grid, type GridHandle } from "../components/Grid";
-import { deleteWatchlist, editWatchlist, putWatchlist, refreshWatchlists, watchlistList, watchlistVersion } from "../command/watchlists";
+import { deleteWatchlist, editWatchlist, editWatchlistMeta, putWatchlist, refreshWatchlists, watchlistList, watchlistVersion } from "../command/watchlists";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { usePanelRefresh } from "./panelRefresh";
 import type { ApiError } from "../net/core";
@@ -20,6 +24,8 @@ import { QuoteErrors } from "./QuoteErrors";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
 import { listNav } from "./listNav";
+import type { WlMeta } from "../net/types";
+import { applyMetaChange, buildRows, EMPTY_META, flagColumn, isSection, nextFilter, nextFlag, sectionColumns, type FlagColor, type MetaChange } from "./wlFlags";
 
 const when = (t: number) => {
   const d = new Date(t * 1000);
@@ -48,6 +54,8 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   const COLUMNS = guiMode ? QUOTE_COLUMNS_GUI : QUOTE_COLUMNS;
   const [reload, setReload] = useState(0);
   const [sort, setSort] = useState<Sort>("INPUT");
+  const [meta, setMeta] = useState<WlMeta>(EMPTY_META);
+  const [filter, setFilter] = useState<FlagColor | null>(null);
   const undo = useRef<string[] | null>(null);
   const grid = useRef<GridHandle>(null);
 
@@ -58,6 +66,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
       .then((w) => {
         if (!alive) return;
         setSymbols(w.symbols);
+        setMeta(w.meta ?? EMPTY_META);
         setMissing(false);
         setErr(null);
       })
@@ -77,9 +86,12 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
   const key = (symbols ?? []).join(",");
   const inputs = useMemo(() => (key ? key.split(",") : []), [key]);
   const { rows, setRows, loading } = useQuotes(inputs, reload);
-  const latest = useLatest({ rows, sort, symbols });
+  // What the grid shows: the quote rows plus section bands (list order only), narrowed by the colour filter.
+  const shown = useMemo(() => buildRows(rows, meta, (r) => r.input, filter, sort === "INPUT"), [rows, meta, filter, sort]);
+  const columns = useMemo(() => [flagColumn<(typeof rows)[number]>(meta, (r) => r.input), ...sectionColumns(COLUMNS)], [meta, COLUMNS]);
+  const latest = useLatest({ rows, sort, symbols, shown, meta, filter });
 
-  useLiveRows(rows, grid, liveSymbol);
+  useLiveRows(shown, grid, (r) => (isSection(r) ? undefined : liveSymbol(r)));
   useCsvExport(panelId, () => gridCsv(`WL_${name}`, QUOTE_COLUMNS, rows));
 
   usePanelRefresh(panelId, () => { setReload((n) => n + 1); });
@@ -87,10 +99,24 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
     () =>
       registerPanelKeys(panelId, (e) => {
         const g = grid.current;
-        const { rows: cur, sort: curSort, symbols: list } = latest.current;
-        if (navKey(e, g, cur.length)) return true;
-        const r = cur[g?.selected() ?? -1];
+        const { rows: cur, sort: curSort, symbols: list, shown: vis, meta: m, filter: f } = latest.current;
+        if (navKey(e, g, vis.length)) return true;
+        const at = vis[g?.selected() ?? -1];
+        const r = at && !isSection(at) ? at : undefined; // a section band is not a security: Enter, D, F do nothing on it
+        const edit = (change: MetaChange) => {
+          setMeta(applyMetaChange(m, change)); // optimistic; the saved document comes back with the refetch
+          void editWatchlistMeta(name, change);
+        };
         switch (e.key) {
+          case "f":
+            if (r) edit({ kind: "flag", symbol: r.input, color: nextFlag(m.flags[r.input]) });
+            return true;
+          case "F":
+            setFilter(nextFilter(f, m));
+            return true;
+          case "h":
+            if (r) prefillCommand(`WL ${name} SECTION ${r.input} `);
+            return true;
           case "Enter":
             if (r) navigate(panelId, { fn: "DES", security: { symbol: r.symbol }, args: [] });
             return true;
@@ -136,10 +162,11 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
             <span className="acc">WATCHLIST {name}</span> <b className="pv">{rows.length}</b> SECURITIES · <span className="dim">SORT</span> {sort}
           </>
         )}
+        {filter && <span className="warn" data-testid="wl-filter"> · ONLY {filter} FLAGS (SHIFT+F)</span>}
         {(loading || (symbols === null && !err)) && <span className="dim"> · LOADING…</span>}
         {/* With a list on screen the error means the data is old; with none, the PanelNote below carries it. */}
         {err && symbols !== null && <span className="err"> · STALE: {err}</span>}
-        <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D REMOVE · U UNDO · S SORT · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ENTER DES · A ADD · D REMOVE · U UNDO · S SORT · F FLAG · SHIFT+F FILTER · H SECTION · E CSV · F5 REFRESH</span>
       </div>
       {err && symbols === null && (
         <PanelNote kind="error" hint="The list could not be read, so nothing is shown. Press F5 to retry.">
@@ -157,7 +184,7 @@ function WatchlistView({ panelId, name }: { panelId: number; name: string }) {
         </PanelNote>
       )}
       <QuoteErrors rows={rows} onRetry={() => setReload((n) => n + 1)} />
-      <Grid ref={grid} columns={COLUMNS} rows={rows} />
+      <Grid ref={grid} columns={columns} rows={shown} band={isSection} />
     </div>
   );
 }

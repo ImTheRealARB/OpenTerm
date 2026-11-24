@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { atrLast, brickCount, brickText, buildBricks, kagi, lineBreak, pointAndFigure, rangeBars, renko, resolveBox, type SrcBars } from "./bricks";
-import { brickNote, isBrickType, volCandleNote } from "./chartTypes";
+import { brickNote, isBrickType, volCandleNote } from "./brickNote";
 import { parseGpArgs, serializeGp } from "../functions/gpArgs";
 
 /** Bars from closes alone: open = high = low = close (what the close-only transforms read), times 100, 200, ... */

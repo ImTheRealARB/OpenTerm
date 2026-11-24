@@ -1,21 +1,31 @@
 """Imported bars (IMPORT) in SQLite, served as the `local` history source. A symbol that exists here always answers
 from here (labelled LOCAL DATA), so an import shadows a same-named real ticker; `IMPORT DEL` removes it.
+
+Phase 22: a document can also be INTRADAY (its blob carries `iv`, the one candle length it serves, e.g. "5m"; see `csvimport.py`),
+and this module also keeps the user's stored SYNTHETIC symbols (`IMPORT SYNTH NAME = AAPL/MSFT`): a name -> formula table in the
+`kv` store under `synth:<NAME>`. The formulas are evaluated by `DataService`, not here: this class only stores and validates them.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import re
 import time
 import zlib
 
 import aiosqlite
 import msgpack
+import orjson
 
+from .. import symmath
 from ..models import Bars
 from ..ranges import _RANGE_DAYS
+from ..symbols import resolve
 
-#: Local data is daily; coarser bars are built from it, finer ones do not exist.
+#: Daily local data serves these; coarser bars are built from it, finer ones do not exist. (An intraday document serves only its own `iv`.)
 INTERVALS = ("1d", "1wk", "1mo")
+#: A stored synthetic's name: letters, digits and _, starting with a letter. No hyphen: `A-B` would read as a subtraction.
+SYNTH_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,15}$")
 
 
 class LocalError(ValueError):
@@ -60,10 +70,13 @@ class LocalData:
     def __init__(self, db: aiosqlite.Connection):
         self.db = db
         self.symbols: set[str] = set()
+        self.synth: dict[str, str] = {}  # stored synthetic name -> its normalised formula (kept in memory: every history call asks)
 
     async def load(self) -> None:
         async with self.db.execute("SELECT symbol FROM local_bars") as cur:
             self.symbols = {r[0] for r in await cur.fetchall()}
+        async with self.db.execute("SELECT key, value FROM kv WHERE key LIKE 'synth:%'") as cur:
+            self.synth = {k.removeprefix("synth:"): orjson.loads(v)["formula"] for k, v in await cur.fetchall()}
 
     async def save(self, symbol: str, cols: dict) -> dict:
         blob = zlib.compress(msgpack.packb(cols))
@@ -74,7 +87,46 @@ class LocalData:
         await self.db.commit()
         self.symbols.add(symbol)
         return {"symbol": symbol, "rows": len(cols["t"]), "first_date": cols["d"][0], "last_date": cols["d"][-1],
-                "volume": cols["v"] is not None, "label": "LOCAL DATA", "created_at": now}
+                "volume": cols["v"] is not None, "label": "LOCAL DATA", "created_at": now,
+                "interval": cols.get("iv", "1d"), **({"tz": cols["tz"]} if "tz" in cols else {})}
+
+    # --- stored synthetic symbols (Phase 22) ----------------------------------------------------
+    async def synth_put(self, raw_name: str, formula: str) -> dict:
+        """Validate and store `NAME = formula`. Everything that could make a later chart fail or loop is refused HERE, by name."""
+        name = (raw_name or "").strip().upper()
+        if not SYNTH_NAME_RE.match(name):
+            raise LocalError("SYNTH NAME MUST BE 1-16 CHARACTERS: LETTERS, DIGITS AND _, STARTING WITH A LETTER")
+        if name in self.symbols:
+            raise LocalError(f"{name} IS AN IMPORTED SYMBOL ALREADY: IMPORT DEL {name} FIRST")
+        try:
+            expr = symmath.parse_formula(formula or "", resolve)
+        except symmath.SymMathError as e:
+            raise LocalError(f"BAD FORMULA: {e}") from None
+        if expr is None:
+            raise LocalError("THAT IS ONE PLAIN SYMBOL, NOT A FORMULA (USE + - * / AND SYMBOLS, E.G. AAPL/MSFT)")
+        used = symmath.legs(expr)
+        # A formula may use real symbols and imports, not other synthetics: that keeps evaluation one level deep (no loops).
+        if clash := next((x for x in used if x in self.synth or x == name), None):
+            raise LocalError(f"{clash} IS " + ("THIS SYNTHETIC'S OWN NAME" if clash == name else "ITSELF A STORED SYNTHETIC: USE ITS FORMULA INSTEAD"))
+        text, now = symmath.render(expr), time.time()
+        await self.db.execute(
+            "INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (f"synth:{name}", orjson.dumps({"formula": text, "created_at": now})))
+        await self.db.commit()
+        self.synth[name] = text
+        return {"name": name, "formula": text, "legs": used, "created_at": now, "label": "SYNTHETIC"}
+
+    async def synth_delete(self, raw_name: str) -> bool:
+        name = (raw_name or "").strip().upper()
+        cur = await self.db.execute("DELETE FROM kv WHERE key=?", (f"synth:{name}",))
+        await self.db.commit()
+        self.synth.pop(name, None)
+        return cur.rowcount > 0
+
+    async def synth_list(self) -> list[dict]:
+        async with self.db.execute("SELECT key, value FROM kv WHERE key LIKE 'synth:%' ORDER BY key") as cur:
+            rows = await cur.fetchall()
+        return [{"name": k.removeprefix("synth:"), **orjson.loads(v), "label": "SYNTHETIC"} for k, v in rows]
 
     async def delete(self, symbol: str) -> bool:
         cur = await self.db.execute("DELETE FROM local_bars WHERE symbol=?", (symbol,))
@@ -90,14 +142,19 @@ class LocalData:
 
     async def history(self, symbol: str, range_: str, interval: str) -> tuple[dict, float]:
         """-> (Bars as a dict, when the file was imported). The range counts back from the last imported bar."""
-        if interval not in INTERVALS:
-            raise LocalError("LOCAL DATA IS DAILY: USE 1D, 1W OR 1MO")
         async with self.db.execute("SELECT bars, created_at FROM local_bars WHERE symbol=?", (symbol,)) as cur:
             row = await cur.fetchone()
         if row is None:
             raise LocalError(f"NO LOCAL DATA FOR {symbol}")
         cols = msgpack.unpackb(zlib.decompress(row[0]), raw=False)
-        cols = _resample(cols, interval)
+        iv = cols.get("iv")  # set only on an intraday import: the one candle length its bars have
+        if iv is not None:
+            if interval != iv:  # folding minute bars into other lengths is not offered: ask for the length that exists
+                raise LocalError(f"LOCAL DATA FOR {symbol} IS {iv.upper()} BARS: ASK FOR {iv.upper()}")
+        elif interval not in INTERVALS:
+            raise LocalError("LOCAL DATA IS DAILY: USE 1D, 1W OR 1MO")
+        else:
+            cols = _resample(cols, interval)
         keep = 0
         days = _RANGE_DAYS.get(range_)
         if days is not None and range_ != "max":
@@ -105,7 +162,10 @@ class LocalData:
             keep = next((i for i, t in enumerate(cols["t"]) if t >= cutoff), 0)
         sl = slice(keep, None)
         bars = Bars.model_construct(
-            symbol=symbol, range=range_, interval=interval, currency=None, exchange="LOCAL DATA", tz="UTC",
+            symbol=symbol, range=range_, interval=interval, currency=None, exchange="LOCAL DATA",
+            # Daily bars are stamped UTC midnight; intraday bars keep the zone their times were written in, so the chart's
+            # time axis reads in exchange time.
+            tz=cols.get("tz", "UTC"),
             t=cols["t"][sl], o=cols["o"][sl], h=cols["h"][sl], l=cols["l"][sl], c=cols["c"][sl],
             v=[int(x) if x is not None else None for x in cols["v"][sl]] if cols["v"] is not None else [None] * len(cols["t"][sl]),
             source="local", as_of=row[1],

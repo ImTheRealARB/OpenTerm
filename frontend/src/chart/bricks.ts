@@ -12,7 +12,8 @@
  * average true range of the source bars, so the box is about one typical bar of movement. Each transform returns the box it
  * really used (`box`), so the screen can print it.
  */
-import type { BoxUsed, ChartType } from "./chartTypes";
+import type { ChartType } from "./chartTypes";
+import type { BoxUsed } from "./brickNote";
 
 /** The source bars the transforms read. A `BarData` fits this shape. */
 export interface SrcBars {

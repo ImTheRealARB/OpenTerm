@@ -18,8 +18,22 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 - Owner decisions to confirm later (defaults used, no blocking): HIGHLOW is drawn as high-low-close bars (the library
   always draws a close tick); COLUMNS start just under the lowest close, not at zero.
 
+- **Phase 22 (linked panels and symbol math): DONE 2026-11-24** (spec `docs/specs/PHASE_22.md`), resumed in worktree
+  `phases-21-32-build-resume-61e1cd` (branch `claude/phases-21-32-build-resume-61e1cd`, fast-forwarded from `...-2c2ded`).
+  Where things live: symbol math `backend/openterm/symmath.py` (parser with the minus rule, printer, inner-join aligner),
+  `service._history_formula` (each leg through `history`, envelope `formula` block), `/api/history/limits` per leg,
+  stored synthetics `bt/localdata.py` `synth_*` + `/api/bt/synth`; command side `command/markets.ts` `isFormulaToken` /
+  `isFormulaArg` (`AAPL/MSFT GP` and `GP AAPL/MSFT`), GP `FormulaNote` (no live ticks for a formula); IMPORT intraday
+  `bt/csvimport.py` + `TZ=` + preview `looksIntraday`, IMPORT args `functions/importArgs.ts`; TRA / BETA panels
+  (`TRA.tsx`, `BETA.tsx`, `BetaScatter.tsx`; BETA takes its symbol from args, `needsSecurity: false`); WL flags and sections
+  `functions/wlFlags.ts` (keys F, Shift+F, H; `WL N FLAG|SECTION`), server `wlmeta.py`, mirror check in `test_ts_mirrors.py`.
+  Gate (CI=1): pytest + vitest + lint ALL PASS, e2e 384 passed; the one failure (smoke BETA needed a panel security) was
+  fixed and the smoke spec rerun 18/18. The final full rerun is folded into Phase 23's gate (the tree already held Phase 23
+  work). No bench for Phase 22 (plan: bench after 21, 23, 27, 32). Deferred: none of the items; owner checks by hand.
+
 Progress (one line per phase; newest last):
 - Phase 21: built 2026-11-24.
+- Phase 22: built 2026-11-24 (gate green after one smoke fix).
 
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):
