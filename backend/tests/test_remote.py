@@ -301,7 +301,7 @@ def test_the_walk_finds_the_loopback_only_routes(client):
     found = _loopback_routes(client.app)
     assert len(found) >= 40
     for must in (("POST", "/api/ai/chat"), ("POST", "/mcp"), ("PUT", "/api/keys/1"), ("POST", "/api/ext/1/enable"),
-                 ("POST", "/api/orders/submit"), ("PUT", "/api/orders/live"), ("POST", "/api/orders/kill"), ("POST", "/api/sync/kite"),
+                 ("POST", "/api/orders/submit"), ("POST", "/api/orders/kill"), ("POST", "/api/sync/kite"),
                  ("POST", "/api/journal/import")):
         assert must in found, must
 

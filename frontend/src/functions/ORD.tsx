@@ -1,23 +1,22 @@
 /**
  * ORD (Phase 18 step 1): the order ticket, the blotter, the mandate and the kill switch. Loopback only; the AI has no route to any of it.
  *
- * Paper is the default (`ORD`, `ORD PAPER`). `ORD ALPACA` and `ORD KITE` are LIVE: the banner says REAL MONEY, live orders must first be
- * switched on (L, typed phrase), the mandate (M) must allow the order, and the order is sent in two steps: Enter reviews it (the server
- * answers with the mandate check and a one-time confirm token for exactly that order), then Y (paper) or the typed symbol + Enter (live)
- * sends it with that token. Nothing on this panel carries a "mode": the broker slot decides it on the server.
+ * PAPER ONLY (`ORD`, `ORD PAPER`): OpenTerm never places live orders (owner decision 2026-11-24, CLAUDE.md). The mandate (M) must allow
+ * the order, and the order is sent in two steps: Enter reviews it (the server answers with the mandate check and a one-time confirm token
+ * for exactly that order), then Y sends it with that token. Nothing on this panel carries a "mode": the server refuses any non-paper account.
  *
- * Keys (outside the fields): E edit the ticket · B broker · S side · T type · G time in force · Enter review · Y confirm paper ·
- * Esc drop the review · X KILL (cancel every open order, block new ones) · U release the kill switch · L live on/off · M mandate ·
+ * Keys (outside the fields): E edit the ticket · S side · T type · G time in force · Enter review · Y confirm paper ·
+ * Esc drop the review · X KILL (cancel every open order, block new ones) · U release the kill switch · M mandate ·
  * C cancel the selected open order (Up/Down select) · I add today's fills to a portfolio · R reload.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { refreshPortfolios } from "../command/portfolios";
 import { registerPanelKeys } from "../keys/panelKeys";
 import type { ApiError } from "../net/core";
-import { LIVE_PHRASE, ordersApi, type Blotter, type LedgerView, type OrderBroker, type OrdersStatus, type Preview } from "../net/ordersApi";
+import { ordersApi, type Blotter, type LedgerView, type OrderBroker, type OrdersStatus, type Preview } from "../net/ordersApi";
 import { usePanelRefresh } from "./panelRefresh";
 import type { FunctionProps } from "./registry";
-import { ageText, BROKER_NAME, BROKER_ORDER, confirmReady, confirmWord, EMPTY_DRAFT, mandateText, money, ORD_USAGE, parseMandate, parseOrdArgs, SLOT_MODE, toBody, type Draft } from "./ordModel";
+import { ageText, BROKER_NAME, EMPTY_DRAFT, mandateText, money, ORD_USAGE, parseMandate, parseOrdArgs, toBody, type Draft } from "./ordModel";
 
 type Msg = { text: string; cls: string } | null;
 const TYPES: Draft["type"][] = ["market", "limit", "stop"];
@@ -33,16 +32,15 @@ export default function ORD({ panelId, args }: FunctionProps) {
   const [ledger, setLedger] = useState<LedgerView | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewAt, setPreviewAt] = useState(0);
-  const [typed, setTyped] = useState("");
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState(0);
   const [now, setNow] = useState(() => Date.now() / 1000);
-  const [edit, setEdit] = useState<null | "mandate" | "live" | "import">(null);
+  const [edit, setEdit] = useState<null | "mandate" | "import">(null);
   const [editText, setEditText] = useState("");
   const symbolRef = useRef<HTMLInputElement>(null);
-  const latest = useRef({ draft, status, blotter, preview, typed, sel, busy, edit });
-  latest.current = { draft, status, blotter, preview, typed, sel, busy, edit };
+  const latest = useRef({ draft, status, blotter, preview, sel, busy, edit });
+  latest.current = { draft, status, blotter, preview, sel, busy, edit };
 
   const loadStatus = useCallback(async () => {
     try {
@@ -86,7 +84,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
   useEffect(() => {
     if (preview?.token && left === 0) {
       setPreview(null);
-      setTyped("");
       setMsg({ text: "THE CONFIRM TOKEN EXPIRED: REVIEW THE ORDER AGAIN", cls: "warn" });
     }
   }, [left, preview]);
@@ -94,7 +91,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
   const change = (patch: Partial<Draft>) => {
     setDraft((d) => ({ ...d, ...patch }));
     setPreview(null); // any change voids the review: the token was issued for exactly the old order
-    setTyped("");
   };
 
   const review = useCallback(async () => {
@@ -108,7 +104,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
       const p = await ordersApi.preview(body);
       setPreview(p);
       setPreviewAt(Date.now() / 1000);
-      setTyped("");
       if (!p.token) setMsg({ text: "THE MANDATE REFUSES THIS ORDER: NOTHING CAN BE SENT", cls: "err" });
     } catch (e) {
       setPreview(null);
@@ -119,20 +114,18 @@ export default function ORD({ panelId, args }: FunctionProps) {
   }, [loadLedger]);
 
   const send = useCallback(async () => {
-    const { preview: p, typed: t, busy: b } = latest.current;
+    const { preview: p, busy: b } = latest.current;
     if (b || !p?.token) return;
-    if (!confirmReady(p.mode, p.order.symbol, t)) return setMsg({ text: `TYPE ${p.order.symbol} TO CONFIRM A LIVE ORDER`, cls: "warn" });
     const body = toBody({ ...latest.current.draft });
     if ("error" in body) return;
     setBusy(true);
     try {
       const r = await ordersApi.submit(body, p.token);
-      setMsg({ text: `SENT ${p.mode.toUpperCase()} ORDER ${r.order.id ?? ""} ${r.order.status}`, cls: p.mode === "live" ? "warn" : "up" });
+      setMsg({ text: `SENT ${p.mode.toUpperCase()} ORDER ${r.order.id ?? ""} ${r.order.status}`, cls: "up" });
     } catch (e) {
       setMsg({ text: (e as ApiError).message, cls: "err" });
     }
     setPreview(null);
-    setTyped("");
     setBusy(false);
     await reload();
   }, [reload]);
@@ -175,11 +168,7 @@ export default function ORD({ panelId, args }: FunctionProps) {
   const commitEdit = useCallback(async () => {
     const { edit: kind, status: st, draft: d } = latest.current;
     try {
-      if (kind === "live") {
-        const on = !st?.live_enabled;
-        await ordersApi.setLive(on, on ? editText : undefined);
-        setMsg({ text: on ? "LIVE ORDERS ARE ON: REAL MONEY" : "LIVE ORDERS ARE OFF", cls: on ? "warn" : "up" });
-      } else if (kind === "mandate" && st) {
+      if (kind === "mandate" && st) {
         const m = parseMandate(editText, st.mandate);
         if ("error" in m) return setMsg({ text: m.error, cls: "warn" });
         await ordersApi.setMandate(m);
@@ -205,9 +194,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
           case "e":
             symbolRef.current?.focus();
             return true;
-          case "b":
-            change({ broker: cycle(BROKER_ORDER, latest.current.draft.broker) });
-            return true;
           case "s":
             change({ side: latest.current.draft.side === "buy" ? "sell" : "buy" });
             return true;
@@ -221,8 +207,7 @@ export default function ORD({ panelId, args }: FunctionProps) {
             void review();
             return true;
           case "y":
-            if (p?.mode === "paper") void send();
-            else if (p) setMsg({ text: `A LIVE ORDER IS CONFIRMED BY TYPING ${p.order.symbol} IN THE BOX BELOW THE REVIEW`, cls: "warn" });
+            if (p) void send();
             return true;
           case "Escape":
             if (latest.current.edit) setEdit(null);
@@ -234,10 +219,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
           case "u":
             void unkill();
             return true;
-          case "l":
-            setEdit("live");
-            setEditText("");
-            return true;
           case "m":
             if (st) {
               setEdit("mandate");
@@ -246,7 +227,7 @@ export default function ORD({ panelId, args }: FunctionProps) {
             return true;
           case "i":
             setEdit("import");
-            setEditText(SLOT_MODE[latest.current.draft.broker] === "paper" ? "PAPER" : latest.current.draft.broker === "kite" ? "KITE" : "ALPACA");
+            setEditText("PAPER");
             return true;
           case "c":
             void cancelSelected();
@@ -274,9 +255,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
       </div>
     );
 
-  const slotMode = SLOT_MODE[draft.broker];
-  const mode = preview?.mode ?? slotMode;
-  const live = mode === "live";
   const row = status?.brokers.find((b) => b.id === draft.broker);
   const keyDown = (ev: React.KeyboardEvent, onEnter: () => void) => {
     if (!ev.ctrlKey && !ev.altKey && !ev.metaKey) ev.stopPropagation(); // plain keys stay in the field; chords (Ctrl+K) still reach the command line
@@ -287,12 +265,11 @@ export default function ORD({ panelId, args }: FunctionProps) {
   return (
     <div className="fn ord" data-testid="ord-panel">
       <div className="line">
-        <span className="acc">ORD</span> ORDER TICKET <span className="dim legend">· E EDIT · B BROKER · S SIDE · T TYPE · ENTER REVIEW · X KILL · U RELEASE · L LIVE · M MANDATE · C CANCEL · I FILLS TO PORT</span>
+        <span className="acc">ORD</span> ORDER TICKET <span className="dim legend">· E EDIT · S SIDE · T TYPE · ENTER REVIEW · X KILL · U RELEASE · M MANDATE · C CANCEL · I FILLS TO PORT</span>
       </div>
-      <div className={live ? "ord-banner ord-live" : "ord-banner ord-paper"} data-testid="ord-banner" data-mode={mode}>
-        {live ? `LIVE · REAL MONEY · ${BROKER_NAME[draft.broker]}` : `PAPER · PLAY MONEY · ${BROKER_NAME[draft.broker]}`}
+      <div className="ord-banner ord-paper" data-testid="ord-banner" data-mode="paper">
+        PAPER · PLAY MONEY · {BROKER_NAME[draft.broker]} · OPENTERM NEVER PLACES LIVE ORDERS
       </div>
-      {draft.broker === "kite" && <div className="warn">KITE HAS NO PAPER MODE: EVERY KITE ORDER IS REAL MONEY</div>}
       {msg && (
         <div className={msg.cls} data-testid="ord-msg">
           {msg.text}
@@ -305,19 +282,12 @@ export default function ORD({ panelId, args }: FunctionProps) {
       )}
       {status && (
         <div className="dim">
-          LIVE ORDERS {status.live_enabled ? <span className="err">ON</span> : "OFF"} · TRADES TODAY {status.trades_today} OF {status.mandate.max_trades_per_day} · MANDATE {status.mandate.symbols.length ? status.mandate.symbols.join(",") : "NO SYMBOLS ALLOWED"} · MAX {status.mandate.max_shares} SHARES / {money(status.mandate.max_notional)} PER ORDER / {money(status.mandate.max_gross)} GROSS
+          TRADES TODAY {status.trades_today} OF {status.mandate.max_trades_per_day} · MANDATE {status.mandate.symbols.length ? status.mandate.symbols.join(",") : "NO SYMBOLS ALLOWED"} · MAX {status.mandate.max_shares} SHARES / {money(status.mandate.max_notional)} PER ORDER / {money(status.mandate.max_gross)} GROSS
         </div>
       )}
       {row && !row.ready && <div className="warn">{row.message}</div>}
 
       <div className="ord-ticket" data-testid="ord-ticket">
-        <select className="ord-in" aria-label="broker" value={draft.broker} onChange={(e) => change({ broker: e.target.value as OrderBroker })} onKeyDown={(e) => e.stopPropagation()}>
-          {BROKER_ORDER.map((b) => (
-            <option key={b} value={b}>
-              {BROKER_NAME[b]}
-            </option>
-          ))}
-        </select>
         <select className="ord-in" aria-label="side" value={draft.side} onChange={(e) => change({ side: e.target.value as Draft["side"] })} onKeyDown={(e) => e.stopPropagation()}>
           <option value="buy">BUY</option>
           <option value="sell">SELL</option>
@@ -345,11 +315,11 @@ export default function ORD({ panelId, args }: FunctionProps) {
       </div>
 
       {preview && (
-        <div className={live ? "ord-review ord-live-box" : "ord-review"} data-testid="ord-review">
+        <div className="ord-review" data-testid="ord-review">
           <div>
             STEP 2 OF 2 · <b>{preview.line}</b> · {preview.mode.toUpperCase()} · ACCOUNT …{preview.account.id.slice(-4)} · {preview.price !== null ? `REF PRICE ${preview.price} (${preview.price_note})` : "NO PRICE"}
           </div>
-          {preview.account.note && <div className={preview.mode === "live" ? "err" : "dim"}>{preview.account.note}</div>}
+          {preview.account.note && <div className="dim">{preview.account.note}</div>}
           {preview.check.checks.map((c) => (
             <div key={c.name} className={c.ok ? "up" : "err"}>
               {c.ok ? "PASS" : "FAIL"} {c.name}: {c.detail}
@@ -357,22 +327,12 @@ export default function ORD({ panelId, args }: FunctionProps) {
           ))}
           {preview.token ? (
             <div>
-              {preview.mode === "paper" ? (
-                <span>
-                  PRESS <b>Y</b> TO SEND THE PAPER ORDER{" "}
-                  <button className="ord-btn" disabled={busy} onClick={() => void send()}>
-                    SEND PAPER ORDER
-                  </button>
-                </span>
-              ) : (
-                <span>
-                  REAL MONEY. TYPE <b>{confirmWord(preview.mode, preview.order.symbol)}</b> THEN ENTER:{" "}
-                  <input className="ord-in" aria-label="confirm live order" autoFocus size={12} value={typed} onChange={(e) => setTyped(e.target.value.toUpperCase())} onKeyDown={(e) => keyDown(e, () => void send())} />
-                  <button className="ord-btn ord-btn-live" disabled={busy || !confirmReady(preview.mode, preview.order.symbol, typed)} onClick={() => void send()}>
-                    SEND LIVE ORDER
-                  </button>
-                </span>
-              )}
+              <span>
+                PRESS <b>Y</b> TO SEND THE PAPER ORDER{" "}
+                <button className="ord-btn" disabled={busy} onClick={() => void send()}>
+                  SEND PAPER ORDER
+                </button>
+              </span>
               <span className="dim"> · TOKEN GOOD ONCE, {left}S LEFT · ESC DROPS THIS REVIEW</span>
             </div>
           ) : (
@@ -383,7 +343,6 @@ export default function ORD({ panelId, args }: FunctionProps) {
 
       {edit && (
         <div className="ord-edit" data-testid="ord-edit">
-          {edit === "live" && (status?.live_enabled ? <span className="err">LIVE ORDERS ARE ON. ENTER SWITCHES THEM OFF</span> : <span>TYPE EXACTLY: <b>{LIVE_PHRASE}</b></span>)}
           {edit === "mandate" && <span>MANDATE (SYMBOLS, THEN SHARES= NOTIONAL= GROSS= TRADES=): </span>}
           {edit === "import" && <span>ADD TODAY&apos;S FILLS TO PORTFOLIO (PAPER FILLS GO TO A PAPER PORTFOLIO): </span>}
           <input className="ord-in" aria-label="ord edit" autoFocus size={edit === "mandate" ? 60 : 44} value={editText} onChange={(e) => setEditText(e.target.value)} onKeyDown={(ev) => { keyDown(ev, () => void commitEdit()); if (ev.key === "Escape") setEdit(null); }} />
@@ -433,7 +392,7 @@ export default function ORD({ panelId, args }: FunctionProps) {
           #{e.seq} {ageText(e.at, now)} · {e.event.toUpperCase()} · {e.mode?.toUpperCase()} {e.order?.symbol ? `${(e.order.side ?? "").toUpperCase()} ${e.order.qty} ${e.order.symbol}` : ""} {e.reason ? `· ${e.reason}` : ""}
         </div>
       ))}
-      <div className="dim">THE AI CANNOT PLACE, CHANGE OR CANCEL ORDERS. EVERY ORDER NEEDS YOUR CONFIRM. FILLS YOU ADD TO PORT ARE LABELLED PAPER / ALPACA / KITE-ORDERS AND NEVER REMOVED BY SYNC.</div>
+      <div className="dim">THE AI CANNOT PLACE, CHANGE OR CANCEL ORDERS. EVERY ORDER NEEDS YOUR CONFIRM. OPENTERM NEVER PLACES LIVE ORDERS. FILLS YOU ADD TO PORT ARE LABELLED PAPER AND NEVER REMOVED BY SYNC.</div>
     </div>
   );
 }

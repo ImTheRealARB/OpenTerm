@@ -1,4 +1,5 @@
-"""HTTP calls to the Kite Connect API (market data and the login exchange only). Headers: `X-Kite-Version: 3` and
+"""HTTP calls to the Kite Connect API (market data and the login exchange only). Authenticated calls are GET only: OpenTerm never
+places orders (owner decision 2026-11-24), so no authenticated POST / PUT / DELETE path exists here. Headers: `X-Kite-Version: 3` and
 `Authorization: token api_key:access_token`. Rate limits (3 requests/s historical, 10 requests/s otherwise) go through `ratelimit`.
 A 403 TokenException on any call marks the login expired and raises a DataError that starts `KITE LOGIN EXPIRED`.
 """
@@ -43,7 +44,7 @@ class KiteClient:
         self.hist_bucket = TokenBucket(3.0, 3)
         self.api_bucket = TokenBucket(10.0, 10)
 
-    async def _send(self, method: str, path: str, params: dict[str, Any] | None, historical: bool, data: dict | None = None) -> httpx.Response:
+    async def _get(self, path: str, params: dict[str, Any] | None, historical: bool) -> httpx.Response:
         key, token = self.session.auth()
         bucket = self.hist_bucket if historical else self.api_bucket
         try:
@@ -52,7 +53,7 @@ class KiteClient:
             raise _error("unavailable", "KITE RATE LIMITED: TOO MANY REQUESTS, TRY AGAIN") from e
         headers = {"X-Kite-Version": "3", "Authorization": f"token {key}:{token}", "User-Agent": "OpenTerm/0.1"}
         try:
-            r = await self.http.request(method, f"{KITE_API}{path}", params=params, data=data, headers=headers, timeout=20.0)
+            r = await self.http.get(f"{KITE_API}{path}", params=params, headers=headers, timeout=20.0)
         except httpx.TimeoutException as e:
             raise _error("unavailable", "KITE TIMEOUT") from e
         except httpx.HTTPError as e:
@@ -79,15 +80,10 @@ class KiteClient:
         return body.get("data")
 
     async def get_json(self, path: str, params: dict[str, Any] | None = None, historical: bool = False) -> Any:
-        return self._json(await self._send("GET", path, params, historical))
-
-    async def call(self, method: str, path: str, params: dict[str, Any] | None = None, data: dict[str, Any] | None = None) -> Any:
-        """Any authenticated call that answers the usual {status, data} envelope. The rate limit, the 403 TokenException handling and the
-        error text are the same as `get_json`. Used by orders/brokers/kite.py (the only caller that is not a data read)."""
-        return self._json(await self._send(method, path, params, False, data))
+        return self._json(await self._get(path, params, historical))
 
     async def get_text(self, path: str) -> str:
-        r = await self._send("GET", path, None, False)
+        r = await self._get(path, None, False)
         if r.status_code >= 400:
             raise _error("unavailable", f"KITE: HTTP {r.status_code}")
         return r.text

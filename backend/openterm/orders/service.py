@@ -1,9 +1,10 @@
 """OrderService: the only way an order reaches a broker.
 
 submit() order of checks (each one a refusal that is written to the ledger):
-  1. kill switch off            2. keys / login present        3. account read from the broker: mode from its host and account
-  4. live switched on by the user (live only)                   5. mandate passes (allowlist, size, notional, gross exposure, daily cap)
-  6. a fresh one-time confirm token issued for exactly this order, mode and account
+  1. kill switch off            2. keys present                3. account read from the broker: it must be a PAPER account
+  4. mandate passes (allowlist, size, notional, gross exposure, daily cap)
+  5. a fresh one-time confirm token issued for exactly this order, mode and account
+OpenTerm NEVER places live orders (owner decision 2026-11-24, CLAUDE.md): there is no live broker and no live switch.
 then `submitted` is written to the ledger BEFORE the broker is called, and `accepted` or `failed` after.
 A lock serialises preview-to-send, so two orders cannot both pass the daily cap, and the kill switch is read again inside it.
 """
@@ -27,11 +28,10 @@ from .model import Order, fingerprint
 from .store import OrdersStore
 
 log = logging.getLogger("openterm.orders")
-LIVE_PHRASE = "I UNDERSTAND LIVE ORDERS USE REAL MONEY"
-EXPECTED_MODE = {"alpaca-paper": "paper", "alpaca-live": "live", "kite": "live"}
+EXPECTED_MODE = {"alpaca-paper": "paper"}
 # `source` written on a lot that comes from an order fill. Never "kite" or "ibkr": those are the read-only SYNC's own tags (brokers/sync.py), and a SYNC
 # replaces every lot carrying its tag, so an order fill with it would be deleted by the next sync. Lots with these tags are left alone by SYNC.
-FILL_SOURCE = {"alpaca-paper": "paper", "alpaca-live": "alpaca", "kite": "kite-orders"}
+FILL_SOURCE = {"alpaca-paper": "paper"}
 
 
 class OrderService:
@@ -72,7 +72,7 @@ class OrderService:
     # --- status ---
     async def status(self) -> dict:
         kill = await self.store.kill()
-        return {"kill": {"on": bool(kill.get("on")), "at": kill.get("at")}, "live_enabled": await self.store.live_enabled(),
+        return {"kill": {"on": bool(kill.get("on")), "at": kill.get("at")},
                 "mandate": (await self.store.mandate()).public(), "trades_today": await self.store.trades_today(),
                 "brokers": [self._broker_row(b) for b in self.brokers.values()]}
 
@@ -107,8 +107,6 @@ class OrderService:
         b = self.broker(order.broker)
         acct = await self._ready_account(b)
         mode = acct["mode"]
-        if mode == "live" and not await self.store.live_enabled():
-            raise OrderError("live_off", "LIVE ORDERS ARE OFF. SWITCH THEM ON IN ORD (L) BY TYPING THE PHRASE (REAL MONEY)")
         if acct.get("trading_blocked"):
             raise OrderError("broker_rejected", f"{b.label.upper()} SAYS TRADING IS BLOCKED FOR THIS ACCOUNT")
         if replace is not None:
@@ -234,15 +232,6 @@ class OrderService:
         return {"kill": {"on": False, "at": st["at"]}}
 
     # --- settings ---
-    async def set_live(self, on: bool, phrase: str | None) -> dict:
-        if on and phrase != LIVE_PHRASE:
-            raise OrderError("bad_request", f"TO TURN LIVE ORDERS ON TYPE: {LIVE_PHRASE}")
-        await self.store.set_live(on)
-        if not on:
-            self.tokens.clear()
-        await self.ledger.event("live_on" if on else "live_off")
-        return {"live_enabled": on}
-
     async def set_mandate(self, raw) -> dict:
         m = await self.store.set_mandate(raw)
         self.tokens.clear()  # a token was checked against the old mandate

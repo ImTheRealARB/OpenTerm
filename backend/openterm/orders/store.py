@@ -11,7 +11,7 @@ import orjson
 from . import mandate as mandate_mod
 from .errors import OrderError
 
-K_MANDATE, K_SETTINGS, K_KILL = "orders.mandate", "orders.settings", "orders.kill"
+K_MANDATE, K_KILL = "orders.mandate", "orders.kill"
 
 
 def today() -> str:
@@ -49,13 +49,6 @@ class OrdersStore:
         m = mandate_mod.parse(raw)
         await self._put(K_MANDATE, m.public())
         return m
-
-    # --- live switch ---
-    async def live_enabled(self) -> bool:
-        return (await self._get(K_SETTINGS, {})).get("live") is True
-
-    async def set_live(self, on: bool) -> None:
-        await self._put(K_SETTINGS, {"live": bool(on), "at": time.time()})
 
     # --- kill switch ---
     async def kill(self) -> dict:

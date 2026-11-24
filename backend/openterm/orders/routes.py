@@ -22,7 +22,6 @@ def service_of(request: Request):
     from ..ai.audit import audit_of
     from ..http_util import svc, user
     from .brokers.alpaca import AlpacaTrading
-    from .brokers.kite import KiteTrading
     from .ledger import OrderLedger
     from .service import OrderService
 
@@ -44,7 +43,8 @@ def service_of(request: Request):
                 return None, "NO FRESH QUOTE"
             return float(price), f"{env.get('source') or 'quote'} {env.get('age_s', 0):g}s OLD"
 
-        brokers = {b.id: b for b in (AlpacaTrading("paper", store, http), AlpacaTrading("live", store, http), KiteTrading(app.state.kite))}
+        # The paper account is the only broker: OpenTerm never places live orders (owner decision 2026-11-24, CLAUDE.md).
+        brokers = {b.id: b for b in (AlpacaTrading("paper", store, http),)}
         app.state.orders = OrderService(db, OrderLedger(audit_of(app, db)), brokers, price_of)
     return app.state.orders
 
@@ -144,15 +144,6 @@ async def unkill(request: Request):
 @guarded
 async def put_mandate(request: Request):
     return await service_of(request).set_mandate(await body_of(request))
-
-
-@router.put("/live")
-@guarded
-async def put_live(request: Request):
-    body = await body_of(request)
-    if not isinstance(body.get("on"), bool):
-        raise OrderError("bad_request", "BODY NEEDS on (true OR false)")
-    return await service_of(request).set_live(body["on"], body.get("phrase"))
 
 
 @router.post("/import")
