@@ -24,6 +24,7 @@ def test_universe_words():
 def test_nifty_csv_and_memb_payload():
     csv = "Company Name,Industry,Symbol,Series,ISIN Code\nExample Ltd.,Energy,EXAMPLE,EQ,INE000000000\nOther Ltd.,IT,OTHER,EQ,INE1\n"
     assert U.nifty_members(csv) == ["EXAMPLE.NS", "OTHER.NS"]
+    assert U.nifty_rows(csv)[1] == {"symbol": "OTHER.NS", "name": "Other Ltd.", "industry": "IT"}
     payload = {"sections": [{"rows": [{"symbol": "AAPL", "weight": 0.07}, {"symbol": None, "weight": 0.01}]}]}
     assert U.memb_members(payload) == [("AAPL", 0.07)]
 

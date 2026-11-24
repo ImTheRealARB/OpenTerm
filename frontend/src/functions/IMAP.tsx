@@ -5,6 +5,7 @@
  *   IMAP [SECTOR|INDUSTRY|COUNTRY] [N=3000] [EQS filter]   the US equity universe (EQS data)
  *   IMAP CRYPTO [N=50]                                     the crypto board: size = market cap, colour = 24 hour change
  *   IMAP ETF [N=150] [FSRC filter: FEE<0.2 CAT=TECH]       the biggest ETFs of the FSRC table: size = total assets
+ *   IMAP NIFTY | NIFTY500                                  NSE index members, equal tiles (no weights in NSE's list), by industry
  *
  * This file only loads each universe's data and words its status; keys, layout and painting live in ImapBoard.
  */
@@ -12,11 +13,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { fmtAge } from "../format";
 import { ApiError } from "../net/core";
 import { marketApi } from "../net/marketApi";
+import { scanApi } from "../net/scanApi";
 import type { Coin, Envelope, ScreenerPayload } from "../net/types";
 import { parseFilter } from "./eqsFilter";
 import { buildImap, parseImapArgs } from "./imapData";
-import { buildCrypto, buildEtf, CRYPTO_LIMIT, ETF_LIMIT, ETF_MAX, parseUniverse, takeLimit, topFunds, usView } from "./imapUniverses";
+import { buildCrypto, buildEtf, buildNifty, CRYPTO_LIMIT, ETF_LIMIT, ETF_MAX, parseUniverse, takeLimit, topFunds, usView } from "./imapUniverses";
 import { ImapBoard } from "./ImapBoard";
+import type { NiftyMember } from "./imapUniverses";
 import { parseFsrcFilter, screenFsrc } from "./fsrcFilter";
 import { usePanelRefresh } from "./panelRefresh";
 import { EnvStatus, ErrorLine } from "./panelStatus";
@@ -28,6 +31,7 @@ export default function IMAP(props: FunctionProps) {
   const { universe, rest } = parseUniverse(props.args);
   if (universe === "CRYPTO") return <CryptoMap panelId={props.panelId} args={rest} />;
   if (universe === "ETF") return <EtfMap panelId={props.panelId} args={rest} />;
+  if (universe === "NIFTY" || universe === "NIFTY500") return <NiftyMap panelId={props.panelId} args={rest} index={universe === "NIFTY" ? "NIFTY50" : "NIFTY500"} />;
   return <UsMap panelId={props.panelId} args={props.args} />;
 }
 
@@ -150,6 +154,61 @@ function EtfMap({ panelId, args }: MapProps) {
           {quotes.error && <div className="err">QUOTES: {quotes.error.message}</div>}
           <ErrorLine error={error} hasData={funds.length > 0} />
           {!d && !error && <div className="dim">LOADING THE ETF LIST…</div>}
+        </>
+      }
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------------- NIFTY
+function NiftyMap({ panelId, args, index }: MapProps & { index: string }) {
+  const [members, setMembers] = useState<NiftyMember[] | null>(null);
+  const [source, setSource] = useState("");
+  const [error, setError] = useState<ApiError | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    return scanApi
+      .nifty(index)
+      .then((r) => {
+        setMembers(r.rows);
+        setSource(r.source);
+        setError(null);
+      })
+      .catch((e: ApiError) => setError(e))
+      .finally(() => setLoading(false));
+  }, [index]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const symbols = useMemo(() => (members ?? []).map((m) => m.symbol), [members]);
+  const quotes = useQuotePct(symbols);
+  const view = useMemo(() => (members ? buildNifty(members, quotes.pct) : null), [members, quotes.pct]);
+  usePanelRefresh(panelId, () => {
+    void load();
+    quotes.reload();
+  });
+  const waiting = view ? view.rows.filter((r) => !quotes.pct.has(r.sym)).length : 0;
+  const noQuote = view ? view.rows.filter((r) => quotes.pct.get(r.sym) === null).length : 0;
+  return (
+    <ImapBoard
+      panelId={panelId} label={index} rest={args} view={view}
+      sizeWord="EQUAL (NSE'S LIST HAS NO WEIGHTS OR MARKET CAPS)" sizeTitle="EQUAL TILE" sizeShort="" csvName={`IMAP_${index}`}
+      noSizeText="" limit={symbols.length} argsKey={`${index} ${args.join(" ")}`}
+      status={
+        <>
+          {source && <span className="dim"> · {source}</span>}
+          {loading && <span className="dim"> · LOADING…</span>}
+        </>
+      }
+      notes={
+        <>
+          {waiting > 0 && <div className="dim">{waiting} TILES AWAIT THEIR DAY CHANGE (NEUTRAL COLOUR)</div>}
+          {noQuote > 0 && <div className="dim">{noQuote} TILES HAVE NO QUOTE FROM THE QUOTE SOURCE (NEUTRAL COLOUR)</div>}
+          {quotes.error && <div className="err">QUOTES: {quotes.error.message}</div>}
+          <ErrorLine error={error} hasData={members !== null} />
         </>
       }
     />

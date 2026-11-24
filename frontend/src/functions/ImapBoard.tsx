@@ -34,6 +34,7 @@ export interface ImapBoardProps {
   /** What a tile's size means ("MARKET CAP", "TOTAL ASSETS"), its short column title and its short readout word. */
   sizeWord: string;
   sizeTitle: string;
+  /** Readout label before the size ("MCAP"); "" hides the size (IMAP NIFTY's tiles are equal, so their size means nothing). */
   sizeShort: string;
   /** What the colour means; the default is the day's change. */
   colourWord?: string;
@@ -109,7 +110,7 @@ export function ImapBoard(p: ImapBoardProps) {
   const selTile = layout?.tiles.find((t) => t.id === selId);
   const selRow = selId !== null && view ? view.rows[selId] : undefined;
   const readout = (r: NonNullable<typeof selRow>) =>
-    `${r.sym} ${r.name} ${fmtPct(r.pct)} ${p.sizeShort} ${fmtBig(r.size)}${r.extra ? ` ${r.extra}` : ""} ${r.group.toUpperCase()}`;
+    `${r.sym} ${r.name} ${fmtPct(r.pct)}${p.sizeShort ? ` ${p.sizeShort} ${fmtBig(r.size)}` : ""}${r.extra ? ` ${r.extra}` : ""} ${r.group.toUpperCase()}`;
 
   const csvRows = layout && view ? layout.tiles.map((t) => view.rows[t.id]) : [];
   useCsvExport(panelId, () =>
@@ -206,7 +207,7 @@ export function ImapBoard(p: ImapBoardProps) {
       </div>
       {selTile && selRow && (
         <div className="line">
-          <span className="acc">{selRow.sym}</span> {selRow.name} · {fmtPct(selRow.pct)} · {p.sizeShort} {fmtBig(selRow.size)}
+          <span className="acc">{selRow.sym}</span> {selRow.name} · {fmtPct(selRow.pct)}{p.sizeShort ? ` · ${p.sizeShort} ${fmtBig(selRow.size)}` : ""}
           {selRow.extra ? ` · ${selRow.extra}` : ""} · {selRow.group.toUpperCase()}
         </div>
       )}

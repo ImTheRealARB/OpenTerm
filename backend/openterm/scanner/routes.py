@@ -382,6 +382,22 @@ async def mrr_start(request: Request, universe: str = Query(..., max_length=200)
     return Orjson(_public(task))
 
 
+@router.get("/api/scan/nifty")
+async def nifty_list(request: Request, index: str = Query("NIFTY50", max_length=10)):
+    """IMAP NIFTY: the index members with their industry (NSE Indices' list has no weights or market caps)."""
+    file = U.NIFTY.get(index.upper())
+    if file is None:
+        return _bad(f"INDEX MUST BE {' OR '.join(U.NIFTY)}")
+    try:
+        text = await request.app.state.service.router.providers["nseindices"].constituents(file)
+        rows = U.nifty_rows(text)
+    except U.UniverseError as e:
+        return _bad(str(e))
+    except DataError as e:
+        return error(e)
+    return {"index": index.upper(), "rows": rows, "source": f"{index.upper()} MEMBERS (NSE INDICES LIST)"}
+
+
 @router.get("/api/mrr/task/{task_id}")
 async def mrr_task(request: Request, task_id: str):
     return await scan_task(request, task_id)

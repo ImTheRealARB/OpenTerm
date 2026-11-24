@@ -921,3 +921,21 @@ within +0.5 KB of that), so Phases 22-24 added about 2.3 KB at startup: the link
 the GRAB binding, formula detection in `command/markets.ts` and the watchlist FLAG / SECTION grammar (`command/watchlistArgs.ts` imports
 `functions/wlFlags.ts`). Tick to pixel 36.2 ms (budget 50), AI first event 23.1 ms (60). The new Phase 23 / 24 budgets (volume profile of
 95k bars <= 40 ms, footprint render <= 16 ms, replay step <= 16 ms) are proposed in the phase specs and not yet gated.
+
+## Phase 27 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-8ff923`)
+
+Bench of this tree and of `main` (`189ce36`, in `C:\otbase`) back to back in one sitting, both rested 45 s first:
+
+| Line | main | Phase 27 tree | Budget |
+|---|---|---|---|
+| Tick received to pixel p95, streaming | 63.6 ms | 68.1 ms | 50 ms |
+| Layout load to paint p95 | 104.1 ms | 111.1 ms | 100 ms |
+| Frame time p95, 50k-bar pan/zoom | 33.4 ms | 33.3 ms | 20 ms |
+| BT 10-year rule run p95, server | 548.7 ms | 502.2 ms | 300 ms |
+| AI first SSE event p95, server | 73.2 ms | 76.4 ms | 60 ms |
+| Result | 34 pass, 5 fail | 34 pass, 5 fail | |
+
+Both miss the same five lines by similar amounts, so the misses are the machine's state that day, not Phase 27 code (CLAUDE.md
+"bench the base commit in the same sitting"). An earlier run of this tree taken right after another bench also missed SEAS (26 ms)
+and streaming frames (33 ms); rested, both passed (7.0 ms, 16.8 ms). Phase 27 has no bench lines of its own: SCAN, MRR and FSRC are
+network-bound tasks shown with progress.

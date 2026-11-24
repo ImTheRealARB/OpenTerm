@@ -51,6 +51,7 @@ from .nager import NagerProvider
 from .nasdaq import NasdaqProvider
 from .news import GdeltProvider, RssProvider, YahooRssProvider
 from .nse_archive import NseArchiveProvider
+from .nseindices import NseIndicesProvider
 from .nws import NwsProvider
 from .okx import OkxProvider
 from .openfigi import OpenFigiProvider
@@ -133,6 +134,8 @@ ADAPTERS: dict[str, type[Provider]] = {
     "opensky": OpenSkyProvider,
     # FSRC: the list of US ETFs (Nasdaq Trader symbol file) and one fund's fee / size / category (Yahoo quoteSummary)
     "nasdaq_trader": NasdaqTraderProvider, "yahoo_funds": YahooFundsProvider,
+    # SCAN / MRR / IMAP NIFTY universes: NSE Indices' constituent CSVs (downloaded on this computer, never shipped)
+    "nseindices": NseIndicesProvider,
 }
 
 # Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a

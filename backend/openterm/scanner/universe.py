@@ -70,6 +70,31 @@ def memb_members(payload: dict) -> list[tuple[str, float | None]]:
     return [(r["symbol"], r.get("weight")) for r in rows if r.get("symbol")]
 
 
+def nifty_rows(csv_text: str) -> list[dict]:
+    """The same CSV -> [{symbol, name, industry}] for the IMAP NIFTY heat map (grouped by the list's own Industry column).
+    A missing Company Name / Industry column leaves those fields empty rather than failing the map."""
+    lines = [ln.strip() for ln in csv_text.splitlines() if ln.strip()]
+    if not lines:
+        raise UniverseError("NSE INDICES SENT AN EMPTY LIST")
+    head = [h.strip().lower() for h in lines[0].split(",")]
+    if "symbol" not in head:
+        raise UniverseError("NSE INDICES' LIST HAS NO SYMBOL COLUMN (THE FILE FORMAT CHANGED)")
+    k = head.index("symbol")
+    ni = head.index("company name") if "company name" in head else None
+    ii = head.index("industry") if "industry" in head else None
+    out = []
+    for ln in lines[1:]:
+        cells = [c.strip() for c in ln.split(",")]
+        if len(cells) <= k or not cells[k]:
+            continue
+        out.append({
+            "symbol": cells[k].upper() + ".NS",
+            "name": cells[ni] if ni is not None and len(cells) > ni else "",
+            "industry": (cells[ii].upper() if ii is not None and len(cells) > ii and cells[ii] else "UNCLASSIFIED"),
+        })
+    return out
+
+
 def nifty_members(csv_text: str) -> list[str]:
     """NSE Indices' constituent CSV (Company Name, Industry, Symbol, Series, ISIN Code) -> Yahoo symbols (`.NS`)."""
     lines = [ln.strip() for ln in csv_text.splitlines() if ln.strip()]

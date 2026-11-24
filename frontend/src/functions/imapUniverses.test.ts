@@ -3,7 +3,7 @@ import type { FsrcRow } from "../net/etfTypes";
 import type { Coin } from "../net/types";
 import { buildImap } from "./imapData";
 import { parseFilter } from "./eqsFilter";
-import { buildCrypto, buildEtf, parseUniverse, takeLimit, usView } from "./imapUniverses";
+import { buildCrypto, buildEtf, buildNifty, parseUniverse, takeLimit, usView } from "./imapUniverses";
 
 const coin = (symbol: string, market_cap: number | null, change_pct_24h: number | null, rank: number): Coin => ({
   symbol, name: `${symbol} coin`, rank, quote: "USD", price: 1, change_pct_1h: null, change_pct_24h, change_pct_7d: null,
@@ -48,5 +48,17 @@ describe("IMAP universes", () => {
     const v = usView(buildImap(u, parseFilter([]), { by: "SECTOR", limit: 3000 }));
     expect(v.rows).toEqual([{ sym: "NVDA", name: "NVIDIA", pct: 2.04, size: 4.4e12, group: "Technology", open: "NVDA", extra: "" }]);
     expect(v.noSize).toBe(1);
+  });
+});
+
+describe("buildNifty", () => {
+  it("gives every member an equal tile, grouped by industry, and never invents a change", () => {
+    const v = buildNifty(
+      [{ symbol: "B.NS", name: "B", industry: "IT" }, { symbol: "A.NS", name: "A", industry: "ENERGY" }, { symbol: "C.NS", name: "C", industry: "IT" }],
+      new Map([["A.NS", 1.5], ["B.NS", null]]),
+    );
+    expect(v.rows.map((r) => [r.sym, r.size, r.pct])).toEqual([["A.NS", 1, 1.5], ["B.NS", 1, null], ["C.NS", 1, null]]);
+    expect(v.groups.map((g) => g.key)).toEqual(["IT", "ENERGY"]);
+    expect(parseUniverse(["NIFTY500"]).universe).toBe("NIFTY500");
   });
 });

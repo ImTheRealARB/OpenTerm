@@ -1,0 +1,6 @@
+{
+ "_note": "DOC-SHAPED, NOT A RECORDING: columns as NSE Indices publishes them; rows invented (ISINs are placeholders). The real lists may not be redistributed.",
+ "status": 200,
+ "content_type": "text/csv",
+ "text": "Company Name,Industry,Symbol,Series,ISIN Code\nReliance Industries Ltd.,Oil Gas & Consumable Fuels,RELIANCE,EQ,INE000000000\nHDFC Bank Ltd.,Financial Services,HDFCBANK,EQ,INE000000001\nInfosys Ltd.,Information Technology,INFY,EQ,INE000000002\nTata Consultancy Services Ltd.,Information Technology,TCS,EQ,INE000000003\nICICI Bank Ltd.,Financial Services,ICICIBANK,EQ,INE000000004\n"
+}

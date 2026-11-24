@@ -312,6 +312,16 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - Exits on any BT or BT OPT: `STOP=5 TARGET=10` (percent from the entry). `FILL=INTRABAR` settles a daily bar that reached both from 60-minute bars (last two years); otherwise, or with no intraday bar, the stop counts first. The EXITS line says which rule settled how many bars.
 - `BT LIVE AAPL @mystrat [1D|1W] [CASH=n]` starts a paper forward test: play money in OpenTerm's own book, filled at the next bar's open, never sent anywhere. `BT LIVE` lists them next to a backtest of the same period on today's data (DIVERGED bars are a warning sign); Enter details, R check now, S stop; `BT LIVE STOP <id>`, `BT LIVE DEL <id>`.
 
+## Phase 27: scanners, indicator columns, smart alerts
+
+- `SCAN SPX RSI14<30 AND CLOSE>SMA200` checks every member of a universe against a BT rule on its newest daily bar. Universes: `SPX NDX DJI RUT MID` (members from the proxy ETF's SEC filing), `MEMB:<ETF>`, `WL:<NAME>`, `LIST:AAPL,MSFT`, `NIFTY50`, `NIFTY500`. A cold 500-name scan takes about a minute (progress shown). J/K move, Enter opens GP with the rule's studies, A all rows or matches only, E CSV.
+- `SCAN SAVE <NAME> <universe> <rule> DAILY=16:30` saves a scan and sends its matches every weekday through DELIVERY; `SCAN SAVED` lists them.
+- Indicator columns: `Q AAPL MSFT COLS=RSI14,SMA50` and `WL TECH COLS=RSI14,ATR14` add the values of any BT term (completed daily bars).
+- Smart alerts: `ALRT AAPL RSI14<30` (checked on completed daily bars every 15 minutes) and `ALRT AAPL LINE [N]` (fires when the price crosses your Nth trend line on the AAPL chart, checked on every tick). They list in ALRT as `S<id>`.
+- `MRR SPX [1D|1W|1M|3M|YTD|1Y]`: which members moved the index, with contribution = weight x return. NIFTY lists have no weights, so they show returns only.
+- `FSRC FEE<0.2 AUM>1B CAT=LARGE SORT=AUM`: the ETF screener (FEE in percent a year, AUM with K/M/B/T, CAT a category prefix). The first full load takes about 40 minutes in the background and resumes after a restart; until then the table says PARTIAL. Enter opens DES, C opens GP, E CSV.
+- Heat maps: `IMAP CRYPTO [N=50]` (size = market cap, colour = 24 hour change), `IMAP ETF [N=150] [FSRC filter]` (size = total assets), `IMAP NIFTY` / `IMAP NIFTY500` (equal tiles, because NSE's list has no weights; grouped by industry).
+
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.
 - `SYNC` shows both brokers: last sync with its age, counts (lots imported, skipped, conflicts, manual lots kept), the difference against the previous sync (`+` new, `-` gone, `~` changed) and the last error. A good sync older than a day is shown `STALE`; a failed try is shown `ERR` with the text.

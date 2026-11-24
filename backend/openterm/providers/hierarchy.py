@@ -237,6 +237,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     # FSRC (ETF screener): the symbol file lists the ETFs, Yahoo's fund modules give each one's fee / size / category
     "etf_universe": ["nasdaq_trader"],
     "fund_profile": ["yahoo_funds"],
+    "nifty_constituents": ["nseindices"],  # the only free source of the member lists
 }
 
 # Test data: with OPENTERM_SYNTHETIC=1 the SYN0000-SYN9999 provider answers for these two capabilities (last in line, so real

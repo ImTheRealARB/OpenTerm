@@ -68,6 +68,7 @@ const CASES: Case[] = [
   { cmd: "FSRC FEE<0.2 AUM>1B CAT=LARGE", want: /8 MATCH/ },
   { cmd: "IMAP CRYPTO", want: /IMAP CRYPTO/ },
   { cmd: "IMAP ETF", want: /TOTAL ASSETS/ },
+  { cmd: "IMAP NIFTY", want: /NIFTY50 MEMBERS/ },
 ];
 
 let backend: ChildProcess | null = null;

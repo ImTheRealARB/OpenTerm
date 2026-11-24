@@ -5,6 +5,8 @@
  *   US      the EQS screener universe (imapData.ts `buildImap`, adapted by `usView`)   IMAP [SECTOR|INDUSTRY|COUNTRY] ...
  *   CRYPTO  the crypto board (CoinGecko): size = market cap, colour = 24 hour change    IMAP CRYPTO [N=50]
  *   ETF     the FSRC table: size = total assets, colour = the day's % change (quotes)   IMAP ETF [N=150] [FSRC filter: FEE<0.2 CAT=TECH]
+ *   NIFTY   NSE Indices' member list: EQUAL tiles (the list has no weights or caps), colour = the day's % change, grouped by industry
+ *           IMAP NIFTY (= NIFTY 50) or IMAP NIFTY500
  *
  * To add a universe: a word in UNIVERSES, a builder here, and a small data component in IMAP.tsx that loads it.
  */
@@ -13,8 +15,8 @@ import type { Coin } from "../net/types";
 import type { ImapData } from "./imapData";
 import type { TGroup } from "./treemap";
 
-export type ImapUniverse = "US" | "CRYPTO" | "ETF";
-const UNIVERSES = new Set<string>(["CRYPTO", "ETF"]); // "US" is what you get when no universe word is typed
+export type ImapUniverse = "US" | "CRYPTO" | "ETF" | "NIFTY" | "NIFTY500";
+const UNIVERSES = new Set<string>(["CRYPTO", "ETF", "NIFTY", "NIFTY500"]); // "US" is what you get when no universe word is typed
 
 /** One tile's facts. `id` of a tile = the row's index in the view. */
 export interface ImapRow {
@@ -117,4 +119,21 @@ export function buildEtf(funds: FsrcRow[], pct: ReadonlyMap<string, number | nul
   }));
   const sized = funds.filter((f) => f[3] != null && f[3] > 0).length;
   return { rows: kept, groups: groupRows(kept), noSize: funds.length - sized, cut: sized - kept.length, total: funds.length };
+}
+
+export interface NiftyMember {
+  symbol: string;
+  name: string;
+  industry: string;
+}
+
+/**
+ * The NIFTY map: every member gets an EQUAL tile (size 1), because NSE's list carries no weights and there is no free Indian
+ * market-cap source; the panel says so. Grouped by the list's own industry; colour = today's % change (null = no quote yet).
+ */
+export function buildNifty(members: NiftyMember[], pct: ReadonlyMap<string, number | null>): ImapView {
+  const rows: ImapRow[] = members
+    .map((m) => ({ sym: m.symbol, name: m.name || m.symbol, pct: pct.get(m.symbol) ?? null, size: 1, group: m.industry, open: m.symbol, extra: "" }))
+    .sort((a, b) => a.group.localeCompare(b.group) || a.sym.localeCompare(b.sym));
+  return { rows, groups: groupRows(rows), noSize: 0, cut: 0, total: members.length };
 }

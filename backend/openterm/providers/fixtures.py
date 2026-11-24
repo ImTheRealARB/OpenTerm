@@ -1063,6 +1063,13 @@ def _route_cryptoex(request: httpx.Request) -> httpx.Response | None:
 # --- FSRC: the ETF list (Nasdaq Trader symbol file) and one fund's profile (Yahoo quoteSummary fundProfile + summaryDetail) ---
 # Both are REAL recordings, trimmed (scripts/record_fsrc.py): 30 ETFs of the symbol file, and each one's real Yahoo answer. A fund that is not
 # among the 30 is Yahoo's own "Quote not found" 404. The modules string must equal providers/etf.py FUND_MODULES.
+def _route_nseindices(request: httpx.Request) -> httpx.Response | None:
+    """NIFTY constituent CSVs: DOC-SHAPED (NOT A RECORDING): NSE Indices' licence forbids shipping the real lists."""
+    if request.url.host == "www.niftyindices.com" and request.url.path.startswith("/IndexConstituent/ind_nifty"):
+        return _load("nseindices_nifty_docshape")
+    return None
+
+
 def _route_fsrc(request: httpx.Request) -> httpx.Response | None:
     p, q = request.url.path, request.url.params
     if request.url.host == "www.nasdaqtrader.com" and p == "/dynamic/SymDir/nasdaqtraded.txt":
@@ -1158,6 +1165,7 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
+    _route_nseindices,  # NIFTY constituent lists (doc-shaped)
     _route_fsrc,        # FSRC: Nasdaq Trader ETF list, Yahoo fund profiles
     _route_aggtrades,   # Binance spot aggregated trades (order flow)
     _route_binance_1s,  # Binance 1 second candles (before `_route_base`, which would answer them with daily ones)

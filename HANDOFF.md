@@ -6,10 +6,8 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 ## Resume here
 
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
-`claude/phases-21-32-build-resume-0f4977` (worktree `.claude/worktrees/phases-21-32-build-resume-0f4977`; fast-forwarded from
-`...-61e1cd`, which holds 21-24). Phases 21, 22, 23, 24 and 26 are DONE. Phase 27 is mostly built and committed as WIP
-(paused at the 5-hour guard; what is left is in the Phase 27 bullet below). NEXT: finish Phase 27 (gate, bench, the open
-items), then Phase 28. Phase 25 stays deferred.**
+`claude/phases-21-32-build-resume-8ff923` (worktree `.claude/worktrees/phases-21-32-build-resume-8ff923`; fast-forwarded from
+`...-0f4977`). Phases 21-24, 26 and 27 are DONE. Phase 28 is in progress (see its bullet). Phase 25 stays deferred.**
 - Worktree-only copies to bring back by hand (a hook blocks writes to the main checkout): this session's `CLAUDE.md` and
   `docs/TEST_CHECKLIST.md` (new section 31) live in the worktree; copy both over the main checkout's files.
 - Owner's pick (2026-11-24, final): build ALL 100 items of Phases 21 to 32 except Phase 25 (deferred: nothing may depend on
@@ -86,13 +84,12 @@ items), then Phase 28. Phase 25 stays deferred.**
   three data components on a shared `ImapBoard.tsx` (`imapUniverses.ts`, `useQuotePct.ts`); the US map is unchanged (phase19b
   IMAP e2e pass). Real trimmed fixtures `nasdaqtrader_etf_trimmed.json`, `yahoo_fundprofile_etf.json` (`scripts/record_fsrc.py`);
   tests `test_phase27_fsrc.py` (4) + vitest; smoke FSRC x2, IMAP CRYPTO, IMAP ETF pass.
-  **Left for the next session:** (1) run the full gate (`CI=1 node scripts/gates.mjs`) and the Phase 27 bench; checked so far:
-  tsc, vitest 1658/1658, ruff, the Phase 27 pytest files, 8 Phase 27 smoke cases; (2) `IMAP NIFTY` (a word + builder in
-  `imapUniverses.ts`, a data component in `IMAP.tsx`); (3) docs: `docs/COMMANDS.md` Phase 27 section (SCAN, MRR, ALRT indicator /
-  drawing alerts, COLS=, FSRC grammar, `IMAP CRYPTO [N=50]`, `IMAP ETF [N=150] [FSRC filter]`), `docs/DATA_SOURCES.md` (Nasdaq
-  Trader, Yahoo fund profile, NSE Indices CSV), the worktree's `docs/TEST_CHECKLIST.md`; (4) never seen in a browser: the FSRC
-  PARTIAL (still loading) screen, FSRC keys Enter / C / E, two late wording fixes ("NO QUOTE" note, "1 FUND HAS"); (5) no GUI
-  toolbar entry for FSRC. Then commit "Phase 27 (finish)" and start Phase 28.
+  **Finished 2026-11-24 (commit "Phase 27 (finish)"):** `IMAP NIFTY` / `IMAP NIFTY500` (equal tiles grouped by industry: NSE's list
+  has no weights; route `GET /api/scan/nifty`); FSRC toolbar (Details / Chart / Export); docs (COMMANDS, DATA_SOURCES, local
+  TEST_CHECKLIST section 32). Bug found and fixed: `nseindices` was never in `ADAPTERS` / `DEFAULT_ORDER`, so every NIFTY universe
+  (SCAN, MRR) was a 500; it is registered now with a doc-shaped fixture. Gate: pytest 4142 passed + 2 load flakes (both pass alone),
+  vitest, lint all pass; e2e 395 passed, the smoke spec then rerun alone 42/42. Bench: 34/39, the same five misses as `main` benched in
+  the same sitting (machine state, see `docs/PERFORMANCE.md` "Phase 27"). Not checked in a browser: the FSRC PARTIAL screen.
 
 Progress (one line per phase; newest last):
 - Phase 21: built 2026-11-24.
@@ -100,7 +97,7 @@ Progress (one line per phase; newest last):
 - Phase 23: built 2026-11-24.
 - Phase 24: built 2026-11-24 (committed together with 23; gate and bench in the commit message).
 - Phase 26: built 2026-11-24 (gate result in the commit message; no bench this phase per the plan).
-- Phase 27: mostly built 2026-11-24, WIP commit at the 5-hour guard (92%); full gate and bench NOT run yet.
+- Phase 27: DONE 2026-11-24 (finish pass in worktree `phases-21-32-build-resume-8ff923`; gate green apart from load flakes, bench = main).
 
 **Update 2026-11-24: next-level planning (local-only docs, nothing built, nothing committed except this note):**
 - A new feature gap and a phase plan exist **only on the owner's laptop**, never in git (they name other products):

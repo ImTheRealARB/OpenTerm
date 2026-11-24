@@ -60,6 +60,12 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
   ALRT: [
     { label: "Add an alert", key: "n", title: "New alert (N)", ask: { prompt: "Stock and level, e.g. AAPL > 200 or AAPL -3%", command: "ALRT {input}" } },
   ],
+  // The ETF screener (Phase 27).
+  FSRC: [
+    { label: "Details", key: "Enter", title: "Open the description (DES) of the selected fund (Enter)" },
+    { label: "Chart", key: "c", title: "Chart the selected fund (C)" },
+    { label: "Export", key: "e", title: "Save the table as CSV (E)" },
+  ],
   Q: [
     { label: "Details", key: "Enter", title: "Open the description (DES) of the selected security (Enter)" },
     { label: "Add", key: "a", title: "Add securities: puts the command in the command line (A)" },

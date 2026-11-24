@@ -190,6 +190,12 @@ Dropped, with the reason:
 
 Details that matter: RBI sends dates without a zone (local time), so a date later than now is capped to now; SEBI dates have no weekday and need a second date format. The Fed press feed is slow-moving (days between items) by nature. Only titles, teasers and links are used; articles open on the publisher's site.
 
+## Phase 27 sources (2026-11-24)
+
+- **Nasdaq Trader symbol directory** (keyless): the list of US-listed ETFs for FSRC. Fixture `nasdaqtrader_etf_trimmed.json` is a trimmed real recording (`scripts/record_fsrc.py`).
+- **Yahoo fund profile** (keyless, `quoteSummary` fundProfile): fee, total assets and category per ETF, loaded in the background at 3 profiles a second (a full load is about 5,800 funds, about 37 minutes), progress saved so a restart resumes.
+- **NSE Indices constituent CSV** (keyless, `providers/nseindices.py`): NIFTY 50 / NIFTY 500 members with company name and industry, no weights. Downloaded on this computer, never shipped; the test fixture is doc-shaped (NOT A RECORDING).
+
 ## Honest limits of what is built
 
 Upstox was built and then removed (2026-11-05): the owner could not get a token and will use paid Kite instead. Kite is the Indian source.
