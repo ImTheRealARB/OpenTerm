@@ -23,6 +23,16 @@ describe("BT OPT arguments (Phase 26)", () => {
     expect(parseOptArgs(["AAPL", "@mine"]).ok).toBe(false);
   });
 
+  it("takes FIT= as a metric name or a formula without spaces (the server is the real parser)", () => {
+    const ok = (fit: string) => parseOptArgs(["AAPL", "SMA{10..50}>SMA200", `FIT=${fit}`]);
+    expect(ok("sortino")).toMatchObject({ ok: true, req: { fit: "SORTINO" } });
+    expect(ok("sharpe-2*dd")).toMatchObject({ ok: true, req: { fit: "SHARPE-2*DD" } });
+    expect(ok("calmar*min(1,trades/30)")).toMatchObject({ ok: true, req: { fit: "CALMAR*MIN(1,TRADES/30)" } });
+    expect(ok("sharpe;1").ok).toBe(false);
+    expect(ok("sharpe[0]").ok).toBe(false);
+    expect(ok("").ok).toBe(false);
+  });
+
   it("renders a run's rule and the first values", () => {
     expect(firstValues("SMA{10..50:5}>SMA{50..200:25}")).toBe("SMA10>SMA50");
     expect(renderRule("SMA{10..50:5}>SMA{50..200:25}", ["15", "100"])).toBe("SMA15>SMA100");

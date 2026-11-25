@@ -90,11 +90,27 @@ def efficient(points: list[tuple[float | None, float | None]]) -> set[int]:
     return front
 
 
-def slice_fitness(r: np.ndarray, fit: str, bars_per_year: int) -> float:
+_NAMED_FITS = ("SHARPE", "SORTINO", "CALMAR", "PF", "NET", "RETURN")
+
+
+def slice_fitness(r: np.ndarray, fit: str, bars_per_year: int, cash: float = 100_000.0) -> float:
     """A fitness number for a slice of bar returns (walk-forward picks its in-sample winner with it). Higher is better;
-    NaN when the slice cannot say (no movement). PF here is the profit factor of BAR returns (trades are not sliced)."""
+    NaN when the slice cannot say (no movement). PF here is the profit factor of BAR returns (trades are not sliced).
+    `fit` is one of the six words or a `fitexpr` formula over them (SHARPE-2*DD): each name is read from the slice's own
+    returns (WIN and TRADES are not, the route refuses them with WF)."""
     if len(r) < 2:
         return math.nan
+    if fit not in _NAMED_FITS:
+        from . import fitexpr
+
+        f = fitexpr.parse(fit)
+        eq = np.cumprod(1 + r)
+        dd = float((eq / np.maximum.accumulate(eq) - 1).min())
+        values = {name: slice_fitness(r, name, bars_per_year) for name in f.names & set(_NAMED_FITS)}
+        values["NET"] = cash * float(eq[-1])
+        values["DD"] = abs(dd)
+        values["ANNUAL"] = _annual(r, bars_per_year) if "ANNUAL" in f.names else math.nan
+        return f.run(values)
     if fit in ("NET", "RETURN"):
         return float(np.prod(1 + r) - 1)
     if fit == "PF":
@@ -135,7 +151,7 @@ def walk_forward(returns: np.ndarray, times: list[int], n_windows: int, anchored
     for k in range(1, n_windows + 1):
         i0 = 0 if anchored else edges[k - 1]
         i1, o1 = edges[k], edges[k + 1]
-        scores = [slice_fitness(returns[i0:i1, j], fit, bars_per_year) for j in range(returns.shape[1])]
+        scores = [slice_fitness(returns[i0:i1, j], fit, bars_per_year, cash) for j in range(returns.shape[1])]
         keys = [s if math.isfinite(s) else -math.inf for s in scores]
         best = int(np.argmax(keys))
         is_r, oos_r = returns[i0:i1, best], returns[i1:o1, best]

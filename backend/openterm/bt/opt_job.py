@@ -14,27 +14,23 @@ from collections.abc import Callable
 # Metrics kept per run (the table's columns); everything else of a run is dropped to keep the result small.
 RUN_METRICS = ("sharpe", "sortino", "calmar", "annual_return", "total_return", "max_drawdown", "profit_factor",
                "win_rate", "trade_count", "final_value")
-# FIT= word -> the metric it ranks by (higher is better for every one of them).
-FIT_METRIC = {"SHARPE": "sharpe", "SORTINO": "sortino", "CALMAR": "calmar", "PF": "profit_factor", "NET": "final_value",
-              "RETURN": "total_return"}
-
-
-def _fitness(metrics: dict, fit: str) -> float:
-    v = metrics.get(FIT_METRIC[fit])
-    return float(v) if isinstance(v, int | float) and math.isfinite(v) else math.nan
+def _fitness(metrics: dict, fit) -> float:
+    """The run's fitness under the compiled FIT= formula (`fitexpr.Fit`); NaN when it cannot be computed."""
+    return fit.from_metrics(metrics)
 
 
 def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     import numpy as np
 
-    from . import limits, optspace, overfit
+    from . import fitexpr, limits, optspace, overfit
     from .engine import backtest
     from .job import _epoch, _num, load_data, scalar_metrics, signals_for, stops_config
 
     progress(0.02, "LOADING DATA")
     payload, data_map, adjusted = load_data(params)
     parts, space = optspace.parse(params["template"])
-    method, fit, seed = params["method"], params["fit"], int(params["seed"])
+    method, fit_text, seed = params["method"], params["fit"], int(params["seed"])
+    fit = fitexpr.parse(fit_text)  # FIT= is SHARPE, SORTINO, ... or a formula such as SHARPE-2*DD
     is_code, short = params["kind"] == "code", bool(params.get("short"))
     stops_cfg = stops_config(params, payload)
     bpy = int(params["bars_per_year"])
@@ -104,7 +100,7 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     wf = None
     if params.get("wf") and matrix.size:
         progress(0.94, "WALK-FORWARD")
-        wf = overfit.walk_forward(matrix, times, int(params["wf"]), bool(params.get("anchored")), fit, bpy, cash)
+        wf = overfit.walk_forward(matrix, times, int(params["wf"]), bool(params.get("anchored")), fit_text, bpy, cash)
         if wf is not None:
             for w in wf["windows"]:  # a column number means nothing to the user: name the parameter set
                 w["values"] = rows[have[w.pop("best")]]["values"]
@@ -120,7 +116,7 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
         labels["wf"] = "WINDOWS SLICED FROM EACH PARAMETER SET'S FULL-HISTORY RUN (POSITIONS CARRY ACROSS WINDOW EDGES)"
     return {
         "opt_id": params["opt_id"], "template": params["template"], "shown": optspace.shown(parts, space),
-        "kind": params["kind"], "method": method, "fit": fit, "seed": seed, "symbols": params["meta"]["symbols"],
+        "kind": params["kind"], "method": method, "fit": fit.text, "seed": seed, "symbols": params["meta"]["symbols"],
         "interval": params["meta"]["interval"], "range": params["meta"]["range"], "strategy": params["meta"].get("strategy"),
         "params": [{"name": p.name, "values": list(p.values), "where": p.where} for p in space],
         "runs": rows, "best": best, "guards": guards, "wf": wf, "bars": len(times), "labels": labels,

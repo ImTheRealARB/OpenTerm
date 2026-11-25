@@ -54,7 +54,7 @@ function tableColumns(res: BtOptResult): Column<Row>[] {
   return [
     { title: "#", width: 5, align: "right", text: (r) => String(r.rank), color: (r) => (r.best ? "acc" : "dim") },
     ...res.params.map((p, j): Column<Row> => ({ title: `${p.name} ${p.where}`.slice(0, 12), width: Math.max(6, Math.min(12, p.name.length + p.where.length + 1)), align: "right", text: (r) => r.values[j], color: () => "val" })),
-    { title: `FIT ${res.fit}`, width: 11, align: "right", text: (r) => fmtNum(r.fitness, 3), color: (r) => (r.best ? "acc" : sign(r.fitness)) },
+    { title: res.fit.length > 6 ? "FIT" : `FIT ${res.fit}`, width: 11, align: "right", text: (r) => fmtNum(r.fitness, 3), color: (r) => (r.best ? "acc" : sign(r.fitness)) },
     { title: "SHARPE", width: 8, align: "right", text: (r) => fmtNum(r.metrics?.sharpe, 2), color: (r) => sign(r.metrics?.sharpe) },
     { title: "ANN RET", width: 9, align: "right", text: (r) => (r.metrics?.annual_return == null ? "—" : fmtPct(r.metrics.annual_return * 100)), color: (r) => sign(r.metrics?.annual_return) },
     { title: "MAX DD", width: 9, align: "right", text: (r) => (r.metrics?.max_drawdown == null ? "—" : fmtPct(r.metrics.max_drawdown * 100)), color: () => "down" },

@@ -20,7 +20,7 @@ import orjson
 from fastapi import APIRouter, Request
 
 from .api import _bt_params, bt_of
-from .bt import fwd, optspace
+from .bt import fitexpr, fwd, optspace
 from .errors import DataError
 from .http_util import bt_error, error, jobs_of, json_object, svc
 from .redact import redact
@@ -31,7 +31,6 @@ from .userdata import UserDataError
 log = logging.getLogger("openterm.btlab")
 router = APIRouter(prefix="/api/bt", route_class=OrjsonRoute)
 
-FITS = ("SHARPE", "SORTINO", "CALMAR", "PF", "NET", "RETURN")
 KV_PREFIX = "btfwd:"
 MAX_FWD = 50  # forward tests kept at once (active or stopped)
 FWD_EVERY_MIN = 15  # the scheduler's check interval while the server runs
@@ -76,18 +75,22 @@ async def bt_opt(request: Request):
         if method not in optspace.METHODS:
             raise BtError("bad_request", f"METHOD MUST BE {' OR '.join(optspace.METHODS)}")
         fit = str(body.get("fit") or "SHARPE").upper()
-        if fit not in FITS:
-            raise BtError("bad_request", f"FIT MUST BE {' OR '.join(FITS)}")
+        compiled = fitexpr.parse(fit)  # a word (SHARPE ...) or a formula (SHARPE-2*DD); a FitError message is shown as is
         n, pop, gen = _int(body, "n", 2, optspace.GRID_CAP, 200), _int(body, "pop", 4, 200, 40), _int(body, "gen", 1, 100, 25)
         if method == "GA" and pop * gen > optspace.GRID_CAP:
             raise BtError("bad_request", f"POP x GEN IS {pop * gen:,}, AT MOST {optspace.GRID_CAP:,} BACKTESTS")
         seed, wf = _int(body, "seed", 0, 2**31 - 1, 1), _int(body, "wf", 0, 12, 0)
+        if wf and compiled.names & fitexpr.NOT_IN_SLICES:  # walk-forward scores slices of bar returns: no trade counts there
+            raise BtError("bad_request", f"WF= CANNOT RANK BY {' OR '.join(sorted(compiled.names & fitexpr.NOT_IN_SLICES))} "
+                                         "(TRADES ARE NOT SLICED): USE THE OTHER NAMES")
         budget = optspace.search_size(method, space, n, pop, gen)
         first = optspace.render(parts, space, tuple(0 for _ in space))  # validates the template with real values
         base = {k: body[k] for k in ("symbols", "interval", "range", "options") if k in body}
         base["rule" if kind == "rule" else "code"] = first
         p = await _bt_params(request, base)
     except optspace.SpaceError as e:
+        return bt_error(BtError("bad_request", str(e)))
+    except fitexpr.FitError as e:
         return bt_error(BtError("bad_request", str(e)))
     except (BtError, RuleError) as e:
         return bt_error(e)

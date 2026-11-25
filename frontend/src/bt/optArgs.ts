@@ -2,7 +2,7 @@
  * `BT OPT` arguments (Phase 26) -> the POST /api/bt/opt body. Pure, so vitest can cover it.
  *
  *   BT OPT AAPL SMA{10..50:5}>SMA{50..200:25} 1D 10Y [METHOD=GRID|RANDOM|GA] [N=200] [POP=40] [GEN=25] [SEED=1]
- *          [FIT=SHARPE|SORTINO|CALMAR|PF|NET|RETURN] [WF=5] [ANCHORED] [STOP=5] [TARGET=10] [FILL=INTRABAR] ...
+ *          [FIT=SHARPE|SORTINO|CALMAR|PF|NET|RETURN|<formula>] [WF=5] [ANCHORED] [STOP=5] [TARGET=10] [FILL=INTRABAR] ...
  *   BT OPT AAPL @mystrategy FAST={10..50:5} SLOW={50..200:25} ...     (a saved Python strategy: its constants get the ranges)
  *
  * The rule itself is checked here by putting each range's first value in place (`SMA{10..50:5}` -> `SMA10`) and running
@@ -33,12 +33,17 @@ export interface BtOptRequest {
 export type OptArgs = { ok: true; req: BtOptRequest } | { ok: false; error: string };
 
 export const OPT_USAGE =
-  "USAGE: BT OPT <SYMBOLS> <RULE WITH {LO..HI:STEP} RANGES> [1D|1W] [RANGE] [METHOD=GRID|RANDOM|GA] [N=] [POP=] [GEN=] [SEED=] [FIT=SHARPE|SORTINO|CALMAR|PF|NET|RETURN] [WF=5] [ANCHORED] [STOP=%] [TARGET=%] [FILL=INTRABAR]";
+  "USAGE: BT OPT <SYMBOLS> <RULE WITH {LO..HI:STEP} RANGES> [1D|1W] [RANGE] [METHOD=GRID|RANDOM|GA] [N=] [POP=] [GEN=] [SEED=] [FIT=SHARPE|SORTINO|CALMAR|PF|NET|RETURN|FORMULA, E.G. SHARPE-2*DD] [WF=5] [ANCHORED] [STOP=%] [TARGET=%] [FILL=INTRABAR]";
 export const OPT_EXAMPLE = "BT OPT AAPL SMA{10..50:5}>SMA{50..200:25} 1D 10Y · PYTHON: BT OPT AAPL @NAME FAST={10..50:5}";
 
 const RANGE_RE = /\{\s*(-?\d+(?:\.\d+)?)\s*\.\.\s*(-?\d+(?:\.\d+)?)\s*(?::\s*(\d+(?:\.\d+)?))?\s*\}/g;
 const METHODS = ["GRID", "RANDOM", "GA"] as const;
-export const FITS = ["SHARPE", "SORTINO", "CALMAR", "PF", "NET", "RETURN"];
+/**
+ * FIT= is a metric name (SHARPE SORTINO CALMAR ANNUAL RETURN NET DD PF WIN TRADES) or a formula over them with + - * / ** ( ),
+ * ABS SQRT LOG MIN MAX, written WITHOUT spaces: FIT=SHARPE-2*DD, FIT=CALMAR*MIN(1,TRADES/30). Only the SHAPE is checked here;
+ * the server (backend/openterm/bt/fitexpr.py) is the one parser and answers with the exact problem.
+ */
+export const FIT_SHAPE = /^[A-Z0-9_+\-*/().,]{1,120}$/;
 const STRATEGY_RE = /^@([A-Za-z0-9_-]{1,40})$/;
 const NAMED_RANGE = /^([A-Z_][A-Z0-9_]{0,39})=(\{.*\})$/;
 
@@ -81,7 +86,7 @@ export function parseOptArgs(args: string[]): OptArgs {
         if (!METHODS.includes(m)) throw new RuleError(`METHOD= MUST BE ${METHODS.join(" OR ")}`);
         req.method = m;
       } else if (u.startsWith("FIT=")) {
-        if (!FITS.includes(u.slice(4))) throw new RuleError(`FIT= MUST BE ${FITS.join(" OR ")}`);
+        if (!FIT_SHAPE.test(u.slice(4))) throw new RuleError("FIT= TAKES A METRIC (SHARPE, SORTINO, CALMAR, PF, NET, RETURN, ...) OR A FORMULA WITH NO SPACES, E.G. FIT=SHARPE-2*DD");
         req.fit = u.slice(4);
       } else if (u.startsWith("N=")) req.n = int("N", u.slice(2), 2, 2000);
       else if (u.startsWith("POP=")) req.pop = int("POP", u.slice(4), 4, 200);
