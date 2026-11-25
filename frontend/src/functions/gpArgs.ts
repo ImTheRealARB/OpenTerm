@@ -115,6 +115,8 @@ export interface GpParsed {
   custom: CustomInd[];
   /** Phase 24: `REPLAY [YYYY-MM-DD]`: bar replay from that day (absent date = the last 100 bars are hidden). */
   replay?: { start: string | null };
+  /** Phase 24 gap: `STOP=5 TARGET=10` (percent from the average entry): the replay practice book's exits. Used only with REPLAY. */
+  exits?: { stop?: number; target?: number };
   /** Phase 28: `CONE`: the options' 1 and 2 standard-deviation price ranges to each listed expiry. */
   cone?: boolean;
 }
@@ -125,6 +127,16 @@ const DAY_TOKEN = /^\d{4}-\d{2}-\d{2}$/;
 const BOX_TOKEN = /^BOX=(\d+\.?\d*|\.\d+)$/i;
 /** `REV=3` -> 3 (a whole number from 1 to 20); anything else -> null. */
 const REV_TOKEN = /^REV=(\d{1,2})$/i;
+/** `STOP=5` / `TARGET=12.5` -> the percent (> 0; a stop under 100); anything else -> null. */
+const EXIT_TOKEN = /^(STOP|TARGET)=(\d+\.?\d*|\.\d+)$/i;
+
+function parseExit(raw: string): ["stop" | "target", number] | null {
+  const m = EXIT_TOKEN.exec(raw);
+  if (!m) return null;
+  const v = Number(m[2]);
+  const which = m[1].toLowerCase() as "stop" | "target";
+  return v > 0 && v <= (which === "stop" ? 99 : 1000) ? [which, v] : null;
+}
 
 function parseBox(raw: string): number | null {
   const m = BOX_TOKEN.exec(raw);
@@ -142,7 +154,7 @@ function isKeyword(raw: string): boolean {
   const a = raw.toUpperCase();
   return (
     a === "VS" || a === "PANE" || a === "EVT" || a === "LOG" || a === "REPLAY" || a === "CONE" || a === "PAT:ICHI" || RANGES.includes(a) || YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a) ||
-    parseBox(raw) !== null || parseRev(raw) !== null ||
+    parseBox(raw) !== null || parseRev(raw) !== null || parseExit(raw) !== null ||
     (CHART_TYPES as string[]).includes(a) || (INDICATORS as readonly string[]).includes(a) || parseCustomToken(raw) !== null
   );
 }
@@ -169,6 +181,10 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
     } else if (REV_TOKEN.test(raw)) {
       const v = parseRev(raw);
       if (v !== null) p.rev = v;
+    } else if (EXIT_TOKEN.test(raw)) {
+      // An out-of-range STOP= / TARGET= is ignored (no exit of that kind), like BOX=.
+      const e = parseExit(raw);
+      if (e) p.exits = { ...p.exits, [e[0]]: e[1] };
     } else if (a === "LOG") p.log = true;
     else if (a === "CONE") p.cone = true;
     else if (a === "REPLAY") p.replay = { start: args[i + 1] && DAY_TOKEN.test(args[i + 1]) ? args[++i] : null };
@@ -257,6 +273,8 @@ export function serializeGp(p: GpParsed, defaultType: ChartType = "CANDLE"): str
     ...(p.log ? ["LOG"] : []),
     ...(p.cone ? ["CONE"] : []),
     ...(p.replay ? ["REPLAY", ...(p.replay.start ? [p.replay.start] : [])] : []),
+    ...(p.exits?.stop ? [`STOP=${p.exits.stop}`] : []),
+    ...(p.exits?.target ? [`TARGET=${p.exits.target}`] : []),
     ...p.indicators,
     ...p.custom.map((c) => c.token),
   ];

@@ -300,6 +300,7 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 
 - `AAPL GP 1Y REPLAY 2024-03-01` hides every bar after that day (no date: the last 100 bars). `.` next bar, `,` back, Space play / pause, `s` speed (1, 2, 5, 10 bars a second). Indicators and studies only ever see the revealed bars.
 - Practice while replaying: Shift+B buys 100, Shift+S sells 100, Shift+F flattens; each fills at the next bar's open. Shift+J saves the session's trades to JRNL as `REPLAY <SYMBOL> <date>`. Nothing is ever sent to a broker.
+- Stop and target exits for the practice book: `AAPL GP 1Y REPLAY 2024-03-01 STOP=5 TARGET=10` (percent from the average entry price) close the position when a revealed bar reaches a level, by the same rule as BT's exits: a bar that opened beyond a level exits at its open, a bar that reached one level exits there, and a bar that reached BOTH is settled by 60-minute bars (a daily or longer replay loads the last 2 years) or else the stop counts first. The line under the chart says which rule decided each exit.
 - Linked GP panels (`LINK A`) that are also replaying follow the same clock.
 
 ## Phase 26: strategy lab

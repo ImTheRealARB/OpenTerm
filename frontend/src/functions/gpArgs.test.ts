@@ -107,3 +107,15 @@ describe("withInterval (GUI candle-length dropdown)", () => {
     expect(withInterval(["5D", "5m"], "", d)).toEqual(["5D"]);
   });
 });
+
+describe("REPLAY practice exits (STOP= TARGET=)", () => {
+  it("reads percent exits, keeps them in the saved args, and ignores values out of range", () => {
+    const p = parseGpArgs(["REPLAY", "2024-03-01", "STOP=5", "target=12.5"]);
+    expect(p.replay).toEqual({ start: "2024-03-01" });
+    expect(p.exits).toEqual({ stop: 5, target: 12.5 });
+    expect(serializeGp(p, "CANDLE")).toEqual(expect.arrayContaining(["REPLAY", "2024-03-01", "STOP=5", "TARGET=12.5"]));
+    expect(parseGpArgs(["REPLAY", "STOP=0"]).exits).toBeUndefined();
+    expect(parseGpArgs(["REPLAY", "STOP=100"]).exits).toBeUndefined();
+    expect(parseGpArgs(["REPLAY", "STOP=abc"]).exits).toBeUndefined();
+  });
+});

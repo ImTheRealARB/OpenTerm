@@ -7,15 +7,19 @@
  *   Space play / pause     s  speed 1, 2, 5, 10 bars per second
  *   Shift+B buy   Shift+S sell   Shift+F flatten    (fill at the NEXT bar's open; practice only, nothing is sent)
  *   Shift+J save the session's trades to the journal (JRNL), named "REPLAY <SYMBOL> <date>"
+ * `REPLAY STOP=5 TARGET=10` (percent from the average entry) closes the practice position when a revealed bar reaches a level,
+ * by the backtester's rule (chart/replay.ts `decideExit`). A DAILY replay with both levels loads 60-minute bars (the last two
+ * years) to settle a bar that reached both; with none, or on an intraday replay, the stop counts first and the line says so.
  * Linked panels (LINK A..D) that are also replaying follow this panel's clock (Phase 22 link bus).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BarData } from "../chart/chartBase";
 import { onLink, publishLink } from "../chart/linkBus";
-import { emptyBook, fillsCsv, firstReveal, onReveal, parseDay, queue, revealed, SPEEDS, type Book } from "../chart/replay";
+import { emptyBook, fillsCsv, finerBetween, firstReveal, onReveal, parseDay, queue, revealed, SPEEDS, type Book, type Exits, type FinerLookup } from "../chart/replay";
 import { info, fail } from "../command/status";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { journalApi } from "../net/journalApi";
+import { marketApi } from "../net/marketApi";
 import { useLatest } from "../state/useLatest";
 
 /** Units per key press in the replay book (a round lot for shares; for crypto it is 100 coins, so P&L reads per 100). */
@@ -31,14 +35,21 @@ export interface ReplayState {
   speed: number;
   book: Book;
   last: number; // close of the last revealed bar
+  /** Where the finer bars for a stop-and-target tie stand: NONE (not needed), LOADING, a source label, or "UNAVAILABLE: reason". */
+  finer: string;
 }
 
-export function useReplay(panelId: number, bars: BarData | undefined, spec: { start: string | null } | undefined, linkGroup: string | undefined, symbol: string): ReplayState {
+export function useReplay(panelId: number, bars: BarData | undefined, spec: { start: string | null } | undefined, linkGroup: string | undefined, symbol: string, exits?: Exits): ReplayState {
   const [n, setN] = useState(0);
   const [book, setBook] = useState<Book>(emptyBook);
   const [playing, setPlaying] = useState(false);
   const [speedIdx, setSpeedIdx] = useState(0);
   const active = !!spec && !!bars && bars.t.length > 1;
+  // Finer bars (60 minutes, last 2 years) only to settle a DAILY-or-longer bar that reached both the stop and the target.
+  const daily = !!bars && bars.t.length > 1 && bars.t[1] - bars.t[0] >= 72_000;
+  const needFiner = active && daily && !!exits?.stop && !!exits?.target;
+  const finerData = useRef<{ t: number[]; h: (number | null)[]; l: (number | null)[] } | null>(null);
+  const [finerNote, setFinerNote] = useState("NONE");
 
   // A new load or a new start day: start again (hidden bars, empty book).
   const startKey = `${spec?.start ?? ""}:${bars?.t.length ?? 0}:${bars?.t[0] ?? 0}`;
@@ -51,16 +62,48 @@ export function useReplay(panelId: number, bars: BarData | undefined, spec: { st
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `startKey` stands for the bars and the start day
   }, [startKey, !!spec]);
 
-  const latest = useLatest({ n, book, bars, active, playing, linkGroup });
+  const latest = useLatest({ n, book, bars, active, playing, linkGroup, exits });
+
+  useEffect(() => {
+    finerData.current = null;
+    if (!needFiner) {
+      setFinerNote("NONE");
+      return;
+    }
+    let gone = false;
+    setFinerNote("LOADING");
+    marketApi
+      .history(symbol, "2Y", "60m")
+      .then((env) => {
+        if (gone) return;
+        const d = env.data;
+        finerData.current = { t: d.t, h: d.h, l: d.l };
+        setFinerNote(`60M ${String(env.source ?? "").toUpperCase()}`.trim());
+      })
+      .catch((err: Error) => {
+        // Loud, not silent: the replay goes on with the stop-first rule and the line says why.
+        if (!gone) setFinerNote(`UNAVAILABLE: ${err.message}`);
+      });
+    return () => {
+      gone = true;
+    };
+  }, [needFiner, symbol]);
+
+  const finer: FinerLookup = (from, to) => {
+    const f = finerData.current;
+    return f ? finerBetween(f.t, f.h, f.l, from, to) : null;
+  };
+  const finerRef = useRef(finer);
+  finerRef.current = finer;
 
   /** Move the clock to `to` revealed bars; each newly revealed bar fills the pending orders at its open. */
   const moveTo = (to: number, broadcast = true) => {
-    const { n: cur, bars: b, linkGroup: g } = latest.current;
+    const { n: cur, bars: b, linkGroup: g, exits: ex } = latest.current;
     if (!b) return;
     const k = Math.max(1, Math.min(b.t.length, to));
     if (k > cur) setBook((bk) => {
       let out = bk;
-      for (let i = cur; i < k; i++) out = onReveal(out, b, i);
+      for (let i = cur; i < k; i++) out = onReveal(out, b, i, ex, (a, z) => finerRef.current(a, z));
       return out;
     });
     setN(k);
@@ -138,5 +181,6 @@ export function useReplay(panelId: number, bars: BarData | undefined, spec: { st
   return {
     shown, active, n, total: bars?.t.length ?? 0, playing, speed: SPEEDS[speedIdx], book,
     last: shown && shown.c.length ? shown.c[shown.c.length - 1] : NaN,
+    finer: finerNote,
   };
 }

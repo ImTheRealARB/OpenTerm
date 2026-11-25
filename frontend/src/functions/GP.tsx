@@ -277,7 +277,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
 
   const L = state.loaded;
   // Phase 24: bar replay. The chart is given only the revealed bars (`rp.shown`), so no study can see a hidden one.
-  const rp = useReplay(panelId, L?.bars, p.replay, linkGroupForReplay(panelId), symbol);
+  const rp = useReplay(panelId, L?.bars, p.replay, linkGroupForReplay(panelId), symbol, p.exits);
   const markers = useMemo<ChartMarkerEvent[] | undefined>(() => {
     if (!L || !p.evt || !events?.env) return undefined;
     const iv = INTERVAL_S[L.bars.interval] ?? 86400;
@@ -638,7 +638,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
         )}
         {L?.stale && <span className="warn"> · STALE</span>}
         {L?.formula && <FormulaNote f={L.formula} />}
-        {rp.active && <ReplayLine r={rp} />}
+        {rp.active && <ReplayLine r={rp} exits={p.exits} />}
         {cone && <span data-testid="gp-cone" className={"error" in cone ? "err" : "dim"}> · CONE: {"error" in cone ? cone.error : cone.label}</span>}
         {L?.fallback.length ? <span className="warn"> · {fallbackText(L.fallback, L.fallbackNotes)}</span> : null}
         {L?.compareErrors.map((m) => (
@@ -841,8 +841,16 @@ function linkGroupForReplay(panelId: number): string | undefined {
 }
 
 /** Phase 24: where the replay is and what the practice book holds. */
-function ReplayLine({ r }: { r: ReturnType<typeof useReplay> }) {
+function ReplayLine({ r, exits }: { r: ReturnType<typeof useReplay>; exits?: { stop?: number; target?: number } }) {
   const b = r.book;
+  const st = b.stats;
+  const decided = [st.gap && `${st.gap} GAP`, st.single && `${st.single} SINGLE`, st.intrabar && `${st.intrabar} INTRABAR`, st.stop_first && `${st.stop_first} STOP FIRST`].filter(Boolean).join(", ");
+  // What settles a bar that reached both levels (the backtester's FILL=INTRABAR rule): finer bars, else the stop first.
+  const both =
+    r.finer === "NONE" ? "STOP FIRST (A DAILY OR LONGER REPLAY LOADS 60-MINUTE BARS TO SETTLE IT)"
+    : r.finer === "LOADING" ? "STOP FIRST UNTIL THE 60-MINUTE BARS LOAD"
+    : r.finer.startsWith("UNAVAILABLE") ? `STOP FIRST (${r.finer})`
+    : `SETTLED BY ${r.finer} BARS, ELSE STOP FIRST`;
   const t = r.shown && r.shown.t.length ? new Date(r.shown.t[r.shown.t.length - 1] * 1000).toISOString().slice(0, 10) : "";
   const pnl = b.realized + unrealized(b, r.last);
   return (
@@ -853,6 +861,13 @@ function ReplayLine({ r }: { r: ReturnType<typeof useReplay> }) {
         {b.pending.length ? ` · ${b.pending.length} ORDER(S) AT NEXT OPEN` : ""} · P&amp;L{" "}
       </span>
       <span className={pnl > 0 ? "up" : pnl < 0 ? "down" : "dim"}>{pnl.toFixed(2)}</span>
+      {exits?.stop || exits?.target ? (
+        <span className="dim" data-testid="gp-replay-exits">
+          {" "}· EXITS{exits.stop ? ` STOP ${exits.stop}%` : ""}{exits.target ? ` TARGET ${exits.target}%` : ""}
+          {decided ? ` · DECIDED: ${decided}` : ""}
+          {exits.stop && exits.target ? ` · BAR REACHING BOTH: ${both}` : ""}
+        </span>
+      ) : null}
       <span className="dim"> · . NEXT , BACK SPACE PLAY S SPEED · SHIFT+B BUY {REPLAY_QTY} SHIFT+S SELL SHIFT+F FLAT SHIFT+J SAVE TO JRNL</span>
     </span>
   );
