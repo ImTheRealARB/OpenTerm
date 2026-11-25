@@ -181,8 +181,15 @@ async def mf_nav(request: Request, q: str = Query(..., max_length=80)):
 
 @router.get("/cdep")
 @data_errors
-async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length=24)):
-    """CDEP: spot order book depth (Binance, OKX when Binance fails): cumulative ladder, spread, imbalance."""
+async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length=40)):
+    """CDEP: spot order book depth (Binance, OKX when Binance fails): cumulative ladder, spread, imbalance.
+    An Indian symbol (`RELIANCE.NS`, `NIFTY26NOVFUT.NFO`) is answered from the Kite ticker's best five levels instead (read-only)."""
+    from .kite.symbols import to_kite
+
+    if to_kite(pair):
+        from .world import kiteflow
+
+        return kiteflow.depth(request.app.state.hub.kite, pair)
     from .world.crypto import cdep
 
     return await cdep(svc(request), pair)
@@ -190,8 +197,15 @@ async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length
 
 @router.get("/flow/trades")
 @data_errors
-async def flow_trades(request: Request, sym: str = Query("BTCUSDT", max_length=24), limit: int = Query(200, ge=1, le=1000)):
-    """TAS: newest Binance spot aggregated trades (exact aggressor side). Crypto only (400 otherwise)."""
+async def flow_trades(request: Request, sym: str = Query("BTCUSDT", max_length=40), limit: int = Query(200, ge=1, le=1000)):
+    """TAS: newest Binance spot aggregated trades (exact aggressor side). An Indian symbol is answered from the Kite ticker's prints
+    with a tick-rule side labelled ESTIMATED; any other symbol is a 400."""
+    from .kite.symbols import to_kite
+
+    if to_kite(sym):
+        from .world import kiteflow
+
+        return kiteflow.tas(request.app.state.hub.kite, sym, limit)
     from .world.flow import trades
 
     return await trades(svc(request), sym, limit)

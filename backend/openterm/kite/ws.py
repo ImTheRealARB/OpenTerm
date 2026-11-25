@@ -5,6 +5,14 @@ quote), 32 (index full), 44 (quote), 184 (full: the quote, then last trade time,
 five buy and five sell depth entries of quantity, price, orders). Every field is big-endian int32 (orders: int16). Prices are paise: divide
 by 100, by 10^7 for currency derivatives (CDS) and by 10^4 for BCD. A short or damaged message is dropped, never raised.
 The client connects while a Kite-served symbol is subscribed and the login is valid, and is never started in fixture mode.
+
+Depth and the tape (read-only, Phase 23 gap): the socket normally runs in `quote` mode (44-byte packets, no depth). A panel that asks for
+a symbol's book (`pin(sym, depth=True)`, called by the DOM route) puts that ONE instrument into `full` mode (184 bytes: the best five
+bids and asks) for `PIN_TTL_S` seconds after its last request; a recording (`hold`) keeps it in full mode until released. Every tick of a
+watched symbol also feeds `tape`: Kite sends the latest price and the day's cumulative volume, not each trade, so a print is
+(time, last price, volume gained since the previous packet), one per packet that gained volume. Whether it was a buy or a sell is NOT
+in the feed: `world/kiteflow.py` guesses it with the tick rule and always says ESTIMATED. Nothing here sends anything to Kite except
+subscribe / unsubscribe / mode, and no order surface exists.
 """
 
 from __future__ import annotations
@@ -14,6 +22,7 @@ import contextlib
 import logging
 import struct
 import time
+from collections import deque
 from collections.abc import Callable
 
 from ..streaming.tick import Tick
@@ -25,6 +34,8 @@ log = logging.getLogger("openterm.kite")
 SEGMENT_DIVISOR = {"cds": 1e7, "bcd": 1e4}
 TOKEN_SEGMENTS = {3: "cds", 6: "bcd"}  # instrument_token & 0xff
 MAX_TOKENS = 3000  # Kite's limit per connection
+TAPE_MAX = 5000  # prints kept per symbol in memory
+PIN_TTL_S = 90.0  # a panel's request keeps a symbol subscribed (and in full mode for depth) this long
 
 
 def default_segment(token: int) -> str | None:
@@ -101,6 +112,15 @@ class KiteTicker:
         self._wake = asyncio.Event()
         self._segments: dict[int, str | None] = {}
         self._sleep = asyncio.sleep  # the backoff wait; a test swaps it for a recording stand-in
+        # --- depth, tape and recording hooks (read-only) ---
+        self.tape: dict[str, deque[tuple[int, int, float, int]]] = {}  # symbol -> (seq, ms, price, qty gained), oldest first
+        self.books: dict[str, dict] = {}  # symbol -> newest depth {t, buy, sell} (5 levels of (qty, price, orders))
+        self.listeners: list[Callable[[str, str, dict], None]] = []  # (symbol, "t" | "d", data): the recorder's hook
+        self._vol: dict[str, int] = {}  # symbol -> the day's cumulative volume at the previous packet
+        self._seq = 0
+        self._pins: dict[str, tuple[float, bool]] = {}  # symbol -> (expires at, wants depth)
+        self._held: dict[str, int] = {}  # symbol -> holds (recordings); always subscribed in full mode
+        self._full: set[int] = set()  # tokens in full mode on the live socket
 
     def start(self) -> None:
         self._task = asyncio.create_task(self._run())
@@ -114,6 +134,51 @@ class KiteTicker:
     async def set_symbols(self, symbols: set[str]) -> None:
         self.symbols = {s for s in symbols if to_kite(s) is not None}
         self._wake.set()
+
+    def pin(self, symbol: str, depth: bool = False) -> None:
+        """A panel asked for `symbol`'s tape or book: subscribe it (even when no chart shows it) for PIN_TTL_S more seconds, in `full`
+        mode when `depth`. Calling again renews the time. Raises ValueError for a symbol Kite does not serve."""
+        sym = symbol.strip().upper()
+        if to_kite(sym) is None:
+            raise ValueError(f"KITE DOES NOT SERVE {sym}")
+        old = self._pins.get(sym)
+        now = time.monotonic()
+        self._pins[sym] = (now + PIN_TTL_S, depth or bool(old and old[1] and old[0] > now))
+        self._wake.set()
+
+    def hold(self, symbol: str) -> None:
+        """A recording needs `symbol` (with its book) until `release`."""
+        sym = symbol.strip().upper()
+        if to_kite(sym) is None:
+            raise ValueError(f"KITE DOES NOT SERVE {sym}")
+        self._held[sym] = self._held.get(sym, 0) + 1
+        self._wake.set()
+
+    def release(self, symbol: str) -> None:
+        sym = symbol.strip().upper()
+        n = self._held.get(sym, 0) - 1
+        if n > 0:
+            self._held[sym] = n
+        else:
+            self._held.pop(sym, None)
+        self._wake.set()
+
+    def _pinned(self) -> dict[str, bool]:
+        """symbol -> wants depth, for every live pin and hold (expired pins are dropped here)."""
+        now = time.monotonic()
+        for s in [s for s, (exp, _) in self._pins.items() if exp <= now]:
+            del self._pins[s]
+        out = {s: d for s, (_, d) in self._pins.items()}
+        out.update({s: True for s in self._held})
+        return out
+
+    def _all_symbols(self) -> set[str]:
+        """The symbols the hub wants plus those panels and recordings pinned."""
+        return {s for s in self.symbols | set(self._pinned()) if to_kite(s) is not None}
+
+    def _full_tokens(self) -> set[int]:
+        depth = {s for s, want in self._pinned().items() if want}
+        return {tok for tok, sym in self._wanted.items() if sym in depth}
 
     def covers(self, symbol: str) -> bool:
         """True while the Kite socket is up and `symbol` is subscribed on it (Yahoo's delayed ticks are dropped meanwhile).
@@ -135,7 +200,7 @@ class KiteTicker:
     async def _tokens(self) -> dict[int, str]:
         dump = await self.instruments.get()
         out: dict[int, str] = {}
-        for s in sorted(self.symbols)[:MAX_TOKENS]:
+        for s in sorted(self._all_symbols())[:MAX_TOKENS]:
             row = dump.find(to_kite(s) or "")
             if row is not None:
                 out[row["instrument_token"]] = s
@@ -148,7 +213,7 @@ class KiteTicker:
 
         backoff = 1.0
         while True:
-            if not self.symbols or not self.session.logged_in:
+            if not self._all_symbols() or not self.session.logged_in:
                 self.status = "OFF" if not self.session.has_key else ("IDLE" if self.session.logged_in else self.session.state)
                 self._wake.clear()
                 with contextlib.suppress(TimeoutError):
@@ -167,8 +232,9 @@ class KiteTicker:
                                               max_queue=4096) as ws:
                     self._ws = ws
                     subscribed = set(self._wanted)
+                    full = self._full = self._full_tokens()
                     await ws.send(orjson.dumps({"a": "subscribe", "v": sorted(subscribed)}).decode())
-                    await ws.send(orjson.dumps({"a": "mode", "v": ["quote", sorted(subscribed)]}).decode())
+                    await self._send_modes(ws, subscribed & full, subscribed - full)
                     self.status = "OK"
                     backoff = 1.0
                     log.info("kite ticker connected (%d instruments)", len(subscribed))
@@ -181,16 +247,19 @@ class KiteTicker:
                             self._wake.clear()
                             with contextlib.suppress(TimeoutError):
                                 await asyncio.wait_for(self._wake.wait(), 5.0)
-                            if reader.done() or not self.symbols or not self.session.logged_in:
+                            if reader.done() or not self._all_symbols() or not self.session.logged_in:
                                 break
                             self._wanted = await self._tokens()
                             add, drop = set(self._wanted) - subscribed, subscribed - set(self._wanted)
                             if add:
                                 await ws.send(orjson.dumps({"a": "subscribe", "v": sorted(add)}).decode())
-                                await ws.send(orjson.dumps({"a": "mode", "v": ["quote", sorted(add)]}).decode())
                             if drop:
                                 await ws.send(orjson.dumps({"a": "unsubscribe", "v": sorted(drop)}).decode())
                             subscribed = set(self._wanted)
+                            # modes: a new token gets its mode; a token whose depth need changed switches (full <-> quote)
+                            full_now = self._full_tokens()
+                            await self._send_modes(ws, (full_now - full) | (full_now & add), ((full - full_now) & subscribed) | (add - full_now))
+                            full = self._full = full_now
                     finally:
                         reader.cancel()
                         with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -205,6 +274,15 @@ class KiteTicker:
             await self._sleep(backoff)
             backoff = min(backoff * 2, 60.0)
 
+    @staticmethod
+    async def _send_modes(ws, full: set[int], quote: set[int]) -> None:
+        import orjson
+
+        if full:
+            await ws.send(orjson.dumps({"a": "mode", "v": ["full", sorted(full)]}).decode())
+        if quote:
+            await ws.send(orjson.dumps({"a": "mode", "v": ["quote", sorted(quote)]}).decode())
+
     async def _read(self, ws) -> None:
         async for raw in ws:
             if isinstance(raw, bytes):
@@ -216,6 +294,9 @@ class KiteTicker:
             if sym is None or d.get("ltp") is None:
                 continue
             price = d["ltp"]
+            self._observe(sym, d)
+            if sym not in self.symbols and sym in self._pinned():
+                continue  # pinned only for a panel's tape / book: no chart asked for this symbol, so the hub does not need its ticks
             close = d.get("close") or self.prev_close(sym)
             change = price - close if close else None
             self.ticks += 1
@@ -223,3 +304,23 @@ class KiteTicker:
                            volume=d.get("volume"), high=d.get("high"), low=d.get("low"),
                            time_ms=int((d.get("ts_exchange") or time.time()) * 1000), source="k"))
 
+    def _observe(self, sym: str, d: dict) -> None:
+        """Feeds the tape and the book from one decoded packet (see the module note). Cheap: it runs on every packet."""
+        t_ms = int((d.get("ts_exchange") or time.time()) * 1000)
+        vol = d.get("volume")
+        if vol is not None:
+            prev = self._vol.get(sym)
+            self._vol[sym] = vol
+            # The first packet (or a volume that went DOWN: a new day) is not a trade, only a starting point: it is kept as a REFERENCE print of
+            # quantity 0 so the tick rule can compare the next price with it; the panels never draw a quantity-0 row.
+            if prev is None or vol < prev or vol > prev:
+                self._seq += 1
+                row = (self._seq, t_ms, d["ltp"], vol - prev if prev is not None and vol > prev else 0)
+                self.tape.setdefault(sym, deque(maxlen=TAPE_MAX)).append(row)
+                for cb in self.listeners:
+                    cb(sym, "t", {"seq": row[0], "t": t_ms, "p": row[2], "q": row[3]})
+        if "depth_buy" in d:
+            book = {"t": t_ms, "buy": d["depth_buy"], "sell": d["depth_sell"]}
+            self.books[sym] = book
+            for cb in self.listeners:
+                cb(sym, "d", book)

@@ -35,6 +35,8 @@ export interface FlowHead {
 
 export interface TasPayload extends FlowHead {
   rows: FlowTrade[];
+  /** Kite tape only: prints before the first price move, which the tick rule cannot give a side */
+  unsided?: number;
 }
 
 export interface BigTradesPayload extends FlowHead {

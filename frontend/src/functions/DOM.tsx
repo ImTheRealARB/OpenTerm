@@ -1,7 +1,8 @@
 /**
  * DOM (Phase 23): a READ-ONLY depth ladder. `DOM BTCUSDT [LEVELS]`: one price column, asks above the spread (red), bids
  * below (green), each level's size and a size bar. Same venues and refresh as CDEP (Binance, then OKX; every 5 s).
- * There is no order entry here and never will be (NO LIVE ORDERS). Crypto only for now; India depth needs a Kite route.
+ * There is no order entry here and never will be (NO LIVE ORDERS). An Indian symbol (`DOM RELIANCE.NS`) shows Kite's best FIVE levels a side
+ * (needs a Kite login; the first answer takes a few seconds while the server switches that one instrument to Kite's full mode).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
@@ -37,19 +38,21 @@ export default function DOM({ panelId, args }: FunctionProps) {
   }, [a.rec]);
   const d = env?.data;
   const rows = useMemo(() => (d ? domRows(d.bids, d.asks, levels) : []), [d, levels]);
+  // Kite quantities are whole shares / lots; crypto sizes are fractions of a coin.
+  const qtyDp = d?.venue.startsWith("KITE") ? 0 : 4;
   const max = useMemo(() => rows.reduce((m, r) => Math.max(m, r.qty), 0), [rows]);
   const grid = useRef<GridHandle>(null);
   const latest = useLatest({ rows, snap, count: d?.recorded?.count ?? 0, rec: !!a.rec });
 
   const columns = useMemo<Column<DomRow>[]>(
     () => [
-      { title: "BID SIZE", width: 12, align: "right", text: (r) => (r.side === "bid" ? fmtNum(r.qty, 4) : ""), color: () => "up" },
+      { title: "BID SIZE", width: 12, align: "right", text: (r) => (r.side === "bid" ? fmtNum(r.qty, qtyDp) : ""), color: () => "up" },
       { title: "", width: 10, align: "right", text: (r) => (r.side === "bid" ? depthBar(r.qty, max) : ""), color: () => "up" },
       { title: "PRICE", width: 12, align: "right", text: (r) => fmtPrice(r.price), color: (r) => (r.side === "ask" ? "down" : "up") },
       { title: "", width: 10, text: (r) => (r.side === "ask" ? depthBar(r.qty, max) : ""), color: () => "down" },
-      { title: "ASK SIZE", width: 12, align: "right", text: (r) => (r.side === "ask" ? fmtNum(r.qty, 4) : ""), color: () => "down" },
+      { title: "ASK SIZE", width: 12, align: "right", text: (r) => (r.side === "ask" ? fmtNum(r.qty, qtyDp) : ""), color: () => "down" },
     ],
-    [max],
+    [max, qtyDp],
   );
 
   // Start with the cursor on the best bid (just under the spread), where the eye goes first.
@@ -80,7 +83,7 @@ export default function DOM({ panelId, args }: FunctionProps) {
         <span className="acc">DOM</span> DEPTH LADDER (READ ONLY) · {d ? `${d.symbol} · ${d.venue}` : a.pair}
         {d?.ts_ms ? <span className="dim"> · BOOK {utc(d.ts_ms)} UTC</span> : null}
         {d?.recorded ? loading && <span className="dim"> · LOADING…</span> : <EnvStatus env={env} loading={loading} />}
-        <span className="dim"> · {levels} LEVELS A SIDE · {a.rec ? ", . = OLDER / NEWER BOOK" : "5S REFRESH"} · F5</span>
+        <span className="dim"> · {d?.venue.startsWith("KITE") ? "BEST 5" : levels} LEVELS A SIDE · {a.rec ? ", . = OLDER / NEWER BOOK" : "5S REFRESH"} · F5</span>
       </div>
       {d?.recorded && (
         <RecordedLine

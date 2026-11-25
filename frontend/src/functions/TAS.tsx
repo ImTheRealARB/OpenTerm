@@ -1,6 +1,7 @@
 /**
  * TAS: time and sales. Every recent Binance spot trade, newest first, with the AGGRESSOR side the exchange reports
  * (BUY = bought at the ask, SELL = sold into the bid). Crypto only; any other symbol says ORDER FLOW: CRYPTO ONLY (BINANCE SPOT PAIRS).
+ * An Indian symbol (`TAS RELIANCE.NS`) shows Kite's prints instead, with the side GUESSED by the tick rule and labelled ESTIMATED.
  * Polls every 3 s while open (the server caches 2 s). Keys: arrows move, E CSV, F5 refresh. `TAS ETHUSDT` or `BTCUSDT TAS`.
  */
 import { useEffect, useMemo, useRef } from "react";
@@ -75,7 +76,11 @@ export default function TAS({ panelId, args, security }: FunctionProps) {
             ({d.n} HELD, {d.span_s.toFixed(0)}S) ·{" "}
           </span>
           <span className="up">{buys} BUY</span> / <span className="down">{rows.length - buys} SELL</span>
-          <span className="dim"> · SIDE = <span data-term="AGGRESSOR">AGGRESSOR</span>: BUY HIT THE ASK, SELL HIT THE BID. NEWEST FIRST.</span>
+          {d.basis.startsWith("ESTIMATED") ? (
+            <span className="warn" data-testid="tas-estimated"> · SIDE IS A GUESS (TICK RULE): PRICE ROSE = BUY, FELL = SELL, SAME = AS BEFORE. {d.unsided ? `${d.unsided} PRINT(S) BEFORE THE FIRST MOVE HAVE NO SIDE. ` : ""}NEWEST FIRST.</span>
+          ) : (
+            <span className="dim"> · SIDE = <span data-term="AGGRESSOR">AGGRESSOR</span>: BUY HIT THE ASK, SELL HIT THE BID. NEWEST FIRST.</span>
+          )}
         </div>
       )}
       <ErrorLine error={error} hasData={!!d} usage="TAS BTCUSDT" />

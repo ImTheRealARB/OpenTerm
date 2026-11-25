@@ -295,6 +295,7 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - `TPO AAPL 5 BRACKET=30`: market profile of the last 5 days from 5-minute bars: letters per 30-minute bracket, POC, value area, initial balance, single prints, poor highs / lows.
 - `TAS BTCUSDT`, `BIGT BTCUSDT USD=100000`, `FOOT BTCUSDT`: time and sales, big trades and footprint from the exchange's own trades (exact, crypto only).
 - `DOM BTCUSDT [LEVELS]`: read-only depth ladder (asks above, bids below). `LIQH BTCUSDT`: liquidity heatmap of the book while the panel is open (memory only, at most 2 hours).
+- India (needs a Kite login, read-only): `DOM RELIANCE.NS` shows Kite's best FIVE bid and ask levels (the server switches that one instrument to Kite's full mode while the panel is open; the first answer takes a few seconds). `TAS RELIANCE.NS` lists one row per Kite packet that gained volume (price, volume gained, time) with the side GUESSED by the tick rule and labelled ESTIMATED (TICK RULE): Kite does not say who started a trade. Without a login or in fixture mode they say why instead of showing anything.
 
 ## Phase 24: replay and practice
 
