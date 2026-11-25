@@ -242,6 +242,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "sec_fts": ["sec_filings"],
     "sec_rss": ["sec_filings"],
     "sec_tickers_x": ["sec_filings"],
+    "sec_doc": ["sec_filings"],  # MA deal values: one filing document as text
     "sec_sic": ["sec_filings"],  # IBQ BY=SIC: SIC code list + the EDGAR company browser by code
     "court_dockets": ["courtlistener"],  # free key; no key = KEY REQUIRED
     "ghg_facilities": ["epa_ghgrp"],

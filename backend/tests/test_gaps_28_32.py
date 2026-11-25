@@ -185,3 +185,62 @@ def test_ets_route_in_fixture_mode(client):
     assert d["sections"][0]["rows"] and "EMISSIONS ONLY, NO SCORE" in d["notes"][0]
     bad = client.get("/api/filings/ets", params={"symbol": "AA", "year": 2023})
     assert bad.status_code >= 400  # only 2024 is recorded: another year is "not recorded", never invented
+
+
+# --- M&A deal values -------------------------------------------------------------------------------------------------------------------
+
+
+def test_ma_value_from_recorded_press_release():
+    """The Darden / Chuy's 8-K exhibit (a REAL recording) states an enterprise value in a sentence; the per-share price is not the value."""
+    from openterm.filings import ma_value as mv
+
+    doc = json.loads((Path(__file__).parent / "fixtures" / "sec_doc_chuys_ex991.json").read_text(encoding="utf-8"))
+    found = mv.extract(mv.to_text(doc["text"]))
+    assert found and found["usd"] == 605_000_000 and found["kind"] == "sentence"
+    assert "$605 million" in found["quote"]
+    assert mv.money(found["usd"]) == "$605M"
+
+
+def test_ma_value_ignores_per_share_price_and_unrelated_money():
+    from openterm.filings import ma_value as mv
+
+    assert mv.extract("Holders will receive $37.50 per share in cash.") is None
+    assert mv.extract("Revenue was $4 billion last year.") is None  # no deal / value word near the amount
+
+
+def test_ma_value_only_reads_sec_archive_urls():
+    from openterm.filings import ma_value as mv
+
+    mv.check_url("https://www.sec.gov/Archives/edgar/data/1524931/000119312524180426/d873202dex991.htm")
+    for bad in ("https://example.com/Archives/edgar/data/1/x.htm", "http://www.sec.gov/Archives/edgar/data/1/x.htm", "file:///etc/passwd"):
+        with pytest.raises(ValueError):
+            mv.check_url(bad)
+
+
+def test_ma_fill_values_marks_stated_not_stated_and_not_read():
+    from openterm.filings import service as fsvc
+    from openterm.providers.base import ProviderError
+    from openterm.router import AllFailed
+
+    docs = {"a": "The deal has a transaction value of approximately $2.1 billion.", "b": "No price is given here."}
+
+    class _Router:
+        async def call(self, cap, fn, *a):
+            class _P:
+                async def document_text(self, url):
+                    if url not in docs:
+                        raise AllFailed([("sec_filings", ProviderError("unavailable", "down"))])
+                    return {"text": docs[url]}
+
+            return await fn(_P()), []
+
+    class _S:
+        router = _Router()
+
+    rows = [{"doc_url": "a"}, {"doc_url": "b"}, {"doc_url": "gone"}, {"doc_url": None}]
+    notes = asyncio.run(fsvc._fill_values(_S(), rows))
+    assert rows[0]["value"] == "$2.10B" and "$2.1 billion" in rows[0]["quote"]
+    assert rows[1]["value"] == "NOT STATED"
+    assert rows[2]["value"] == "NOT READ"
+    assert "value" not in rows[3]
+    assert "FIRST 3 OF 4" in notes[0] and "1 FILING(S) NOT READ" in notes[1]

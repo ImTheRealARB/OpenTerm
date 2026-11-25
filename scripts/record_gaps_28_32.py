@@ -1,7 +1,7 @@
 """Records the keyless fixtures for the Phase 28-32 gap closures (2026-11-25). No key is used, nothing secret is stored.
 
 Run from backend/:  uv run python ../scripts/record_gaps_28_32.py [step ...]      (default: every step)
-Steps: sic bio ets
+Steps: sic bio ets mav
 
 Writes backend/tests/fixtures/<name>.json as {"status", "text", "content_type"} (XML / HTML) or {"status", "body"} (JSON), like every other
 recording. Big answers are TRIMMED to the few companies the other fixtures already hold (Apple, Microsoft, Berkshire, Meta) and each trim is
@@ -149,7 +149,16 @@ def rec_bio() -> None:
     print("wrote fts_bio_proxy_timothy_cook")
 
 
-STEPS = {"sic": rec_sic, "bio": rec_bio, "ets": rec_ets}
+MAV_URL = "https://www.sec.gov/Archives/edgar/data/1524931/000119312524180426/d873202dex991.htm"  # Darden / Chuy's press release (8-K exhibit 99.1), 2024-07-17
+
+
+def rec_mav() -> None:
+    """MA deal value: one real press release that states a deal value ("an all-cash transaction with an enterprise value of approximately $605 million")."""
+    r = get(MAV_URL)
+    save_text("sec_doc_chuys_ex991", r.text, "text/html; charset=utf-8")
+
+
+STEPS = {"sic": rec_sic, "bio": rec_bio, "ets": rec_ets, "mav": rec_mav}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or list(STEPS):

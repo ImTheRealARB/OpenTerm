@@ -8,6 +8,7 @@ Capabilities (each one is a line in `hierarchy.DEFAULT_ORDER`):
   sec_fts        efts.sec.gov full-text search: `fts(params)`
   sec_rss        www.sec.gov enforcement feeds: `litigation()`
   sec_tickers_x  company_tickers_exchange.json: `issuer(symbol)`, `related(symbol)`
+  sec_doc        one SEC filing document read as text (MA deal values): `document_text(url)`
   sec_sic        the SIC code list page and the EDGAR company browser filtered by one SIC code (IBQ BY=SIC): `sic_table()`, `sic_members(code)`
 """
 
@@ -18,6 +19,7 @@ from typing import Any
 
 from ..filings import fts as F
 from ..filings import legal as L
+from ..filings import ma_value as MV
 from ..filings import rels as R
 from ..fund import sic as S
 from .base import ProviderError
@@ -27,6 +29,7 @@ FTS = "sec_fts"
 RSS = "sec_rss"
 TICKERS_X = "sec_tickers_x"
 SIC = "sec_sic"
+DOC = "sec_doc"
 SIC_LIST_URL = "https://www.sec.gov/search-filings/standard-industrial-classification-sic-code-list"
 SIC_BROWSE_URL = "https://www.sec.gov/cgi-bin/browse-edgar"
 SIC_PAGE = 100  # the most entries the company browser returns per page
@@ -42,7 +45,7 @@ TICKERS_X_TTL_S = 86400.0
 class SecFilingsProvider(SecProvider):
     name = "sec_filings"
     label = "SEC EDGAR full-text search and enforcement feeds"
-    capabilities = frozenset({FTS, RSS, TICKERS_X, SIC})
+    capabilities = frozenset({FTS, RSS, TICKERS_X, SIC, DOC})
     markets = "US SEC filings text search (2001 on), SEC litigation releases and administrative proceedings (latest 25 each), ticker-by-exchange file"
 
     def __init__(self, *a, **kw):
@@ -103,6 +106,14 @@ class SecFilingsProvider(SecProvider):
         """The issuer plus every ticker filed under its CIK."""
         who = await self.issuer(symbol)
         return {**who, "rows": R.siblings(await self._exchange_rows(), who["cik"])}
+
+    async def document_text(self, url: str) -> dict[str, Any]:
+        """One filing document (`www.sec.gov/Archives/edgar/data/...` only) as plain text, cut at `MAV.MAX_TEXT` characters: {text, url, source, as_of}."""
+        try:
+            MV.check_url(url)
+        except ValueError as e:
+            raise ProviderError("bad_request", str(e)) from e
+        return {"text": MV.to_text(await self.get_bytes(url)), "url": url, "source": self.source, "as_of": self.now()}
 
     async def sic_table(self) -> dict[int, dict[str, str]]:
         """{SIC code: {title, office}} from the SEC's own list page."""

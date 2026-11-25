@@ -43,6 +43,10 @@ def route_filings(request: httpx.Request) -> httpx.Response | None:
             return fx._load("sec_company_tickers_exchange")
         if p in SEC_FEEDS:
             return fx._load(SEC_FEEDS[p])
+        if p == "/Archives/edgar/data/1524931/000119312524180426/d873202dex991.htm":
+            return fx._load("sec_doc_chuys_ex991")  # RECORDING: the one filing document the fixtures hold (a deal value is stated in it)
+        if p.startswith("/Archives/edgar/data/"):
+            return httpx.Response(404, text=NOT_RECORDED)
         if p == "/search-filings/standard-industrial-classification-sic-code-list":
             return fx._load("sec_sic_list")
         if p == "/cgi-bin/browse-edgar" and q.get("SIC"):
