@@ -209,7 +209,7 @@ const defs: FunctionDef[] = [
   { code: "DDIS", title: "Debt maturity ladder from the 10-K", needsSecurity: true, load: () => import("./DDIS") },
   { code: "SCORE", title: "Formula scores: Altman, Piotroski, Beneish, Ohlson, Merton", needsSecurity: true, load: () => import("./SCORE") },
   { code: "FRM", title: "One XBRL concept for every filer, point in time", needsSecurity: false, argsSchema: "<TAG> [CY2024] [ASOF=YYYY-MM-DD]", load: () => import("./FRM") },
-  { code: "IBQ", title: "Industry roll-ups: median margins, growth, valuation", needsSecurity: false, argsSchema: "[YEAR] [INDUSTRY]", load: () => import("./IBQ") },
+  { code: "IBQ", title: "Industry roll-ups: median margins, growth, valuation", needsSecurity: false, argsSchema: "[YEAR] [SECTOR|INDUSTRY|SIC|DIV]", load: () => import("./IBQ") },
   { code: "REVS", title: "Estimate revision score (inputs shown)", needsSecurity: true, load: () => import("./REVS") },
   // Phase 30: macro, rates and commodities depth (server: /api/macrod/...)
   { code: "MMR", title: "Money market rates: SOFR, TGCR, BGCR, EFFR, OBFR, ESTR, SONIA with history", needsSecurity: false, load: () => import("./MMR") },

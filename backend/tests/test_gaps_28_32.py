@@ -4,11 +4,15 @@ Pure parsers are tested on recorded text; service paths use a stub (tests never 
 """
 
 import asyncio
+import json
+import time
 from datetime import date
+from pathlib import Path
 
 import pytest
 
 from openterm.fund import service as fs
+from openterm.fund import sic
 
 
 class _Svc:
@@ -71,3 +75,43 @@ def test_eqsfund_falls_back_one_year_when_most_filers_are_missing(monkeypatch):
     monkeypatch.setattr(stub, "concept_year", spy)
     out = asyncio.run(stub.fn_eqsfund())["data"]  # no year typed and < 3,000 revenue filers: current year - 1 is "not filed yet"
     assert out["year"] == date.today().year - 2 and any("NOT FILED BY MOST COMPANIES" in n for n in out["notes"])
+
+
+# --- SIC grouping for IBQ (recorded SEC pages, trimmed to Apple / Microsoft / Berkshire / Meta) -------------------------------------------
+
+
+
+def _fx(name: str) -> str:
+    return json.loads((Path(__file__).parent / "fixtures" / f"{name}.json").read_text(encoding="utf-8"))["text"]
+
+
+def test_sic_list_and_company_pages_parse():
+    table = sic.parse_sic_table(_fx("sec_sic_list"))
+    assert table[3571]["title"] == "ELECTRONIC COMPUTERS" and table[7372]["title"] == "SERVICES-PREPACKAGED SOFTWARE"
+    assert sic.parse_atom(_fx("sec_sic_3571")) == [{"cik": 320193, "sic": 3571, "name": "Apple Inc."}]
+    assert sic.parse_atom(_fx("sec_sic_7372"))[0]["cik"] == 789019
+    with pytest.raises(ValueError, match="NO SIC TABLE"):
+        sic.parse_sic_table("<html>layout changed</html>")
+    with pytest.raises(ValueError, match="DID NOT PARSE"):
+        sic.parse_atom("<feed")
+
+
+def test_sic_divisions():
+    assert sic.division(3571) == ("D", "MANUFACTURING") and sic.division(100) == ("A", "AGRICULTURE, FORESTRY, FISHING")
+    assert sic.division(6331)[0] == "H" and sic.division(7372)[0] == "I" and sic.division(9999)[0] == "J"
+    assert sic.division(1900)[0] == "?"  # no major group 19 in the manual: said, not guessed
+
+
+def test_ibq_by_sic_builds_the_map_then_groups(client):
+    """First call starts the background build and says so; once it is done the same call returns the roll-up (fixtures: four filers)."""
+    first = client.get("/api/fund/ibq", params={"by": "SIC", "year": "2024"}).json()
+    assert first["data"]["title"].startswith("IBQ") and any("SIC MAP" in n for n in first["data"].get("notes", [])) or first["data"].get("sections")
+    for _ in range(60):
+        body = client.get("/api/fund/ibq", params={"by": "SIC", "year": "2024"}).json()
+        if body["data"].get("sections"):
+            break
+        time.sleep(0.25)
+    groups = {r["group"] for r in body["data"]["sections"][0]["rows"]}
+    assert "3571 ELECTRONIC COMPUTERS" in groups and "7372 SERVICES-PREPACKAGED SOFTWARE" in groups
+    div = client.get("/api/fund/ibq", params={"by": "DIV", "year": "2024"}).json()["data"]["sections"][0]["rows"]
+    assert {"D MANUFACTURING", "H FINANCE, INSURANCE, REAL ESTATE", "I SERVICES"} <= {r["group"] for r in div}

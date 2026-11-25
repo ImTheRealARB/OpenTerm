@@ -33,6 +33,7 @@ from . import estimates as es
 from . import frames as fr
 from . import metrics as mt
 from . import scores as sc
+from . import sic as sicmod
 
 if TYPE_CHECKING:
     from ..service import DataService
@@ -43,6 +44,8 @@ BT_LABEL = "HISTORICAL SIMULATION, NOT A FORECAST"
 MAX_PEERS = 4
 MAX_UNIVERSE = 60
 FRAME_TTL = 86400.0  # a calendar year's frame changes only when late filers file
+SIC_TTL = 30 * 86400.0  # the SEC rarely changes a filer's SIC code; the whole map is about 450 cached answers
+SIC_WORKERS = 4  # concurrent company-browser pages (the provider's own bucket keeps the total under the SEC's 10 requests a second)
 EQSFUND_FIELDS = ("MARGIN", "OPMARGIN", "ROE", "GROWTH", "DE")  # order = the columns of the `rows` lists
 EQSFUND_MIN_FILERS = 3000  # a calendar year with fewer revenue filers than this is "not filed yet" (about 5,000 file a year)
 
@@ -68,6 +71,14 @@ def _num(v: float | None, d: int = 2) -> str | None:
 class Fund:
     def __init__(self, svc: DataService):
         self.svc = svc
+        # IBQ BY=SIC: the CIK -> SIC map is built once in the background (about 450 codes, a few minutes; every answer is cached 30 days).
+        self._sic_task: asyncio.Task | None = None
+        self._sic_map: dict[int, int] | None = None
+        self._sic_titles: dict[int, str] = {}
+        self._sic_done = 0
+        self._sic_total = 0
+        self._sic_errors: dict[int, str] = {}
+        self._sic_trunc: list[int] = []
 
     async def run(self, fn: str, **params: Any) -> dict:
         method = getattr(self, f"fn_{fn.lower()}", None)
@@ -436,13 +447,69 @@ class Fund:
             return fr.fields_for(cur, prev)
         return {}
 
+    # --- SIC map (IBQ BY=SIC / DIV) -----------------------------------------------------------------
+    @property
+    def sec_filings(self):
+        p = self.svc.router.providers.get("sec_filings")
+        if p is None:
+            raise DataError("unavailable", "SEC FILINGS PROVIDER NOT CONFIGURED")
+        return p
+
+    async def _build_sic_map(self) -> None:
+        """Fill `_sic_map` from the SEC: the code list, then every code's company page (4 at a time). A code that fails is counted and named."""
+        try:
+            async def fetch_table() -> dict:
+                t = await self.sec_filings.sic_table()
+                return {"data": {"codes": {str(k): v for k, v in t.items()}}, "fallback_from": []}
+
+            table = {int(k): v for k, v in (await self.svc.swr("sictable", SIC_TTL, fetch_table))["data"]["codes"].items()}
+            self._sic_titles = {k: v["title"] for k, v in table.items()}
+            codes = sorted(table)
+            self._sic_total, self._sic_done = len(codes), 0
+            out: dict[int, int] = {}
+            queue = list(codes)
+
+            async def worker() -> None:
+                while queue:
+                    code = queue.pop(0)
+
+                    async def fetch(c=code) -> dict:
+                        r = await self.sec_filings.sic_members(c)
+                        return {"data": {"ciks": r["ciks"], "truncated": r["truncated"]}, "fallback_from": []}
+
+                    try:
+                        env = await self.svc.swr(f"sicm:{code}", SIC_TTL, fetch)
+                        for cik in env["data"]["ciks"]:
+                            out[int(cik)] = code
+                        if env["data"]["truncated"]:
+                            self._sic_trunc.append(code)
+                    except Exception as e:  # noqa: BLE001 - one bad code must not stop the other 450; it is counted and named on screen
+                        self._sic_errors[code] = str(e)[:120]
+                    self._sic_done += 1
+
+            await asyncio.gather(*(worker() for _ in range(SIC_WORKERS)))
+            self._sic_map = out
+        except Exception as e:  # noqa: BLE001 - the list page itself failed: IBQ says so on its next call instead of hanging on "building"
+            self._sic_errors[0] = str(e)[:160]
+            self._sic_task = None
+
+    def _sic_status(self) -> str:
+        return f"BUILDING THE SIC MAP FROM THE SEC: {self._sic_done} OF {self._sic_total or '?'} CODES (FIRST RUN ONLY, A FEW MINUTES; THEN CACHED 30 DAYS). PRESS F5 TO CHECK"
+
     # --- IBQ: industry roll-ups -----------------------------------------------------------------------
     async def fn_ibq(self, year: str | None = None, by: str | None = None, **_: Any) -> dict:
         y = int(year or date.today().year - 1)
-        group_by = "industry" if (by or "").upper().startswith("IND") else "sector"
+        b = (by or "").upper()
+        group_by = "industry" if b.startswith("IND") else "sic" if b == "SIC" else "division" if b.startswith("DIV") else "sector"
         scr = (await self.svc.screener())["data"]
-        names = scr["industries"] if group_by == "industry" else scr["sectors"]
-        gi = scr["columns"].index(group_by)
+        if group_by in ("sic", "division") and self._sic_map is None:
+            if 0 in self._sic_errors:
+                raise DataError("unavailable", "SEC SIC LIST: " + self._sic_errors.pop(0))
+            if self._sic_task is None or self._sic_task.done():
+                self._sic_task = asyncio.create_task(self._build_sic_map())
+            return _env(payload(None, f"IBQ � {group_by.upper()} ROLL-UPS � CY{y}", [head("STATUS", "BUILDING")], [], [self._sic_status()], "SEC EDGAR"))
+        names = scr["industries"] if group_by == "industry" else scr["sectors"] if group_by == "sector" else []
+        gi = scr["columns"].index(group_by) if group_by in ("industry", "sector") else -1
         mi, si = scr["columns"].index("mcap"), scr["columns"].index("symbol")
         ciks = await self.sec.tickers_by_cik()
         by_ticker = {t: c for c, ts in ciks.items() for t in ts}
@@ -452,7 +519,14 @@ class Fund:
         matched = 0
         for row in scr["rows"]:
             cik = by_ticker.get(row[si]) or by_ticker.get(str(row[si]).replace("/", "-"))
-            g = names[row[gi]] if row[gi] is not None and row[gi] < len(names) else ""
+            if group_by in ("sic", "division"):
+                code = (self._sic_map or {}).get(cik) if cik is not None else None
+                if code is None:
+                    continue
+                g = (f"{code:04d} {self._sic_titles.get(code, '')}".strip() if group_by == "sic"
+                     else " ".join(sicmod.division(code)))
+            else:
+                g = names[row[gi]] if row[gi] is not None and row[gi] < len(names) else ""
             if cik is None or not g:
                 continue
             rev = (cur["revenue"].get(cik) or {}).get("val")
@@ -479,16 +553,25 @@ class Fund:
                  "om": fr.median_or_none(b["om"]), "gr": fr.median_or_none(b["gr"]), "gr_iqr": fr.iqr(b["gr"]),
                  "ps": fr.median_or_none(b["ps"]), "pe": fr.median_or_none(b["pe"])} for g, b in groups.items()]
         rows.sort(key=lambda r: -r["n"])
+        sic_mode = group_by in ("sic", "division")
+        sic_notes = ["SIC CODE = THE INDUSTRY CODE THE SEC GIVES EACH FILER (EDGAR COMPANY BROWSER); " + (
+            "DIVISION = THE TEN SIC DIVISIONS A TO J" if group_by == "division" else "4-DIGIT CODES: MANY HAVE ONLY A FEW NAMES")
+            ] if sic_mode else ["GROUPS ARE NASDAQ'S SECTOR / INDUSTRY; TRY BY=SIC OR BY=DIV FOR THE SEC'S OWN INDUSTRY CODES"]
+        if sic_mode and self._sic_errors:
+            sic_notes.append(f"{len(self._sic_errors)} SIC CODES COULD NOT BE READ FROM THE SEC (THEIR COMPANIES ARE MISSING): "
+                             + ", ".join(f"{c:04d}" for c in sorted(self._sic_errors)[:12]))
+        if sic_mode and self._sic_trunc:
+            sic_notes.append("MORE THAN 3,000 COMPANIES UNDER " + ", ".join(f"{c:04d}" for c in sorted(self._sic_trunc)) + ": THE LIST WAS CUT")
         out = payload(None, f"IBQ · {group_by.upper()} ROLL-UPS · CY{y}", [
             head("COMPANIES MATCHED", f"{matched:,}"), head("GROUPS", str(len(rows))), head("YEAR", f"CY{y}"),
-            head("GROUPED BY", f"{group_by.upper()} (NASDAQ SCREENER)")],
+            head("GROUPED BY", f"{group_by.upper()} (SEC EDGAR SIC CODE)" if sic_mode else f"{group_by.upper()} (NASDAQ SCREENER)")],
             [section("ibq", f"MEDIANS BY {group_by.upper()}", [
                 col("group", group_by.upper(), "text", 30), col("n", "N", "int"), col("nm", "NET MARGIN", "pct"),
                 col("nm_iqr", "NM IQR", "pct"), col("om", "OP MARGIN", "pct"), col("gr", "REV GROWTH", "pct"),
                 col("gr_iqr", "GROWTH IQR", "pct"), col("ps", "P/S", "num"), col("pe", "P/E", "num")], rows)],
             [("FUNDAMENTALS: SEC XBRL FRAMES FOR THE CALENDAR YEAR; MARKET CAP: TODAY'S SCREENER (SO P/S AND P/E MIX TODAY'S PRICE "
              "WITH THAT YEAR'S NUMBERS)"), "IQR = 75TH MINUS 25TH PERCENTILE (DISPERSION); P/E ONLY OVER PROFITABLE COMPANIES",
-             "SIC CODES ARE NOT IN THE FREE SCREENER: GROUPS ARE NASDAQ'S SECTOR / INDUSTRY", "GROUPS WITH FEW NAMES ARE NOISY"],
+             *sic_notes, "GROUPS WITH FEW NAMES ARE NOISY"],
             f"SEC XBRL FRAMES + {scr.get('source')}")
         return _env(out)
 

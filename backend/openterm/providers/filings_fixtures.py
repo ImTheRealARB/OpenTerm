@@ -26,6 +26,7 @@ SEC_FEEDS = {
     "/enforcement-litigation/administrative-proceedings/rss": "sec_admin_proceedings_rss",
 }
 NOT_RECORDED = "not recorded"
+SIC_RECORDED = {"3571", "7372", "6331", "7370"}
 
 
 def route_filings(request: httpx.Request) -> httpx.Response | None:
@@ -41,6 +42,12 @@ def route_filings(request: httpx.Request) -> httpx.Response | None:
             return fx._load("sec_company_tickers_exchange")
         if p in SEC_FEEDS:
             return fx._load(SEC_FEEDS[p])
+        if p == "/search-filings/standard-industrial-classification-sic-code-list":
+            return fx._load("sec_sic_list")
+        if p == "/cgi-bin/browse-edgar" and q.get("SIC"):
+            # TRIMMED RECORDINGS (scripts/record_gaps_28_32.py): one entry each for Apple, Microsoft, Berkshire and Meta; any other code is "not recorded".
+            code = q.get("SIC", "")
+            return fx._load(f"sec_sic_{code}") if code in SIC_RECORDED else httpx.Response(404, text=NOT_RECORDED)
         return None
     if host == "api.openfigi.com" and p == "/v3/mapping" and request.method == "POST":
         jobs = json.loads(request.content or b"[]")

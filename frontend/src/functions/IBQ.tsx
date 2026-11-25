@@ -5,7 +5,7 @@ import { ibqParams } from "./fundArgs";
 export default makeResearchPanel({
   fn: "ibq",
   api: "fund",
-  usage: "USAGE: IBQ [YEAR] [SECTOR|INDUSTRY]",
+  usage: "USAGE: IBQ [YEAR] [SECTOR|INDUSTRY|SIC|DIV]",
   keys: "IQR = DISPERSION",
   params: (p) => ibqParams(p.args),
 });

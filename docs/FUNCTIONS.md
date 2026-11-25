@@ -244,7 +244,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SCORE` | Formula scores: Altman, Piotroski, Beneish, Ohlson, Merton | yes |  | `AAPL SCORE` |
 | `REVS` | Estimate revision score (inputs shown) | yes |  | `AAPL REVS` |
 | `FRM` | One XBRL concept for every filer, point in time |  | `<TAG> [CY2024] [ASOF=YYYY-MM-DD]` | `FRM` |
-| `IBQ` | Industry roll-ups: median margins, growth, valuation |  | `[YEAR] [INDUSTRY]` | `IBQ` |
+| `IBQ` | Industry roll-ups: median margins, growth, valuation |  | `[YEAR] [SECTOR\|INDUSTRY\|SIC\|DIV]` | `IBQ` |
 
 ### Research: Filings and owners
 
