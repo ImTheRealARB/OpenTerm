@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
     async def _stored_settings() -> dict:
         return (await SettingsStore(db).get())["settings"] or {}
 
-    app.state.recorder = Recorder(rec_root, service, _stored_settings, DEFAULT_POLL_S)
+    app.state.recorder = Recorder(rec_root, service, _stored_settings, DEFAULT_POLL_S, kite=ticker)
     from .query.notebook import NotebookServer  # Phase 31 NB: nothing starts until the user asks
 
     app.state.nb = NotebookServer(settings.openterm_db_path, settings.openterm_port)

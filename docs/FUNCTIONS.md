@@ -375,7 +375,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
 | `LOG` | Backend log |  |  | `LOG` |
 | `EXT` | Third-party extensions: list, enable, run (their code runs with your permissions) |  | `[LIST \| ENABLE name \| DISABLE name \| name [route] [args]]` | `EXT` |
-| `REC` | Recorder: crypto trades and order book kept on this computer |  | `[SYMBOL ON\|OFF]` | `REC` |
+| `REC` | Recorder: crypto trades and order book, or Kite prints and book of an Indian symbol, kept on this computer |  | `[SYMBOL ON\|OFF]` | `REC` |
 
 ## Global keyboard shortcuts
 

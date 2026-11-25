@@ -303,6 +303,7 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
 - Practice while replaying: Shift+B buys 100, Shift+S sells 100, Shift+F flattens; each fills at the next bar's open. Shift+J saves the session's trades to JRNL as `REPLAY <SYMBOL> <date>`. Nothing is ever sent to a broker.
 - Stop and target exits for the practice book: `AAPL GP 1Y REPLAY 2024-03-01 STOP=5 TARGET=10` (percent from the average entry price) close the position when a revealed bar reaches a level, by the same rule as BT's exits: a bar that opened beyond a level exits at its open, a bar that reached one level exits there, and a bar that reached BOTH is settled by 60-minute bars (a daily or longer replay loads the last 2 years) or else the stop counts first. The line under the chart says which rule decided each exit.
 - Linked GP panels (`LINK A`) that are also replaying follow the same clock.
+- `REC RELIANCE.NS ON` (needs a Kite login; `OFF` stops) records an Indian symbol from the Kite ticker, read-only: every price print with the volume gained, and every change of the best-five book (the instrument is held in Kite's full mode while it records). Off by default, same disk cap and retention as crypto recordings, and it ends by itself, saying so, when the Kite login ends. Replay with `TAS RELIANCE.NS REC=<id>` and `DOM RELIANCE.NS REC=<id>` (the side is the tick-rule guess, labelled ESTIMATED; FOOT needs exact trades and refuses a Kite session).
 
 ## Phase 26: strategy lab
 

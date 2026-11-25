@@ -1,12 +1,12 @@
 /**
- * REC (Phase 24): the optional recorder for crypto trades and order-book snapshots.
+ * REC (Phase 24): the optional recorder for crypto trades and order-book snapshots, and for Kite prints and books of Indian symbols.
  *
  *   REC                    running recordings + stored sessions
  *   REC BTCUSDT ON | OFF   start / stop recording that pair
  *
  * OFF BY DEFAULT: nothing records until you type `REC <SYMBOL> ON`. Files stay on this computer only (`<db folder>/recordings`).
  * Limits: SETTINGS RECORDER CAP <MB> | DAYS <n>. Keys: arrows move, Enter opens FOOT on the session, T = TAS, M = DOM (the order book),
- * S stops a running recording, D twice deletes a stored session, F5 refreshes. Crypto only (Binance spot pairs).
+ * S stops a running recording, D twice deletes a stored session, F5 refreshes. Crypto = Binance spot pairs; India = Kite-served symbols (needs a login).
  * `FOOT BTCUSDT REC=<id>`, `TAS ... REC=<id>` and `DOM ... REC=<id>` show a session instead of live data.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -177,7 +177,7 @@ export default function REC({ panelId, args }: FunctionProps) {
       {confirm && <div className="line warn">DELETE {confirm}? PRESS D AGAIN (ANY OTHER KEY CANCELS)</div>}
       {note && <div className="line" data-testid="rec-note">{note}</div>}
       {error && <div className="line err">{error}</div>}
-      {listing && rows.length === 0 && !error && <div className="line dim">NOTHING RECORDED YET. TYPE REC BTCUSDT ON TO START (CRYPTO ONLY).</div>}
+      {listing && rows.length === 0 && !error && <div className="line dim">NOTHING RECORDED YET. TYPE REC BTCUSDT ON TO START (OR REC RELIANCE.NS ON WITH A KITE LOGIN).</div>}
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>
   );

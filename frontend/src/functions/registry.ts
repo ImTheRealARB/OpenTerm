@@ -191,7 +191,7 @@ const defs: FunctionDef[] = [
   { code: "TPO", title: "Market profile (TPO): letters per time bracket, POC, value area, initial balance", needsSecurity: false, argsSchema: "[SYMBOL] [DAYS 1-20] [BRACKET=30]", load: () => import("./TPO") },
   { code: "DOM", title: "Depth ladder, read only: asks above, bids below (crypto)", needsSecurity: false, argsSchema: "[PAIR] [LEVELS 5-50]", load: () => import("./DOM") },
   { code: "LIQH", title: "Liquidity heatmap: order book depth over time while the panel is open (crypto)", needsSecurity: false, argsSchema: "[PAIR]", load: () => import("./LIQH") },
-  { code: "REC", title: "Recorder: crypto trades and order book kept on this computer", needsSecurity: false, argsSchema: "[SYMBOL ON|OFF]", load: () => import("./REC") },
+  { code: "REC", title: "Recorder: crypto trades and order book, or Kite prints and book of an Indian symbol, kept on this computer", needsSecurity: false, argsSchema: "[SYMBOL ON|OFF]", load: () => import("./REC") },
   { code: "OSCAN", title: "Option scan: IV rank, expected move, OI, put/call ratio", needsSecurity: false, argsSchema: "<UNIVERSE> [IVR>50] [EM>5]", load: () => import("./OSCAN") },
   { code: "OREC", title: "Option chain recorder and IV rank", needsSecurity: true, argsSchema: "[WATCHLIST|OFF]", load: () => import("./OREC") },
   { code: "EMOV", title: "Earnings move: implied vs past reports", needsSecurity: true, load: () => import("./EMOV") },

@@ -20,7 +20,7 @@ _STATUS = {"bad_request": 400, "not_found": 404, "conflict": 409, "forbidden": 4
 
 
 class SymbolBody(BaseModel):
-    symbol: str = Field(..., max_length=24)
+    symbol: str = Field(..., max_length=40)
 
 
 def _fail(e: RecorderError):

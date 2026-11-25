@@ -20,6 +20,13 @@ File format (every line has `k`):
   {"k":"t","id":<aggregate id>,"t":<ms>,"p":<price>,"q":<coins>,"buy":true|false}      one per NEW trade (de-duplicated by id)
   {"k":"d","t":<epoch ms of the poll>, ...depth payload as `/api/world/cdep` returns it...}   one per poll
   {"k":"end","t":<epoch s>,"reason":"STOPPED"|"DISK CAP <n> MB"|...}                    written when the recording ends
+
+Indian symbols (`REC RELIANCE.NS ON`, needs a Kite login) are recorded from the Kite ticker instead of polled: the symbol is held
+in full mode and every print and every CHANGE of the best-five book is appended (buffered, flushed every `poll_s`):
+  {"k":"meta","v":1,"symbol":"RELIANCE.NS","started":..,"venue":"KITE","kite":true}
+  {"k":"kt","t":<ms>,"p":<last price>,"q":<volume gained since the previous packet>}      q = 0 is the reference print (first packet)
+  {"k":"kd","t":<ms>,"buy":[[qty,price,orders]*5],"sell":[[qty,price,orders]*5]}            only when the book changed
+The side of a Kite print is never stored (the feed has none): replay guesses it with the tick rule and says ESTIMATED.
 """
 
 from __future__ import annotations
@@ -37,8 +44,10 @@ import orjson
 
 from . import errkinds as K
 from .errors import DataError
+from .kite.symbols import to_kite
 from .router import AllFailed
 from .world import cryptodepth as cd
+from .world import kiteflow
 from .world import orderflow as of
 
 log = logging.getLogger("openterm.recorder")
@@ -46,7 +55,7 @@ log = logging.getLogger("openterm.recorder")
 DEFAULT_CAP_MB = 500
 DEFAULT_RETENTION_DAYS = 14
 DEFAULT_POLL_S = 5.0
-SESSION_RE = re.compile(r"^([A-Z0-9]{2,20})/(\d{4}-\d{2}-\d{2}-\d{6})$")  # a session id: SYMBOL/YYYY-MM-DD-HHMMSS
+SESSION_RE = re.compile(r"^([A-Z0-9]{2,30})/(\d{4}-\d{2}-\d{2}-\d{6})$")  # a session id: SYMBOL/YYYY-MM-DD-HHMMSS
 MAX_SESSION_LINES = 50_000  # GET /session returns at most this many lines (a tail of the file): the response stays bounded
 MAX_SESSION_BYTES = 12_000_000
 
@@ -73,6 +82,9 @@ class _Active:
         self.errors = 0
         self.last_error: str | None = None
         self.task: asyncio.Task | None = None
+        self.kite: str | None = None  # the Yahoo-style symbol when this is a Kite recording
+        self.buffer: list[dict[str, Any]] = []  # Kite lines waiting for the next flush
+        self.last_book: Any = None  # the last depth written (a book is written only when it changed)
 
     @property
     def session_id(self) -> str:
@@ -80,7 +92,7 @@ class _Active:
 
 
 class Recorder:
-    def __init__(self, root: Path | None, svc: Any, settings_get: Any, poll_s: float = DEFAULT_POLL_S):
+    def __init__(self, root: Path | None, svc: Any, settings_get: Any, poll_s: float = DEFAULT_POLL_S, kite: Any = None):
         """`root` = `<db dir>/recordings` (None for an in-memory database: recording is then refused).
         `settings_get` = async callable returning the stored settings dict (so the cap and retention are read fresh each time).
         `poll_s` is a plain attribute on purpose: tests set it to a few milliseconds."""
@@ -88,6 +100,7 @@ class Recorder:
         self.svc = svc
         self.settings_get = settings_get
         self.poll_s = poll_s
+        self.kite = kite  # the Kite ticker (None in fixture mode): Indian symbols are recorded from it
         self.active: dict[str, _Active] = {}
         self.stopped_notes: dict[str, str] = {}  # symbol -> why its last recording ended on its own (disk cap, errors)
 
@@ -123,6 +136,8 @@ class Recorder:
     async def start(self, symbol: str) -> dict[str, Any]:
         if self.root is None:
             raise RecorderError("bad_request", "RECORDER NEEDS A DATABASE FILE (NOT :memory:)")
+        if to_kite(symbol):
+            return await self._start_kite(symbol.strip().upper())
         try:
             base, quote = cd.parse_pair(symbol)
         except ValueError as e:
@@ -146,12 +161,82 @@ class Recorder:
         rec.task = asyncio.create_task(self._run(rec, base, quote), name=f"recorder:{sym}")
         return self._active_row(rec)
 
-    async def stop(self, symbol: str) -> dict[str, Any]:
+    async def _start_kite(self, symbol: str) -> dict[str, Any]:
+        """Records an Indian symbol from the Kite ticker (read-only): prints and book changes, no polling."""
+        assert self.root is not None
         try:
-            base, quote = cd.parse_pair(symbol)
-        except ValueError as e:
-            raise RecorderError("bad_request", "RECORDER: CRYPTO ONLY (BINANCE SPOT PAIRS LIKE BTCUSDT)") from e
-        sym = f"{base}{'USDT' if quote == 'USD' else quote}"
+            kiteflow.need_ticker(self.kite)
+        except DataError as e:
+            raise RecorderError("bad_request", f"RECORDING {symbol} NEEDS THE KITE TICKER: {e}") from e
+        key = _clean(symbol)
+        if key in self.active:
+            raise RecorderError("conflict", f"ALREADY RECORDING {symbol}")
+        cap, retention = await self._limits()
+        self.delete_old(retention)
+        if self.total_bytes() >= cap:
+            raise RecorderError("conflict", f"RECORDER STOPPED: DISK CAP {cap // 1_000_000} MB (DELETE OLD SESSIONS IN REC)")
+        (self.root / key).mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
+        rec = _Active(key, self.root / key / f"{stamp}.jsonl")
+        rec.kite = symbol
+        self._write(rec, [{"k": "meta", "v": 1, "symbol": symbol, "started": rec.started, "venue": "KITE", "kite": True}])
+        self.stopped_notes.pop(key, None)
+        self.active[key] = rec
+
+        def on_event(sym: str, kind: str, data: dict[str, Any]) -> None:
+            if sym != symbol:
+                return
+            if kind == "t":
+                rec.buffer.append({"k": "kt", "t": data["t"], "p": data["p"], "q": data["q"]})
+                if data["q"] > 0:
+                    rec.trades += 1
+            else:
+                book = (data["buy"], data["sell"])
+                if book != rec.last_book:  # a packet that repeats the same book adds nothing
+                    rec.last_book = book
+                    rec.buffer.append({"k": "kd", "t": data["t"], "buy": data["buy"], "sell": data["sell"]})
+                    rec.snapshots += 1
+
+        rec.listener = on_event  # type: ignore[attr-defined]
+        self.kite.listeners.append(on_event)
+        self.kite.hold(symbol)  # subscribed in full mode until `_finish`
+        rec.task = asyncio.create_task(self._run_kite(rec), name=f"recorder:{key}")
+        return self._active_row(rec)
+
+    async def _run_kite(self, rec: _Active) -> None:
+        """Flushes the buffered Kite lines every `poll_s` and ends the recording at the disk cap or when the Kite login ends."""
+        try:
+            while True:
+                await asyncio.sleep(self.poll_s)
+                self._flush(rec)
+                cap, _ = await self._limits()
+                if self.total_bytes() >= cap:
+                    await self._finish(rec, f"DISK CAP {cap // 1_000_000} MB")
+                    log.warning("recorder %s: RECORDER STOPPED: DISK CAP %d MB", rec.symbol, cap // 1_000_000)
+                    return
+                if not self.kite.session.logged_in:  # the daily login ended: nothing more will arrive, say so instead of idling
+                    await self._finish(rec, "KITE LOGIN ENDED")
+                    return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("recorder %s crashed", rec.symbol)
+            await self._finish(rec, "CRASHED (SEE LOG)")
+
+    def _flush(self, rec: _Active) -> None:
+        if rec.buffer:
+            lines, rec.buffer = rec.buffer, []
+            self._write(rec, lines)
+
+    async def stop(self, symbol: str) -> dict[str, Any]:
+        if to_kite(symbol):
+            sym = _clean(symbol)
+        else:
+            try:
+                base, quote = cd.parse_pair(symbol)
+            except ValueError as e:
+                raise RecorderError("bad_request", "RECORDER: CRYPTO ONLY (BINANCE SPOT PAIRS LIKE BTCUSDT) OR KITE-SERVED INDIAN SYMBOLS") from e
+            sym = f"{base}{'USDT' if quote == 'USD' else quote}"
         rec = self.active.get(sym)
         if rec is None:
             raise RecorderError("not_found", f"NOT RECORDING {sym}")
@@ -169,6 +254,12 @@ class Recorder:
         if task is not None and task is not asyncio.current_task():
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+        if rec.kite is not None and self.kite is not None:
+            listener = getattr(rec, "listener", None)
+            if listener in self.kite.listeners:
+                self.kite.listeners.remove(listener)
+            self.kite.release(rec.kite)
+            self._flush(rec)
         self._write(rec, [{"k": "end", "t": time.time(), "reason": reason}])
         if reason not in ("STOPPED", "SERVER STOPPED"):
             self.stopped_notes[rec.symbol] = reason
@@ -271,6 +362,8 @@ class Recorder:
         meta: dict[str, Any] | None = None
         trades: list[dict[str, Any]] = []
         depth: list[dict[str, Any]] = []
+        kticks: list[dict[str, Any]] = []  # Kite sessions: prints and book changes (see the module note)
+        kdepth: list[dict[str, Any]] = []
         end: dict[str, Any] | None = None
         if truncated:  # the meta line is at the file head: read it separately
             with p.open("rb") as f:
@@ -287,13 +380,22 @@ class Recorder:
                 trades.append(row)
             elif k == "d":
                 depth.append(row)
+            elif k == "kt":
+                kticks.append(row)
+            elif k == "kd":
+                kdepth.append(row)
             elif k == "end":
                 end = row
         if len(trades) > MAX_SESSION_LINES:
             trades, truncated = trades[-MAX_SESSION_LINES:], True
         if len(depth) > MAX_SESSION_LINES // 10:
             depth, truncated = depth[-(MAX_SESSION_LINES // 10):], True
-        return {"id": sid, "meta": meta, "trades": trades, "depth": depth, "end": end, "truncated": truncated, "bytes": size}
+        if len(kticks) > MAX_SESSION_LINES:
+            kticks, truncated = kticks[-MAX_SESSION_LINES:], True
+        if len(kdepth) > MAX_SESSION_LINES // 5:
+            kdepth, truncated = kdepth[-(MAX_SESSION_LINES // 5):], True
+        return {"id": sid, "meta": meta, "trades": trades, "depth": depth, "kticks": kticks, "kdepth": kdepth, "end": end, "truncated": truncated,
+                "bytes": size}
 
     def delete_session(self, sid: str) -> None:
         p = self._path(sid)
@@ -326,15 +428,35 @@ class Recorder:
         now = time.time()
         return {"data": data, "source": "recorder", "as_of": now, "age_s": 0.0, "stale": False, "fallback_from": []}
 
+    @staticmethod
+    def _is_kite(s: dict[str, Any]) -> bool:
+        return bool((s.get("meta") or {}).get("kite"))
+
+    @staticmethod
+    def _kite_recorded(s: dict[str, Any], count: int) -> dict[str, Any]:
+        started = (s["meta"] or {}).get("started") or _stamp_to_epoch(s["id"].split("/")[1])
+        return {"id": s["id"], "started": started, "ended": (s["end"] or {}).get("t"), "reason": (s["end"] or {}).get("reason"),
+                "truncated": s["truncated"], "snapshots": count}
+
     def replay_tas(self, sid: str, limit: int) -> dict[str, Any]:
-        trades, head = self._replay_head(self.read_session(sid))
+        s = self.read_session(sid)
+        if self._is_kite(s):  # a Kite session: the tick rule guesses the sides, exactly as the live Kite TAS does
+            prints = [(i, t["t"], t["p"], t["q"]) for i, t in enumerate(s["kticks"], 1)]
+            if not any(p[3] > 0 for p in prints):
+                raise RecorderError("not_found", f"SESSION {sid} HAS NO PRINTS YET")
+            data = kiteflow.tas_payload(s["meta"]["symbol"], prints, limit, venue="KITE (RECORDED)")
+            return self._replay_envelope({**data, "recorded": self._kite_recorded(s, len(s["kdepth"]))})
+        trades, head = self._replay_head(s)
         return self._replay_envelope({**head, "rows": of.recent(trades, limit)})
 
     def replay_footprint(self, sid: str, interval: str, bars: int, step: float | None) -> dict[str, Any]:
         iv = of.INTERVAL_MS.get(interval)
         if iv is None:
             raise RecorderError("bad_request", f"INTERVAL: {', '.join(of.INTERVAL_MS)}")
-        trades, head = self._replay_head(self.read_session(sid))
+        s = self.read_session(sid)
+        if self._is_kite(s):
+            raise RecorderError("bad_request", "FOOT NEEDS EXACT TRADES: A KITE SESSION HAS ONLY PRICE AND VOLUME PRINTS (USE TAS OR DOM)")
+        trades, head = self._replay_head(s)
         try:
             # truncated=True marks the OLDEST bar partial: a recording starts mid-bar, so that bar lacks its first trades.
             fp = of.footprint(trades, iv, bars, step, True)
@@ -345,16 +467,27 @@ class Recorder:
     def replay_depth(self, sid: str, index: int) -> dict[str, Any]:
         """Snapshot number `index` (0 = oldest; negative counts from the newest, so -1 = the last one) in the CDEP / DOM payload shape."""
         s = self.read_session(sid)
-        snaps = s["depth"]
+        snaps = s["kdepth"] if self._is_kite(s) else s["depth"]
         if not snaps:
             raise RecorderError("not_found", f"SESSION {sid} HAS NO ORDER-BOOK SNAPSHOTS YET")
         if not -len(snaps) <= index < len(snaps):
             raise RecorderError("bad_request", f"SNAPSHOT {index} OUT OF RANGE (0 TO {len(snaps) - 1})")
         snap = dict(snaps[index])
         recorded_t = snap.pop("t")
+        if self._is_kite(s):
+            data = kiteflow.depth_payload(s["meta"]["symbol"], {"t": recorded_t, "buy": snap["buy"], "sell": snap["sell"]})
+            data["venue"] = "KITE (RECORDED) · BEST 5 LEVELS A SIDE"
+            started = (s["meta"] or {}).get("started") or _stamp_to_epoch(sid.split("/")[1])
+            return self._replay_envelope({**data, "recorded": {"id": sid, "started": started, "at": recorded_t, "index": index % len(snaps),
+                                                               "count": len(snaps), "ended": (s["end"] or {}).get("t"), "truncated": s["truncated"]}})
         started = (s["meta"] or {}).get("started") or _stamp_to_epoch(sid.split("/")[1])
         return self._replay_envelope({**snap, "recorded": {"id": sid, "started": started, "at": recorded_t, "index": index % len(snaps),
                                                            "count": len(snaps), "ended": (s["end"] or {}).get("t"), "truncated": s["truncated"]}})
+
+
+def _clean(symbol: str) -> str:
+    """The folder / session name of a symbol: letters and digits only (`RELIANCE.NS` -> `RELIANCENS`), the rule `recArgs.sessionId` uses."""
+    return re.sub(r"[^A-Z0-9]", "", symbol.upper())
 
 
 def _loads(line: bytes) -> dict[str, Any] | None:

@@ -2,7 +2,8 @@
  * Pure helpers of the recorder panel and of `REC=<id>` on FOOT / TAS / DOM (no React, no request layer: vitest imports it).
  *
  *   REC                       list running recordings and stored sessions
- *   REC BTCUSDT ON | OFF      start / stop recording that pair (crypto only; OFF BY DEFAULT: nothing records until you type ON)
+ *   REC BTCUSDT ON | OFF      start / stop recording that pair (OFF BY DEFAULT: nothing records until you type ON)
+ *   REC RELIANCE.NS ON        an Indian symbol from the Kite ticker (needs a Kite login; prints and book changes)
  *   FOOT BTCUSDT REC=2026-11-24-101500        show a recorded session instead of live data
  *
  * A session's id on screen is its start stamp `YYYY-MM-DD-HHMMSS` (UTC). The server names a session `SYMBOL/STAMP`; a command may
@@ -11,7 +12,7 @@
  */
 
 const STAMP = String.raw`\d{4}-\d{2}-\d{2}-\d{6}`;
-const REC_TOKEN = new RegExp(String.raw`^REC=(?:([A-Z0-9]{2,20})/)?(${STAMP})$`);
+const REC_TOKEN = new RegExp(String.raw`^REC=(?:([A-Z0-9]{2,30})/)?(${STAMP})$`);
 
 export interface RecSplit {
   rest: string[];
