@@ -36,7 +36,7 @@ Print = tuple[int, int, float, int]
 def need_ticker(ticker: Any) -> None:
     """Raises the right DataError unless the Kite ticker exists and the login is valid."""
     if ticker is None:
-        raise DataError(K.UNSUPPORTED, "KITE TICKER IS NOT RUNNING (FIXTURE MODE)")
+        raise DataError(K.LOGIN_REQUIRED, "KITE TICKER IS NOT RUNNING: LOG IN TO KITE IN APIKEYS (NOT AVAILABLE IN FIXTURE MODE)")  # LOGIN_REQUIRED has an HTTP status (401); UNSUPPORTED has none and became a 500
     if not ticker.session.logged_in:
         kind = {"NO KEY": K.KEY_REQUIRED, "KITE LOGIN EXPIRED": K.LOGIN_EXPIRED}.get(ticker.session.state, K.LOGIN_REQUIRED)
         raise DataError(kind, ticker.session.message() or "KITE LOGIN NEEDED")
