@@ -13,7 +13,7 @@ import json
 from datetime import date, timedelta
 from typing import Any
 
-from ..errkinds import KEY_REQUIRED
+from ..errkinds import KEY_REQUIRED, NOT_FOUND
 from ..errors import DataError
 from ..research.table import col, head, payload, section
 from ..router import AllFailed
@@ -113,7 +113,8 @@ async def _fill_values(svc: Any, rows: list[dict[str, Any]]) -> list[str]:
                 doc, _ = await svc.router.call("sec_doc", lambda p: p.document_text(row["doc_url"]))
             except AllFailed as e:
                 row["value"] = "NOT READ"
-                failed.append(str(e)[:80])
+                # The router's generic wording talks about a SYMBOL; here the missing thing is a filing document, so say that.
+                failed.append("DOCUMENT NOT FOUND" if e.kind == NOT_FOUND else str(e)[:80])
                 return
         found = MV.extract(doc["text"])
         row["value"] = MV.money(found["usd"]) if found else "NOT STATED"

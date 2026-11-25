@@ -2,6 +2,17 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Phases 21-32 gap pass (2026-11-25)
+Items the first build left out, now built. Commands: [docs/COMMANDS.md](docs/COMMANDS.md) and [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
+- `BT OPT ... FIT=SHARPE-2*DD`: your own fitness formula over the run metrics (safe parser, no code runs).
+- `GP ... REPLAY <date> STOP=5 TARGET=10`: stop and target exits in the practice book, settled with the backtester's intrabar rule.
+- Kite (read-only): `DOM RELIANCE.NS` shows the Indian 5-level book, `TAS RELIANCE.NS` an estimated tape (tick rule, labelled ESTIMATED), `REC RELIANCE.NS ON` records Kite prints and book changes.
+- `EQS` filters, sorts and shows SEC formula fields (`EQS ROE>15 MARGIN>10`, percent).
+- `IBQ 2024 SIC` (or `DIV`) groups by SEC industry code.
+- `BIO` adds a proxy statement (DEF 14A) name-match section.
+- New `ETS` (`AA ETS`): EU emissions trading verified emissions by account holder (Union Registry public data).
+- `MA` rows show the stated deal value with the sentence it came from, or NOT STATED / NOT READ.
+
 ## Phases 21-32: charts, order flow, replay, strategy lab, scanners, options, fundamentals, macro, query language, AI in functions (2026-11-24)
 Commands and keys for all of these: [docs/COMMANDS.md](docs/COMMANDS.md). Phase 25 (a script language) is deferred.
 - Charts (21): 30 drawing tools with an object tree, 16 chart types (adds Renko, Kagi, point and figure, line break, range, columns, high-low, step, volume candles), candle lengths from 2 hours to 12 months, Binance 1-second bars.

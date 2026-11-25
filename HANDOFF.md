@@ -5,6 +5,31 @@ from `main`. The older copies of this file on `claude/gifted-galileo-w6y22a` and
 
 ## Resume here
 
+**RESUME HERE: Phases 21-32 gap pass (2026-11-25).** Local `main` was fast-forwarded to the Phases 21-32 branch tip (`cf25759`,
+owner's request, NOT pushed). Two Sonnet sessions audited all 100 picks against the code and built the missing ones on
+`claude/gaps-21-27-chart-5df9b3` (4 commits) and `claude/gaps-28-32-data-82eb6f` (5 commits); both are merged into
+`claude/handoff-phases-21-33-c6fd04` with this doc update. Audit files (local only): `docs/review/GAPS_21-27.md`, `GAPS_28-32.md` in those worktrees.
+- Built: BT OPT custom `FIT=` formulas (`bt/fitexpr.py`, ast allowlist, no eval); REPLAY `STOP=` / `TARGET=` (`chart/replay.ts`
+  `decideExit` = TS port of `bt/stops.py`); Kite DOM depth (`world/kiteflow.py`, `KiteTicker.pin(sym, depth=True)` = full mode for one
+  instrument, 90 s); Kite tick-rule TAS (REST route pins the symbol, no `/ws` path; label ESTIMATED (TICK RULE)); Kite recording in `REC`
+  (`kt` / `kd` lines; FOOT refuses a Kite session); EQS SEC formula fields (`/api/fund/eqsfund`, percent units); `IBQ 2024 SIC|DIV`; BIO DEF 14A name
+  match (full-text search; the proxy board table is NOT parsed); new `ETS` (EU verified emissions by holder name, no ticker map); MA
+  deal values (`filings/ma_value.py`, cover-page valuation or value-word sentence, never a per-share price).
+- Skipped with reason: XBRL customer concentration (needs every filing's full XBRL instance, several MB each); NY Fed Staff Nowcast
+  (the only workbook is a frozen archive ending 2021-08-27); Zillow (terms page answers 403, so terms unread; not bypassed).
+  Dropped by the owner: IMF papers, NBER, revenue consensus. Phase 25 still deferred.
+- **Next (new gaps the audit found, not built, usage ran short):** FX options should fetch the two rates (FRED / central bank)
+  and the pair's past vol as labelled defaults (today `OV ... RF= RD=` must be typed); BIO should parse the proxy's board and officer
+  table; RE needs India house prices (RBI HPI). CN news digest is a chip, not a card (by design, owner may want a card).
+- **Owner checks on a day with a fresh Kite login:** `DOM RELIANCE.NS` and `DOM NIFTY26NOVFUT.NFO` (5 levels a side, compare with the
+  Kite app; equity full-mode packets never recorded); `TAS RELIANCE.NS` while trading; `REC RELIANCE.NS ON` a few minutes, OFF, then
+  `TAS|DOM RELIANCE.NS REC=<id>`, and the recording must stop with KITE LOGIN ENDED when the login expires. Checkable now:
+  `GP AAPL REPLAY <date> STOP=5 TARGET=10`, `BT OPT ... FIT=SHARPE-2*DD`, `EQS ROE>15 MARGIN>10`, `IBQ 2024 SIC`, `AA ETS`, `AAPL MA`.
+- Gate on the merged branch (2026-11-25, CI=1): ALL GATES PASS, pytest 4276, e2e 457 (smoke spec 88/88), vitest, tsc, eslint, ruff.
+  The first two gate runs caught regressions the sessions' targeted tests missed (an MA fixture catch-all that hid older SEC fixtures,
+  a 500 for Kite symbols on the crypto flow route, the BT OPT and MA smoke cases); all fixed. No bench this pass (no hot-path change).
+  `test_phase24_recorder.py::test_the_disk_cap_stops_a_recording_and_says_so` failed once under 10 workers (KeyError 'BTCUSDT'), passes alone 3/3: watch it.
+
 **RESUME HERE: Phases 21-32 build (started 2026-11-24, local commits, NOT pushed). Current branch
 `claude/phases-21-32-build-resume-f09808` (worktree `.claude/worktrees/phases-21-32-build-resume-f09808`; fast-forwarded from
 `...-8ff923` at 4565a3f). Phases 21-24 and 26-32 are DONE: Phase 25 deferred, so the 21-32 build is COMPLETE (Phase 29 gate 2026-11-24: pytest 4167, e2e 431; OIB needs a live Kite login to check). Phase 29 not built: EQS live-screener formula columns (only EQS BT has the fields), SIC grouping in IBQ, BIO boards from DEF 14A, EU ETS, MA deal values; CourtListener is doc-shaped (never run with a key). Phases 30-32: see their entries below. Branch pushed to origin 2026-11-24 with NO PR: the owner tests every feature by hand (local `docs/TEST_CHECKLIST.md` sections 28-38), then opens the PR to `main` himself (`main` has none of 21-32 yet). Phase 33 and Phase 25 are not started. To test: `cd .claude\worktrees\phases-21-32-build-resume-f09808; .\scripts\start.ps1` (or check out the branch in the main folder).**

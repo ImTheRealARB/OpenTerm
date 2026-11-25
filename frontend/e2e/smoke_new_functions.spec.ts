@@ -93,7 +93,7 @@ const CASES: Case[] = [
   { cmd: "EQS BT MARGIN>0.1 UNIV=LIST:AAPL,MSFT FROM=2023", want: /SURVIVORSHIP BIAS/, timeout: 60_000 },
   // Phase 29: filings (the SEC search is replayed only for the exact recorded query, so these carry the recorded dates)
   { cmd: 'FTS "going concern" FORM=10-K FROM=2024-01-01 TO=2024-12-31', want: /SEC EDGAR FULL-TEXT SEARCH: THE SEC'S OWN INDEX/ },
-  { cmd: "MA FROM=2024-10-01 TO=2024-12-31", want: /VALUE: ONLY WHEN THE FILING STATES IT/ },
+  { cmd: "MA FROM=2024-10-01 TO=2024-12-31", want: /VALUE: A DOLLAR FIGURE THE FILING TEXT STATES/ },
   { cmd: "AAPL LEGAL", want: /KEY REQUIRED: set COURTLISTENER_API_KEY in APIKEYS/ },
   { cmd: "BIO 1214156 FROM=2023-01-01 TO=2025-12-31", want: /TEXT MATCH FOR "TIMOTHY COOK" IN DEF 14A/ },
   { cmd: "GOOGL RELS", want: /SAME-CIK TICKERS/ },
