@@ -43,6 +43,8 @@ BT_LABEL = "HISTORICAL SIMULATION, NOT A FORECAST"
 MAX_PEERS = 4
 MAX_UNIVERSE = 60
 FRAME_TTL = 86400.0  # a calendar year's frame changes only when late filers file
+EQSFUND_FIELDS = ("MARGIN", "OPMARGIN", "ROE", "GROWTH", "DE")  # order = the columns of the `rows` lists
+EQSFUND_MIN_FILERS = 3000  # a calendar year with fewer revenue filers than this is "not filed yet" (about 5,000 file a year)
 
 
 def _env(data: dict) -> dict:
@@ -489,6 +491,41 @@ class Fund:
              "SIC CODES ARE NOT IN THE FREE SCREENER: GROUPS ARE NASDAQ'S SECTOR / INDUSTRY", "GROUPS WITH FEW NAMES ARE NOISY"],
             f"SEC XBRL FRAMES + {scr.get('source')}")
         return _env(out)
+
+    # --- EQS fundamentals columns (live screener) -----------------------------------------------------
+    async def fn_eqsfund(self, year: str | None = None, **_: Any) -> dict:
+        """Formula fields (MARGIN OPMARGIN ROE GROWTH DE) for every screener name that files with the SEC.
+
+        The live EQS panel joins this to its universe by symbol and lets `ROE>15 MARGIN>10` filter and sort on it. Same
+        concepts and formulas as EQS BT (`frames.fields_for`), on the newest calendar year most filers have reported.
+        Ratios that are fractions in `fields_for` are served here in PERCENT (so `ROE>15` and `ROE>15%` mean the same).
+        """
+        y = int(year) if year else date.today().year - 1
+        notes: list[str] = []
+        concepts = {k: await self.concept_year(k, y) for k in fr.CONCEPTS}
+        if not year and len(concepts["revenue"]) < EQSFUND_MIN_FILERS:
+            # Early in the year most 10-Ks are not in yet: use the year before and say so.
+            y -= 1
+            concepts = {k: await self.concept_year(k, y) for k in fr.CONCEPTS}
+            notes.append(f"CY{y + 1} IS NOT FILED BY MOST COMPANIES YET: SHOWING CY{y}")
+        prev_rev = await self.concept_year("revenue", y - 1)
+        scr = (await self.svc.screener())["data"]
+        si = scr["columns"].index("symbol")
+        by_ticker = {t: c for c, ts in (await self.sec.tickers_by_cik()).items() for t in ts}
+        rows: dict[str, list[float | None]] = {}
+        for row in scr["rows"]:
+            sym = row[si]
+            cik = by_ticker.get(sym) or by_ticker.get(str(sym).replace("/", "-"))
+            if cik is None:
+                continue
+            cur = {k: (m.get(cik) or {}).get("val") for k, m in concepts.items()}
+            f = fr.fields_for(cur, {"revenue": (prev_rev.get(cik) or {}).get("val")})
+            vals = [None if f[k] is None else round(f[k] * (1 if k == "DE" else 100), 4) for k in EQSFUND_FIELDS]
+            if any(v is not None for v in vals):
+                rows[sym] = vals
+        notes += [f"SEC XBRL FRAMES, CALENDAR YEAR {y}; MARKET DATA IS TODAY'S SCREENER", "US SEC FILERS ONLY: OTHER NAMES NEVER PASS A FUNDAMENTALS FILTER",
+                  "MARGIN OPMARGIN ROE GROWTH ARE PERCENT; DE = LIABILITIES / EQUITY (A RATIO); ROE AND DE NEED POSITIVE EQUITY"]
+        return _env({"year": y, "fields": list(EQSFUND_FIELDS), "rows": rows, "notes": notes, "source": "SEC XBRL FRAMES"})
 
     # --- REVS: estimate revision score ---------------------------------------------------------------
     async def fn_revs(self, symbol: str | None = None, **_: Any) -> dict:

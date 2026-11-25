@@ -88,6 +88,7 @@ const CASES: Case[] = [
   { cmd: "AAPL REVS", want: /50 x BREADTH/ },
   { cmd: "FRM NetIncomeLoss CY2024", want: /KNOWN DATE = PERIOD END/ },
   { cmd: "IBQ 2024", want: /IQR = 75TH MINUS 25TH/ },
+  { cmd: "EQS ROE>0 MARGIN>0", want: /SEC FIGURES CY20\d\d/, timeout: 30_000 },
   { cmd: "EQS BT MARGIN>0.1 UNIV=LIST:AAPL,MSFT FROM=2023", want: /SURVIVORSHIP BIAS/, timeout: 60_000 },
   // Phase 29: filings (the SEC search is replayed only for the exact recorded query, so these carry the recorded dates)
   { cmd: 'FTS "going concern" FORM=10-K FROM=2024-01-01 TO=2024-12-31', want: /SEC EDGAR FULL-TEXT SEARCH: THE SEC'S OWN INDEX/ },

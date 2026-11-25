@@ -88,7 +88,7 @@ const defs: FunctionDef[] = [
   { code: "SCAN", title: "Scan a list of symbols against a rule (RSI, averages, ATR...)", needsSecurity: false, argsSchema: "<UNIVERSE> <RULE> | SAVE NAME UNIVERSE RULE [DAILY=HH:MM] | SAVED | RUN|DEL NAME", load: () => import("./SCAN") },
   { code: "MRR", title: "Index movers: members ranked by return and contribution", needsSecurity: false, argsSchema: "<UNIVERSE> [1D|1W|1M|3M|YTD|1Y]", load: () => import("./MRR") },
   { code: "FSRC", title: "ETF screener: fee, size, category (US ETFs; loads in the background, PARTIAL until complete)", needsSecurity: false, argsSchema: "[FEE<0.2] [AUM>1B] [CAT=LARGE] [SORT=FEE|AUM|SYMBOL|NAME|CAT]", load: () => import("./FSRC") },
-  { code: "EQS", title: "Equity screener", needsSecurity: false, argsSchema: "[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]", load: () => import("./EQS") },
+  { code: "EQS", title: "Equity screener", needsSecurity: false, argsSchema: "[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT] [SEC: ROE>15 MARGIN>10 OPMARGIN>10 GROWTH>5 DE<1] | BT <RULES> UNIV=LIST:...", load: () => import("./EQS") },
   { code: "GIP", title: "Intraday tick chart (candles built from the live ticks seen since the session began)", needsSecurity: true, argsSchema: "[1S|5S|15S|1M]", load: () => import("./GIP"), idlePreload: false },
   { code: "IMAP", title: "Heat map of the equity universe (size = market cap, colour = % change)", needsSecurity: false, argsSchema: "[SECTOR|INDUSTRY|COUNTRY|CRYPTO|ETF] [N=3000] [EQS / FSRC filter]", load: () => import("./IMAP") },
   { code: "SEAS", title: "Seasonality (average return by month, weekday, day of month, ISO week)", needsSecurity: true, argsSchema: "[MONTH|WEEKDAY|DOM|WOY]", load: () => import("./SEAS") },

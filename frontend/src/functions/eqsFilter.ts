@@ -35,11 +35,20 @@ const NUMERIC = { PRICE: 2, CHG: 3, PCT: 4, VOL: 5, MCAP: 6, IPO: 8 } as const;
 const TEXT = { SECTOR: 9, INDUSTRY: 10, COUNTRY: 7 } as const;
 type NumField = keyof typeof NUMERIC;
 type TextField = keyof typeof TEXT;
-export type SortKey = NumField | "SYMBOL" | "NAME";
+/**
+ * Formula fields from SEC filings (Phase 29 finish): not in the Nasdaq screener rows, so they come from `/api/fund/eqsfund` as
+ * `{SYMBOL: [margin, opmargin, roe, growth, de]}` and are joined by symbol. MARGIN OPMARGIN ROE GROWTH are percent, DE is a ratio.
+ * A name without SEC numbers (a foreign or non-filer) has no value, and an unknown value never passes a numeric filter.
+ */
+export const FUND_FIELDS = ["MARGIN", "OPMARGIN", "ROE", "GROWTH", "DE"] as const;
+export type FundField = (typeof FUND_FIELDS)[number];
+export type FundMap = Record<string, (number | null)[]>;
+const isFund = (f: string): f is FundField => (FUND_FIELDS as readonly string[]).includes(f);
+export type SortKey = NumField | FundField | "SYMBOL" | "NAME";
 
 const ALIASES: Record<string, string> = {
   LAST: "PRICE", PX: "PRICE", "%CHG": "PCT", "CHG%": "PCT", PCTCHG: "PCT", VOLUME: "VOL", CAP: "MCAP",
-  MKTCAP: "MCAP", MARKETCAP: "MCAP", IND: "INDUSTRY", SEC: "SECTOR", CTRY: "COUNTRY", SYM: "SYMBOL", TICKER: "SYMBOL",
+  MKTCAP: "MCAP", MARKETCAP: "MCAP", NETMARGIN: "MARGIN", OPM: "OPMARGIN", REVGROWTH: "GROWTH", LEVERAGE: "DE", IND: "INDUSTRY", SEC: "SECTOR", CTRY: "COUNTRY", SYM: "SYMBOL", TICKER: "SYMBOL",
 };
 
 const COUNTRY_CODES: Record<string, string> = {
@@ -55,6 +64,7 @@ export type Op = ">" | ">=" | "<" | "<=" | "=" | "!=";
 
 export type Clause =
   | { kind: "num"; field: NumField; op: Op; value: number; text: string }
+  | { kind: "fund"; field: FundField; op: Op; value: number; text: string }
   | { kind: "text"; field: TextField; neg: boolean; values: string[]; text: string }
   | { kind: "name"; neg: boolean; value: string; text: string }
   | { kind: "bare"; value: string; text: string };
@@ -99,7 +109,7 @@ export function parseFilter(args: string[]): ParsedFilter {
       const dirCh = val[0] === "+" || val[0] === "-" ? val[0] : "";
       const keyRaw = val.slice(dirCh.length).toUpperCase();
       const key = (ALIASES[keyRaw] ?? keyRaw) as SortKey;
-      if (!(key in NUMERIC) && key !== "SYMBOL" && key !== "NAME") {
+      if (!(key in NUMERIC) && !isFund(key) && key !== "SYMBOL" && key !== "NAME") {
         out.errors.push(`CANNOT SORT BY ${keyRaw}`);
         continue;
       }
@@ -111,6 +121,12 @@ export function parseFilter(args: string[]): ParsedFilter {
       const n = parseNumber(val);
       if (n === null) out.errors.push(`${field}: ${val.toUpperCase()} IS NOT A NUMBER`);
       else out.clauses.push({ kind: "num", field: field as NumField, op, value: n, text });
+      continue;
+    }
+    if (isFund(field)) {
+      const n = parseNumber(val);
+      if (n === null) out.errors.push(`${field}: ${val.toUpperCase()} IS NOT A NUMBER`);
+      else out.clauses.push({ kind: "fund", field, op, value: n, text });
       continue;
     }
     if (field in TEXT || field === "NAME") {
@@ -153,6 +169,11 @@ export function matchTable(table: string[], values: string[], countryCodes = fal
   return hit;
 }
 
+/** True when the filter or its sort needs the SEC formula fields (the panel then fetches them). */
+export function usesFund(f: ParsedFilter): boolean {
+  return f.clauses.some((c) => c.kind === "fund") || (f.sort !== null && isFund(f.sort.key));
+}
+
 export interface CompiledFilter {
   test: (r: UniverseRow) => boolean;
   /** Human-readable terms after resolution, e.g. "SECTOR=TECHNOLOGY". */
@@ -172,7 +193,7 @@ const cmp = (v: number | null, op: Op, x: number) => {
   }
 };
 
-export function compileFilter(f: ParsedFilter, u: Universe): CompiledFilter {
+export function compileFilter(f: ParsedFilter, u: Universe, fund?: FundMap | null): CompiledFilter {
   const errors = [...f.errors];
   const terms: string[] = [];
   const tests: ((r: UniverseRow) => boolean)[] = [];
@@ -182,7 +203,12 @@ export function compileFilter(f: ParsedFilter, u: Universe): CompiledFilter {
     return names.length > 3 ? `${names.slice(0, 3).join(",")} +${names.length - 3}` : names.join(",");
   };
   for (const c of f.clauses) {
-    if (c.kind === "num") {
+    if (c.kind === "fund") {
+      const idx = FUND_FIELDS.indexOf(c.field);
+      if (!fund) errors.push(`${c.field}: SEC FIGURES NOT LOADED`);
+      tests.push((r) => cmp(fund?.[r[0]]?.[idx] ?? null, c.op, c.value));
+      terms.push(c.text);
+    } else if (c.kind === "num") {
       const col = NUMERIC[c.field];
       tests.push((r) => cmp(r[col] as number | null, c.op, c.value));
       terms.push(c.text);
@@ -218,17 +244,19 @@ export function compileFilter(f: ParsedFilter, u: Universe): CompiledFilter {
   return { test: (r) => tests.every((t) => t(r)), terms, errors };
 }
 
-const SORT_COL: Record<SortKey, number> = { ...NUMERIC, SYMBOL: 0, NAME: 1 };
+const SORT_COL: Record<NumField | "SYMBOL" | "NAME", number> = { ...NUMERIC, SYMBOL: 0, NAME: 1 };
 
 /** Matching rows, sorted (default: market cap, largest first). Nulls always sort last. */
-export function screen(u: Universe, f: ParsedFilter): { rows: UniverseRow[]; compiled: CompiledFilter } {
-  const compiled = compileFilter(f, u);
+export function screen(u: Universe, f: ParsedFilter, fund?: FundMap | null): { rows: UniverseRow[]; compiled: CompiledFilter } {
+  const compiled = compileFilter(f, u, fund);
   const rows = u.rows.filter(compiled.test);
   const sort = f.sort ?? { key: "MCAP" as SortKey, dir: -1 as const };
-  const col = SORT_COL[sort.key];
+  // A formula field is read from the SEC map by symbol; every other key is a column of the screener row.
+  const fi = isFund(sort.key) ? FUND_FIELDS.indexOf(sort.key) : -1;
+  const col = isFund(sort.key) ? 0 : SORT_COL[sort.key];
   rows.sort((a, b) => {
-    const x = a[col];
-    const y = b[col];
+    const x = fi >= 0 ? (fund?.[a[0]]?.[fi] ?? null) : a[col];
+    const y = fi >= 0 ? (fund?.[b[0]]?.[fi] ?? null) : b[col];
     if (x === y) return 0;
     if (x === null) return 1;
     if (y === null) return -1;

@@ -88,7 +88,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `WL` | Watchlists |  | `[NAME] [ADD\|RM SYM...] \| DEL NAME` | `WL` |
 | `WEI` | World equity indices |  |  | `WEI` |
 | `MOV` | Top movers |  | `[GAINERS\|LOSERS\|ACTIVE\|DOLLAR\|NDX100]` | `MOV` |
-| `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]` | `EQS` |
+| `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT] [SEC: ROE>15 MARGIN>10 OPMARGIN>10 GROWTH>5 DE<1] \| BT <RULES> UNIV=LIST:...` | `EQS` |
 | `FSRC` | ETF screener: fee, size, category (US ETFs; loads in the background, PARTIAL until complete) |  | `[FEE<0.2] [AUM>1B] [CAT=LARGE] [SORT=FEE\|AUM\|SYMBOL\|NAME\|CAT]` | `FSRC` |
 | `SCAN` | Scan a list of symbols against a rule (RSI, averages, ATR...) |  | `<UNIVERSE> <RULE> \| SAVE NAME UNIVERSE RULE [DAILY=HH:MM] \| SAVED \| RUN\|DEL NAME` | `SCAN` |
 | `MRR` | Index movers: members ranked by return and contribution |  | `<UNIVERSE> [1D\|1W\|1M\|3M\|YTD\|1Y]` | `MRR` |

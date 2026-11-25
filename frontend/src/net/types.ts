@@ -457,6 +457,15 @@ export interface AlertEngineState {
 // Screener and peers (marketApi)
 // ---------------------------------------------------------------------------
 
+/** `/api/fund/eqsfund` (Phase 29 finish): SEC formula fields for the live EQS screener, by symbol (percent, DE a ratio). */
+export interface EqsFundPayload {
+  year: number;
+  fields: string[];
+  rows: Record<string, (number | null)[]>;
+  notes: string[];
+  source: string;
+}
+
 export interface ScreenerPayload {
   columns: string[];
   /** [symbol, name, last, chg, pct, volume, mcap, country_i, ipo, sector_i, industry_i] (see functions/eqsFilter.ts). */
