@@ -20,6 +20,7 @@ FTS_RECORDED = {
     ("going concern", "10-K", "", "2024-01-01", "2024-12-31"): "fts_going_concern_10k",
     ("", "SC TO-T,DEFM14A,S-4,425", "", "2024-10-01", "2024-12-31"): "fts_ma_market",
     ("", "3,4,5", "0001214156", "2023-01-01", "2025-12-31"): "fts_bio_1214156",
+    ("Timothy Cook", "DEF 14A", "", "2023-01-01", "2025-12-31"): "fts_bio_proxy_timothy_cook",
 }
 SEC_FEEDS = {
     "/enforcement-litigation/litigation-releases/rss": "sec_litigation_releases_rss",

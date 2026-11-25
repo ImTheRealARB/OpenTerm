@@ -95,7 +95,7 @@ const CASES: Case[] = [
   { cmd: 'FTS "going concern" FORM=10-K FROM=2024-01-01 TO=2024-12-31', want: /SEC EDGAR FULL-TEXT SEARCH: THE SEC'S OWN INDEX/ },
   { cmd: "MA FROM=2024-10-01 TO=2024-12-31", want: /VALUE: ONLY WHEN THE FILING STATES IT/ },
   { cmd: "AAPL LEGAL", want: /KEY REQUIRED: set COURTLISTENER_API_KEY in APIKEYS/ },
-  { cmd: "BIO 1214156 FROM=2023-01-01 TO=2025-12-31", want: /BOARDS FROM DEF 14A: NOT BUILT/ },
+  { cmd: "BIO 1214156 FROM=2023-01-01 TO=2025-12-31", want: /TEXT MATCH FOR "TIMOTHY COOK" IN DEF 14A/ },
   { cmd: "GOOGL RELS", want: /SAME-CIK TICKERS/ },
   { cmd: "AA ESG", want: /EMISSIONS ONLY, NO SCORE/ },
   // Phase 30: macro, rates and commodities depth

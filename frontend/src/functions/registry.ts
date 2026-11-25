@@ -201,7 +201,7 @@ const defs: FunctionDef[] = [
   { code: "FTS", title: "SEC full-text search", needsSecurity: false, argsSchema: "\"<WORDS>\" [FORM=10-K] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD] [TICKER]", load: () => import("./FTS") },
   { code: "MA", title: "Deal filings: mergers, tender offers, material agreements", needsSecurity: false, argsSchema: "[SYMBOL] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]", load: () => import("./MA") },
   { code: "LEGAL", title: "Litigation: SEC enforcement + court dockets (name match)", needsSecurity: true, load: () => import("./LEGAL") },
-  { code: "BIO", title: "Insider biography: one owner's Form 3/4/5 filings", needsSecurity: false, argsSchema: "<CIK | \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]", load: () => import("./BIO") },
+  { code: "BIO", title: "Insider biography: one owner's Form 3/4/5 filings + proxy (DEF 14A) name matches", needsSecurity: false, argsSchema: "<CIK | \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]", load: () => import("./BIO") },
   { code: "RELS", title: "Related instruments: share classes and listings", needsSecurity: true, load: () => import("./RELS") },
   { code: "ESG", title: "Emissions (EPA, US facilities; no score)", needsSecurity: false, argsSchema: "<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]", load: () => import("./ESG") },
   { code: "GF", title: "Fundamental metric over time (SEC filings, vs peers)", needsSecurity: true, argsSchema: "[METRIC] [Q] [VS=MSFT,GOOGL]", load: () => import("./GF") },

@@ -162,11 +162,26 @@ async def bio(svc: Any, target: str, start: str, end: str) -> dict[str, Any]:
     async def fetch() -> dict:
         out, failed = await svc.router.call("sec_fts", lambda p: p.fts(params))
         rows = P.rows_from_fts(out["hits"], cik, name)
-        data = P.build_payload(str(cik) if cik else name, rows, out["total"], out["source"])
+        boards = await _boards(svc, rows, name, start, end)
+        data = P.build_payload(str(cik) if cik else name, rows, out["total"], out["source"], boards)
         await _fill_tickers(svc, data)
         return {"data": data, "fallback_from": failed, "source": out["source"]}
 
     return await svc.swr("w:bio:" + json.dumps(params, sort_keys=True), LIST_TTL_S, fetch)
+
+
+async def _boards(svc: Any, rows: list[dict[str, Any]], name: str, start: str, end: str) -> dict[str, Any]:
+    """The second search of BIO: DEF 14A proxy statements whose text prints the person's name (see filings/people.py)."""
+    owner = name or next((r["owner"] for r in rows if r["owner"] and not r["owner"].startswith("(")), "")
+    phrase = P.proxy_phrase(owner.split(" / ")[0]) if owner else None
+    if phrase is None:
+        return {"phrase": None, "why": "THE OWNER IS AN ENTITY OR HAS NO READABLE PERSON NAME" if owner else "NO OWNER NAME IN THE FILINGS"}
+    try:
+        params = F.build_params(q=f'"{phrase}"', forms=P.PROXY_FORM, start=start, end=end)
+        out, _ = await svc.router.call("sec_fts", lambda p: p.fts(params))
+    except (ValueError, AllFailed) as e:
+        return {"phrase": None, "why": f"THE PROXY SEARCH FAILED ({e})"}  # said on screen; the Form 3/4/5 table above is still good
+    return {"phrase": phrase, "rows": P.board_rows(out["hits"]), "total": out["total"]}
 
 
 # --- RELS -------------------------------------------------------------------------------------------------------------------------------

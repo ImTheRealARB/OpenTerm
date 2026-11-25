@@ -115,3 +115,29 @@ def test_ibq_by_sic_builds_the_map_then_groups(client):
     assert "3571 ELECTRONIC COMPUTERS" in groups and "7372 SERVICES-PREPACKAGED SOFTWARE" in groups
     div = client.get("/api/fund/ibq", params={"by": "DIV", "year": "2024"}).json()["data"]["sections"][0]["rows"]
     assert {"D MANUFACTURING", "H FINANCE, INSURANCE, REAL ESTATE", "I SERVICES"} <= {r["group"] for r in div}
+
+
+# --- BIO boards from DEF 14A (recorded SEC full-text answer for "Timothy Cook", 2023-2025) ------------------------------------------------
+
+
+def test_proxy_phrase_from_sec_owner_names():
+    from openterm.filings import people
+
+    assert people.proxy_phrase("COOK TIMOTHY D") == "Timothy Cook"
+    assert people.proxy_phrase("O'BRIEN SEAN") == "Sean O'Brien"
+    assert people.proxy_phrase("Vanguard Group Inc") is None and people.proxy_phrase("SOROS FUND MANAGEMENT LLC") is None
+    assert people.proxy_phrase("Madonna") is None
+
+
+def test_board_rows_group_proxies_by_company():
+    from openterm.filings import fts, people
+
+    hits = fts.parse_fts(json.loads((Path(__file__).parent / "fixtures" / "fts_bio_proxy_timothy_cook.json").read_text(encoding="utf-8"))["body"])["hits"]
+    rows = people.board_rows(hits)
+    assert rows and all(r["proxies"] >= 1 and r["cik"] for r in rows)
+    assert [r["proxies"] for r in rows] == sorted((r["proxies"] for r in rows), reverse=True)
+    assert len({r["cik"] for r in rows}) == len(rows)  # one row per company
+    out = people.build_payload("COOK", [], 0, "SEC", {"phrase": "Timothy Cook", "rows": rows, "total": len(hits)})
+    assert [s["id"] for s in out["sections"]] == ["filings", "boards"] and any("TEXT MATCH" in n for n in out["notes"])
+    skipped = people.build_payload("X", [], 0, "SEC", {"phrase": None, "why": "THE OWNER IS AN ENTITY"})
+    assert any(n.startswith("BOARDS NOT SEARCHED") for n in skipped["notes"]) and len(skipped["sections"]) == 1

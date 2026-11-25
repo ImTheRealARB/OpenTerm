@@ -1,7 +1,7 @@
 """Records the keyless fixtures for the Phase 28-32 gap closures (2026-11-25). No key is used, nothing secret is stored.
 
 Run from backend/:  uv run python ../scripts/record_gaps_28_32.py [step ...]      (default: every step)
-Steps: sic
+Steps: sic bio
 
 Writes backend/tests/fixtures/<name>.json as {"status", "text", "content_type"} (XML / HTML) or {"status", "body"} (JSON), like every other
 recording. Big answers are TRIMMED to the few companies the other fixtures already hold (Apple, Microsoft, Berkshire, Meta) and each trim is
@@ -69,7 +69,23 @@ def rec_sic() -> None:
                   f"TRIMMED RECORDING: the EDGAR company-browser Atom page for SIC {code}, cut to the one entry of CIK {cik}")
 
 
-STEPS = {"sic": rec_sic}
+def rec_bio() -> None:
+    """BIO boards: the SEC full-text search for the phrase "Timothy Cook" in DEF 14A proxies, 2023-2025 (TRIM: first 25 hits, no filter counts)."""
+    for attempt in range(4):  # the SEC search answers an odd HTTP 500; the same request works a moment later
+        r = httpx.get("https://efts.sec.gov/LATEST/search-index", params={"q": '"Timothy Cook"', "forms": "DEF 14A", "dateRange": "custom",
+                                                                          "startdt": "2023-01-01", "enddt": "2025-12-31"}, headers=UA, timeout=40)
+        if r.status_code < 500:
+            break
+        time.sleep(2 * (attempt + 1))
+    r.raise_for_status()
+    body = r.json()
+    body["hits"]["hits"] = body["hits"]["hits"][:25]  # TRIM
+    body.pop("aggregations", None)  # TRIM
+    (OUT / "fts_bio_proxy_timothy_cook.json").write_text(json.dumps({"status": 200, "body": body}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print("wrote fts_bio_proxy_timothy_cook")
+
+
+STEPS = {"sic": rec_sic, "bio": rec_bio}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or list(STEPS):

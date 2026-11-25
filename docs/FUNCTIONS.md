@@ -260,7 +260,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `MEMB` | Index members and weights via the proxy ETF's N-PORT |  | `SPX\|NDX\|DJI\|RUT\|MID\|<ETF>` | `MEMB` |
 | `FTS` | SEC full-text search |  | `\"<WORDS>\" [FORM=10-K] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD] [TICKER]` | `FTS` |
 | `MA` | Deal filings: mergers, tender offers, material agreements |  | `[SYMBOL] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `MA` |
-| `BIO` | Insider biography: one owner's Form 3/4/5 filings |  | `<CIK \| \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `BIO` |
+| `BIO` | Insider biography: one owner's Form 3/4/5 filings + proxy (DEF 14A) name matches |  | `<CIK \| \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `BIO` |
 | `RELS` | Related instruments: share classes and listings | yes |  | `AAPL RELS` |
 
 ### Research: Options
