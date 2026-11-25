@@ -52,6 +52,8 @@ export function ibqParams(args: string[]): Params {
     if (/^\d{4}$/.test(w)) out.year = w;
     else if (w.startsWith("IND")) out.by = "industry";
     else if (w.startsWith("SEC")) out.by = "sector";
+    else if (w === "SIC" || w === "BY=SIC") out.by = "sic";
+    else if (w.startsWith("DIV") || w === "BY=DIV") out.by = "division";
   }
   return out;
 }

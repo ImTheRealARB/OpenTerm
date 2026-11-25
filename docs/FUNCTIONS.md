@@ -88,7 +88,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `WL` | Watchlists |  | `[NAME] [ADD\|RM SYM...] \| DEL NAME` | `WL` |
 | `WEI` | World equity indices |  |  | `WEI` |
 | `MOV` | Top movers |  | `[GAINERS\|LOSERS\|ACTIVE\|DOLLAR\|NDX100]` | `MOV` |
-| `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]` | `EQS` |
+| `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT] [SEC: ROE>15 MARGIN>10 OPMARGIN>10 GROWTH>5 DE<1] \| BT <RULES> UNIV=LIST:...` | `EQS` |
 | `FSRC` | ETF screener: fee, size, category (US ETFs; loads in the background, PARTIAL until complete) |  | `[FEE<0.2] [AUM>1B] [CAT=LARGE] [SORT=FEE\|AUM\|SYMBOL\|NAME\|CAT]` | `FSRC` |
 | `SCAN` | Scan a list of symbols against a rule (RSI, averages, ATR...) |  | `<UNIVERSE> <RULE> \| SAVE NAME UNIVERSE RULE [DAILY=HH:MM] \| SAVED \| RUN\|DEL NAME` | `SCAN` |
 | `MRR` | Index movers: members ranked by return and contribution |  | `<UNIVERSE> [1D\|1W\|1M\|3M\|YTD\|1Y]` | `MRR` |
@@ -244,7 +244,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SCORE` | Formula scores: Altman, Piotroski, Beneish, Ohlson, Merton | yes |  | `AAPL SCORE` |
 | `REVS` | Estimate revision score (inputs shown) | yes |  | `AAPL REVS` |
 | `FRM` | One XBRL concept for every filer, point in time |  | `<TAG> [CY2024] [ASOF=YYYY-MM-DD]` | `FRM` |
-| `IBQ` | Industry roll-ups: median margins, growth, valuation |  | `[YEAR] [INDUSTRY]` | `IBQ` |
+| `IBQ` | Industry roll-ups: median margins, growth, valuation |  | `[YEAR] [SECTOR\|INDUSTRY\|SIC\|DIV]` | `IBQ` |
 
 ### Research: Filings and owners
 
@@ -260,7 +260,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `MEMB` | Index members and weights via the proxy ETF's N-PORT |  | `SPX\|NDX\|DJI\|RUT\|MID\|<ETF>` | `MEMB` |
 | `FTS` | SEC full-text search |  | `\"<WORDS>\" [FORM=10-K] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD] [TICKER]` | `FTS` |
 | `MA` | Deal filings: mergers, tender offers, material agreements |  | `[SYMBOL] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `MA` |
-| `BIO` | Insider biography: one owner's Form 3/4/5 filings |  | `<CIK \| \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `BIO` |
+| `BIO` | Insider biography: one owner's Form 3/4/5 filings + proxy (DEF 14A) name matches |  | `<CIK \| \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `BIO` |
 | `RELS` | Related instruments: share classes and listings | yes |  | `AAPL RELS` |
 
 ### Research: Options
@@ -315,7 +315,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
 | `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
 | `LEGAL` | Litigation: SEC enforcement + court dockets (name match) | yes |  | `AAPL LEGAL` |
-| `ESG` | Emissions (EPA, US facilities; no score) |  | `<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]` | `ESG` |
+| `ESG` | Emissions (EPA, US facilities; no score; EU: ETS) |  | `<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]` | `ESG` |
+| `ETS` | EU ETS emissions (Union Registry, EU installations; no score) |  | `<SYMBOL> [YEAR=2024] [NAME=<COMPANY>]` | `ETS` |
 
 ### Portfolio
 

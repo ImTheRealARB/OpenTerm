@@ -20,12 +20,14 @@ FTS_RECORDED = {
     ("going concern", "10-K", "", "2024-01-01", "2024-12-31"): "fts_going_concern_10k",
     ("", "SC TO-T,DEFM14A,S-4,425", "", "2024-10-01", "2024-12-31"): "fts_ma_market",
     ("", "3,4,5", "0001214156", "2023-01-01", "2025-12-31"): "fts_bio_1214156",
+    ("Timothy Cook", "DEF 14A", "", "2023-01-01", "2025-12-31"): "fts_bio_proxy_timothy_cook",
 }
 SEC_FEEDS = {
     "/enforcement-litigation/litigation-releases/rss": "sec_litigation_releases_rss",
     "/enforcement-litigation/administrative-proceedings/rss": "sec_admin_proceedings_rss",
 }
 NOT_RECORDED = "not recorded"
+SIC_RECORDED = {"3571", "7372", "6331", "7370"}
 
 
 def route_filings(request: httpx.Request) -> httpx.Response | None:
@@ -41,6 +43,16 @@ def route_filings(request: httpx.Request) -> httpx.Response | None:
             return fx._load("sec_company_tickers_exchange")
         if p in SEC_FEEDS:
             return fx._load(SEC_FEEDS[p])
+        if p == "/Archives/edgar/data/1524931/000119312524180426/d873202dex991.htm":
+            return fx._load("sec_doc_chuys_ex991")  # RECORDING: the one filing document the fixtures hold (a deal value is stated in it)
+        if p.startswith("/Archives/edgar/data/"):
+            return httpx.Response(404, text=NOT_RECORDED)
+        if p == "/search-filings/standard-industrial-classification-sic-code-list":
+            return fx._load("sec_sic_list")
+        if p == "/cgi-bin/browse-edgar" and q.get("SIC"):
+            # TRIMMED RECORDINGS (scripts/record_gaps_28_32.py): one entry each for Apple, Microsoft, Berkshire and Meta; any other code is "not recorded".
+            code = q.get("SIC", "")
+            return fx._load(f"sec_sic_{code}") if code in SIC_RECORDED else httpx.Response(404, text=NOT_RECORDED)
         return None
     if host == "api.openfigi.com" and p == "/v3/mapping" and request.method == "POST":
         jobs = json.loads(request.content or b"[]")
@@ -58,6 +70,13 @@ def route_filings(request: httpx.Request) -> httpx.Response | None:
         if p == "/api/rest/v4/courts/":
             return fx._load("courtlistener_courts_docshape")
         return httpx.Response(404, text=NOT_RECORDED)
+    if host == "union-registry-data.ec.europa.eu" and p == "/api/data-download":
+        return fx._load("eu_ets_data_download")  # TRIMMED RECORDING (scripts/record_gaps_28_32.py ets)
+    if host == "dlsclimabi.blob.core.windows.net" and p.endswith("/operators_daily.csv.gz"):
+        return fx._load("eu_ets_operators_daily")  # TRIMMED RECORDING: only account holders containing "alcoa"
+    if host == "climate.ec.europa.eu" and p.startswith("/document/download/"):
+        # TRIMMED RECORDING: the 2024 verified-emissions workbook cut to the rows of those installations; another year is "not recorded".
+        return fx._load("eu_ets_verified_2024") if "verified_emissions_2024" in str(request.url) else httpx.Response(404, text=NOT_RECORDED)
     if host == "data.epa.gov":
         if "/PARENT_COMPANY/CONTAINING/ALCOA/YEAR/2023/" in p:
             return fx._load("epa_ghgrp_alcoa_2023")

@@ -3,7 +3,7 @@ import type { TablePayload } from "../research/tablePayload";
 import { get, TTL } from "./core";
 import { filingsApi } from "./filingsApi";
 import type { ConePoint } from "../chart/cone";
-import type { Envelope } from "./types";
+import type { Envelope, EqsFundPayload } from "./types";
 
 type Params = Record<string, string | undefined>;
 
@@ -19,6 +19,8 @@ export const researchApi = {
     get<Envelope<{ symbol: string; spot: number; label: string; points: ConePoint[] }>>("/api/deriv/cone", { symbol }, TTL.m1),
   /** Phase 29 fundamentals depth: GF EM DDIS SCORE FRM EQSBT IBQ REVS (`/api/fund/<fn>`). Filings change slowly: 2 minutes. */
   fund: (fn: string, params: Params, fresh = false) => get<Envelope<TablePayload>>(`/api/fund/${fn}`, params, TTL.m2, fresh),
+  /** EQS formula fields (MARGIN OPMARGIN ROE GROWTH DE) for every screener name that files with the SEC. One call, cached a day server side. */
+  eqsFund: (fresh = false) => get<Envelope<EqsFundPayload>>("/api/fund/eqsfund", {}, TTL.m2, fresh),
   /** Phase 29 filings: FTS MA LEGAL BIO RELS ESG (`/api/filings/<fn>`, the client lives in filingsApi.ts). */
   filings: filingsApi.get,
   /** Phase 30 macro depth: MMR NOWC ECFC FOMC WB CRPR FWCV BTMM WCRS CDR CTM TSYS NRGF AGRI RE WPE (`/api/macrod/<fn>`). */

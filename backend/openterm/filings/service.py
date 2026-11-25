@@ -8,6 +8,7 @@ PROVIDER DOWN with its name and a missing key shows KEY REQUIRED, exactly like e
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import date, timedelta
 from typing import Any
@@ -17,9 +18,11 @@ from ..errors import DataError
 from ..research.table import col, head, payload, section
 from ..router import AllFailed
 from . import esg as E
+from . import ets as T
 from . import fts as F
 from . import legal as L
 from . import ma as M
+from . import ma_value as MV
 from . import people as P
 from . import rels as R
 
@@ -93,13 +96,44 @@ async def fts(svc: Any, q: str, forms: str, start: str, end: str, symbol: str) -
 # --- MA ---------------------------------------------------------------------------------------------------------------------------------
 
 
+MA_VALUE_DOCS = 12  # filing documents read per table (newest first); each is one SEC request at <= 8 per second
+MA_VALUE_PARALLEL = 3
+
+
+async def _fill_values(svc: Any, rows: list[dict[str, Any]]) -> list[str]:
+    """Read the first MA_VALUE_DOCS filing documents and set `value` / `quote` from what the text states (never an estimate).
+    "NOT STATED" = read, no figure found; "NOT READ" = the fetch failed (said in the returned notes). Rows past the limit stay blank."""
+    todo = [r for r in rows if r.get("doc_url")][:MA_VALUE_DOCS]
+    gate = asyncio.Semaphore(MA_VALUE_PARALLEL)
+    failed: list[str] = []
+
+    async def one(row: dict[str, Any]) -> None:
+        async with gate:
+            try:
+                doc, _ = await svc.router.call("sec_doc", lambda p: p.document_text(row["doc_url"]))
+            except AllFailed as e:
+                row["value"] = "NOT READ"
+                failed.append(str(e)[:80])
+                return
+        found = MV.extract(doc["text"])
+        row["value"] = MV.money(found["usd"]) if found else "NOT STATED"
+        row["quote"] = found["quote"] if found else None
+
+    await asyncio.gather(*(one(r) for r in todo))
+    notes = [f"VALUES READ FROM THE FIRST {len(todo)} OF {len(rows)} FILINGS (THE FILING TEXT, NOT A DEAL DATABASE)"] if todo else []
+    if failed:
+        notes.append(f"{len(failed)} FILING(S) NOT READ: {failed[0]}")
+    return notes
+
+
 async def ma(svc: Any, symbol: str, start: str, end: str) -> dict[str, Any]:
     if symbol:
         async def fetch_company() -> dict:
             out, failed = await svc.router.call("filings", lambda p: p.filings(symbol), symbol)
             rows = M.rows_from_filings(out["filings"], out["name"] or symbol, symbol)
+            notes = await _fill_values(svc, rows)
             scope = f"{out['name']} · ITS {len(out['filings'])} MOST RECENT FILINGS"
-            return {"data": M.build_payload(symbol, f"MA {symbol}", rows, out["source"], scope), "fallback_from": failed, "source": out["source"]}
+            return {"data": M.build_payload(symbol, f"MA {symbol}", rows, out["source"], scope, notes), "fallback_from": failed, "source": out["source"]}
 
         return await svc.swr(f"w:ma:{symbol.upper()}", LIST_TTL_S, fetch_company)
     try:
@@ -110,9 +144,10 @@ async def ma(svc: Any, symbol: str, start: str, end: str) -> dict[str, Any]:
     async def fetch_market() -> dict:
         out, failed = await svc.router.call("sec_fts", lambda p: p.fts(params))
         rows = M.rows_from_fts(out["hits"])
+        notes = await _fill_values(svc, rows)
         extra = [f"MARKET-WIDE: {len(rows)} OF {out['total']:,} FILINGS SHOWN (NEWEST 100). TYPE A SYMBOL FOR ONE COMPANY'S DEAL FILINGS"] if out["total"] > len(rows) else []
         scope = f"ALL FILERS · {params['startdt']} TO {params['enddt']}"
-        data = M.build_payload(None, "MA", rows, out["source"], scope, extra)
+        data = M.build_payload(None, "MA", rows, out["source"], scope, [*extra, *notes])
         await _fill_tickers(svc, data)
         return {"data": data, "fallback_from": failed, "source": out["source"]}
 
@@ -162,11 +197,26 @@ async def bio(svc: Any, target: str, start: str, end: str) -> dict[str, Any]:
     async def fetch() -> dict:
         out, failed = await svc.router.call("sec_fts", lambda p: p.fts(params))
         rows = P.rows_from_fts(out["hits"], cik, name)
-        data = P.build_payload(str(cik) if cik else name, rows, out["total"], out["source"])
+        boards = await _boards(svc, rows, name, start, end)
+        data = P.build_payload(str(cik) if cik else name, rows, out["total"], out["source"], boards)
         await _fill_tickers(svc, data)
         return {"data": data, "fallback_from": failed, "source": out["source"]}
 
     return await svc.swr("w:bio:" + json.dumps(params, sort_keys=True), LIST_TTL_S, fetch)
+
+
+async def _boards(svc: Any, rows: list[dict[str, Any]], name: str, start: str, end: str) -> dict[str, Any]:
+    """The second search of BIO: DEF 14A proxy statements whose text prints the person's name (see filings/people.py)."""
+    owner = name or next((r["owner"] for r in rows if r["owner"] and not r["owner"].startswith("(")), "")
+    phrase = P.proxy_phrase(owner.split(" / ")[0]) if owner else None
+    if phrase is None:
+        return {"phrase": None, "why": "THE OWNER IS AN ENTITY OR HAS NO READABLE PERSON NAME" if owner else "NO OWNER NAME IN THE FILINGS"}
+    try:
+        params = F.build_params(q=f'"{phrase}"', forms=P.PROXY_FORM, start=start, end=end)
+        out, _ = await svc.router.call("sec_fts", lambda p: p.fts(params))
+    except (ValueError, AllFailed) as e:
+        return {"phrase": None, "why": f"THE PROXY SEARCH FAILED ({e})"}  # said on screen; the Form 3/4/5 table above is still good
+    return {"phrase": phrase, "rows": P.board_rows(out["hits"]), "total": out["total"]}
 
 
 # --- RELS -------------------------------------------------------------------------------------------------------------------------------
@@ -189,6 +239,22 @@ async def rels(svc: Any, symbol: str) -> dict[str, Any]:
         return {"data": R.build_payload(symbol, who["name"], who["rows"], figi, note, source), "fallback_from": failed, "source": source}
 
     return await svc.swr(f"w:rels:{symbol.upper()}", LIST_TTL_S, fetch)
+
+
+# --- ETS (EU emissions trading) -----------------------------------------------------------------------------------------------------------
+
+
+async def ets(svc: Any, symbol: str, name: str, year: int) -> dict[str, Any]:
+    company = name or (await _company(svc, symbol))["name"]
+    core = L.core_name(company)
+    if len(core) < L.MIN_NAME_CHARS:
+        raise DataError("bad_request", f"COMPANY NAME TOO SHORT TO MATCH: {company[:40]}")
+
+    async def fetch() -> dict:
+        out, failed = await svc.router.call("eu_ets", lambda p: p.installations(company, year))
+        return {"data": T.build_payload(symbol or company, company, year, out["rows"], out["source"]), "fallback_from": failed, "source": out["source"]}
+
+    return await svc.swr(f"w:ets:{core}:{year}", EMISSIONS_TTL_S, fetch)
 
 
 # --- ESG --------------------------------------------------------------------------------------------------------------------------------

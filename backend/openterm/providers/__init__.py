@@ -27,6 +27,7 @@ from .ecb import EcbProvider
 from .epa_ghgrp import EpaGhgrpProvider
 from .etf import NasdaqTraderProvider, YahooFundsProvider
 from .etherscan import EtherscanProvider
+from .eu_ets import EuEtsProvider
 from .finnhub import FinnhubProvider
 from .finra import FinraProvider
 from .fixtures import fixture_transport
@@ -155,7 +156,7 @@ ADAPTERS: dict[str, type[Provider]] = {
     # SCAN / MRR / IMAP NIFTY universes: NSE Indices' constituent CSVs (downloaded on this computer, never shipped)
     "nseindices": NseIndicesProvider,
     # Phase 29 filings: SEC full-text search / enforcement feeds / ticker-by-exchange file, CourtListener (free key), EPA GHGRP emissions
-    "sec_filings": SecFilingsProvider, "courtlistener": CourtListenerProvider, "epa_ghgrp": EpaGhgrpProvider,
+    "sec_filings": SecFilingsProvider, "courtlistener": CourtListenerProvider, "epa_ghgrp": EpaGhgrpProvider, "eu_ets": EuEtsProvider,
     # Phase 30 macro depth: money-market rates, GDPNow, forecasts, FOMC statements, Treasury securities, WASDE (keyless); EIA, NASS (free keys)
     "nyfed": NyFedProvider, "ecb_estr": EcbEstrProvider, "boe_sonia": BoeSoniaProvider, "atlfed": AtlFedProvider, "philfed": PhilFedProvider,
     "imf_dm": ImfDmProvider, "oecd_eo": OecdEoProvider, "fed_web": FedWebProvider, "td_secs": TdSecuritiesProvider, "wasde": WasdeProvider, "research_feeds": ResearchFeedsProvider,

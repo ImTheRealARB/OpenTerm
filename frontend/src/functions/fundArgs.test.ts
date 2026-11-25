@@ -24,3 +24,11 @@ describe("Phase 29 argument parsing", () => {
     expect(codes).toEqual([...GF_METRICS]);
   });
 });
+
+describe("IBQ grouping words", () => {
+  it("maps SIC and DIV to the backend's by parameter", () => {
+    expect(ibqParams(["2024", "SIC"])).toEqual({ year: "2024", by: "sic" });
+    expect(ibqParams(["div"])).toEqual({ by: "division" });
+    expect(ibqParams(["INDUSTRY"])).toEqual({ by: "industry" });
+  });
+});
