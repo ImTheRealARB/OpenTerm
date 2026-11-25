@@ -25,6 +25,11 @@ owner's request, NOT pushed). Two Sonnet sessions audited all 100 picks against 
   Kite app; equity full-mode packets never recorded); `TAS RELIANCE.NS` while trading; `REC RELIANCE.NS ON` a few minutes, OFF, then
   `TAS|DOM RELIANCE.NS REC=<id>`, and the recording must stop with KITE LOGIN ENDED when the login expires. Checkable now:
   `GP AAPL REPLAY <date> STOP=5 TARGET=10`, `BT OPT ... FIT=SHARPE-2*DD`, `EQS ROE>15 MARGIN>10`, `IBQ 2024 SIC`, `AA ETS`, `AAPL MA`.
+- Local `main` = `212d8e5` (owner said so 2026-11-25; not pushed). Owner is testing by hand: local `docs/TEST_CHECKLIST.md`
+  sections 28-40 (39 = Phase 29 filings, 40 = this gap pass; both added 2026-11-25, `.html` rebuilt), then opens the PR to `main` himself.
+- After the 2026-11-25 system crash, `openterm -Rebuild` failed with "failed to remove directory ... .venv ... Access is denied":
+  an interrupted `uv sync` had left 1,116 read-only entries in `backend/.venv`. Fix: clear the ReadOnly attribute on `.venv`
+  (or delete `.venv`) and rerun `uv sync`. The "is the port in use?" line in `start.ps1` was a red herring.
 - Gate on the merged branch (2026-11-25, CI=1): ALL GATES PASS, pytest 4276, e2e 457 (smoke spec 88/88), vitest, tsc, eslint, ruff.
   The first two gate runs caught regressions the sessions' targeted tests missed (an MA fixture catch-all that hid older SEC fixtures,
   a 500 for Kite symbols on the crypto flow route, the BT OPT and MA smoke cases); all fixed. No bench this pass (no hot-path change).
