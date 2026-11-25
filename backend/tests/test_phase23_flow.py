@@ -166,11 +166,19 @@ def test_footprint_route_shape_and_truncation(client):
 
 
 def test_non_crypto_and_unknown_pairs_say_crypto_only(client):
-    for sym in ("AAPL", "ETHUSDT", "$$$", "RELIANCE.NS"):  # AAPL / ETHUSDT: Binance 400 (ETHUSDT is simply not recorded)
+    for sym in ("AAPL", "ETHUSDT", "$$$"):  # AAPL / ETHUSDT: Binance 400 (ETHUSDT is simply not recorded)
         r = client.get("/api/world/flow/trades", params={"sym": sym})
         assert r.status_code == 400, sym
         assert "ORDER FLOW: CRYPTO ONLY (BINANCE SPOT PAIRS)" in r.text, sym
     assert client.get("/api/world/flow/footprint", params={"sym": "AAPL"}).status_code == 400
+
+
+def test_an_indian_symbol_without_a_kite_ticker_is_a_clean_user_error_not_a_500(client):
+    """TAS for `RELIANCE.NS` goes to the Kite tape (not Binance). With no Kite ticker (fixture mode / not logged in) it must say what
+    to do, with a 4xx and a `kind`, never a 500 (an error kind with no HTTP status used to fall through to 500)."""
+    r = client.get("/api/world/flow/trades", params={"sym": "RELIANCE.NS"})
+    assert r.status_code == 401 and r.json()["kind"] == "login_required"
+    assert "KITE" in r.json()["error"]
 
 
 def test_bad_arguments_are_400(client):

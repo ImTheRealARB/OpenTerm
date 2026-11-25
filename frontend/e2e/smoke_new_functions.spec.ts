@@ -191,6 +191,8 @@ const BAD = /UNKNOWN FUNCTION|EMPTY PANEL|PROVIDER DOWN|NO DATA FOR|BAD (RANGE|I
 
 for (const c of CASES) {
   test(`smoke: ${c.cmd}`, async ({ page }) => {
+    // The test's own limit (20 s in the config) must not be shorter than the wait it allows: BT OPT's first job starts a cold worker (~27 s).
+    if (c.timeout) test.setTimeout(c.timeout + 30_000);
     const errors = await connect(page);
     await run(page, c.cmd);
     const p = panel(page);
