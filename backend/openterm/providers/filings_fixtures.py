@@ -66,6 +66,13 @@ def route_filings(request: httpx.Request) -> httpx.Response | None:
         if p == "/api/rest/v4/courts/":
             return fx._load("courtlistener_courts_docshape")
         return httpx.Response(404, text=NOT_RECORDED)
+    if host == "union-registry-data.ec.europa.eu" and p == "/api/data-download":
+        return fx._load("eu_ets_data_download")  # TRIMMED RECORDING (scripts/record_gaps_28_32.py ets)
+    if host == "dlsclimabi.blob.core.windows.net" and p.endswith("/operators_daily.csv.gz"):
+        return fx._load("eu_ets_operators_daily")  # TRIMMED RECORDING: only account holders containing "alcoa"
+    if host == "climate.ec.europa.eu" and p.startswith("/document/download/"):
+        # TRIMMED RECORDING: the 2024 verified-emissions workbook cut to the rows of those installations; another year is "not recorded".
+        return fx._load("eu_ets_verified_2024") if "verified_emissions_2024" in str(request.url) else httpx.Response(404, text=NOT_RECORDED)
     if host == "data.epa.gov":
         if "/PARENT_COMPANY/CONTAINING/ALCOA/YEAR/2023/" in p:
             return fx._load("epa_ghgrp_alcoa_2023")

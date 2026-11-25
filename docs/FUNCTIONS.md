@@ -315,7 +315,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
 | `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
 | `LEGAL` | Litigation: SEC enforcement + court dockets (name match) | yes |  | `AAPL LEGAL` |
-| `ESG` | Emissions (EPA, US facilities; no score) |  | `<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]` | `ESG` |
+| `ESG` | Emissions (EPA, US facilities; no score; EU: ETS) |  | `<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]` | `ESG` |
+| `ETS` | EU ETS emissions (Union Registry, EU installations; no score) |  | `<SYMBOL> [YEAR=2024] [NAME=<COMPANY>]` | `ETS` |
 
 ### Portfolio
 

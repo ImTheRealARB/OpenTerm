@@ -1,0 +1,22 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "name": "Operators Daily",
+   "pane_index": 0,
+   "group_index": 0,
+   "sort_index": 1,
+   "url": "https://dlsclimabi.blob.core.windows.net/public-data/eutlpublic_prod/extracts/_all_extracts/operator/operators_daily.csv.gz",
+   "action": "d_operators_dayli"
+  },
+  {
+   "name": "Verified Emissions for 2024",
+   "pane_index": 1,
+   "group_index": 1,
+   "sort_index": 1,
+   "url": "https://climate.ec.europa.eu/document/download/385daec1-0970-44ab-917d-f500658e72aa_en?filename=verified_emissions_2024_en.xlsx",
+   "action": "d_verified_2024"
+  }
+ ],
+ "note": "TRIMMED RECORDING: the list cut to the two extracts the app reads"
+}

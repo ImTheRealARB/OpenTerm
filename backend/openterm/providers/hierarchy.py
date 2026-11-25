@@ -245,6 +245,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "sec_sic": ["sec_filings"],  # IBQ BY=SIC: SIC code list + the EDGAR company browser by code
     "court_dockets": ["courtlistener"],  # free key; no key = KEY REQUIRED
     "ghg_facilities": ["epa_ghgrp"],
+    "eu_ets": ["eu_ets"],  # ETS: EU installations (Union Registry public data)
     # Phase 30 macro depth (one source each; EIA and NASS need a free key, no key = KEY REQUIRED)
     "nyfed_rates": ["nyfed"], "estr": ["ecb_estr"], "sonia": ["boe_sonia"], "gdpnow": ["atlfed"], "spf": ["philfed"],
     "imf_weo": ["imf_dm"], "oecd_eo": ["oecd_eo"], "fomc_statement": ["fed_web"], "tsy_securities": ["td_secs"], "wasde": ["wasde"], "research_feeds": ["research_feeds"],

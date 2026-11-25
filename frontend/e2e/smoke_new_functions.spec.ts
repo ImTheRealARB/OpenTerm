@@ -98,6 +98,7 @@ const CASES: Case[] = [
   { cmd: "BIO 1214156 FROM=2023-01-01 TO=2025-12-31", want: /TEXT MATCH FOR "TIMOTHY COOK" IN DEF 14A/ },
   { cmd: "GOOGL RELS", want: /SAME-CIK TICKERS/ },
   { cmd: "AA ESG", want: /EMISSIONS ONLY, NO SCORE/ },
+  { cmd: "AA ETS", want: /Alcoa Mosj|VERIFIED t CO2E|EU ETS VERIFIED EMISSIONS/i, timeout: 30_000 },
   // Phase 30: macro, rates and commodities depth
   { cmd: "MMR", want: /P1 \/ P99 = 1ST AND 99TH PERCENTILE/ },
   { cmd: "NOWC", want: /GDPNOW IS A MODEL ESTIMATE/ },

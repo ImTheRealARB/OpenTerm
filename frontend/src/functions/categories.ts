@@ -53,7 +53,7 @@ export const MENU: Readonly<Record<Category, readonly Subgroup[]>> = {
     { name: "Options", codes: ["OMON", "PCR", "OV", "OSA", "OVDV", "SKEW", "HIVG", "OSCAN", "OREC", "EMOV", "OIB", "PGRK"] },
     { name: "Statistics", codes: ["QRY", "FLD", "NB", "CORR", "TRA", "BETA", "REGIME", "FACT", "QL", "ALPHA"] },
     { name: "AI research", codes: ["AI", "SWARM", "THESIS", "AUDIT", "MCP"] },
-    { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO", "LEGAL", "ESG"] },
+    { name: "Public records", codes: ["FEDREG", "CONGRESS", "FEC", "USASP", "UKCO", "LEGAL", "ESG", "ETS"] },
   ],
   Portfolio: [{ name: "Portfolio", codes: ["PORT", "ALRT", "RISK", "OPT", "ATTR", "SYNC", "JRNL", "ORD"] }],
   Backtest: [{ name: "Backtest", codes: ["BT", "IMPORT"] }],

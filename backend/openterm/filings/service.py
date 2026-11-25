@@ -17,6 +17,7 @@ from ..errors import DataError
 from ..research.table import col, head, payload, section
 from ..router import AllFailed
 from . import esg as E
+from . import ets as T
 from . import fts as F
 from . import legal as L
 from . import ma as M
@@ -204,6 +205,22 @@ async def rels(svc: Any, symbol: str) -> dict[str, Any]:
         return {"data": R.build_payload(symbol, who["name"], who["rows"], figi, note, source), "fallback_from": failed, "source": source}
 
     return await svc.swr(f"w:rels:{symbol.upper()}", LIST_TTL_S, fetch)
+
+
+# --- ETS (EU emissions trading) -----------------------------------------------------------------------------------------------------------
+
+
+async def ets(svc: Any, symbol: str, name: str, year: int) -> dict[str, Any]:
+    company = name or (await _company(svc, symbol))["name"]
+    core = L.core_name(company)
+    if len(core) < L.MIN_NAME_CHARS:
+        raise DataError("bad_request", f"COMPANY NAME TOO SHORT TO MATCH: {company[:40]}")
+
+    async def fetch() -> dict:
+        out, failed = await svc.router.call("eu_ets", lambda p: p.installations(company, year))
+        return {"data": T.build_payload(symbol or company, company, year, out["rows"], out["source"]), "fallback_from": failed, "source": out["source"]}
+
+    return await svc.swr(f"w:ets:{core}:{year}", EMISSIONS_TTL_S, fetch)
 
 
 # --- ESG --------------------------------------------------------------------------------------------------------------------------------

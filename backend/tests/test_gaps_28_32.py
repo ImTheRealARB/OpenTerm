@@ -141,3 +141,47 @@ def test_board_rows_group_proxies_by_company():
     assert [s["id"] for s in out["sections"]] == ["filings", "boards"] and any("TEXT MATCH" in n for n in out["notes"])
     skipped = people.build_payload("X", [], 0, "SEC", {"phrase": None, "why": "THE OWNER IS AN ENTITY"})
     assert any(n.startswith("BOARDS NOT SEARCHED") for n in skipped["notes"]) and len(skipped["sections"]) == 1
+
+
+# --- ETS: EU emissions trading (recorded Union Registry files, trimmed to the account holders containing "alcoa") ---------------------------
+
+
+def _b64(name: str) -> bytes:
+    import base64
+
+    return base64.b64decode(json.loads((Path(__file__).parent / "fixtures" / f"{name}.json").read_text(encoding="utf-8"))["b64"])
+
+
+def test_ets_join_matches_holders_by_core_name_and_keeps_blanks_blank():
+    from openterm.filings import ets
+
+    ops = ets.parse_operators(_b64("eu_ets_operators_daily"))
+    ver = ets.parse_verified(_b64("eu_ets_verified_2024"), 2024)
+    rows = ets.installations(ops, ver, "Alcoa Corp")
+    names = {r["installation"] for r in rows}
+    assert any(n.startswith("Alcoa Mosj") for n in names) and len(rows) >= 4
+    assert [r["tons"] for r in rows if r["tons"] is not None] == sorted((r["tons"] for r in rows if r["tons"] is not None), reverse=True)
+    blank = [r for r in rows if r["tons"] is None]
+    assert blank and all(r["tons"] != 0 for r in blank)  # -1 (blank) and 'Excluded' stay empty, never zero
+    assert ets.installations(ops, ver, "Dow Inc") == []  # nothing in the trimmed file starts with DOW
+    out = ets.build_payload("AA", "Alcoa Corp", 2024, rows, "EU")
+    assert any("NEVER READ AS ZERO" in n for n in out["notes"]) and out["sections"][0]["id"] == "installations"
+
+
+def test_ets_holder_rule_is_word_for_word_and_inputs_are_checked():
+    from openterm.filings import ets
+
+    assert ets.holder_matches("Alcoa Norway AS", "ALCOA") and not ets.holder_matches("Dowlais Group plc", "DOW") and not ets.holder_matches("X", "")
+    with pytest.raises(ValueError, match="NEW SHAPE"):
+        ets.parse_download_list({"not": "a list"})
+    with pytest.raises(ValueError, match="NOT A GZIP"):
+        ets.parse_operators(b"not gzip")
+    with pytest.raises(ValueError, match="NO COLUMNS FOR 1999"):
+        ets.parse_verified(_b64("eu_ets_verified_2024"), 1999)
+
+
+def test_ets_route_in_fixture_mode(client):
+    d = client.get("/api/filings/ets", params={"symbol": "AA", "year": 2024}).json()["data"]
+    assert d["sections"][0]["rows"] and "EMISSIONS ONLY, NO SCORE" in d["notes"][0]
+    bad = client.get("/api/filings/ets", params={"symbol": "AA", "year": 2023})
+    assert bad.status_code >= 400  # only 2024 is recorded: another year is "not recorded", never invented

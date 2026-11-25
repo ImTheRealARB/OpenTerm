@@ -8,6 +8,7 @@ from fastapi import APIRouter, Query, Request
 
 from .errors import DataError
 from .filings import esg as _esg
+from .filings import ets as _ets
 from .filings import service
 from .http_util import data_errors, svc
 from .responses import OrjsonRoute
@@ -49,6 +50,16 @@ async def bio(request: Request, q: str = Query(..., max_length=80), start: str =
 async def rels(request: Request, symbol: str = Query(..., max_length=24)):
     """RELS: other tickers of the same issuer (SEC) and the listings of this ticker (OpenFIGI)."""
     return await service.rels(svc(request), symbol)
+
+
+@router.get("/ets")
+@data_errors
+async def ets(request: Request, symbol: str = Query("", max_length=24), name: str = Query("", max_length=80),
+              year: int = Query(_ets.YEAR_NOW, ge=2008, le=2100)):
+    """ETS: EU Emissions Trading System verified emissions of installations whose account holder opens with the company name (emissions only, no score)."""
+    if not symbol and not name:
+        raise DataError("bad_request", "GIVE A SYMBOL OR NAME=<COMPANY>")
+    return await service.ets(svc(request), symbol, name, year)
 
 
 @router.get("/esg")
