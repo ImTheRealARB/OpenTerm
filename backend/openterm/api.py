@@ -554,6 +554,10 @@ async def get_settings_doc(request: Request):
 async def put_settings_doc(request: Request):
     from .settings_store import VERSION, SettingsStore, source_prefs
 
+    # Audit C-02: settings switch on AI web access, alert delivery and the recorder; docs/HOSTING.md promises they are
+    # changed only from this machine. Reading them (GET) stays open.
+    if not loopback(request):
+        return key_error("forbidden", "SETTINGS CAN ONLY BE CHANGED FROM THIS MACHINE")
     try:
         body = await json_object(request)
         if "settings" not in body:
@@ -992,7 +996,14 @@ async def bt_run(request: Request):
     from .bt.store import BtError
 
     try:
-        params = await _bt_params(request, await json_object(request))
+        body = await json_object(request)
+        # Audit C-02: inline Python is code execution on this machine (inside the sandbox), so only this machine may
+        # send it, the same rule as saving a strategy (PUT /bt/strategies). Remote callers can still run rules and
+        # strategies that were saved locally. Checked here, not in `_bt_params`, because the Lab routes pass saved code
+        # through `_bt_params` and must keep working remotely.
+        if body.get("code") is not None and not loopback(request):
+            return key_error("forbidden", "STRATEGY CODE CAN ONLY BE SENT FROM THIS MACHINE")
+        params = await _bt_params(request, body)
     except (BtError, RuleError) as e:
         return bt_error(e)
     except (DataError, UserDataError) as e:

@@ -11,6 +11,16 @@ attribute access on an allowed module):
    even if layers 1 and 2 were somehow bypassed. A hook can never be removed once added, so it only acts while
    `strict()` is active: the job's own file reads and the rest of the worker are unaffected.
 
+Gemini audit C-01 (2026-11, reproduced) walked around all three at once: `typing.get_type_hints(SomeClass)` evaluates
+the class's annotation STRINGS with the class's own `__dict__` as globals (Python 3.12 swaps the namespaces on purpose so
+class attributes win). That dict has no `__builtins__`, so `eval` supplies the REAL builtins and `__import__('os')` works.
+The annotation then started a thread, and layer 3 is per thread. Fixes: the evaluators are refused by name (layer 1),
+starting a thread is a refused audit event (layer 3, so anything that does get evaluated still cannot leave the guard),
+`type()` takes one argument only (three arguments build a class with bases, which layer 1 forbids), and `generate`'s
+result is copied into a plain dict while the guard is still on.
+Strict per thread (not process-wide) on purpose: the test runner and any future worker helper have their own threads
+that must keep working while a strategy runs.
+
 A separate "no subscript on module objects" rule (the audit's idea) is not needed: indexing a module is only dangerous
 after reaching `sys.modules`, and the `sys` / `modules` attribute names are refused in layer 1. A blanket rule would
 also break `np.r_[...]` and `typing.Dict[...]`.
@@ -45,6 +55,8 @@ BLOCKED_ATTRS |= {"sys", "os", "builtins", "compat", "subprocess", "modules", "p
                   "unlink", "rmdir", "mkdir", "makedirs", "startfile", "spawn", "execv", "fork", "socket", "ctypes",
                   "importlib", "inspect", "pickle", "shutil", "pathlib", "tempfile", "threading", "multiprocessing",
                   "marshal", "pty", "winreg", "msvcrt", "webbrowser", "urllib"}
+# Audit C-01: functions that turn an annotation STRING into running code. `from typing import Dict` stays fine.
+BLOCKED_ATTRS |= {"get_type_hints", "ForwardRef", "evaluate_forward_ref", "get_annotations"}
 MAX_CODE = 100_000
 
 
@@ -127,22 +139,41 @@ def check(code: str) -> ast.Module:
 SAFE_BUILTINS = ["abs", "all", "any", "bool", "dict", "divmod", "enumerate", "filter", "float", "frozenset", "int",
                  "isinstance", "issubclass", "iter", "len", "list", "map", "max", "min", "next", "object", "pow",
                  "print", "range", "repr", "reversed", "round", "set", "slice", "sorted", "str", "sum", "tuple",
-                 "zip", "hash", "chr", "ord", "callable", "bytes", "bytearray", "super", "type",
+                 "zip", "hash", "chr", "ord", "callable", "bytes", "bytearray", "super",
                  "Exception", "ValueError", "TypeError", "KeyError", "IndexError", "ZeroDivisionError",
                  "ArithmeticError", "StopIteration", "RuntimeError", "NotImplementedError", "AttributeError",
                  "__build_class__"]
 
 
+def _one_arg_type(obj, *rest):
+    """`type(x)` (what strategies use it for: a type check). `type(name, bases, dict)` builds a class with bases and
+    any method names, which layer 1 forbids in `class` statements (audit C-01), so it is refused here."""
+    if rest:
+        raise TypeError("type(name, bases, dict) IS NOT ALLOWED IN STRATEGIES")
+    return type(obj)
+
+
+def _refuse_network(*_a, **_k):
+    raise OSError("NETWORK DISABLED IN STRATEGIES")
+
+
+class _NoSocket:
+    """Stands in for `socket.socket`. A class, not a function: `ssl` subclasses `socket.socket` when it is imported, and
+    subclassing a function raises TypeError (audit M-09). Creating one (or a subclass) still fails."""
+
+    def __init__(self, *_a, **_k) -> None:
+        _refuse_network()
+
+
 def disable_network() -> None:
-    """Sockets are off for the rest of this worker's life (workers never need the network: the server fetches data)."""
+    """Sockets are off for the rest of this worker's life (workers never need the network: the server fetches data).
+    `_socket.socket` (the C module underneath) is not patched here; layer 3 refuses it while strategy code runs."""
     import socket
 
-    def refuse(*_a, **_k):
-        raise OSError("NETWORK DISABLED IN STRATEGIES")
-
-    for name in ("socket", "create_connection", "getaddrinfo", "gethostbyname", "socketpair", "fromfd"):
+    socket.socket = _NoSocket
+    for name in ("create_connection", "getaddrinfo", "gethostbyname", "socketpair", "fromfd"):
         if hasattr(socket, name):
-            setattr(socket, name, refuse)
+            setattr(socket, name, _refuse_network)
 
 
 # --- layer 3: the runtime guard ------------------------------------------------------------------------------------
@@ -156,7 +187,10 @@ REFUSED_EVENTS = ("subprocess.", "os.system", "os.exec", "os.spawn", "os.posix_s
                   "os.startfile", "os.kill", "os.killpg", "os.remove", "os.rename", "os.mkdir", "os.rmdir", "os.chmod",
                   "os.chown", "os.truncate", "os.link", "os.symlink", "os.utime", "os.chdir", "os.putenv",
                   "os.unsetenv", "os.mkfifo", "os.mknod", "shutil.", "socket.", "ctypes.", "winreg.", "msvcrt.",
-                  "webbrowser.", "urllib.", "http.client.", "ftplib.", "smtplib.", "pty.", "sys.addaudithook")
+                  "webbrowser.", "urllib.", "http.client.", "ftplib.", "smtplib.", "pty.", "sys.addaudithook",
+                  # Audit C-01: strict() is per thread, so a thread started from strategy code would run unguarded.
+                  # The event fires in the starting thread (which is strict), so refusing it closes that door.
+                  "_thread.start_new_thread")
 
 
 def _norm(path: str) -> str:
@@ -234,7 +268,12 @@ class Guarded:
 
     def generate(self, data_map):
         with strict():
-            return self._engine.generate(data_map)
+            out = self._engine.generate(data_map)
+            # Copy into a plain dict INSIDE the guard: the caller iterates the result after strict() has ended, so a
+            # result whose own methods ran strategy code would run it unguarded (audit C-01).
+            if isinstance(out, dict):
+                out = {k: v for k, v in dict.items(out)}
+            return out
 
 
 def load(code: str):
@@ -252,6 +291,7 @@ def load(code: str):
 
     safe = {k: getattr(builtins, k) for k in SAFE_BUILTINS if hasattr(builtins, k)}
     safe["__import__"] = guarded_import
+    safe["type"] = _one_arg_type
     env = {"__builtins__": safe, "__name__": "strategy"}
     with strict():  # module-level code and __init__ are strategy code too
         exec(compile(code, "<strategy>", "exec"), env)  # noqa: S102 - checked above, restricted builtins
