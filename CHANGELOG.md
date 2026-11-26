@@ -2,6 +2,24 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Audit fixes and two bug fixes (2026-11-26)
+An outside code audit found 63 issues; 39 were confirmed, 23 partly confirmed and 1 was a false alarm. The confirmed ones are fixed, in 10 groups:
+- Security: strategy code can no longer escape its sandbox; backtest runs and settings changes are accepted from this computer only; secrets
+  stay out of error text; links and outbound web requests are checked (no `javascript:` links, no requests to private addresses); CSV exports
+  cannot carry spreadsheet formulas.
+- Honest data: a view built from old data is marked STALE instead of fresh.
+- AI: a panel says UNGROUNDED unless tools really grounded the answer; the audit log lists only tools the model was offered.
+- Money maths: forex profit and loss, option profit chances, live backtest sizes and some metrics are corrected.
+- Reliability: the source fallback and its cool-down after failures, shutdown, extensions, the MCP server, the Kite login (one-time `state`) and
+  the network bind (a public address needs `OPENTERM_ALLOW_PUBLIC_BIND=1`) are hardened.
+- Panels: AI and SWARM runs stop when their panel is replaced; BT EDIT keeps unsaved text when a panel is maximized.
+- Data: stored journal trades are re-keyed with the corrected rule (database migration 21).
+- Extensions may say how old their data is (`as_of`, `stale`): [docs/EXTENSIONS.md](docs/EXTENSIONS.md).
+
+Two bugs found on live data, both after Nasdaq started to block OpenTerm (see [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md)):
+- Plain English (`apple stock price past 5 years`) showed no preview when the company list could not load. It now asks Yahoo's name search.
+- An unknown ticker (`ZZZZQ GP`) said PROVIDER DOWN. It now says NO DATA FOR SYMBOL when the main source says the ticker does not exist.
+
 ## Phases 21-32 gap pass (2026-11-25)
 Items the first build left out, now built. Commands: [docs/COMMANDS.md](docs/COMMANDS.md) and [docs/FUNCTIONS.md](docs/FUNCTIONS.md).
 - `BT OPT ... FIT=SHARPE-2*DD`: your own fitness formula over the run metrics (safe parser, no code runs).
