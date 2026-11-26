@@ -92,6 +92,12 @@ def delta_strike(fit: Fit, T: float, call: bool) -> float | None:
         return (nm.norm_cdf(d1) - 0.25) if call else (nm.norm_cdf(d1) - 0.75)
 
     lo, hi = (0.0, 1.5) if call else (-1.5, 0.0)
+    # The usual side holds the root while s * sqrt(T) is under about 1.35. A long-dated or very volatile smile puts the 25-delta
+    # strike further out (a put's can even sit above the forward): widen to a symmetric bracket until the sign changes.
+    width = 1.5
+    while f(lo) * f(hi) > 0 and width < 100:
+        width *= 2
+        lo, hi = -width, width
     if f(lo) * f(hi) > 0:
         return None
     try:
@@ -104,8 +110,9 @@ def delta_strike(fit: Fit, T: float, call: bool) -> float | None:
 def skew_metrics(fit: Fit, T: float) -> dict:
     """ATM IV, 25-delta call and put IV, risk reversal (call - put), butterfly (wing average - ATM) and the slope dIV/dk at the forward."""
     kc, kp = delta_strike(fit, T, True), delta_strike(fit, T, False)
-    ivc = fit.iv(kc) if kc is not None else None
-    ivp = fit.iv(kp) if kp is not None else None
+    # iv_in_range: a fitted vol below the 1-point floor (or negative) is not a vol to report
+    ivc = fit.iv_in_range(kc) if kc is not None else None
+    ivp = fit.iv_in_range(kp) if kp is not None else None
     return {
         "atm_iv": fit.a, "iv_c25": ivc, "iv_p25": ivp,
         "rr25": None if ivc is None or ivp is None else ivc - ivp,

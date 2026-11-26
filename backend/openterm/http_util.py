@@ -27,7 +27,8 @@ from .userdata import UserData, UserDataError
 
 # kind -> HTTP status for data and user-data errors (anything not listed is a 500)
 STATUS = {K.BAD_REQUEST: 400, K.NOT_FOUND: 404, K.TOO_LARGE: 413, K.UNAVAILABLE: 503, K.KEY_REQUIRED: 424,
-          K.LOGIN_REQUIRED: 401, K.LOGIN_EXPIRED: 403}  # Phase 15: Kite
+          K.LOGIN_REQUIRED: 401, K.LOGIN_EXPIRED: 403,  # Phase 15: Kite
+          K.RATE_LIMITED: 503}  # Kite's 429 reaches a route as this kind; 503 is what it answered before it had its own kind
 # kind -> HTTP status for the key store (APIKEYS), strategy and spend-cap routes
 KEY_STATUS = {"unknown_provider": 404, K.BAD_REQUEST: 400, "env_locked": 409, "forbidden": 403}
 
@@ -72,14 +73,25 @@ def require_json_type(request: Request) -> None:
         raise UserDataError(K.BAD_REQUEST, "CONTENT-TYPE MUST BE application/json")
 
 
-async def json_object(request: Request) -> dict:
+async def read_capped(request: Request) -> bytes:
+    """The request body, refused above MAX_BODY. Reads the stream chunk by chunk, so a chunked upload with no Content-Length
+    cannot make us buffer gigabytes before the size is checked."""
     declared = request.headers.get("content-length", "")
     if declared.isdigit() and int(declared) > MAX_BODY:  # refuse before buffering it
         raise UserDataError(K.TOO_LARGE, f"BODY OVER {MAX_BODY // 1_000_000} MB")
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_BODY:
+            raise UserDataError(K.TOO_LARGE, f"BODY OVER {MAX_BODY // 1_000_000} MB")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+async def json_object(request: Request) -> dict:
     require_json_type(request)
-    raw = await request.body()
-    if len(raw) > MAX_BODY:
-        raise UserDataError(K.TOO_LARGE, f"BODY OVER {MAX_BODY // 1_000_000} MB")
+    raw = await read_capped(request)
     try:
         body = orjson.loads(raw)
     except orjson.JSONDecodeError:

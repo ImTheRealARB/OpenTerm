@@ -24,7 +24,15 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
 
     from . import fitexpr, limits, optspace, overfit
     from .engine import backtest
-    from .job import _epoch, _num, load_data, scalar_metrics, signals_for, stops_config
+    from .job import (
+        _epoch,
+        _num,
+        drop_undefined_sortino,
+        load_data,
+        scalar_metrics,
+        signals_for,
+        stops_config,
+    )
 
     progress(0.02, "LOADING DATA")
     payload, data_map, adjusted = load_data(params)
@@ -47,7 +55,7 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
         try:
             sig = signals_for(None if is_code else text, text if is_code else None, data_map, short)
             res = backtest(data_map, sig, params["config"], engine=params["engine"], bars_per_year=bpy, stops=stops_cfg)
-            m = scalar_metrics(res.metrics)
+            m = drop_undefined_sortino(scalar_metrics(res.metrics), res.equity, cash)
             row["metrics"] = {k: _num(m.get(k)) for k in RUN_METRICS}
             eq = res.equity
             if not times:

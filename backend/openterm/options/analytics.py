@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable
-from itertools import pairwise
 
 PROB_LABEL = "MODEL PROBABILITY, LOGNORMAL (RISK-NEUTRAL, FROM EACH CONTRACT'S IV)"
 TOUCH_LABEL = "TOUCH = REFLECTION APPROXIMATION (ABOUT 2 x PROBABILITY OF FINISHING PAST THE STRIKE)"
@@ -169,22 +168,44 @@ def pl_curves(legs: list[dict], premiums: list[float], grid: list[float], T: flo
 
 
 def prob_profit(curve: list[dict], S0: float, T: float, r: float, iv: float) -> float | None:
-    """Probability the EXPIRY P/L is above zero, under the lognormal model: sums the probability mass of grid cells whose
-    expiry P/L is positive (cells bounded at the midpoints between grid spots; the ends run to 0 and infinity)."""
+    """Probability the EXPIRY P/L is above zero, under the lognormal model.
+
+    The expiry P/L is piecewise linear in the spot, so it is treated as a straight line between neighbouring grid spots and
+    as the same straight line continued past the first and last grid spot (down to 0 and out to infinity). The probability
+    mass of each stretch where that line is above zero is added up. The grid only spans [0.8 x lowest strike, 1.2 x highest],
+    so a wide structure (a 1-year 60% IV straddle) has its breakevens OUTSIDE it: judging the two open-ended stretches by the
+    sign at the grid ends said 0% (long) or 100% (short)."""
     if T <= 0 or iv <= 0 or len(curve) < 2:
         return None
     s = iv * math.sqrt(T)
     mu = math.log(S0) + (r - 0.5 * iv * iv) * T
 
     def cdf(x: float) -> float:
-        return 0.0 if x <= 0 else ncdf((math.log(x) - mu) / s)
+        return 0.0 if x <= 0 else 1.0 if math.isinf(x) else ncdf((math.log(x) - mu) / s)
 
     spots = [c["spot"] for c in curve]
-    edges = [0.0] + [(a + b) / 2 for a, b in pairwise(spots)] + [math.inf]
+    pl = [c["expiry"] for c in curve]
     total = 0.0
-    for c, lo, hi in zip(curve, edges, edges[1:], strict=False):
-        if c["expiry"] > 0:
-            total += (1.0 if math.isinf(hi) else cdf(hi)) - cdf(lo)
+    # one (left spot, right spot, P/L at left, slope) per stretch: the open ends reuse their neighbour's slope
+    n = len(spots)
+    for i in range(-1, n):
+        if i == -1:
+            a, b, slope = 0.0, spots[0], (pl[1] - pl[0]) / (spots[1] - spots[0])
+            fa = pl[0] - slope * spots[0]
+        elif i == n - 1:
+            a, b, slope = spots[-1], math.inf, (pl[-1] - pl[-2]) / (spots[-1] - spots[-2])
+            fa = pl[-1]
+        else:
+            a, b = spots[i], spots[i + 1]
+            slope = (pl[i + 1] - pl[i]) / (b - a)
+            fa = pl[i]
+        if slope == 0:
+            lo, hi = (a, b) if fa > 0 else (a, a)
+        else:
+            root = a - fa / slope  # where this line crosses zero
+            lo, hi = (max(a, root), b) if slope > 0 else (a, min(b, root))
+        if hi > lo:
+            total += cdf(hi) - cdf(lo)
     return total
 
 

@@ -1,5 +1,6 @@
 """User data in SQLite: named workspace layouts, command line history and watchlists."""
 
+import asyncio
 import time
 
 import aiosqlite
@@ -58,6 +59,9 @@ def check_state(state) -> bytes:
 class UserData:
     def __init__(self, db: aiosqlite.Connection):
         self.db = db
+        # Watchlist edits read, merge and write across awaits; two at once would each start from the same list and the second
+        # write would drop the first one's change (audit M-07).
+        self._edit_lock = asyncio.Lock()
 
     async def layouts(self) -> list[dict]:
         async with self.db.execute("SELECT name, state, updated_at FROM layouts ORDER BY name") as cur:
@@ -197,13 +201,14 @@ class UserData:
         if add is None and remove is None:
             raise UserDataError("bad_request", "BODY NEEDS add OR remove")
         plus, minus = check_symbols(add or []), set(check_symbols(remove or []))
-        current = await self._watchlist(name)
-        if current is None and not plus:
-            raise UserDataError("not_found", f"NO WATCHLIST {name}")
-        merged = [s for s in dict.fromkeys([*(current or []), *plus]) if s not in minus]
-        if len(merged) > MAX_WATCHLIST:
-            raise UserDataError("too_large", f"WATCHLIST OVER {MAX_WATCHLIST} SYMBOLS")
-        return await self._store(name, merged)
+        async with self._edit_lock:
+            current = await self._watchlist(name)
+            if current is None and not plus:
+                raise UserDataError("not_found", f"NO WATCHLIST {name}")
+            merged = [s for s in dict.fromkeys([*(current or []), *plus]) if s not in minus]
+            if len(merged) > MAX_WATCHLIST:
+                raise UserDataError("too_large", f"WATCHLIST OVER {MAX_WATCHLIST} SYMBOLS")
+            return await self._store(name, merged)
 
     async def delete_watchlist(self, raw_name: str) -> str:
         name = watchlist_name(raw_name)

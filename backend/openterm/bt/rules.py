@@ -300,10 +300,13 @@ def _eval(node, df, cache: dict):
         cond = {">": a > b, "<": a < b, ">=": a >= b, "<=": a <= b}[node.op]
         return cond & valid, valid
     above = (a > b) if node.op == "CROSS>" else (a < b)
+    # The way back needs a STRICT cross the other way (Pine's crossunder): a bar where the two lines only touch (a == b)
+    # keeps the position, instead of exiting on the touch.
+    below = (a < b) if node.op == "CROSS>" else (a > b)
     prev = above.shift(1, fill_value=False) & valid.shift(1, fill_value=False)
     was_valid_prev = valid.shift(1, fill_value=False)
     on = above & valid & was_valid_prev & ~prev
-    off = ~above & valid & was_valid_prev & prev
+    off = below & valid & was_valid_prev
     state = on.astype(float).where(on | off)
     state = state.where(~off, 0.0).ffill()
     # Before the first cross the condition is simply False, not "unknown": the inputs are valid, nothing has crossed yet.

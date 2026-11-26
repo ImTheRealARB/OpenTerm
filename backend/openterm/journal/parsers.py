@@ -184,17 +184,21 @@ def _finish(trades: list[Trade], errs: list[str], ignored: int) -> tuple[list[Tr
         raise JournalError(f"{len(errs)} ROW{'S' if len(errs) != 1 else ''} COULD NOT BE READ, NOTHING WAS STORED", "\n".join(errs[:12]))
     if not trades:
         raise JournalError("NO TRADES FOUND IN THE FILE", f"{ignored} ROWS WERE NOT TRADES" if ignored else None)
-    _keys(trades)
+    assign_keys(trades)
     return trades, ignored
 
 
-def _keys(trades: list[Trade]) -> None:
-    """A stable de-duplication key. A broker trade id decides when there is one; otherwise every field does, and a repeat of the
-    very same row inside one file gets its own count, so two real identical fills stay two while a re-import stays a no-op."""
+def assign_keys(trades: list[Trade]) -> None:
+    """A stable de-duplication key. A broker trade id plus the time, symbol, side and order id decides when there is one; otherwise
+    every field does. A repeat of the very same row inside one file gets its own count, so two real identical fills stay two while
+    a re-import stays a no-op.
+
+    Why the id alone is not enough (audit C-10): brokers can reuse a trade id on another day, and the count restarts at #1 in every
+    file, so a day-2 file's row would silently collide with a day-1 row and be dropped as a duplicate."""
     seen: dict[str, int] = {}
     for t in trades:
         if t.trade_id:
-            base = f"{t.broker}|id|{t.trade_id}"
+            base = f"{t.broker}|id|{t.trade_id}|{t.time}|{t.symbol}|{t.side}|{t.order_id}"
         else:
             base = "|".join([t.broker, t.time, t.symbol, t.side, f"{t.qty:.8g}", f"{t.price:.8g}", t.order_id])
         n = seen[base] = seen.get(base, 0) + 1

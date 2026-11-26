@@ -1,6 +1,7 @@
 """Daily AI spend cap. Spend per local date in `kv` key `llm_spend:<YYYY-MM-DD>`, the cap in `llm_cap` (US$).
 
-Before a call: refuse when today's spend plus the worst case (`max_tokens` at the output price) passes the cap.
+Before a call: refuse when today's spend, plus what calls already in flight may still cost (`reserved`), plus this call's worst
+case (the prompt at the input price and `max_tokens` at the output price) passes the cap.
 After a call: add the real cost. A model with no known price is refused (the cap could not be kept), unless it is local.
 """
 
@@ -16,13 +17,20 @@ MAX_CAP = 1000.0
 CAP_KEY = "llm_cap"
 
 
-def check(spent: float, cap: float, max_tokens: int, price: dict | None, local: bool) -> str | None:
-    """-> None when the call may go ahead, else the refusal text."""
+def worst_case(max_tokens: int, price: dict, prompt_tokens: int = 0) -> float:
+    """US$ one call can cost at most: its whole prompt plus `max_tokens` of answer."""
+    return (prompt_tokens * float(price.get("input", 0.0)) + max_tokens * float(price.get("output", 0.0))) / 1e6
+
+
+def check(spent: float, cap: float, max_tokens: int, price: dict | None, local: bool,
+          reserved: float = 0.0, prompt_tokens: int = 0) -> str | None:
+    """-> None when the call may go ahead, else the refusal text. `reserved` = the worst case of calls still streaming (audit C-12:
+    without it, calls that overlap each saw the same `spent` and all passed)."""
     if local:
         return None
     if price is None:
         return "PRICE UNKNOWN"
-    if spent + max_tokens * float(price.get("output", 0.0)) / 1e6 > cap:
+    if spent + reserved + worst_case(max_tokens, price, prompt_tokens) > cap:
         return "SPEND CAP REACHED"
     return None
 

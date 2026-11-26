@@ -143,6 +143,10 @@ class JobRunner:
         if self._closing:
             return
         i = self.workers.index(w)
+        # Free the old worker's task pipe now (audit M-02). Only this thread ever uses it; the result pipe is read by the reader
+        # thread, which may be waiting on it this very moment, so that one is left to its own garbage collection.
+        with contextlib.suppress(Exception):
+            w.tasks.close()
         self.workers[i] = Worker(self._ctx, w.wid)
         self._wake()
         self._dispatch()
@@ -399,3 +403,9 @@ class JobRunner:
         if self._reader is not None:
             self._reader.join(1.0)
         self.workers = []
+        # The wake pipe ends were never closed (audit M-02). Only when the reader is gone: closing a handle it still waits on is unsafe.
+        if self._reader is None or not self._reader.is_alive():
+            for end in (self._wake_r, self._wake_w):
+                if end is not None:
+                    with contextlib.suppress(Exception):
+                        end.close()

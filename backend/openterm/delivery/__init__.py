@@ -149,6 +149,18 @@ async def _take_slot(app, channel: str, cap: int) -> bool:
 
 # --- retry in the background -----------------------------------------------------------------------------------
 
+MAX_RETRY_AFTER_S = BACKOFF_S[-1]  # a server's `Retry-After` never holds a retry task for longer than our own longest wait (audit M-05)
+
+
+def retry_wait(step: float, err: BaseException) -> float:
+    """Seconds to wait before the next try: the schedule step, or the server's `Retry-After` when that is longer, but at most
+    MAX_RETRY_AFTER_S. A hostile or broken server could otherwise ask for days (or `inf`) and park the task."""
+    asked = getattr(err, "retry_after", None)
+    asked = float(asked) if asked else 0.0
+    if not asked > 0:  # also false for NaN
+        return step
+    return max(step, min(asked, MAX_RETRY_AFTER_S))
+
 
 def _track(app, task: asyncio.Task) -> None:
     """Keeps a reference so the task is not garbage collected while it sleeps."""
@@ -169,9 +181,7 @@ async def _retry_later(app, row_id: int, secrets: list[str], sender, values, cfg
     status, detail = "failed", None
     try:
         for n, step in enumerate(BACKOFF_S, start=1):
-            # a 429 can ask for longer than the schedule: honour whichever is longer
-            wait = max(step, float(getattr(err, "retry_after", None) or 0))
-            await sleep(wait)
+            await sleep(retry_wait(step, err))
             try:
                 await _once(sender, app, values, cfg, subject, text, extra)
                 status, detail = "sent", None

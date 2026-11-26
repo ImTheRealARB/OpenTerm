@@ -86,6 +86,10 @@ _TOKEN = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
 ORDER_WORDS = {"buy", "sell", "gtt", "kite", "brokerage", "autotrade"}
 ORDER_NOUNS = {"order", "orders", "trade", "trades", "position", "positions"}
 ORDER_VERBS = {"place", "submit", "create", "execute", "send", "modify", "cancel", "amend", "square", "exit", "open", "close", "put", "make", "new", "add", "post"}
+# Verbs that only ever mean "do something to an order or trade". With one of these next to an order or trade word the tool is refused even
+# when the name starts with a read verb: `get_place_order` is still an order tool (audit H-12 item 6). "open", "close", "new" are left out on
+# purpose: `list_open_orders` is a read.
+STRONG_ACTIONS = {"place", "submit", "execute", "modify", "cancel", "amend", "square", "send", "create"}
 READ_VERBS = {"get", "list", "fetch", "read", "search", "show", "find", "query", "lookup", "describe", "history", "view"}
 ORDER_DESC = re.compile(r"\b(?:place|places|placing|submit|submits|submitting|execute|executes|executing|send|sends|sending)\b[^.\n]{0,40}\b(?:buy|sell|orders?|trades?)\b"
                         r"|\b(?:buy|sell)\s+(?:or|and|/)\s+(?:sell|buy)\b|\b(?:market|limit|stop)[- ]?(?:loss )?orders?\b[^.\n]{0,30}\b(?:place|submit|send)\b"
@@ -96,6 +100,8 @@ def order_like(name: str, description: str = "") -> bool:
     """True when a tool's name or description suggests placing an order or trade. Reading an order book or trade statistics is fine."""
     tokens = [t.lower() for t in _TOKEN.findall(name)]
     if set(tokens) & ORDER_WORDS or "".join(tokens) in {"placeorder", "createorder", "submitorder"}:
+        return True
+    if set(tokens) & STRONG_ACTIONS and set(tokens) & ORDER_NOUNS:  # whatever the first word is
         return True
     if set(tokens) & ORDER_NOUNS and tokens and tokens[0] not in READ_VERBS and set(tokens) & ORDER_VERBS:
         return True

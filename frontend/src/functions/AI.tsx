@@ -21,7 +21,7 @@ import { navigate, replaceView } from "../state/workspace";
 import { aiArgs } from "./aiArgs";
 import { aiApi, isAbort, streamPost } from "../net/aiApi";
 import type { RawReply } from "../net/core";
-import { citeSegments, codeDraftStatus, newTurn, numberedLines, reduceTurn, stopTurn, turnLine, type AiEvent, type Turn } from "./aiStream";
+import { citeSegments, codeDraftStatus, newTurn, numberedLines, reduceTurn, showsAiLine, stopTurn, turnLine, untrustedLine, type AiEvent, type Turn } from "./aiStream";
 import type { FunctionProps } from "./registry";
 import { watchPanelGone } from "./panelGoneWatch";
 import { usePanelMemory } from "./usePanelMemory";
@@ -54,11 +54,12 @@ export function ToolLines({ tools }: { tools: Turn["tools"] }) {
   return (
     <>
       {tools.map((r) => (
-        <div key={r.id} className={r.state === "failed" ? "warn" : "dim"} data-testid="ai-tool">
+        <div key={r.id} className={r.state === "failed" || r.untrusted ? "warn" : "dim"} data-testid="ai-tool">
           [{r.id}] {r.name} {JSON.stringify(r.args)} · {r.source ?? "-"}
           {r.age_s != null ? ` · ${r.age_s < 10 ? r.age_s.toFixed(1) : Math.round(r.age_s)}s` : ""}
           {r.stale ? " · STALE" : ""} · {r.state === "running" ? "RUNNING" : r.state.toUpperCase()}
           {r.state === "failed" && r.summary ? ` · ${r.summary}` : ""}
+          {untrustedLine(r) ? ` · ${untrustedLine(r)}` : ""}
         </div>
       ))}
     </>
@@ -97,7 +98,7 @@ function TurnView({ t }: { t: Turn }) {
           ))}
         </div>
       )}
-      {t.status === "done" && (
+      {showsAiLine(t) && (
         <div className="dim" data-testid="ai-footer">
           {turnLine(t)}
         </div>

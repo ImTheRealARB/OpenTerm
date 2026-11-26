@@ -302,14 +302,19 @@ def test_the_walk_finds_the_loopback_only_routes(client):
     assert len(found) >= 40
     for must in (("POST", "/api/ai/chat"), ("POST", "/mcp"), ("PUT", "/api/keys/1"), ("POST", "/api/ext/1/enable"),
                  ("POST", "/api/orders/submit"), ("POST", "/api/orders/kill"), ("POST", "/api/sync/kite"),
-                 ("POST", "/api/journal/import")):
+                 ("POST", "/api/journal/import"), ("PUT", "/api/settings"), ("POST", "/api/bt/run")):
         assert must in found, must
+
+
+# Routes that are loopback-only for SOME bodies: the body that triggers the guard (audit C-02: `/bt/run` refuses inline
+# Python from remote callers, but rules and saved strategies may still be run remotely).
+TRIGGER_BODY = {("POST", "/api/bt/run"): {"code": "x"}}
 
 
 def test_loopback_only_routes_are_refused_even_from_127_0_0_1_with_a_valid_session(session):
     refused, wrong = [], []
     for method, path in _loopback_routes(session.app):
-        r = session.request(method, path, json={}, headers=GOOD_ORIGIN)
+        r = session.request(method, path, json=TRIGGER_BODY.get((method, path), {}), headers=GOOD_ORIGIN)
         (refused if r.status_code in (403, 401) else wrong).append((method, path, r.status_code))
     assert not wrong, wrong
     assert refused

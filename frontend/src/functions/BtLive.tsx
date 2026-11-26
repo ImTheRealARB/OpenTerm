@@ -145,7 +145,7 @@ export default function BtLive({ panelId, args }: { panelId: number; args: strin
     <div className="fn bt bt-live">
       <div className="line">
         <span className="acc">BT LIVE </span>
-        PAPER FORWARD TESTS · PLAY MONEY IN OPENTERM'S OWN BOOK (NO BROKER, NO ORDERS) · RAW PRICES, NO FEES OR SLIPPAGE
+        PAPER FORWARD TESTS · PLAY MONEY IN OPENTERM'S OWN BOOK (NO BROKER, NO ORDERS) · RAW PRICES, NO FEES OR SLIPPAGE · SIMULATION, NOT A FORECAST
       </div>
       {error && <PanelNote kind="error" hint={LIVE_USAGE}>ERR: {error}</PanelNote>}
       {msg && <div className="dim">{msg}</div>}

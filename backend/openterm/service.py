@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 
 from . import cachekeys as ck
 from . import errkinds as K
-from . import symmath
+from . import freshness, symmath
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
 from .config import load_yaml
@@ -39,17 +39,22 @@ INTRADAY = {"1s", "1m", "2m", "5m", "15m", "30m", "60m", "90m"}  # candles that 
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
-    """value is the cached form: {"data": ..., "fallback_from": [...], optional "source"}."""
+    """value is the cached form: {"data": ..., "fallback_from": [...], optional "source"}.
+    A view built from other cached answers carries `as_of` (its oldest input) and `stale` (any input stale) in `value`
+    (`freshness.fold`, set by `swr`): they win over the time the view itself was stored (audit G3 H-16)."""
     data = value["data"]
-    return {
+    stored_at = min(stored_at, value.get("as_of") or stored_at)
+    env = {
         "data": data,
         "source": value.get("source") or (data.get("source") if isinstance(data, dict) else None),
         "as_of": stored_at,
         "age_s": round(time.time() - stored_at, 2),
-        "stale": stale,
+        "stale": bool(stale or value.get("stale")),
         "fallback_from": value.get("fallback_from", []),
         **({"fallback_notes": value["fallback_notes"]} if value.get("fallback_notes") else {}),
     }
+    freshness.note(env)  # a view that combines envelopes (a collect() scope) sees every one of them
+    return env
 
 
 class DataService:
@@ -83,7 +88,11 @@ class DataService:
 
             async def work() -> None:
                 try:
-                    value = await fetch()
+                    # Every envelope the fetch read (a view over FRED series, a chain, a curve ...) is folded into the value that gets
+                    # cached: without it a view built from stale inputs was stored as fresh and served as fresh (audit G3 H-16).
+                    with freshness.collect() as seen:
+                        value = await fetch()
+                    value = freshness.fold(value, seen)
                     self.cache.put(key, value)
                     fut.set_result(value)
                 except BaseException as e:  # noqa: BLE001 - forwarded to every waiter
@@ -100,6 +109,14 @@ class DataService:
         self._bg.add(task)
         task.add_done_callback(self._bg.discard)
 
+    async def aclose(self) -> None:
+        """Shutdown: cancel every background task (coalesced fetches, quote batches, refreshes) and wait for them, so none is still
+        running when the HTTP client and the database close under it (audit H-05)."""
+        tasks = list(self._bg)
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
     async def _refresh_quiet(self, key: str, fetch: Callable[[], Awaitable[dict]]) -> None:
         try:
             await self._once(key, fetch)
@@ -114,7 +131,8 @@ class DataService:
         entry = await self.cache.get(key)
         if entry is not None:
             value, stored_at = entry
-            if time.time() - stored_at < ttl:
+            # A value built from stale inputs is never "fresh" (it is served with stale=True and rebuilt in the background).
+            if time.time() - stored_at < ttl and not value.get("stale"):
                 self.fresh_hits += 1
                 return envelope(value, stored_at, stale=False)
             self.stale_hits += 1
@@ -380,12 +398,15 @@ class DataService:
 
         The one reader of the quote cache outside this class (the IEX poller's previous-close lookup in main.py uses it).
         """
-        entry = self.cache.mem.get(ck.quote(symbol))
+        entry = self.cache.mem.get(self._qkey(symbol))  # the SAME key the quote was stored under (scoped by pin / source prefs)
         return None if entry is None else entry[0].get("data") or {}
 
     def apply_tick(self, tick) -> None:
         """Fold a streamed tick into the cached quote so REST snapshots match the stream."""
-        key = ck.quote(tick.symbol)
+        # Quotes are stored under `_qkey` (the key plus the saved source preferences); the bare `ck.quote` key stopped matching as soon
+        # as any SETTINGS SOURCE preference existed, so ticks never reached the REST quote (audit H-03). A tick carries no pin: a
+        # quote cached for one pinned source (`?source=`) is deliberately not touched.
+        key = self._qkey(tick.symbol)
         entry = self.cache.mem.get(key)
         if entry is None:
             return
@@ -513,31 +534,45 @@ class DataService:
                 self._inflight[key] = futures[s] = fut
                 mine.append(s)
         if mine:
-            try:
-                found, errors = await self.router.quotes(mine)
-                for s in mine:
-                    fut = futures[s]
-                    if s in found:
-                        q, failed = found[s]
-                        value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
-                        self.cache.put(self._qkey(s), value)
-                        self.rest_at[self._qkey(s)] = time.time()
-                        fut.set_result(value)
-                    else:
-                        fut.set_exception(errors[s])
-                        fut.exception()
-            except BaseException as e:
-                for s in mine:
-                    if not futures[s].done():
-                        futures[s].set_exception(e)
-                        futures[s].exception()
-                if not quiet:
-                    raise
-            finally:
-                for s in mine:
-                    self._inflight.pop(self._qkey(s), None)
+            # The batch runs in its own task, like `_once` does: other callers wait on the futures this batch fills, so cancelling THIS
+            # caller (a closed browser tab) must not cancel the fetch and hand CancelledError to them (audit H-04).
+            batch = asyncio.ensure_future(self._run_quote_batch(mine, futures))
+            self._bg.add(batch)
+            batch.add_done_callback(self._bg.discard)
+            err = await asyncio.shield(batch)
+            if err is not None and not quiet:
+                raise err
         results = await asyncio.gather(*(asyncio.shield(f) for f in futures.values()), return_exceptions=True)
         return dict(zip(futures.keys(), results))
+
+    async def _run_quote_batch(self, mine: list[str], futures: dict[str, asyncio.Future]) -> Exception | None:
+        """Fetches `mine` upstream and settles each symbol's future. Returns the error instead of raising it (nobody may be awaiting
+        this task any more); a cancellation (shutdown) still settles every future first, then propagates."""
+        try:
+            found, errors = await self.router.quotes(mine)
+            for s in mine:
+                fut = futures[s]
+                if s in found:
+                    q, failed = found[s]
+                    value = {"data": q.model_dump(), "fallback_from": failed, "fallback_notes": self._notes(failed)}
+                    self.cache.put(self._qkey(s), value)
+                    self.rest_at[self._qkey(s)] = time.time()
+                    fut.set_result(value)
+                else:
+                    fut.set_exception(errors[s])
+                    fut.exception()
+            return None
+        except BaseException as e:  # every waiter must get an answer; a cancel is re-raised below
+            for s in mine:
+                if not futures[s].done():
+                    futures[s].set_exception(e)
+                    futures[s].exception()
+            if not isinstance(e, Exception):
+                raise
+            return e
+        finally:
+            for s in mine:
+                self._inflight.pop(self._qkey(s), None)
 
     def stats(self) -> dict:
         total = self.fresh_hits + self.stale_hits + self.misses

@@ -1,5 +1,6 @@
 """Background jobs so user requests hit warm caches and tripped providers recover on their own."""
 
+import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
@@ -10,21 +11,30 @@ from .providers.base import Provider, ProviderError
 from .router import Router
 
 log = logging.getLogger("openterm.scheduler")
+PROBE_PARALLEL = 8  # probes in flight at once
 
 
 async def probe_down_providers(router: Router) -> None:
     """Half-open check: a tripped provider gets one cheap probe; success closes the breaker."""
-    for name, p in router.providers.items():
-        h = router.health[name]
-        if not h.consecutive:
-            continue
-        if type(p).probe is Provider.probe:
-            continue  # no probe(): the cooldown simply runs out (a missing probe used to count as a fresh failure every 30 s)
-        try:
-            await router.attempt(p, lambda prov: prov.probe())
-            log.info("provider %s recovered", name)
-        except ProviderError:
-            pass
+    gate = asyncio.Semaphore(PROBE_PARALLEL)
+
+    async def probe(name: str, p: Provider) -> None:
+        async with gate:
+            try:
+                await router.attempt(p, lambda prov: prov.probe())
+                log.info("provider %s recovered", name)
+            except ProviderError:
+                pass
+
+    # Side by side, not one after another: with several tripped providers a slow probe (20 s timeouts) used to delay all the others
+    # past the 30 s interval (audit M-03).
+    todo = [
+        probe(name, p)
+        for name, p in router.providers.items()
+        if router.health[name].consecutive
+        and type(p).probe is not Provider.probe  # no probe(): the cooldown simply runs out (a missing probe used to count as a fresh failure every 30 s)
+    ]
+    await asyncio.gather(*todo)
 
 
 async def prune_cache(cache: Cache) -> None:

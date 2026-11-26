@@ -40,6 +40,18 @@ def scalar_metrics(m: dict) -> dict:
     return out
 
 
+def drop_undefined_sortino(m: dict, equity, cash: float) -> dict:
+    """Sortino divides by the RMS of losing bars. With no losing bar Vibe's `calc_metrics` divides by 1e-10 instead and
+    reports ~1e8 (kept as is: the cross-check fixtures hold that number), which `BT OPT FIT=SORTINO` then ranks first. Here
+    the metrics of a run leave the worker: a run with no losing bar has NO Sortino (None), not a huge one (audit H-23)."""
+    from .metrics import period_returns
+
+    r = period_returns(equity, cash).fillna(0.0)  # the same bar returns calc_metrics uses, first bar measured from cash
+    if "sortino" in m and not bool((r < 0).any()):
+        m["sortino"] = None
+    return m
+
+
 def tail_risk(equity) -> dict:
     """Historical one-bar VaR 95 and ES 95 of the equity curve's bar returns (spec decision H), as returns:
     VaR = the 5th percentile (linear interpolation), ES = the mean of the returns at or below it. None under 20 bars."""
@@ -212,7 +224,7 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
         labels["data_note"] = (labels.get("data_note", "") + " RAW CLOSES: NO ADJUSTED CLOSES FROM THE SOURCE").strip()
     return {
         "run_id": params["run_id"],
-        "metrics": {**scalar_metrics(res.metrics), **tail_risk(res.equity)},
+        "metrics": {**drop_undefined_sortino(scalar_metrics(res.metrics), res.equity, cash), **tail_risk(res.equity)},
         "equity": [[_epoch(ts), round(float(v), 4)] for ts, v in res.equity.items()],
         "benchmark": [[_epoch(ts), round(float(v), 4)] for ts, v in bench_eq.items()],
         "trades": trades,

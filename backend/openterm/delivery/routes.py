@@ -8,7 +8,7 @@ import re
 
 from fastapi import APIRouter, Query, Request
 
-from ..http_util import error, json_object, loopback, user
+from ..http_util import MAX_BODY, error, json_object, loopback, user
 from ..responses import Orjson, OrjsonRoute
 from ..userdata import UserDataError
 from . import NEEDS, dispatch, pairing
@@ -89,7 +89,9 @@ async def post_test(request: Request):
 # Phase 22 GRAB: a panel picture to the channels the user names (TG = telegram, EMAIL = email). Same pipeline as alerts:
 # keys, fixture-mode skip, daily cap, delivery log and retry; the senders attach `extra["picture"]`.
 PICTURE_CHANNELS = {"TG": "telegram", "TELEGRAM": "telegram", "EMAIL": "email", "MAIL": "email"}
-PICTURE_MAX = 8 * 1024 * 1024  # bytes of PNG; a 9-panel 4K screen is well under this
+# Bytes of PNG. The picture travels as base64 inside a JSON body (4 bytes per 3), and `json_object` refuses bodies over MAX_BODY, so
+# a bigger limit could never be reached (it was 8 MB against a 4 MB body limit). 4096 bytes are left for the channel list and the name.
+PICTURE_MAX = (MAX_BODY - 4096) // 4 * 3
 _PICTURE_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,120}\.png$")
 
 
@@ -108,7 +110,7 @@ def parse_picture(body: dict) -> tuple[list[str], str, bytes]:
     if not png.startswith(b"\x89PNG\r\n\x1a\n"):
         raise UserDataError("bad_request", "NOT A PNG")
     if len(png) > PICTURE_MAX:
-        raise UserDataError("too_large", f"PICTURE OVER {PICTURE_MAX // (1024 * 1024)} MB")
+        raise UserDataError("too_large", f"PICTURE OVER {PICTURE_MAX / 1_000_000:.1f} MB")
     return sorted({PICTURE_CHANNELS[c.upper()] for c in raw}), name, png
 
 

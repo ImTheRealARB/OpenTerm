@@ -19,6 +19,10 @@ T = TypeVar("T")
 
 TRIP_AFTER = 3
 MAX_COOLDOWN_S = 300.0
+MAX_BACKOFF_STEPS = 10  # 5 s * 2**10 is already far above MAX_COOLDOWN_S; the cap keeps `2 ** n` a small int (audit H-01)
+# While every source of a capability is tripped, ONE trial call per provider is let through this often (half-open breaker); every other
+# call fails at once with the last error instead of hitting a source that is known to be down (audit H-02).
+HALF_OPEN_GAP_S = 10.0
 
 
 @dataclass
@@ -27,6 +31,7 @@ class Health:
     errors: int = 0
     consecutive: int = 0
     down_until: float = 0.0
+    probe_at: float = 0.0  # earliest time the next half-open trial may go out while every source is tripped
     last_ok: float | None = None
     last_error: str | None = None
     last_error_at: float | None = None
@@ -52,8 +57,12 @@ class Health:
         self.last_error = f"{err.kind}: {err}"
         self.last_error_at = time.time()
         if err.kind == K.RATE_LIMITED or self.consecutive >= TRIP_AFTER:
-            cooldown = min(MAX_COOLDOWN_S, 5.0 * 2 ** max(0, self.consecutive - 1))
-            self.down_until = time.time() + cooldown
+            # The exponent is clamped: `consecutive` keeps counting during a long outage (the 30 s probe loop adds one per
+            # failed probe) and `5.0 * 2 ** 1025` raises OverflowError, which would crash `attempt` instead of tripping.
+            cooldown = min(MAX_COOLDOWN_S, 5.0 * 2 ** min(MAX_BACKOFF_STEPS, max(0, self.consecutive - 1)))
+            now = time.time()
+            self.down_until = now + cooldown
+            self.probe_at = now + min(cooldown, HALF_OPEN_GAP_S)
 
 
 class AllFailed(Exception):
@@ -119,8 +128,30 @@ class Router:
             if n in self.providers and self.providers[n].supports(capability, symbol)
         ]
         up = [p for p in ps if not self.health[p.name].down]
-        # Everything tripped: try anyway (half-open) rather than refusing outright.
+        # Everything tripped: list them all, soonest to recover first. `call` / `quotes` then let only a trial through (`_callable`).
         return up or sorted(ps, key=lambda p: self.health[p.name].down_until)
+
+    def _callable(self, capability: str, symbol: str | None = None) -> tuple[list[Provider], list[tuple[str, ProviderError]]]:
+        """`candidates`, minus the tripped sources that may not be tried yet: (providers to call, why the others were skipped).
+
+        With any healthy source the answer is `candidates` unchanged. When EVERY source is tripped (always the case for a capability
+        with a single provider) each one gets one half-open trial per `HALF_OPEN_GAP_S`; the rest of the calls are refused with the
+        provider's last error. Before audit H-02 every call retried a tripped source, so the breaker never really opened.
+        """
+        cands = self.candidates(capability, symbol)
+        if not cands or PIN.get() or not all(self.health[p.name].down for p in cands):
+            return cands, []
+        now = time.time()
+        go: list[Provider] = []
+        skipped: list[tuple[str, ProviderError]] = []
+        for p in cands:
+            h = self.health[p.name]
+            if now >= h.probe_at:
+                h.probe_at = now + HALF_OPEN_GAP_S  # claim the slot before awaiting, so concurrent calls do not all trial
+                go.append(p)
+            else:
+                skipped.append((p.name, ProviderError(K.UNAVAILABLE, f"CIRCUIT OPEN: {h.last_error or 'recent failures'}")))
+        return go, skipped
 
     async def attempt(self, p: Provider, fn: Callable[[Provider], Awaitable[T]]) -> T:
         """Calls `fn(p)` on ONE named provider, recording its health and latency (the circuit breaker sees it). Public: the scheduler's
@@ -152,14 +183,15 @@ class Router:
         pin = PIN.get()
         if pin:
             return await self._call_pinned(pin, capability, fn, symbol), []
-        for p in self.candidates(capability, symbol):
+        cands, skipped = self._callable(capability, symbol)
+        for p in cands:
             try:
                 return await self.attempt(p, fn), [n for n, _ in errors]
             except ProviderError as e:
                 errors.append((p.name, e))
                 if e.kind == K.KEY_REQUIRED:
                     keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
-        raise AllFailed(errors, keys)
+        raise AllFailed(errors + skipped, keys)
 
     def pin_block(self, p: Provider, capability: str, symbol: str | None) -> ProviderError | None:
         """Why the pinned source cannot even be asked (None = ask it)."""
@@ -196,7 +228,14 @@ class Router:
                 why = ProviderError(K.BAD_REQUEST, "UNKNOWN SOURCE") if pinned_p is None else self.pin_block(pinned_p, "quotes", s)
                 if why is not None:
                     errors[s].append((pin, why))
-        for p in ([pinned_p] if pinned_p is not None else []) if pin else self.candidates("quotes"):
+        cands, skipped = ([pinned_p] if pinned_p is not None else []), []
+        if not pin:
+            cands, skipped = self._callable("quotes")
+        for name, why in skipped:  # tripped and not due a trial: every symbol it could serve says why it got no answer
+            for s in symbols:
+                if self.providers[name].supports("quotes", s):
+                    errors[s].append((name, why))
+        for p in cands:
             name = p.name
             batch = [s for s in symbols if s not in found and not (pin and errors[s]) and p.supports("quotes", s)]
             if not batch:

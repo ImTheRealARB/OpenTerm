@@ -31,6 +31,19 @@ describe("csv", () => {
     expect(csvField("=1+1,2")).toBe(`"'=1+1,2"`);
   });
 
+  it("neutralizes formulas that start with a number sign (audit H-14)", () => {
+    expect(neutralize("+1+cmd|' /C calc'!A0")).toBe("'+1+cmd|' /C calc'!A0");
+    expect(neutralize("-1+2")).toBe("'-1+2");
+    expect(neutralize("-2+HYPERLINK(1)")).toBe("'-2+HYPERLINK(1)");
+    expect(neutralize("+.5+cmd")).toBe("'+.5+cmd");
+    expect(neutralize("\tx")).toBe("'\tx");
+    expect(neutralize("\rx")).toBe("'\rx");
+    // plain numbers (and a percent figure) stay numeric
+    for (const n of ["-1", "+1", "-1.5", "+3.4%", "-.5", "1e5", "-1.2E-3", "5."]) expect(neutralize(n), n).toBe(n);
+    // ordinary text is untouched
+    expect(neutralize("AAPL")).toBe("AAPL");
+  });
+
   it("serializes a table with CRLF records", () => {
     expect(toCsv(["SYM", "NAME", "LAST"], [["AAPL", "Apple, Inc.", 342], ["X", null, -1.5]])).toBe(
       'SYM,NAME,LAST\r\nAAPL,"Apple, Inc.",342\r\nX,,-1.5\r\n',

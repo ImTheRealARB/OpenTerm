@@ -165,13 +165,13 @@ def test_telegram_posts_markdownv2_and_every_part(client, waits):
 
 # --- (a) 429 honours retry_after ---
 def test_429_waits_at_least_retry_after_then_sends(client, waits):
-    answers = [httpx.Response(429, json={"ok": False, "parameters": {"retry_after": 700}}),
+    answers = [httpx.Response(429, json={"ok": False, "parameters": {"retry_after": 500}}),
                httpx.Response(200, json={"ok": True})]
     telegram_app(client, lambda req: answers.pop(0))
     assert send_test(client, "telegram")["status"] == "retrying"
     row = wait_status(client, ("sent", "failed"))
     assert row["status"] == "sent"
-    assert waits == [700.0]  # the server asked for longer than the 30 s step, so we waited 700
+    assert waits == [500.0]  # the server asked for longer than the 30 s step, so we waited 500 (capped at 600 by delivery.MAX_RETRY_AFTER_S, audit M-05)
 
 
 def test_429_with_a_short_retry_after_still_waits_the_schedule_step(client, waits):
@@ -266,13 +266,13 @@ def test_a_failing_channel_never_blocks_the_caller(client, monkeypatch):
 
 def test_webhook_5xx_and_429_are_retried_but_4xx_is_not(client, waits):
     client.app.state.keys.set("webhook", {"ALERT_WEBHOOK_URL": "https://hooks.example.com/secret-path-123"})
-    answers = [httpx.Response(503), httpx.Response(429, headers={"retry-after": "700"}), httpx.Response(200)]
+    answers = [httpx.Response(503), httpx.Response(429, headers={"retry-after": "500"}), httpx.Response(200)]
     client.app.state.keys_http = httpx.AsyncClient(transport=httpx.MockTransport(lambda req: answers.pop(0)))
     client.app.state.delivery_senders = {"webhook": webhook.send}
     configure(client, ("webhook",))
     assert send_test(client, "webhook")["status"] == "retrying"
     assert wait_status(client, ("sent", "failed"))["status"] == "sent"
-    assert waits == [30.0, 700.0]  # step 1 = 30 s; the 429's Retry-After (700 s) is longer than step 2 (120 s)
+    assert waits == [30.0, 500.0]  # step 1 = 30 s; the 429's Retry-After (500 s) is longer than step 2 (120 s)
 
 
 def test_webhook_4xx_fails_at_once(client, waits):

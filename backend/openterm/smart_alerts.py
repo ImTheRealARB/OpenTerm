@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
+import math
 import time
 import uuid
 from types import SimpleNamespace
@@ -90,7 +91,11 @@ def where(alert: dict, price: float, at: float) -> int:
 
 
 def fired(alert: dict, price: float, at: float) -> bool:
-    """A line alert fires when the side differs from the side at creation; a channel alert when the price is outside."""
+    """A line alert fires when the side differs from the side at creation; a channel alert when the price is outside.
+    A price that is not a finite number never fires: every comparison with NaN is false, which `where` would read as "below the line"
+    (audit H-10)."""
+    if not math.isfinite(price):
+        return False
     w = where(alert, price, at)
     return w != 0 if alert["kind"] in CHANNEL_KINDS else w != alert["side"]
 
@@ -173,6 +178,9 @@ async def check_one(app, a: dict) -> dict:
 
     _hook(app)
     env = await app.state.service.history(a["symbol"], range_for(rules.max_period(rules.parse(a["rule"]))), "1d")
+    if env.get("stale"):
+        # An alert must never fire (or stay quiet) on bars older than the cache allows (audit H-10): say so, the caller shows it.
+        raise DataError("unavailable", f"{a['symbol']} DAILY BARS ARE STALE ({env.get('source')}): NOT CHECKED")
     bars = drop_forming(env["data"], time.time())
     sha, path = await asyncio.to_thread(bt_of(SimpleNamespace(app=app)).write_data, {"bars": {a["symbol"]: bars}})
     return await app.state.jobs.submit("alerts.ind", {"data_path": str(path), "data_sha": sha, "rule": a["rule"],
@@ -247,11 +255,17 @@ async def add_indicator(request: Request, body: IndBody):
         return error_response(400, "bad_request", str(e))
     a = {"id": uuid.uuid4().hex[:8], "type": "ind", "symbol": resolve(body.symbol.strip().upper()), "rule": body.rule.upper(),
          "status": "active", "created": time.time(), "checked": None, "note": "FIRST CHECK RUNNING", "values": {}}
-    await _save(request.app.state.userdata.db, IND, a)
+    db = request.app.state.userdata.db
+    await _save(db, IND, a)  # saved first: the check job's hook looks the alert up by id
     try:
         job = await check_one(request.app, a)
-    except DataError as e:
-        return error(e)
+    except Exception as e:
+        # A first check that failed leaves no alert behind (audit H-10): it would sit on "FIRST CHECK RUNNING" until the next sweep.
+        await db.execute("DELETE FROM kv WHERE key=?", (IND + a["id"],))
+        await db.commit()
+        if isinstance(e, DataError):
+            return error(e)
+        raise
     return Orjson({"alert": a, "job": job})
 
 
@@ -271,7 +285,7 @@ async def add_drawing(request: Request, body: DrawBody):
         return error_response(400, "bad_request", f"{sym} HAS {len(usable)} ALERTABLE DRAWINGS: {names}")
     env = (await request.app.state.service.quotes([sym])).get(sym) or {}
     price = (env.get("data") or {}).get("price")
-    if not isinstance(price, int | float):
+    if not isinstance(price, int | float) or not math.isfinite(price):
         return error_response(503, "unavailable", f"NO PRICE FOR {sym} NOW ({redact(str(env.get('error') or 'NO QUOTE'))}): THE SIDE OF THE LINE IS MEASURED FROM IT")
     a = {"id": uuid.uuid4().hex[:8], "type": "draw", "symbol": sym, "drawing_id": pick["id"], "kind": pick["kind"],
          "pts": pick["pts"], "status": "active", "created": time.time(), "note": f"CREATED AT {price:g}"}

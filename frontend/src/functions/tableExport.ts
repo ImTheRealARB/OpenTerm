@@ -27,7 +27,9 @@ const getters = new Map<number, CsvGetter[]>();
 
 /** Formatted cells exactly as the grid shows them (what you see is what you get). */
 export function gridCsv<R>(name: string, columns: Column<R>[], rows: R[], extra?: { title: string; text: (r: R) => CsvCell }[]): CsvTable {
-  const cols = [...columns.map((c) => ({ title: c.title, text: c.text as (r: R) => CsvCell })), ...(extra ?? [])];
+  // `aux` columns (flag squares, canvas bars, sparklines) have no text of their own: leave them out, as the
+  // screen-reader mirror does, instead of exporting blank-headed columns (audit M-14). Done here so no panel has to remember.
+  const cols = [...columns.filter((c) => !c.aux).map((c) => ({ title: c.title, text: c.text as (r: R) => CsvCell })), ...(extra ?? [])];
   return { name, header: cols.map((c) => c.title), rows: rows.map((r) => cols.map((c) => c.text(r))) };
 }
 

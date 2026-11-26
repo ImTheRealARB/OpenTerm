@@ -14,6 +14,7 @@ import time
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from .. import freshness
 from ..errors import DataError
 from ..kite.symbols import derivative_root
 from ..options import chain as ch
@@ -29,7 +30,6 @@ from ..research import corp_parse as cp
 from ..router import AllFailed
 from ..service import envelope
 from ..symbols import resolve
-from . import freshness
 from .calc_service import CalcMixin
 from .fut_service import FuturesMixin
 from .phase28 import Phase28Mixin

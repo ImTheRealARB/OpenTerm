@@ -201,8 +201,11 @@ def main():
     fx = synthetic(12, 1.10, 0.002)
     sigfx = [0, 1, 1, 1, 1, 0, -1, -1, -1, 0, 0, 0]
     cfg = {"initial_cash": 10_000}
+    # Vibe's ForexEngine does not understand Yahoo's "=X" (it prices EURUSD=X with the default spread and swap), so it
+    # is run under the spelling EURUSD.FX and the ticker is renamed back: OpenTerm strips "=X" (audit C-08).
+    fx_run = run(ForexEngine(cfg), {"EURUSD.FX": fx}, Fixed({"EURUSD.FX": sigfx}), cfg)
     cases["forex_eurusd"] = {"bars": {"EURUSD=X": frame_json(fx)}, "signals": {"EURUSD=X": sigfx},
-                             **run(ForexEngine(cfg), {"EURUSD=X": fx}, Fixed({"EURUSD=X": sigfx}), cfg)}
+                             **json.loads(json.dumps(fx_run).replace("EURUSD.FX", "EURUSD=X"))}
     fut = synthetic(12, 5000.0, 10.0)
     sigfut = [0, 1, 1, 1, 0, 0, -1, -1, 0, 0, 0, 0]
     cfg = {"initial_cash": 100_000}

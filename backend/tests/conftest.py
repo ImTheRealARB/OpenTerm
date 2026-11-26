@@ -31,6 +31,17 @@ def hermetic_keys(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENTERM_DOTENV_PATH", str(tmp_path / "keys.env"))
 
 
+@pytest.fixture(autouse=True)
+def hermetic_dns(monkeypatch):
+    """Audit C-03: the webhook sender resolves its host name. No test may reach real DNS: every name answers one public address."""
+    from openterm.delivery import webhook
+
+    async def fake(_host, _port):
+        return ["93.184.216.34"]
+
+    monkeypatch.setattr(webhook, "RESOLVER", fake)
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     """App in fixture + synthetic mode: no network, recorded responses, SYNxxxx test instruments."""

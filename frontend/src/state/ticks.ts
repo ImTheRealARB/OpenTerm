@@ -76,10 +76,13 @@ export const setStreamUp = (up: boolean): void => {
  * Should a row show the stream's last tick instead of its REST snapshot? Yes only when the stream is up AND the tick is at
  * least as new as the snapshot's own trade time (`restMs`, epoch ms; null = the snapshot has no time). Without this check one
  * old tick overrode every later REST quote, and kept the green STREAM label after the stream dropped (audit A-1).
+ * `restStale`: the snapshot is flagged STALE. A tick of the SAME trade time then brings nothing newer, so it must not replace the
+ * snapshot's honest "STALE 5m" label with a green STREAM one (audit C-06); only a strictly newer tick wins.
  */
-export function liveWins(id: number, restMs: number | null | undefined): boolean {
+export function liveWins(id: number, restMs: number | null | undefined, restStale = false): boolean {
   if (!streamUp || !bitHas(liveBits, id)) return false;
-  return restMs == null || live.t[id] >= restMs;
+  if (restMs == null) return true;
+  return restStale ? live.t[id] > restMs : live.t[id] >= restMs;
 }
 
 /**
@@ -390,9 +393,14 @@ class LiveView implements Live {
 }
 const views: (LiveView | undefined)[] = [];
 
-export function getLive(symbol: string): Live | undefined {
+/**
+ * The symbol's last tick, or undefined when there is none OR it must not be shown as live: the stream is down, or the REST snapshot
+ * the caller also holds (`restMs` = its trade time, `restStale` = flagged STALE) is newer (audit H-17; same rule as `liveWins`).
+ * Pass the snapshot whenever the caller has one, otherwise a tick from before a dropped stream overrides it.
+ */
+export function getLive(symbol: string, restMs?: number | null, restStale = false): Live | undefined {
   const id = peekSymId(symbol);
-  if (id < 0 || !bitHas(liveBits, id)) return undefined;
+  if (id < 0 || !liveWins(id, restMs, restStale)) return undefined;
   return (views[id] ??= new LiveView(id));
 }
 export const currentFrame = () => frame;

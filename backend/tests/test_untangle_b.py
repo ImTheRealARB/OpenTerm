@@ -105,9 +105,9 @@ async def test_bars_spaces_real_symbols_after_the_first_five(sleeps):
 
 
 # ================================================================== B9: one identifier module
-# The accepted / rejected sets, written against the old regexes. Note `$` (not `\Z`) in the AI ones: "AAPL\n" passes today.
-SYMBOL_OK = ["AAPL", "aapl", "^GSPC", "BRK-B", "EURUSD=X", "RELIANCE.NS", "A" * 12, "AAPL\n"]
-SYMBOL_BAD = ["", "A" * 13, "AA PL", "AA;PL", "AA/PL", "AAPL\nX"]
+# The accepted / rejected sets. The AI pattern ends in `\Z` (audit H-15): "AAPL\n" used to pass because `$` matches before a trailing newline.
+SYMBOL_OK = ["AAPL", "aapl", "^GSPC", "BRK-B", "EURUSD=X", "RELIANCE.NS", "A" * 12]
+SYMBOL_BAD = ["", "A" * 13, "AA PL", "AA;PL", "AA/PL", "AAPL\nX", "AAPL\n"]
 
 
 @pytest.mark.parametrize("s", SYMBOL_OK)

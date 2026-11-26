@@ -184,7 +184,8 @@ async def ai_filing(request: Request):
         good = sum(1 for c in checked if c["verified"])
         # Numbers in the (verified-only) summary must appear in the retrieved passages, the same check every AI panel makes.
         unsourced = ground.check(summary, [h.text for h in hits]) if good else []
-        yield {"type": "done", "answer": summary, "grounded": True, "label": None, "unsourced": unsourced, "tool_calls": 1, "cost": cost, "stopped": None,
+        # grounded = at least one quote was found word for word in the filing; with none, the model's text is all there is (H-19)
+        yield {"type": "done", "answer": summary, "grounded": good > 0, "label": None if good else "UNGROUNDED", "unsourced": unsourced, "tool_calls": 1, "cost": cost, "stopped": None,
                "verified": good, "unverified": len(checked) - good}
 
     system_for_audit = filings.FILING_SYSTEM

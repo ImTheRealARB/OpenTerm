@@ -96,13 +96,30 @@ def _series(p: dict) -> dict:
             "t": [int(x) for x in t], "v": [_number(x) for x in v]}
 
 
+def _freshness(p: dict) -> dict:
+    """Optional `as_of` (epoch seconds: when the data shown was current) and `stale` (true when the extension knows it is old).
+    OpenTerm cannot see where an extension got its numbers, so only the extension can tell the screen how old they are
+    (audit G3 H-12): the route passes both into the envelope instead of claiming "fresh, age 0"."""
+    out: dict = {}
+    if p.get("as_of") is not None:
+        v = p["as_of"]
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v <= 0:
+            raise PayloadError("as_of MUST BE EPOCH SECONDS")
+        out["as_of"] = float(v)
+    if p.get("stale") is not None:
+        if not isinstance(p["stale"], bool):
+            raise PayloadError("stale MUST BE true OR false")
+        out["stale"] = p["stale"]
+    return out
+
+
 def normalize(payload: Any) -> dict:
     """The cleaned payload, or PayloadError saying what is wrong. Unknown keys are dropped."""
     if not isinstance(payload, dict):
         raise PayloadError("A ROUTE MUST RETURN AN OBJECT")
     kind = payload.get("kind")
     if kind == "table":
-        return _table(payload)
+        return {**_table(payload), **_freshness(payload)}
     if kind == "series":
-        return _series(payload)
+        return {**_series(payload), **_freshness(payload)}
     raise PayloadError("PAYLOAD kind MUST BE table OR series")

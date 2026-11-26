@@ -1,6 +1,8 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/india_equity.py (MIT; see THIRD_PARTY.md).
 # Changes: import paths (`blocked_by_limit` lives in `bands.py`); en dashes and the rupee sign replaced by ASCII;
-# `_bar_date` catches (ValueError, TypeError) instead of Exception; the last rule of `india_can_execute` is one return.
+# `_bar_date` catches (ValueError, TypeError) instead of Exception; the last rule of `india_can_execute` is one return;
+# audit H-24: `calc_commission` charges stamp duty and the DP charge by order SIDE (buy / sell), not by open / close, so
+# an allow_short sell-to-open pays the sell-side charge and the buy-to-cover pays the buy-side one (longs unchanged).
 """India equity (NSE / BSE) backtest engine.
 
 Models the Indian cash-equity **delivery** segment on daily bars. Intraday (MIS) mechanics are not represented by a
@@ -78,11 +80,13 @@ class IndiaEquityEngine(BaseEngine):
         """Cash equity trades in 1-share lots."""
         return float(max(int(raw_size), 0))
 
-    def calc_commission(self, size: float, price: float, _direction: int, is_open: bool) -> float:
+    def calc_commission(self, size: float, price: float, direction: int, is_open: bool) -> float:
         """India delivery cost stack (see module docstring).
 
-        ``_direction`` is unused: reserved for future asymmetric long/short (intraday MIS) schedules.
+        ``direction`` is the position's direction. The order is a BUY when it opens a long or closes a short, a SELL when
+        it opens a short or closes a long: stamp duty is buy-only and the DP charge sell-only.
         """
+        is_buy = (direction == 1) == is_open
         notional = size * price
         brokerage = notional * self.in_brokerage
         exchange_txn = notional * self.in_exchange_txn        # bilateral
@@ -90,7 +94,7 @@ class IndiaEquityEngine(BaseEngine):
         gst = (brokerage + exchange_txn + sebi_fee) * self.in_gst
         stt = notional * self.in_stt                          # bilateral (delivery)
         comm = brokerage + exchange_txn + sebi_fee + gst + stt
-        if is_open:
+        if is_buy:
             comm += notional * self.in_stamp_duty             # stamp duty: buy-only
         else:
             comm += self.in_dp_charge                         # DP charge: sell-only, flat

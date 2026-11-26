@@ -16,6 +16,7 @@ import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { useEnvelope } from "./secPanel";
+import { openExternal } from "../safeUrl";
 import { gridCsv, useCsvExport } from "./tableExport";
 
 
@@ -32,7 +33,7 @@ const COLUMNS: Column<Row>[] = [
 
 function openArticle(url: string): void {
   // Article bodies are never fetched or shown here: the publisher's page opens in a new tab.
-  window.open(url, "_blank", "noopener,noreferrer");
+  openExternal(url); // http/https only (audit C-05)
 }
 
 export default function N({ panelId, args, security, source }: FunctionProps) {

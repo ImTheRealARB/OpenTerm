@@ -497,7 +497,9 @@ async def list_news_alerts(request: Request):
 @router.post("/newsalerts")
 async def create_news_alert(request: Request):
     try:
-        return await news_alerts_store(request).create(await json_object(request))
+        alert = await news_alerts_store(request).create(await json_object(request))
+        await engine_of(request).sync()  # like the price alerts above (audit L-02)
+        return alert
     except UserDataError as e:
         return error(e)
 
@@ -506,13 +508,17 @@ async def create_news_alert(request: Request):
 async def clear_news_alerts(request: Request, status: str = Query(...)):
     if status != "triggered":
         return error(UserDataError("bad_request", "ONLY status=triggered CAN BE CLEARED"))
-    return {"deleted": await news_alerts_store(request).clear_triggered()}
+    deleted = await news_alerts_store(request).clear_triggered()
+    await engine_of(request).sync()
+    return {"deleted": deleted}
 
 
 @router.delete("/newsalerts/{alert_id}")
 async def delete_news_alert(request: Request, alert_id: int):
     try:
-        return {"deleted": await news_alerts_store(request).delete(alert_id)}
+        deleted = await news_alerts_store(request).delete(alert_id)
+        await engine_of(request).sync()
+        return {"deleted": deleted}
     except UserDataError as e:
         return error(e)
 
@@ -531,7 +537,9 @@ async def trigger_news_alert(request: Request, alert_id: int):
 @router.post("/newsalerts/{alert_id}/rearm")
 async def rearm_news_alert(request: Request, alert_id: int):
     try:
-        return await news_alerts_store(request).rearm(alert_id)
+        alert = await news_alerts_store(request).rearm(alert_id)
+        await engine_of(request).sync()
+        return alert
     except UserDataError as e:
         return error(e)
 
@@ -554,6 +562,10 @@ async def get_settings_doc(request: Request):
 async def put_settings_doc(request: Request):
     from .settings_store import VERSION, SettingsStore, source_prefs
 
+    # Audit C-02: settings switch on AI web access, alert delivery and the recorder; docs/HOSTING.md promises they are
+    # changed only from this machine. Reading them (GET) stays open.
+    if not loopback(request):
+        return key_error("forbidden", "SETTINGS CAN ONLY BE CHANGED FROM THIS MACHINE")
     try:
         body = await json_object(request)
         if "settings" not in body:
@@ -992,7 +1004,14 @@ async def bt_run(request: Request):
     from .bt.store import BtError
 
     try:
-        params = await _bt_params(request, await json_object(request))
+        body = await json_object(request)
+        # Audit C-02: inline Python is code execution on this machine (inside the sandbox), so only this machine may
+        # send it, the same rule as saving a strategy (PUT /bt/strategies). Remote callers can still run rules and
+        # strategies that were saved locally. Checked here, not in `_bt_params`, because the Lab routes pass saved code
+        # through `_bt_params` and must keep working remotely.
+        if body.get("code") is not None and not loopback(request):
+            return key_error("forbidden", "STRATEGY CODE CAN ONLY BE SENT FROM THIS MACHINE")
+        params = await _bt_params(request, body)
     except (BtError, RuleError) as e:
         return bt_error(e)
     except (DataError, UserDataError) as e:
@@ -1092,7 +1111,8 @@ async def bt_import(request: Request, symbol: str = "", tz: str | None = Query(N
         except UnicodeDecodeError:
             raise BtError("bad_request", "CSV REJECTED", detail="THE FILE IS NOT UTF-8 TEXT") from None
         try:
-            cols = csvimport.parse_bars(text, tz)
+            # In a thread (audit H-08): up to 20 MB of CSV is tens of milliseconds to seconds of pure Python.
+            cols = await asyncio.to_thread(csvimport.parse_bars, text, tz)
         except csvimport.CsvError as e:
             raise BtError("bad_request", "CSV REJECTED", detail=str(e)) from None
     except csvimport.CsvError as e:

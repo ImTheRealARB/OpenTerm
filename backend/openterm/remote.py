@@ -53,6 +53,23 @@ def check_config() -> None:
         raise RuntimeError("OPENTERM_REMOTE=1 needs OPENTERM_PUBLIC_ORIGIN set to the https address people use, e.g. https://term.example.com")
 
 
+LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+
+
+def check_bind(host: str) -> None:
+    """Refuse to listen on a non-loopback address unless remote mode is on (audit H-13).
+
+    Without remote mode there is no login: every route that is not "this machine only" is open to anyone who can reach the port, and
+    behind Docker's bridge even the loopback checks see a foreign address. `OPENTERM_ALLOW_PUBLIC_BIND=1` is the explicit "I know"
+    switch (a container whose published port is limited to 127.0.0.1 on the host)."""
+    if host in LOOPBACK_HOSTS or enabled():
+        return
+    if os.environ.get("OPENTERM_ALLOW_PUBLIC_BIND", "").strip().lower() in ("1", "true", "yes", "on"):
+        return
+    raise RuntimeError(f"OPENTERM_HOST={host!r} would open OpenTerm to the network with no login. Use OPENTERM_REMOTE=1 (docs/HOSTING.md), "
+                       "or keep 127.0.0.1. In a container whose port you publish only to 127.0.0.1, set OPENTERM_ALLOW_PUBLIC_BIND=1.")
+
+
 def _hash(token: str, salt: bytes) -> str:
     return hashlib.scrypt(token.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32).hex()
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { citeSegments, codeDraftStatus, newTurn, numberedLines, reduceTurn, stopTurn, turnLine, type AiEvent } from "./aiStream";
+import { citeSegments, codeDraftStatus, newTurn, numberedLines, reduceTurn, showsAiLine, stopTurn, turnLine, untrustedLine, type AiEvent } from "./aiStream";
 
 // The SSE parser (`parseSse`) moved to net/sse.ts; its tests are in net/sse.test.ts.
 
@@ -127,5 +127,28 @@ describe("code drafts (AI BT CODE)", () => {
   it("numbers the lines of the code", () => {
     expect(numberedLines("a\nb\n")).toEqual(["1  a", "2  b"]);
     expect(numberedLines(Array.from({ length: 10 }, () => "x").join("\n"))[0]).toBe(" 1  x");
+  });
+});
+
+// Audit H-20: the AI line and the "not data" flags must reach the screen, not only the event stream.
+describe("labels that must be shown", () => {
+  it("a web or third-party tool result is flagged UNTRUSTED with its fetch time", () => {
+    let t = newTurn("q");
+    for (const e of [
+      { type: "tool_call", id: "T1", name: "read_url", args: { url: "https://example.com/a" } },
+      { type: "tool_result", id: "T1", name: "read_url", ok: true, empty: false, source: "web", age_s: 0, stale: false, bytes: 9, summary: "x", untrusted: true, fetched: "2026-10-18T10:00:05Z" },
+      { type: "tool_call", id: "T2", name: "quote", args: {} },
+      { type: "tool_result", id: "T2", name: "quote", ok: true, empty: false, source: "yahoo", age_s: 1, stale: false, bytes: 9, summary: "x" },
+    ] as AiEvent[]) t = reduceTurn(t, e);
+    expect(untrustedLine(t.tools[0])).toBe("UNTRUSTED THIRD-PARTY TEXT, NOT DATA · FETCHED 10:00:05Z");
+    expect(untrustedLine(t.tools[1])).toBeNull();
+  });
+
+  it("the AI line is shown for a finished turn and for a turn that failed after the model started", () => {
+    const started = reduceTurn(newTurn("q"), { type: "start", model: "m/x", provider: "openrouter", started: "2026-10-18T10:00:00+00:00" });
+    expect(showsAiLine(started)).toBe(false); // still running
+    expect(showsAiLine(reduceTurn(started, { type: "error", kind: "provider", text: "PROVIDER DOWN" }))).toBe(true);
+    expect(showsAiLine(reduceTurn(newTurn("q"), { type: "error", kind: "key_required", text: "KEY REQUIRED" }))).toBe(false); // no model ever ran
+    expect(showsAiLine(reduceTurn(started, { type: "done", answer: "a", grounded: true, label: null, unsourced: [], tool_calls: 1, cost: 0, stopped: null }))).toBe(true);
   });
 });

@@ -278,11 +278,12 @@ async def lifespan(app: FastAPI):
         await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
+        await service.aclose()  # in-flight fetches and refreshes end before their HTTP client and database close (audit H-05)
         for part in (hub, ticker, iex, synthetic, poller, yahoo):
             if part:
                 await part.stop()
         await router.providers["nse_archive"].close()
-        await cache.flush()
+        await cache.aclose()  # also stops the delayed flusher task, then writes the last entries
         await http.aclose()
         await db.close()
 

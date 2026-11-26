@@ -13,18 +13,25 @@ every row says where its IV came from.
 from __future__ import annotations
 
 import math
+from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from ..providers.base import ProviderError
 
 MIN_VENDOR_IV = 0.01   # Yahoo prints 1e-05 style placeholders for contracts with no market; below 1 vol point is not an IV
 SECONDS_PER_YEAR = 365.0 * 86400.0
-EXPIRY_CLOSE_UTC_HOUR = 20   # 16:00 New York in daylight time; the standard-time hour (21) differs by one hour of a day count
+_NY = ZoneInfo("America/New_York")
 
 
 def years_to_expiry(expiry_epoch: int, now_epoch: float) -> float:
-    """Spec C: expiry date at 16:00 New York minus now, over 365 calendar days. Floors at 0 (an expiring contract)."""
-    close = expiry_epoch + EXPIRY_CLOSE_UTC_HOUR * 3600
+    """Spec C: expiry date at 16:00 New York minus now, over 365 calendar days. Floors at 0 (an expiring contract).
+
+    The expiry epoch is 00:00 UTC of the expiry date; the close is 16:00 New York on that date, which is 20:00 UTC in daylight
+    time and 21:00 UTC in standard time (a fixed 20:00 zeroed T, and with it the IV and every Greek, for the last hour of a
+    winter expiry day). Other venues' closes are not modelled here: every caller passes a US-style expiry."""
+    day = datetime.fromtimestamp(expiry_epoch, UTC)
+    close = datetime(day.year, day.month, day.day, 16, 0, tzinfo=_NY).timestamp()
     return max(0.0, (close - now_epoch) / SECONDS_PER_YEAR)
 
 

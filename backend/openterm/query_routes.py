@@ -7,6 +7,7 @@
                            spreadsheet can read quotes but nothing can write through it.
 """
 
+import asyncio
 import csv
 import io
 from datetime import UTC, datetime
@@ -14,6 +15,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
+from .csvsafe import neutralize
 from .errors import DataError
 from .http_util import data_errors, loopback, svc
 from .query import engine
@@ -58,7 +60,8 @@ def _text(v: object) -> PlainTextResponse:
 def _csv(rows: list[list[object]], name: str) -> Response:
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\r\n")
-    w.writerows(rows)
+    # Provider text (names, labels) lands in these cells: guard formulas (audit H-14). Numbers pass through untouched.
+    w.writerows([[neutralize(v) for v in r] for r in rows])
     return Response(buf.getvalue(), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'inline; filename="{name}.csv"'})
 
 
@@ -139,7 +142,8 @@ async def nb_start(request: Request):
     from .query.notebook import NotebookError
 
     try:
-        return {"data": request.app.state.nb.start()}
+        # In a thread (audit H-08): start probes ports and copies files, stop waits up to 10 s for the process; neither may block the loop.
+        return {"data": await asyncio.to_thread(request.app.state.nb.start)}
     except NotebookError as e:
         raise DataError("unavailable", str(e)) from e
 
@@ -148,4 +152,4 @@ async def nb_start(request: Request):
 @data_errors
 async def nb_stop(request: Request):
     _local(request)
-    return {"data": request.app.state.nb.stop()}
+    return {"data": await asyncio.to_thread(request.app.state.nb.stop)}

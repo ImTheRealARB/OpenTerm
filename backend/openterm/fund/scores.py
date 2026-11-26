@@ -28,6 +28,19 @@ def _out(score, zone, formula, inputs, missing) -> dict:
             "inputs": inputs, "missing": missing}
 
 
+ZERO_DENOMINATOR = "A DENOMINATOR IS ZERO (REVENUE, ASSETS, LIABILITIES ...)"
+
+
+def _zero_safe(formula: str, calc):
+    """Run `calc()` (the formula's arithmetic, returns the `_out` dict). A company with a zero in a denominator (a
+    pre-revenue biotech has no revenue or gross profit; a shell has no assets) has NO score: the result says why instead of
+    the ZeroDivisionError becoming an HTTP 500 on the panel."""
+    try:
+        return calc()
+    except ZeroDivisionError:
+        return _out(None, None, formula, [], [ZERO_DENOMINATOR])
+
+
 # --- Altman Z (1968, public manufacturers) and Z'' (1995, non-manufacturers) -------------------------------------
 def altman_z(cur: dict, market_cap: float | None) -> dict:
     """Z = 1.2 X1 + 1.4 X2 + 3.3 X3 + 0.6 X4 + 1.0 X5. Safe > 2.99, distress < 1.81."""
@@ -39,15 +52,19 @@ def altman_z(cur: dict, market_cap: float | None) -> dict:
     if missing:
         return _out(None, None, formula, [], missing)
     ta, tl = cur["total_assets"], cur["total_liabilities"]
-    x1 = (cur["current_assets"] - cur["current_liabilities"]) / ta
-    x2 = cur["retained_earnings"] / ta
-    x3 = cur["operating_income"] / ta  # EBIT ~ operating income (the filing's own line)
-    x4 = market_cap / tl
-    x5 = cur["revenue"] / ta
-    z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 1.0 * x5
-    zone = "SAFE" if z > 2.99 else "GREY" if z >= 1.81 else "DISTRESS"
-    return _out(z, zone, formula, [("X1 WC/TA", x1), ("X2 RE/TA", x2), ("X3 EBIT/TA", x3), ("X4 MVE/TL", x4),
-                                   ("X5 SALES/TA", x5)], [])
+
+    def calc() -> dict:
+        x1 = (cur["current_assets"] - cur["current_liabilities"]) / ta
+        x2 = cur["retained_earnings"] / ta
+        x3 = cur["operating_income"] / ta  # EBIT ~ operating income (the filing's own line)
+        x4 = market_cap / tl
+        x5 = cur["revenue"] / ta
+        z = 1.2 * x1 + 1.4 * x2 + 3.3 * x3 + 0.6 * x4 + 1.0 * x5
+        zone = "SAFE" if z > 2.99 else "GREY" if z >= 1.81 else "DISTRESS"
+        return _out(z, zone, formula, [("X1 WC/TA", x1), ("X2 RE/TA", x2), ("X3 EBIT/TA", x3), ("X4 MVE/TL", x4),
+                                       ("X5 SALES/TA", x5)], [])
+
+    return _zero_safe(formula, calc)
 
 
 def altman_z2(cur: dict) -> dict:
@@ -58,13 +75,17 @@ def altman_z2(cur: dict) -> dict:
     if missing:
         return _out(None, None, formula, [], missing)
     ta, tl = cur["total_assets"], cur["total_liabilities"]
-    x1 = (cur["current_assets"] - cur["current_liabilities"]) / ta
-    x2 = cur["retained_earnings"] / ta
-    x3 = cur["operating_income"] / ta
-    x4 = cur["equity"] / tl
-    z = 6.56 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
-    zone = "SAFE" if z > 2.6 else "GREY" if z >= 1.1 else "DISTRESS"
-    return _out(z, zone, formula, [("X1 WC/TA", x1), ("X2 RE/TA", x2), ("X3 EBIT/TA", x3), ("X4 BE/TL", x4)], [])
+
+    def calc() -> dict:
+        x1 = (cur["current_assets"] - cur["current_liabilities"]) / ta
+        x2 = cur["retained_earnings"] / ta
+        x3 = cur["operating_income"] / ta
+        x4 = cur["equity"] / tl
+        z = 6.56 * x1 + 3.26 * x2 + 6.72 * x3 + 1.05 * x4
+        zone = "SAFE" if z > 2.6 else "GREY" if z >= 1.1 else "DISTRESS"
+        return _out(z, zone, formula, [("X1 WC/TA", x1), ("X2 RE/TA", x2), ("X3 EBIT/TA", x3), ("X4 BE/TL", x4)], [])
+
+    return _zero_safe(formula, calc)
 
 
 # --- Piotroski F (2000): nine pass/fail tests, current year vs prior year ----------------------------------------
@@ -79,20 +100,23 @@ def piotroski_f(cur: dict, prev: dict) -> dict:
     def roa(d):
         return d["net_income"] / d["total_assets"]
 
-    tests = [
-        ("ROA > 0", roa(cur) > 0),
-        ("OPERATING CASH FLOW > 0", cur["operating_cf"] > 0),
-        ("ROA HIGHER THAN LAST YEAR", roa(cur) > roa(prev)),
-        ("CASH FLOW > NET INCOME (LOW ACCRUALS)", cur["operating_cf"] > cur["net_income"]),
-        ("LONG-TERM DEBT / ASSETS LOWER", cur["long_term_debt"] / cur["total_assets"] < prev["long_term_debt"] / prev["total_assets"]),
-        ("CURRENT RATIO HIGHER", cur["current_assets"] / cur["current_liabilities"] > prev["current_assets"] / prev["current_liabilities"]),
-        ("NO NEW SHARES (DILUTED COUNT NOT UP)", cur["shares_diluted"] <= prev["shares_diluted"]),
-        ("GROSS MARGIN HIGHER", cur["gross_profit"] / cur["revenue"] > prev["gross_profit"] / prev["revenue"]),
-        ("ASSET TURNOVER HIGHER", cur["revenue"] / cur["total_assets"] > prev["revenue"] / prev["total_assets"]),
-    ]
-    f = sum(1 for _, ok in tests if ok)
-    zone = "STRONG" if f >= 8 else "WEAK" if f <= 2 else "MIDDLE"
-    return _out(float(f), zone, formula, [(name, 1.0 if ok else 0.0) for name, ok in tests], [])
+    def calc() -> dict:
+        tests = [
+            ("ROA > 0", roa(cur) > 0),
+            ("OPERATING CASH FLOW > 0", cur["operating_cf"] > 0),
+            ("ROA HIGHER THAN LAST YEAR", roa(cur) > roa(prev)),
+            ("CASH FLOW > NET INCOME (LOW ACCRUALS)", cur["operating_cf"] > cur["net_income"]),
+            ("LONG-TERM DEBT / ASSETS LOWER", cur["long_term_debt"] / cur["total_assets"] < prev["long_term_debt"] / prev["total_assets"]),
+            ("CURRENT RATIO HIGHER", cur["current_assets"] / cur["current_liabilities"] > prev["current_assets"] / prev["current_liabilities"]),
+            ("NO NEW SHARES (DILUTED COUNT NOT UP)", cur["shares_diluted"] <= prev["shares_diluted"]),
+            ("GROSS MARGIN HIGHER", cur["gross_profit"] / cur["revenue"] > prev["gross_profit"] / prev["revenue"]),
+            ("ASSET TURNOVER HIGHER", cur["revenue"] / cur["total_assets"] > prev["revenue"] / prev["total_assets"]),
+        ]
+        f = sum(1 for _, ok in tests if ok)
+        zone = "STRONG" if f >= 8 else "WEAK" if f <= 2 else "MIDDLE"
+        return _out(float(f), zone, formula, [(name, 1.0 if ok else 0.0) for name, ok in tests], [])
+
+    return _zero_safe(formula, calc)
 
 
 # --- Beneish M (1999, eight variables) ---------------------------------------------------------------------------
@@ -106,18 +130,22 @@ def beneish_m(cur: dict, prev: dict) -> dict:
         return _out(None, None, formula, [], missing)
     c, p = cur, prev
     sec_c, sec_p = c.get("lt_investments") or 0.0, p.get("lt_investments") or 0.0  # securities: 0 when not tagged
-    dsri = (c["receivables"] / c["revenue"]) / (p["receivables"] / p["revenue"])
-    gmi = (p["gross_profit"] / p["revenue"]) / (c["gross_profit"] / c["revenue"])
-    aqi = (1 - (c["current_assets"] + c["ppe"] + sec_c) / c["total_assets"]) / (1 - (p["current_assets"] + p["ppe"] + sec_p) / p["total_assets"])
-    sgi = c["revenue"] / p["revenue"]
-    depi = (p["da"] / (p["da"] + p["ppe"])) / (c["da"] / (c["da"] + c["ppe"]))
-    sgai = (c["sga"] / c["revenue"]) / (p["sga"] / p["revenue"])
-    lvgi = ((c["current_liabilities"] + c["long_term_debt"]) / c["total_assets"]) / ((p["current_liabilities"] + p["long_term_debt"]) / p["total_assets"])
-    tata = (c["net_income"] - c["operating_cf"]) / c["total_assets"]
-    m = -4.84 + 0.920 * dsri + 0.528 * gmi + 0.404 * aqi + 0.892 * sgi + 0.115 * depi - 0.172 * sgai + 4.679 * tata - 0.327 * lvgi
-    zone = "FLAG (ABOVE -1.78)" if m > -1.78 else "NO FLAG"
-    return _out(m, zone, formula, [("DSRI", dsri), ("GMI", gmi), ("AQI", aqi), ("SGI", sgi), ("DEPI", depi),
-                                   ("SGAI", sgai), ("TATA", tata), ("LVGI", lvgi)], [])
+
+    def calc() -> dict:
+        dsri = (c["receivables"] / c["revenue"]) / (p["receivables"] / p["revenue"])
+        gmi = (p["gross_profit"] / p["revenue"]) / (c["gross_profit"] / c["revenue"])
+        aqi = (1 - (c["current_assets"] + c["ppe"] + sec_c) / c["total_assets"]) / (1 - (p["current_assets"] + p["ppe"] + sec_p) / p["total_assets"])
+        sgi = c["revenue"] / p["revenue"]
+        depi = (p["da"] / (p["da"] + p["ppe"])) / (c["da"] / (c["da"] + c["ppe"]))
+        sgai = (c["sga"] / c["revenue"]) / (p["sga"] / p["revenue"])
+        lvgi = ((c["current_liabilities"] + c["long_term_debt"]) / c["total_assets"]) / ((p["current_liabilities"] + p["long_term_debt"]) / p["total_assets"])
+        tata = (c["net_income"] - c["operating_cf"]) / c["total_assets"]
+        m = -4.84 + 0.920 * dsri + 0.528 * gmi + 0.404 * aqi + 0.892 * sgi + 0.115 * depi - 0.172 * sgai + 4.679 * tata - 0.327 * lvgi
+        zone = "FLAG (ABOVE -1.78)" if m > -1.78 else "NO FLAG"
+        return _out(m, zone, formula, [("DSRI", dsri), ("GMI", gmi), ("AQI", aqi), ("SGI", sgi), ("DEPI", depi),
+                                       ("SGAI", sgai), ("TATA", tata), ("LVGI", lvgi)], [])
+
+    return _zero_safe(formula, calc)
 
 
 # --- Ohlson O (1980) ---------------------------------------------------------------------------------------------
@@ -135,25 +163,32 @@ def ohlson_o(cur: dict, prev: dict) -> dict:
     if missing:
         return _out(None, None, formula, [], missing)
     c = cur
-    ta_m = c["total_assets"] / 1e6
-    size = math.log(ta_m / PRICE_INDEX_1968)
-    tlta = c["total_liabilities"] / c["total_assets"]
-    wcta = (c["current_assets"] - c["current_liabilities"]) / c["total_assets"]
-    clca = c["current_liabilities"] / c["current_assets"]
-    x = 1.0 if c["total_liabilities"] > c["total_assets"] else 0.0
-    nita = c["net_income"] / c["total_assets"]
-    futl = c["operating_cf"] / c["total_liabilities"]  # funds from operations ~ operating cash flow
-    y = 1.0 if c["net_income"] < 0 and prev["net_income"] < 0 else 0.0
-    den = abs(c["net_income"]) + abs(prev["net_income"])
-    chin = (c["net_income"] - prev["net_income"]) / den if den else 0.0
-    o = (-1.32 - 0.407 * size + 6.03 * tlta - 1.43 * wcta + 0.0757 * clca - 1.72 * x - 2.37 * nita - 1.83 * futl
-         + 0.285 * y - 0.521 * chin)
-    prob = 1 / (1 + math.exp(-o))
-    zone = f"FAILURE PROBABILITY {prob * 100:.1f}%"
-    return _out(o, zone, formula, [("SIZE LOG(TA $M / INDEX)", size), ("PRICE INDEX (1968=100, FIXED)", PRICE_INDEX_1968),
-                                   ("TL/TA", tlta), ("WC/TA", wcta), ("CL/CA", clca), ("X (TL>TA)", x), ("NI/TA", nita),
-                                   ("FFO/TL (FFO = OPERATING CF)", futl), ("Y (TWO LOSS YEARS)", y), ("CHIN", chin),
-                                   ("PROBABILITY", prob)], [])
+    if c["total_assets"] <= 0:  # the size term is a logarithm of assets
+        return _out(None, None, formula, [], ["total_assets must be positive"])
+
+    def calc() -> dict:
+        ta_m = c["total_assets"] / 1e6
+        size = math.log(ta_m / PRICE_INDEX_1968)
+        tlta = c["total_liabilities"] / c["total_assets"]
+        wcta = (c["current_assets"] - c["current_liabilities"]) / c["total_assets"]
+        clca = c["current_liabilities"] / c["current_assets"]
+        x = 1.0 if c["total_liabilities"] > c["total_assets"] else 0.0
+        nita = c["net_income"] / c["total_assets"]
+        futl = c["operating_cf"] / c["total_liabilities"]  # funds from operations ~ operating cash flow
+        y = 1.0 if c["net_income"] < 0 and prev["net_income"] < 0 else 0.0
+        den = abs(c["net_income"]) + abs(prev["net_income"])
+        chin = (c["net_income"] - prev["net_income"]) / den if den else 0.0
+        o = (-1.32 - 0.407 * size + 6.03 * tlta - 1.43 * wcta + 0.0757 * clca - 1.72 * x - 2.37 * nita - 1.83 * futl
+             + 0.285 * y - 0.521 * chin)
+        # logistic written so that exp() only ever sees a non-positive number (exp(-O) overflows for O below about -709)
+        prob = 1 / (1 + math.exp(-o)) if o >= 0 else math.exp(o) / (1 + math.exp(o))
+        zone = f"FAILURE PROBABILITY {prob * 100:.1f}%"
+        return _out(o, zone, formula, [("SIZE LOG(TA $M / INDEX)", size), ("PRICE INDEX (1968=100, FIXED)", PRICE_INDEX_1968),
+                                       ("TL/TA", tlta), ("WC/TA", wcta), ("CL/CA", clca), ("X (TL>TA)", x), ("NI/TA", nita),
+                                       ("FFO/TL (FFO = OPERATING CF)", futl), ("Y (TWO LOSS YEARS)", y), ("CHIN", chin),
+                                       ("PROBABILITY", prob)], [])
+
+    return _zero_safe(formula, calc)
 
 
 # --- Merton distance to default (1974; KMV default point) ---------------------------------------------------------
@@ -175,12 +210,17 @@ def merton_dd(equity: float | None, sigma_e: float | None, current_liabilities: 
         d1 = (math.log(v / d) + (r + sv * sv / 2) * t) / (sv * math.sqrt(t))
         d2 = d1 - sv * math.sqrt(t)
         n1 = _N.cdf(d1)
+        if n1 <= 0.0:  # N(d1) underflowed: a near-default firm the iteration cannot solve (it would divide by zero)
+            return _out(None, None, formula, [], ["the asset value and volatility could not be solved (N(d1) is zero)"])
         v_new = (equity + d * math.exp(-r * t) * _N.cdf(d2)) / n1
         sv_new = sigma_e * equity / (n1 * v_new)
         done = abs(v_new - v) < 1e-6 * v and abs(sv_new - sv) < 1e-8
         v, sv = v_new, sv_new
         if done:
             break
+    else:
+        # 200 steps and still moving: the numbers below would be a half-solved guess shown as a result
+        return _out(None, None, formula, [], ["the asset value and volatility did not converge in 200 steps"])
     dd = (math.log(v / d) + (r - sv * sv / 2) * t) / (sv * math.sqrt(t))
     pd = _N.cdf(-dd)
     zone = f"MODEL DEFAULT PROBABILITY {pd * 100:.2f}% (1Y)"

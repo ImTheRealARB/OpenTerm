@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import math
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import msgpack
 import numpy as np
@@ -13,6 +15,7 @@ import numpy as np
 from ..research.table import head, payload
 
 YEAR_DAYS = 365.2425
+_EPOCH_ORDINAL = date(1970, 1, 1).toordinal()  # day number 0
 
 
 def load(params: dict) -> dict:
@@ -32,11 +35,37 @@ def fin(x: Any) -> float | None:
     return v if math.isfinite(v) else None
 
 
+def parametric_var(returns: Any, confidence: float, horizon: int) -> float:
+    """Normal VaR over `horizon` periods, with the mean grown by the horizon and only the spread by its square root:
+    -(mu * h + z * sigma * sqrt(h)). The ported `quantlib.risk.parametric_var` scales the WHOLE sum by sqrt(h) (Vibe's
+    documented convention, pinned by the cross-check tests), which misreads the drift of a 60-day VaR by mu * (60 - sqrt(60))
+    (audit H-25). The panels use this one; the ported function stays as Vibe has it."""
+    from ..quantlib import risk as qr
+
+    one_period = qr.parametric_var(returns, confidence, 1)  # validates the inputs and the confidence like the ported one
+    r = np.asarray(returns, dtype=float)
+    mu = float(r[np.isfinite(r)].mean())
+    # one_period = -(mu + z sigma): the spread term is -(one_period + mu) = z * sigma (negative for a loss tail)
+    spread = -(one_period + mu)
+    if horizon < 1:
+        raise ValueError(f"horizon must be >= 1, got {horizon}")
+    return float(-(mu * horizon + spread * math.sqrt(horizon)))
+
+
 def series(bars: dict | None) -> tuple[np.ndarray, np.ndarray]:
-    """(UTC day numbers, closes) ascending, one close per day (the last), without missing closes."""
+    """(day numbers, closes) ascending, one close per day (the last), without missing closes.
+
+    A day is the EXCHANGE's calendar date when the bars name their time zone (`tz`, Yahoo's exchangeTimezoneName), else the
+    UTC date. ASX and NZX daily bars are stamped at the local open, which is 23:00 UTC the day before in summer: bucketing
+    them by UTC date paired every ASX return with the previous US day (audit H-25)."""
     if not bars or not bars.get("t"):
         return np.array([], dtype=np.int64), np.array([], dtype=float)
-    t = np.asarray(bars["t"], dtype=np.int64) // 86400
+    stamps = np.asarray(bars["t"], dtype=np.int64)
+    if bars.get("tz"):
+        zone = ZoneInfo(bars["tz"])  # an unknown zone name raises: better a failed job than a silently shifted calendar
+        t = np.array([datetime.fromtimestamp(int(x), zone).toordinal() - _EPOCH_ORDINAL for x in stamps], dtype=np.int64)
+    else:
+        t = stamps // 86400
     c = np.array([np.nan if v is None else v for v in bars["c"]], dtype=float)
     ok = np.isfinite(c) & (c > 0)
     t, c = t[ok], c[ok]

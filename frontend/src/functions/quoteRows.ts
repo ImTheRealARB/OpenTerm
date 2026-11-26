@@ -10,7 +10,7 @@ import { marketApi } from "../net/marketApi";
 import type { Quote, QuoteResult } from "../net/types";
 import { subscribe } from "../net/socket";
 import { NO_SYM, symId } from "../state/symbols";
-import { live, liveWins, onTicks, SRC_SYNTHETIC, srcLabel } from "../state/ticks";
+import { getLive, live, liveWins, onTicks, SRC_SYNTHETIC, srcLabel } from "../state/ticks";
 import { buildRowIndex, markHits, rowIds, startAgeRedraw, subscriptionKey, symbolLayout } from "./liveRowsCore";
 
 export interface QRow {
@@ -42,7 +42,16 @@ export function rowId(r: QRow): number {
  * is not older than the snapshot's trade time (audit A-1; the rule lives in `liveWins`).
  */
 export function rowLive(r: QRow, id: number = rowId(r)): boolean {
-  return liveWins(id, r.q?.market_time ? r.q.market_time * 1000 : null);
+  return liveWins(id, r.q?.market_time ? r.q.market_time * 1000 : null, r.stale);
+}
+
+/**
+ * The row's symbol read as a live tick, or undefined when the row should show its REST snapshot (stream down, snapshot newer, or the
+ * snapshot is STALE and the tick brings nothing newer). For readers outside the grid (FX legs, PORT) that must not trust `getLive`
+ * alone: a tick kept from before a dropped stream otherwise overrides a newer snapshot (audit H-17).
+ */
+export function rowLiveTick(r: QRow | undefined, symbol: string) {
+  return getLive(symbol, r?.q?.market_time ? r.q.market_time * 1000 : null, r?.stale ?? false);
 }
 
 /** `column[id]` as number-or-null when the row shows live data (NaN means "the tick did not carry this field"). */

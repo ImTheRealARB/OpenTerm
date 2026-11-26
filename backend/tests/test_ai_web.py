@@ -522,7 +522,9 @@ def test_remote_mode_does_not_change_the_guard(monkeypatch):
 
 # --- per-run caps and the "page cannot send you elsewhere" rule ---------------------------------------------------------------------------
 def test_policy_caps():
-    p = web.WebPolicy("what is x")
+    # read_url is an allowlist (audit C-11): the user names every URL here, so only the cap is under test
+    named = " ".join(f"https://x.example/{i}" for i in range(web.MAX_READS)) + " https://x.example/z"
+    p = web.WebPolicy(f"what is x {named}")
     assert [p.before("web_search", {}) for _ in range(web.MAX_SEARCHES)] == [None] * web.MAX_SEARCHES
     assert "LIMIT" in p.before("web_search", {})
     for i in range(web.MAX_READS):
@@ -546,7 +548,8 @@ def test_agent_enforces_read_cap_and_web_text_is_not_data():
     n = web.MAX_READS + 2
     gw = FakeGateway(_turn(*[("read_url", {"url": f"https://x.example/{i}"}) for i in range(n)]), [Event("token", text="42"), Event("done")])
     tools = Tools(_res)
-    evs = asyncio.run(_collect(agent.run(gw, tools, "read https://x.example/0", [], web_access=True)))
+    question = "read " + " ".join(f"https://x.example/{i}" for i in range(n))  # the user names every URL (audit C-11: read_url is an allowlist)
+    evs = asyncio.run(_collect(agent.run(gw, tools, question, [], web_access=True)))
     assert len(tools.seen) == web.MAX_READS  # the rest were refused before running
     done = evs[-1]
     assert done["type"] == "done" and done["grounded"] is False and done["label"] == "UNGROUNDED"

@@ -83,6 +83,9 @@ def install(eng, stop_pct: float | None, target_pct: float | None, intraday: dic
         if hit is None:
             return
         reason, price, how = hit
+        # The engine sets `_active_symbol` only inside its own order paths; a multi-pair forex run would slip this exit with
+        # whichever pair traded last (a JPY pip on EUR/USD is 100 times too large).
+        eng._active_symbol = symbol
         eng._close_position(symbol, eng.apply_slippage(price, -pos.direction), ts, reason)
         blocked[symbol] = int(pos.direction)
         stats[reason] += 1

@@ -8,6 +8,9 @@ except in the Authorization header of a Kite request.
 
 from __future__ import annotations
 
+import hmac
+import secrets
+import time
 from datetime import datetime, timedelta, timezone
 
 from ..errors import DataError
@@ -28,6 +31,9 @@ def expiry_of(login_dt: datetime) -> datetime:
     return cut if cut > local else cut + timedelta(days=1)
 
 
+STATE_TTL_S = 600.0  # the user has ten minutes to finish logging in at Kite
+
+
 def expired(login_dt: datetime, now_dt: datetime) -> bool:
     return now_dt >= expiry_of(login_dt)
 
@@ -42,6 +48,20 @@ class KiteSession:
         self._login_at: datetime | None = None
         self._user: str | None = None
         self._flagged = False  # a 403 TokenException was seen
+        self._state: tuple[str, float] | None = None  # (nonce, monotonic deadline) of the login we started; memory only
+
+    # --- login state (CSRF guard) ---
+    def begin_login(self) -> str:
+        """A fresh one-time `state` for the login redirect. The callback must bring it back, or anyone who can make the user's browser open
+        /api/kite/callback?request_token=... could log OpenTerm in as the attacker's own Kite account (login CSRF)."""
+        nonce = secrets.token_urlsafe(24)
+        self._state = (nonce, time.monotonic() + STATE_TTL_S)
+        return nonce
+
+    def consume_state(self, candidate: str | None) -> bool:
+        """True once, for the state `begin_login` made and only while it is fresh. Any answer (right or wrong) leaves no state behind."""
+        cur, self._state = self._state, None
+        return bool(candidate and cur and time.monotonic() < cur[1] and hmac.compare_digest(candidate.encode(), cur[0].encode()))
 
     # --- cache over the key store (reload on any key change) ---
     def reload(self) -> None:

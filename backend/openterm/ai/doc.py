@@ -19,6 +19,9 @@ from xml.etree import ElementTree
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_CHARS = 3_000_000
+# MAX_BYTES caps the COMPRESSED upload only; a zip bomb is a few KB that unpack to gigabytes (audit M-08). These cap the unpacked XML.
+MAX_ZIP_MEMBER_BYTES = 64 * 1024 * 1024  # one member (word/document.xml, a sheet)
+MAX_ZIP_TOTAL_BYTES = 128 * 1024 * 1024  # everything read from one file
 CHUNK = 1500
 OVERLAP = 150
 KINDS = {"txt": "text", "md": "text", "json": "text", "csv": "csv", "htm": "html", "html": "html", "docx": "docx", "xlsx": "xlsx", "pdf": "pdf"}
@@ -57,10 +60,33 @@ def html_to_text(html: str) -> str:
     return "\n".join(ln for ln in lines if ln)
 
 
+class ZipTooLarge(ValueError):
+    """A zip member unpacks past the limits. A ValueError so callers show the text; its own class so `_xlsx` does not relabel it."""
+
+
+class _ZipReader:
+    """Reads members of one zip with a size budget. `file_size` in the header can lie, so the real read is bounded too."""
+
+    def __init__(self, z: zipfile.ZipFile):
+        self.z, self.used = z, 0
+
+    def read(self, name: str) -> bytes:
+        info = self.z.getinfo(name)  # KeyError for a missing member, as `z.read` raised
+        room = min(MAX_ZIP_MEMBER_BYTES, MAX_ZIP_TOTAL_BYTES - self.used)
+        if info.file_size > room:
+            raise ZipTooLarge("THE FILE UNPACKS TO TOO LARGE A SIZE (ZIP BOMB?)")
+        with self.z.open(info) as f:
+            data = f.read(room + 1)
+        if len(data) > room:
+            raise ZipTooLarge("THE FILE UNPACKS TO TOO LARGE A SIZE (ZIP BOMB?)")
+        self.used += len(data)
+        return data
+
+
 def _docx(data: bytes) -> str:
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as z:
-            root = ElementTree.fromstring(z.read("word/document.xml"))
+            root = ElementTree.fromstring(_ZipReader(z).read("word/document.xml"))
     except (zipfile.BadZipFile, KeyError, ElementTree.ParseError) as e:
         raise ValueError("NOT A READABLE DOCX FILE") from e
     w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -73,12 +99,13 @@ def _xlsx(data: bytes) -> str:
     rel = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as z:
+            zr = _ZipReader(z)
             names = z.namelist()
             strings = []
             if "xl/sharedStrings.xml" in names:
-                sst = ElementTree.fromstring(z.read("xl/sharedStrings.xml"))
+                sst = ElementTree.fromstring(zr.read("xl/sharedStrings.xml"))
                 strings = ["".join(t.text or "" for t in si.iter(ns + "t")) for si in sst.iter(ns + "si")]
-            wb = ElementTree.fromstring(z.read("xl/workbook.xml"))
+            wb = ElementTree.fromstring(zr.read("xl/workbook.xml"))
             sheets = [(s.get("name") or f"Sheet{i}", s.get(rel + "id")) for i, s in enumerate(wb.iter(ns + "sheet"), 1)]
             out: list[str] = []
             for i, (name, _rid) in enumerate(sheets, 1):
@@ -86,7 +113,7 @@ def _xlsx(data: bytes) -> str:
                 if path not in names:
                     continue
                 out.append(f"Sheet {name}")
-                for row in ElementTree.fromstring(z.read(path)).iter(ns + "row"):
+                for row in ElementTree.fromstring(zr.read(path)).iter(ns + "row"):
                     vals = []
                     for c in row.iter(ns + "c"):
                         v = c.find(ns + "v")
@@ -96,6 +123,8 @@ def _xlsx(data: bytes) -> str:
                     if vals:
                         out.append(" | ".join(vals))
             return "\n".join(out)
+    except ZipTooLarge:
+        raise
     except (zipfile.BadZipFile, KeyError, ElementTree.ParseError, ValueError) as e:
         raise ValueError("NOT A READABLE XLSX FILE") from e
 

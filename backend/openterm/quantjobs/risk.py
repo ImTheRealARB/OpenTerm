@@ -111,19 +111,21 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     except ValueError as e:
         fit, evt_note = None, f"EVT NOT FITTED: {e}"
     var_rows = []
+    es_swapped: list[int] = []
     for lv in levels:
         c = lv / 100.0
         hv, hes = qr.historical_var(port, c, hor), qr.historical_cvar(port, c, hor)
-        nv = qr.parametric_var(port, c, hor)
+        nv = cm.parametric_var(port, c, hor)  # mean grows with the horizon, spread with its square root (audit H-25)
         mu, sd = float(port.mean()), float(port.std(ddof=1))
         z = float(norm.ppf(1 - c))
         phi = math.exp(-z * z / 2) / math.sqrt(2 * math.pi)
-        nes = (-mu + sd * phi / (1 - c)) * math.sqrt(hor)
+        nes = -mu * hor + sd * phi / (1 - c) * math.sqrt(hor)  # same scaling for the normal expected shortfall
         ev, ees = (None, None)
         if fit is not None:
             ev, ees = _gpd_var(port, c, hor, fit)
             if ev is not None and (ees is None or not math.isfinite(ees) or ees < ev):
-                ees = hes  # EVT expected shortfall needs shape < 1; fall back to the historical one, said in the notes
+                ees = hes  # EVT expected shortfall needs shape < 1; fall back to the historical one ...
+                es_swapped.append(lv)  # ... and SAY so in the notes (it used to be silent: the EVT row then looked like a real EVT ES)
         for method, v, es in (("HIST", hv, hes), ("NORMAL", nv, nes), ("EVT", ev, ees)):
             var_rows.append({"method": method, "conf": lv, "hor": hor, "var_pct": cm.fin(v), "var_money": cm.fin(v * value) if v is not None else None,
                              "es_pct": cm.fin(es), "es_money": cm.fin(es * value) if es is not None else None})
@@ -224,6 +226,9 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     elif pair is None:
         notes.append(f"UNDER 30 DAYS OVERLAP WITH {bench_sym}: BETA AND CORRELATION NOT SHOWN")
     notes.append(evt_note)
+    if es_swapped:
+        notes.append("EVT EXPECTED SHORTFALL NEEDS A TAIL SHAPE BELOW 1 AND IT WAS NOT MET AT " + ", ".join(f"{lv}%" for lv in es_swapped) +
+                     ": THE EVT ROW'S ES THERE IS THE HISTORICAL ES, NOT AN EVT ESTIMATE")
     charts = [
         {"id": "equity", "title": "CUMULATIVE RETURN (CURRENT WEIGHTS HELD CONSTANT)", "xlabel": "YEAR", "ylabel": "RETURN",
          "series": [{"name": "PORTFOLIO", "points": [[round(float(x), 4), round(float(y), 6)] for x, y in zip(cm.year(rdays), eq - 1.0, strict=True)]}]},

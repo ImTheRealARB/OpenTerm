@@ -234,7 +234,7 @@ test("PORT: EXPORT downloads a re-importable CSV; V pastes a CSV, previews it, m
   await expect(p).toContainText("2 POSITIONS");
 });
 
-test("PORT: a non-base currency is converted at live FX and labelled", async ({ page }) => {
+test("PORT: a non-base currency is converted at the FX snapshot and labelled as not live", async ({ page }) => {
   await setup(page);
   await run(page, "PORT EUR ADD SAP.DE 10 100");
   const p = panel(page);
@@ -242,7 +242,8 @@ test("PORT: a non-base currency is converted at live FX and labelled", async ({ 
   await expect(selected(page)).toContainText("SAP.DE");
   // (the canvas mirror only refreshes on selection or row changes, so the converted label is checked in the summary)
   const sum = page.getByTestId("port-summary");
-  await expect(sum).toContainText("CONVERTED AT LIVE FX: EURUSD=X");
+  // No EURUSD=X tick was pushed, so the rate is the REST snapshot: the label must not say LIVE (audit H-17).
+  await expect(sum).toContainText("CONVERTED AT FX SNAPSHOT (NOT LIVE): EURUSD=X");
   await expect(sum).toContainText("TOTAL USD MKT VAL 1,302.28"); // 10 x 120 EUR x 1.08523
   await expect(sum).not.toContainText("NOT IN TOTAL");
   await expect.poll(() => subs.flat()).toContain("EURUSD=X");

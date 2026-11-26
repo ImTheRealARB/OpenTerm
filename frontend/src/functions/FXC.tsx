@@ -9,10 +9,10 @@ import { registerPanelKeys } from "../keys/panelKeys";
 import { usePanelRefresh } from "./panelRefresh";
 import { subscribe } from "../net/socket";
 import { symId } from "../state/symbols";
-import { getLive, onTicks } from "../state/ticks";
+import { onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import { crossPair, crossRate, parseCurrencies, usdLeg } from "./boards";
-import { useQuotes, type QRow } from "./quoteRows";
+import { rowLiveTick, useQuotes, type QRow } from "./quoteRows";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -38,7 +38,7 @@ export default function FXC({ panelId, args }: FunctionProps) {
     if (ccy === "USD") return 1;
     const r = legRows.get(ccy);
     if (!r || r.error) return null;
-    return prev ? (r.q?.prev_close ?? null) : (getLive(r.symbol)?.price ?? r.q?.price ?? null);
+    return prev ? (r.q?.prev_close ?? null) : (rowLiveTick(r, r.symbol)?.price ?? r.q?.price ?? null);
   };
   const legState = useLatest(rate);
 

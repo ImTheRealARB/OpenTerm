@@ -11,6 +11,7 @@ import type { Alert, NewsAlert, SmartAlert } from "../net/types";
 import { smartAlertsApi } from "../net/smartAlertsApi";
 import { errText } from "../net/errText";
 import { useStore } from "../state/store";
+import { openExternal } from "../safeUrl";
 import { navigate } from "../state/workspace";
 import { plainAlert } from "./alertPlain";
 import { engineView } from "./alertEngineText";
@@ -120,7 +121,7 @@ export default function ALRT({ panelId }: FunctionProps) {
         switch (e.key) {
           case "Enter":
             if (r?.a) navigate(panelId, { fn: "GP", security: { symbol: r.a.symbol }, args: ["1D"] });
-            else if (r?.n?.url) window.open(r.n.url, "_blank", "noopener,noreferrer");
+            else if (r?.n?.url) openExternal(r.n.url);
             else if (r?.n) navigate(panelId, r.n.symbol ? { fn: "N", security: { symbol: r.n.symbol }, args: [] } : { fn: "N", args: [] });
             return true;
           case "n":

@@ -103,7 +103,36 @@ MIGRATIONS: list[str | list[str]] = [
          " atm_iv REAL, em_pct REAL, PRIMARY KEY (day, symbol, expiry))"),
         "CREATE INDEX chain_atm_sym ON chain_atm (symbol, day)",
     ],
+    # 21: no new table. Re-key stored journal trades with the audit C-10 rule (a Python step, see `_rekey_journal`)
+    [lambda db: _rekey_journal(db)],
 ]
+
+
+async def _rekey_journal(db: aiosqlite.Connection) -> None:
+    """Rewrite every stored `journal_trades.dkey` with the parser's current rule (audit C-10 widened it for rows with a broker
+    trade id). Without this, re-importing a broker file imported before the change would add each of its trades a second time.
+
+    Keys are recomputed with `parsers.assign_keys` itself, grouped per import in insert order (the per-file repeat count
+    restarts in every file), so the migration and a fresh import can never disagree. A clash on the UNIQUE key is not
+    expected (the new key only adds fields to the old one); if it happens the step fails loudly and rolls back."""
+    # imported here: the journal code is not needed to open the database
+    from .journal import parsers
+
+    async with db.execute("SELECT id, import_id, time, symbol, side, qty, price, fee, currency, broker, order_id, trade_id, mult"
+                          " FROM journal_trades ORDER BY import_id, id") as cur:
+        rows = await cur.fetchall()
+    by_import: dict[int, list[tuple[int, parsers.Trade]]] = {}
+    for r in rows:
+        t = parsers.Trade(time=r[2], symbol=r[3], side=r[4], qty=r[5], price=r[6], fee=r[7], currency=r[8], broker=r[9],
+                          order_id=r[10], trade_id=r[11], mult=r[12])
+        by_import.setdefault(r[1], []).append((r[0], t))
+    updates: list[tuple[str, int]] = []
+    for group in by_import.values():
+        parsers.assign_keys([t for _, t in group])
+        updates += [(t.dkey, row_id) for row_id, t in group]
+    # Park every key first, so a new key can never meet an old one that is about to be replaced (UNIQUE is checked per row).
+    await db.execute("UPDATE journal_trades SET dkey = 'rekey:' || id")
+    await db.executemany("UPDATE journal_trades SET dkey = ? WHERE id = ?", updates)
 
 
 async def open_db(path: str | Path) -> aiosqlite.Connection:
@@ -120,8 +149,18 @@ async def migrate(db: aiosqlite.Connection) -> int:
     async with db.execute("PRAGMA user_version") as cur:
         (version,) = await cur.fetchone()
     for i, sql in enumerate(MIGRATIONS[version:], start=version + 1):
-        for stmt in sql if isinstance(sql, list) else [sql]:
-            await db.execute(stmt)
-        await db.execute(f"PRAGMA user_version={i}")
-    await db.commit()
+        # One transaction per step (audit H-06). Python's sqlite3 does not open one for DDL, so without BEGIN each statement
+        # committed alone and a crash half way left a step that failed forever with "already exists". SQLite DDL and
+        # `user_version` are both transactional: the step lands whole, with its version number, or not at all.
+        await db.commit()  # nothing may be pending: BEGIN inside an open transaction is an error
+        await db.execute("BEGIN")
+        try:
+            for stmt in sql if isinstance(sql, list) else [sql]:
+                # A step is SQL text or, when SQL cannot express it (re-hashing keys), an async function of the connection.
+                await (stmt(db) if callable(stmt) else db.execute(stmt))
+            await db.execute(f"PRAGMA user_version={i}")
+        except BaseException:
+            await db.rollback()
+            raise
+        await db.commit()
     return len(MIGRATIONS)

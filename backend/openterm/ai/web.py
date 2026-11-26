@@ -124,11 +124,11 @@ def config_from(app, ai: dict | None) -> WebConfig | None:
 
 def offered_names(base: list[str] | None, cfg: WebConfig | None) -> list[str] | None:
     """Tool names for the audit manifest: the plain-chat set plus the web tools when they are on (None = the default set, unchanged)."""
-    from .tools import REGISTRY
+    from .tools import default_names
 
     if cfg is None:
         return base
-    return sorted({*(base if base is not None else [t.name for t in REGISTRY.values() if not (t.doc_only or t.web_only)]), *WEB_TOOLS})
+    return sorted({*(base if base is not None else default_names()), *WEB_TOOLS})
 
 
 # --- the policy: caps and "a page cannot send the model somewhere" -----------------------------------------------------------------------
@@ -172,8 +172,16 @@ class WebPolicy:
             if self.reads >= self.max_reads:
                 return f"PAGE READ LIMIT {self.max_reads} PER ANSWER REACHED"
             u = _norm(str(args.get("url") or ""))
-            if u in self.page_urls and u not in self.user_urls and u not in self.listed and not self.browsing:
-                return "THAT URL APPEARED ONLY INSIDE A FETCHED PAGE; ASK THE USER TO NAME IT OR TO ASK FOR BROWSING"
+            # ALLOWLIST (audit C-11): a prompt-injected page can make the model INVENT a URL that carries private tool data in its query
+            # (https://evil.example/collect?p=AAPL,MSFT). Only a URL the user typed, a search hit, or (when browsing was asked for) a link
+            # seen in a page may be read; everything else is refused, including a seen URL with a changed query.
+            if u in self.user_urls or u in self.listed:
+                pass
+            elif u in self.page_urls:
+                if not self.browsing:
+                    return "THAT URL APPEARED ONLY INSIDE A FETCHED PAGE; ASK THE USER TO NAME IT OR TO ASK FOR BROWSING"
+            else:
+                return "THAT URL WAS NOT NAMED BY THE USER OR LISTED BY A SEARCH; ASK THE USER TO NAME THE URL"
             self.reads += 1
         return None
 

@@ -1,6 +1,7 @@
 """Two-level cache: bounded in-memory LRU in front of SQLite. Writes are batched off the request path."""
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections import OrderedDict
@@ -102,6 +103,14 @@ class Cache:
             await self.db.commit()
         except Exception:
             log.exception("cache flush failed; %d entries kept in memory only", len(rows))
+
+    async def aclose(self) -> None:
+        """Shutdown: stop the delayed flusher (it would wake up after the database closed) and write what is still pending."""
+        if self._flusher is not None and not self._flusher.done():
+            self._flusher.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._flusher
+        await self.flush()
 
     async def prune(self, max_age_s: float = CACHE_MAX_AGE_S, max_bytes: int = CACHE_MAX_BYTES) -> int:
         """Deletes cache rows older than max_age_s, then the oldest rows until the table is under max_bytes.

@@ -22,6 +22,7 @@ from itertools import pairwise
 from statistics import median
 from typing import TYPE_CHECKING, Any
 
+from .. import freshness
 from ..barfetch import fetch_bars
 from ..errors import DataError
 from ..options import market as mk
@@ -84,7 +85,11 @@ class Fund:
         method = getattr(self, f"fn_{fn.lower()}", None)
         if method is None:
             raise DataError("not_found", f"NO FUNDAMENTALS FUNCTION {fn.upper()}")
-        return await method(**params)
+        # `_env` builds a fresh envelope, but the answer was computed from cached filings, prices and curves: fold in how old they
+        # are (oldest as_of, stale if any input was) instead of claiming "fresh, age 0" (audit C-07).
+        with freshness.collect() as notes:
+            result = await method(**params)
+        return freshness.stamp(result, notes)
 
     # --- shared fetches --------------------------------------------------------------------------
     @property
@@ -369,12 +374,17 @@ class Fund:
         ref = next(envs[s]["data"] for s in syms if s in envs)
         t_all = list(ref["t"])
         ends = [i for i in fr.month_ends(t_all) if datetime.fromtimestamp(t_all[i], UTC).year >= y0]
-        closes = {s: dict(zip(envs[s]["data"]["t"], envs[s]["data"]["c"], strict=False)) for s in envs}
+        # Adjusted closes (splits and dividends) where the source sends them: a raw close turns a split into a fake -50% month.
+        # The names that only have raw closes are listed in the notes, so the label below never claims more than was used.
+        raw_only = [s for s in envs if not any(v is not None for v in envs[s]["data"].get("adj") or [])]
+        closes = {s: dict(zip(envs[s]["data"]["t"], envs[s]["data"]["c"] if s in raw_only else envs[s]["data"]["adj"], strict=False))
+                  for s in envs}
 
         def px(s: str, ts: float) -> float | None:
             return closes.get(s, {}).get(ts)
 
         rets, bench_rets, held_counts, months = [], [], [], []
+        no_exit = 0  # picks that passed the screen but have no entry or exit price (delisted, gap in the data): counted, never hidden
         for a, b in pairwise(ends):
             ta, tb = t_all[a], t_all[b]
             asof = datetime.fromtimestamp(ta, UTC).date()
@@ -384,13 +394,16 @@ class Fund:
                     continue
                 vals = self._known_fields(concepts, ciks[s], asof, years)
                 if need_mom:
-                    t12 = t_all[max(0, a - 252)]
-                    p0, p1 = px(s, t12), px(s, ta)
+                    # 252 bars back must exist: in the first year the old code clamped to the first bar and called a 3-month return
+                    # "12-month momentum". No full year of prices = no MOM12 = the rule fails (a missing value never passes).
+                    p0, p1 = (px(s, t_all[a - 252]) if a >= 252 else None), px(s, ta)
                     vals["MOM12"] = p1 / p0 - 1 if p0 and p1 else None
                 if fr.passes(vals, parsed):
                     pa, pb = px(s, ta), px(s, tb)
                     if pa and pb:
                         picks.append(pb / pa - 1)
+                    else:
+                        no_exit += 1
             rets.append(sum(picks) / len(picks) if picks else 0.0)  # no match = cash at 0% that month
             held_counts.append(len(picks))
             ba, bb = px(bench, ta), px(bench, tb)
@@ -417,7 +430,15 @@ class Fund:
                       ("MONTHS UP", "hit"))]
         monthly = [{"month": m, "held": h, "ret": r, "bench": br} for m, h, r, br in zip(months, held_counts, rets, bench_rets, strict=True)]
         notes = [SURVIVORSHIP, BT_LABEL, fr.KNOWN_RULE, ("EQUAL WEIGHT, REBALANCED MONTHLY AT THE CLOSE; NO FEES OR SLIPPAGE; "
-                 "A MONTH WITH NO MATCH IS HELD IN CASH AT 0%"), "CLOSES ARE ADJUSTED AS THE PRICE SOURCE SENDS THEM"]
+                 "A MONTH WITH NO MATCH IS HELD IN CASH AT 0%"),
+                 "CLOSES ARE ADJUSTED FOR SPLITS AND DIVIDENDS WHERE THE PRICE SOURCE SENDS THEM"]
+        if raw_only:
+            notes.append("RAW CLOSES (NO ADJUSTED SERIES FROM THE SOURCE, SPLITS AND DIVIDENDS NOT REMOVED): " + ", ".join(raw_only))
+        if need_mom:
+            notes.append("MOM12 NEEDS 252 TRADING DAYS OF PRICES: EARLIER MONTHS HAVE NO MOM12 AND FAIL ITS RULE")
+        if no_exit:
+            notes.append(f"{no_exit} PICK(S) HAD NO ENTRY OR NO EXIT PRICE (DELISTED OR A GAP IN THE DATA) AND ARE LEFT OUT OF THE MONTH'S RETURN: "
+                         "THE RESULT FAVOURS NAMES THAT SURVIVED")
         missing = [s for s in syms if s not in envs] + [s for s in syms if s in envs and s not in ciks]
         if missing:
             notes.append("LEFT OUT (NO PRICES OR NOT AN SEC FILER): " + ", ".join(missing))

@@ -8,6 +8,7 @@
  *   node scripts/bench.mjs --no-build reuse frontend/dist
  */
 import { spawn, execSync } from "node:child_process";
+import { benchChildEnv } from "./benchEnv.mjs";
 import { readFileSync, writeFileSync, existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
@@ -37,7 +38,7 @@ function start(cmd, cwd, env = {}) {
   // detached on POSIX makes the child its own process group leader, so stopAll's process.kill(-pid) reaches the whole tree
   // (shell -> uv -> python). Without it the kill threw, the fallback c.kill() only stopped the shell, and the old backend
   // kept port 8000 with its old DB: the next bench run talked to it and saw "served from the cache".
-  const child = spawn(cmd, { cwd, shell: true, stdio: "ignore", detached: !isWin, env: { ...process.env, ...env } });
+  const child = spawn(cmd, { cwd, shell: true, stdio: "ignore", detached: !isWin, env: benchChildEnv(process.env, env) }); // real keys never reach the servers (see benchEnv.mjs)
   children.push(child);
   return child;
 }

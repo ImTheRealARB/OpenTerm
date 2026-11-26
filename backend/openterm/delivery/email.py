@@ -54,7 +54,8 @@ def _close(s) -> None:
 
 def build_message(sender: str, to: str, subject: str, text: str, picture: tuple[str, bytes] | None = None) -> EmailMessage:
     msg = EmailMessage()
-    msg["From"], msg["To"], msg["Subject"] = sender, to, subject.replace("\n", " ")
+    # splitlines() splits on \n, \r, \r\n and the Unicode line breaks: EmailMessage raises on any CR/LF, and a header must never be injectable.
+    msg["From"], msg["To"], msg["Subject"] = sender, to, " ".join(subject.splitlines())
     msg.set_content(text)
     if picture:  # Phase 22 GRAB: the panel picture as a PNG attachment
         msg.add_attachment(picture[1], maintype="image", subtype="png", filename=picture[0])

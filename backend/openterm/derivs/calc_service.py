@@ -6,13 +6,13 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
+from .. import freshness
 from ..errors import DataError
 from ..redact import redact
 from ..router import AllFailed
 from ..service import envelope
 from ..symbols import resolve
 from . import calc as cc
-from . import freshness
 
 if TYPE_CHECKING:
     from ..service import DataService

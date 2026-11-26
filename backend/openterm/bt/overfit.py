@@ -147,11 +147,13 @@ def walk_forward(returns: np.ndarray, times: list[int], n_windows: int, anchored
     edges = np.linspace(0, t, n_windows + 2).astype(int)
     if np.min(np.diff(edges)) < 4:
         return None
-    windows, oos_parts, is_annuals = [], [], []
+    windows, oos_parts, oos_times, is_annuals = [], [], [], []
     for k in range(1, n_windows + 1):
         i0 = 0 if anchored else edges[k - 1]
         i1, o1 = edges[k], edges[k + 1]
         scores = [slice_fitness(returns[i0:i1, j], fit, bars_per_year, cash) for j in range(returns.shape[1])]
+        if not any(math.isfinite(s) for s in scores):
+            continue  # nothing to choose from (every set was flat in sample): np.argmax would silently take column 0
         keys = [s if math.isfinite(s) else -math.inf for s in scores]
         best = int(np.argmax(keys))
         is_r, oos_r = returns[i0:i1, best], returns[i1:o1, best]
@@ -159,14 +161,18 @@ def walk_forward(returns: np.ndarray, times: list[int], n_windows: int, anchored
         if is_a is not None:
             is_annuals.append(is_a)
         oos_parts.append(oos_r)
+        oos_times.extend(times[i1:o1])
         windows.append({"window": k, "is_start": times[i0], "is_end": times[i1 - 1], "oos_start": times[i1],
                         "oos_end": times[o1 - 1], "best": best, "is_fitness": None if not math.isfinite(scores[best]) else scores[best],
                         "is_annual": is_a, "oos_annual": oos_a, "oos_return": float(np.prod(1 + oos_r) - 1)})
+    if not oos_parts:
+        return None
     oos = np.concatenate(oos_parts)
     eq = cash * np.cumprod(1 + oos)
-    oos_times = times[edges[1]:edges[-1]]
     oos_annual = _annual(oos, bars_per_year)
     mean_is = float(np.mean(is_annuals)) if is_annuals else None
-    wfe = oos_annual / mean_is if oos_annual is not None and mean_is not in (None, 0.0) else None
+    # A ratio of two losses is a positive number (-18% out of / -10% in = 1.9 "efficiency"): only a positive in-sample
+    # return gives a meaningful one.
+    wfe = oos_annual / mean_is if oos_annual is not None and mean_is is not None and mean_is > 0 else None
     return {"windows": windows, "equity": [[int(a), round(float(b), 4)] for a, b in zip(oos_times, eq, strict=True)],
             "oos_annual": oos_annual, "is_annual_mean": mean_is, "wfe": wfe, "anchored": anchored, "n_windows": n_windows}

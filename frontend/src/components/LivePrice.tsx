@@ -16,7 +16,8 @@ export function LivePrice({ quote, stale, ageS }: { quote: Quote; stale: boolean
 
   useEffect(() => {
     const paint = () => {
-      const l = getLive(quote.symbol);
+      // The tick shows as live only while the stream is up and the snapshot above has nothing newer (audit H-17).
+      const l = getLive(quote.symbol, quote.market_time ? quote.market_time * 1000 : null, stale);
       const price = l?.price ?? quote.price;
       const change = l?.change ?? quote.change;
       const pct = l?.pct ?? quote.change_pct;
