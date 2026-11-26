@@ -12,6 +12,7 @@ The token is a secret: it is in the URL the panel opens and nowhere else (never 
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import shutil
 import socket
@@ -36,6 +37,22 @@ def _free_port() -> int:
             if s.connect_ex(("127.0.0.1", p)) != 0:
                 return p
     raise NotebookError(f"NO FREE PORT IN {PORTS.start}-{PORTS.stop - 1} FOR JUPYTERLAB")
+
+
+# Any variable whose name looks like a credential is not handed to Jupyter: a notebook (and every package it imports) can read its
+# whole environment, and the user's AI / data keys have no business there (audit C-04).
+_SECRET_NAME = re.compile(r"API_?KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL", re.IGNORECASE)
+
+
+def child_env(api_port: int, token: str) -> dict[str, str]:
+    """The environment for the Jupyter process: ours minus every key the key store knows and anything named like a secret."""
+    from ..keys import KEY_SPECS
+
+    known = {f.upper() for s in KEY_SPECS.values() for f in (*s.fields, *s.hidden_fields)}  # upper: Windows names are case-insensitive
+    env = {k: v for k, v in os.environ.items() if k.upper() not in known and not _SECRET_NAME.search(k)}
+    env["OPENTERM_URL"] = f"http://127.0.0.1:{api_port}"
+    env["JUPYTER_TOKEN"] = token
+    return env
 
 
 def copy_examples(dest: Path) -> list[str]:
@@ -82,9 +99,10 @@ class NotebookServer:
             raise NotebookError("uv NOT FOUND ON PATH: INSTALL uv (https://docs.astral.sh/uv/) OR RUN JUPYTER YOURSELF WITH pip install ./sdk/python")
         copy_examples(self.dir)
         self.port, self.token = _free_port(), secrets.token_hex(16)
-        env = {**os.environ, "OPENTERM_URL": f"http://127.0.0.1:{self.api_port}"}
+        env = child_env(self.api_port, self.token)
+        # No token on the command line: argv is readable by every process on this machine. Jupyter reads JUPYTER_TOKEN from the environment.
         cmd = [uv, "run", "--project", str(BACKEND), "--extra", "notebook", "jupyter", "lab", "--no-browser", "--ip", "127.0.0.1",
-               f"--port={self.port}", f"--ServerApp.root_dir={self.dir}", f"--IdentityProvider.token={self.token}"]
+               f"--port={self.port}", f"--ServerApp.root_dir={self.dir}"]
         flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         self.proc = subprocess.Popen(cmd, cwd=str(self.dir), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                      creationflags=flags)

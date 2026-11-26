@@ -25,10 +25,10 @@ from . import agent, tools
 from .audit import audit_of, audited, manifest
 
 router = APIRouter(prefix="/api/ai", route_class=OrjsonRoute)
-MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}$")
+MODEL_RE = re.compile(r"^[A-Za-z0-9._:/\-]{1,80}\Z")  # \Z, not $: `$` also matches before a trailing newline (audit H-15)
 MAX_QUESTION = 2000
 MAX_IMAGE = 4_000_000  # characters of data URL (about 3 MB of PNG)
-IMAGE_RE = re.compile(r"^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$")
+IMAGE_RE = re.compile(r"^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+\Z")
 VISION_MODEL = "deepseek/deepseek-v4.1-flash"
 DRAFT_RE = re.compile(r"^BT_DRAFT\s+(\{.*\})\s*$", re.MULTILINE)
 BT_TOOLS = ["history", "quote", "profile", "skill", "skills", "strategy_check"]
@@ -73,7 +73,7 @@ async def _body(request: Request) -> dict | Response:
 def _models(body: dict, cfg: dict, field: str = "model", default: str = agent.DEFAULT_MODEL) -> tuple[str, str] | None:
     model = body.get("model") or cfg.get(field) or default
     provider = body.get("provider") or cfg.get("provider") or "openrouter"
-    ok = isinstance(model, str) and MODEL_RE.match(model) and isinstance(provider, str) and re.match(r"^[a-z]{3,12}$", provider)
+    ok = isinstance(model, str) and MODEL_RE.match(model) and isinstance(provider, str) and re.match(r"^[a-z]{3,12}\Z", provider)
     return (model, provider) if ok else None
 
 
@@ -149,7 +149,7 @@ def parse_draft(answer: str) -> dict:
     try:
         d = json.loads(found[-1])
         symbols = d["symbols"]
-        if not isinstance(symbols, list) or not 1 <= len(symbols) <= 10 or not all(isinstance(s, str) and re.match(r"^[A-Za-z0-9.^=\-]{1,12}$", s) for s in symbols):
+        if not isinstance(symbols, list) or not 1 <= len(symbols) <= 10 or not all(isinstance(s, str) and re.match(r"^[A-Za-z0-9.^=\-]{1,12}\Z", s) for s in symbols):
             return {"error": "BT_DRAFT symbols MUST BE 1-10 TICKERS"}
         rule = str(d["rule"]).strip()
         interval = str(d.get("interval") or "1D").upper()
@@ -284,7 +284,7 @@ async def chart(request: Request):
 
 
 # --- AI DOC ------------------------------------------------------------------------------------------------------------------------
-NAME_RE = re.compile(r"^[\w.\- ()]{1,100}$")
+NAME_RE = re.compile(r"^[\w.\- ()]{1,100}\Z")
 DOC_SYSTEM = """You answer questions about ONE document: "{name}" ({kind}, {chunks} chunks). Today is {today}.
 Rules:
 - Find passages with the doc_search tool (try different words if the first search finds nothing). Chunks come back labelled C1, C2...
@@ -342,7 +342,7 @@ async def doc_filing(request: Request):
     if isinstance(body, Response):
         return body
     symbol, form = str(body.get("symbol") or ""), str(body.get("form") or "10-K").upper()
-    if not AI_SYMBOL_RE.match(symbol) or not re.match(r"^[A-Z0-9/\-]{1,12}$", form):
+    if not AI_SYMBOL_RE.match(symbol) or not re.match(r"^[A-Z0-9/\-]{1,12}\Z", form):
         return http_util.error_response(400, "bad_request", "SYMBOL OR FORM IS NOT VALID")
     sec = http_util.svc(request).router.providers["sec"]
     try:

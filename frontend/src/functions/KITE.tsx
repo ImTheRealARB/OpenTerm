@@ -20,8 +20,11 @@ const USAGE = "USAGE: KITE [LOGIN|STATUS|LOGOUT]";
 const CLS: Record<string, string> = { OK: "up", "LOGGED OUT": "warn", "KITE LOGIN EXPIRED": "err", "NO KEY": "dim" };
 
 export function openKiteLogin(): boolean {
-  // The route answers with a redirect to Kite; no noopener so the tab can be checked, but nothing from it is read.
-  return window.open(kiteApi.loginUrl, "_blank") !== null;
+  // The route answers with a redirect to Kite. "noopener" would make window.open return null even on success, so the
+  // popup-blocked check needs the handle: keep it, then cut the new tab's link back to this window (audit C-05).
+  const w = window.open(kiteApi.loginUrl, "_blank");
+  if (w) w.opener = null;
+  return w !== null;
 }
 
 export default function KITE({ panelId, args }: FunctionProps) {

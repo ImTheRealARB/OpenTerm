@@ -24,6 +24,7 @@ import { marketApi } from "../net/marketApi";
 import type { NewsItem } from "../net/types";
 import { pollMs, settingsStore } from "../settings/runtime";
 import { useStore } from "../state/store";
+import { openExternal, safeHttpUrl } from "../safeUrl";
 import { type QRow } from "./quoteRows";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -71,8 +72,8 @@ function loadNews(fresh: boolean, alive: () => boolean, put: (id: string, s: New
 }
 
 function openArticle(url: string): void {
-  // Article bodies are never fetched or shown here: the publisher's page opens in a new tab.
-  window.open(url, "_blank", "noopener,noreferrer");
+  // Article bodies are never fetched or shown here: the publisher's page opens in a new tab (http/https only, audit C-05).
+  openExternal(url);
 }
 /** A number's chart opens in a NEW panel so the page stays where it is (HOME brings it back anyway). */
 const openChart = (symbol: string): void => void execute(`${symbol} GP`, { newPanel: true });
@@ -116,12 +117,24 @@ function NewsRows({ s, bi, pos, pick }: { s: NewsState; bi: number; pos: Pos; pi
       {!s.loading && !s.error && s.items.length === 0 && <div className="hb-note dim">NO HEADLINES</div>}
       {s.items.map((it, i) => {
         const on = pos.b === bi && pos.r === i;
-        return (
-          <a key={it.id} href={it.url} target="_blank" rel="noopener noreferrer" className={"hr hn" + (on ? " on" : "")} aria-selected={on} title={it.title} onClick={() => pick(bi, i, false)}>
+        const cells = (
+          <>
             <span className="hn-s">{(it.publisher ?? it.source ?? "").toUpperCase()}</span>
             <span className="hn-a">{it.published ? fmtAge(Math.max(0, nowS - it.published)) : "–"}</span>
             <span className="hn-t">{it.title}</span>
+          </>
+        );
+        const cls = "hr hn" + (on ? " on" : "");
+        const href = safeHttpUrl(it.url);
+        // A link that is not http(s) is shown as plain text, never as a link (audit C-05).
+        return href ? (
+          <a key={it.id} href={href} target="_blank" rel="noopener noreferrer" className={cls} aria-selected={on} title={it.title} onClick={() => pick(bi, i, false)}>
+            {cells}
           </a>
+        ) : (
+          <div key={it.id} className={cls} aria-selected={on} title={it.title} onClick={() => pick(bi, i, false)}>
+            {cells}
+          </div>
         );
       })}
     </>

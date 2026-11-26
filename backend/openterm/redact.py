@@ -35,7 +35,8 @@ def unregister(values) -> None:
 def redact(text: str, secrets=None) -> str:
     if not text:
         return text
-    pool = _SECRETS if secrets is None else {s for s in secrets if s and len(s) >= MIN_SECRET}
+    # Passed secrets ADD to the registered ones (audit C-04): replacing them let a caller that passed its own list leak every other key.
+    pool = _SECRETS if secrets is None else _SECRETS | {s for s in secrets if s and len(s) >= MIN_SECRET}
     for s in sorted(pool, key=len, reverse=True):
         if s in text:
             text = text.replace(s, "***")

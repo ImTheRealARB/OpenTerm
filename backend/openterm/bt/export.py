@@ -9,21 +9,15 @@ import csv
 import datetime as dt
 import io
 
+from ..csvsafe import (
+    neutralize,  # the one spreadsheet-formula guard (audit H-14), shared with the Excel bridge
+)
 from .job import HEADLINE
 from .rules import BoolOp, Cmp, Term, parse
 
 PARTS = ("trades", "equity", "metrics")
 TRADE_FIELDS = ("symbol", "direction", "entry_time", "exit_time", "entry_price", "exit_price", "size", "pnl", "pnl_pct",
                 "commission", "holding_bars", "exit_reason")
-
-
-def neutralize(v):
-    """Spreadsheet formula guard (audit D-3; the same rule as frontend/src/csvText.ts): a text cell that starts with
-    = @ TAB CR, or with + / - not followed by a number, gets a leading apostrophe so Excel shows it instead of running it.
-    Numbers (floats, ints) are never touched."""
-    if isinstance(v, str) and (v[:1] in ("=", "@", "\t", "\r") or (v[:1] in ("+", "-") and not v[1:2].isdigit() and v[1:2] != ".")):
-        return "'" + v
-    return v
 
 
 def _csv(header: list[str], rows: list[list]) -> str:

@@ -4,12 +4,16 @@
  */
 export type CsvCell = string | number | boolean | null | undefined;
 
+// A strict plain number: sign, digits (with fraction) or a bare fraction, exponent, percent sign. Nothing else.
+const PLAIN_NUMBER = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?%?$/;
+
 /**
- * Spreadsheet formula injection guard: a text cell starting with = @ TAB CR, or with + / - not followed by
- * a number, gets a leading apostrophe. Numbers and signed figures like "-1.25" or "+3.4%" are left alone.
+ * Spreadsheet formula injection guard (audit H-14; the same rule as backend/openterm/csvsafe.py): a text cell
+ * starting with = + - @ TAB or CR gets a leading apostrophe, unless the WHOLE cell is a plain number such as
+ * "-1.25" or "+3.4%". Looking only one character past + or - let "+1+cmd|..." through.
  */
 export function neutralize(s: string): string {
-  return /^[=@\t\r]/.test(s) || /^[+-](?![\d.])/.test(s) ? `'${s}` : s;
+  return /^[=+\-@\t\r]/.test(s) && !PLAIN_NUMBER.test(s) ? `'${s}` : s;
 }
 
 export function csvField(v: CsvCell): string {

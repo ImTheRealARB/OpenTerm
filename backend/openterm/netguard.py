@@ -73,12 +73,13 @@ def private_name(host: str) -> bool:
 
 
 def private_host(host: str) -> bool:
-    """Webhook-style check with no network: a well-known local name or an address literal that is not public."""
+    """Check with no network: a local name (single label, `.local`, `.corp`, `.lan`, ...) or an address literal that is not public.
+    A public-looking name that RESOLVES inside (`127.0.0.1.nip.io`) passes this; callers that send must also call `public_addresses`."""
     h = host.lower().rstrip(".")
-    if h == "localhost" or h.endswith(LOCAL_SUFFIXES[:3]):
-        return True
     ip = parse_host_literal(h)
-    return blocked_ip(ip) if ip is not None else False
+    if ip is not None:
+        return blocked_ip(ip)
+    return private_name(h)
 
 
 async def system_resolver(host: str, port: int) -> list[str]:

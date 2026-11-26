@@ -3,6 +3,8 @@
 import time
 from collections import deque
 
+from .redact import redact
+
 _SAMPLES: deque[tuple[str, float]] = deque(maxlen=4096)
 
 
@@ -20,8 +22,12 @@ def percentile(values: list[float], p: float) -> float:
 
 def summary() -> dict:
     by_path: dict[str, list[float]] = {}
+    masked: dict[str, str] = {}  # many samples share a path: mask each distinct path once
     for path, ms in _SAMPLES:
-        by_path.setdefault(path, []).append(ms)
+        # Masked here, not in record(): record runs on every request, summary only when /api/perf is asked (audit C-04).
+        if path not in masked:
+            masked[path] = redact(path)
+        by_path.setdefault(masked[path], []).append(ms)
     return {
         path: {"n": len(v), "p50": percentile(v, 50), "p95": percentile(v, 95)}
         for path, v in by_path.items()

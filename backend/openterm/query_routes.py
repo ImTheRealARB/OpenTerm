@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse, Response
 
+from .csvsafe import neutralize
 from .errors import DataError
 from .http_util import data_errors, loopback, svc
 from .query import engine
@@ -58,7 +59,8 @@ def _text(v: object) -> PlainTextResponse:
 def _csv(rows: list[list[object]], name: str) -> Response:
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\r\n")
-    w.writerows(rows)
+    # Provider text (names, labels) lands in these cells: guard formulas (audit H-14). Numbers pass through untouched.
+    w.writerows([[neutralize(v) for v in r] for r in rows])
     return Response(buf.getvalue(), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'inline; filename="{name}.csv"'})
 
 

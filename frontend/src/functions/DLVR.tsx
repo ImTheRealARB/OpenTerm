@@ -19,6 +19,7 @@ import { PanelNote } from "../components/PanelNote";
 import { editStart, fieldError, fieldPatch, fieldValue, isRecipientField, type FieldId } from "./dlvrFields";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
+import { safeHttpUrl } from "../safeUrl";
 
 /**
  * One table row. `toggle` is what Space flips; `field` is what Enter edits. A row can have either or both.
@@ -54,6 +55,7 @@ export default function DLVR({ panelId }: FunctionProps) {
   const [log, setLog] = useState<DeliveryRow[] | null>(null);
   // A pairing in progress: the bot link and code to show. The chat id never comes here, only `paired: true`.
   const [pair, setPair] = useState<TelegramPairStart | null>(null);
+  const pairHref = pair ? safeHttpUrl(pair.link) : null; // a link that is not http(s) shows as text, never as a link (audit C-05)
 
   const load = useCallback(async () => {
     try {
@@ -259,7 +261,8 @@ export default function DLVR({ panelId }: FunctionProps) {
       {msg && <div className={msg.cls} data-testid="dlvr-msg">{msg.text}</div>}
       {pair && view === "settings" && (
         <div data-testid="dlvr-pair">
-          <span className="acc">PAIR TELEGRAM</span> · OPEN <a href={pair.link} target="_blank" rel="noreferrer">{pair.link}</a> AND SEND{" "}
+          <span className="acc">PAIR TELEGRAM</span> · OPEN{" "}
+          {pairHref ? <a href={pairHref} target="_blank" rel="noopener noreferrer">{pair.link}</a> : <span>{pair.link}</span>} AND SEND{" "}
           <span className="acc" data-testid="dlvr-pair-code">{pair.code}</span>
           <span className="dim"> · VALID {Math.round(pair.expires_in / 60)} MIN · C CHECK · ESC CANCEL</span>
         </div>
