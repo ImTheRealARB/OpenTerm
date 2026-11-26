@@ -74,6 +74,9 @@ class AllFailed(Exception):
         # An expired login (Kite) is a reason shown beside the fallback, not an outage: when the sources that DO answer say
         # "no such symbol" or "too shallow", the user gets that real answer instead of PROVIDER DOWN (audit A-3).
         kinds_ex_login = kinds - {K.LOGIN_EXPIRED}
+        # The first source in the chain that gave a real answer (an expired login or "does not cover this symbol" is not one).
+        # `errors` is in chain order, best first, with skipped (tripped) sources at the front (see `call` and `quotes`).
+        first = next((e for _, e in errors if e.kind not in (K.LOGIN_EXPIRED, K.UNSUPPORTED)), None)
         if pinned:
             # A pinned source answers alone: say which one and why, never the generic "no data" of a whole chain.
             self.kind, msg = self._pinned(pinned, errors[0][1] if errors else None, keys)
@@ -88,6 +91,12 @@ class AllFailed(Exception):
             # Phase 11: no keyless provider could answer, so the missing key is the reason.
             self.kind, msg = K.KEY_REQUIRED, "KEY REQUIRED"
             self.key = next((keys or {}).get(n) for n, e in errors if e.kind == K.KEY_REQUIRED)
+        elif first is not None and first.kind == K.NOT_FOUND:
+            # The best source that answered says "no such symbol"; only lower-ranked fallbacks were down (2026-11-26: Yahoo
+            # said 404 for ZZZZQ, the Nasdaq fallback was blocked, and the user saw PROVIDER DOWN for a symbol that does not
+            # exist). A down source that ranks ABOVE it is first in the list instead, so that case stays PROVIDER DOWN.
+            # `detail` still names every source's reason, so the outage is not hidden.
+            self.kind, msg = K.NOT_FOUND, "NO DATA FOR SYMBOL"
         else:
             self.kind, msg = K.UNAVAILABLE, "PROVIDER DOWN"
         super().__init__(msg)
@@ -191,7 +200,8 @@ class Router:
                 errors.append((p.name, e))
                 if e.kind == K.KEY_REQUIRED:
                     keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
-        raise AllFailed(errors + skipped, keys)
+        # Skipped (tripped) sources go FIRST, like `quotes` does: AllFailed reads the first entry as "the best source's answer".
+        raise AllFailed(skipped + errors, keys)
 
     def pin_block(self, p: Provider, capability: str, symbol: str | None) -> ProviderError | None:
         """Why the pinned source cannot even be asked (None = ask it)."""

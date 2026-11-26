@@ -71,6 +71,43 @@ def test_expired_login_does_not_turn_real_errors_into_provider_down():
     assert down.kind == "unavailable"
 
 
+def test_best_source_not_found_beats_a_lower_fallback_outage():
+    # 2026-11-26: Yahoo (best) said 404 for ZZZZQ, the Nasdaq fallback was blocked (403): the user saw PROVIDER DOWN.
+    nf = ("yahoo", ProviderError("not_found", "404"))
+    blocked = ("nasdaq", ProviderError("unavailable", "403 (blocked or needs auth)"))
+    missing = AllFailed([nf, blocked])
+    assert missing.kind == "not_found" and str(missing) == "NO DATA FOR SYMBOL"
+    # A source that does not cover the symbol, or an expired login, ranked above does not change that.
+    assert AllFailed([("kite", ProviderError("unsupported")), nf, blocked]).kind == "not_found"
+    assert AllFailed([("kite", ProviderError("login_expired", "KITE LOGIN EXPIRED")), nf, blocked]).kind == "not_found"
+    # A HIGHER-ranked source that is down might have the symbol: still PROVIDER DOWN.
+    assert AllFailed([("kite", ProviderError("unavailable", "timeout")), nf]).kind == "unavailable"
+
+
+def test_router_call_puts_tripped_sources_first(monkeypatch):
+    """`call` lists skipped (circuit-open) sources before the tried ones, so a tripped better source keeps PROVIDER DOWN."""
+    import asyncio
+
+    from openterm.router import Router
+
+    router = Router({}, {})
+    skipped = [("kite", ProviderError("unavailable", "CIRCUIT OPEN: timeout"))]
+    tried = type("P", (), {"name": "yahoo"})()
+
+    async def fail(p, fn):
+        raise ProviderError("not_found", "404")
+
+    monkeypatch.setattr(router, "_callable", lambda cap, sym=None: ([tried], skipped))
+    monkeypatch.setattr(router, "attempt", fail)
+    try:
+        asyncio.run(router.call("history", lambda p: p, "X.NS"))
+    except AllFailed as e:
+        assert [n for n, _ in e.errors] == ["kite", "yahoo"]
+        assert e.kind == "unavailable"
+    else:
+        raise AssertionError("call should raise AllFailed")
+
+
 def test_history_limits_and_cache_key_ignore_an_expired_kite(client):
     router = client.app.state.service.router
     kite = router.providers["kite"]

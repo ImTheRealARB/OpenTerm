@@ -273,11 +273,13 @@ export function interpretNatural(input: string, ctx: NlContext): NlResult {
       ].filter((h, i, all) => all.findIndex((x) => x.symbol === h.symbol) === i);
       if (near.length) return { kind: "choices", choices: near.slice(0, 4).map((h) => ({ command: make(h.symbol), label: `${h.symbol}  ${h.name}` })) };
     }
-    // Still nothing: let the async side try Yahoo's name search for what is left (a short phrase of real words).
-    const left = words.filter((w) => !isFiller(w, upper) && !isNum(w));
-    if (left.length && left.length <= 4 && left.join(" ").length >= 3) {
-      return { kind: "none", lookup: { phrase: left.join(" "), template: make("{S}") } };
-    }
+  }
+  // Still nothing: let the async side try Yahoo's name search for what is left (a short phrase of real words).
+  // This runs WITHOUT the company list too: that list comes from the Nasdaq screener, which can be down (Nasdaq's edge
+  // answered 403 to our client on 2026-11-26), and Yahoo's search is the fallback for exactly that case.
+  const left = words.filter((w) => !isFiller(w, upper) && !isNum(w));
+  if (left.length && left.length <= 4 && left.join(" ").length >= 3) {
+    return { kind: "none", lookup: { phrase: left.join(" "), template: make("{S}") } };
   }
   return { kind: "none" };
 }

@@ -403,9 +403,16 @@ describe("Yahoo name search fallback (nlRemote.pickRemote, the pure half)", () =
     expect(interpretNatural("gold price", ctx).kind).toBe("command"); // known by alias: no lookup
     expect(interpretNatural("xyzzy blorp", ctx)).toMatchObject({ kind: "none", lookup: { phrase: "xyzzy blorp" } });
   });
-  it("no lookup before the company list is loaded or for filler-only text", () => {
-    expect(interpretNatural("zomato stock", { ...ctx, companies: null })).toEqual({ kind: "none" });
+  // CHANGED ON PURPOSE (2026-11-26): `companies: null` reaches the router only after the company list FAILED to load
+  // (nlResolve awaits the load first), e.g. when the Nasdaq screener is blocked. The Yahoo search is the fallback for that
+  // case, so it is asked for. Before this, plain English went silent: "apple stock price past 5 years" showed no preview.
+  it("the search is asked for when the company list is unavailable", () => {
+    expect(interpretNatural("zomato stock", { ...ctx, companies: null })).toEqual({ kind: "none", lookup: { phrase: "zomato", template: "{S} GP" } });
+    expect(interpretNatural("apple stock price past 5 years", { ...ctx, companies: null })).toEqual({ kind: "none", lookup: { phrase: "apple", template: "{S} GP 5Y" } });
+  });
+  it("no lookup for filler-only text", () => {
     expect(interpretNatural("the", ctx)).toEqual({ kind: "none" });
+    expect(interpretNatural("the", { ...ctx, companies: null })).toEqual({ kind: "none" });
   });
 });
 
