@@ -714,12 +714,13 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
         <PanelNote
           kind="error"
           hint={clash ? "PICK A LONGER CANDLE (AUTO) OR A SHORTER RANGE." : "F5 TO RETRY."}
-          // GUI wording: a symbol the user picked is valid, so never blame the spelling here; say what is actually wrong.
+          // GUI wording: say what is actually wrong. NO DATA covers a ticker that does not exist (typed, e.g. ZZZZQ) AND a real one
+          // with nothing for this range, and the server cannot tell them apart, so the text names both instead of guessing.
           plain={
             clash
               ? `The data source only has ${p.interval ?? "these"} candles ${limitText(depthDays!)} back, and ${p.range} is longer than that. Your candle length is kept; pick one of the fixes below.`
               : /NO DATA|NOT FOUND/i.test(state.error)
-                ? `No chart data came back for ${symbol} over ${p.range}. The name is fine: the data source has nothing for it right now (in sample-data mode that can be a gap in the recordings). Retry, try another range, or chart a different stock.`
+                ? `No chart data came back for ${symbol} over ${p.range}. The data source does not know this ticker, or it has nothing for it over this range (in sample-data mode that can be a gap in the recordings). Check the spelling, try another range, or chart a different stock.`
                 : undefined
           }
           actions={[
