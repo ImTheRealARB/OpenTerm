@@ -6,6 +6,11 @@
 //        OPENTERM_KEYRING=memory SEC_USER_AGENT="OpenTerm README screenshots" uv run --no-dev python -m openterm   (from backend/)
 //   3. node scripts/screenshots.mjs [name ...]      (no names = all; BASE=http://127.0.0.1:8011 by default)
 //
+// FIXTURE MODE for docs/GUIDE.md: start the server in step 2 with OPENTERM_FIXTURES=1 as well (recorded responses, no network).
+// Then the "guide/..." shots below are repeatable and write to docs/screenshots/guide/<name>.png. Select them by name
+// (`node scripts/screenshots.mjs guide/des guide/chart`) or all at once with `guide`. Seed the PORT shot first: see the
+// comment on "guide/port". Plain names (home, workspace, ...) are the live-data README pictures and are unchanged.
+//
 // Needs Playwright's Chromium (`.\scripts\setup.ps1 -Dev` installs it). Every shot uses a fresh browser context, because
 // panels are saved to the server and would otherwise pile up from shot to shot.
 // Why the page is small: GitHub shows a README picture about 880 px wide whatever its size, so a 1440 px page was shrunk to
@@ -14,6 +19,7 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
 
 const require = createRequire(new URL("../frontend/package.json", import.meta.url));
 const { chromium } = require("@playwright/test");
@@ -108,12 +114,104 @@ const SHOTS = [
     await page.keyboard.press("Enter");
     await page.waitForTimeout(2500);
   }],
+
+  // ---- Guide shots (fixture mode, docs/GUIDE.md). Names start with "guide/" so the file lands in docs/screenshots/guide/. ----
+  // Terminal mode (what Alt+G switches to): command line on top, tiled panels, no menus. Two panels side by side.
+  ["guide/terminal-mode", "terminal", async (page) => {
+    await cmd(page, "Q AAPL MSFT META ^GSPC GC=F EURUSD=X", { wait: 2500 }); // symbols the recorded fixtures cover
+    await cmd(page, "AAPL GP", { newPanel: true, wait: 3000 });
+    await page.keyboard.press("Escape");
+  }],
+  // DES: company description for AAPL.
+  ["guide/des", "terminal", async (page) => {
+    await cmd(page, "AAPL DES", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // Chart with two moving averages and an RSI pane.
+  ["guide/chart", "terminal", async (page) => {
+    await cmd(page, "AAPL GP 1Y SMA20 SMA50 RSI", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // FA: financial statements from SEC EDGAR (recorded).
+  ["guide/fa", "terminal", async (page) => {
+    await cmd(page, "AAPL FA", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // Quote board: WEI, world equity indices.
+  ["guide/quotes", "terminal", async (page) => {
+    await cmd(page, "WEI", { wait: 3500 });
+    await page.keyboard.press("Escape");
+  }],
+  // N: news headlines.
+  ["guide/news", "terminal", async (page) => {
+    await cmd(page, "N", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // EQS: equity screener over the whole US universe.
+  ["guide/eqs", "terminal", async (page) => {
+    await cmd(page, "EQS", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // Macro: US rates next to the CPI series from FRED.
+  ["guide/macro", "terminal", async (page) => {
+    await cmd(page, "RATES", { wait: 3000 });
+    await cmd(page, "FRED CPIAUCSL", { newPanel: true, wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // PORT: a stored portfolio. Seed it first (the PUT is the same one the app uses):
+  //   curl -X PUT $BASE/api/portfolios/Demo -H "Content-Type: application/json" -d '{"positions":[{"symbol":"AAPL","qty":50,"cost":150},{"symbol":"MSFT","qty":20,"cost":300},{"symbol":"META","qty":10,"cost":500},{"symbol":"RELIANCE.NS","qty":100,"cost":1100}]}'
+  // The name is stored upper case (DEMO). The shot seeds it itself through the same API so it works on a fresh database.
+  ["guide/port", "terminal", async (page) => {
+    await page.request.put(BASE + "/api/portfolios/Demo", {
+      headers: { "Content-Type": "application/json" },
+      data: { positions: [
+        { symbol: "AAPL", qty: 50, cost: 150 }, { symbol: "MSFT", qty: 20, cost: 300 },
+        { symbol: "META", qty: 10, cost: 500 }, { symbol: "RELIANCE.NS", qty: 100, cost: 1100 } ] },
+    });
+    await cmd(page, "PORT DEMO", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // ALRT: add one price alert, then show the alert list in the panel.
+  ["guide/alrt", "terminal", async (page) => {
+    await cmd(page, "ALRT AAPL > 400", { wait: 2500 });
+    await cmd(page, "ALRT", { wait: 2500 });
+    await page.keyboard.press("Escape");
+  }],
+  // OMON: option chain with IV and Greeks.
+  ["guide/omon", "terminal", async (page) => {
+    await cmd(page, "AAPL OMON", { wait: 4000 });
+    await page.keyboard.press("Escape");
+  }],
+  // BT: backtest of an SMA20 > SMA50 rule, with the HISTORICAL SIMULATION label.
+  ["guide/bt", "terminal", async (page) => {
+    await cmd(page, "BT AAPL SMA20>SMA50 1D 5Y", { wait: 7000 });
+    await page.keyboard.press("Escape");
+  }],
+  // HELP: the built-in help panel.
+  ["guide/help", "terminal", async (page) => {
+    await cmd(page, "HELP", { wait: 2500 });
+    await page.keyboard.press("Escape");
+  }],
+  // Window menu (Alt+M): opens RECENT; ArrowRight moves to RELATED (the functions that go with this security). Over a DES panel.
+  ["guide/window-menu", "terminal", async (page) => {
+    await cmd(page, "AAPL DES", { wait: 4000 });
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Alt+m");
+    await page.waitForTimeout(500);
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(800);
+  }],
+  // APIKEYS: where keys are typed (masked); none are set here.
+  ["guide/apikeys", "terminal", async (page) => {
+    await cmd(page, "APIKEYS", { wait: 3500 });
+    await page.keyboard.press("Escape");
+  }],
 ];
 
 const wanted = process.argv.slice(2);
 const browser = await chromium.launch();
 for (const [name, mode, setup] of SHOTS) {
-  if (wanted.length && !wanted.includes(name)) continue;
+  if (wanted.length && !wanted.includes(name) && !(wanted.includes("guide") && name.startsWith("guide/"))) continue;
   const ctx = await browser.newContext({ viewport: { width: VIEW_W, height: VIEW_H }, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   // Seed the same browser storage the e2e tests use: GUI or Terminal mode, welcome card already seen, panels as tiles.
@@ -137,6 +235,7 @@ for (const [name, mode, setup] of SHOTS) {
   }
   await setup(page);
   await page.waitForTimeout(WAIT);
+  fs.mkdirSync(path.dirname(path.join(OUT, name + ".png")), { recursive: true }); // "guide/x" needs docs/screenshots/guide/
   await page.screenshot({ path: path.join(OUT, name + ".png") });
   console.log("saved", name);
   await ctx.close();
