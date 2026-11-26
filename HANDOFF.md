@@ -6,7 +6,7 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
 ## Resume here (2026-10-19, end of the review sprint and terminal-look session)
-- **2026-11-26, branch `claude/openterm-data-sources-e700ae` (not committed yet):** EQS (`screener`) and MOV (`movers`) had Nasdaq as their only source.
+- **2026-11-26, branch `claude/openterm-data-sources-e700ae` (commit 5353d59, not pushed):** EQS (`screener`) and MOV (`movers`) had Nasdaq as their only source.
   Added `providers/tradingview.py` (TradingView's keyless stock scanner) as the second source for both, after Nasdaq in `config.yaml` and `main.py`
   `DEFAULT_ORDER`. Same payload shapes; differences in `docs/DATA_LIMITS.md` Phase 9. Fixtures `tv_*.json` (recorder `scripts/record_tradingview.py`,
   matched on the exact request body in `fixtures.py`), tests `tests/test_tradingview.py`. Gate: ruff clean, pytest 1645 passed (frontend untouched,
