@@ -16,6 +16,7 @@ import type { FunctionProps } from "./registry";
 import { commandFor, coverageLabel, subjectSymbol, swarmArgs, type PresetInfo, type PresetsResponse } from "./swarmArgs";
 import { estimateLine, newSwarm, reduceSwarm, type RoleState, type SwarmEvent, type SwarmState } from "./swarmStream";
 import { watchPanelGone } from "./panelGoneWatch";
+import { latestOnly } from "../state/latestOnly";
 import { usePanelMemory } from "./usePanelMemory";
 
 interface StoredRun {
@@ -71,6 +72,7 @@ export default function SWARM({ panelId, args }: FunctionProps) {
   const [stored, setStored] = useState<StoredRun[]>([]);
   const [note, setNote] = useState<{ text: string; cls: string } | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const runs = useRef(latestOnly());
   const lastRun = useRef<{ preset: string; subject: string; variables: Record<string, string> } | null>(null); // for the "run anyway" command
   const state = useRef({ run, ai });
   state.current = { run, ai };
@@ -95,12 +97,17 @@ export default function SWARM({ panelId, args }: FunctionProps) {
   }, []);
 
   const stream = useCallback(async (url: string, body: unknown) => {
+    // A second run stops the first (a paid stream) and takes over: the older run's late writes
+    // and its cleanup must not touch the newer run (audit H-30).
+    abort.current?.abort();
+    const ticket = runs.current.next();
     const ac = new AbortController();
     abort.current = ac;
     let cur = newSwarm();
     // `gone` = the panel closed or moved on to another view: this run's late writes go inert, so
     // they cannot overwrite the run the panel shows now.
     let gone = false;
+    const stale = () => gone || !runs.current.isCurrent(ticket);
     const incomplete = (): SwarmState => ({ ...cur, status: "done", final: { answer: "", unsourced: [], grounded: false, label: "INCOMPLETE", failed: [] } });
     // Stop the (paid) run if this panel is closed or its view is replaced (a new command, a history
     // step). A maximize remount keeps the same view, so it does not count.
@@ -111,22 +118,22 @@ export default function SWARM({ panelId, args }: FunctionProps) {
     });
     setRun(cur);
     const apply = (e: SwarmEvent) => {
-      if (gone) return;
+      if (stale()) return;
       cur = reduceSwarm(cur, e);
       setRun(cur);
     };
     try {
       // false = the server refused the run: streamPost already showed its error as an event, so there is nothing to settle.
       if (!(await streamPost<SwarmEvent>(url, body, ac.signal, apply))) return;
-      if (cur.status === "running" && !gone) setRun(incomplete());
+      if (cur.status === "running" && !stale()) setRun(incomplete());
     } catch (e) {
-      if (gone) {
-        /* already marked INCOMPLETE when the panel moved on */
+      if (stale()) {
+        /* marked INCOMPLETE when the panel moved on, or a newer run owns the display now */
       } else if (isAbort(e)) setRun(incomplete());
       else apply({ type: "error", kind: "network", text: "BACKEND DOWN" });
     } finally {
       unwatch();
-      abort.current = null;
+      if (abort.current === ac) abort.current = null; // a newer run may already own it
       void loadLists();
     }
   }, [loadLists, panelId, setRun]);

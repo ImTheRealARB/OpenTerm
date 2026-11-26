@@ -56,17 +56,19 @@ export default function KITE({ panelId, args }: FunctionProps) {
   }, [refresh]);
 
   // `KITE LOGIN` / `KITE LOGOUT` act once, then the view goes back to plain status so a remount does not repeat them.
-  const acted = useRef(false);
+  // Remember the args array we acted on, not a boolean: a boolean ignored every later `KITE LOGOUT` typed
+  // into this same instance (audit M-13). The args are cleared below, so a new array is a new command.
+  const acted = useRef<readonly string[] | null>(null);
   useEffect(() => {
     void refresh();
-    if (acted.current) return;
+    if (acted.current === args) return;
     if (action === "login" || action === "logout") {
-      acted.current = true;
+      acted.current = args;
       if (action === "login") login();
       else void logout();
       replaceView(panelId, (v) => ({ ...v, args: [] }));
     }
-  }, [action, panelId, refresh, login, logout]);
+  }, [action, args, panelId, refresh, login, logout]);
 
   usePanelRefresh(panelId, () => {
     setMsg(null);

@@ -13,6 +13,12 @@ import { workspace } from "../state/workspace";
 export function watchPanelGone(panelId: number, onGone: () => void): () => void {
   const p = workspace.get().panels[panelId];
   const view = p?.views[p.pos]; // the exact view object this stream belongs to
+  // The panel may already be gone (closed while the caller awaited something before starting the
+  // stream). No store event will follow, so a subscription alone would never fire: stop at once.
+  if (!p) {
+    onGone();
+    return () => {};
+  }
   const off = workspace.subscribe(() => {
     if (panelGone(workspace.get(), panelId, view)) {
       off();

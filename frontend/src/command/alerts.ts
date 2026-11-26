@@ -12,6 +12,7 @@
  * once: marked triggered locally at once, then on the backend with the trigger price and time.
  */
 import { fmtPrice } from "../format";
+import { browserChecksNews } from "./newsAlertGate";
 import { marketApi } from "../net/marketApi";
 import { newsAlertsApi } from "../net/newsAlertsApi";
 import { priceAlertsApi } from "../net/priceAlertsApi";
@@ -211,7 +212,7 @@ function fireNews(a: NewsAlert, item: NewsItem): void {
 export function checkNewsItems(symbol: string | null, items: readonly NewsItem[]): void {
   const list = newsAlerts.get();
   if (!list?.length) return;
-  if (engineState.get()?.fixtures !== true) return; // live news is checked by the backend; only fixture-mode (recorded) news fires here
+  if (!browserChecksNews(engineState.get())) return; // live news is checked by the backend; only fixture-mode (recorded) news fires here
   for (const a of list) {
     if (a.status !== "active" || newsFiring.has(a.id) || (a.symbol ?? null) !== symbol) continue;
     const hit = items.find((i) => i.published != null && i.published > a.created_at && newsMatch(a.word, i.title));
@@ -226,6 +227,7 @@ export async function pollNewsAlerts(): Promise<void> {
   if (newsPolling) return;
   const active = (newsAlerts.get() ?? []).filter((a) => a.status === "active");
   if (!active.length) return;
+  if (!browserChecksNews(engineState.get())) return; // the backend polls live news: do not download headlines just to discard them
   newsPolling = true;
   try {
     for (const symbol of [...new Set(active.map((a) => a.symbol))]) {

@@ -59,14 +59,16 @@ export default function SYNC({ panelId, args }: FunctionProps) {
   );
 
   // `SYNC KITE GO` runs once, then the view goes back to the plain status so a remount does not run it again.
-  const acted = useRef(false);
+  // Remember the args array we ran for, not a boolean: a boolean ignored every later `SYNC <broker> GO` typed
+  // into this same instance (audit M-13).
+  const acted = useRef<readonly string[] | null>(null);
   useEffect(() => {
     void load();
-    if (acted.current || !cfg?.go || !cfg.broker) return;
-    acted.current = true;
+    if (acted.current === args || !cfg?.go || !cfg.broker) return;
+    acted.current = args;
     void run(cfg.broker);
     replaceView(panelId, (v) => ({ ...v, args: v.args.filter((a) => a.toUpperCase() !== "GO") }));
-  }, [cfg, load, run, panelId]);
+  }, [cfg, args, load, run, panelId]);
 
   usePanelRefresh(panelId, () => {
     void load();
