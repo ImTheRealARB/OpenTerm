@@ -2,6 +2,20 @@
 
 Known limitations, surfaced in the UI where they apply. Updated each phase.
 
+## Nasdaq blocks OpenTerm (since 2026-11-26)
+
+`api.nasdaq.com` now answers every OpenTerm request with "Access Denied" (HTTP 403). The block is in Nasdaq's edge network (Akamai): it
+recognises the program that opens the connection, not the request itself (the same request from `curl` still works). OpenTerm does not try to
+get around bot checks, so these show PROVIDER DOWN on live data until Nasdaq lifts the block or another source replaces it:
+- `EQS` (the screener universe) and the `COMP` peer fallback.
+- `MOV` (market movers) and `ERN` (earnings calendar).
+- The Nasdaq fallbacks: US quotes and daily history, company profile, dividends and splits, short interest. Yahoo still answers first for
+  quotes and history, so charts and quotes work.
+- Plain English loses its local company list and uses Yahoo's name search instead. A name that fits several companies (`apple`: Apple and
+  Apple Hospitality REIT) then gives choices, because Yahoo's answer has no market size to pick the obvious one.
+
+Sample-data mode (`OPENTERM_FIXTURES=1`) is not affected: it replays recorded Nasdaq answers.
+
 ## Providers (verified 2026-10-17)
 
 | Provider | Key | Coverage | Limits and caveats |

@@ -58,6 +58,20 @@ def register(api):
 - `api.add_tool(name, description, parameters, handler)`: description 1 to 240 characters; up to 8 flat, typed arguments (`string`, `integer`, `number`, `array`, `object`); at most 10 tools.
 - `api.add_provider(cls)`: `cls` subclasses `openterm.providers.base.Provider` (see [ADDING_A_PROVIDER.md](ADDING_A_PROVIDER.md)). It joins the end of every capability's order and cannot replace a built-in source or invent a capability.
 
+### Saying how old the data is
+
+OpenTerm cannot see where an extension got its numbers, so a route payload may say how old they are. Both fields are optional:
+
+- `as_of`: epoch seconds, the time the data was current. The panel shows the age from it. A time in the future counts as now.
+- `stale`: `true` when the extension knows the data is old (for example, it served a cached copy because its source failed). The panel then shows STALE.
+
+```python
+return {"kind": "table", "title": "MY TABLE", "columns": [...], "rows": [...], "as_of": 1795600000, "stale": False}
+```
+
+Without `as_of`, the data is shown as current at the time of the request. A wrong type (`as_of` that is not a positive number, or `stale` that is
+not `true` / `false`) is refused with an error.
+
 ### Rules for honest data
 
 Follow the project's rules: never invent numbers (return `None` and say why), label sample or computed data as such (`notes`), keep secrets out of results and error text (errors are redacted before they reach the screen, but do not rely on it), and make no network call at import time.
