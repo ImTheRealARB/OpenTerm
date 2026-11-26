@@ -20,7 +20,7 @@ def _term(t: Term, shift: str, used: set[tuple[str, int]]) -> str:
         return f"{t.n:g}"
     if t.kind == "FIELD":
         return f"(double)iVolume(_Symbol, TF, {shift})" if t.name == "VOLUME" else f"{_PRICE[t.name]}(_Symbol, TF, {shift})"
-    if t.kind in ("SMA", "EMA", "RSI"):
+    if t.kind in ("SMA", "EMA", "RSI", "ATR"):
         used.add((t.kind.lower(), n))
         return f"BufValue(h_{t.kind.lower()}{n}, {shift})"
     return {"HIGH": f"HighestHigh({n}, {shift})", "LOW": f"LowestLow({n}, {shift})", "RET": f"Ret({n}, {shift})"}[t.kind]
@@ -120,6 +120,7 @@ def mql5_expert(rule: str, *, short: bool, cash: float, fees_bps: float, symbols
     ]
     for k, n in handles:
         out.append(f"   {h(k, n)} = iRSI(_Symbol, TF, {n}, PRICE_CLOSE);" if k == "rsi"
+                   else f"   {h(k, n)} = iATR(_Symbol, TF, {n});" if k == "atr"
                    else f"   {h(k, n)} = iMA(_Symbol, TF, {n}, 0, MODE_{k.upper()}, PRICE_CLOSE);")
         out.append(f"   if({h(k, n)} == INVALID_HANDLE) return INIT_FAILED;")
     out += [

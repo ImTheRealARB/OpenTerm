@@ -111,7 +111,7 @@ test("SETTINGS: Shift+R twice resets everything", async ({ page }) => {
   await expect(panel(page)).toContainText("RESET ALL SETTINGS? PRESS SHIFT+R AGAIN");
   await page.keyboard.press("Shift+R");
   await expect(panel(page)).toContainText("SETTINGS RESET TO DEFAULTS");
-  expect(await theme(page)).toBeNull();
+  await expect.poll(() => theme(page)).toBeNull(); // the attribute is removed on the next frame: poll, never read once
   await expect.poll(() => puts.at(-1)).toEqual({}); // a reset restores the default startup too
 });
 

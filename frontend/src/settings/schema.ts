@@ -75,6 +75,10 @@ export interface Settings {
   tapeSymbols: string[];
   /** Preferred source per kind of data, tried first (SETTINGS SOURCE HISTORY NASDAQ): capability -> source name. The default order still backs it up. */
   sources: Record<string, string>;
+  /** Phase 22: inside a link group, which chart views follow each other (SETTINGS LINK CROSSHAIR|RANGE|INTERVAL ON|OFF). */
+  link: { crosshair: boolean; range: boolean; interval: boolean };
+  /** Phase 24 recorder limits (SETTINGS RECORDER CAP <MB> | DAYS <n>): disk cap in MB and days a recorded session is kept. The recorder itself is OFF until REC <SYMBOL> ON. */
+  recorder: { capMb: number; retentionDays: number };
 }
 
 export const DEFAULTS: Settings = Object.freeze({
@@ -93,7 +97,12 @@ export const DEFAULTS: Settings = Object.freeze({
   tape: false,
   tapeSymbols: [...TAPE_DEFAULT],
   sources: {},
+  link: { crosshair: true, range: true, interval: true },
+  recorder: { capMb: 500, retentionDays: 14 },
 }) as Settings;
+
+/** Recorder limits: [min, max] of each number (mirror of backend settings_store.py REC_FIELDS). */
+export const REC_BOUNDS = { capMb: [1, 100_000], retentionDays: [1, 3650] } as const;
 
 export const SOURCE_NAME_RE = /^[a-z][a-z0-9_]{0,39}$/;
 
@@ -209,6 +218,27 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
     }
   } else if (r.sources !== undefined) errors.push("sources");
 
+  // link: three on/off switches for chart sync inside a link group; a bad or missing switch keeps its default.
+  const lk = isObj(r.link) ? r.link : {};
+  const link = { ...d.link };
+  for (const k of ["crosshair", "range", "interval"] as const) {
+    if (lk[k] === undefined) continue;
+    if (typeof lk[k] === "boolean") link[k] = lk[k] as boolean;
+    else errors.push(`link.${k}`);
+  }
+  if (r.link !== undefined && !isObj(r.link)) errors.push("link");
+
+  // recorder: two whole numbers inside the backend's bounds (settings_store.py REC_FIELDS); a bad or missing one keeps its default.
+  const rc = isObj(r.recorder) ? r.recorder : {};
+  const recorder = { ...d.recorder };
+  for (const k of ["capMb", "retentionDays"] as const) {
+    if (rc[k] === undefined) continue;
+    const [lo, hi] = REC_BOUNDS[k];
+    if (typeof rc[k] === "number" && Number.isInteger(rc[k]) && (rc[k] as number) >= lo && (rc[k] as number) <= hi) recorder[k] = rc[k] as number;
+    else errors.push(`recorder.${k}`);
+  }
+  if (r.recorder !== undefined && !isObj(r.recorder)) errors.push("recorder");
+
   return {
     settings: {
       mode,
@@ -226,6 +256,8 @@ export function normalize(raw: unknown): { settings: Settings; errors: string[] 
       tape: pick("tape", typeof r.tape === "boolean", r.tape as boolean, d.tape),
       tapeSymbols: pick("tapeSymbols", tapeOk, (r.tapeSymbols as string[])?.slice(), [...d.tapeSymbols]),
       sources: sourcesOut,
+      link,
+      recorder,
     },
     errors,
   };

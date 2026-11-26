@@ -58,7 +58,7 @@ def _term(t: Term) -> str:
     if t.kind == "FIELD":
         return _FIELD[t.name]
     return {
-        "SMA": f"ta.sma(close, {n})", "EMA": f"ta.ema(close, {n})", "RSI": f"ta.rsi(close, {n})",
+        "SMA": f"ta.sma(close, {n})", "EMA": f"ta.ema(close, {n})", "RSI": f"ta.rsi(close, {n})", "ATR": f"ta.atr({n})",
         "HIGH": f"ta.highest(high, {n})", "LOW": f"ta.lowest(low, {n})", "RET": f"(close / close[{n}] - 1)",
     }[t.kind]
 

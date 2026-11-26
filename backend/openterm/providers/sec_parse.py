@@ -77,6 +77,27 @@ ROWS: list[tuple[str, str, str, str, str, tuple[str, ...]]] = [
 # Only used to fill Total liabilities when the filer does not tag it (flagged "c" = computed).
 HELPER_TAGS = ("LiabilitiesAndStockholdersEquity",)
 TAGS = sorted({t for r in ROWS for t in r[5]} | set(HELPER_TAGS))
+"""Every us-gaap tag the FA statements read."""
+
+# Phase 29: balance-sheet items FA does not show but the scores (SCORE) and the debt ladder (DDIS) need.
+# (key, unit, tags in priority order). All are instants read at the same period ends as the FA columns.
+EXTRA_ROWS: list[tuple[str, str, tuple[str, ...]]] = [
+    ("retained_earnings", "USD", ("RetainedEarningsAccumulatedDeficit",)),
+    ("receivables", "USD", ("AccountsReceivableNetCurrent",)),
+    ("inventory", "USD", ("InventoryNet",)),
+    ("ppe", "USD", ("PropertyPlantAndEquipmentNet",)),
+    ("lt_investments", "USD", ("LongTermInvestments", "MarketableSecuritiesNoncurrent")),
+    ("shares_out", "shares", ("CommonStockSharesOutstanding",)),
+    # Debt maturity ladder: principal due in each of the next five fiscal years and after that (10-K note).
+    ("mat_y1", "USD", ("LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths",)),
+    ("mat_y2", "USD", ("LongTermDebtMaturitiesRepaymentsOfPrincipalInYearTwo",)),
+    ("mat_y3", "USD", ("LongTermDebtMaturitiesRepaymentsOfPrincipalInYearThree",)),
+    ("mat_y4", "USD", ("LongTermDebtMaturitiesRepaymentsOfPrincipalInYearFour",)),
+    ("mat_y5", "USD", ("LongTermDebtMaturitiesRepaymentsOfPrincipalInYearFive",)),
+    ("mat_after", "USD", ("LongTermDebtMaturitiesRepaymentsOfPrincipalAfterYearFive",)),
+]
+EXTRA_TAGS = sorted({t for r in EXTRA_ROWS for t in r[2]})
+ALL_TAGS = sorted(set(TAGS) | set(EXTRA_TAGS))
 """Every us-gaap tag OpenTerm reads (fixtures are trimmed to these)."""
 
 
@@ -152,7 +173,7 @@ def _own_periods(gaap: dict) -> dict[str, dict]:
         cur = own.get(f["end"])
         # The original filing names the period; amendments keep the same fy/fp anyway.
         if cur is None or f.get("filed", "") < cur.get("filed", ""):
-            own[f["end"]] = {"fy": f["fy"], "fp": f["fp"], "form": f["form"], "filed": f.get("filed")}
+            own[f["end"]] = {"fy": f["fy"], "fp": f["fp"], "form": f["form"], "filed": f.get("filed"), "accn": f.get("accn")}
     return own
 
 
@@ -245,7 +266,7 @@ def _statements(gaap: dict, mode: str, own: dict[str, dict]) -> dict:
         o = own.get(end) or {}
         periods.append({
             "key": end, "label": lbl, "end": end, "start": starts.get(end), "fy": fy, "fp": fp,
-            "form": o.get("form"), "filed": o.get("filed"),
+            "form": o.get("form"), "filed": o.get("filed"), "accn": o.get("accn"),
             "derived": any(r["flags"][i] == "d" for rows in statements.values() for r in rows),
         })
     return {"periods": periods, "statements": statements}
@@ -259,7 +280,29 @@ def parse_companyfacts(body: dict) -> dict:
            "A": _statements(gaap, "A", own), "Q": _statements(gaap, "Q", own)}
     if not out["A"]["periods"] and not out["Q"]["periods"]:
         raise ValueError("no US-GAAP statements in the company facts")
+    # Phase 29: the extra instants at the same column ends, plus the tag each value came from (shown by SCORE / DDIS).
+    out["extra"] = {m: _extra(gaap, [p["end"] for p in out[m]["periods"]]) for m in ("A", "Q")}
     return out
+
+
+def _extra(gaap: dict, ends: list[str]) -> dict[str, dict]:
+    """{key: {"values": [...], "tags": [...]}} for EXTRA_ROWS, one value per period end (None when not tagged)."""
+    rows: dict[str, dict] = {}
+    for key, unit, names in EXTRA_ROWS:
+        tags = _tags(gaap, unit, names)
+        values: list[float | None] = []
+        used: list[str | None] = []
+        for end in ends:
+            v, tag = None, None
+            for name, t in tags:
+                f = t.instant(end)
+                if f is not None:
+                    v, tag = f["val"], name
+                    break
+            values.append(v)
+            used.append(tag)
+        rows[key] = {"values": values, "tags": used}
+    return rows
 
 
 # --- submissions ------------------------------------------------------------------------------

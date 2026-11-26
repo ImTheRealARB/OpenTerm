@@ -68,3 +68,17 @@ def schedule_brief(sched: AsyncIOScheduler, app, cfg: dict) -> None:
                           timezone=cfg.get("tz") or None)  # None = apscheduler's local zone
     sched.add_job(scheduled_run, trigger, args=[app], id=BRIEF_JOB, replace_existing=True,
                   max_instances=1, coalesce=True, misfire_grace_time=3600)
+
+
+CHAINREC_JOB = "chainrec"
+
+
+def schedule_chain_recorder(sched: AsyncIOScheduler, app) -> None:
+    """One weekday cron job at 16:45 US Eastern (45 minutes after the close). The job itself does nothing while the
+    recorder is OFF (kv `chainrec` absent), so the job is always registered."""
+    from apscheduler.triggers.cron import CronTrigger
+
+    from .options.recorder import scheduled_run
+
+    sched.add_job(scheduled_run, CronTrigger(day_of_week="mon-fri", hour=16, minute=45, timezone="America/New_York"), args=[app],
+                  id=CHAINREC_JOB, replace_existing=True, max_instances=1, coalesce=True, misfire_grace_time=3600)

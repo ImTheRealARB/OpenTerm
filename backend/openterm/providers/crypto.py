@@ -112,13 +112,18 @@ class BinanceProvider(Provider):
 _BINANCE_SPOT = "https://data-api.binance.vision/api/v3/klines"
 _BINANCE_PERP = "https://fapi.binance.com/fapi/v1/klines"
 _BINANCE_FUNDING = "https://fapi.binance.com/fapi/v1/fundingRate"
-_BINANCE_INTERVAL = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "60m": "1h", "1d": "1d", "1wk": "1w", "1mo": "1M"}
-_BAR_DAYS = {"1m": 1 / 1440, "5m": 5 / 1440, "15m": 15 / 1440, "30m": 30 / 1440, "60m": 1 / 24, "1d": 1.0, "1wk": 7.0,
+_BINANCE_INTERVAL = {"1s": "1s", "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "60m": "1h", "1d": "1d", "1wk": "1w", "1mo": "1M"}
+_BAR_DAYS = {"1s": 1 / 86400, "1m": 1 / 1440, "5m": 5 / 1440, "15m": 15 / 1440, "30m": 30 / 1440, "60m": 1 / 24, "1d": 1.0, "1wk": 7.0,
              "1mo": 30.4375}
 _FUNDING_INTERVALS = ("1d", "1wk", "1mo")
 _PAIR = re.compile(r"^([A-Z0-9]{2,12})(?:-?USDT)(\.P)?$")
 _PAGE = 1000
 _MAX_PAGES = 12
+
+
+def _held_range(seconds: float) -> str:
+    """A span as a range label: "3.3h" or "45min". Used when a request asked for more than the page cap lets us fetch."""
+    return f"{seconds / 3600:.1f}h" if seconds >= 3600 else f"{max(1, round(seconds / 60))}min"
 
 
 class BinanceKlinesProvider(Provider):
@@ -132,6 +137,9 @@ class BinanceKlinesProvider(Provider):
     rate = (5.0, 10)
     timeout = 10.0
     headers: ClassVar[dict[str, str]] = {"User-Agent": UA, "Accept": "application/json"}
+    # 1 second candles are paged at most _MAX_PAGES x _PAGE = 12,000 deep, which is 3.3 hours. Limits are whole days, so this says 1
+    # (the chart then greys out every range longer than 1D; the 1D answer still holds only the last 3.3 hours and its `range` says so).
+    intraday_days: ClassVar[dict[str, int]] = {"1s": 1}
 
     def supports(self, capability: str, symbol: str | None = None) -> bool:
         return capability in self.capabilities and symbol is not None and _PAIR.match(symbol.upper()) is not None
@@ -169,6 +177,8 @@ class BinanceKlinesProvider(Provider):
         if m is None or bi is None:
             raise ProviderError("unsupported", f"no Binance candles for {symbol} {interval}")
         pair, perp = f"{m.group(1)}USDT", m.group(2) is not None
+        if perp and interval == "1s":
+            raise ProviderError("unsupported", "Binance USD-M futures have no 1 second candles")  # only the spot host has them
         want = max(2, int(_RANGE_DAYS.get(range_, 366) / _BAR_DAYS[interval]) + 1)
         params = {"symbol": pair, "interval": bi}
         with_funding = perp and interval in _FUNDING_INTERVALS
@@ -191,8 +201,11 @@ class BinanceKlinesProvider(Provider):
                     sums[i] += float(f["fundingRate"])
                     counts[i] += 1
             fund = [s / c if c else None for s, c in zip(sums, counts, strict=True)]
+        # The page cap stops a 1 second request far short of its range (even "1D" would be 86,400 candles), so `range` must not repeat
+        # what was asked: it says how much time the candles really cover (first open to the end of the last second).
+        held = _held_range((opens[-1] - opens[0]) / 1000 + 1) if interval == "1s" else range_
         return Bars.model_construct(
-            symbol=symbol.upper(), range=range_, interval=interval, currency="USDT",
+            symbol=symbol.upper(), range=held, interval=interval, currency="USDT",
             exchange="Binance USD-M Futures" if perp else "Binance", tz="UTC",
             t=[o // 1000 for o in opens], o=[float(r[1]) for r in klines], h=[float(r[2]) for r in klines],
             l=[float(r[3]) for r in klines], c=[float(r[4]) for r in klines], v=[int(float(r[5])) for r in klines],

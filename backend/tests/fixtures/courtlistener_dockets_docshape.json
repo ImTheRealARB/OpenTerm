@@ -1,0 +1,10 @@
+{
+ "doc_shaped": "Built from the CourtListener REST API v4 search docs (type=r, RECAP dockets), NOT a recording: no key was available. The cases are invented.",
+ "status": 200,
+ "body": {"count": 2, "next": null, "previous": null, "results": [
+  {"caseName": "Exampleco Inc v. Sample Supplies LLC", "court": "United States District Court for the Western District of Pennsylvania", "court_id": "pawd",
+   "dateFiled": "2024-06-03", "docketNumber": "2:24-cv-00999", "docket_id": 99900001, "docket_absolute_url": "/docket/99900001/exampleco-inc-v-sample-supplies-llc/"},
+  {"caseName": "Sample Holdings v. Exampleco Inc", "court": "United States District Court for the Southern District of New York", "court_id": "nysd",
+   "dateFiled": "2023-11-14", "docketNumber": "1:23-cv-08888", "docket_id": 99900002, "docket_absolute_url": "/docket/99900002/sample-holdings-v-exampleco-inc/"}
+ ]}
+}

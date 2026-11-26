@@ -5,10 +5,11 @@ evaluates a parsed rule on bar frames and imports pandas lazily (worker side).
     or_expr := and_expr ("OR" and_expr)*
     and_expr:= cmp ("AND" cmp)*
     cmp     := term op term          op: > < >= <= CROSS> CROSS<
-    term    := CLOSE | OPEN | HIGH | LOW | VOLUME | SMA<n> | EMA<n> | RSI<n> | HIGH<n> | LOW<n> | RET<n> | number
+    term    := CLOSE | OPEN | HIGH | LOW | VOLUME | SMA<n> | EMA<n> | RSI<n> | ATR<n> | HIGH<n> | LOW<n> | RET<n> | number
 
 Case-insensitive. Error columns are 0-based character offsets into the rule text.
-Indicators: SMA = rolling mean, EMA = ewm(span=n, adjust=False), RSI = Wilder (ewm alpha 1/n), HIGH<n>/LOW<n> = rolling
+Indicators: SMA = rolling mean, EMA = ewm(span=n, adjust=False), RSI = Wilder (ewm alpha 1/n), ATR = Wilder average of the
+true range (max of high-low, |high-prev close|, |low-prev close|; ewm alpha 1/n, Phase 27), HIGH<n>/LOW<n> = rolling
 max of highs / min of lows including the current bar, RET<n> = n-bar return; all need n bars (NaN before).
 A comparison is 0 while any input is NaN. `A CROSS> B` is 1 from the bar A crosses above B until it crosses back
 below (0 before the first cross); `CROSS<` mirrors it. With `short=True` a false (valid) rule gives -1 instead of 0.
@@ -21,7 +22,7 @@ from dataclasses import dataclass, field
 
 MAX_PERIOD = 1000
 FIELDS = {"CLOSE", "OPEN", "HIGH", "LOW", "VOLUME"}
-INDICATORS = {"SMA", "EMA", "RSI", "HIGH", "LOW", "RET"}
+INDICATORS = {"SMA", "EMA", "RSI", "ATR", "HIGH", "LOW", "RET"}
 OPS = {">", "<", ">=", "<=", "CROSS>", "CROSS<"}
 INTERVALS = {"1D": "1d", "1W": "1wk"}
 RANGE_RE = re.compile(r"^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$")
@@ -268,6 +269,11 @@ def _series(term: Term, df, cache: dict):
         gain = d.clip(lower=0).ewm(alpha=1 / n, adjust=False, min_periods=n).mean()
         loss = (-d.clip(upper=0)).ewm(alpha=1 / n, adjust=False, min_periods=n).mean()
         s = 100 - 100 / (1 + gain / loss)
+    elif term.kind == "ATR":
+        prev = close.shift(1)
+        tr = pd.concat([df["high"] - df["low"], (df["high"] - prev).abs(), (df["low"] - prev).abs()], axis=1).max(axis=1)
+        tr.iloc[0] = df["high"].iloc[0] - df["low"].iloc[0]  # the first bar has no previous close: its range alone
+        s = tr.ewm(alpha=1 / n, adjust=False, min_periods=n).mean()
     elif term.kind == "HIGH":
         s = df["high"].rolling(n, min_periods=n).max()
     elif term.kind == "LOW":

@@ -17,6 +17,25 @@ export interface Envelope<T> {
   fallback_from: string[];
   /** Why a skipped source was skipped, when worth saying (e.g. kite: "KITE LOGIN EXPIRED: run KITE LOGIN"). */
   fallback_notes?: Record<string, string>;
+  /** Phase 22: only on a history answer for a formula (`AAPL/MSFT`) or a stored synthetic: what it was built from. */
+  formula?: FormulaInfo;
+}
+
+/** Phase 22 symbol math (backend `service._history_formula`): the legs behind a computed series and what the join dropped. */
+export interface FormulaInfo {
+  /** The normalised formula, e.g. `2*GLD - SLV`. */
+  text: string;
+  /** The stored synthetic's name (`IMPORT SYNTH`), or null for a formula typed on the command line. */
+  name: string | null;
+  legs: { symbol: string; source: string | null; age_s: number; stale: boolean; bars: number }[];
+  /** Bars present in some leg but not in all of them (inner join). */
+  dropped_join: number;
+  /** Bars a leg had with an open, high, low or close missing. */
+  incomplete: number;
+  /** Common bars removed because the formula divided by zero there. */
+  dropped_zero: number;
+  /** Legs with an unknown time zone, joined on UTC dates. */
+  utc_fallback: string[];
 }
 
 export interface Quote {
@@ -120,10 +139,19 @@ export interface WatchlistInfo {
   updated_at: number;
 }
 
+/** Phase 22: colour flags and section headers of a watchlist (backend `wlmeta.py`). A list with neither has no `meta` at all. */
+export interface WlMeta {
+  /** Stored symbol -> one of the 7 flag colours (see `functions/wlFlags.ts`). */
+  flags: Record<string, string>;
+  /** A header row shown just above the symbol `before`. */
+  sections: { before: string; title: string }[];
+}
+
 export interface Watchlist {
   name: string;
   symbols: string[];
   updated_at: number;
+  meta?: WlMeta;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,6 +457,15 @@ export interface AlertEngineState {
 // Screener and peers (marketApi)
 // ---------------------------------------------------------------------------
 
+/** `/api/fund/eqsfund` (Phase 29 finish): SEC formula fields for the live EQS screener, by symbol (percent, DE a ratio). */
+export interface EqsFundPayload {
+  year: number;
+  fields: string[];
+  rows: Record<string, (number | null)[]>;
+  notes: string[];
+  source: string;
+}
+
 export interface ScreenerPayload {
   columns: string[];
   /** [symbol, name, last, chg, pct, volume, mcap, country_i, ipo, sector_i, industry_i] (see functions/eqsFilter.ts). */
@@ -500,6 +537,180 @@ export interface BtLabels {
   sources: BtSource[];
   benchmark?: string;
   data_note?: string;
+  /** Phase 26: STOP= / TARGET= settings and which rule settled each exit (FILL=INTRABAR or stop first). */
+  stops?: string;
+  /** Phase 26 BT OPT: how the walk-forward windows were cut. */
+  wf?: string;
+}
+
+/** Phase 26: one parameter set of a BT OPT search. `i` = index of each value in its range. */
+export interface BtOptRun {
+  i: number[];
+  values: string[];
+  metrics?: Record<string, number | null>;
+  fitness: number | null;
+  front?: boolean;
+  error?: string;
+}
+
+export interface BtOptWindow {
+  window: number;
+  is_start: number;
+  is_end: number;
+  oos_start: number;
+  oos_end: number;
+  values: string[];
+  is_fitness: number | null;
+  is_annual: number | null;
+  oos_annual: number | null;
+  oos_return: number;
+}
+
+/** Result of a bt.opt job (POST /api/bt/opt). */
+export interface BtOptResult {
+  opt_id: string;
+  template: string;
+  shown: string;
+  kind: "rule" | "code";
+  method: "GRID" | "RANDOM" | "GA";
+  fit: string;
+  seed: number;
+  symbols: string[];
+  interval: string;
+  range: string;
+  strategy: string | null;
+  params: { name: string; values: string[]; where: string }[];
+  runs: BtOptRun[];
+  best: number | null;
+  guards: {
+    trials: number;
+    failed: number;
+    no_fitness: number;
+    edge: string[];
+    plateau: { neighbours: number; mean: number | null; best: number | null } | null;
+    pbo: { pbo: number; splits: number; blocks: number; median_logit: number } | null;
+    dsr: { dsr: number; expected_max_sharpe: number; observed_sharpe: number; trials: number } | null;
+  };
+  wf: { windows: BtOptWindow[]; equity: [number, number][]; oos_annual: number | null; is_annual_mean: number | null;
+    wfe: number | null; anchored: boolean; n_windows: number } | null;
+  bars: number;
+  labels: BtLabels;
+}
+
+/** Phase 27: a SCAN or MRR task (POST starts it; GET .../task/{id} polls it). */
+export interface ScanTask<R> {
+  id: string;
+  kind: "scan" | "mrr" | "cols";
+  state: "fetching" | "running" | "done" | "error";
+  done: number;
+  total: number;
+  error: string | null;
+  result: R | null;
+  universe?: string;
+  source: string;
+  rule?: string;
+  period?: string;
+  cols?: string;
+}
+
+/** WL / Q indicator columns (`COLS=RSI14,PCT_SMA200<0`): the newest daily bar's value of each column, per symbol. */
+export interface ColsResult {
+  cols: { label: string; op: "<" | ">" | "<=" | ">=" | null; num: number | null }[];
+  rows: Record<string, { date: string | null; values: Record<string, number | null>; note: string }>;
+  labels: Record<string, string>;
+}
+
+export interface ScanRow {
+  symbol: string;
+  matched: boolean;
+  valid: boolean;
+  date: string | null;
+  close: number | null;
+  values: Record<string, number | null>;
+  note: string;
+}
+
+export interface ScanResult {
+  rule: string;
+  terms: string[];
+  rows: ScanRow[];
+  matched: number;
+  checked: number;
+  failed: number;
+  labels: Record<string, string>;
+}
+
+export interface ScanSaved {
+  name: string;
+  universe: string;
+  rule: string;
+  daily: string | null;
+}
+
+export interface MrrRow {
+  symbol: string;
+  return: number | null;
+  weight: number | null;
+  contrib: number | null;
+  last: number | null;
+  note?: string;
+}
+
+export interface MrrResult {
+  rows: MrrRow[];
+  weighted: boolean;
+  sum_contrib: number | null;
+  up: number;
+  down: number;
+  failed: number;
+  fixtures: boolean;
+}
+
+/** Phase 27 indicator (`type: "ind"`) or drawing (`type: "draw"`) alert. */
+export interface SmartAlert {
+  id: string;
+  type: "ind" | "draw";
+  symbol: string;
+  rule?: string;
+  kind?: string;
+  drawing_id?: string;
+  status: "active" | "triggered";
+  created: number;
+  checked?: number | null;
+  triggered_at?: number;
+  bar?: string | null;
+  values?: Record<string, number | null>;
+  note: string;
+}
+
+/** Phase 26 paper forward test: list row (GET /api/bt/fwd). */
+export interface BtFwdSummary {
+  id: string;
+  symbol: string;
+  strategy: string;
+  interval: string;
+  cash0: number;
+  started: number;
+  status: "active" | "stopped";
+  pos: number;
+  checked: number | null;
+  error: string | null;
+  decisions: number;
+  late: number;
+  fills: number;
+  live_return: number | null;
+  bt_return: number | null;
+  n_diverged: number;
+}
+
+/** GET /api/bt/fwd/{id}: decisions [bar t, direction, catch-up], fills [t, side, qty, price]. */
+export interface BtFwdFull {
+  id: string;
+  decisions: [number, number, boolean][];
+  fills: [number, "BUY" | "SELL", number, number][];
+  summary: BtFwdSummary;
+  backtest: { equity: number | null; return: number | null; fills: number; decisions: number; diverged: [number, number, number][];
+    n_diverged: number; live_equity: number | null; live_return: number | null; price: number | null } | null;
 }
 
 export interface BtTrade {
@@ -545,7 +756,8 @@ export interface BtRunRequest {
   symbols: string[];
   interval: string;
   range: string;
-  options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string };
+  options: { short?: boolean; fees_bps?: number; slip_bps?: number; cash?: number; bench?: string; engine?: string;
+    stop_pct?: number; target_pct?: number; fill?: "intrabar" };
   /** Phase 14: MKT=options (an OSA structure instead of a rule). */
   structure?: Record<string, unknown>;
 }
@@ -606,6 +818,14 @@ export interface BtImported {
   rows: number;
   first_date: string;
   last_date: string;
+  created_at: number;
+  label: string;
+}
+
+/** Phase 22: a stored synthetic symbol (`IMPORT SYNTH NAME = formula`), charted like a ticker. */
+export interface BtSynth {
+  name: string;
+  formula: string;
   created_at: number;
   label: string;
 }
@@ -1388,4 +1608,48 @@ export interface Brief {
   at: number;
   sections: BriefSection[];
   watchlist?: string;
+}
+
+// --- Phase 28: option chain recorder (OREC) and option scan (OSCAN), `backend/openterm/options_rec_routes.py` ---
+export interface OptionRecStatus {
+  watchlist: string | null;
+  last: { watchlist: string; day: string; recorded: string[]; failed: { symbol: string; error: string }[]; at: number } | null;
+  first_day: string | null;
+  label: string;
+  schedule: string;
+}
+export interface OptionRecTermPoint { expiry: number; days: number; atm_iv: number | null }
+export interface OptionRecStats {
+  symbol: string;
+  day: string;
+  spot: number;
+  atm_iv: number | null;
+  iv_rank: number | null;
+  iv_percentile: number | null;
+  rank_days: number;
+  days_recorded: number;
+  em_pct: number | null;
+  oi: number;
+  call_oi: number;
+  put_oi: number;
+  pcr: number | null;
+  first_day: string;
+}
+export interface OptionRecSymbol extends Partial<OptionRecStats> {
+  symbol: string;
+  recorded: boolean;
+  label: string;
+  message?: string;
+  rank_note?: string;
+  term?: { day: string; points: OptionRecTermPoint[] }[];
+}
+export interface OptionScanResult {
+  universe: string;
+  filter: string;
+  checked: number;
+  matched: number;
+  rows: OptionRecStats[];
+  not_recorded: string[];
+  label: string;
+  note: string;
 }

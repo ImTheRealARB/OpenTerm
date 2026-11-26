@@ -100,12 +100,12 @@ test("FUNC lists codes, filters by typing and opens one with Enter", async ({ pa
   await page.keyboard.press("Escape");
   // Wait until typing really filters (panel keys register after the module loads).
   await expect(async () => {
-    await page.keyboard.type("wcrs");
-    await expect(panel(page)).toContainText("FILTER: WCRS");
+    await page.keyboard.type("most");
+    await expect(panel(page)).toContainText("FILTER: MOST");
   }).toPass();
-  await expect(panel(page).locator(".grid .sr")).toContainText("WCRS");
+  await expect(panel(page).locator(".grid .sr")).toContainText("MOST");
   await page.keyboard.press("Enter"); // an alias opens the canonical function
-  await expect(panel(page).locator(".ph")).toContainText("FXC");
+  await expect(panel(page).locator(".ph")).toContainText("MOV");
 });
 
 test("aliases run the canonical function", async ({ page }) => {

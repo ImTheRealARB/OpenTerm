@@ -22,6 +22,8 @@ from .context import RESULT_LIMIT, truncate_text
 
 JOB_WAIT_S = 90.0
 QUANT_FNS = ("risk", "fact", "ql", "alpha", "regime")
+# Phase 32: the Phase 30 boards and RES the model may read (question chips on those panels ask about them)
+BOARD_FNS = ("mmr", "nowc", "ecfc", "fomc", "wb", "crpr", "fwcv", "btmm", "wcrs", "cdr", "ctm", "tsys", "nrgf", "agri", "re", "wpe", "res")
 RESEARCH_FNS = ("ee", "eeo", "anr", "mgmt", "cn", "dvd", "splt", "cacs", "ipo", "si", "evts", "etf", "memb", "mgr")
 
 
@@ -433,6 +435,16 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
     Tool("options_chain", "Option chain monitor for a ticker (optional expiry date YYYY-MM-DD): strikes, bid/ask, implied vol, open interest.",
          obj({"symbol": S, "date": S}, ["symbol"]), "/api/deriv/omon", shape=shape_table_env),
     Tool("rates", "Government yield curve (default USD; also EUR, GBP, CAD, JPY) with 2s10s spread.", obj({"ccy": S}), "/api/rates", build=_rates, shape=shape_slim),
+    Tool("board", "A macro, rates or commodities board as tables: mmr (money-market rates), nowc (GDP nowcast), ecfc (IMF, OECD, SPF and "
+         "FOMC forecasts), fomc (statement word diff, dots), wb (world bond yields), crpr (credit spreads), fwcv (forward rates), btmm (one "
+         "country: country US IN UK EA JP), wcrs (currency ranks), cdr (exchange holidays), ctm (futures expiries: root such as CL), tsys "
+         "(Treasury auctions), nrgf (EIA inventories), agri (WASDE crops), re (US housing), wpe (index valuation through ETFs), res (research papers from BIS, Fed, ECB, RBI, arXiv q-fin: q words, src one source).",
+         obj({"fn": {"type": "string", "enum": list(BOARD_FNS)}, "country": S, "root": S, "q": S, "src": S}, ["fn"]), "/api/macrod/{fn}",
+         build=lambda a: {"path": f"/api/macrod/{a['fn']}", "params": {k: v for k, v in a.items() if k != "fn"}}, shape=shape_table_env),
+    Tool("qry", "Run an OpenTerm QRY query. Snapshot: 'QRY last, pe, mcap FOR AAPL,MSFT' or 'QRY mcap, sector FOR SPX WHERE pe<15 SORT mcap "
+         "LIMIT 20'. Series: 'QRY close, ret FOR SPY,TLT,FRED:DGS10 DATES -1Y..0 FREQ M' (FRED series use the field value). Fields: last chg "
+         "pct volume prev name mcap sector industry country pe fpe pb ps evebitda beta divy eps netmargin shares short hi52 lo52 close adj ret vol value.",
+         obj({"q": S}, ["q"]), "/api/query", shape=shape_table_env),
     Tool("macro", "Search macro series (FRED-style catalog) by text, for example 'cpi' or 'unemployment'.", obj({"q": S}), "/api/macro", shape=shape_slim),
     Tool("portfolio", "The user's portfolios: with no name, the list; with a name, its positions (symbol, quantity, cost).", obj({"name": S}), "/api/portfolios",
          build=_portfolio, shape=shape_slim),

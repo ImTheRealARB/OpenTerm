@@ -181,11 +181,54 @@ async def mf_nav(request: Request, q: str = Query(..., max_length=80)):
 
 @router.get("/cdep")
 @data_errors
-async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length=24)):
-    """CDEP: spot order book depth (Binance, OKX when Binance fails): cumulative ladder, spread, imbalance."""
+async def crypto_depth(request: Request, pair: str = Query("BTCUSDT", max_length=40)):
+    """CDEP: spot order book depth (Binance, OKX when Binance fails): cumulative ladder, spread, imbalance.
+    An Indian symbol (`RELIANCE.NS`, `NIFTY26NOVFUT.NFO`) is answered from the Kite ticker's best five levels instead (read-only)."""
+    from .kite.symbols import to_kite
+
+    if to_kite(pair):
+        from .world import kiteflow
+
+        return kiteflow.depth(request.app.state.hub.kite, pair)
     from .world.crypto import cdep
 
     return await cdep(svc(request), pair)
+
+
+@router.get("/flow/trades")
+@data_errors
+async def flow_trades(request: Request, sym: str = Query("BTCUSDT", max_length=40), limit: int = Query(200, ge=1, le=1000)):
+    """TAS: newest Binance spot aggregated trades (exact aggressor side). An Indian symbol is answered from the Kite ticker's prints
+    with a tick-rule side labelled ESTIMATED; any other symbol is a 400."""
+    from .kite.symbols import to_kite
+
+    if to_kite(sym):
+        from .world import kiteflow
+
+        return kiteflow.tas(request.app.state.hub.kite, sym, limit)
+    from .world.flow import trades
+
+    return await trades(svc(request), sym, limit)
+
+
+@router.get("/flow/bigtrades")
+@data_errors
+async def flow_bigtrades(request: Request, sym: str = Query("BTCUSDT", max_length=24), min_qty: float | None = Query(None, alias="min", gt=0),
+                         usd: float | None = Query(None, gt=0)):
+    """BIGT: trades of at least `min` coins or `usd` dollars among the newest <= 5,000 Binance spot trades."""
+    from .world.flow import bigtrades
+
+    return await bigtrades(svc(request), sym, min_qty, usd)
+
+
+@router.get("/flow/footprint")
+@data_errors
+async def flow_footprint(request: Request, sym: str = Query("BTCUSDT", max_length=24), interval: str = Query("1m", max_length=3),
+                         bars: int = Query(30, ge=3, le=120), step: float | None = Query(None, gt=0)):
+    """FOOT: footprint of the newest `bars` bars (bid x ask volume per price level, delta, cumulative delta) from Binance spot trades."""
+    from .world.flow import footprint
+
+    return await footprint(svc(request), sym, interval, bars, step)
 
 
 @router.get("/fund")
@@ -353,3 +396,23 @@ async def congress_bills(request: Request, q: str = Query("", max_length=120)):
     from .world.usgovsvc import congress_view
 
     return await congress_view(svc(request), q)
+
+
+@router.get("/tra")
+@data_errors
+async def total_return(request: Request, symbols: str = Query(..., max_length=300), vs: str = Query("SPY", max_length=24),
+                       range: str = Query("1Y", max_length=8)):
+    """TRA (Phase 22): price return, total return (dividends included), dividend part, annualised return and the excess over a benchmark, from daily adjusted closes. `symbols` is comma separated (at most 12)."""
+    from .world.returnssvc import tra
+
+    return await tra(svc(request), symbols.split(","), vs, range)
+
+
+@router.get("/beta")
+@data_errors
+async def beta_regression(request: Request, symbol: str = Query(..., max_length=24), vs: str = Query("SPY", max_length=24),
+                          range: str = Query("2Y", max_length=8), per: str = Query("D", max_length=1), win: int = Query(60, ge=5, le=1000)):
+    """BETA (Phase 22): least-squares regression of a security's returns on a benchmark's (D / W / M returns): beta, alpha, R-squared, standard error, adjusted beta, scatter points and a rolling beta over `win` returns."""
+    from .world.returnssvc import beta
+
+    return await beta(svc(request), symbol, vs, range, per, win)

@@ -1,0 +1,9 @@
+/* BETA: the scatter and the rolling-beta chart side by side under the numbers (each half is a flex column that fills its share). */
+.tb-pair { flex: 1 1 auto; min-height: 0; display: flex; gap: 8px; }
+.tb-half { flex: 1 1 50%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.tb-half > .dim { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-scatter { flex: 1 1 auto; min-height: 0; position: relative; }
+/* In narrow panels the two halves stack instead of squeezing. */
+@media (max-width: 700px) { .tb-pair { flex-direction: column; } }
+/* ChartView draws its own `.fn` root: let it fill what is left under the caption instead of its default 100% height. */
+.vis > .fn, .tb-half > .fn { flex: 1 1 auto; height: auto; min-height: 0; }

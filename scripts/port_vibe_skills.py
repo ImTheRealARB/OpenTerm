@@ -5,7 +5,7 @@
     uv run python ../scripts/port_vibe_skills.py <path to Vibe-Trading checkout or its agent/src/skills> [--check]
 
 Source: HKUDS/Vibe-Trading `agent/src/skills/<name>/SKILL.md` @ 8172827, MIT (see THIRD_PARTY.md).
-Output: `backend/openterm/ai/skills/<name>.md` for every skill that survives triage, `docs/PHASE_20_SKIPPED.md` for the rest.
+Output: `backend/openterm/ai/skills/<name>.md` for every skill that survives triage, `docs/porting/VIBE_SKILLS_SKIPPED.md` for the rest.
 Idempotent: the same input gives byte-identical output; stale ported files are removed. `--check` writes nothing and exits 1 on any difference.
 
 Triage, in this order (the first rule that fires skips the skill and its reason is written down):
@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "backend" / "openterm" / "ai" / "skills"
-SKIPPED_DOC = ROOT / "docs" / "PHASE_20_SKIPPED.md"
+SKIPPED_DOC = ROOT / "docs" / "porting" / "VIBE_SKILLS_SKIPPED.md"
 THIRD_PARTY = ROOT / "THIRD_PARTY.md"
 
 COMMIT = "8172827"
@@ -483,7 +483,7 @@ def third_party_row() -> str:
     return (f"| `openterm/ai/skills/*.md` (ported ones start with `<!-- {MARK}`) | `agent/src/skills/<name>/SKILL.md` and its English `references/*.md` "
             f"(frontmatter dropped; shell, file and Vibe-only tool steps cut; Vibe tool names renamed to OpenTerm tools, web steps marked opt-in; one header comment added; "
             f"Chinese-language skills, and the Chinese `references/*.md` of elliott-wave, harmonic, ichimoku and smc, ported from English translations in `scripts/vibe_skill_overrides/`; "
-            f"list in `docs/PHASE_20_SKIPPED.md`) | {SOURCE} @ `{COMMIT}` | MIT. NOTICE: \"Vibe-Trading, Copyright 2026 HKUDS contributors. "
+            f"list in `docs/porting/VIBE_SKILLS_SKIPPED.md`) | {SOURCE} @ `{COMMIT}` | MIT. NOTICE: \"Vibe-Trading, Copyright 2026 HKUDS contributors. "
             f"This product includes software developed at HKUDS (https://github.com/HKUDS).\" |")
 
 
@@ -523,7 +523,7 @@ def main() -> None:
                 p.write_bytes(text.encode("utf-8"))
     doc = skipped_doc(skipped, ported, len(results)).encode("utf-8")
     if not SKIPPED_DOC.exists() or SKIPPED_DOC.read_bytes() != doc:
-        diffs.append("write docs/PHASE_20_SKIPPED.md")
+        diffs.append("write docs/porting/VIBE_SKILLS_SKIPPED.md")
         if not a.check:
             SKIPPED_DOC.write_bytes(doc)
     tp = THIRD_PARTY.read_text(encoding="utf-8")

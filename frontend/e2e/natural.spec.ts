@@ -164,7 +164,7 @@ for (const mode of ["terminal", "gui"] as const) {
       await expect(hint.locator("b")).toHaveText("[1D..MAX]");
       await expect(page.getByTestId("syntax-values")).toContainText("1Y");
       await page.keyboard.type("5Y ");
-      await expect(hint.locator("b")).toHaveText("[D|W|MO|5MIN|1H]");
+      await expect(hint.locator("b")).toHaveText("[D|W|MO|5MIN|1H|4H|2D|2W|Q|YEARLY|1S]"); // Phase 21 candle lengths
       await page.keyboard.press("Escape");
       await expect(hint).toHaveCount(0);
     });

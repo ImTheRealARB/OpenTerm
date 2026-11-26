@@ -1,18 +1,22 @@
 import { TWINS } from "../functions/aliases";
 import { FUNCTIONS, isFunction } from "../functions/registry";
 import { commandStart } from "../perf/metrics";
-import { currentView, navigate, splitOrSay, workspace } from "../state/workspace";
+import { currentView, navigate, setUsesSecurity, splitOrSay, workspace } from "../state/workspace";
 import { bareSecurityFn } from "./bareSecurity";
 import { history } from "./history";
 import { layoutCommand } from "./layouts";
+import { isFormulaArg, type SecurityRef } from "./markets";
 import { parseCommand } from "./parser";
 import { fail, info, statusMsg } from "./status";
-import { deleteWatchlist, editWatchlist, parseWl } from "./watchlists";
+import { deleteWatchlist, editWatchlist, editWatchlistMeta, parseWl } from "./watchlists";
 import { alrtCommand } from "./alerts"; // Phase 8
 import { portCommand } from "./portfolios"; // Phase 8
 import { getSettings, updateSettings } from "../settings/runtime";
 
 export { statusMsg, type StatusMsg } from "./status";
+
+// Link groups (Phase 22) switch only panels whose function takes a security; the registry knows which ones do.
+setUsesSecurity((v) => !!v.fn && FUNCTIONS.get(v.fn)?.needsSecurity === true);
 
 // The THEME / SETTINGS argument parser is only needed by those two commands, so it lives in its own chunk (not the
 // startup bundle). main.tsx asks for it while the browser is idle, so by the time anyone types THEME it is nearly
@@ -34,7 +38,7 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   const parsed = parseCommand(input, isFunction);
   if (!parsed.ok) return fail(parsed.error);
   if (!opts.replay) history.push(parsed.raw.toUpperCase());
-  // An alias (WCRS, MOST ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
+  // An alias (MOST, PRTU ...) runs its canonical function, so panels and saved layouts only ever hold canonical codes.
   if (parsed.fn) parsed.fn = FUNCTIONS.get(parsed.fn)?.code ?? parsed.fn;
 
   // LAYOUT and its twin (MONITOR, see TWINS) share the layout command handling.
@@ -55,6 +59,17 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
       if (t.next !== getSettings()) updateSettings(() => t.next);
       info(t.message);
     });
+    return true;
+  }
+
+  // Phase 22: LINK (colour group of the focused or named panel) and GRAB (picture of it) act on a panel and never open one.
+  // Both live in small lazy chunks, like TAPE, so the startup bundle does not grow.
+  if (parsed.fn === "LINK" || parsed.fn === "GRAB") {
+    statusMsg.set(() => null);
+    const id = parsed.target ?? workspace.get().focus;
+    const largs = parsed.args;
+    if (parsed.fn === "LINK") void import("./linkCmd").then(({ linkCommand }) => linkCommand(largs, id));
+    else void import("../grab/grab").then(({ grabCommand }) => grabCommand(id, largs));
     return true;
   }
 
@@ -99,6 +114,10 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
       void deleteWatchlist(act.name);
       return true;
     }
+    if (act.kind === "meta") {
+      void editWatchlistMeta(act.name, act.change);
+      args = [act.name]; // then show the list
+    }
     if (act.kind === "edit") {
       void editWatchlist(act.name, act.add, act.remove);
       args = [act.name]; // then show the list
@@ -110,6 +129,13 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
     const r = parsed.fn === "PORT" ? portCommand(args, parsed.security) : alrtCommand(args, parsed.security);
     if (typeof r === "boolean") return r;
     args = r;
+  }
+
+  // Phase 22: `GP AAPL/MSFT` puts the formula where `AAPL/MSFT GP` would: it becomes the panel's security.
+  let formulaSec: SecurityRef | undefined;
+  if (!parsed.security && args[0] && FUNCTIONS.get(fnOverride ?? parsed.fn ?? "")?.needsSecurity && isFormulaArg(args[0])) {
+    formulaSec = { symbol: args[0].toUpperCase() };
+    args = args.slice(1);
   }
 
   const s = workspace.get();
@@ -127,9 +153,9 @@ export function execute(input: string, opts: { newPanel?: boolean; replay?: bool
   const fn = fnOverride ?? parsed.fn ?? bareSecurityFn(opts.keepFn, cur.fn, (code) => FUNCTIONS.get(code)?.needsSecurity === true);
   const def = FUNCTIONS.get(fn)!;
   // Security context is sticky per panel, even across functions that don't use it.
-  const security = parsed.security ?? sticky;
+  const security = parsed.security ?? formulaSec ?? sticky;
   if (def.needsSecurity && !security) return fail(`${fn} NEEDS A SECURITY, E.G. AAPL ${fn}`);
-  if (parsed.security) history.addRecentSecurity(parsed.security.symbol);
+  if (parsed.security ?? formulaSec) history.addRecentSecurity((parsed.security ?? formulaSec)!.symbol);
 
   statusMsg.set(() => null);
   // Editing the list a panel already shows: it refetches by itself, no new history entry.

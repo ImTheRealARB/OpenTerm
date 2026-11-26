@@ -44,6 +44,11 @@ describe("aiArgs FILING", () => {
     expect(aiArgs(["FILING", "AAPL", "10-K", "drivers"])).toMatchObject({ mode: "filing", form: "10-K", drivers: true });
     expect(aiArgs(["FILING", "AAPL", "what", "drivers", "margins"])).toMatchObject({ mode: "filing", drivers: false, text: "what drivers margins" });
   });
+  it("EARNINGS (Phase 32) reads the results 8-K, so it takes no 10-K / 10-Q form", () => {
+    expect(aiArgs(["FILING", "nvda", "earnings"])).toEqual({ mode: "filing", text: "EARNINGS", symbol: "NVDA", form: null, drivers: false, preset: "earnings" });
+    expect(aiArgs(["FILING", "NVDA", "10-Q", "EARNINGS"]).mode).toBe("bad");
+  });
+
   it("GUIDANCE and CHAIN are presets like DRIVERS, only when they are the whole question", () => {
     expect(aiArgs(["FILING", "aapl", "guidance"])).toEqual({ mode: "filing", text: "GUIDANCE", symbol: "AAPL", form: null, drivers: false, preset: "guidance" });
     expect(aiArgs(["FILING", "AAPL", "10-Q", "chain"])).toMatchObject({ mode: "filing", form: "10-Q", preset: "chain", drivers: false });

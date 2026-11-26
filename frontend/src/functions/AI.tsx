@@ -72,7 +72,8 @@ function TurnView({ t }: { t: Turn }) {
       <ToolLines tools={t.tools} />
       {t.filing && (
         <div className="dim" data-testid="ai-filing">
-          {t.filing.source} · {t.filing.symbol} {t.filing.form} · FILED {t.filing.filed} · ACCESSION {t.filing.accession} · {t.filing.sections} SECTIONS · {t.filing.passages} PASSAGES
+          {/* Phase 32: every FILING answer (CHAIN customers and suppliers, EARNINGS release numbers, ...) is the model's extraction, checked quote by quote below */}
+          AI-EXTRACTED · {t.filing.source} · {t.filing.symbol} {t.filing.form} · FILED {t.filing.filed} · ACCESSION {t.filing.accession} · {t.filing.sections} SECTIONS · {t.filing.passages} PASSAGES
         </div>
       )}
       {t.passages && t.passages.length > 0 && (
@@ -190,7 +191,7 @@ export default function AI({ panelId, args }: FunctionProps) {
   }, []);
 
   const send = useCallback(
-    async (question: string, mode: "ask" | "bt" | "btcode" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" }) => {
+    async (question: string, mode: "ask" | "bt" | "btcode" | "chart" | "auto" | "filing" = "ask", filing?: { symbol: string; form: string | null; drivers: boolean; preset?: "guidance" | "chain" | "earnings" }) => {
       const { turns: cur, ai: cfg, doc: curDoc } = state.current;
       if ((mode !== "chart" && !question.trim()) || cur.some((t) => t.status === "running")) return;
       const label = mode === "btcode" ? "AI BT CODE" : mode === "bt" ? "AI BT" : mode === "chart" ? "AI CHART" : mode === "auto" ? "AI AUTO" : mode === "filing" ? `AI FILING ${filing?.symbol ?? ""}` : "";

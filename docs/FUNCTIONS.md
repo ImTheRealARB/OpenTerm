@@ -88,9 +88,13 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `WL` | Watchlists |  | `[NAME] [ADD\|RM SYM...] \| DEL NAME` | `WL` |
 | `WEI` | World equity indices |  |  | `WEI` |
 | `MOV` | Top movers |  | `[GAINERS\|LOSERS\|ACTIVE\|DOLLAR\|NDX100]` | `MOV` |
-| `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT]` | `EQS` |
+| `EQS` | Equity screener |  | `[SECTOR=TECH MCAP>10B PCT>2 PRICE<50 VOL>1M COUNTRY=US SORT=PCT] [SEC: ROE>15 MARGIN>10 OPMARGIN>10 GROWTH>5 DE<1] \| BT <RULES> UNIV=LIST:...` | `EQS` |
+| `FSRC` | ETF screener: fee, size, category (US ETFs; loads in the background, PARTIAL until complete) |  | `[FEE<0.2] [AUM>1B] [CAT=LARGE] [SORT=FEE\|AUM\|SYMBOL\|NAME\|CAT]` | `FSRC` |
+| `SCAN` | Scan a list of symbols against a rule (RSI, averages, ATR...) |  | `<UNIVERSE> <RULE> \| SAVE NAME UNIVERSE RULE [DAILY=HH:MM] \| SAVED \| RUN\|DEL NAME` | `SCAN` |
+| `MRR` | Index movers: members ranked by return and contribution |  | `<UNIVERSE> [1D\|1W\|1M\|3M\|YTD\|1Y]` | `MRR` |
 | `SECF` | Security finder (fuzzy name or ticker search; ISIN / CUSIP / SEDOL / FIGI lookup via OpenFIGI) |  | `<text \| ISIN \| CUSIP \| SEDOL \| FIGI:id ...>` | `SECF` |
 | `MF` | Indian mutual funds: search by name or open by scheme code for NAV, returns and chart (MFapi.in) |  | `<WORDS> \| <SCHEME CODE>` | `MF` |
+| `WPE` | World index valuation via index ETFs: P/E, P/B, P/S, yield (PROXY) |  |  | `WPE` |
 
 ### Markets: Calendars
 
@@ -100,6 +104,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `ERN` | Earnings calendar |  | `[TODAY\|TOMORROW\|+N\|-N\|YYYY-MM-DD]` | `ERN` |
 | `IPO` | IPO calendar: upcoming, priced, filed, withdrawn |  | `[YYYY-MM]` | `IPO` |
 | `CENB` | Central bank calendar: policy rates and rate-decision dates (Fed, ECB, BoE, BoJ, BoC, RBA, RBI, SNB) |  |  | `CENB` |
+| `FOMC` | FOMC: calendar, statement word diff, SEP dots, links to minutes |  |  | `FOMC` |
+| `CDR` | Exchange calendar: holidays, early closes, regular hours |  | `[YEAR]` | `CDR` |
 
 ### Markets: Currencies
 
@@ -108,6 +114,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `FX` | Currency rates |  |  | `FX` |
 | `FXC` | Currency cross matrix |  | `[CCY ...]` | `FXC` |
 | `FXFA` | FX forward estimate by covered interest parity (not a dealer quote) |  | `<PAIR> [1W,1M,3M,6M,1Y] [R1= R2=]` | `FXFA` |
+| `WCRS` | Currencies ranked by return vs USD and vs INR |  | `[SORT=1W\|1M\|3M\|6M\|YTD\|1Y]` | `WCRS` |
 
 ### Markets: Crypto
 
@@ -120,6 +127,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `STBL` | Stablecoin supply by coin and chain (DefiLlama) |  | `[CHAIN]` | `STBL` |
 | `DEFI` | DeFi yield pools over US$1M TVL by chain or project (DefiLlama) |  | `[CHAIN\|PROJECT]` | `DEFI` |
 | `ADDR` | EVM address balance, recent transactions and gas price on Ethereum or L2s (Etherscan, free key ETHERSCAN_KEY; read only) |  | `[0xADDRESS\|GAS] [ETH\|ARB\|OP\|BASE\|POLY\|BSC]` | `ADDR` |
+| `TAS` | Time and sales: every trade with its buy or sell side, newest first (crypto, exact) |  | `[SYMBOL]` | `TAS` |
+| `BIGT` | Big trades: the largest recent trades, buys and sells (crypto, exact) |  | `[SYMBOL] [MIN=COINS\|USD=AMOUNT]` | `BIGT` |
+| `FOOT` | Footprint: bid x ask volume per price level per bar, delta, cumulative delta (crypto, exact) |  | `[SYMBOL] [INTERVAL] [BARS]` | `FOOT` |
+| `DOM` | Depth ladder, read only: asks above, bids below (crypto) |  | `[PAIR] [LEVELS 5-50]` | `DOM` |
+| `LIQH` | Liquidity heatmap: order book depth over time while the panel is open (crypto) |  | `[PAIR]` | `LIQH` |
 
 ### Markets: Commodities and energy
 
@@ -127,8 +139,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `CMDTY` | Commodities |  |  | `CMDTY` |
 | `NRG` | Energy board: crude, natural gas, refined products, retail fuel (FRED CSV, prices only) |  | `[WTI\|BRENT\|HH\|GASNY\|GASGC\|ULSD\|HEAT\|JET\|PROPANE\|GASRET\|DIESELRET]` | `NRG` |
+| `NRGF` | Energy fundamentals: EIA weekly petroleum status and gas storage (free key) |  |  | `NRGF` |
+| `AGRI` | Crops: WASDE supply and use, NASS crop condition (free key) |  |  | `AGRI` |
 | `WETR` | Weather for commodities: degree-day basket, place forecast, NWS alerts (Open-Meteo) |  | `[<place> \| <lat,lon>]` | `WETR` |
 | `CT` | Futures term structure: contango/backwardation, spread to front, roll yield (month spacing) |  | `<ROOT: CL NG GC ES ZN ZQ ...>` | `CT` |
+| `CTM` | Futures contract table: last trade and first notice per contract (rules) |  | `[ROOT]` | `CTM` |
 | `COT` | CFTC Commitments of Traders: positions, weekly change, 3-year net history and percentile |  | `<MARKET: ES CL GC ZN EUR ... or name>` | `COT` |
 
 ### Markets: Rates and bonds
@@ -137,6 +152,11 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `RATES` | Yield curve |  | `[EUR\|GBP\|CAD\|JPY\|SPRD\|AUCT\|NS <ccy>]` | `RATES` |
 | `WIRP` | Implied fed funds path across FOMC meetings from ZQ futures (not a probability forecast) |  |  | `WIRP` |
+| `MMR` | Money market rates: SOFR, TGCR, BGCR, EFFR, OBFR, ESTR, SONIA with history |  |  | `MMR` |
+| `WB` | World government bond yields (10Y, 2Y where free; daily or monthly per row) |  |  | `WB` |
+| `CRPR` | Credit spreads: ICE BofA OAS (US IG / HY, euro HY, EM) from FRED |  |  | `CRPR` |
+| `FWCV` | Forward curve bootstrapped from the Treasury par curve (1y1y, 5y5y ...) |  |  | `FWCV` |
+| `TSYS` | US Treasury securities: CUSIPs, coupons, maturities, auction results |  | `[BILL\|NOTE\|BOND\|TIPS\|FRN\|CMB]` | `TSYS` |
 | `YAS` | Bond yield analysis from terms: price/yield, accrued, duration, convexity, DV01, key-rate durations |  | `CPN= MAT= PX=\|YLD= [FREQ= SETTLE= DAYS= FACE=]` | `YAS` |
 | `SWPM` | Vanilla swap valuation on the Treasury par curve (discount proxy, not SOFR) or a flat curve |  | `N= FIXED= TENOR= DIR=PAY\|REC [FREQ= CURVE=TSY\|FLAT:4.2]` | `SWPM` |
 | `CDSW` | CDS valuation, flat hazard (credit triangle), user inputs only |  | `SPREAD= REC= TENOR= RF= COUPON= N= [FREQ=]` | `CDSW` |
@@ -147,6 +167,10 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 |---|---|---|---|---|
 | `MACRO` | FRED series browser |  | `[query]` | `MACRO` |
 | `USMAC` | US macro: BLS jobs and prices, BEA GDP, trade and industry, Census retail and trade (free keys) |  | `BLS [CPI\|CORECPI\|PPI\|UNEMP\|LFPR\|PAYROLL\|AHE\|JOLTS\|<series id>] \| BEA [GDPG\|PCEG\|GDP\|TRADEBAL\|SERVBAL\|CURACCT\|INDUSTRY] \| CENSUS [RETAIL [TOTAL\|AUTO\|FOOD\|GEN\|REST] \| TRADE <COUNTRY> <HS2>]` | `USMAC` |
+| `NOWC` | GDP nowcast: Atlanta Fed GDPNow path and past quarters vs BEA |  |  | `NOWC` |
+| `ECFC` | Economic forecasts: IMF WEO, OECD Outlook, Philadelphia Fed SPF, FOMC SEP |  |  | `ECFC` |
+| `BTMM` | Country monitor: policy rate, 2Y/10Y, FX, index, CPI, GDP, next releases |  | `[US\|IN\|UK\|EA\|JP]` | `BTMM` |
+| `RE` | US housing board: prices, starts, sales, mortgage rates (FRED) |  |  | `RE` |
 | `WECO` | World economies: G20 growth, inflation, unemployment, debt, current account (each cell with its data year) |  |  | `WECO` |
 | `ECST` | World statistics: one indicator for one country (World Bank, DBnomics IMF) |  | `<COUNTRY> <GDP\|GDPG\|GDPPC\|CPI\|UNEMP\|POP\|DEBT\|CA\|TRADE> \| DBN:<provider>/<dataset>/<series>` | `ECST` |
 | `DBSRCH` | Find DBnomics series by words (IMF, OECD, Eurostat, BIS, ECB ...); Enter opens it in ECST |  | `<WORDS> \| DS:<PROVIDER>/<DATASET> [WORDS]` | `DBSRCH` |
@@ -167,12 +191,13 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
-| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA] [LOG] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC SMA100 SMA200 EMA50 EMA200]` | `AAPL GP` |
+| `GP` | Price chart | yes | `[1D..MAX] [D\|W\|MO\|5MIN\|1H\|4H\|2D\|2W\|Q\|YEARLY\|1S] [VS SYM] [CANDLE\|OHLC\|LINE\|AREA\|RENKO\|KAGI\|PNF\|LINEBREAK\|RANGE\|COLUMNS\|HIGHLOW\|STEP\|VOLCANDLE] [BOX=n] [REV=n] [LOG] [REPLAY [YYYY-MM-DD] [STOP=pct] [TARGET=pct]] [SMA20 SMA50 EMA20 BB RSI MACD VWAP ATR STOCH ADX OBV CCI WILLR MFI KELT DONCH SUPERTREND PSAR ICHIMOKU PAT:CANDLE PAT:SMC PAT:GEO SMA100 SMA200 EMA50 EMA200 AVWAP AVWAP:W AVWAP:M VP VP:S VP:A AVWAP:A]` | `AAPL GP` |
 | `IND` | Indicator library, formulas and presets for GP |  | `[search]` | `IND` |
 | `GIP` | Intraday tick chart (candles built from the live ticks seen since the session began) | yes | `[1S\|5S\|15S\|1M]` | `AAPL GIP` |
 | `HIST` | Historical price table | yes | `[1M..MAX] [D\|W\|MO]` | `AAPL HIST` |
 | `SEAS` | Seasonality (average return by month, weekday, day of month, ISO week) | yes | `[MONTH\|WEEKDAY\|DOM\|WOY]` | `AAPL SEAS` |
-| `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY] [N=3000] [EQS filter: MCAP>10B ...]` | `IMAP` |
+| `TPO` | Market profile (TPO): letters per time bracket, POC, value area, initial balance |  | `[SYMBOL] [DAYS 1-20] [BRACKET=30]` | `TPO` |
+| `IMAP` | Heat map of the equity universe (size = market cap, colour = % change) |  | `[SECTOR\|INDUSTRY\|COUNTRY\|CRYPTO\|ETF] [N=3000] [EQS / FSRC filter]` | `IMAP` |
 | `FRED` | Plot a FRED series |  | `SERIES_ID [1Y\|2Y\|5Y\|10Y\|20Y\|MAX]` | `FRED` |
 
 ### News
@@ -184,6 +209,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `CN` | Company news from every source, keyword-scored (not a model) | yes |  | `AAPL CN` |
 | `EVTS` | Company events: SEC 8-K filings by item | yes |  | `AAPL EVTS` |
 | `BRIEF` | Daily brief |  |  | `BRIEF` |
+| `RES` | Research library: BIS, Fed, ECB, RBI and arXiv papers, AI summary on demand |  | `[SRC=BIS\|BISHUB\|FEDNOTES\|FEDS\|IFDP\|ECB\|ECBBLOG\|RBI\|ARXIV] [DAYS=n] [words]` | `RES` |
 
 ### Research: Company
 
@@ -208,6 +234,18 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `WACC` | Weighted average cost of capital (Vibe engine) | yes | `ERP=5.5 BASIS=CURRENT\|TARGET [EW= KD= RF= BETA= TAX=]` | `AAPL WACC` |
 | `RV` | Relative valuation: peer multiples from SEC filings (Vibe comps engine) | yes | `[PEERS=SYM,SYM]` | `AAPL RV` |
 
+### Research: Fundamentals
+
+| Code | What it does | Security | Arguments | Example |
+|---|---|---|---|---|
+| `GF` | Fundamental metric over time (SEC filings, vs peers) | yes | `[METRIC] [Q] [VS=MSFT,GOOGL]` | `AAPL GF` |
+| `EM` | Earnings matrix: quarters x years, actual vs estimate | yes |  | `AAPL EM` |
+| `DDIS` | Debt maturity ladder from the 10-K | yes |  | `AAPL DDIS` |
+| `SCORE` | Formula scores: Altman, Piotroski, Beneish, Ohlson, Merton | yes |  | `AAPL SCORE` |
+| `REVS` | Estimate revision score (inputs shown) | yes |  | `AAPL REVS` |
+| `FRM` | One XBRL concept for every filer, point in time |  | `<TAG> [CY2024] [ASOF=YYYY-MM-DD]` | `FRM` |
+| `IBQ` | Industry roll-ups: median margins, growth, valuation |  | `[YEAR] [SECTOR\|INDUSTRY\|SIC\|DIV]` | `IBQ` |
+
 ### Research: Filings and owners
 
 | Code | What it does | Security | Arguments | Example |
@@ -220,6 +258,10 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `SI` | Short interest (FINRA) and daily short sale volume | yes |  | `AAPL SI` |
 | `ETF` | ETF profile, full N-PORT holdings and sector weights | yes |  | `AAPL ETF` |
 | `MEMB` | Index members and weights via the proxy ETF's N-PORT |  | `SPX\|NDX\|DJI\|RUT\|MID\|<ETF>` | `MEMB` |
+| `FTS` | SEC full-text search |  | `\"<WORDS>\" [FORM=10-K] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD] [TICKER]` | `FTS` |
+| `MA` | Deal filings: mergers, tender offers, material agreements |  | `[SYMBOL] [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `MA` |
+| `BIO` | Insider biography: one owner's Form 3/4/5 filings + proxy (DEF 14A) name matches |  | `<CIK \| \"OWNER NAME\"> [FROM=YYYY-MM-DD] [TO=YYYY-MM-DD]` | `BIO` |
+| `RELS` | Related instruments: share classes and listings | yes |  | `AAPL RELS` |
 
 ### Research: Options
 
@@ -232,12 +274,22 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `OVDV` | Implied-vol surface: expiry x moneyness heat map and fitted smiles (equity from the chain, crypto from Deribit) | yes |  | `AAPL OVDV` |
 | `SKEW` | Skew by expiry: ATM IV, 25-delta risk reversal and butterfly, slope, term structure | yes |  | `AAPL SKEW` |
 | `HIVG` | Realized vs implied vol, variance risk premium, rolling RV, local IV rank | yes |  | `AAPL HIVG` |
+| `OSCAN` | Option scan: IV rank, expected move, OI, put/call ratio |  | `<UNIVERSE> [IVR>50] [EM>5]` | `OSCAN` |
+| `OREC` | Option chain recorder and IV rank | yes | `[WATCHLIST\|OFF]` | `AAPL OREC` |
+| `EMOV` | Earnings move: implied vs past reports | yes |  | `AAPL EMOV` |
+| `OIB` | Open interest buildup (India F&O) | yes |  | `AAPL OIB` |
+| `PGRK` | Portfolio option Greeks |  | `<PORTFOLIO> [VS=SPY]` | `PGRK` |
 
 ### Research: Statistics
 
 | Code | What it does | Security | Arguments | Example |
 |---|---|---|---|---|
+| `QRY` | Query fields over universes and dates (also via SDK and Excel) |  | `<fields> FOR <universe> [WHERE ..] [SORT ..] [LIMIT n] \| <fields> FOR <symbols> DATES -1Y..0 [FREQ D\|W\|M]` | `QRY` |
+| `FLD` | Field catalog for QRY: source, unit, frequency, key |  | `[words]` | `FLD` |
+| `NB` | Local JupyterLab with openterm-sdk and example notebooks |  |  | `NB` |
 | `CORR` | Correlation matrix |  | `SYM SYM... [1M..MAX]` | `CORR` |
+| `TRA` | Total return vs a benchmark (price + dividends, annualised, excess over a benchmark) |  | `SYM[,SYM...] [1M..MAX] [VS BENCHMARK]` | `TRA` |
+| `BETA` | Beta, alpha and R-squared of a security against a benchmark |  | `[SYM] [VS BENCHMARK] [1M..MAX] [D\|W\|M] [WIN=60]` | `BETA` |
 | `REGIME` | Correlation regime (CORR REGIME): DIFFUSE vs FUSED state, edge density and episodes of a watchlist or list |  | `[WL:<NAME>\|LIST:A,B,C] [WIN=60] [EDGE=0.5]` | `REGIME` |
 | `FACT` | Factor regression (Fama-French / momentum / quality) of a symbol or portfolio; the factor data end date is shown |  | `<SYM\|PORTFOLIO> [RANGE=3y]` | `FACT` |
 | `QL` | Quant calculators on bars: GARCH OU COINT HEDGE COPULA ROLL AMIHUD KYLE VPIN EVENT DSR ADF HVAR |  | `<GARCH\|OU\|COINT\|HEDGE\|COPULA\|ROLL\|AMIHUD\|KYLE\|VPIN\|EVENT\|DSR\|ADF\|HVAR> [SYMBOLS] [KEY=VALUE]` | `QL` |
@@ -262,6 +314,9 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `FEC` | US campaign finance: candidate and committee search, receipts and disbursements by cycle (OpenFEC, free key FEC_API_KEY) |  | `<NAME> \| <FEC ID>` | `FEC` |
 | `USASP` | US federal spending: top contract recipients, largest awards and top agencies in USD obligated (USASpending.gov, no key) |  | `[<COMPANY OR KEYWORD> \| AGENCY]` | `USASP` |
 | `UKCO` | UK Companies House: company search, profile, officers and filing history (free key COMPANIES_HOUSE_KEY) |  | `<NAME\|NUMBER>` | `UKCO` |
+| `LEGAL` | Litigation: SEC enforcement + court dockets (name match) | yes |  | `AAPL LEGAL` |
+| `ESG` | Emissions (EPA, US facilities; no score; EU: ETS) |  | `<SYMBOL> [YEAR=2023] [NAME=<COMPANY>]` | `ESG` |
+| `ETS` | EU ETS emissions (Union Registry, EU installations; no score) |  | `<SYMBOL> [YEAR=2024] [NAME=<COMPANY>]` | `ETS` |
 
 ### Portfolio
 
@@ -301,6 +356,8 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `LAYOUT` | Save / load named workspaces |  | `[SAVE\|LOAD\|DEL] name` | `LAYOUT` |
 | `MONITOR` | Alias of LAYOUT |  | `[SAVE\|LOAD\|DEL] name` | `MONITOR` |
 | `TMPL` | Workspace templates: Long-term, Day trader, Macro, India |  | `[LONGTERM\|DAY\|MACRO\|INDIA]` | `TMPL` |
+| `LINK` | Link panels by colour group |  | `[A\|B\|C\|D\|OFF]` | `LINK` |
+| `GRAB` | Panel picture (PNG) |  | `[SAVE \| VIA TG,EMAIL]` | `GRAB` |
 
 ### Settings: Keys and connections
 
@@ -319,6 +376,7 @@ Arguments in `[brackets]` are optional; `A|B` means one of them.
 | `PERF` | Performance monitor |  | `[GRID rows \| CHART bars \| CALC]` | `PERF` |
 | `LOG` | Backend log |  |  | `LOG` |
 | `EXT` | Third-party extensions: list, enable, run (their code runs with your permissions) |  | `[LIST \| ENABLE name \| DISABLE name \| name [route] [args]]` | `EXT` |
+| `REC` | Recorder: crypto trades and order book, or Kite prints and book of an Indian symbol, kept on this computer |  | `[SYMBOL ON\|OFF]` | `REC` |
 
 ## Global keyboard shortcuts
 
@@ -347,6 +405,7 @@ Rebind any of these in `SETTINGS KEYS`.
 | `?` | Shortcut cheatsheet |
 | `Ctrl+Shift+P` | Toggle PERF HUD |
 | `Alt+X` | Export the focused panel's table to CSV (also E in tables) |
+| `Alt+P` | Copy a picture of the focused panel (GRAB; GRAB SAVE downloads it) |
 | `Alt+M` | Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter) |
 | `Alt+G` | Switch between TERMINAL and GUI mode |
 | `Alt+H` | Help drawer for the focused panel (GUI mode) |

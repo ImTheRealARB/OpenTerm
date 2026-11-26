@@ -39,6 +39,15 @@ export const GLOSSARY: Readonly<Record<string, string>> = {
   "DRAWDOWN": "How far a price or portfolio has fallen from its highest point, in percent. The maximum drawdown is the worst such fall.",
   "SHARPE": "Sharpe ratio: return earned per unit of ups-and-downs (risk). Higher is better; above 1 is generally considered good.",
   "SORTINO": "Like the Sharpe ratio, but it only counts the downward swings as risk, so big gains are not punished.",
+  "TRIALS": "How many settings the optimiser tried. The more you try, the more likely one looks great by pure luck.",
+  ETF: "Exchange-traded fund: a fund you buy and sell on an exchange like a share.",
+  "EXPENSE RATIO": "The fund's yearly fee as a percent of the money invested: 0.1% costs $1 a year per $1,000.",
+  AUM: "Assets under management: the total money in the fund, i.e. its size.",
+  "DEFLATED SHARPE":"The chance that the winner's Sharpe ratio beats the best one that the same number of settings with NO real edge would show by luck. Above 95% means it survives the search.",
+  "PBO": "Probability of backtest overfitting: history is cut into blocks and split many ways; this is how often the setting that was best on one half did worse than the median on the other half. Near 0 is good; 50% or more means the winner is probably luck.",
+  "BEST REGION": "The settings one step either side of the winner. If they score almost as well, the winner sits on a wide plateau (trustworthy); if they score much worse, it is a lone peak (probably luck).",
+  "EFFICIENT FRONT": "The runs where you cannot get more return without accepting a deeper fall from a peak. Every other run is beaten on both counts by one of these.",
+  "WALK-FORWARD EFFICIENCY": "Return on data the settings never saw divided by the return on the data they were tuned on. Near 1 means the tuning carries over; well below 0.5 means it mostly fitted noise.",
   "CAGR": "Compound annual growth rate: the steady yearly percent growth that would turn the starting value into the ending value.",
   "VOLATILITY": "How much the price jumps around, shown as a yearly percent. Higher means a bumpier ride.",
   "ENGINE": "The simulation engine that replays your rule over past prices. The market code (US, India, crypto) decides lot sizes and trading rules.",
@@ -63,6 +72,10 @@ export const GLOSSARY: Readonly<Record<string, string>> = {
   "NAV": "Net asset value: what one unit of a fund is worth, from the total value of everything the fund holds divided by its units.",
   "APY": "Annual percentage yield: the yearly return including interest earned on interest.",
   "DURATION":"How sensitive a bond's price is to interest rates, in years. A duration of 5 means roughly a 5% price drop if rates rise 1 point.",
+  "AGGRESSOR": "In every trade one side was waiting (a resting order) and the other crossed the gap to trade right away. The one who crossed is the aggressor: a BUY aggressor paid the ask, a SELL aggressor hit the bid.",
+  "DELTA": "Coins bought at the ask minus coins sold at the bid in the same period. Positive means buyers were the more aggressive side. The cumulative delta adds the deltas up bar after bar.",
+  "IMBALANCE": "One side traded at least three times as much as the other at neighbouring prices (buyers against the bid one level below, sellers against the ask one level above). It marks where one side was pushing hard.",
+  "FOOTPRINT": "A chart that shows, for every price inside every bar, how much was bought at the ask and sold at the bid, instead of only the bar's open, high, low and close.",
 };
 
 /** The line for a term (case-insensitive), or null when we have none. */

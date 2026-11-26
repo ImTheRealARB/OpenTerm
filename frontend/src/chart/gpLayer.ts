@@ -26,9 +26,12 @@ import {
 import { fmtPrice } from "../format";
 import { gauges } from "../perf/metrics";
 import type { IndicatorName } from "./indicators";
+import { coneVertices, type ConePoint } from "./cone";
+import { OVERLAY_STUDIES, paintOverlayStudies, type OverlayStudy } from "./profileOverlay";
 import { diffIndicators } from "./indicatorDiff";
-import { hitTest, segments, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo } from "./drawings";
+import { NEEDED, hitTest, pendingPrims, prims, timeToLogical, type DPoint, type DrawKind, type Drawing, type Geo, type Prim } from "./drawings";
 import { PATTERN_INFO } from "./patterns";
+import { GEO_INFO, geoUnflat } from "./geoPatterns";
 import type { LibraryRes } from "./libraryWorker";
 import { toTime, type BarData, type ThemeColors } from "./chartBase";
 import type { ChartType } from "./chartTypes";
@@ -74,6 +77,8 @@ export interface GpLayerProps {
   custom?: CustomItem[];
   /** Worker errors per custom key ("FORMULA ERROR: ... AT 12"); called when the set of errors changes. */
   onCustomErrors?: (errors: Record<string, string>) => void;
+  /** Phase 28 `GP ... CONE`: model price ranges per expiry (chart/cone.ts), drawn past the last bar. */
+  cone?: ConePoint[];
 }
 
 /** The parts of ChartView's state the layer reads. All refs, so reading them is always current. */
@@ -165,6 +170,8 @@ export function useGpLayer(
   eventsRef.current = events;
   const drawRef = useRef<DrawState | undefined>(draw);
   drawRef.current = draw;
+  const coneRef = useRef<ConePoint[] | undefined>(gp?.cone);
+  coneRef.current = gp?.cone;
   const pickRef = useRef({ armed: false, cb: gp?.onPickPrice });
   pickRef.current = { armed: !!gp?.pickArmed, cb: gp?.onPickPrice };
   const compareOn = useRef(false);
@@ -278,7 +285,8 @@ export function useGpLayer(
       const onPick = gp?.onPick;
       if (!g || !d || !onPick || compareOn.current) return;
       const r = e.currentTarget.getBoundingClientRect();
-      onPick(hitTest(d.drawings, e.clientX - r.left, e.clientY - r.top, g, 6));
+      const b = dataRef.current;
+      onPick(hitTest(d.drawings, e.clientX - r.left, e.clientY - r.top, g, 6, { t: b.t, c: b.c }));
     },
   };
   gpRef.current = gp ? ops : null;
@@ -468,6 +476,11 @@ export function useGpLayer(
       line(r.BB_LO, c.dim, 0);
     }
     if (r.VWAP) line(r.VWAP, c.warn, 0, "VWAP");
+    // Phase 23: VWAP bands (avwap.ts). Each indicator draws from its own result group, so the keys can repeat across AVWAP / :W / :M.
+    if (r.AV_MID) {
+      line(r.AV_MID, c.warn, 0, name);
+      for (const k of ["AV_U1", "AV_L1", "AV_U2", "AV_L2", "AV_U3", "AV_L3"]) line(r[k], c.dim, 0);
+    }
     if (r.RSI) {
       const rs = line(r.RSI, c.acc, pane, "RSI14");
       rs.createPriceLine({ price: 70, color: c.line, lineWidth: 1, axisLabelVisible: false });
@@ -558,6 +571,23 @@ export function useGpLayer(
         }
       }
     }
+    // PAT:GEO: each shape as dashed outline segments between its swing pivots, named by a marker at its last pivot.
+    if (r.GEO) {
+      for (const g of geoUnflat(r.GEO)) {
+        const info = GEO_INFO[g.code];
+        if (!info) continue;
+        const col = info.dir > 0 ? c.up : info.dir < 0 ? c.down : c.dim;
+        for (const [a, b] of info.lines) {
+          const [pa, pb] = [g.pts[a], g.pts[b]].sort((x, y) => x.i - y.i);
+          if (!pa || !pb || pa.i === pb.i || t[pa.i] === undefined || t[pb.i] === undefined) continue;
+          const ls = ch.addSeries(LineSeries, { color: col, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }, 0);
+          ls.setData([{ time: toTime(t[pa.i]), value: pa.p }, { time: toTime(t[pb.i]), value: pb.p }]);
+          mine.push(ls);
+        }
+        const last = g.pts.reduce((x, y) => (y.i > x.i ? y : x), g.pts[0]);
+        if (last && t[last.i] !== undefined) marks.push({ time: toTime(t[last.i]), position: info.dir < 0 ? "aboveBar" : "belowBar", shape: "square", color: col, size: 0.5, text: `${info.name} (RULE)` });
+      }
+    }
     ind.current.set(name, { series: mine, marks });
   }
 
@@ -593,12 +623,46 @@ export function useGpLayer(
       const bars = dataRef.current;
       const plotW = Math.max(0, w - chart.priceScale("right").width());
       const ts = chart.timeScale();
+      const paneH = chart.panes()[0]?.getHeight() ?? h;
       const geo: Geo = {
         toX: (t) => ts.logicalToCoordinate(timeToLogical(t, bars.t) as Logical),
         toY: (p) => s.priceToCoordinate(p),
         width: plotW,
+        height: paneH,
+        logicalOf: (t) => timeToLogical(t, bars.t),
+        xOfLogical: (l) => ts.logicalToCoordinate(l as Logical),
       };
       geoRef.current = geo;
+      // Phase 23: volume profiles and the anchored VWAP (profileOverlay.ts) sit under the drawings.
+      const studies = (indicators ?? []).filter((x): x is OverlayStudy => (OVERLAY_STUDIES as readonly string[]).includes(x));
+      const vis = ts.getVisibleLogicalRange();
+      gauges.set("chart.profiles", compareOn.current ? 0 : paintOverlayStudies({
+        ctx, bars, geo, colors: colors.current, studies, drawings: d?.drawings ?? [],
+        visible: vis ? [Math.max(0, Math.floor(vis.from)), Math.ceil(vis.to) + 1] : [0, bars.t.length],
+      }));
+      // Phase 28: the probability cone (1 SD solid, 2 SD dashed), from the last close out to each expiry.
+      const coneV = coneRef.current && !compareOn.current && bars.t.length ? coneVertices(coneRef.current, bars.t, bars.c[bars.c.length - 1]) : [];
+      gauges.set("chart.cone", coneV.length);
+      if (coneV.length) {
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (const [key, col, dash] of [["1", colors.current.acc, [] as number[]], ["2", colors.current.dim, [4, 3]]] as [string, string, number[]][]) {
+          ctx.strokeStyle = col;
+          ctx.setLineDash(dash);
+          for (const side of ["lo", "hi"] as const) {
+            ctx.beginPath();
+            coneV.forEach((v, j) => {
+              const x = geo.xOfLogical?.(v.x) ?? null;
+              const y = geo.toY(v[`${side}${key}` as "lo1"]);
+              if (x === null || y === null) return;
+              if (j === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
       if (!d || compareOn.current || (!d.drawings.length && !d.pending)) {
         gauges.set("chart.drawSegs", 0);
         return;
@@ -606,38 +670,67 @@ export function useGpLayer(
       const c = colors.current;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, 0, plotW, chart.panes()[0]?.getHeight() ?? h);
+      ctx.rect(0, 0, plotW, paneH);
       ctx.clip();
       ctx.font = `${c.fs}px ${c.font}`;
       ctx.lineWidth = 1;
       let nSegs = 0;
-      const stroke = (list: Drawing[], color: (id: string) => string, dash: number[]) => {
-        for (const dr of list) {
-          const col = color(dr.id);
+      // Paints one drawing's primitives (drawings.ts `prims`) in one colour; `dashAll` marks a drawing still being placed.
+      // Fills are flat and faint (profit / loss zones, measure boxes): colour carries meaning, nothing decorative.
+      const paint = (list: Prim[], col: string, dashAll: boolean) => {
+        for (const pr of list) {
+          nSegs++;
           ctx.strokeStyle = col;
           ctx.fillStyle = col;
-          ctx.setLineDash(dr.kind === "FIB" ? [] : dash);
-          for (const sg of segments(dr, geo)) {
-            nSegs++;
-            ctx.setLineDash(!sg.label && dr.kind === "FIB" ? [3, 3] : dr.kind === "FIB" ? [] : dash);
+          ctx.setLineDash(dashAll || ("dash" in pr && pr.dash) ? [4, 3] : []);
+          if (pr.k === "seg") {
             ctx.beginPath();
-            ctx.moveTo(sg.x1, sg.y1);
-            ctx.lineTo(sg.x2, sg.y2);
+            ctx.moveTo(pr.x1, pr.y1);
+            ctx.lineTo(pr.x2, pr.y2);
             ctx.stroke();
-            const text = sg.label ? `${sg.label} ${fmtPrice(sg.price ?? NaN)}` : sg.price !== undefined ? fmtPrice(sg.price) : "";
-            if (text) ctx.fillText(text, Math.max(2, sg.x2 - ctx.measureText(text).width - 4), sg.y1 - 2);
+            const text = pr.label ? `${pr.label} ${fmtPrice(pr.price ?? NaN)}` : pr.price !== undefined ? fmtPrice(pr.price) : "";
+            if (text) ctx.fillText(text, Math.max(2, pr.x2 - ctx.measureText(text).width - 4), pr.y1 - 2);
+          } else if (pr.k === "poly") {
+            ctx.beginPath();
+            pr.xs.forEach((x, i) => (i ? ctx.lineTo(x, pr.ys[i]) : ctx.moveTo(x, pr.ys[i])));
+            if (pr.closed) ctx.closePath();
+            if (pr.fill) {
+              ctx.fillStyle = pr.fill === "up" ? c.up : c.down;
+              ctx.globalAlpha = 0.18;
+              ctx.fill();
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = col;
+            }
+            ctx.stroke();
+          } else if (pr.k === "ellipse") {
+            ctx.beginPath();
+            ctx.ellipse(pr.cx, pr.cy, Math.max(0.5, pr.rx), Math.max(0.5, pr.ry), 0, 0, 2 * Math.PI);
+            ctx.stroke();
+          } else {
+            const w = ctx.measureText(pr.text).width;
+            const x0 = pr.align === "center" ? pr.x - w / 2 : pr.x;
+            if (pr.box) {
+              ctx.fillStyle = c.bg;
+              ctx.fillRect(x0 - 2, pr.y - c.fs, w + 4, c.fs + 3);
+              ctx.setLineDash([]);
+              ctx.strokeRect(x0 - 2, pr.y - c.fs, w + 4, c.fs + 3);
+            }
+            ctx.fillStyle = pr.tone === "up" ? c.up : pr.tone === "down" ? c.down : col;
+            ctx.fillText(pr.text, x0, pr.y);
           }
         }
       };
-      stroke(d.drawings, (id) => (id === d.selected ? c.warn : c.fg), []);
+      const ctxBars = { t: bars.t, c: bars.c };
+      for (const dr of d.drawings) if (!dr.hidden) paint(prims(dr, geo, ctxBars), dr.id === d.selected ? c.warn : c.fg, false);
       if (d.pending) {
+        // While placing, the crosshair bar (at the chosen OHLC anchor) stands in for the next anchor.
         const i = cross.current.on ? cross.current.idx : -1;
         const pts = [...d.pending.pts];
-        if (i >= 0 && i < bars.t.length && pts.length < (d.pending.kind === "HLINE" ? 1 : 2)) {
+        if (i >= 0 && i < bars.t.length && pts.length < NEEDED[d.pending.kind]) {
           const px = d.pending.anchor === "H" ? bars.h[i] : d.pending.anchor === "L" ? bars.l[i] : d.pending.anchor === "O" ? bars.o[i] : bars.c[i];
           pts.push({ t: bars.t[i], p: px });
         }
-        stroke([{ id: "pending", kind: d.pending.kind, pts }], () => c.acc, [4, 3]);
+        paint(pendingPrims(d.pending.kind, pts, geo, ctxBars), c.acc, true);
       }
       ctx.restore();
       gauges.set("chart.drawSegs", nSegs);
@@ -651,7 +744,7 @@ export function useGpLayer(
       paintRef.current();
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- repaint when the drawings or the chart's inputs change
-  }, [draw, data, indicators, comparePanes, compare, ver]);
+  }, [draw, data, indicators, comparePanes, compare, ver, gp?.cone]);
 
   return { overlay };
 }

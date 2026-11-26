@@ -1,20 +1,27 @@
 /** CDEP / FUND / LIQ / STBL / DEFI: pure argument handling and table shaping (no DOM, no network; vitest runs it). */
+import { sessionId, splitRec } from "./recArgs";
 
 export interface CdepArgs {
   pair: string;
   levels: number;
+  /** DOM only: `REC=<id>` = the server's id of a recorded session to show instead of the live book */
+  rec?: string;
+  recError?: string;
 }
 
 /** `CDEP [PAIR] [N]`: pair as the server reads it (BTCUSDT, BTC-USDT, BTC), N = ladder rows shown (5..100, default 25). */
 export function parseCdepArgs(args: string[]): CdepArgs {
-  const a = args.filter(Boolean);
+  const { rest, stamp, recSym, bad } = splitRec(args.filter(Boolean).map((w) => w.toUpperCase()));
   let levels = 25;
   const words: string[] = [];
-  for (const w of a) {
+  for (const w of rest) {
     if (/^\d{1,3}$/.test(w)) levels = Math.min(100, Math.max(5, Number(w)));
-    else words.push(w.toUpperCase());
+    else words.push(w);
   }
-  return { pair: words.join("") || "BTCUSDT", levels };
+  const out: CdepArgs = { pair: words.join("") || "BTCUSDT", levels };
+  if (stamp) out.rec = sessionId(out.pair, stamp, recSym);
+  if (bad) out.recError = bad;
+  return out;
 }
 
 /** `FUND [SYM]`, `LIQ [SYM]`, `STBL [CHAIN]`, `DEFI [CHAIN|PROJECT]`: the words as one argument. */

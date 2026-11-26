@@ -1,0 +1,6 @@
+{
+ "status": 200,
+ "text": "<html><body><table class=\"table layout-table list\" style=\"width:100%;\" role=\"presentation\"><tbody><tr><td scope=\"col\"><strong>SIC Code</strong></td><td scope=\"col\"><strong>Office</strong></td><td scope=\"col\"><strong>Industry Title</strong></td></tr><tr><td>3571</td><td>Office of Technology</td><td>ELECTRONIC COMPUTERS</td></tr><tr><td>6331</td><td>Office of Finance</td><td>FIRE, MARINE &amp; CASUALTY INSURANCE</td></tr><tr><td>7370</td><td>Office of Technology</td><td>SERVICES-COMPUTER PROGRAMMING, DATA PROCESSING, ETC.</td></tr><tr><td>7372</td><td>Office of Technology</td><td>SERVICES-PREPACKAGED SOFTWARE</td></tr></tbody></table></body></html>",
+ "content_type": "text/html; charset=utf-8",
+ "note": "TRIMMED RECORDING: the SEC SIC list page cut to the table rows of SIC 3571 6331 7370 7372"
+}

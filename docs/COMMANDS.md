@@ -196,7 +196,7 @@ SWARM CRYPTODESK BTC-USDT timeframe=4h --force
 SWARM REPLAY 3fa9c2d17b40
 ```
 
-Code to Vibe-Trading name (source: HKUDS/Vibe-Trading at commit 8172827, MIT; `docs/PHASE_20_PRESETS.md` lists what each desk cannot do):
+Code to Vibe-Trading name (source: HKUDS/Vibe-Trading at commit 8172827, MIT; `docs/porting/VIBE_PRESETS.md` lists what each desk cannot do):
 
 | Code | Vibe-Trading preset | Title | Roles | Coverage |
 |---|---|---|---|---|
@@ -267,6 +267,149 @@ On MCX and CDS there is no spot index, so the nearest future that expires with t
   `LIQ [COIN]` : latest OKX liquidations. `STBL [CHAIN]` : stablecoin supply (`C` coins / chains, Enter opens a chain). `DEFI [CHAIN|PROJECT]` : yield pools over US$1M TVL.
 - `SECF axis bluechip` : also lists Indian mutual fund schemes from AMFI NAV; `M` switches to the fund rows. `RELIANCE.NS GP 1Y` : when Yahoo cannot answer, daily bars come from the NSE archive (labelled, raw prices).
 
+
+## Phase 21: chart depth
+
+- `AAPL GP 1Y RENKO` / `KAGI` / `PNF` / `LINEBREAK` / `RANGE` : brick charts (time axis not linear; built from the bars shown, labelled). `BOX=2.5` fixes the box / reversal / range size (default ATR 14), `REV=3` the point and figure reversal. Indicators, compare and drawings are off on a brick chart.
+- `AAPL GP 1Y COLUMNS` / `HIGHLOW` / `STEP` / `VOLCANDLE` : columns of closes, high-low-close bars, step line, candles as wide as their volume.
+- `AAPL GP 1M 4H` (also `2H 3H 6H 8H 12H`), `AAPL GP 2Y 2D` (`3D`), `AAPL GP 10Y 2W`, `AAPL GP 20Y Q` (quarterly), `AAPL GP MAX YEARLY` : candles glued from smaller ones; hour candles start at the market open (09:30 US, 09:15 India).
+- `BTCUSDT GP 1D 1S` : one-second crypto candles (Binance spot, about the last 3.3 hours).
+- `AAPL GP 1Y PAT:GEO` : double tops / bottoms, head and shoulders, triangles, wedges, flags from swing pivots. PATTERN RULE, NOT A SIGNAL.
+- GP drawing tools: `W` opens the tool picker (30 tools: rays, extended / vertical / cross lines, channels, regression channel, shapes, path, text, notes, arrows, measures, fib extension / time zones / fan, pitchfork, Gann fan, long / short position planner, XABCD, Elliott labels). Move the crosshair, `Enter` places each anchor (`Shift+Enter` ends a path), text tools then ask for their words. `E` re-places the selected drawing, `O` opens the object tree (`V` hide, `D` remove, `R` rename, `L` lock).
+
+## Phase 22: linked panels and symbol math
+
+- `LINK A` (or `B`, `C`, `D`) puts the focused panel in a colour group; `LINK OFF` takes it out; `LINK` alone shows the group. In GUI mode the chip in the panel header cycles the groups on click. Typing a new security into one panel of a group loads it in every other panel of that group that shows a security (watchlists and boards stay as they are). Groups are saved with the layout.
+- Linked charts share the crosshair time, the visible dates and the candle length. Each can be turned off: `SETTINGS LINK CROSSHAIR OFF`, `SETTINGS LINK RANGE OFF`, `SETTINGS LINK INTERVAL OFF` (`ON` turns it back on).
+- Symbol math: `AAPL/MSFT GP`, `GP 2*GLD-SLV`, `ES=F-NQ=F GP 1Y`, `(AAPL+MSFT)/2 GP` (one word, no spaces; `+ - * /` and brackets, up to 6 symbols). Each symbol's bars are fetched as usual, joined on the bar date (bars missing in any symbol are dropped and counted on screen) and computed per bar. The chart line names every symbol's source and age. A hyphen is part of a symbol only for share classes and currency pairs (`BRK-B`, `BTC-USD`); otherwise it is minus.
+- `IMPORT SYNTH PAIR = AAPL/MSFT` stores a formula under a name, so `PAIR GP` charts it; `IMPORT` lists synthetics under the imports; `IMPORT SYNTH DEL PAIR` removes one. A synthetic may not use another synthetic.
+- `TRA AAPL 5Y` total return (price plus dividends, annualised) against SPY; `TRA AAPL,MSFT,NVDA 3Y VS ^NSEI` for a list and another benchmark.
+- `BETA AAPL VS QQQ 5Y W WIN=26`: beta, alpha, R², standard error, adjusted beta, a scatter and a rolling beta line (D, W or M returns; P cycles them).
+- Watchlist flags and sections: in `WL TECH`, F cycles a colour flag on the row, Shift+F shows one colour only, H adds a section header above the row. Typed: `WL TECH FLAG AAPL RED` (`OFF` removes), `WL TECH SECTION JPM Banks` (no title removes).
+- `IMPORT ES5 TZ=America/New_York` takes intraday bars too: a file where a date repeats with times is read as minute bars (1 to 90 min, spacing read from the data). Times need an offset (`-05:00`, `Z`) or the `TZ=` zone. Chart them with that candle length: `ES5 GP 5D 5MIN`.
+- `GRAB` copies the focused panel to the clipboard as a picture (charts and grids included), `GRAB SAVE` downloads it as a PNG, `GRAB VIA TG,EMAIL` sends it through the delivery channels set in `DLVR` (fixture mode never sends). Shortcut Alt+P.
+
+## Phase 23: volume and order flow
+
+- GP studies: `VP` (volume profile of the bars on screen), `VP:S` (one per session), `VP:A` (from your last vertical line, or between the last two), `AVWAP` / `AVWAP:W` / `AVWAP:M` (VWAP with 1, 2 and 3 standard deviation bands, restarting each session / week / month), `AVWAP:A` (anchored at your last vertical line). Profiles are estimated from the chart's bars (each bar's volume spread over its range) and say so on the chart.
+- `TPO AAPL 5 BRACKET=30`: market profile of the last 5 days from 5-minute bars: letters per 30-minute bracket, POC, value area, initial balance, single prints, poor highs / lows.
+- `TAS BTCUSDT`, `BIGT BTCUSDT USD=100000`, `FOOT BTCUSDT`: time and sales, big trades and footprint from the exchange's own trades (exact, crypto only).
+- `DOM BTCUSDT [LEVELS]`: read-only depth ladder (asks above, bids below). `LIQH BTCUSDT`: liquidity heatmap of the book while the panel is open (memory only, at most 2 hours).
+- India (needs a Kite login, read-only): `DOM RELIANCE.NS` shows Kite's best FIVE bid and ask levels (the server switches that one instrument to Kite's full mode while the panel is open; the first answer takes a few seconds). `TAS RELIANCE.NS` lists one row per Kite packet that gained volume (price, volume gained, time) with the side GUESSED by the tick rule and labelled ESTIMATED (TICK RULE): Kite does not say who started a trade. Without a login or in fixture mode they say why instead of showing anything.
+
+## Phase 24: replay and practice
+
+- `AAPL GP 1Y REPLAY 2024-03-01` hides every bar after that day (no date: the last 100 bars). `.` next bar, `,` back, Space play / pause, `s` speed (1, 2, 5, 10 bars a second). Indicators and studies only ever see the revealed bars.
+- Practice while replaying: Shift+B buys 100, Shift+S sells 100, Shift+F flattens; each fills at the next bar's open. Shift+J saves the session's trades to JRNL as `REPLAY <SYMBOL> <date>`. Nothing is ever sent to a broker.
+- Stop and target exits for the practice book: `AAPL GP 1Y REPLAY 2024-03-01 STOP=5 TARGET=10` (percent from the average entry price) close the position when a revealed bar reaches a level, by the same rule as BT's exits: a bar that opened beyond a level exits at its open, a bar that reached one level exits there, and a bar that reached BOTH is settled by 60-minute bars (a daily or longer replay loads the last 2 years) or else the stop counts first. The line under the chart says which rule decided each exit.
+- Linked GP panels (`LINK A`) that are also replaying follow the same clock.
+- `REC RELIANCE.NS ON` (needs a Kite login; `OFF` stops) records an Indian symbol from the Kite ticker, read-only: every price print with the volume gained, and every change of the best-five book (the instrument is held in Kite's full mode while it records). Off by default, same disk cap and retention as crypto recordings, and it ends by itself, saying so, when the Kite login ends. Replay with `TAS RELIANCE.NS REC=<id>` and `DOM RELIANCE.NS REC=<id>` (the side is the tick-rule guess, labelled ESTIMATED; FOOT needs exact trades and refuses a Kite session).
+
+## Phase 26: strategy lab
+
+- `BT OPT AAPL SMA{10..50:5}>SMA{50..200:25} 1D 10Y` tries every combination of the ranges in braces (`{lo..hi:step}`, at most 2,000 runs) through the normal backtester and ranks them. `METHOD=RANDOM N=200` or `METHOD=GA POP=40 GEN=25` search a sample instead (`SEED=` repeats a search exactly). `FIT=SHARPE|SORTINO|CALMAR|PF|NET|RETURN` picks what "best" means, or write your own score with no spaces: `FIT=SHARPE-2*DD`, `FIT=CALMAR*MIN(1,TRADES/30)` (names SHARPE SORTINO CALMAR ANNUAL RETURN NET DD PF WIN TRADES; `DD` is the worst fall as a positive number; operators + - * / ** and ABS SQRT LOG MIN MAX; with `WF=` the trade names WIN and TRADES are refused). A run the formula cannot score shows NO FITNESS.
+- A saved Python strategy keeps valid code: give its constants ranges on the command, `BT OPT AAPL @mystrat FAST={10..50:5} SLOW={50..200:25}` (the strategy needs one line `FAST = 20` per name).
+- Views (V / Shift+V, 1-4): TABLE (S changes the sort, Enter runs the selected set as a normal BT in a new panel, E saves a CSV), HEAT (two parameters as a colour map, X next pair), FRONT (annual return against max drawdown; the efficient runs joined), WF.
+- Above every view: number of trials, deflated Sharpe, probability of backtest overfitting, EDGE OF RANGE when the winner sits on a range end, and the best region (the winner's neighbours).
+- `WF=5` adds walk-forward optimisation (tune on one part of history, test on the next, slide forward; `ANCHORED` keeps the start fixed): the out-of-sample windows, their stitched equity and the walk-forward efficiency.
+- Exits on any BT or BT OPT: `STOP=5 TARGET=10` (percent from the entry). `FILL=INTRABAR` settles a daily bar that reached both from 60-minute bars (last two years); otherwise, or with no intraday bar, the stop counts first. The EXITS line says which rule settled how many bars.
+- `BT LIVE AAPL @mystrat [1D|1W] [CASH=n]` starts a paper forward test: play money in OpenTerm's own book, filled at the next bar's open, never sent anywhere. `BT LIVE` lists them next to a backtest of the same period on today's data (DIVERGED bars are a warning sign); Enter details, R check now, S stop; `BT LIVE STOP <id>`, `BT LIVE DEL <id>`.
+
+## Phase 27: scanners, indicator columns, smart alerts
+
+- `SCAN SPX RSI14<30 AND CLOSE>SMA200` checks every member of a universe against a BT rule on its newest daily bar. Universes: `SPX NDX DJI RUT MID` (members from the proxy ETF's SEC filing), `MEMB:<ETF>`, `WL:<NAME>`, `LIST:AAPL,MSFT`, `NIFTY50`, `NIFTY500`. A cold 500-name scan takes about a minute (progress shown). J/K move, Enter opens GP with the rule's studies, A all rows or matches only, E CSV.
+- `SCAN SAVE <NAME> <universe> <rule> DAILY=16:30` saves a scan and sends its matches every weekday through DELIVERY; `SCAN SAVED` lists them.
+- Indicator columns: `Q AAPL MSFT COLS=RSI14,SMA50` and `WL TECH COLS=RSI14,ATR14` add the values of any BT term (completed daily bars).
+- Smart alerts: `ALRT AAPL RSI14<30` (checked on completed daily bars every 15 minutes) and `ALRT AAPL LINE [N]` (fires when the price crosses your Nth trend line on the AAPL chart, checked on every tick). They list in ALRT as `S<id>`.
+- `MRR SPX [1D|1W|1M|3M|YTD|1Y]`: which members moved the index, with contribution = weight x return. NIFTY lists have no weights, so they show returns only.
+- `FSRC FEE<0.2 AUM>1B CAT=LARGE SORT=AUM`: the ETF screener (FEE in percent a year, AUM with K/M/B/T, CAT a category prefix). The first full load takes about 40 minutes in the background and resumes after a restart; until then the table says PARTIAL. Enter opens DES, C opens GP, E CSV.
+- Heat maps: `IMAP CRYPTO [N=50]` (size = market cap, colour = 24 hour change), `IMAP ETF [N=150] [FSRC filter]` (size = total assets), `IMAP NIFTY` / `IMAP NIFTY500` (equal tiles, because NSE's list has no weights; grouped by industry).
+
+## Phase 28: options analytics II
+
+- `AAPL OMON` now also shows, per contract, P(ITM), P(OTM), P(TOUCH) (model probabilities from each contract's IV), BREAKEVEN, EXTRINSIC and OI CHG (since the chain recorder's last snapshot), and in the headline the expected move both ways (ATM straddle and IV x sqrt(T)), MAX PAIN and the call / put walls. The OI AND VOLUME BY STRIKE section lists both sides per strike.
+- `AAPL OSA STRAT=BULLCALL,270,290 T=0.3 IV=25` adds a risk profile: P&L today, at a chosen date and at expiry, with delta and gamma along the curve and P(PROFIT). `D` / `Shift+D` move the date curve 7 days, `V` / `Shift+V` shift IV 5 points (also `DAYS=14 IVSHIFT=-5`).
+- `AAPL GP 1Y CONE` draws the 1 and 2 standard-deviation price ranges to each listed expiry from the chain's ATM IV.
+- `AAPL EMOV`: the nearest expiry's implied move against the stock's moves on its last 12 earnings reports (8-K item 2.02 dates; US filers).
+- `OREC TECH` records the option chains of watchlist TECH every weekday after the US close (off by default); `AAPL OREC` shows the recorded IV rank, percentile and term history. `OSCAN SPX IVR>50 EM>5 OI>1000 PCR>1.2` filters underlyings on those recordings.
+- `NIFTY26NOVFUT.NFO OIB 1M 1d` (Kite login needed): open interest per bar with the long buildup / short buildup / short covering / long unwinding reading.
+- FX options: `EURUSD=X OV K=1.1 TYPE=C T=0.5 IV=8 RF=3 RD=4` prices with Garman-Kohlhagen (RF = foreign rate, RD = domestic rate, both percent).
+- `PGRK <PORTFOLIO> [VS=SPY]`: Greeks of the OCC option positions in a portfolio (`AAPL260116C00200000`) and the beta-weighted delta to an index.
+
+## Phase 29: fundamentals depth (GF EM DDIS SCORE FRM IBQ REVS, EQS BT)
+
+All read SEC XBRL (company facts, as FA does, or the frames API: one concept for every filer). US SEC filers only.
+
+| Command | What it shows |
+|---|---|
+| `AAPL GF` / `AAPL GF PE` / `AAPL GF ROIC Q VS=MSFT,GOOGL` | A metric over time (REVENUE NI EPS FCF GM OM NM ROE ROIC DE, or the daily multiples PE PS PB EVEBITDA). Multiples use the newest period filed on or before each day (no look-ahead); splits are inferred from the share count and named. `Q` = quarterly (multiples on TTM). |
+| `AAPL EM` | Earnings matrix: quarters x fiscal years of SEC EPS and revenue, the consensus estimate and the surprise (heat map). SEC EPS is GAAP; the surprise compares Yahoo's actual with Yahoo's estimate. |
+| `AAPL DDIS` | Debt maturity ladder (next 12 months, years 2-5, after) from the latest 10-K that tags it, with the filing. Enter opens it. |
+| `AAPL SCORE` | Altman Z and Z'', Piotroski F, Beneish M, Ohlson O, Merton distance to default, each with inputs and formula. FORMULA SCORE, NOT A RATING. |
+| `FRM NetIncomeLoss CY2024 [ASOF=2025-02-01]` | One XBRL concept for every filer. `ASOF` keeps only values public by then: known date = period end + 90 days (annual) or 45 (quarter), because frames carry no filing date. |
+| `IBQ [2024] [INDUSTRY]` | Sector (or industry) medians of net and operating margin, revenue growth, P/S, P/E, with the interquartile range as dispersion. `IBQ 2024 SIC` (or `BY=SIC`) groups by SEC SIC code, `DIV` (or `BY=DIV`) by SIC division. |
+| `EQS ROE>15 MARGIN>10 SORT=GROWTH` | The live screener also takes the SEC formula fields ROE MARGIN OPMARGIN GROWTH (in percent) and DE as filters, sort keys and columns; labelled SEC FIGURES with the year. |
+| `AAPL REVS` | Estimate revision score, -100 to +100 = 50 x breadth + 50 x drift, inputs shown. |
+| `EQS BT MARGIN>0.15 GROWTH>5% UNIV=LIST:AAPL,MSFT,NVDA FROM=2021 [VS=SPY]` | Monthly screen backtest on frames data (fields MARGIN OPMARGIN ROE GROWTH DE MOM12), equal weight, vs a benchmark. Labelled SURVIVORSHIP BIAS and HISTORICAL SIMULATION. Universe up to 60 names. |
+
+## Phase 29: filings (FTS MA LEGAL BIO RELS ESG)
+
+All six read public filings and registers. Each row names its source; a source that is down says so, and nothing is filled in. Enter and `O` are the row keys of FTS, MA and BIO: Enter opens FIL for the row's company filtered to that form (FIL cannot jump to one filing, find the accession there), `O` opens the filing on sec.gov.
+
+| Command | What it shows |
+|---|---|
+| `FTS "going concern" FORM=10-K FROM=2024-01-01 TO=2024-12-31 [AAPL]` | SEC EDGAR full-text search (filings from 2001): date, form, company, file. Newest 100 hits, the total is in the header. `CO=AAPL` also names the company. A hit is a word match, not a finding. |
+| `MA` / `AAPL MA` / `MA FROM=2024-10-01 TO=2024-12-31` | Deal filings. With a symbol: that company's own filing list, keeping 8-K items 1.01 and 2.01, SC TO-T, DEFM14A, PREM14A, S-4, 425. With none: market-wide from the full-text search (SC TO-T, DEFM14A, S-4, 425; default the last 90 days). The value column shows a dollar figure the filing states (cover-page transaction valuation, or a deal / enterprise / equity value sentence; never a per-share price) with the sentence it came from, else NOT STATED, or NOT READ when the document was not fetched. A deal form is a filing, not a closed deal. |
+| `AAPL LEGAL` | SEC litigation releases and administrative proceedings whose title names the company (`NAME MATCH`; the SEC's feeds hold only the latest 25 items each) and, with a free `COURTLISTENER_API_KEY` in `APIKEYS`, federal court dockets by case name. Without the key the court section says `KEY REQUIRED` and the SEC rows still show. The CourtListener part is doc-shaped and has not run against a live key. |
+| `BIO 1214156` / `BIO "COOK TIMOTHY" [FROM=..] [TO=..]` | A reporting owner's Form 3, 4 and 5 filings across every company they file for (owner and issuer both come from the SEC search). A CIK is exact; a name searches filing text and can match several people. A name also gets a section of proxy statements (DEF 14A) that mention it (a full-text name match; the board table itself is not parsed). |
+| `AA ETS [YEAR=2024] [NAME=<COMPANY>]` | EU emissions trading: verified emissions per EU installation for the company's account-holder name (`NAME=` overrides it), from the Commission's Union Registry data. Name match only, no ticker map. |
+| `GOOGL RELS` | Other tickers filed under the issuer's CIK (SEC company_tickers_exchange) and every listing of the ticker (OpenFIGI, its own exchange codes). |
+| `AA ESG [YEAR=2023] [NAME=<company>]` | EMISSIONS ONLY, NO SCORE. US EPA greenhouse-gas reports of facilities whose parent-company text matches the name (`NAME MATCH`), tonnes CO2e per facility and, where EPA states an ownership share for that exact name, the weighted tonnes. US facilities over 25,000 t only; no scope 2/3, no EU ETS. |
+
+## Phase 30: macro, rates and commodities depth
+
+Every board is a table panel: J/K move, V / Shift+V switch tables, C cycles the chart (where there is one), E exports, F5 refreshes. Rows that point at another function open it with Enter (CTM to CT, TSYS to YAS, WPE to DES); FOMC rows open the Fed page. A missing series shows its reason on its own row; the rest of the board still draws.
+
+| Command | What it shows |
+|---|---|
+| `MMR` | Overnight reference rates: SOFR, TGCR, BGCR, EFFR, OBFR (NY Fed, with 1st / 99th percentiles and volume), ESTR (ECB), SONIA (Bank of England); changes in bp; chart of the last ~60 publications. |
+| `NOWC` | Atlanta Fed GDPNow: the current quarter's nowcast after each data release, and past quarters' first and final nowcasts against the BEA advance estimate. A model estimate, not a forecast. The NY Fed Staff Nowcast is not shown (no clean download). |
+| `ECFC` | Forecasts as published: IMF WEO (GDP, inflation, unemployment, this year and next), OECD Economic Outlook (adds the long-term rate), Philadelphia Fed SPF medians (GDP, CPI, unemployment, 10Y yield), FOMC SEP medians with the participants' range. |
+| `FOMC` | Meeting calendar (Enter opens the statement; minutes and press-conference links), the latest statement, its word-level diff against the previous one, and the SEP fed funds dots (median, lowest, highest). |
+| `WIRP` | Unchanged path, plus a new MEETING ODDS table (V): P(cut), P(hold), P(hike) and P(50 bp+) per meeting by the standard 25 bp-step method, chained across meetings. `MARKET-IMPLIED, NOT A FORECAST`. |
+| `WB` | Government bond yields: US 2Y / 10Y (daily), euro AAA, UK and Japan from the RATES curves (daily), and OECD monthly 10Y yields for 15 more countries; the frequency is shown per row, with the spread to US 10Y. |
+| `CRPR` | ICE BofA option-adjusted spreads (US IG by rating, US HY by rating, euro HY, EM) in bp with 1W / 1M / 1Y changes and the percentile over the history FRED serves (the last 3 years only, said on screen). |
+| `FWCV` | Forward rates bootstrapped from the US Treasury par curve: 1y1y, 1y2y, 2y1y, 2y3y, 3y2y, 5y5y, 10y10y, 20y10y, the zero curve and a chart of par, zero and 1-year forwards. |
+| `BTMM [US\|IN\|UK\|EA\|JP]` | One-country monitor: policy rate, 2Y / 10Y, FX, main index, CPI y/y, real GDP growth; next US releases from ECO. Items with no free source say so; a series that stopped updating is flagged. |
+| `WCRS [SORT=1W\|1M\|3M\|6M\|YTD\|1Y]` | About 30 currencies ranked by return against USD and against INR (ECB reference rates). WCRS used to be an alias of FXC; type FXC for the cross matrix. |
+| `CDR [YEAR]` | Exchange calendar for NY, LN, IN, TK, HK: closures and early closes (next 12 months, or one year) and regular hours, from the same tables the market lights use. |
+| `CTM [ROOT]` | Futures contract table (default CL): each listed contract's last trade and first notice day from a reviewed rules table, days left, cash or physical; a list of the 20 roots. Dates are estimated (NYSE holiday calendar); the exchange is the authority. Enter opens CT. |
+| `TSYS [BILL\|NOTE\|BOND\|TIPS\|FRN\|CMB]` | US Treasury securities auctioned in the last 90 days (CUSIP, term, coupon, maturity, high yield or discount rate, bid-to-cover, size) and announced auctions (TreasuryDirect). Enter opens YAS with the coupon, maturity and yield. |
+| `NRGF` | EIA weekly petroleum status (crude ex-SPR, Cushing, SPR, gasoline, distillate, refinery utilisation, production) and gas storage, with w/w, vs a year ago and 2-year range. Needs the free `EIA_API_KEY` (KEY REQUIRED without it). Doc-shaped: not yet run with a live key. |
+| `AGRI` | WASDE US wheat, corn and soybean supply and use (latest report, from the Cornell library copy) and, with the free `NASS_API_KEY`, weekly crop condition. Without the key the WASDE tables still show. |
+| `RE` | US housing from FRED: Case-Shiller, FHFA, median price, starts, permits, completions, new-home sales and supply, 30Y / 15Y mortgage rates, rental vacancy, homeownership. Zillow data is not used. |
+| `WPE` | Index valuation through index ETFs (18 markets): P/E, P/B, P/S of the holdings and the fund's yield, each row labelled `PROXY: <ETF>`. Enter opens DES for the ETF. |
+
+## Phase 31: query language, Excel and notebooks
+
+| Command | What it shows |
+|---|---|
+| `QRY last, pe, mcap FOR MEMB:SPY WHERE pe<20 AND sector=Technology SORT mcap DESC LIMIT 50` | A snapshot: one row per symbol. `FOR` takes SPX NDX DJI RUT MID, `MEMB:<ETF>`, `WL:<name>`, `LIST:A,B` (or just `A,B`), NIFTY50 / NIFTY500, or `US` (the whole US screener file). Conditions are joined by AND (`< <= > >= = !=`; text compares without case); a missing value fails its condition. Screener fields are applied first, then quotes, then Yahoo key statistics (one call per symbol, at most 150 symbols: narrow first with `mcap>...`). Enter opens DES. |
+| `QRY close, ret FOR AAPL,MSFT,FRED:DGS10 DATES -2Y..0 FREQ M` | A time series: one row per date, a column per symbol and field. Dates: `-30D -6M -1Y 0` or `YYYY-MM-DD`; `FREQ W` / `M` keep the last value of each week / month. FRED series as `FRED:<ID>` with the field `value`. At most 20 symbols. C shows the chart. |
+| `FLD [words]` | The field catalog: every field with its mode (snapshot or DATES), source, unit, update frequency and key. |
+| `NB` | A local JupyterLab with openterm-sdk and three example notebooks: S starts it (the first start installs JupyterLab with uv: a minute or two), Enter opens it, X stops it. Notebooks live in `<data folder>/notebooks`; it stops with OpenTerm. Needs a source checkout with uv. |
+
+Excel: `=VALUE(WEBSERVICE("http://127.0.0.1:8000/api/xl/last?s=AAPL"))`, `/api/xl/field?s=AAPL&f=pe`, `/api/xl/query.csv?q=<QRY>`, `/api/xl/history.csv?s=AAPL&range=1Y`. GET only, this computer only. Guide and Power Query templates: [EXCEL.md](EXCEL.md); example workbook `docs/excel/OpenTerm_examples.xlsx`. SDK: `ot.query("QRY ...")`, `ot.fields("valuation")`.
+
+## Phase 32: AI inside functions
+
+| Command / key | What it does |
+|---|---|
+| `?` in any table panel (the macro boards, QRY, CN, EE, RES ...) | Lists 2 or 3 suggested questions; 1-3 opens AI beside the panel with that question, Esc closes the list. Each question names the tool that reads the panel's own data (`board`, `qry`, `news`, `read_url`), so the answer cites it; nothing is sent until you pick. On CN the first question is the headline digest (each bullet with its headline's time and source). |
+| `A` in `ERN` | Earnings card: opens `AI FILING <SYM> EARNINGS` beside the calendar, so the row's EPS vs consensus and surprise stay in view. |
+| `AI FILING <SYM> EARNINGS` | Reads the newest results 8-K (Item 2.02) and its Exhibit 99.1 press release (found by the type column of the filing's EDGAR index, not by file name): revenue, EPS and every guidance sentence, each quoted and checked word for word. US SEC filers only. |
+| `AI FILING <SYM> CHAIN` | Supply chain lite (existing): named suppliers, customers and concentration, each with its quoted sentence. Every FILING answer is labelled `AI-EXTRACTED`. |
+| `RES [SRC=<source>] [DAYS=n] [words]` | Research library: BIS working papers and research hub, Fed FEDS / FEDS Notes / IFDP, ECB working papers and blog, RBI publications, arXiv q-fin. Newest first; every word must appear in the title or summary. Enter opens the paper; `?` asks AI to read and summarise the selected paper. Not included: IMF papers (its feed answers 403, a bot check), NBER (paywalled). |
 
 ## Phase 18 step 2: read-only broker sync (`SYNC`, `PORT SYNC`)
 Reads what your broker already holds and writes it into a `PORT` portfolio. It never sends an order; Alpaca is not part of it.

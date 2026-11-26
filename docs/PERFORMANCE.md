@@ -792,7 +792,7 @@ Changes since the last full bench: Kite follow-ups, `.BFO` / `.CDS` chains, Kite
 | Backend p95, cached /api/quote | 1.0 ms | 1.1 ms | 20 ms |
 
 Run 1: 36 of 37 (only the chart pan line). Run 2: 33 of 37; the BT, SEAS and tick lines moved together, the pattern of a busy machine (another session was building at the time). A third run was cut short by a pause. A clean rerun on a quiet machine is still to do; the other 31 lines passed in both runs.
-Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs needed a fixture backend or a test fix, see HANDOFF.md "Wrap-up job").
+Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs needed a fixture backend or a test fix).
 
 **Run 3 (clean, 2026-11-05, branch `claude/wrapup-final` = main `49c0fd6` + wrapup):** machine rested 100 s, `OPENROUTER_API_KEY` unset, ports free: **37 of 37 PASS**. Cold start 94.5 ms (web), tick-to-pixel p95 36.8 ms, 50k-bar chart pan 16.7 ms, BT 10-year run 283.2 ms (budget 300; it reads 230 rested and rises after back-to-back runs, so it is the closest line to its budget). The README `## Built to be fast` cells are updated from this run.
 
@@ -913,3 +913,33 @@ the panel-header Related and `?` buttons (`Panel.tsx`), the tab badge (`gui/tabL
 sparks client (`net/marketApi.ts`). Grid.tsx and the board graphics are not in the entry chunk. Keystroke echo under streaming
 load read 15.4 ms (was 9.4) with the machine still warm from the gate; a rested rerun read **39/39** with 10.9 ms (keystroke echo
 14.9 ms, tick to pixel 41.9 ms, 10k-row grid scroll 16.8 ms, bundle 127.1 KB), so that was machine heat, not the code.
+
+## Phases 22-24 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-61e1cd`)
+
+Bench after Phase 23 (with Phase 24 in the tree): **39/39 PASS**. Startup bundle 129.9 KB gz (UI parity pass: 127.1; Phase 21 left it
+within +0.5 KB of that), so Phases 22-24 added about 2.3 KB at startup: the link chip and link groups in `Panel.tsx` / `state/linkGroups.ts`,
+the GRAB binding, formula detection in `command/markets.ts` and the watchlist FLAG / SECTION grammar (`command/watchlistArgs.ts` imports
+`functions/wlFlags.ts`). Tick to pixel 36.2 ms (budget 50), AI first event 23.1 ms (60). The new Phase 23 / 24 budgets (volume profile of
+95k bars <= 40 ms, footprint render <= 16 ms, replay step <= 16 ms) are proposed in the phase specs and not yet gated.
+
+## Phase 27 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-8ff923`)
+
+Bench of this tree and of `main` (`189ce36`, in `C:\otbase`) back to back in one sitting, both rested 45 s first:
+
+| Line | main | Phase 27 tree | Budget |
+|---|---|---|---|
+| Tick received to pixel p95, streaming | 63.6 ms | 68.1 ms | 50 ms |
+| Layout load to paint p95 | 104.1 ms | 111.1 ms | 100 ms |
+| Frame time p95, 50k-bar pan/zoom | 33.4 ms | 33.3 ms | 20 ms |
+| BT 10-year rule run p95, server | 548.7 ms | 502.2 ms | 300 ms |
+| AI first SSE event p95, server | 73.2 ms | 76.4 ms | 60 ms |
+| Result | 34 pass, 5 fail | 34 pass, 5 fail | |
+
+Both miss the same five lines by similar amounts, so the misses are the machine's state that day, not Phase 27 code (CLAUDE.md
+"bench the base commit in the same sitting"). An earlier run of this tree taken right after another bench also missed SEAS (26 ms)
+and streaming frames (33 ms); rested, both passed (7.0 ms, 16.8 ms). Phase 27 has no bench lines of its own: SCAN, MRR and FSRC are
+network-bound tasks shown with progress.
+
+## Phase 32 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-f09808`)
+First run 38/39: SEAS 10,000-bar calc 16.1 ms against 15 ms (Phase 32 does not touch SEAS). Rerun straight after: **39/39 PASS**,
+SEAS 7.9 ms, BT 10-year daily rule run 165.5 ms (budget 300). The miss was machine noise (see the "lone bench miss" note in CLAUDE.md).

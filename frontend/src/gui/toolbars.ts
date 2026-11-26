@@ -60,6 +60,12 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
   ALRT: [
     { label: "Add an alert", key: "n", title: "New alert (N)", ask: { prompt: "Stock and level, e.g. AAPL > 200 or AAPL -3%", command: "ALRT {input}" } },
   ],
+  // The ETF screener (Phase 27).
+  FSRC: [
+    { label: "Details", key: "Enter", title: "Open the description (DES) of the selected fund (Enter)" },
+    { label: "Chart", key: "c", title: "Chart the selected fund (C)" },
+    { label: "Export", key: "e", title: "Save the table as CSV (E)" },
+  ],
   Q: [
     { label: "Details", key: "Enter", title: "Open the description (DES) of the selected security (Enter)" },
     { label: "Add", key: "a", title: "Add securities: puts the command in the command line (A)" },
@@ -81,6 +87,8 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     { label: "Indicators…", key: "i", open: "IND", bandHidden: true, title: "Indicator library: search, write a formula, Enter adds it to this chart" },
     { label: "Crosshair", key: "x", bandHidden: true, title: "Toggle the crosshair (X)" },
     { label: "Price alert", key: "A", shift: true, title: "Click the chart at the price for an alert (Shift+A; A uses the crosshair)" },
+    { label: "Draw", key: "w", title: "Drawing tools (W): pick a tool, move the crosshair, Enter places each anchor" },
+    { label: "Objects", key: "o", title: "Object tree (O): hide, remove, rename or lock drawings and indicators" },
     { label: "Zoom +", key: "+", bandHidden: true, title: "Zoom in (+)" },
     { label: "Zoom -", key: "-", bandHidden: true, title: "Zoom out (-)" },
     { label: "<", key: "ArrowLeft", bandHidden: true, title: "Pan left, or move the crosshair when it is on (Left arrow)" },

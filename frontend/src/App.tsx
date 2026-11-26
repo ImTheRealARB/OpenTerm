@@ -237,6 +237,12 @@ export function App() {
         case "exportCsv":
           exportPanelCsv(workspace.get().focus);
           break;
+        case "grabPanel": {
+          // Phase 22: the GRAB code is its own lazy chunk.
+          const id = workspace.get().focus;
+          void import("./grab/grab").then(({ grabCommand }) => grabCommand(id, []));
+          break;
+        }
         case "windowMenu":
           input?.blur();
           openWindowMenu();

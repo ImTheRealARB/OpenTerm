@@ -143,6 +143,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "crypto_options": ["deribit"],
     # Crypto depth (Binance first; OKX when Binance fails, e.g. HTTP 451), funding, liquidations (OKX only), DefiLlama
     "crypto_depth": ["binance_deriv", "okx", "kraken", "coinbase"],
+    "crypto_trades": ["binance_deriv"],  # Phase 23 order flow: exact aggressor side exists only in Binance spot aggTrades here (no fallback built)
     "crypto_funding": ["binance_deriv", "okx"],
     "crypto_funding_detail": ["binance_deriv", "okx"],
     "crypto_liq": ["okx"],
@@ -233,6 +234,23 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "pred_kalshi": ["kalshi"],
     "pred_kalshi_market": ["kalshi"],
     "pred_kalshi_candles": ["kalshi"],
+    # FSRC (ETF screener): the symbol file lists the ETFs, Yahoo's fund modules give each one's fee / size / category
+    "etf_universe": ["nasdaq_trader"],
+    "fund_profile": ["yahoo_funds"],
+    "nifty_constituents": ["nseindices"],  # the only free source of the member lists
+    # Phase 29 filings: FTS / MA / BIO (SEC full-text search), LEGAL (SEC enforcement feeds + CourtListener), RELS / ESG / LEGAL (ticker file), ESG (EPA)
+    "sec_fts": ["sec_filings"],
+    "sec_rss": ["sec_filings"],
+    "sec_tickers_x": ["sec_filings"],
+    "sec_doc": ["sec_filings"],  # MA deal values: one filing document as text
+    "sec_sic": ["sec_filings"],  # IBQ BY=SIC: SIC code list + the EDGAR company browser by code
+    "court_dockets": ["courtlistener"],  # free key; no key = KEY REQUIRED
+    "ghg_facilities": ["epa_ghgrp"],
+    "eu_ets": ["eu_ets"],  # ETS: EU installations (Union Registry public data)
+    # Phase 30 macro depth (one source each; EIA and NASS need a free key, no key = KEY REQUIRED)
+    "nyfed_rates": ["nyfed"], "estr": ["ecb_estr"], "sonia": ["boe_sonia"], "gdpnow": ["atlfed"], "spf": ["philfed"],
+    "imf_weo": ["imf_dm"], "oecd_eo": ["oecd_eo"], "fomc_statement": ["fed_web"], "tsy_securities": ["td_secs"], "wasde": ["wasde"], "research_feeds": ["research_feeds"],
+    "eia_series": ["eia"], "nass_crop": ["nass"], "etf_valuation": ["yahoo_funds"], "fx_panel": ["frankfurter"],
 }
 
 # Test data: with OPENTERM_SYNTHETIC=1 the SYN0000-SYN9999 provider answers for these two capabilities (last in line, so real

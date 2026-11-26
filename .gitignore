@@ -1,17 +1,52 @@
+# What git never tracks in OpenTerm. Grouped by why it is ignored.
+
+# --- Dependencies and build output (recreated by scripts/setup and scripts/start) ---
 node_modules/
 dist/
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 .pytest_cache/
-.env
-data/*.db
-data/*.db-*
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Test and benchmark output ---
 bench-report.json
 playwright-report/
 test-results/
-.claude/
 
-# --- Logs and local data ---
-*.log
+# --- Secrets and local data (keys, saved layouts, caches) ---
+.env
+data/*.db
+data/*.db-*
 backend/data/
+*.log
+
+# --- Editor and OS files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.orig
+*.rej
+
+# --- AI agent files and local working notes: kept on the owner's disk, never published ---
+.claude/
+CLAUDE.md
+AGENTS.md
+AGENTS.md.bak
+HANDOFF.md
+RESUME_PROMPT.md
+wip-patches/
+.worktreeinclude
+.impeccable/
+frontend/.impeccable/
+docs/specs/
+docs/review/
+docs/PARALLEL_BUILD.md
+docs/TEST_CHECKLIST.*
+docs/build_checklist_page.py

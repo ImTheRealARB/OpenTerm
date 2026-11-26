@@ -34,6 +34,8 @@ import { afterPaint, commandStartedAt, gauges, series } from "../perf/metrics";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import BtEditor from "./BtEditor";
+import BtLive from "./BtLive";
+import BtOpt from "./BtOpt";
 import BtRuns from "./BtRuns";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport, type CsvTable } from "./tableExport";
@@ -109,6 +111,8 @@ function request(a: BtRun, structure?: Record<string, unknown>) {
       ...(a.short ? { short: true } : {}), ...(a.fees !== undefined ? { fees_bps: a.fees } : {}),
       ...(a.slip !== undefined ? { slip_bps: a.slip } : {}), ...(a.cash !== 100_000 ? { cash: a.cash } : {}),
       ...(a.bench ? { bench: a.bench } : {}), ...(a.mkt ? { engine: a.mkt } : {}),
+      ...(a.stop !== undefined ? { stop_pct: a.stop } : {}), ...(a.target !== undefined ? { target_pct: a.target } : {}),
+      ...(a.fill ? { fill: a.fill } : {}),
     },
   };
 }
@@ -246,7 +250,7 @@ export default function BT({ panelId, args }: FunctionProps) {
     if (!parsed.ok) return setState({ k: "bad", error: parsed.error, rule: parsed.rule, col: parsed.col });
     if (!isBtRun(parsed)) {
       const id = parsed.args[0];
-      if (parsed.sub === "RUNS") return setState({ k: "usage" }); // drawn by BtRuns
+      if (parsed.sub === "RUNS" || parsed.sub === "OPT" || parsed.sub === "LIVE") return setState({ k: "usage" }); // drawn by BtRuns / BtOpt / BtLive
       if (parsed.sub === "OPEN") return id ? load(id) : setState({ k: "bad", error: "USAGE: BT OPEN <RUNID> (BT RUNS LISTS THE IDS)" });
       if (parsed.sub === "EXPORT") return exportRun(id, parsed.args[1]);
       if (parsed.sub === "SAVE") return saveRule(id, parsed.args.slice(1).join(" "));
@@ -256,6 +260,16 @@ export default function BT({ panelId, args }: FunctionProps) {
     submit(parsed);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- args identity changes only when the command changes
   }, [parsed]);
+
+  // Progress normally arrives as WebSocket `J` frames; a frame lost while the socket reconnects would leave the panel on
+  // RUNNING forever, so the job is also re-read every 3 s while it runs (Phase 26, same as BT OPT).
+  useEffect(() => {
+    if (!jobId) return;
+    const timer = setInterval(() => {
+      fetchJob(jobId).catch(() => {}); // a failed re-read is retried 3 s later; the job effect below shows real failures
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [jobId]);
 
   // Job finished: fetch the stored run (the done frame or GET /api/jobs/{id} carries its id).
   useEffect(() => {
@@ -448,6 +462,8 @@ export default function BT({ panelId, args }: FunctionProps) {
   );
 
   if (parsed.ok && parsed.sub === "RUNS") return <BtRuns panelId={panelId} />;
+  if (parsed.ok && parsed.sub === "OPT") return <BtOpt panelId={panelId} args={parsed.args} />;
+  if (parsed.ok && parsed.sub === "LIVE") return <BtLive panelId={panelId} args={parsed.args} />;
   if (parsed.ok && (parsed.sub === "EDIT" || parsed.sub === "LOAD")) return <BtEditor panelId={panelId} name={parsed.args[0]} />;
   return (
     <div className="fn bt">
@@ -466,6 +482,7 @@ export default function BT({ panelId, args }: FunctionProps) {
           <div className="dim">BT EDIT [NAME] = PYTHON STRATEGY EDITOR · BT SAVE &lt;NAME&gt; &lt;RULE&gt; · BT DEL &lt;NAME&gt; · BT &lt;SYMBOLS&gt; @&lt;NAME&gt; RUNS A SAVED ONE</div>
           <div className="dim">BT RUNS LISTS STORED RUNS (C COMPARES TWO) · BT OPEN &lt;RUNID&gt; · BT EXPORT &lt;RUNID&gt; [PINE|MQL5|PDF|XLSX|TRADES|EQUITY|METRICS]</div>
           <div className="dim">BT MC|WF &lt;SYMBOLS&gt; &lt;RULE&gt; … RUNS IT, THEN SHUFFLES ITS TRADES (MC) OR SPLITS IT INTO WINDOWS (WF) · M / W ON AN OPEN RUN DO THE SAME</div>
+          <div className="dim">BT OPT AAPL SMA{"{10..50:5}"}&gt;SMA{"{50..200:25}"} 1D 10Y [METHOD=GA] [WF=5] OPTIMISES THE SETTINGS · BT LIVE AAPL @&lt;NAME&gt; = PAPER FORWARD TEST · STOP=5 TARGET=10 [FILL=INTRABAR] = EXITS</div>
         </>
       )}
       {state.k === "bad" && <BadRule {...state} />}
@@ -640,6 +657,7 @@ function Labels({ run }: { run: BtRunFull }) {
           {l.short ? " · SHORTS ALLOWED" : " · LONG ONLY"}
         </div>
       )}
+      {l.stops ? <div className="line dim bt-stops">EXITS: {l.stops}</div> : null}
       <div className="line dim bt-data">
         DATA:{" "}
         {sources.length

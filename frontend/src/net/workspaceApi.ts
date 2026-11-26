@@ -1,6 +1,6 @@
 /** What the user keeps on the server between sessions: saved layouts, watchlists and the command history. All uncached (`send`). */
 import { send } from "./core";
-import type { LayoutInfo, Watchlist, WatchlistInfo } from "./types";
+import type { LayoutInfo, Watchlist, WatchlistInfo, WlMeta } from "./types";
 
 export const workspaceApi = {
   layouts: () => send<{ layouts: LayoutInfo[] }>("GET", "/api/layouts"),
@@ -14,6 +14,9 @@ export const workspaceApi = {
   editWatchlist: (name: string, change: { add?: string[]; remove?: string[] }) =>
     send<Watchlist>("PATCH", `/api/watchlists/${encodeURIComponent(name)}`, change),
   deleteWatchlist: (name: string) => send<{ deleted: string }>("DELETE", `/api/watchlists/${encodeURIComponent(name)}`),
+  /** Phase 22: replace the colour flags and section headers of a list (the whole document each time). */
+  putWatchlistMeta: (name: string, meta: WlMeta) =>
+    send<{ name: string; meta: WlMeta }>("PUT", `/api/watchlists/${encodeURIComponent(name)}/meta`, meta),
   cmdHistory: () => send<{ items: string[] }>("GET", "/api/cmdhistory"),
   pushCmdHistory: (cmds: string[]) => send<{ added: number }>("POST", "/api/cmdhistory", { cmds }),
 };

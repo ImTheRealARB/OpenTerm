@@ -24,7 +24,33 @@ export type AlrtAction =
   | { kind: "delete"; id: number; news?: boolean }
   | { kind: "rearm"; id: number; news?: boolean }
   | { kind: "clear" }
+  /** Phase 27: an indicator alert (`ALRT AAPL RSI14<30`, the BT rule grammar on completed daily bars, checked by the server). */
+  | { kind: "createInd"; symbol: string; rule: string }
+  /** Phase 27: a drawing alert (`ALRT AAPL LINE [n]`): the price crosses GP line n (or leaves channel n); no n = the newest. */
+  | { kind: "createDraw"; symbol: string; n?: number }
+  /** Phase 27: delete an indicator or drawing alert, written S<id>. */
+  | { kind: "deleteSmart"; id: string }
   | { kind: "error"; message: string };
+
+const TERM_START = /^(SMA|EMA|RSI|ATR|HIGH|LOW|RET|CLOSE|OPEN|VOLUME)/i;
+
+/** The Phase 27 forms, or null when the arguments are a price / percent alert. */
+function smartBody(args: string[], explicit?: SecurityRef): AlrtAction | null {
+  const isSmart = (t: string | undefined) => !!t && (TERM_START.test(t) || t.toUpperCase() === "LINE");
+  let symbol: string;
+  let rest: string[];
+  if (explicit && isSmart(args[0])) [symbol, rest] = [explicit.symbol, args];
+  else if (args.length >= 2 && isSmart(args[1])) [symbol, rest] = [args[0].toUpperCase(), args.slice(1)];
+  else return null;
+  if (!isSymbolToken(symbol)) return { kind: "error", message: `BAD SYMBOL: ${symbol}` };
+  if (rest[0].toUpperCase() === "LINE") {
+    if (rest.length > 2 || (rest[1] !== undefined && !/^\d{1,3}$/.test(rest[1]))) return { kind: "error", message: "USAGE: ALRT SYM LINE [N] (N = THE DRAWING'S PLACE IN GP'S OBJECT TREE; NONE = THE NEWEST)" };
+    return { kind: "createDraw", symbol, ...(rest[1] ? { n: Number(rest[1]) } : {}) };
+  }
+  // The rule is checked by the server (the BT rule parser), which answers with the same error text BT shows: importing the
+  // parser here would put it in the startup bundle, since command parsing loads at startup.
+  return { kind: "createInd", symbol, rule: rest.join(" ").toUpperCase() };
+}
 
 const USAGE = "USAGE: ALRT | ALRT SYM > 200 [VIA TG,EMAIL] | ALRT SYM < 180 | ALRT SYM +5% | ALRT SYM -3% | ALRT NEWS WORD [SYM] [VIA WEBHOOK] | ALRT DEL ID | ALRT CLEAR";
 
@@ -151,9 +177,12 @@ function parseBody(args: string[], explicit?: SecurityRef): AlrtAction {
   if (!args.length) return explicit ? { kind: "error", message: `ALRT NEEDS A CONDITION, E.G. ${explicit.symbol} ALRT > 200` } : { kind: "list" };
   const first = args[0].toUpperCase();
   if (first === "NEWS") return parseNews(args, explicit);
+  if ((first === "DEL" || first === "DELETE" || first === "RM") && args.length === 2 && /^S[0-9A-F]{8}$/i.test(args[1])) return { kind: "deleteSmart", id: args[1].slice(1).toLowerCase() };
   if (first === "DEL" || first === "DELETE" || first === "RM") return args.length === 2 ? idAction("delete", args[1]) : idAction("delete", undefined);
   if (first === "REARM") return args.length === 2 ? idAction("rearm", args[1]) : idAction("rearm", undefined);
   if (first === "CLEAR") return args.length === 1 ? { kind: "clear" } : { kind: "error", message: USAGE };
+  const smart = smartBody(args, explicit);
+  if (smart) return smart;
 
   // Split operators off the tokens so "AAPL>200" and "AAPL > 200" read the same.
   const toks = args.join(" ").replace(/(>=?|<=?)/g, " $1 ").trim().split(/\s+/);

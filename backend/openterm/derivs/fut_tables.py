@@ -5,6 +5,7 @@ from __future__ import annotations
 import calendar
 from itertools import pairwise
 
+from ..macrod.curves import odds_table
 from ..research.table import col, head, payload, section
 from . import fut_parse as fp
 
@@ -90,6 +91,12 @@ def wirp_payload(effr: dict, band: tuple[float | None, float | None], meetings_a
         col("rate_after", "RATE AFTER", "num4"), col("change_bp", "CHANGE BP", "bp"), col("move_share", "25BP MOVE SHARE", "pct"),
         col("cum_bp", "CUM BP", "bp"), col("how", "BASIS")], path,
         "RATES IN PERCENT. THE MOVE SHARE IS |CHANGE| / 25 BP: ILLUSTRATIVE, NOT A PROBABILITY")
+    # Phase 30: hike / hold / cut odds per meeting from the same path (macrod/curves.py explains the standard method)
+    odds_sec = section("odds", "MEETING ODDS (MARKET-IMPLIED, NOT A FORECAST)", [
+        col("meeting", "DECISION", "date"), col("p_cut", "P(CUT)", "pct"), col("p_hold", "P(HOLD)", "pct"), col("p_hike", "P(HIKE)", "pct"),
+        col("big_move", "P(50BP+)", "pct"), col("mode_bp", "LIKELIEST CHG SINCE TODAY BP", "bp"), col("mode_p", "ITS PROB", "pct")],
+        odds_table(path),
+        "MARKET-IMPLIED, NOT A FORECAST: EACH MEETING'S IMPLIED CHANGE IS READ AS WHOLE 25 BP MOVES (-10 BP = 40% CUT, 60% HOLD), CHAINED ACROSS MEETINGS")
     month_sec = section("months", "FED FUNDS FUTURES (ZQ)", [
         col("contract", "CONTRACT"), col("month", "MONTH"), col("price", "PRICE", "price"), col("implied", "IMPLIED RATE", "num4"),
         col("vs_effr", "VS EFFR BP", "bp")], months)
@@ -99,10 +106,11 @@ def wirp_payload(effr: dict, band: tuple[float | None, float | None], meetings_a
                 head("MEETINGS", f"{len(path)} OF {len([m for m in meetings_all])} LISTED", len(path))]
     notes = ["IMPLIED BY FUTURES PRICES, NOT A PROBABILITY FORECAST: AVERAGE RATE = 100 - PRICE; A TERM PREMIUM AND THE DAY-COUNT SPLIT ARE IGNORED",
              "THE DECISION TAKES EFFECT THE NEXT DAY; A LATE-MONTH DECISION READS THE NEXT MONTH'S CONTRACT (NOT SPLIT)",
-             "FOMC DATES: federalreserve.gov CALENDAR (REFRESHED DAILY). EFFR AND TARGET RANGE: FRED DFF, DFEDTARL, DFEDTARU"]
+             "FOMC DATES: federalreserve.gov CALENDAR (REFRESHED DAILY). EFFR AND TARGET RANGE: FRED DFF, DFEDTARL, DFEDTARU",
+             "MEETING ODDS (V FOR THE NEXT TABLE): HIKE / HOLD / CUT PROBABILITIES, MARKET-IMPLIED, NOT A FORECAST"]
     if skipped:
         notes.append("CONTRACTS YAHOO DID NOT LIST, SKIPPED: " + " ".join(skipped))
-    return payload("WIRP", "WIRP FED FUNDS IMPLIED PATH", headline, [path_sec, month_sec], notes, source)
+    return payload("WIRP", "WIRP FED FUNDS IMPLIED PATH", headline, [path_sec, odds_sec, month_sec], notes, source)
 
 
 # --- COT --------------------------------------------------------------------------------------------------------------

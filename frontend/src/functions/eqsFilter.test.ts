@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileFilter, parseFilter, parseNumber, prefixMatch, screen, type Universe, type UniverseRow } from "./eqsFilter";
+import { compileFilter, parseFilter, parseNumber, prefixMatch, screen, usesFund, type FundMap, type Universe, type UniverseRow } from "./eqsFilter";
 
 // Small hand-made universe in the /api/screener shape (tables index 0 = blank).
 const U: Universe = {
@@ -101,5 +101,33 @@ describe("EQS filter grammar", () => {
     const ms = performance.now() - t0;
     expect(n).toBeGreaterThan(0);
     expect(ms).toBeLessThan(16);
+  });
+});
+
+describe("EQS SEC formula fields", () => {
+  // [margin %, opmargin %, roe %, growth %, de]; KHC has no SEC numbers loaded, NVDA has a null ROE.
+  const FUND: FundMap = {
+    AAPL: [25, 30, 150, 2, 4.5],
+    NVDA: [55, 62, null, 120, 0.4],
+    TSLA: [8, 9, 20, 1, 1.5],
+  };
+  const run = (args: string) => screen(U, parseFilter(args.split(" ")), FUND).rows.map((r) => r[0]);
+
+  it("filters and sorts on SEC fields; a name without a value never passes", () => {
+    expect(run("ROE>15")).toEqual(["AAPL", "TSLA"]);
+    expect(run("MARGIN>10 DE<1")).toEqual(["NVDA"]);
+    expect(run("GROWTH>0 SORT=MARGIN")).toEqual(["NVDA", "AAPL", "TSLA"]);
+    expect(run("ROE>15% SECTOR=TECH")).toEqual(["AAPL"]);
+    expect(run("ROE<1000")).not.toContain("KHC");
+  });
+
+  it("knows when the SEC figures are needed, and says so when they are not loaded", () => {
+    expect(usesFund(parseFilter(["ROE>10"]))).toBe(true);
+    expect(usesFund(parseFilter(["SORT=ROE"]))).toBe(true);
+    expect(usesFund(parseFilter(["MCAP>1B"]))).toBe(false);
+    const c = compileFilter(parseFilter(["ROE>10"]), U, null);
+    expect(c.errors.join(" ")).toContain("NOT LOADED");
+    expect(screen(U, parseFilter(["ROE>10"]), null).rows).toEqual([]);
+    expect(parseFilter(["NETMARGIN>5"]).clauses[0]).toMatchObject({ kind: "fund", field: "MARGIN" });
   });
 });

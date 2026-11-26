@@ -5,6 +5,7 @@ import { workspaceApi } from "../net/workspaceApi";
 import { createStore } from "../state/store";
 import { fail, info } from "./status";
 import { errMessage } from "../net/errText";
+import { applyMetaChange, EMPTY_META, type MetaChange } from "../functions/wlFlags";
 
 export { parseWl, type WlAction } from "./watchlistArgs";
 
@@ -41,6 +42,23 @@ export async function editWatchlist(name: string, add: string[], remove: string[
     return fail(`WL ${name} NOT CHANGED: ${errMessage(e)}`);
   }
   changed();
+  return true;
+}
+
+/**
+ * Phase 22: one flag or section edit. The server stores the whole document each time, so read the current one, apply the
+ * edit (`wlFlags.applyMetaChange`) and send it back; then every open view of the list refetches.
+ */
+export async function editWatchlistMeta(name: string, change: MetaChange): Promise<boolean> {
+  try {
+    const wl = await workspaceApi.watchlist(name);
+    await workspaceApi.putWatchlistMeta(name, applyMetaChange(wl.meta ?? EMPTY_META, change));
+    info(change.kind === "flag" ? `WL ${name}: ${change.symbol} ${change.color ?? "UNFLAGGED"}` : `WL ${name}: ${change.title ? `SECTION "${change.title}" ABOVE` : "NO SECTION ABOVE"} ${change.before}`);
+  } catch (e) {
+    return fail(`WL ${name} NOT CHANGED: ${errMessage(e)}`);
+  } finally {
+    changed();
+  }
   return true;
 }
 

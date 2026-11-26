@@ -130,8 +130,7 @@ Built in this branch (none committed yet):
 3. **Frankfurter** (FX history and quotes behind Yahoo), **Companies House** (`UKCO`), **Marketaux** (news sentiment), **Etherscan** (`ADDR`).
 4. **AISstream** (free key `AISSTREAM_API_KEY`, beta WebSocket) as `AIS`: `providers/aisstream.py` (socket, one listen at a time, hard caps of 15 s / 5,000 messages), `aisstream_parse.py` (pure),
    `world/ais.py` (presets SUEZ PANAMA HORMUZ MALACCA BABEL BOSPHORUS GIBRALTAR DOVER, `BOX S W N E`). **Run against the real service on 2026-11-05** (`ais_stream_recording.json` is a real 46-message recording; the free feed is sparse). Not a streaming
-   feature: the server opens the socket for one short listen per request (cached 20 s), so nothing is subscribed at startup. The key goes in the first message, never in a URL. Details and
-   the list of untested guesses: HANDOFF.md "AISstream".
+   feature: the server opens the socket for one short listen per request (cached 20 s), so nothing is subscribed at startup. The key goes in the first message, never in a URL.
 
 ### Kraken and Coinbase (keyless second crypto exchanges, verified live 2026-11-05)
 
@@ -189,6 +188,19 @@ Dropped, with the reason:
 | hnrss.org front page | duplicate of the Hacker News feed that is kept |
 
 Details that matter: RBI sends dates without a zone (local time), so a date later than now is capped to now; SEBI dates have no weekday and need a second date format. The Fed press feed is slow-moving (days between items) by nature. Only titles, teasers and links are used; articles open on the publisher's site.
+
+## Phase 27 sources (2026-11-24)
+
+- **Nasdaq Trader symbol directory** (keyless): the list of US-listed ETFs for FSRC. Fixture `nasdaqtrader_etf_trimmed.json` is a trimmed real recording (`scripts/record_fsrc.py`).
+- **Yahoo fund profile** (keyless, `quoteSummary` fundProfile): fee, total assets and category per ETF, loaded in the background at 3 profiles a second (a full load is about 5,800 funds, about 37 minutes), progress saved so a restart resumes.
+- **NSE Indices constituent CSV** (keyless, `providers/nseindices.py`): NIFTY 50 / NIFTY 500 members with company name and industry, no weights. Downloaded on this computer, never shipped; the test fixture is doc-shaped (NOT A RECORDING).
+
+## Phase 29-32 sources (2026-11-24)
+
+- **SEC EDGAR full-text search, frames and filing indexes** (keyless, needs `SEC_USER_AGENT`): `FTS`, the Phase 29 fundamentals, and the earnings card, which reads a results 8-K's `<accession>-index.html` page to find its Exhibit 99.1 by document type.
+- **CourtListener** (`LEGAL`, key `COURTLISTENER_API_KEY`, free): fixtures are doc-shaped; never run with a key. **EPA GHGRP** (`ESG`, keyless).
+- **Phase 30 macro hosts** (all keyless unless noted): NY Fed reference rates, ECB data portal (ESTR, curves), Bank of England (SONIA), Atlanta Fed GDPNow workbook, Philadelphia Fed SPF, IMF DataMapper, OECD Economic Outlook, federalreserve.gov FOMC statements, TreasuryDirect, USDA WASDE (Cornell library copy), FRED CSV, Frankfurter. EIA (`EIA_API_KEY`) and USDA NASS (`NASS_API_KEY`) are free keys; their fixtures are doc-shaped. Recorder: `scripts/record_phase30.py`, manifest `tests/fixtures/phase30_manifest.json`.
+- **RES research feeds** (keyless, `providers/macrod.py` `research_feeds`, list in `macrod/boards.py` `RES_FEEDS`): BIS working papers and research hub (RSS 1.0), Fed FEDS / FEDS Notes / IFDP, ECB working papers and blog, RBI publications, arXiv q-fin (one request per refresh, cached 6 hours; arXiv asks for at most one request per 3 seconds). Real recordings `res_*.json` (`record_phase30.py res`). Not included: IMF papers (the feed answers 403, a bot check) and NBER (paywalled).
 
 ## Honest limits of what is built
 

@@ -1,4 +1,6 @@
-/** Earnings calendar (Nasdaq.com): estimates for upcoming days, reported EPS and surprise for past days. */
+/** Earnings calendar (Nasdaq.com): estimates for upcoming days, reported EPS and surprise for past days.
+ * Phase 32 earnings card: A on a row opens `AI FILING <SYM> EARNINGS` beside this panel (the release's revenue, EPS and guidance, each
+ * claim quoted from the 8-K Exhibit 99.1), so the row's EPS vs estimate and surprise stay in view next to it. US SEC filers only. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtNum, fmtPct } from "../format";
@@ -8,6 +10,7 @@ import { ApiError } from "../net/core";
 import { macroApi } from "../net/macroApi";
 import type { Earning, EarningsPayload, Envelope } from "../net/types";
 import { navigate, replaceView } from "../state/workspace";
+import { askAi } from "./askAi";
 import { addDays, dayLabel, isWeekend, nyToday, parseErnArgs } from "./macroArgs";
 import { EnvStatus, ErrorLine } from "./panelStatus";
 import { navKey } from "../keys/gridNav";
@@ -43,6 +46,7 @@ export default function ERN({ panelId, args }: FunctionProps) {
   const [env, setEnv] = useState<Envelope<EarningsPayload> | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
   const grid = useRef<GridHandle>(null);
 
   const load = useCallback(
@@ -91,6 +95,17 @@ export default function ERN({ panelId, args }: FunctionProps) {
           case "t":
             go(nyToday());
             return true;
+          case "a":
+          case "A": {
+            const row = r[g?.selected() ?? -1];
+            if (!row) return true;
+            if (row.eps == null) setNote(`${row.symbol} HAS NOT REPORTED YET: THE EARNINGS CARD NEEDS ITS RELEASE`);
+            else {
+              setNote(null);
+              askAi(`FILING ${row.symbol} EARNINGS`, setNote);
+            }
+            return true;
+          }
           case "Enter": {
             const row = r[g?.selected() ?? -1];
             if (row) navigate(panelId, { fn: "DES", security: { symbol: row.symbol }, args: [] });
@@ -111,7 +126,7 @@ export default function ERN({ panelId, args }: FunctionProps) {
         {cur && ` · ${rows.length} REPORTS`}
         {cur && rows.length > 0 && ` · ${reported} REPORTED`}
         <EnvStatus env={cur} loading={loading} />
-        <span className="dim legend"> · J/K MOVE · ←/→ DAY · T TODAY · ENTER DES · E CSV · F5 REFRESH</span>
+        <span className="dim legend"> · J/K MOVE · ←/→ DAY · T TODAY · ENTER DES · A EARNINGS CARD (AI) · E CSV · F5 REFRESH</span>
       </div>
       {!parsed.ok && <div className="err">{parsed.error}</div>}
       {cur && rows.length === 0 && (
@@ -121,6 +136,7 @@ export default function ERN({ panelId, args }: FunctionProps) {
         </div>
       )}
       {cur && rows.length > 0 && <div className="dim">SORTED BY MARKET CAP · EPS EST = CONSENSUS ({cur.data.as_of_text?.toUpperCase() ?? "NASDAQ"}) · ESTIMATES, NOT ACTUALS, UNTIL A COMPANY REPORTS</div>}
+      {note && <div className="line acc" data-testid="ern-note">{note}</div>}
       <ErrorLine error={error} hasData={!!cur} usage="ERN [TODAY|TOMORROW|+N|-N|YYYY-MM-DD]" />
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>

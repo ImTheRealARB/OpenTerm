@@ -40,5 +40,14 @@ class OpenFigiProvider(Provider):
             items.extend(parse_mapping(chunk, answer))
         return {"items": items, "source": self.source}
 
+    async def ticker_listings(self, ticker: str) -> dict[str, Any]:
+        """RELS: every listing OpenFIGI knows for one equity ticker (exchanges and depositary receipts), composite listing first.
+        OpenFIGI writes class shares with a slash (BRK/B); the caller passes that spelling."""
+        job = Ident("TICKER", ticker, True)  # not one of ID_TYPES: the job body is built here, `parse_mapping` only reads kind and value
+        answer = await self.post_json(URL, [{"idType": "TICKER", "idValue": ticker, "marketSecDes": "Equity"}])
+        if not isinstance(answer, list):
+            raise ProviderError("unavailable", "OpenFIGI answered with something other than a list")
+        return {"items": parse_mapping([job], answer), "source": self.source}
+
     async def probe(self) -> None:
         await self.figi([Ident("ISIN", "US0378331005", True)])

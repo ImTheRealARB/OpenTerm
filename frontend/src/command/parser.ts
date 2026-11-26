@@ -1,4 +1,4 @@
-import { MARKET_SUFFIX, isSymbolToken, resolveSecurity, type SecurityRef } from "./markets";
+import { MARKET_SUFFIX, isFormulaToken, isSymbolToken, resolveSecurity, type SecurityRef } from "./markets";
 import { mapSector, parseSector } from "./sectors";
 import { takeSource } from "./srcArg";
 
@@ -36,7 +36,7 @@ export function parseCommand(input: string, isFunction: (code: string) => boolea
     return { ok: true, raw, target, fn: first, args: tokens.slice(1), source };
   }
 
-  if (!isSymbolToken(first)) return { ok: false, raw, error: `BAD SYMBOL: ${tokens[0]}` };
+  if (!isSymbolToken(first) && !isFormulaToken(first)) return { ok: false, raw, error: `BAD SYMBOL: ${tokens[0]}` }; // Phase 22: AAPL/MSFT GP
 
   let i = 1;
   let market: string | undefined;

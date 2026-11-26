@@ -1,5 +1,6 @@
 import type { SecurityRef } from "../command/markets";
 import { MAX_PANELS } from "./layoutState";
+import { propagate, type LinkGroup } from "./linkGroups";
 import { memResetAll } from "./panelMemory";
 import { createStore, loadJSON, saveJSON } from "./store";
 
@@ -16,6 +17,8 @@ export interface PanelState {
   /** Navigation history; `pos` points at the current view. */
   views: View[];
   pos: number;
+  /** Phase 22 link group: panels in the same group follow each other's security (see linkGroups.ts). Absent = none. */
+  link?: LinkGroup;
 }
 
 export type Layout =
@@ -168,11 +171,33 @@ export function setLayoutName(name: string | undefined): void {
   workspace.set((s) => (s.name === name ? s : { ...s, name }));
 }
 
+/**
+ * Does a view take a security (so a link group may switch it)? Set by the command layer, which knows the function
+ * registry; this module stays free of it. Until then: any view that holds a security.
+ */
+let usesSecurity: (v: View) => boolean = (v) => !!v.security;
+export function setUsesSecurity(fn: (v: View) => boolean): void {
+  usesSecurity = fn;
+}
+
 export function navigate(id: number, view: View): void {
   workspace.set((s) => {
     const p = s.panels[id];
     const views = [...p.views.slice(0, p.pos + 1), view].slice(-50);
-    return { ...s, focus: id, panels: { ...s.panels, [id]: { id, views, pos: views.length - 1 } } };
+    const panels = { ...s.panels, [id]: { ...p, id, views, pos: views.length - 1 } };
+    // A new security in a linked panel reaches the rest of its group (no-op for unlinked panels or the same security).
+    const changed = view.security && view.security.symbol !== currentView(p).security?.symbol;
+    return { ...s, focus: id, panels: changed ? propagate(panels, id, view.security, usesSecurity) : panels };
+  });
+}
+
+/** Puts a panel in a link group (A-D), or takes it out (undefined). */
+export function setLink(id: number, group: LinkGroup | undefined): void {
+  workspace.set((s) => {
+    const p = s.panels[id];
+    if (!p || p.link === group) return s;
+    const { link: _old, ...rest } = p;
+    return { ...s, panels: { ...s.panels, [id]: group ? { ...rest, link: group } : rest } };
   });
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { depthLimitFromError, intervalFits, limitText, longestRangeWithin, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
+import { depthLimitFromError, intervalFits, intervalToken, limitText, longestRangeWithin, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
 
 describe("candle-length limits (reported by the backend per symbol)", () => {
   const yahoo = { "1m": 7, "5m": 60, "15m": 60, "60m": 730 };
@@ -23,6 +23,14 @@ describe("candle-length limits (reported by the backend per symbol)", () => {
     expect(intervalFits("1Y", "15min", yahoo)).toBe(false);
     expect(intervalFits("5D", "1MIN", yahoo)).toBe(true);
     expect(intervalFits("1M", "1MIN", yahoo)).toBe(false);
+  });
+  it("knows the Phase 21 lengths, ties hours to the 60m reach, and never mistakes them for a range", () => {
+    expect(["4H", "Q", "yearly", "2wk", "1sec"].map(intervalToken)).toEqual(["4h", "3mo", "12mo", "2wk", "1s"]);
+    expect(intervalFits("1Y", "4h", yahoo)).toBe(true); // the server reports 4h with the reach of 60m
+    expect(intervalFits("2Y", "4h", { ...yahoo, "4h": 730 })).toBe(false);
+    expect(parseGpArgs(["1Y", "4H"])).toMatchObject({ range: "1Y", interval: "4H" });
+    expect(parseGpArgs(["3M", "3mo"])).toMatchObject({ range: "3M", interval: "3mo" }); // 3M is the range, 3mo the quarterly candle
+    expect(parseGpArgs(["VS", "MSFT", "Q"])).toMatchObject({ compare: ["MSFT"], interval: "Q" }); // VS stops at an interval word
   });
   it("names the longest range that fits and words the depth", () => {
     expect(longestRangeWithin(7)).toBe("5D");
@@ -97,5 +105,17 @@ describe("withInterval (GUI candle-length dropdown)", () => {
   });
   it("empty token goes back to Auto", () => {
     expect(withInterval(["5D", "5m"], "", d)).toEqual(["5D"]);
+  });
+});
+
+describe("REPLAY practice exits (STOP= TARGET=)", () => {
+  it("reads percent exits, keeps them in the saved args, and ignores values out of range", () => {
+    const p = parseGpArgs(["REPLAY", "2024-03-01", "STOP=5", "target=12.5"]);
+    expect(p.replay).toEqual({ start: "2024-03-01" });
+    expect(p.exits).toEqual({ stop: 5, target: 12.5 });
+    expect(serializeGp(p, "CANDLE")).toEqual(expect.arrayContaining(["REPLAY", "2024-03-01", "STOP=5", "TARGET=12.5"]));
+    expect(parseGpArgs(["REPLAY", "STOP=0"]).exits).toBeUndefined();
+    expect(parseGpArgs(["REPLAY", "STOP=100"]).exits).toBeUndefined();
+    expect(parseGpArgs(["REPLAY", "STOP=abc"]).exits).toBeUndefined();
   });
 });

@@ -49,6 +49,8 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
   // defaults are passed so a range the user did not type falls back to their default, not to a hardcoded 1Y.
   const gp = fn === "GP" ? parseGpArgs([...args], settingsStore.get().chart) : null;
   const activeRange = gp ? gp.range.toUpperCase() : "";
+  // The candle length as the server id ("4H" and "4h" both give "4h"), so a typed alias still selects its dropdown row.
+  const activeInterval = gp?.interval ? intervalToken(gp.interval) : "";
   // Only the GP candle-length dropdown uses this; other panels pass no symbol to fetch for.
   const limits = useHistoryLimits(fn === "GP" ? symbol : undefined);
 
@@ -263,7 +265,7 @@ export function PanelToolbar({ id, fn, args, symbol }: { id: number; fn: string 
             data-testid="gp-interval"
             title="Candle length (Auto = chosen by the range). Minute candles only reach back days or weeks."
             aria-label="Candle length"
-            value={INTERVAL_CHOICES.some(([, t]) => t === gp.interval) ? gp.interval : ""}
+            value={INTERVAL_CHOICES.some(([, t]) => t === activeInterval) ? activeInterval : ""}
             onChange={(e) => {
               const v = e.target.value;
               const d = settingsStore.get().chart;

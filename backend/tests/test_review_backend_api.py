@@ -96,7 +96,9 @@ def test_json_body_over_the_cap_is_refused_without_parsing(client):
 
 def test_history_profile_and_resolve_refuse_an_unbounded_symbol(client):
     long = "A" * 200
-    assert client.get("/api/history", params={"symbol": long}).status_code == 422
+    # Phase 22: /api/history takes formulas up to 200 characters, so the route bound is 200 and a long PLAIN symbol is a 400.
+    assert client.get("/api/history", params={"symbol": long + "A"}).status_code == 422
+    assert client.get("/api/history", params={"symbol": long}).status_code == 400
     assert client.get("/api/profile", params={"symbol": long}).status_code == 422
     assert client.get("/api/resolve", params={"symbol": long}).status_code == 422
     assert client.get("/api/resolve", params={"symbol": "btcusd"}).json()["symbol"] == "BTC-USD"

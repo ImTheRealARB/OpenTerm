@@ -56,25 +56,41 @@ MAX_OUTPUT_TOKENS = 4000
 OUT_OF_TOKENS = (f"THE MODEL USED ALL {MAX_OUTPUT_TOKENS} OUTPUT TOKENS (A REASONING MODEL THINKS IN THEM TOO) BEFORE IT ANSWERED: "
                  "ASK A NARROWER QUESTION OR PICK A NON-REASONING MODEL")
 
-async def load_filing(request: Request, symbol: str, form: str | None) -> filings.ParsedFiling:
-    """Newest 10-K / 10-Q (or the asked form) with a document, parsed. Raises ProviderError (SEC trouble) or FilingsError (unreadable filing)."""
+async def load_filing(request: Request, symbol: str, form: str | None, earnings: bool = False) -> filings.ParsedFiling:
+    """Newest 10-K / 10-Q (or the asked form) with a document, parsed. With `earnings`, the newest results 8-K (Item 2.02) and its
+    Exhibit 99.1 press release instead (Phase 32 ERN card). Raises ProviderError (SEC trouble) or FilingsError (unreadable filing)."""
     sec = http_util.svc(request).router.providers["sec"]
     listing = (await sec.filings(symbol.upper())).get("filings") or []
-    wanted = (form,) if form else filings.FORMS
-    hit = next((f for f in listing if f.get("form") in wanted and f.get("doc_url")), None)
-    if hit is None:
-        raise ProviderError("not_found", f"NO {' OR '.join(wanted)} FILING WITH A DOCUMENT FOR {symbol.upper()} IN THE LATEST SEC LIST")
+    if earnings:
+        hit = next((f for f in listing if filings.is_earnings_8k(f) and f.get("doc_url")), None)
+        if hit is None:
+            raise ProviderError("not_found", f"NO RESULTS 8-K (ITEM 2.02) FOR {symbol.upper()} IN THE LATEST SEC LIST")
+    else:
+        wanted = (form,) if form else filings.FORMS
+        hit = next((f for f in listing if f.get("form") in wanted and f.get("doc_url")), None)
+        if hit is None:
+            raise ProviderError("not_found", f"NO {' OR '.join(wanted)} FILING WITH A DOCUMENT FOR {symbol.upper()} IN THE LATEST SEC LIST")
     cache = _cache(request)
     key = (symbol.upper(), hit["accession"])
     if key in cache:
         cache.move_to_end(key)
         return cache[key]
-    raw = await sec.get_bytes(hit["doc_url"])
+    doc_url, kind = hit["doc_url"], hit["form"]
+    if earnings:
+        # The 8-K itself is a one-page cover; the numbers are in Exhibit 99.1. The filing's index page names each document's type.
+        folder = doc_url.rsplit("/", 1)[0]
+        index = (await sec.get_bytes(f"{folder}/{hit['accession']}-index.html")).decode("utf-8", errors="replace")
+        path = filings.exhibit_991(index)
+        if path is None:
+            raise filings.FilingsError(f"THE {hit.get('filed') or ''} RESULTS 8-K FOR {symbol.upper()} HAS NO EXHIBIT 99.1 DOCUMENT")
+        doc_url = path if path.startswith("http") else f"https://www.sec.gov{path}"
+        kind = filings.EARNINGS_FORM
+    raw = await sec.get_bytes(doc_url)
     if len(raw) > MAX_FILING_BYTES:
         raise filings.FilingsError("THE FILING DOCUMENT IS OVER 12 MB")
     parsed = await asyncio.to_thread(  # parsing a 3 MB HTML file takes ~1 s of CPU: keep it off the event loop
-        filings.parse_filing, raw.decode("utf-8", errors="replace"), symbol=symbol.upper(), form=hit["form"], filed=hit.get("filed") or "",
-        accession=hit["accession"], url=hit.get("url") or hit["doc_url"], fetched_at=time.time())
+        filings.parse_filing, raw.decode("utf-8", errors="replace"), symbol=symbol.upper(), form=kind, filed=hit.get("filed") or "",
+        accession=hit["accession"], url=doc_url if earnings else (hit.get("url") or doc_url), fetched_at=time.time())
     cache[key] = parsed
     while len(cache) > CACHE_SIZE:
         cache.popitem(last=False)
@@ -88,7 +104,7 @@ async def ai_filing(request: Request):
     if isinstance(body, Response):
         return body
     symbol = str(body.get("symbol") or "")
-    preset = body.get("mode") if body.get("mode") in filings.PRESETS else None  # drivers | guidance | chain
+    preset = body.get("mode") if body.get("mode") in filings.PRESETS else None  # drivers | guidance | chain | earnings
     drivers = preset is not None  # every preset retrieves for several themes, like DRIVERS
     question, themes, extra = filings.PRESETS[preset] if preset else (body.get("question"), None, "")
     form = str(body["form"]).upper() if body.get("form") else None
@@ -104,7 +120,7 @@ async def ai_filing(request: Request):
     if not http_util.svc(request).router.providers["sec"].ua_set:  # SEC may refuse an anonymous client; say how to fix it before any work is done
         return http_util.error_response(400, "key_required", f"KEY REQUIRED: SEC_USER_AGENT IS NOT SET ({UA_HINT})")
     try:
-        filing = await load_filing(request, symbol, form)
+        filing = await load_filing(request, symbol, form, earnings=preset == "earnings")
     except ProviderError as e:
         status = {"not_found": 404, "unsupported": 400}.get(e.kind, 502)
         return http_util.error_response(status, "provider" if status == 502 else e.kind, redact(f"SEC: {str(e)[:160]}"))

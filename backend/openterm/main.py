@@ -9,7 +9,18 @@ import httpx
 import orjson
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from . import APP_NAME, __version__, keys, logbuf, perf, providers, redact, remote, scheduler
+from . import (
+    APP_NAME,
+    __version__,
+    bt_lab_routes,
+    keys,
+    logbuf,
+    perf,
+    providers,
+    redact,
+    remote,
+    scheduler,
+)
 from .ai import routes_filing, routes_run  # noqa: F401 - importing routes_filing registers POST /api/ai/filing on the shared AI router
 from .ai.routes import router as ai_router
 from .api import router as api_router
@@ -20,21 +31,29 @@ from .cache import Cache
 from .config import ROOT, get_settings, load_yaml
 from .db import open_db
 from .delivery.routes import router as delivery_router
+from .etf_routes import router as etf_router
 from .extensions.routes import router as ext_router
+from .filings_routes import router as filings_router
 from .journal_routes import router as journal_router
 from .kite_routes import router as kite_router
+from .macrod_routes import router as macrod_router
 from .mcp.routes import router as mcp_router
 from .mcpclient.routes import router as mcp_client_router
+from .options_rec_routes import router as options_rec_router
 from .orders.routes import router as orders_router
 from .origin import OriginGuardMiddleware
 from .pin import SourcePinMiddleware
 from .providers.hierarchy import build_order
 from .quant_routes import router as quant_router
+from .query_routes import router as query_router
+from .recorder_routes import router as recorder_router
 from .remote import RemoteAuthMiddleware
 from .remote_routes import router as remote_router
 from .responses import Orjson, OrjsonRoute
 from .router import Router
+from .scanner.routes import router as scan_router
 from .service import DataService
+from .smart_alerts import router as smart_alerts_router
 from .streaming.hub import Client, Hub
 from .streaming.upstream import NullStream, Poller, SyntheticStream, YahooStream
 from .symbols import resolve
@@ -81,6 +100,11 @@ async def lifespan(app: FastAPI):
     from .derivs.service import Derivs
 
     service.derivs = Derivs(service, settings.openterm_fixtures, db)
+
+    # --- Phase 29: fundamentals depth (GF EM DDIS SCORE FRM EQS BT IBQ REVS) ---
+    from .fund.service import Fund
+
+    service.fund = Fund(service)
 
     from .rates.service import RatesViews
 
@@ -133,6 +157,19 @@ async def lifespan(app: FastAPI):
     app.state.service = service
     app.state.hub = hub
     app.state.userdata = UserData(db)
+
+    # --- Phase 24: the optional recorder (OFF by default: nothing records until a user starts it). Files live beside the database. ---
+    from .recorder import DEFAULT_POLL_S, Recorder
+
+    rec_root = None if str(db_path) == ":memory:" else (db_path if db_path.is_absolute() else ROOT / db_path).parent / "recordings"
+
+    async def _stored_settings() -> dict:
+        return (await SettingsStore(db).get())["settings"] or {}
+
+    app.state.recorder = Recorder(rec_root, service, _stored_settings, DEFAULT_POLL_S, kite=ticker)
+    from .query.notebook import NotebookServer  # Phase 31 NB: nothing starts until the user asks
+
+    app.state.nb = NotebookServer(settings.openterm_db_path, settings.openterm_port)
 
     # --- Phase 11: key store. Key tests use the fixture transport in fixture mode. ---
     redact.install()
@@ -190,6 +227,13 @@ async def lifespan(app: FastAPI):
     from .delivery import settings as delivery_settings
 
     scheduler.schedule_brief(sched, app, (await delivery_settings.get(db))["brief"])  # Phase 17 C
+    # Phase 26: paper forward tests advance on new bars while the server runs (play money, OpenTerm's own book).
+    sched.add_job(bt_lab_routes.step_all, "interval", minutes=bt_lab_routes.FWD_EVERY_MIN, args=[app], id="bt_fwd",
+                  max_instances=1, coalesce=True)
+    # Phase 27: saved scans with DAILY=HH:MM run on weekdays and send their matches through DELIVERY.
+    from .scanner import routes as scan_routes
+
+    scan_routes.schedule_saved(app, await scan_routes.saved_all(db))
     # --- Phase 20: server-side alerts. The engine watches active alerts through the hub and fires them with no browser open.
     # `deliver` is the Phase 17 background sender; `news_for_alerts` reads the same cached news the N panel shows.
     # `deliver_spawn` = delivery.spawn plus the per-alert VIA channels (alert_channels.py)
@@ -201,7 +245,16 @@ async def lifespan(app: FastAPI):
 
     app.state.alerts_engine = engine = AlertsEngine(
         db, hub, lambda *a, **kw: deliver_spawn(app, *a, **kw), news_for_alerts, fixtures=settings.openterm_fixtures)
+    engine.app = app  # Phase 27: drawing alerts fire through smart_alerts, which needs the app (delivery, kv)
     await engine.start()
+    # Phase 27: indicator alerts are checked on completed daily bars every few minutes while the server runs.
+    from . import smart_alerts
+
+    sched.add_job(smart_alerts.check_all, "interval", minutes=smart_alerts.CHECK_EVERY_MIN, args=[app], id="smart_alerts",
+                  max_instances=1, coalesce=True)
+    # Phase 28: the chain recorder snapshots its watchlist once per weekday after the US close; never in fixture mode.
+    if not settings.openterm_fixtures:
+        scheduler.schedule_chain_recorder(sched, app)
     mount_static(app, settings.openterm_static_dir)  # Phase 10: built frontend (Docker / desktop)
     try:
         yield
@@ -220,6 +273,8 @@ async def lifespan(app: FastAPI):
             await asyncio.gather(*pending, return_exceptions=True)
         if (mcpm := getattr(app.state, "mcp_manager", None)) is not None:
             await mcpm.close_all()  # third-party MCP servers: kill their processes
+        await app.state.recorder.aclose()  # end every running recording cleanly (its last line is written)
+        app.state.nb.stop()  # a JupyterLab started by NB ends with OpenTerm
         await jobs.aclose()  # timers off, in-flight job store writes finished, workers stopped
         if keys_http is not http:
             await keys_http.aclose()
@@ -241,6 +296,14 @@ app.add_middleware(RemoteAuthMiddleware)  # outermost; inert unless OPENTERM_REM
 app.include_router(api_router)
 app.include_router(quant_router)
 app.include_router(world_router)
+app.include_router(recorder_router)
+app.include_router(bt_lab_routes.router)
+app.include_router(scan_router)
+app.include_router(options_rec_router)
+app.include_router(smart_alerts_router)
+app.include_router(filings_router)
+app.include_router(macrod_router)  # Phase 30 macro depth
+app.include_router(query_router)  # Phase 31 QRY, FLD, Excel bridge
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)
@@ -252,6 +315,7 @@ app.include_router(mcp_client_router)
 app.include_router(routes_run.theses_router)
 app.include_router(journal_router)
 app.include_router(ext_router)
+app.include_router(etf_router)
 app.include_router(remote_router)
 
 

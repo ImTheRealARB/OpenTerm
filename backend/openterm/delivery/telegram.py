@@ -88,6 +88,20 @@ def _retry_after(r: httpx.Response) -> float | None:
 async def send(app, values: dict, cfg: dict, subject: str, text: str, extra: dict) -> None:
     # Reuse the app's shared HTTP client (fixture transport in fixture mode, the real one otherwise).
     http: httpx.AsyncClient = app.state.keys_http
+    picture = extra.get("picture")
+    if picture:
+        # Phase 22 GRAB: one photo with the subject as its caption (plain text: captions are short, no MarkdownV2 needed).
+        name, png = picture
+        r = await http.post(f"https://api.telegram.org/bot{values['TELEGRAM_BOT_TOKEN']}/sendPhoto",
+                            data={"chat_id": cfg["telegram_chat_id"], "caption": subject.strip()[:1024]},
+                            files={"photo": (name, png, "image/png")}, timeout=30.0)
+        if r.status_code == 429:
+            raise RetryableError("TELEGRAM HTTP 429: RATE LIMITED", retry_after=_retry_after(r))
+        if r.status_code >= 500:
+            raise RetryableError(f"TELEGRAM HTTP {r.status_code}: SERVER ERROR")
+        if r.status_code != 200:
+            raise DeliveryError(f"TELEGRAM HTTP {r.status_code}: {r.text[:160]}")
+        return
     url = f"https://api.telegram.org/bot{values['TELEGRAM_BOT_TOKEN']}/sendMessage"
     parts = build_messages(subject, text)
     # `extra` is this channel's private copy and survives retries: remember how many parts already went out,

@@ -8,11 +8,14 @@ from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 from ..world import cryptodepth as cd
+from ..world import orderflow as of
 from .base import Provider, ProviderError
 
 DEPTH = "crypto_depth"
 FUNDING = "crypto_funding"
 FUNDING_DETAIL = "crypto_funding_detail"
+TRADES = "crypto_trades"  # Phase 23: spot aggregated trades (time and sales, big trades, footprint)
+AGG_PAGE = 1000  # Binance returns at most 1000 aggregated trades per call
 SPOT, FAPI = "https://api.binance.com", "https://fapi.binance.com"
 INFO_TTL_S = 6 * 3600.0
 
@@ -20,8 +23,8 @@ INFO_TTL_S = 6 * 3600.0
 class BinanceDerivProvider(Provider):
     name = "binance_deriv"
     label = "Binance order book + USD-M funding"
-    capabilities = frozenset({DEPTH, FUNDING, FUNDING_DETAIL})
-    markets = "Spot order book (100 levels) and USD-M perpetual / quarterly futures funding, mark and index prices"
+    capabilities = frozenset({DEPTH, FUNDING, FUNDING_DETAIL, TRADES})
+    markets = "Spot order book (100 levels), spot aggregated trades and USD-M perpetual / quarterly futures funding, mark and index prices"
     terms = "Public market data, no key. Blocked in some countries (HTTP 451)."
     rate = (4.0, 10)
     timeout = 8.0
@@ -44,6 +47,37 @@ class BinanceDerivProvider(Provider):
         bids, asks, _ = cd.parse_binance_book(await self._json(f"{SPOT}/api/v3/depth", {"symbol": f"{base}{q}", "limit": 100}))
         out = cd.depth_summary(bids, asks, q)
         return {**out, "symbol": f"{base}{q}", "venue": "BINANCE SPOT", "ts_ms": None}
+
+    async def crypto_trades(self, base: str, quote: str, window_ms: int | None = None, max_pages: int = 1) -> dict[str, Any]:
+        """Latest spot aggregated trades, oldest first. One call = the newest 1000. With `window_ms`, older pages are fetched
+        (`fromId` = the oldest id held minus 1000) until the trades span that long, or `max_pages` calls were made, or a page
+        brings nothing new. The window is measured on the EXCHANGE's clock (newest trade), never the local one.
+        `truncated` = the trades do not span the whole window (the caller must say so on screen)."""
+        q = "USDT" if quote == "USD" else quote
+        sym = f"{base}{q}"
+        pages = [of.parse_agg_trades(await self._flow_json({"symbol": sym, "limit": AGG_PAGE}))]
+        held = of.merge_pages(pages)
+        while window_ms is not None and len(pages) < max_pages and held and held[-1].t - held[0].t < window_ms and held[0].id > 0:
+            older = of.parse_agg_trades(await self._flow_json({"symbol": sym, "limit": AGG_PAGE, "fromId": max(0, held[0].id - AGG_PAGE)}))
+            merged = of.merge_pages([*pages, older])
+            if len(merged) == len(held):  # nothing new (start of the market, or a replay): stop instead of asking again
+                break
+            pages.append(older)
+            held = merged
+        if not held:
+            raise ProviderError("not_found", f"NO RECENT TRADES FOR {sym}")
+        truncated = window_ms is not None and held[-1].t - held[0].t < window_ms
+        return {"symbol": sym, "venue": "BINANCE SPOT", "trades": held, "truncated": truncated, "pages": len(pages)}
+
+    async def _flow_json(self, params: dict[str, Any]) -> Any:
+        """aggTrades call. Binance answers 400 for a pair it does not list: that is `not_found` (a typo or a non-crypto symbol),
+        not an outage, so it does not count as a circuit-breaker strike."""
+        try:
+            return await self._json(f"{SPOT}/api/v3/aggTrades", params)
+        except ProviderError as e:
+            if "HTTP 400" in str(e):
+                raise ProviderError("not_found", "NOT A BINANCE SPOT PAIR") from e
+            raise
 
     async def _intervals(self) -> dict[str, float]:
         if self._info and time.time() - self._info[0] < INFO_TTL_S:

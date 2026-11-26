@@ -13,6 +13,9 @@ from pathlib import Path
 
 import httpx
 
+from .filings_fixtures import route_filings  # Phase 29: FTS, MA, LEGAL, BIO, RELS, ESG
+from .macrod_fixtures import route_macrod  # Phase 30: macro, rates and commodities depth
+
 FIXTURES = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
 
 ROUTES = {
@@ -121,6 +124,34 @@ def fixture_transport() -> httpx.MockTransport:
     return httpx.MockTransport(_handler)
 
 
+# --- Phase 21: Binance 1 second candles (spot host only; a REAL recording of 120 seconds of BTCUSDT, taken 2026-11-24) ---
+def _route_binance_1s(request: httpx.Request) -> httpx.Response | None:
+    """The `BINANCE_KLINES` route above answers every interval with the 1 day recording; 1 second asks get this one instead.
+    BTCUSDT only, like the others (any other symbol is Binance's own 400 for an unknown pair, never invented data)."""
+    q = request.url.params
+    if request.url.path != "/api/v3/klines" or q.get("interval") != "1s":
+        return None
+    return _load("binance_spot_klines_btcusdt_1s_real") if q.get("symbol") == "BTCUSDT" else httpx.Response(400, json={"code": -1121})
+
+
+# --- Phase 23: Binance spot aggregated trades (a REAL recording of the newest 1000 BTCUSDT trades, taken 2026-11-24 by scripts/record_phase23.py) ---
+def _route_aggtrades(request: httpx.Request) -> httpx.Response | None:
+    """BTCUSDT only (any other pair is Binance's own 400 for an unknown symbol, never invented trades). Binance's paging rules are
+    applied to the one recording: `fromId` = the first `limit` trades with id >= fromId, otherwise the newest `limit`."""
+    if request.url.host != "api.binance.com" or request.url.path != "/api/v3/aggTrades":
+        return None
+    q = request.url.params
+    if q.get("symbol") != "BTCUSDT":
+        return httpx.Response(400, json={"code": -1121, "msg": "Invalid symbol."})
+    rows = json.loads((FIXTURES / "binance_aggtrades_btcusdt.json").read_text(encoding="utf-8"))["body"]
+    limit = int(q.get("limit", "500"))
+    if "fromId" in q:
+        rows = [r for r in rows if r["a"] >= int(q["fromId"])][:limit]
+    else:
+        rows = rows[-limit:]
+    return httpx.Response(200, json=rows)
+
+
 # --- Phase 6: SEC EDGAR + Yahoo ownership ---
 # sec_facts_*: us-gaap tags in sec_parse.TAGS only, 10-K/10-Q facts ending 2014 or later.
 # sec_subs_*: filings.recent cut to the first 60 entries. sec_company_tickers: AAPL, MSFT, BRK-B only.
@@ -139,6 +170,13 @@ def _route_phase6(request: httpx.Request) -> httpx.Response | None:
             if p.startswith(prefix) and p.endswith(".json"):
                 cik = p[len(prefix):-5]
                 return _keyed({str(k): v for k, v in table.items()}, str(int(cik)) if cik.isdigit() else cik)
+        if p.startswith("/api/xbrl/frames/us-gaap/"):
+            # Phase 29 (IBQ, FRM, EQS BT): /api/xbrl/frames/us-gaap/<tag>/<unit>/<period>.json -> sec_frame_<tag>_<period>.json,
+            # REAL recordings (scripts/record_phase29_fund.py) trimmed to cik/accn/end/val/entityName.
+            parts = p[len("/api/xbrl/frames/us-gaap/"):].removesuffix(".json").split("/")
+            name = f"sec_frame_{parts[0]}_{parts[-1]}" if len(parts) == 3 else ""
+            if name and (FIXTURES / f"{name}.json").exists():
+                return _load(name)
         return httpx.Response(404, text="not recorded")
     if host == "www.sec.gov" and p.startswith("/Archives/edgar/data/"):
         parts = p.split("/")  # /Archives/edgar/data/<cik>/<accession without dashes>/<document>
@@ -1032,6 +1070,29 @@ def _route_cryptoex(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
+# --- FSRC: the ETF list (Nasdaq Trader symbol file) and one fund's profile (Yahoo quoteSummary fundProfile + summaryDetail) ---
+# Both are REAL recordings, trimmed (scripts/record_fsrc.py): 30 ETFs of the symbol file, and each one's real Yahoo answer. A fund that is not
+# among the 30 is Yahoo's own "Quote not found" 404. The modules string must equal providers/etf.py FUND_MODULES.
+def _route_nseindices(request: httpx.Request) -> httpx.Response | None:
+    """NIFTY constituent CSVs: DOC-SHAPED (NOT A RECORDING): NSE Indices' licence forbids shipping the real lists."""
+    if request.url.host == "www.niftyindices.com" and request.url.path.startswith("/IndexConstituent/ind_nifty"):
+        return _load("nseindices_nifty_docshape")
+    return None
+
+
+def _route_fsrc(request: httpx.Request) -> httpx.Response | None:
+    p, q = request.url.path, request.url.params
+    if request.url.host == "www.nasdaqtrader.com" and p == "/dynamic/SymDir/nasdaqtraded.txt":
+        return _load("nasdaqtrader_etf_trimmed")
+    if p.startswith("/v10/finance/quoteSummary/") and q.get("modules") == "fundProfile,summaryDetail":
+        profiles = json.loads((FIXTURES / "yahoo_fundprofile_etf.json").read_text(encoding="utf-8"))["body"]
+        sym = p.rsplit("/", 1)[1]
+        if sym in profiles:
+            return httpx.Response(200, json=profiles[sym])
+        return httpx.Response(404, json={"quoteSummary": {"result": None, "error": {"code": "Not Found", "description": f"Quote not found for symbol: {sym}"}}})
+    return None
+
+
 # --- FLT: OpenSky aircraft. DOC-SHAPED, NOT A RECORDING (OpenSky refused every connection from the build machine on 2026-11-05) ---
 # `states/all` returns the invented aircraft of opensky_docshape_states.json that lie inside the requested lamin/lomin/lamax/lomax box (all of them with no box,
 # as the real service does), `states: null` when none do, and the remaining-credits header the docs describe. The token endpoint accepts any client except one whose
@@ -1114,7 +1175,13 @@ def _route_usgov(request: httpx.Request) -> httpx.Response | None:
 # (or anywhere you need it to win) and list it here. `_route_base` always answers (unknown paths get Nasdaq's "no data" 200),
 # so it must stay last.
 ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
-    _route_usgov,       # US government data: USASpending, Federal Register, OpenFEC, Congress.gov
+    route_macrod,       # Phase 30: NY Fed, ESTR, SONIA, GDPNow, SPF, IMF, OECD, FOMC statements, TreasuryDirect, WASDE, EIA, NASS, WPE, WCRS
+    route_filings,      # Phase 29: SEC full-text search + enforcement feeds + ticker file, OpenFIGI tickers, CourtListener, EPA GHGRP
+    _route_nseindices,  # NIFTY constituent lists (doc-shaped)
+    _route_fsrc,        # FSRC: Nasdaq Trader ETF list, Yahoo fund profiles
+    _route_aggtrades,   # Binance spot aggregated trades (order flow)
+    _route_binance_1s,  # Binance 1 second candles (before `_route_base`, which would answer them with daily ones)
+    _route_usgov,      # US government data: USASpending, Federal Register, OpenFEC, Congress.gov
     _route_opensky,     # FLT: OpenSky aircraft
     _route_cryptoex,    # Kraken and Coinbase Exchange
     _route_mf,          # MFapi.in mutual funds

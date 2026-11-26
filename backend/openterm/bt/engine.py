@@ -62,9 +62,17 @@ def make_engine(engine: str, config: dict, codes: list[str]) -> BaseEngine:
 
 def backtest(data_map: dict[str, pd.DataFrame], signal_map: dict[str, pd.Series], config: dict, engine: str = "us",
              bars_per_year: int | None = None, bench_ret: pd.Series | None = None,
-             benchmark_metadata: dict | None = None) -> BacktestResult:
+             benchmark_metadata: dict | None = None, stops: dict | None = None) -> BacktestResult:
+    """`stops` (Phase 26): {"stop": pct | None, "target": pct | None, "intraday": {symbol: {day: [(high, low)]}} | None};
+    the exit counts come back in `extra["stops"]`."""
     eng = make_engine(engine, dict(config), sorted(data_map))
+    stop_stats = None
+    if stops and (stops.get("stop") or stops.get("target")):
+        from .stops import install
+
+        stop_stats = install(eng, stops.get("stop"), stops.get("target"), stops.get("intraday"))
     bpy = bars_per_year if bars_per_year is not None else BARS_PER_YEAR.get(engine, 252)
     metrics = eng.run(data_map, signal_map, bpy, bench_ret=bench_ret, benchmark_metadata=benchmark_metadata)
     return BacktestResult(equity=eng.equity_series, trades=list(eng.trades), fills=list(eng.fill_records),
-                          metrics=metrics, benchmark=eng.bench_ret, engine=engine)
+                          metrics=metrics, benchmark=eng.bench_ret, engine=engine,
+                          extra={"stops": stop_stats} if stop_stats is not None else {})

@@ -19,11 +19,15 @@ from .boc import BocProvider
 from .boe import BoeProvider
 from .coinbase import CoinbaseProvider
 from .companies_house import CompaniesHouseProvider
+from .courtlistener import CourtListenerProvider
 from .crypto import BinanceKlinesProvider, BinanceProvider, CoinGeckoProvider
 from .defillama import DefiLlamaProvider
 from .deribit import DeribitProvider
 from .ecb import EcbProvider
+from .epa_ghgrp import EpaGhgrpProvider
+from .etf import NasdaqTraderProvider, YahooFundsProvider
 from .etherscan import EtherscanProvider
+from .eu_ets import EuEtsProvider
 from .finnhub import FinnhubProvider
 from .finra import FinraProvider
 from .fixtures import fixture_transport
@@ -43,6 +47,21 @@ from .macro import (
     NasdaqEarningsProvider,
     TreasuryProvider,
 )
+from .macrod import (
+    AtlFedProvider,
+    BoeSoniaProvider,
+    EcbEstrProvider,
+    EiaProvider,
+    FedWebProvider,
+    ImfDmProvider,
+    NassProvider,
+    NyFedProvider,
+    OecdEoProvider,
+    PhilFedProvider,
+    ResearchFeedsProvider,
+    TdSecuritiesProvider,
+    WasdeProvider,
+)
 from .marketaux import MarketauxProvider
 from .mfapi import MfapiProvider
 from .mof import MofProvider
@@ -50,6 +69,7 @@ from .nager import NagerProvider
 from .nasdaq import NasdaqProvider
 from .news import GdeltProvider, RssProvider, YahooRssProvider
 from .nse_archive import NseArchiveProvider
+from .nseindices import NseIndicesProvider
 from .nws import NwsProvider
 from .okx import OkxProvider
 from .openfigi import OpenFigiProvider
@@ -65,6 +85,7 @@ from .research_nasdaq import NasdaqResearchProvider
 from .research_yahoo import YahooResearchProvider
 from .screener import NasdaqScreenerProvider, YahooPeersProvider
 from .sec import SecProvider
+from .sec_filings import SecFilingsProvider
 from .sec_funds import Sec13fProvider, SecNportProvider
 from .synthetic import SyntheticProvider
 from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
@@ -130,6 +151,16 @@ ADAPTERS: dict[str, type[Provider]] = {
     "twelvedata": TwelveDataProvider, "polygon": PolygonProvider, "fmp": FmpProvider, "alphavantage": AlphaVantageProvider,
     # FLT: live aircraft from the OpenSky Network (works with no key; an optional free account raises the daily credits)
     "opensky": OpenSkyProvider,
+    # FSRC: the list of US ETFs (Nasdaq Trader symbol file) and one fund's fee / size / category (Yahoo quoteSummary)
+    "nasdaq_trader": NasdaqTraderProvider, "yahoo_funds": YahooFundsProvider,
+    # SCAN / MRR / IMAP NIFTY universes: NSE Indices' constituent CSVs (downloaded on this computer, never shipped)
+    "nseindices": NseIndicesProvider,
+    # Phase 29 filings: SEC full-text search / enforcement feeds / ticker-by-exchange file, CourtListener (free key), EPA GHGRP emissions
+    "sec_filings": SecFilingsProvider, "courtlistener": CourtListenerProvider, "epa_ghgrp": EpaGhgrpProvider, "eu_ets": EuEtsProvider,
+    # Phase 30 macro depth: money-market rates, GDPNow, forecasts, FOMC statements, Treasury securities, WASDE (keyless); EIA, NASS (free keys)
+    "nyfed": NyFedProvider, "ecb_estr": EcbEstrProvider, "boe_sonia": BoeSoniaProvider, "atlfed": AtlFedProvider, "philfed": PhilFedProvider,
+    "imf_dm": ImfDmProvider, "oecd_eo": OecdEoProvider, "fed_web": FedWebProvider, "td_secs": TdSecuritiesProvider, "wasde": WasdeProvider, "research_feeds": ResearchFeedsProvider,
+    "eia": EiaProvider, "nass": NassProvider,
 }
 
 # Keyed providers with a SOURCES row but no adapter yet: name -> (settings attribute, phase, purpose). Providers that DO have a

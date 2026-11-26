@@ -1,0 +1,248 @@
+{
+ "status": 200,
+ "note": "DOC-SHAPED, NOT A RECORDING: written from the API documentation on 2026-11-24; the values are invented. Record a real answer with the first key.",
+ "body": {
+  "data": [
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT EXCELLENT",
+    "unit_desc": "PCT EXCELLENT",
+    "week_ending": "2026-09-27",
+    "year": 2026,
+    "Value": "18"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT GOOD",
+    "unit_desc": "PCT GOOD",
+    "week_ending": "2026-09-27",
+    "year": 2026,
+    "Value": "46"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT FAIR",
+    "unit_desc": "PCT FAIR",
+    "week_ending": "2026-09-27",
+    "year": 2026,
+    "Value": "22"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT POOR",
+    "unit_desc": "PCT POOR",
+    "week_ending": "2026-09-27",
+    "year": 2026,
+    "Value": "8"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT VERY POOR",
+    "unit_desc": "PCT VERY POOR",
+    "week_ending": "2026-09-27",
+    "year": 2026,
+    "Value": "4"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT EXCELLENT",
+    "unit_desc": "PCT EXCELLENT",
+    "week_ending": "2026-09-20",
+    "year": 2026,
+    "Value": "18"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT GOOD",
+    "unit_desc": "PCT GOOD",
+    "week_ending": "2026-09-20",
+    "year": 2026,
+    "Value": "47"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT FAIR",
+    "unit_desc": "PCT FAIR",
+    "week_ending": "2026-09-20",
+    "year": 2026,
+    "Value": "23"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT POOR",
+    "unit_desc": "PCT POOR",
+    "week_ending": "2026-09-20",
+    "year": 2026,
+    "Value": "8"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT VERY POOR",
+    "unit_desc": "PCT VERY POOR",
+    "week_ending": "2026-09-20",
+    "year": 2026,
+    "Value": "4"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT EXCELLENT",
+    "unit_desc": "PCT EXCELLENT",
+    "week_ending": "2026-09-13",
+    "year": 2026,
+    "Value": "18"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT GOOD",
+    "unit_desc": "PCT GOOD",
+    "week_ending": "2026-09-13",
+    "year": 2026,
+    "Value": "48"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT FAIR",
+    "unit_desc": "PCT FAIR",
+    "week_ending": "2026-09-13",
+    "year": 2026,
+    "Value": "24"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT POOR",
+    "unit_desc": "PCT POOR",
+    "week_ending": "2026-09-13",
+    "year": 2026,
+    "Value": "8"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT VERY POOR",
+    "unit_desc": "PCT VERY POOR",
+    "week_ending": "2026-09-13",
+    "year": 2026,
+    "Value": "4"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT EXCELLENT",
+    "unit_desc": "PCT EXCELLENT",
+    "week_ending": "2026-09-06",
+    "year": 2026,
+    "Value": "18"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT GOOD",
+    "unit_desc": "PCT GOOD",
+    "week_ending": "2026-09-06",
+    "year": 2026,
+    "Value": "46"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT FAIR",
+    "unit_desc": "PCT FAIR",
+    "week_ending": "2026-09-06",
+    "year": 2026,
+    "Value": "22"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT POOR",
+    "unit_desc": "PCT POOR",
+    "week_ending": "2026-09-06",
+    "year": 2026,
+    "Value": "8"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT VERY POOR",
+    "unit_desc": "PCT VERY POOR",
+    "week_ending": "2026-09-06",
+    "year": 2026,
+    "Value": "4"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT EXCELLENT",
+    "unit_desc": "PCT EXCELLENT",
+    "week_ending": "2026-08-30",
+    "year": 2026,
+    "Value": "18"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT GOOD",
+    "unit_desc": "PCT GOOD",
+    "week_ending": "2026-08-30",
+    "year": 2026,
+    "Value": "47"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT FAIR",
+    "unit_desc": "PCT FAIR",
+    "week_ending": "2026-08-30",
+    "year": 2026,
+    "Value": "23"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT POOR",
+    "unit_desc": "PCT POOR",
+    "week_ending": "2026-08-30",
+    "year": 2026,
+    "Value": "8"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT VERY POOR",
+    "unit_desc": "PCT VERY POOR",
+    "week_ending": "2026-08-30",
+    "year": 2026,
+    "Value": "4"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT EXCELLENT",
+    "unit_desc": "PCT EXCELLENT",
+    "week_ending": "2026-08-23",
+    "year": 2026,
+    "Value": "18"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT GOOD",
+    "unit_desc": "PCT GOOD",
+    "week_ending": "2026-08-23",
+    "year": 2026,
+    "Value": "48"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT FAIR",
+    "unit_desc": "PCT FAIR",
+    "week_ending": "2026-08-23",
+    "year": 2026,
+    "Value": "24"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT POOR",
+    "unit_desc": "PCT POOR",
+    "week_ending": "2026-08-23",
+    "year": 2026,
+    "Value": "8"
+   },
+   {
+    "commodity_desc": "WHEAT",
+    "short_desc": "WHEAT - CONDITION, MEASURED IN PCT VERY POOR",
+    "unit_desc": "PCT VERY POOR",
+    "week_ending": "2026-08-23",
+    "year": 2026,
+    "Value": "4"
+   }
+  ]
+ }
+}

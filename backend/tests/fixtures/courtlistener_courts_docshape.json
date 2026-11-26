@@ -1,0 +1,5 @@
+{
+ "doc_shaped": "Built from the CourtListener REST API v4 docs, NOT a recording: no key was available. Only the status is read (key test).",
+ "status": 200,
+ "body": {"count": 1, "next": null, "previous": null, "results": [{"id": "pawd", "short_name": "W.D. Pennsylvania"}]}
+}

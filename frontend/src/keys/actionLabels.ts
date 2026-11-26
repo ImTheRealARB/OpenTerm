@@ -27,6 +27,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   cheatsheet: "Shortcut cheatsheet",
   perfHud: "Toggle PERF HUD",
   exportCsv: "Export the focused panel's table to CSV (also E in tables)",
+  grabPanel: "Copy a picture of the focused panel (GRAB; GRAB SAVE downloads it)",
   windowMenu: "Window menu: RECENT / RELATED / OPTIONS (arrows, 1-9, Enter)",
   toggleMode: "Switch between TERMINAL and GUI mode",
   helpDrawer: "Help drawer for the focused panel (GUI mode)",

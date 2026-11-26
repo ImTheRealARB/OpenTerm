@@ -9,7 +9,8 @@ import { shortTitle } from "../gui/titleText";
 import { settingsStore } from "../settings/runtime";
 import { PanelIdContext } from "../state/panelContext";
 import { useStore } from "../state/store";
-import { currentView, focusPanel, workspace } from "../state/workspace";
+import { currentView, focusPanel, setLink, workspace } from "../state/workspace";
+import { nextGroup } from "../state/linkGroups";
 import { MENUS, type MenuIndex } from "./windowMenu";
 import { closeWindowMenu, itemsOf, openWindowMenu, runItem, windowMenu } from "./windowMenuRun";
 
@@ -107,6 +108,20 @@ export function Panel({ id }: { id: number }) {
     <section className={"panel" + (focused ? " focus" : "")} data-panel={id} onMouseDown={() => focusPanel(id)}>
       <header className="ph">
         <span className="id">{id}</span>
+        {/* Phase 22 link group chip: the group's letter in its colour; a click moves the panel to the next group (LINK A|B|C|D|OFF by keyboard). */}
+        <button
+          type="button"
+          tabIndex={-1}
+          className={"ph-link" + (panel.link ? ` link-${panel.link}` : "")}
+          data-testid="panel-link"
+          title={panel.link ? `Link group ${panel.link}: panels in this group follow each other's security. Click for the next group.` : "Not linked. Click to put this panel in link group A."}
+          onClick={(e) => {
+            e.stopPropagation();
+            setLink(id, nextGroup(panel.link));
+          }}
+        >
+          {panel.link ?? "·"}
+        </button>
         <span>
           {tickerPart && <span className="tk">{tickerPart}</span>}
           {tickerPart && fnPart && " | "}

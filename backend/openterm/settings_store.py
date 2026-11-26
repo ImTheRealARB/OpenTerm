@@ -32,8 +32,12 @@ TAPE_MAX = 30  # ticker tape symbols
 TAPE_SYMBOL_RE = re.compile(r"^[A-Z0-9^][A-Z0-9.\-=^&]{0,19}\Z")  # same rule as frontend settings/schema.ts
 THEMES = ("amber", "green", "white", "light")
 CHART_RANGES = ("1D", "5D", "1M", "3M", "6M", "YTD", "1Y", "2Y", "5Y", "10Y", "MAX")
-# Same seven as frontend chart/chartTypes.ts (test_ts_mirrors.py keeps them equal): SETTINGS CHART HEIKIN used to be refused here.
-CHART_TYPES = ("CANDLE", "HOLLOW", "OHLC", "LINE", "AREA", "BASELINE", "HEIKIN")
+# Same list as frontend chart/chartTypes.ts (test_ts_mirrors.py keeps them equal): SETTINGS CHART HEIKIN used to be refused here.
+CHART_TYPES = (
+    "CANDLE", "HOLLOW", "OHLC", "LINE", "AREA", "BASELINE", "HEIKIN",
+    "RENKO", "KAGI", "PNF", "LINEBREAK", "RANGE",
+    "COLUMNS", "HIGHLOW", "STEP", "VOLCANDLE",
+)
 THOUSANDS = (",", ".", " ", "'", "")
 DECIMALS = (".", ",")
 # Poll intervals in seconds: (min, max). The floors keep free providers inside their rate limits.
@@ -178,6 +182,32 @@ def _tape_symbols(raw) -> list[str]:
     return list(raw)
 
 
+LINK_SYNC = ("crosshair", "range", "interval")
+
+
+def _link(raw) -> dict:
+    """Phase 22 chart sync inside a link group: which of crosshair / visible range / candle length follow (each true or false)."""
+    if not isinstance(raw, dict) or set(raw) - set(LINK_SYNC) or not all(isinstance(raw[k], bool) for k in raw):
+        raise _bad("link MUST BE {crosshair, range, interval} EACH true OR false")
+    return {k: raw.get(k, True) for k in LINK_SYNC}
+
+
+REC_FIELDS = {"capMb": (1, 100_000), "retentionDays": (1, 3650)}  # Phase 24 recorder: disk cap in MB, days to keep a session
+
+
+def _recorder(raw) -> dict:
+    """Phase 24 recorder limits: `{capMb, retentionDays}`, whole numbers in range. Missing keys take the defaults (500 MB, 14 days)."""
+    if not isinstance(raw, dict) or set(raw) - set(REC_FIELDS):
+        raise _bad("recorder MUST BE {capMb, retentionDays}")
+    out = {"capMb": 500, "retentionDays": 14}
+    for k, v in raw.items():
+        lo, hi = REC_FIELDS[k]
+        if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+            raise _bad(f"recorder.{k} MUST BE A WHOLE NUMBER FROM {lo} TO {hi}")
+        out[k] = v
+    return out
+
+
 def _vim(raw) -> bool:
     if not isinstance(raw, bool):
         raise _bad("vim MUST BE true OR false")
@@ -222,6 +252,8 @@ FIELDS = {
     "rowNumbers": lambda v: _choice(v, ROW_NUMBERS, "rowNumbers"),
     "tape": _tape,
     "tapeSymbols": _tape_symbols,
+    "link": _link,
+    "recorder": _recorder,
 }
 
 

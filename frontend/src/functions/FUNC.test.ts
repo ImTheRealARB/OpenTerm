@@ -43,8 +43,8 @@ describe("aliases", () => {
     }
   });
   it("resolve through the registry to the canonical definition", () => {
-    expect(FUNCTIONS.get("WCRS")).toBe(FUNCTIONS.get("FXC"));
-    expect(FUNCTIONS.get("WCRS")?.code).toBe("FXC");
+    expect(FUNCTIONS.get("MOST")).toBe(FUNCTIONS.get("MOV"));
+    expect(FUNCTIONS.get("MOST")?.code).toBe("MOV");
     expect(FUNCTIONS.get("MENU")?.code).toBe("FUNC");
   });
 });

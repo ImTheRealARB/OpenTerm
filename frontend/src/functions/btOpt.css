@@ -1,0 +1,15 @@
+/* BT OPT (Phase 26): heat map, return-vs-drawdown scatter and the walk-forward chart. Colour only carries meaning:
+   heat cells are green above the neutral fitness and red below (set inline from the value), the efficient front is the
+   accent colour, everything else is dim. */
+.bt-heat { overflow: auto; flex: 1 1 auto; min-height: 0; }
+.bt-heat table.heat { border-collapse: collapse; font: inherit; }
+.bt-heat th, .bt-heat td { padding: 0 6px; text-align: right; white-space: nowrap; border: 1px solid var(--line); }
+.bt-heat th { color: var(--fg-dim); font-weight: normal; }
+.bt-heat td.win { outline: 2px solid var(--accent); outline-offset: -2px; }
+svg.bt-front { width: 100%; max-height: calc(100% - 3em); display: block; }
+svg.bt-front .axis { stroke: var(--line); stroke-width: 1; }
+svg.bt-front .lbl { fill: var(--fg-dim); font: inherit; font-size: 11px; }
+svg.bt-front .pt { fill: var(--fg-dim); }
+svg.bt-front .pt-front { fill: var(--accent); }
+svg.bt-front .front { fill: none; stroke: var(--accent); stroke-width: 1; }
+.bt-opt-wfchart { height: 40%; min-height: 140px; display: flex; flex-direction: column; }

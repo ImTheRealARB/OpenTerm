@@ -7,7 +7,9 @@ import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtPct, fmtPrice, fmtTime } from "../format";
 import { registerPanelKeys } from "../keys/panelKeys";
 import { usePanelRefresh } from "./panelRefresh";
-import type { Alert, NewsAlert } from "../net/types";
+import type { Alert, NewsAlert, SmartAlert } from "../net/types";
+import { smartAlertsApi } from "../net/smartAlertsApi";
+import { errText } from "../net/errText";
 import { useStore } from "../state/store";
 import { navigate } from "../state/workspace";
 import { plainAlert } from "./alertPlain";
@@ -192,6 +194,33 @@ export default function ALRT({ panelId }: FunctionProps) {
         </PanelNote>
       )}
       <Grid ref={grid} columns={COLS} rows={rows} />
+      <SmartAlerts />
+    </div>
+  );
+}
+
+/** Phase 27: indicator and drawing alerts (server-side, kept apart from the price grid above). Delete one with ALRT DEL S<id>. */
+function SmartAlerts() {
+  const [data, setData] = useState<{ indicator: SmartAlert[]; drawing: SmartAlert[] } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    smartAlertsApi.list().then(setData, (e) => setErr(errText(e)));
+  }, []);
+  const rows = data ? [...data.indicator, ...data.drawing] : [];
+  if (err) return <div className="line err">INDICATOR / DRAWING ALERTS: ERR {err}</div>;
+  if (!rows.length) return <div className="dim legend">INDICATOR ALERTS: ALRT AAPL RSI14&lt;30 (COMPLETED DAILY BARS) · DRAWING ALERTS: ALRT AAPL LINE [N] (A GP TREND / RAY / HLINE / CHANNEL)</div>;
+  return (
+    <div data-testid="alrt-smart">
+      <div className="line"><span className="acc">INDICATOR AND DRAWING ALERTS</span> <span className="dim">· ALRT DEL S&lt;ID&gt; DELETES ONE</span></div>
+      {rows.map((a) => (
+        <div key={a.id} className="line">
+          <span className="dim">S{a.id} </span>
+          <span className={a.status === "active" ? "up" : "warn"}>{a.status.toUpperCase()} </span>
+          {a.type === "ind" ? `${a.symbol} ${a.rule}` : `${a.symbol} ${a.kind === "PCHAN" ? "LEAVES" : "CROSSES"} ${a.kind}`}
+          {a.bar ? <span className="dim"> · LAST BAR {a.bar}</span> : null}
+          {a.note ? <span className="dim"> · {a.note}</span> : null}
+        </div>
+      ))}
     </div>
   );
 }

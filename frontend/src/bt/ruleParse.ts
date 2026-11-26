@@ -4,17 +4,17 @@
  * bad rule before anything is sent. The backend validates again; it is the authority.
  *
  *   rule := and_expr ("OR" and_expr)* ; and_expr := cmp ("AND" cmp)* ; cmp := term op term
- *   term := CLOSE | OPEN | HIGH | LOW | VOLUME | SMA<n> | EMA<n> | RSI<n> | HIGH<n> | LOW<n> | RET<n> | number
+ *   term := CLOSE | OPEN | HIGH | LOW | VOLUME | SMA<n> | EMA<n> | RSI<n> | ATR<n> | HIGH<n> | LOW<n> | RET<n> | number
  */
 
 export const MAX_PERIOD = 1000;
 const FIELDS = new Set(["CLOSE", "OPEN", "HIGH", "LOW", "VOLUME"]);
-const INDICATORS = new Set(["SMA", "EMA", "RSI", "HIGH", "LOW", "RET"]);
+const INDICATORS = new Set(["SMA", "EMA", "RSI", "ATR", "HIGH", "LOW", "RET"]);
 export const INTERVALS = ["1D", "1W"];
 const RANGE_RE = /^(\d{1,2}Y|\d{1,2}M|MAX|YTD)$/;
 const TOKEN_RE = /\s*(?:(CROSS[<>])|(>=|<=|>|<)|(\d+(?:\.\d+)?|\.\d+)|([A-Za-z]+\d*)|(\S))/iy;
 /** `BT <SUB> ...` forms; anything else is `BT <SYMBOLS> <RULE> ...`. */
-export const SUBCOMMANDS = new Set(["RUNS", "OPEN", "EXPORT", "SAVE", "LOAD", "EDIT", "DEL"]);
+export const SUBCOMMANDS = new Set(["RUNS", "OPEN", "EXPORT", "SAVE", "LOAD", "EDIT", "DEL", "OPT", "LIVE"]);
 /** A saved strategy in the rule position: `BT AAPL @golden 1D 5Y`. */
 const STRATEGY_RE = /^@([A-Za-z0-9_-]{1,40})$/;
 /** `BT MC|WF <SYMBOLS> <RULE> ...` runs the backtest, then validates it. */
@@ -28,7 +28,7 @@ interface Tok {
   col: number;
 }
 
-class RuleError extends Error {
+export class RuleError extends Error {
   constructor(message: string, public col = -1) {
     super(message);
   }
@@ -138,6 +138,10 @@ export interface BtRun {
   strategy?: string;
   /** Validate the finished run: Monte Carlo (MC) or walk-forward (WF). */
   val?: "MC" | "WF";
+  /** Phase 26: exits at a percentage from the entry price; FILL=INTRABAR settles a bar that reached both from 60-minute bars. */
+  stop?: number;
+  target?: number;
+  fill?: "intrabar";
 }
 export interface BtSub {
   ok: true;
@@ -154,11 +158,41 @@ export interface BtArgsError {
 export type BtArgs = BtRun | BtSub | BtArgsError;
 export const isBtRun = (a: BtArgs): a is BtRun => a.ok && a.sub === undefined;
 
-export const BT_USAGE = "USAGE: BT <SYMBOLS> <RULE> [1D|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym]";
+export const BT_USAGE = "USAGE: BT <SYMBOLS> <RULE> [1D|1W] [RANGE] [SHORT] [FEES=bps] [SLIP=bps] [CASH=n] [BENCH=sym] [STOP=%] [TARGET=%] [FILL=INTRABAR]";
 
-function isOption(a: string): boolean {
+const RUN_KEYS = ["FEES", "SLIP", "CASH", "BENCH", "MKT", "OPEN", "CLOSE", "STYLE", "STOP", "TARGET", "FILL"];
+export function isOption(a: string): boolean {
   const u = a.toUpperCase();
-  return INTERVALS.includes(u) || RANGE_RE.test(u) || u === "SHORT" || (u.includes("=") && ["FEES", "SLIP", "CASH", "BENCH", "MKT", "OPEN", "CLOSE", "STYLE"].includes(u.split("=")[0]));
+  return INTERVALS.includes(u) || RANGE_RE.test(u) || u === "SHORT" || (u.includes("=") && RUN_KEYS.includes(u.split("=")[0]));
+}
+
+/** One run option (`1D`, `5Y`, `SHORT`, `FEES=5`, `STOP=5`, ...) applied to `out`; false when `a` is not a run option.
+ * Shared by BT and BT OPT (`optArgs.ts`). Throws RuleError for a bad value. */
+export function applyRunOption(out: BtRun, a: string): boolean {
+  const u = a.toUpperCase();
+  if (INTERVALS.includes(u)) out.interval = u;
+  else if (RANGE_RE.test(u)) out.range = u;
+  else if (u === "SHORT") out.short = true;
+  else if (u.startsWith("FEES=")) out.fees = num("FEES", u.slice(5), 0, 1000);
+  else if (u.startsWith("SLIP=")) out.slip = num("SLIP", u.slice(5), 0, 1000);
+  else if (u.startsWith("CASH=")) out.cash = num("CASH", u.slice(5), 1, 1e12);
+  else if (u.startsWith("BENCH=")) out.bench = u.slice(6) || undefined;
+  else if (u.startsWith("MKT=")) out.mkt = u.slice(4).toLowerCase() || undefined;
+  else if (u.startsWith("OPEN=")) out.open = u.slice(5);
+  else if (u.startsWith("CLOSE=")) out.close = u.slice(6);
+  else if (u.startsWith("STYLE=")) out.style = u.slice(6).toLowerCase();
+  else if (u.startsWith("STOP=")) out.stop = num("STOP", u.slice(5).replace(/%$/, ""), 0.1, 99);
+  else if (u.startsWith("TARGET=")) out.target = num("TARGET", u.slice(7).replace(/%$/, ""), 0.1, 1000);
+  else if (u.startsWith("FILL=")) {
+    if (u.slice(5) !== "INTRABAR") throw new RuleError("FILL= MUST BE INTRABAR");
+    out.fill = "intrabar";
+  } else return false;
+  return true;
+}
+
+/** STOP= / TARGET= / FILL= consistency, shared by BT and BT OPT. */
+export function checkExits(out: BtRun): void {
+  if (out.fill && out.stop === undefined && out.target === undefined) throw new RuleError("FILL=INTRABAR NEEDS STOP= OR TARGET=");
 }
 
 const DECIMAL = /^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i;
@@ -192,24 +226,13 @@ export function parseBtArgs(args: string[]): BtArgs {
     while (rest.length && !isOption(rest[0])) ruleParts.push(rest.shift()!);
     const out: BtRun = { ok: true, symbols, rule: ruleParts.join(" "), interval: "1D", range: "5Y", short: false, cash: 100_000 };
     for (const a of rest) {
-      const u = a.toUpperCase();
-      if (INTERVALS.includes(u)) out.interval = u;
-      else if (RANGE_RE.test(u)) out.range = u;
-      else if (u === "SHORT") out.short = true;
-      else if (u.startsWith("FEES=")) out.fees = num("FEES", u.slice(5), 0, 1000);
-      else if (u.startsWith("SLIP=")) out.slip = num("SLIP", u.slice(5), 0, 1000);
-      else if (u.startsWith("CASH=")) out.cash = num("CASH", u.slice(5), 1, 1e12);
-      else if (u.startsWith("BENCH=")) out.bench = u.slice(6) || undefined;
-      else if (u.startsWith("MKT=")) out.mkt = u.slice(4).toLowerCase() || undefined;
-      else if (u.startsWith("OPEN=")) out.open = u.slice(5);
-      else if (u.startsWith("CLOSE=")) out.close = u.slice(6);
-      else if (u.startsWith("STYLE=")) out.style = u.slice(6).toLowerCase();
-      else throw new RuleError(`UNKNOWN BT OPTION ${a}`);
+      if (!applyRunOption(out, a)) throw new RuleError(`UNKNOWN BT OPTION ${a}`);
     }
+    checkExits(out);
     if (out.mkt === "options") {
       // The OSA structure replaces the rule (the backend validates the rest and lists what is missing).
       if (out.rule) throw new RuleError("MKT=options TAKES THE LAST OSA STRUCTURE, NOT A RULE");
-      if (out.short || out.slip !== undefined) throw new RuleError("MKT=options TAKES NO SHORT OR SLIP");
+      if (out.short || out.slip !== undefined || out.stop !== undefined || out.target !== undefined) throw new RuleError("MKT=options TAKES NO SHORT, SLIP, STOP OR TARGET");
       for (const [k, v] of [["OPEN", out.open], ["CLOSE", out.close]] as const) {
         if (v !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new RuleError(`${k}= NEEDS A DATE YYYY-MM-DD`);
       }
