@@ -2,6 +2,15 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## Other sources while Nasdaq blocks OpenTerm (2026-11-26)
+Nasdaq's website API now refuses OpenTerm. These functions work on live data again, from other sources (details in
+[docs/DATA_LIMITS.md](docs/DATA_LIMITS.md)):
+- `EQS` and the plain-English company list: Yahoo's screener (no key). `apple` again opens Apple at once.
+- `MOV`: Yahoo's gainers, losers and most active lists (no key). The $ volume and Nasdaq-100 tabs say they are not in this source.
+- `ERN`, `BRIEF` earnings and `IPO`: Finnhub (free key `FINNHUB_API_KEY`).
+- Earnings markers on `GP`: Financial Modeling Prep (free key `FMP_API_KEY`).
+- When a missing key is the only way to another source, the error text names that key.
+
 ## Audit fixes and two bug fixes (2026-11-26)
 An outside code audit found 63 issues; 39 were confirmed, 23 partly confirmed and 1 was a false alarm. The confirmed ones are fixed, in 10 groups:
 - Security: strategy code can no longer escape its sandbox; backtest runs and settings changes are accepted from this computer only; secrets

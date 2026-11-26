@@ -6,13 +6,20 @@ Known limitations, surfaced in the UI where they apply. Updated each phase.
 
 `api.nasdaq.com` now answers every OpenTerm request with "Access Denied" (HTTP 403). The block is in Nasdaq's edge network (Akamai): it
 recognises the program that opens the connection, not the request itself (the same request from `curl` still works). OpenTerm does not try to
-get around bot checks, so these show PROVIDER DOWN on live data until Nasdaq lifts the block or another source replaces it:
-- `EQS` (the screener universe) and the `COMP` peer fallback.
-- `MOV` (market movers) and `ERN` (earnings calendar).
-- The Nasdaq fallbacks: US quotes and daily history, company profile, dividends and splits, short interest. Yahoo still answers first for
-  quotes and history, so charts and quotes work.
-- Plain English loses its local company list and uses Yahoo's name search instead. A name that fits several companies (`apple`: Apple and
-  Apple Hospitality REIT) then gives choices, because Yahoo's answer has no market size to pick the obvious one.
+get around bot checks. Nasdaq stays the first source, so it comes back by itself if Nasdaq lifts the block. Until then, other sources answer:
+
+| Function | Source while Nasdaq is down | Key | What is different |
+|---|---|---|---|
+| `EQS` screener, `COMP` peer fallback, plain-English company list | Yahoo screener | none | About 6,800 stocks, not 7,000. The country column is blank. The first load takes 10 to 20 seconds. |
+| `MOV` market movers | Yahoo's gainers, losers and most active lists | none | Larger companies only. There is no $ volume or Nasdaq-100 tab. |
+| `ERN` earnings calendar, `BRIEF` "Earnings today" | Finnhub | `FINNHUB_API_KEY` (free) | Company names and market caps come from the screener. There is no analyst count or last year's EPS. Only about one month back. |
+| `IPO` calendar | Finnhub | `FINNHUB_API_KEY` (free) | One date for each deal. |
+| Earnings markers on `GP` | Financial Modeling Prep | `FMP_API_KEY` (free) | The last four reports. A free key covers larger US companies only. Other companies show KEY PLAN. |
+
+With no key, `ERN`, `IPO` and the `GP` earnings markers show PROVIDER DOWN. The error text names the key that turns on the other source.
+
+Still down with no replacement: the Nasdaq fallbacks for US quotes and daily history, company profile, dividends and splits, short
+interest. Yahoo answers first for all of them, so you only lose the backup.
 
 Sample-data mode (`OPENTERM_FIXTURES=1`) is not affected: it replays recorded Nasdaq answers.
 

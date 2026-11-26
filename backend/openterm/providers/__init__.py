@@ -95,6 +95,7 @@ from .twelvedata import TwelveDataProvider
 from .usgov import CongressProvider, FederalRegisterProvider, OpenFecProvider, UsaSpendingProvider
 from .worldstats import DbnomicsProvider, WorldBankProvider
 from .yahoo import YahooProvider
+from .yahoo_screens import YahooMoversProvider, YahooScreenerProvider
 
 # Every source the app can build. The ORDER of this dict is the order of the rows on SOURCES, so keep it stable.
 ADAPTERS: dict[str, type[Provider]] = {
@@ -109,6 +110,8 @@ ADAPTERS: dict[str, type[Provider]] = {
     "nasdaq_earnings": NasdaqEarningsProvider, "agency_ics": AgencyCalendarProvider,
     # Screener (EQS) and peers (COMP)
     "nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider,
+    # Yahoo screens: the screener universe and market movers when Nasdaq is down (it blocks OpenTerm since 2026-11-26)
+    "yahoo_screener": YahooScreenerProvider, "yahoo_movers": YahooMoversProvider,
     # Research functions: Yahoo quoteSummary modules, Nasdaq calendars, FINRA short volume, SEC funds (N-PORT, 13F)
     "yahoo_research": YahooResearchProvider, "nasdaq_research": NasdaqResearchProvider, "finra": FinraProvider,
     "sec_nport": SecNportProvider, "sec_13f": Sec13fProvider,

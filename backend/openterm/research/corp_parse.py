@@ -108,11 +108,31 @@ def parse_short_volume(text: str) -> dict[str, tuple[float, float, float]]:
     return out
 
 
+IPO_DATE_KEYS = {"upcoming": "expectedPriceDate", "priced": "pricedDate", "filed": "filedDate", "withdrawn": "withdrawDate"}
+
+
 def ipo_tables(body: dict, source: str) -> dict:
+    """Nasdaq's IPO calendar -> {"rows": {section: [row]}, "note", "source"}, the shape `ipo_payload` draws (Finnhub's parser,
+    `calendars_parse.finnhub_ipo`, gives the same shape)."""
     d = (body or {}).get("data")
     if not d:
         raise ProviderError("not_found", "no IPO calendar")
-    return {"data": d, "source": source}
+
+    def rows(key: str, date_key: str) -> list[dict]:
+        t = d.get(key) or {}
+        r = t.get("rows") if "rows" in t else (t.get("upcomingTable") or {}).get("rows")
+        out = []
+        for x in r or []:
+            out.append({"symbol": x.get("proposedTickerSymbol"), "company": x.get("companyName"),
+                        "exchange": x.get("proposedExchange"), "price": _money(x.get("proposedSharePrice")),
+                        "range": x.get("proposedSharePrice"), "shares": number(x.get("sharesOffered")),
+                        "date": us_date(x.get(date_key)), "filed": us_date(x.get("filedDate")),
+                        "amount": _money(x.get("dollarValueOfSharesOffered"))})
+        out.sort(key=lambda r: r["date"] or "", reverse=True)
+        return out
+
+    return {"rows": {k: rows(k, dk) for k, dk in IPO_DATE_KEYS.items()},
+            "note": "NASDAQ.COM IPO CALENDAR (EDGAR-DERIVED); A FILED DEAL HAS NO SYMBOL UNTIL IT PRICES", "source": source}
 
 
 # ---------------------------------------------------------------------------------------------- payloads
@@ -192,23 +212,9 @@ def valid_month(text: str | None, today: date | None = None) -> str:
 
 
 def ipo_payload(month: str, raw: dict) -> dict:
-    d = raw["data"]
-
-    def rows(key: str, date_key: str) -> list[dict]:
-        t = d.get(key) or {}
-        r = t.get("rows") if "rows" in t else (t.get("upcomingTable") or {}).get("rows")
-        out = []
-        for x in r or []:
-            out.append({"symbol": x.get("proposedTickerSymbol"), "company": x.get("companyName"),
-                        "exchange": x.get("proposedExchange"), "price": _money(x.get("proposedSharePrice")),
-                        "range": x.get("proposedSharePrice"), "shares": number(x.get("sharesOffered")),
-                        "date": us_date(x.get(date_key)), "filed": us_date(x.get("filedDate")),
-                        "amount": _money(x.get("dollarValueOfSharesOffered"))})
-        out.sort(key=lambda r: r["date"] or "", reverse=True)
-        return out
-
-    up, priced = rows("upcoming", "expectedPriceDate"), rows("priced", "pricedDate")
-    filed, wd = rows("filed", "filedDate"), rows("withdrawn", "withdrawDate")
+    """The IPO panel from normalised rows (`ipo_tables` for Nasdaq, `calendars_parse.finnhub_ipo` for Finnhub)."""
+    r = raw["rows"]
+    up, priced, filed, wd = r["upcoming"], r["priced"], r["filed"], r["withdrawn"]
     base = [col("symbol", "SYMBOL", "text", 8), col("company", "COMPANY", "text", 34), col("exchange", "EXCHANGE", "text", 20)]
     sections = [
         section("upcoming", "UPCOMING", [*base, col("range", "PRICE", "text", 12), col("shares", "SHARES", "int"),
@@ -223,7 +229,7 @@ def ipo_payload(month: str, raw: dict) -> dict:
     ]
     heads = [head("MONTH", month), head("UPCOMING", str(len(up)), len(up)), head("PRICED", str(len(priced)), len(priced)),
              head("FILED", str(len(filed)), len(filed)), head("WITHDRAWN", str(len(wd)), len(wd))]
-    return payload(None, f"IPO · {month}", heads, sections, ["NASDAQ.COM IPO CALENDAR (EDGAR-DERIVED); A FILED DEAL HAS NO SYMBOL UNTIL IT PRICES"], raw["source"])
+    return payload(None, f"IPO · {month}", heads, sections, [raw["note"]], raw["source"])
 
 
 def si_payload(symbol: str, interest: dict, volume: dict | None, volume_note: str | None, keystats: dict | None) -> dict:

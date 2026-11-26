@@ -21,6 +21,14 @@ YAHOO_TO_SECTOR = {
 }
 
 
+def from_yahoo_name(display: str | None) -> str:
+    """A Yahoo sector DISPLAY name ("Financial Services", the screener's labels) as the canonical (Nasdaq) name; "" when blank or unknown.
+
+    Yahoo spells the same sectors two ways: display names here, `snake_case` keys in `sectorWeightings` (YAHOO_TO_SECTOR)."""
+    key = (display or "").strip().lower().replace(" ", "_")
+    return YAHOO_TO_SECTOR.get("realestate" if key == "real_estate" else key, "")
+
+
 def canonical(screener_sector: str | None) -> str:
     """A screener sector name as a SPDR-mapped sector, else Unclassified (Miscellaneous, blank, unknown)."""
     s = (screener_sector or "").strip()

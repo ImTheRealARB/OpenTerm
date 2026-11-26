@@ -202,6 +202,28 @@ Details that matter: RBI sends dates without a zone (local time), so a date late
 - **Phase 30 macro hosts** (all keyless unless noted): NY Fed reference rates, ECB data portal (ESTR, curves), Bank of England (SONIA), Atlanta Fed GDPNow workbook, Philadelphia Fed SPF, IMF DataMapper, OECD Economic Outlook, federalreserve.gov FOMC statements, TreasuryDirect, USDA WASDE (Cornell library copy), FRED CSV, Frankfurter. EIA (`EIA_API_KEY`) and USDA NASS (`NASS_API_KEY`) are free keys; their fixtures are doc-shaped. Recorder: `scripts/record_phase30.py`, manifest `tests/fixtures/phase30_manifest.json`.
 - **RES research feeds** (keyless, `providers/macrod.py` `research_feeds`, list in `macrod/boards.py` `RES_FEEDS`): BIS working papers and research hub (RSS 1.0), Fed FEDS / FEDS Notes / IFDP, ECB working papers and blog, RBI publications, arXiv q-fin (one request per refresh, cached 6 hours; arXiv asks for at most one request per 3 seconds). Real recordings `res_*.json` (`record_phase30.py res`). Not included: IMF papers (the feed answers 403, a bot check) and NBER (paywalled).
 
+## Nasdaq replacements (2026-11-26)
+
+`api.nasdaq.com` blocks OpenTerm's client since 2026-11-26 (see `DATA_LIMITS.md` "Nasdaq blocks OpenTerm"). Nasdaq stays FIRST in each
+order below, because it has the richest answer and the block may lift. These sources answer when it is down. Each one was checked live
+on 2026-11-26 (free keys for Finnhub and FMP). Fixtures are real recordings, trimmed: `scripts/record_nasdaq_replacements.py`.
+
+| Capability (functions) | Order | Replacement | What it lacks next to Nasdaq |
+|---|---|---|---|
+| `screener` (EQS, COMP peer fallback, ALPHA TOP100, quant sectors, QRY, plain-English company list) | `nasdaq_screener`, `yahoo_screener` | Yahoo screener, keyless (session crumb). One query per Yahoo industry (145, listed by Yahoo with their sectors), 250 rows a page: about 150 calls, 7 to 18 s measured, cached 15 min | No headquarters country (column blank). About 6,800 stocks instead of 7,000: Yahoo files about 600 listings under no industry. The IPO year is the first trading year. Sectors are mapped onto the Nasdaq names (`quantjobs/sectors.py` `from_yahoo_name`); industries are Yahoo's own names. |
+| `movers` (MOV) | `nasdaq`, `yahoo_movers` | Yahoo predefined screens `day_gainers`, `day_losers`, `most_actives`, keyless | Yahoo's own definitions (larger US companies only). No $-volume or Nasdaq-100 table (MOV says NOT IN THIS SOURCE). |
+| `earnings` (ERN, BRIEF "Earnings today") | `nasdaq_earnings`, `finnhub` | Finnhub `calendar/earnings` (FINNHUB_API_KEY, free) | No company name, analyst count, last year's EPS or market cap. `service._earnings_names` fills names and market caps from the screener and sorts largest first; the source line then names both. The free plan reaches about a month back. |
+| `ipo` (IPO) | `nasdaq_research`, `finnhub` | Finnhub `calendar/ipo` (FINNHUB_API_KEY, free) | One date per deal (its status date), so a withdrawn deal has no filing date. |
+| `earnings_history` (GP earnings markers) | `nasdaq_research`, `fmp` | FMP `stable/earnings` (FMP_API_KEY, free) | The last four reported quarters (plus the next date, which is not drawn). A free key covers larger US companies only: others answer 402, shown as KEY PLAN. |
+
+Rejected on the way (2026-11-26): FMP `company-screener` and `ipos-calendar` (402 on a free key); Yahoo `visualization` earnings dates
+(its newest dates stop in May 2025); Finnhub `stock/earnings` for the markers (it gives the quarter's END date, not the day results came
+out, so markers would sit about a month early); Finnhub `stock/symbol` (no sector or market cap). FMP `biggest-gainers` / `losers` /
+`most-actives` answer on a free key and could back up Yahoo for MOV, but are not built (one keyless source is enough for now).
+
+When every keyless source is down and a keyed source in the chain has no key, the error detail says which key would unlock it
+(`Router.keys_to_unlock`, for example `ANOTHER SOURCE NEEDS A KEY: set FINNHUB_API_KEY in APIKEYS`). The error kind stays PROVIDER DOWN.
+
 ## Honest limits of what is built
 
 Upstox was built and then removed (2026-11-05): the owner could not get a token and will use paid Kite instead. Kite is the Indian source.

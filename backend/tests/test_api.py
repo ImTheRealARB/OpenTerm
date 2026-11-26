@@ -35,6 +35,7 @@ def test_search_and_sources(client):
             "twelvedata", "polygon", "fmp", "alphavantage",  # keyed market data (workstream 07)
         "usaspending", "federalregister", "openfec", "congressgov",  # USASP, FEDREG, FEC, CONGRESS
         "nasdaq_trader", "yahoo_funds",  # FSRC (ETF screener)
+        "yahoo_screener", "yahoo_movers",  # EQS universe and MOV when Nasdaq is down (it blocks OpenTerm since 2026-11-26)
         "nseindices",  # SCAN / MRR / IMAP NIFTY member lists
         "sec_filings", "courtlistener", "epa_ghgrp", "eu_ets",  # Phase 29: FTS / MA / BIO / RELS, LEGAL, ESG, ETS
         "nyfed", "ecb_estr", "boe_sonia", "atlfed", "philfed", "imf_dm", "oecd_eo", "fed_web", "td_secs", "wasde", "research_feeds", "eia", "nass",  # Phase 30

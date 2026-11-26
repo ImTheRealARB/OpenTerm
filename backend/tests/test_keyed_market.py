@@ -538,10 +538,12 @@ def test_fixture_labels():
             assert r.get("doc_shaped", "").startswith("NOT A RECORDING") and "recorded" not in r, n
         else:
             assert "REAL" in r.get("recorded", "") and "doc_shaped" not in r, n
-            assert n.startswith(("twelvedata_real_", "alphavantage_real_", "keytest_")), n
+            assert n.startswith(("twelvedata_real_", "alphavantage_real_", "fmp_real_", "keytest_")), n
         assert "madeupkey" not in json.dumps(r), n  # a made-up key never stays in a file
-    # real success shapes exist only where a public demo key can record them: nothing "real" for Polygon or FMP besides the 401s
-    assert not [n for n in names if n.startswith(("polygon_real_", "fmp_real_"))]
+    # Real success shapes exist where a public demo key could record them, plus FMP's earnings dates (recorded with the owner's
+    # free key, 2026-11-26, for GP's earnings markers). Nothing real for Polygon besides the 401.
+    assert not [n for n in names if n.startswith("polygon_real_")]
+    assert [n for n in names if n.startswith("fmp_real_")] == ["fmp_real_earnings_aapl"]
 
 
 def test_no_fixture_holds_a_secret_shaped_value():

@@ -66,10 +66,15 @@ class Health:
 
 
 class AllFailed(Exception):
-    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None, pinned: str | None = None):
+    def __init__(self, errors: list[tuple[str, ProviderError]], keys: dict[str, str] | None = None, pinned: str | None = None,
+                 unlock: list[str] | None = None):
         self.errors = errors
         self.key: str | None = None
         self.pinned = pinned
+        self.unlock = unlock or []
+        """Keys (their APIKEYS names) of sources in the chain that were skipped because no key is set: when the keyless sources
+        are down, setting one of them is the user's way out (2026-11-26: Nasdaq blocked, Finnhub not keyed). Only the error
+        detail says so; the kind stays what the sources that were asked answered."""
         kinds = {e.kind for _, e in errors}
         # An expired login (Kite) is a reason shown beside the fallback, not an outage: when the sources that DO answer say
         # "no such symbol" or "too shallow", the user gets that real answer instead of PROVIDER DOWN (audit A-3).
@@ -201,7 +206,18 @@ class Router:
                 if e.kind == K.KEY_REQUIRED:
                     keys[p.name] = getattr(p, "key_name", "") or p.name.upper()
         # Skipped (tripped) sources go FIRST, like `quotes` does: AllFailed reads the first entry as "the best source's answer".
-        raise AllFailed(skipped + errors, keys)
+        raise AllFailed(skipped + errors, keys, unlock=self.keys_to_unlock(capability, symbol))
+
+    def keys_to_unlock(self, capability: str, symbol: str | None = None) -> list[str]:
+        """APIKEYS names of the chain's keyed sources that would serve this request but have no key (so `candidates` left them out)."""
+        out = []
+        for n in self.order.get(capability, []):
+            p = self.providers.get(n)
+            if p is None or capability not in p.capabilities or getattr(p, "has_key", True) or not getattr(p, "key_name", ""):
+                continue
+            if not p.supports(capability, symbol):  # false today only for the missing key; a key would switch it on
+                out.append(p.key_name)
+        return out
 
     def pin_block(self, p: Provider, capability: str, symbol: str | None) -> ProviderError | None:
         """Why the pinned source cannot even be asked (None = ask it)."""
