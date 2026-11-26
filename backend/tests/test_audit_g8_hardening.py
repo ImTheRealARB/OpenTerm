@@ -33,15 +33,15 @@ def _trade(time: str, trade_id: str = "T1", symbol: str = "INFY.NS", side: str =
 
 def test_c10_same_trade_id_on_two_days_gets_two_keys_across_imports():
     day1, day2 = [_trade("2026-11-02T10:00:00")], [_trade("2026-11-03T10:00:00")]  # two files, one id reused (each file's own count is #1)
-    parsers._keys(day1)
-    parsers._keys(day2)
+    parsers.assign_keys(day1)
+    parsers.assign_keys(day2)
     assert day1[0].dkey != day2[0].dkey
 
 
 def test_c10_a_reimport_of_the_same_trade_is_still_a_noop():
     a, b = [_trade("2026-11-02T10:00:00")], [_trade("2026-11-02T10:00:00")]
-    parsers._keys(a)
-    parsers._keys(b)
+    parsers.assign_keys(a)
+    parsers.assign_keys(b)
     assert a[0].dkey == b[0].dkey
 
 

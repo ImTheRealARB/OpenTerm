@@ -184,11 +184,11 @@ def _finish(trades: list[Trade], errs: list[str], ignored: int) -> tuple[list[Tr
         raise JournalError(f"{len(errs)} ROW{'S' if len(errs) != 1 else ''} COULD NOT BE READ, NOTHING WAS STORED", "\n".join(errs[:12]))
     if not trades:
         raise JournalError("NO TRADES FOUND IN THE FILE", f"{ignored} ROWS WERE NOT TRADES" if ignored else None)
-    _keys(trades)
+    assign_keys(trades)
     return trades, ignored
 
 
-def _keys(trades: list[Trade]) -> None:
+def assign_keys(trades: list[Trade]) -> None:
     """A stable de-duplication key. A broker trade id plus the time, symbol, side and order id decides when there is one; otherwise
     every field does. A repeat of the very same row inside one file gets its own count, so two real identical fills stay two while
     a re-import stays a no-op.
