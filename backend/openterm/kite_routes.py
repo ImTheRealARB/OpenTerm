@@ -52,11 +52,14 @@ async def login(request: Request):
     creds = provider(request).session.credentials()
     if creds is None:
         return no_key()
-    return RedirectResponse(f"{KITE_LOGIN}?v=3&api_key={quote(creds[0], safe='')}", status_code=302)
+    # `redirect_params` is a Kite Connect login option: the string comes back as query parameters on the redirect, so the callback can prove
+    # that this login was started here (a one-time `state`).
+    state = quote(f"state={provider(request).session.begin_login()}", safe="")
+    return RedirectResponse(f"{KITE_LOGIN}?v=3&api_key={quote(creds[0], safe='')}&redirect_params={state}", status_code=302)
 
 
 @router.get("/callback")
-async def callback(request: Request, request_token: str | None = None, status: str | None = None):
+async def callback(request: Request, request_token: str | None = None, status: str | None = None, state: str | None = None):
     if not loopback(request):
         return page("LOGIN FAILED", "THE KITE CALLBACK CAN ONLY BE OPENED FROM THIS MACHINE", 403)
     kite = provider(request)
@@ -64,6 +67,8 @@ async def callback(request: Request, request_token: str | None = None, status: s
         return page("LOGIN FAILED", f"KITE DID NOT SEND A REQUEST TOKEN (STATUS {status or 'MISSING'}). RUN KITE LOGIN AGAIN", 400)
     if not kite.session.has_key:
         return page("LOGIN FAILED", KEY_REQUIRED_MESSAGE, 400)
+    if not kite.session.consume_state(state):  # before any call to Kite: a forged or replayed callback must not reach the token exchange
+        return page("LOGIN FAILED", "THIS LOGIN WAS NOT STARTED HERE (STATE MISSING, WRONG OR USED). RUN KITE LOGIN AGAIN", 403)
     try:
         data = await kite.client.exchange_token(request_token)
     except KiteLoginFailed as e:

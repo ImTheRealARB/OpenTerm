@@ -632,6 +632,11 @@ def _is_empty(shaped: Any) -> bool:
     return False
 
 
+# A `local` tool (skill lookup, an extension's tool) is plain synchronous Python. It runs in a worker thread with this limit so a slow or
+# stuck one cannot freeze the whole backend event loop (audit H-12). A thread cannot be killed: on a timeout it is abandoned, not stopped.
+LOCAL_TIMEOUT_S = 10.0
+
+
 class ToolRunner:
     """Calls the allow-listed routes of the running app in-process, as the local user."""
 
@@ -640,6 +645,9 @@ class ToolRunner:
         self.web = web  # a web.WebConfig when the user turned web access on, else None: the web tools are then refused
         self.http = httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=client), base_url="http://openterm.local", timeout=120.0)
         self.allowed = set(tools) if tools is not None else None
+        # This run's third-party tools, fixed now: another run's `prepare()` (or a shutdown) replaces the global EXTERNAL dict, and must not
+        # remove a tool in the middle of this run, nor hand this run tools it never offered (audit H-12 item 7).
+        self.external = dict(EXTERNAL)
 
     async def aclose(self) -> None:
         await self.http.aclose()
@@ -648,10 +656,10 @@ class ToolRunner:
         return await self.call(name, args)
 
     async def call(self, name: str, args: dict) -> ToolResult:
-        ext = EXTERNAL.get(name)
+        ext = self.external.get(name) or next((t for t in self.external.values() if t.wire == name), None)
         if ext is not None:
-            if self.allowed is not None and name not in self.allowed and EXTERNAL_ALL not in self.allowed:
-                return ToolResult(ok=False, text=f"TOOL {name} IS NOT AVAILABLE HERE", error="NOT AVAILABLE")
+            if self.allowed is not None and ext.name not in self.allowed and EXTERNAL_ALL not in self.allowed:
+                return ToolResult(ok=False, text=f"TOOL {ext.name} IS NOT AVAILABLE HERE", error="NOT AVAILABLE")
             if err := validate_external(ext, args):
                 return ToolResult(ok=False, text=err, error=err)
             return await ext.run(args)
@@ -666,7 +674,10 @@ class ToolRunner:
             return await webmod.run_tool(self.web, name, args)
         if t.local is not None:
             try:
-                data = t.local(args, self.ctx)
+                data = await asyncio.wait_for(asyncio.to_thread(t.local, args, self.ctx), LOCAL_TIMEOUT_S)
+            except TimeoutError:
+                msg = f"TOOL ERROR: {name} TIMED OUT AFTER {LOCAL_TIMEOUT_S:.0f}S"
+                return ToolResult(ok=False, text=msg, error=msg)
             except (OSError, ValueError, KeyError) as e:
                 msg = f"TOOL ERROR {type(e).__name__}: {str(e)[:120]}"
                 return ToolResult(ok=False, text=msg, error=msg)

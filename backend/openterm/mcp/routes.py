@@ -18,6 +18,7 @@ from ..ai import tools as toolbox
 from ..origin import origin_ok
 from ..redact import redact
 from ..responses import OrjsonRoute
+from ..userdata import UserDataError
 from . import server
 
 router = APIRouter(route_class=OrjsonRoute)
@@ -38,7 +39,13 @@ async def mcp_post(request: Request) -> Response:
     if not _origin_ok(request.headers.get("origin")):
         return JSONResponse({"error": "FORBIDDEN: ORIGIN NOT ALLOWED"}, status_code=403)
     try:
-        message = json.loads(await request.body())
+        # Same body rules as every JSON route: application/json only (a cross-site page can send text/plain without a preflight) and a size cap.
+        http_util.require_json_type(request)
+        raw = await http_util.read_capped(request)
+    except UserDataError as e:
+        return http_util.error(e)
+    try:
+        message = json.loads(raw)
     except ValueError:
         return JSONResponse(server.error(None, -32700, "PARSE ERROR: BODY IS NOT JSON"), status_code=400)
     # Same construction as the AI agent: calls the app's own routes in-process.

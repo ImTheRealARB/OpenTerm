@@ -21,6 +21,8 @@ docker compose -f docker-compose.remote.yml logs openterm | grep "ACCESS TOKEN"
 
 `deploy/` was written without running Docker. Read `docker-compose.remote.yml` and the `Caddyfile` before you use them. Open `https://term.example.com`, paste the token on the login page.
 
+`python -m openterm` refuses to start on any non-loopback `OPENTERM_HOST` (such as `0.0.0.0`) unless `OPENTERM_REMOTE=1` is set. The plain `Dockerfile` sets `OPENTERM_HOST=0.0.0.0`, so a bare `docker run` stops with that message: use the remote compose file, or set `OPENTERM_ALLOW_PUBLIC_BIND=1` and publish the port only as `127.0.0.1:8000:8000`.
+
 Without Docker: run `OPENTERM_REMOTE=1 OPENTERM_PUBLIC_ORIGIN=https://term.example.com python -m openterm` (bound to `127.0.0.1`) and put any HTTPS reverse proxy in front that passes WebSockets. `OPENTERM_REMOTE=1` refuses to start unless the public origin is an `https://` address with no path.
 
 ## The token and the session

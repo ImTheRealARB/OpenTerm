@@ -13,6 +13,7 @@ import json
 import struct
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -40,9 +41,15 @@ def set_keys(client, secret: str = SECRET):
     assert r.status_code == 200, r.text
 
 
+def start_login(client) -> str:
+    """GET /api/kite/login and read back the one-time `state` Kite would hand to the callback (audit H-13)."""
+    loc = client.get("/api/kite/login", follow_redirects=False).headers["location"]
+    return parse_qs(parse_qs(urlsplit(loc).query)["redirect_params"][0])["state"][0]
+
+
 def login(client):
     set_keys(client)
-    r = client.get("/api/kite/callback", params={"request_token": REQUEST_TOKEN, "status": "success"})
+    r = client.get("/api/kite/callback", params={"request_token": REQUEST_TOKEN, "status": "success", "state": start_login(client)})
     assert r.status_code == 200 and "LOGGED IN" in r.text.upper(), r.text[:300]
 
 
@@ -106,7 +113,7 @@ def test_login_redirects_to_kite_and_never_exposes_the_secret(client):
     r = client.get("/api/kite/login", follow_redirects=False)
     assert r.status_code == 302
     loc = r.headers["location"]
-    assert loc == f"https://kite.zerodha.com/connect/login?v=3&api_key={KEY}" and SECRET not in loc
+    assert loc.startswith(f"https://kite.zerodha.com/connect/login?v=3&api_key={KEY}&redirect_params=state%3D") and SECRET not in loc
 
 
 @KITE
@@ -125,7 +132,7 @@ def test_callback_exchanges_the_request_token_with_the_documented_checksum(clien
 @KITE
 def test_wrong_secret_fails_and_leaves_you_logged_out(client):
     set_keys(client, secret="not-the-secret")
-    r = client.get("/api/kite/callback", params={"request_token": REQUEST_TOKEN, "status": "success"})
+    r = client.get("/api/kite/callback", params={"request_token": REQUEST_TOKEN, "status": "success", "state": start_login(client)})
     assert r.status_code in (400, 403) and "LOGIN FAILED" in r.text.upper() and ACCESS not in r.text
     assert status(client)["state"] == "LOGGED OUT"
     for params in ({"status": "success"}, {"request_token": "x", "status": "error"}):
