@@ -62,7 +62,7 @@ PORTED = ported()
 
 
 def skipped_from_doc() -> dict[str, str]:
-    text = (ROOT / "docs" / "PHASE_20_SKIPPED.md").read_text(encoding="utf-8")
+    text = (ROOT / "docs" / "porting" / "VIBE_SKILLS_SKIPPED.md").read_text(encoding="utf-8")
     block = text.split("## Skipped", 1)[1].split("## Ported with limits", 1)[0]
     return {m.group(1): m.group(2).strip() for m in re.finditer(r"^\| `([a-z0-9-]+)` \| (.+) \|$", block, re.MULTILINE)}
 
@@ -81,11 +81,11 @@ def test_every_vibe_skill_is_ported_or_listed_as_skipped_exactly_once():
     skipped = skipped_from_doc()
     done = set(PORTED.values())
     assert len(VIBE_SKILLS) == 89 and len(set(VIBE_SKILLS)) == 89
-    assert done | set(skipped) == set(VIBE_SKILLS), "port_vibe_skills.py output and docs/PHASE_20_SKIPPED.md disagree with the 89 Vibe skills"
+    assert done | set(skipped) == set(VIBE_SKILLS), "port_vibe_skills.py output and docs/porting/VIBE_SKILLS_SKIPPED.md disagree with the 89 Vibe skills"
     assert not done & set(skipped), "a skill is both ported and skipped"
     assert all(len(r) > 15 for r in skipped.values()), "every skipped skill needs a written reason"
     assert not set(skipped) & set(skills.names()), "a skipped skill must not have a playbook file"
-    head = (ROOT / "docs" / "PHASE_20_SKIPPED.md").read_text(encoding="utf-8")
+    head = (ROOT / "docs" / "porting" / "VIBE_SKILLS_SKIPPED.md").read_text(encoding="utf-8")
     assert f"{len(done)} ported" in head and f"{len(skipped)} skipped" in head and f"## Skipped ({len(skipped)})" in head
 
 

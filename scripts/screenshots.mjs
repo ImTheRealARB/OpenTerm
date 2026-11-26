@@ -45,6 +45,11 @@ async function keepOnly(page, n) {
 
 /** Every shot: [file name without .png, mode, async (page) => void that sets the screen up]. */
 const SHOTS = [
+  // HOME: what a new browser tab opens on by default (markets by region, headlines, ticker tape).
+  // Only this shot keeps the default `startup: home`; every other shot seeds `startup: layout` (see the loop below).
+  ["home", "gui", async (page) => {
+    await page.getByTestId("sidebar-toggle").click();
+  }],
   // Main picture: GUI mode, the ready-made starter screen (watchlist, chart, news), tiles side by side.
   // The sidebar is hidden so the panels get the width (the category menus then run along the top instead).
   ["workspace", "gui", async (page) => {
@@ -88,6 +93,8 @@ const SHOTS = [
     await cmd(page, "AAPL DES", { wait: 3000 });
     // HDS (top holders) comes from Yahoo and needs no key; FA needs SEC_USER_AGENT with a real contact address.
     await cmd(page, "AAPL HDS", { newPanel: true, wait: 5000 });
+    // A new panel can open with its RELATED menu showing; Escape closes it so the holders table is the picture.
+    await page.keyboard.press("Escape");
   }],
   ["macro", "terminal", async (page) => {
     await cmd(page, "RATES", { wait: 3000 });
@@ -110,12 +117,14 @@ for (const [name, mode, setup] of SHOTS) {
   const ctx = await browser.newContext({ viewport: { width: VIEW_W, height: VIEW_H }, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   // Seed the same browser storage the e2e tests use: GUI or Terminal mode, welcome card already seen, panels as tiles.
-  await page.addInitScript((m) => {
+  await page.addInitScript(([m, home]) => {
     // GUI mode leaves "welcomed" unset on purpose: a first-time GUI user is what gets the starter layout (watchlist, chart, news).
     if (m !== "gui") localStorage.setItem("openterm.welcomed", "1");
     localStorage.setItem("openterm.guiTabs", "0");
-    localStorage.setItem("openterm.settings", JSON.stringify({ settings: m === "gui" ? { mode: "gui" } : {}, updatedAt: 0, dirty: false }));
-  }, mode);
+    // The default `startup` is "home", which would put the HOME page in every picture; only the "home" shot keeps it.
+    const settings = { ...(m === "gui" ? { mode: "gui" } : {}), ...(home ? {} : { startup: "layout" }) };
+    localStorage.setItem("openterm.settings", JSON.stringify({ settings, updatedAt: 0, dirty: false }));
+  }, [mode, name === "home"]);
   await page.goto(BASE);
   await page.waitForFunction(() => window.__openterm_perf?.ready);
   await page.waitForTimeout(1200);

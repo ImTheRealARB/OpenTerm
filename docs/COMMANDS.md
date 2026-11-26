@@ -196,7 +196,7 @@ SWARM CRYPTODESK BTC-USDT timeframe=4h --force
 SWARM REPLAY 3fa9c2d17b40
 ```
 
-Code to Vibe-Trading name (source: HKUDS/Vibe-Trading at commit 8172827, MIT; `docs/PHASE_20_PRESETS.md` lists what each desk cannot do):
+Code to Vibe-Trading name (source: HKUDS/Vibe-Trading at commit 8172827, MIT; `docs/porting/VIBE_PRESETS.md` lists what each desk cannot do):
 
 | Code | Vibe-Trading preset | Title | Roles | Coverage |
 |---|---|---|---|---|

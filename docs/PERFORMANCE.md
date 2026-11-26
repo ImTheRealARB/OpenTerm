@@ -792,7 +792,7 @@ Changes since the last full bench: Kite follow-ups, `.BFO` / `.CDS` chains, Kite
 | Backend p95, cached /api/quote | 1.0 ms | 1.1 ms | 20 ms |
 
 Run 1: 36 of 37 (only the chart pan line). Run 2: 33 of 37; the BT, SEAS and tick lines moved together, the pattern of a busy machine (another session was building at the time). A third run was cut short by a pause. A clean rerun on a quiet machine is still to do; the other 31 lines passed in both runs.
-Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs needed a fixture backend or a test fix, see HANDOFF.md "Wrap-up job").
+Gates the same day: pytest 2032, vitest 1107, Playwright 304 pass (2 specs needed a fixture backend or a test fix).
 
 **Run 3 (clean, 2026-11-05, branch `claude/wrapup-final` = main `49c0fd6` + wrapup):** machine rested 100 s, `OPENROUTER_API_KEY` unset, ports free: **37 of 37 PASS**. Cold start 94.5 ms (web), tick-to-pixel p95 36.8 ms, 50k-bar chart pan 16.7 ms, BT 10-year run 283.2 ms (budget 300; it reads 230 rested and rises after back-to-back runs, so it is the closest line to its budget). The README `## Built to be fast` cells are updated from this run.
 

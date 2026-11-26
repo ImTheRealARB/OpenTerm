@@ -130,8 +130,7 @@ Built in this branch (none committed yet):
 3. **Frankfurter** (FX history and quotes behind Yahoo), **Companies House** (`UKCO`), **Marketaux** (news sentiment), **Etherscan** (`ADDR`).
 4. **AISstream** (free key `AISSTREAM_API_KEY`, beta WebSocket) as `AIS`: `providers/aisstream.py` (socket, one listen at a time, hard caps of 15 s / 5,000 messages), `aisstream_parse.py` (pure),
    `world/ais.py` (presets SUEZ PANAMA HORMUZ MALACCA BABEL BOSPHORUS GIBRALTAR DOVER, `BOX S W N E`). **Run against the real service on 2026-11-05** (`ais_stream_recording.json` is a real 46-message recording; the free feed is sparse). Not a streaming
-   feature: the server opens the socket for one short listen per request (cached 20 s), so nothing is subscribed at startup. The key goes in the first message, never in a URL. Details and
-   the list of untested guesses: HANDOFF.md "AISstream".
+   feature: the server opens the socket for one short listen per request (cached 20 s), so nothing is subscribed at startup. The key goes in the first message, never in a URL.
 
 ### Kraken and Coinbase (keyless second crypto exchanges, verified live 2026-11-05)
 

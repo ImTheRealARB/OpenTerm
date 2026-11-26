@@ -6,7 +6,7 @@ Reads `agent/src/factors/{base.py,zoo/<family>/*.py}` (MIT; Qlib Alpha158 parts 
   * backend/openterm/quantlib/alpha/base.py           the operator library (import line + header only)
   * backend/openterm/quantlib/alpha/zoo/<family>/*.py  one module per factor that OpenTerm's panel can feed (import line + header only)
   * backend/openterm/quantlib/alpha/zoo_index.json      id / family / file / inputs / warm-up for every ported factor (`core` = the first 29)
-  * docs/ALPHA_SKIPPED.md                               every factor that was NOT ported, with the reason
+  * docs/porting/VIBE_ALPHAS_SKIPPED.md                               every factor that was NOT ported, with the reason
 
 Idempotent: the same input gives byte-identical output. The files are never edited by hand; a factor is skipped only by the rules in
 `skip_reason` (or `RUNTIME_SKIPS`, found by running the factor on the cross-check panel), never silently.
@@ -130,7 +130,7 @@ def main(vibe: Path) -> int:
     lines += [f"| {why} | {len(ids)} |" for why, ids in sorted(by_reason.items(), key=lambda kv: -len(kv[1]))]
     lines += ["", "| Factor | Family | Reason |", "|---|---|---|"]
     lines += [f"| `{fid}` | {fam} | {why} |" for fam, fid, _, why in skipped]
-    (ROOT / "docs" / "ALPHA_SKIPPED.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (ROOT / "docs" / "porting" / "VIBE_ALPHAS_SKIPPED.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     per = {f: sum(1 for z in index if z["family"] == f) for f in FAMILIES}
     print(f"ported {len(index)} of {total}; skipped {len(skipped)}; by family {per}")
     return 0

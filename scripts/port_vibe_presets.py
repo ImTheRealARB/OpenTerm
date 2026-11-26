@@ -5,7 +5,7 @@
 
 Reads `agent/src/swarm/presets/*.yaml` from HKUDS/Vibe-Trading (MIT, commit 8172827; licence text in THIRD_PARTY.md) and writes
   * backend/openterm/ai/presets/<file>.yaml   one OpenTerm preset per Vibe preset (loaded by `swarm.all_presets`)
-  * docs/PHASE_20_PRESETS.md                  the report: code mapping, coverage, every sentence the rules cut and how
+  * docs/porting/VIBE_PRESETS.md                  the report: code mapping, coverage, every sentence the rules cut and how
 It is idempotent: the same input gives byte-identical output, so a re-run after the tool set or the skill library grows only changes what the
 new tools make possible. Nothing here is hand-edited per preset; the only per-preset input is the code table `CODES` and `OVERRIDES` (empty).
 
@@ -39,7 +39,7 @@ from openterm.ai import tools as toolbox  # noqa: E402
 
 COMMIT = "8172827"
 OUT_DIR = ROOT / "backend" / "openterm" / "ai" / "presets"
-REPORT = ROOT / "docs" / "PHASE_20_PRESETS.md"
+REPORT = ROOT / "docs" / "porting" / "VIBE_PRESETS.md"
 
 # --- the code of each preset (uppercase, at most 14 characters, unique, not one of the five built-in desks) ------------------------------------
 CODES = {

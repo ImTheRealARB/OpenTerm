@@ -66,7 +66,7 @@ def test_preset_codes_follow_the_code_rule_and_are_unique():
     for c in codes:
         assert c == c.upper() and len(c) <= 14 and swarm.CODE_RE.match(c), c
         assert c not in BUILT_IN, f"{c} clashes with a built-in desk"
-    assert len({raw(f)["name"] for f in FILES}) == 30  # the Vibe names (the mapping table in docs/PHASE_20_PRESETS.md) are unique too
+    assert len({raw(f)["name"] for f in FILES}) == 30  # the Vibe names (the mapping table in docs/porting/VIBE_PRESETS.md) are unique too
 
 
 def test_the_engine_loads_all_thirty_next_to_the_five_built_in_desks_with_no_errors():

@@ -20,7 +20,7 @@ from openterm.quantlib.alpha import base as ops
 HERE = Path(__file__).resolve().parent
 ALPHA_DIR = HERE.parent / "openterm" / "quantlib" / "alpha"
 FIX = json.loads((HERE / "fixtures" / "alpha_vibe_expected.json").read_text(encoding="utf-8"))
-SKIPPED_MD = HERE.parents[1] / "docs" / "ALPHA_SKIPPED.md"
+SKIPPED_MD = HERE.parents[1] / "docs" / "porting" / "VIBE_ALPHAS_SKIPPED.md"
 VIBE_TOTAL = 478  # alpha101 101 + qlib158 154 + academic 12 + gtja191 191 + fundamental 20 in Vibe's zoo at the ported commit
 CORE = {f"alpha101_{n:03d}" for n in (1, 2, 3, 4, 6, 9, 12, 13, 16, 21, 33, 34, 101)} | {
     f"qlib158_{n}" for n in ("roc10", "std20", "ma20", "beta10", "resi10", "rsqr20", "rank20", "corr10", "rsv10", "wvma20")} | {

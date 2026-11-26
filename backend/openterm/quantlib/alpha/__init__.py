@@ -4,7 +4,7 @@ Ported from HKUDS/Vibe-Trading (see ``SOURCE`` for the commit; MIT, Qlib Alpha15
 Changes: OpenTerm glue, not a Vibe file. ``ZOO`` lists the ported factors (metadata from Vibe's own factor files, written by
 ``scripts/port_vibe_alphas.py`` into ``zoo_index.json``), ``compute_factor`` imports one module and calls its ``compute(panel)``, and
 ``extend_panel`` adds the two series Vibe's bar loader supplies that a plain OHLCV panel lacks. Factors that need data OpenTerm has
-not got are not in the zoo; ``docs/ALPHA_SKIPPED.md`` lists them with the reason.
+not got are not in the zoo; ``docs/porting/VIBE_ALPHAS_SKIPPED.md`` lists them with the reason.
 """
 
 from __future__ import annotations
