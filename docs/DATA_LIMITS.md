@@ -10,8 +10,8 @@ get around bot checks. Nasdaq stays the first source, so it comes back by itself
 
 | Function | Source while Nasdaq is down | Key | What is different |
 |---|---|---|---|
-| `EQS` screener, `COMP` peer fallback, plain-English company list | Yahoo screener | none | About 6,800 stocks, not 7,000. The country column is blank. The first load takes 10 to 20 seconds. |
-| `MOV` market movers | Yahoo's gainers, losers and most active lists | none | Larger companies only. There is no $ volume or Nasdaq-100 tab. |
+| `EQS` screener, `COMP` peer fallback, plain-English company list | TradingView's public screener; Yahoo's screener if that is down too | none | TradingView: about 6,100 stocks (no ETFs or funds), no IPO year, preferred shares have no market cap, prices 15 minutes late, sectors translated to Nasdaq's names. Yahoo: about 6,800 stocks, the country column is blank, the first load takes 10 to 20 seconds. |
+| `MOV` market movers | TradingView's public screener; Yahoo's lists if that is down too | none | TradingView: all five tabs, but no "data as of" time in the header (STALE and the age still show when the data is old), and the Nasdaq-100 tab shows the 10 members that moved most either way. Yahoo: larger companies only, no $ volume or Nasdaq-100 tab. |
 | `ERN` earnings calendar, `BRIEF` "Earnings today" | Finnhub | `FINNHUB_API_KEY` (free) | Company names and market caps come from the screener. There is no analyst count or last year's EPS. Only about one month back. |
 | `IPO` calendar | Finnhub | `FINNHUB_API_KEY` (free) | One date for each deal. |
 | Earnings markers on `GP` | Financial Modeling Prep | `FMP_API_KEY` (free) | The last four reports. A free key covers larger US companies only. Other companies show KEY PLAN. |

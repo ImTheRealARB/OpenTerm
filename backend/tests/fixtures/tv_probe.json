@@ -1,0 +1,34 @@
+{
+ "request": {
+  "columns": [
+   "name"
+  ],
+  "filter": [
+   {
+    "left": "exchange",
+    "operation": "in_range",
+    "right": [
+     "AMEX",
+     "NASDAQ",
+     "NYSE"
+    ]
+   }
+  ],
+  "range": [
+   0,
+   1
+  ]
+ },
+ "status": 200,
+ "body": {
+  "totalCount": 10824,
+  "data": [
+   {
+    "s": "NASDAQ:SDVY",
+    "d": [
+     "SDVY"
+    ]
+   }
+  ]
+ }
+}

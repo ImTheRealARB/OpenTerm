@@ -2,6 +2,13 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## TradingView for the screener and market movers (2026-11-26)
+A second free source for `EQS` and `MOV` while Nasdaq refuses OpenTerm, tried before Yahoo (details in
+[docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) and [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)):
+- `EQS` loads the whole US stock list in about 1.5 seconds (Yahoo took 10 to 20), with each company's country.
+- `MOV` has all five tabs again, including $ volume and Nasdaq-100.
+- No key needed. If TradingView is down too, Yahoo still answers as before.
+
 ## Other sources while Nasdaq blocks OpenTerm (2026-11-26)
 Nasdaq's website API now refuses OpenTerm. These functions work on live data again, from other sources (details in
 [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md)):
