@@ -40,6 +40,10 @@ const COLUMNS: Column<Earning>[] = [
   { title: "MKT CAP", width: 9, align: "right", text: (r) => fmtBig(r.market_cap) },
 ];
 
+/** The calendar's own name from the envelope source: "nasdaq_earnings" -> NASDAQ, "finnhub + yahoo_screener (...)" -> FINNHUB
+ * (Finnhub answers while Nasdaq blocks OpenTerm, 2026-11-26). */
+const calendarName = (source: string): string => source.split(/[_\s]/)[0].toUpperCase();
+
 export default function ERN({ panelId, args }: FunctionProps) {
   const parsed = useMemo(() => parseErnArgs(args, nyToday()), [args]);
   const date = parsed.ok ? parsed.date : null;
@@ -131,11 +135,11 @@ export default function ERN({ panelId, args }: FunctionProps) {
       {!parsed.ok && <div className="err">{parsed.error}</div>}
       {cur && rows.length === 0 && (
         <div className="dim">
-          NASDAQ LISTS NO REPORTS FOR {date}
+          {calendarName(cur.data.source)} LISTS NO REPORTS FOR {date}
           {date && isWeekend(date) ? " (WEEKEND)." : " (HOLIDAY, OR NOT SCHEDULED YET)."} ←/→ CHANGES THE DAY.
         </div>
       )}
-      {cur && rows.length > 0 && <div className="dim">SORTED BY MARKET CAP · EPS EST = CONSENSUS ({cur.data.as_of_text?.toUpperCase() ?? "NASDAQ"}) · ESTIMATES, NOT ACTUALS, UNTIL A COMPANY REPORTS</div>}
+      {cur && rows.length > 0 && <div className="dim">SORTED BY MARKET CAP · EPS EST = CONSENSUS ({cur.data.as_of_text?.toUpperCase() ?? calendarName(cur.data.source)}) · ESTIMATES, NOT ACTUALS, UNTIL A COMPANY REPORTS</div>}
       {note && <div className="line acc" data-testid="ern-note">{note}</div>}
       <ErrorLine error={error} hasData={!!cur} usage="ERN [TODAY|TOMORROW|+N|-N|YYYY-MM-DD]" />
       <Grid ref={grid} columns={COLUMNS} rows={rows} />

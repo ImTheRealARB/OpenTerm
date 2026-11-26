@@ -128,8 +128,8 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "search": ["yahoo", "twelvedata", "polygon", "fmp"],  # keyed free-tier fallbacks, inert without a key; US names or mapped exchanges only
     "profile": ["yahoo", "nasdaq"],
     "sparks": ["yahoo"],  # board 2DAY sparkline: two sessions of 30 minute closes (only Yahoo's batched spark endpoint gives them keyless)
-    "movers": ["nasdaq"],
-    "screener": ["nasdaq_screener"],
+    "movers": ["nasdaq", "yahoo_movers"],  # Nasdaq first (it has the $-volume and Nasdaq-100 tables); it blocks us since 2026-11-26
+    "screener": ["nasdaq_screener", "yahoo_screener"],  # Nasdaq first (one call, has country); Yahoo needs ~150 calls
     "peers": ["yahoo_peers"],
     "figi": ["openfigi"],  # SECF identifier mapping
     "mfnav": ["amfi"],  # AMFI NAV for the SECF fund rows
@@ -167,17 +167,17 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "corp_events": ["yahoo_research"],
     "dividends": ["nasdaq_research", "yahoo_research"],
     "splits": ["yahoo_research"],
-    "ipo": ["nasdaq_research"],
+    "ipo": ["nasdaq_research", "finnhub"],  # Finnhub needs FINNHUB_API_KEY
     "short_interest": ["nasdaq_research", "yahoo_research"],
     "short_volume": ["finra"],
     "etf_holdings": ["sec_nport"],
     "manager_13f": ["sec_13f"],
-    "earnings_history": ["nasdaq_research"],  # GP event markers
+    "earnings_history": ["nasdaq_research", "fmp"],  # GP event markers; FMP needs FMP_API_KEY (larger US companies on a free key)
     # Macro. fred = official API, only active with FRED_API_KEY; fred_csv = keyless CSV.
     "fred_series": ["fred", "fred_csv"],
     "fred_search": ["fred"],
     "yield_curve": ["treasury", "fred_csv"],
-    "earnings": ["nasdaq_earnings"],
+    "earnings": ["nasdaq_earnings", "finnhub"],  # Finnhub needs FINNHUB_API_KEY; it has no names or market caps (the service adds them)
     "eco_calendar": ["agency_ics", "fred"],
     # Options and rates views
     "option_chain": ["yahoo_options", "tradier"],  # Tradier is a keyed fallback

@@ -22,9 +22,11 @@ import httpx
 from .. import errkinds as K
 from ..models import Bars, Quote, SearchHit
 from ..ranges import range_days
+from ..research import calendars_parse as cal
 from .base import HISTORY, QUOTES, SEARCH, ProviderError
 from .keyed import KeyedProvider
 from .keyed_market import build_fa, fnum, inum
+from .research_nasdaq import EARNINGS_HISTORY
 
 FUNDAMENTALS = "fundamentals"
 BASE = "https://financialmodelingprep.com/stable"
@@ -83,7 +85,7 @@ def error_for(status: int, body: Any) -> ProviderError | None:
 class FmpProvider(KeyedProvider):
     name = "fmp"
     label = "Financial Modeling Prep (free key)"
-    capabilities = frozenset({QUOTES, HISTORY, SEARCH, FUNDAMENTALS})
+    capabilities = frozenset({QUOTES, HISTORY, SEARCH, FUNDAMENTALS, EARNINGS_HISTORY})
     markets = "US shares and ETFs: quote, daily candles (about 5 years), symbol search, annual income statement, balance sheet and cash flow"
     terms = ("Free key (FMP_API_KEY): 250 requests a day, US coverage, annual statements only (per provider docs, not verified here). "
              "Quarterly statements, intraday candles and most non-US data need a paid plan.")
@@ -209,6 +211,15 @@ class FmpProvider(KeyedProvider):
         out = {m: build_fa(reports, FIELDS, "date", label, m) for m, reports in (("A", annual), ("Q", quarter))}
         return {"cik": None, "name": None, "currency": cur, **out, "notes": notes, "symbol": symbol, "source": self.source,
                 "as_of": self.now()}
+
+    async def earnings_history(self, symbol: str) -> dict:
+        """GP's earnings markers: the days results came out, with EPS. On a free key FMP answers the last four quarters plus the
+        next date, and only for larger US companies (others are 402, said as KEY PLAN). Added 2026-11-26 behind Nasdaq."""
+        fmp = fmp_symbol(symbol)
+        if fmp is None:
+            raise ProviderError(K.UNSUPPORTED, "US tickers only")
+        today = datetime.now(UTC).date().isoformat()
+        return cal.fmp_earnings_history(await self._api("earnings", {"symbol": fmp}), today, self.source)
 
     async def probe(self) -> None:
         await self._api("quote", {"symbol": "AAPL"})

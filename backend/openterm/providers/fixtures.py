@@ -81,6 +81,33 @@ def _news_table_feed(request: httpx.Request) -> httpx.Response | None:
                           headers={"content-type": "application/rss+xml"})
 
 
+# --- Nasdaq replacements (2026-11-26): Yahoo screener + predefined screens, REAL trimmed recordings (scripts/record_nasdaq_replacements.py).
+# The fields recording lists only the three recorded industries, so fixture mode builds a 36-row universe; any other industry is a 404.
+YAHOO_SCREENER_INDUSTRIES = {"Consumer Electronics": "yahoo_screener_consumer_electronics",
+                             "Software\u2014Infrastructure": "yahoo_screener_software_infrastructure",
+                             "Semiconductors": "yahoo_screener_semiconductors"}
+YAHOO_PREDEFINED = {"day_gainers", "day_losers", "most_actives"}
+
+
+def _route_yahoo_screens(request: httpx.Request) -> httpx.Response | None:
+    p = request.url.path
+    if p == "/v1/finance/screener/instrument/equity/fields":
+        return _load("yahoo_screener_fields")
+    if p == "/v1/finance/screener/predefined/saved":
+        scr = request.url.params.get("scrIds", "")
+        return _load(f"yahoo_predefined_{scr}") if scr in YAHOO_PREDEFINED else httpx.Response(404, text="not recorded")
+    if p == "/v1/finance/screener" and request.method == "POST":
+        try:
+            body = json.loads(request.content)
+            ops = body["query"]["operands"]
+            industry = next(o["operands"][1] for o in ops if o.get("operands", [None])[0] == "industry")
+        except (ValueError, KeyError, StopIteration, TypeError):
+            return httpx.Response(404, text="not recorded")
+        name = YAHOO_SCREENER_INDUSTRIES.get(industry)
+        return _load(name) if name and body.get("offset", 0) == 0 else httpx.Response(404, text="not recorded")
+    return None
+
+
 def _route_base(request: httpx.Request) -> httpx.Response:
     p = request.url.path
     q = request.url.params
@@ -325,7 +352,8 @@ _TD = {("quote", ""): "twelvedata_real_quote_aapl", ("time_series", "1day"): "tw
 _AV = {"GLOBAL_QUOTE": "alphavantage_real_quote_ibm", "TIME_SERIES_DAILY": "alphavantage_docshape_daily_ibm", "OVERVIEW": "alphavantage_real_overview_ibm",
        "INCOME_STATEMENT": "alphavantage_real_income_ibm", "BALANCE_SHEET": "alphavantage_real_balance_ibm", "CASH_FLOW": "alphavantage_real_cashflow_ibm"}
 _FMP = {"quote": "fmp_docshape_quote_aapl", "historical-price-eod/full": "fmp_docshape_history_aapl", "income-statement": "fmp_docshape_income_aapl",
-        "balance-sheet-statement": "fmp_docshape_balance_aapl", "cash-flow-statement": "fmp_docshape_cashflow_aapl", "search-symbol": "fmp_docshape_search_apple"}
+        "balance-sheet-statement": "fmp_docshape_balance_aapl", "cash-flow-statement": "fmp_docshape_cashflow_aapl", "search-symbol": "fmp_docshape_search_apple",
+        "earnings": "fmp_real_earnings_aapl"}  # earnings: a REAL recording (scripts/record_nasdaq_replacements.py)
 _KEYED_MARKET_HOSTS = ("api.twelvedata.com", "www.alphavantage.co", "api.massive.com", "financialmodelingprep.com")
 
 
@@ -444,12 +472,22 @@ KEYED_ROUTES = {
 }
 
 
+# Nasdaq replacements (2026-11-26): REAL Finnhub recordings by scripts/record_nasdaq_replacements.py, keyed on (from, to).
+FINNHUB_CALENDARS = {
+    "/api/v1/calendar/earnings": {("2026-11-24", "2026-11-24"): "finnhub_earnings_calendar_2026-11-24"},
+    "/api/v1/calendar/ipo": {("2026-11-01", "2026-11-30"): "finnhub_ipo_calendar_2026-11"},
+}
+
+
 def _route_keyed(request: httpx.Request) -> httpx.Response | None:
     host, p, q = request.url.host, request.url.path, request.url.params
     if (host == "finnhub.io" and p != "/api/v1/quote") or host == "data.alpaca.markets":
         authed = request.headers.get("x-finnhub-token") if host == "finnhub.io" else request.headers.get("apca-api-key-id")
         if not authed:
             return httpx.Response(401, json={"error": "Invalid API key"})
+        if p in FINNHUB_CALENDARS:  # earnings / IPO calendars: only the recorded window answers
+            name = FINNHUB_CALENDARS[p].get((q.get("from"), q.get("to")))
+            return _load(name) if name else httpx.Response(404, json={"error": "not recorded"})
         name = KEYED_ROUTES.get((host, p, q.get("symbol") or q.get("symbols")))
         if name:
             return _load(name)
@@ -1198,6 +1236,7 @@ ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
     _route_phase19b,    # World Bank, DBnomics series, Nager.Date, policy rates
     _route_phase19,     # OpenFIGI mapping
     _route_kite,        # Zerodha Kite Connect
+    _route_yahoo_screens,  # Yahoo screener (EQS universe) and predefined screens (MOV), the Nasdaq replacements
     _route_kenfrench,   # Ken French factor zips
     _route_slice,       # shorter daily Yahoo charts cut from a longer recording
     _route_futures,     # futures contract charts, CFTC COT, FOMC calendar

@@ -100,8 +100,8 @@ class Provider:
         except orjson.JSONDecodeError as e:
             raise ProviderError("unavailable", "non-JSON response (bot check?)") from e
 
-    async def post_json(self, url: str, body: Any, timeout: float | None = None) -> Any:
-        r = await self._request(url, None, timeout, body)
+    async def post_json(self, url: str, body: Any, timeout: float | None = None, params: dict[str, Any] | None = None) -> Any:
+        r = await self._request(url, params, timeout, body)
         try:
             return orjson.loads(r.content)
         except orjson.JSONDecodeError as e:

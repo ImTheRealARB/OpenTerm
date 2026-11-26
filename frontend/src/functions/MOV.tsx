@@ -121,6 +121,10 @@ export default function MOV({ panelId, args }: FunctionProps) {
           {error.detail && <span className="dim"> ({error.detail})</span>}
         </div>
       )}
+      {/* The Yahoo fallback (used while Nasdaq blocks OpenTerm) has no $-volume or Nasdaq-100 table: say so instead of an empty grid. */}
+      {env && !(tab in env.data.tables) && (
+        <div className="dim">NOT IN THIS SOURCE ({(env.source ?? "").toUpperCase()}): TRY 1-3</div>
+      )}
       <Grid ref={grid} columns={COLUMNS} rows={rows} />
     </div>
   );

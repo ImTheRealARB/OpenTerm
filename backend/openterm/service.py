@@ -6,6 +6,7 @@ A stale envelope is served instantly and refreshed in the background; it is neve
 
 import asyncio
 import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
@@ -144,6 +145,8 @@ class DataService:
             value = await self._once(key, fetch)
         except AllFailed as e:
             detail = "; ".join(f"{name}: {err.kind} ({err})" for name, err in e.errors) or None
+            if e.unlock and e.kind == K.UNAVAILABLE:
+                detail = f"{detail}; ANOTHER SOURCE NEEDS A KEY: set {' or '.join(e.unlock)} in APIKEYS"
             raise DataError(e.kind if e.kind != K.UNSUPPORTED else K.NOT_FOUND, str(e), detail, e.key) from e
         return envelope(value, self.cache.mem[key][1] if key in self.cache.mem else time.time(), stale=False)
 
@@ -736,9 +739,30 @@ class DataService:
 
         async def fetch() -> dict:
             out, failed = await self.router.call("earnings", lambda p: p.earnings(d))
-            return {"data": out, "fallback_from": failed}
+            return {"data": await self._earnings_names(out), "fallback_from": failed}
 
         return await self.swr(f"ern:{d.isoformat()}", self._ttl7("earnings", 900), fetch)
+
+    async def _earnings_names(self, out: dict) -> dict:
+        """Finnhub's calendar (the fallback while Nasdaq blocks us) has no company names or market caps. They come from the
+        screener universe, and the rows are then sorted largest first like Nasdaq's. The `source` says where they came from; if the
+        screener is down too the rows stay as the calendar gave them (blank COMPANY / MKT CAP, which is the truth)."""
+        rows = out["rows"]
+        if not rows or any(r.get("market_cap") is not None or r.get("name") for r in rows):
+            return out  # Nasdaq rows already carry both
+        try:
+            uni = (await self.screener())["data"]
+        except DataError:
+            return out
+        # Screener spelling is `BRK/B`; Finnhub writes `BRK.B`. Compare on letters and digits only.
+        by_sym = {re.sub(r"[^A-Z0-9]", "", r[0]): r for r in uni["rows"]}
+        name_i, cap_i = uni["columns"].index("name"), uni["columns"].index("mcap")
+        for r in rows:
+            hit = by_sym.get(re.sub(r"[^A-Z0-9]", "", r["symbol"]))
+            if hit:
+                r["name"], r["market_cap"] = hit[name_i] or None, hit[cap_i]
+        rows.sort(key=lambda r: -(r["market_cap"] or 0))
+        return {**out, "source": f"{out['source']} + {uni['source']} (names, market caps)"}
 
     async def eco(self, start: str | None = None, days: int = 14) -> dict:
         try:
