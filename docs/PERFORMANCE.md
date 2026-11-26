@@ -943,3 +943,10 @@ network-bound tasks shown with progress.
 ## Phase 32 (2026-11-24, Windows 11, 20 threads, branch `claude/phases-21-32-build-resume-f09808`)
 First run 38/39: SEAS 10,000-bar calc 16.1 ms against 15 ms (Phase 32 does not touch SEAS). Rerun straight after: **39/39 PASS**,
 SEAS 7.9 ms, BT 10-year daily rule run 165.5 ms (budget 300). The miss was machine noise (see the "lone bench miss" note in CLAUDE.md).
+
+## Gemini audit groups 2-10 (2026-11-26, Windows 11, 20 threads, branch `claude/openterm-audit-groups-2-10-e06ec2`)
+One run after all nine groups, with a real `OPENROUTER_API_KEY` in the shell (the bench used to fail 409 `env_locked`; group 10
+strips key env vars from the spawned servers): **39/39 PASS**. Hot-path changes were groups 3 (freshness fold in `service.swr`),
+5 (exchange-tz day bucketing in quant jobs) and 6 (router half-open check, shielded quote batch). BT 10-year daily rule run
+255.3 ms (budget 300; the audit's 348 ms reading was not reproduced), tick to pixel 41.6 ms (50), cached quote / history /
+screener 0.6 / 0.9 / 0.7 ms server-side (20).
