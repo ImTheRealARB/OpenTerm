@@ -215,9 +215,11 @@ async def bt_code(request: Request):
 
     async def run() -> AsyncIterator[dict]:
         answer, cost, calls, repaired = "", 0.0, 0, False
+        grounded, unsourced = False, []  # taken from the agent rounds' own verdicts (never assumed): a draft that read no tool data is UNGROUNDED
         async for ev in one(idea, []):
             if ev["type"] == "done":
                 answer, cost, calls = ev["answer"], ev["cost"], ev["tool_calls"]
+                grounded, unsourced = ev["grounded"], list(ev["unsourced"])
             else:
                 yield ev
             if ev["type"] == "error":
@@ -231,6 +233,8 @@ async def bt_code(request: Request):
             async for ev in one(btcode.REPAIR.format(error=check["error"]), history):
                 if ev["type"] == "done":
                     answer, cost, calls = ev["answer"], cost + ev["cost"], calls + ev["tool_calls"]
+                    grounded = grounded or ev["grounded"]  # data read in either round grounds the draft
+                    unsourced += [u for u in ev["unsourced"] if u not in unsourced]
                 elif ev["type"] != "start":
                     yield ev
                 if ev["type"] == "error":
@@ -239,7 +243,8 @@ async def bt_code(request: Request):
             check = btcode.validate(code)
         yield {"type": "code_draft", "draft": {"code": code or "", "name": btcode.suggest_name(answer), "ok": check["ok"], "error": check["error"], "line": check["line"],
                                                  "repaired": repaired, "note": btcode.NOTE}}
-        yield {"type": "done", "answer": btcode.rationale(answer), "grounded": True, "label": None, "unsourced": [], "tool_calls": calls, "cost": cost, "stopped": None}
+        yield {"type": "done", "answer": btcode.rationale(answer), "grounded": grounded, "label": None if grounded else "UNGROUNDED", "unsourced": unsourced,
+               "tool_calls": calls, "cost": cost, "stopped": None}
 
     events = audit(request, run(), "ai_bt_code", btcode.BT_CODE_SYSTEM, idea, btcode.BT_CODE_TOOLS, names[0], names[1])
     return _stream(request, t0, events, runner)
@@ -280,7 +285,8 @@ async def chart(request: Request):
                 return
         yield {"type": "done", "answer": "".join(parts), "grounded": False, "label": "CHART IMAGE ONLY", "unsourced": [], "tool_calls": 0, "cost": cost, "stopped": None}
 
-    return _stream(request, t0, events())
+    # the question hashed is the label (symbol and range): the image itself is never hashed or stored
+    return _stream(request, t0, audit(request, events(), "ai_chart", CHART_SYSTEM, label, [], model, provider))
 
 
 # --- AI DOC ------------------------------------------------------------------------------------------------------------------------

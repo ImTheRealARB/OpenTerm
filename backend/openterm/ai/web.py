@@ -124,11 +124,11 @@ def config_from(app, ai: dict | None) -> WebConfig | None:
 
 def offered_names(base: list[str] | None, cfg: WebConfig | None) -> list[str] | None:
     """Tool names for the audit manifest: the plain-chat set plus the web tools when they are on (None = the default set, unchanged)."""
-    from .tools import REGISTRY
+    from .tools import default_names
 
     if cfg is None:
         return base
-    return sorted({*(base if base is not None else [t.name for t in REGISTRY.values() if not (t.doc_only or t.web_only)]), *WEB_TOOLS})
+    return sorted({*(base if base is not None else default_names()), *WEB_TOOLS})
 
 
 # --- the policy: caps and "a page cannot send the model somewhere" -----------------------------------------------------------------------

@@ -42,8 +42,9 @@ def fit(messages: list[dict], budget: int = BUDGET_TOKENS) -> list[dict]:
     messages = [dict(m) for m in messages]  # the caller's list is not edited
     system = [m for m in messages if m.get("role") == "system"]
     turns = _turns(messages)
-    # 1. blank the oldest tool results (the call stays, so the protocol stays valid), never the current turn's
-    for turn in turns[:-1] + [turns[-1]]:
+    # 1. blank the oldest tool results (the call stays, so the protocol stays valid), never the current turn's: the answer is being written from
+    #    them, and blanking them would leave a "grounded" answer with no data behind it (audit M-15). Each result is already capped by RESULT_LIMIT.
+    for turn in turns[:-1]:
         for m in turn:
             if m.get("role") == "tool" and m.get("content") != DROPPED:
                 m["content"] = DROPPED

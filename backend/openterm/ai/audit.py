@@ -42,7 +42,7 @@ def canonical(obj: object) -> str:
 
 def manifest(prompt: str, tool_names: list[str] | None, model: str, provider: str) -> dict:
     """What the run was allowed to use: hashes of the prompt, the offered tools (name, description, schema) and the skill files."""
-    names = sorted(tool_names if tool_names is not None else [t.name for t in toolbox.REGISTRY.values() if not (t.doc_only or t.web_only)])
+    names = sorted(tool_names if tool_names is not None else toolbox.default_names())
     spec = [{"name": n, "description": toolbox.REGISTRY[n].description, "parameters": toolbox.REGISTRY[n].parameters} for n in names if n in toolbox.REGISTRY]
     mf = {"prompt_sha": sha(prompt), "tools": names, "tools_sha": sha(canonical(spec)),
           "skills": {n: sha(skills.get(n) or "")[:16] for n in skills.names()}, "app": __version__, "model": model, "provider": provider}

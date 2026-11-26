@@ -545,9 +545,16 @@ def validate_external(t: ExternalTool, args: Any) -> str | None:
     return None
 
 
+def default_names() -> list[str]:
+    """The built-in tools plain chat offers when no list is given. The ONE definition: `openai_tools` sends these to the model and the audit
+    manifest records them, so the ledger can never list a tool the model was not offered (audit C-14)."""
+    return [t.name for t in REGISTRY.values() if not (t.doc_only or t.desk_only or t.web_only)]
+
+
 def openai_tools(names: list[str] | None = None) -> list[dict]:
+    wanted = default_names() if names is None else names
     out = [{"type": "function", "function": {"name": t.name, "description": t.description, "parameters": t.parameters}}
-           for t in REGISTRY.values() if (t.name in names if names is not None else not (t.doc_only or t.desk_only or t.web_only))]
+           for t in REGISTRY.values() if t.name in wanted]
     out += [{"type": "function", "function": {"name": t.wire, "description": f"[THIRD-PARTY, server {t.server}] {t.description}", "parameters": t.parameters}}
             for t in external_for(names)]
     return out

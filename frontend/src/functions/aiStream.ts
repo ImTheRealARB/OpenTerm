@@ -6,7 +6,7 @@ export type AiEvent =
   | { type: "start"; model: string; provider: string; started: string; fixtures?: boolean }
   | { type: "token"; text: string }
   | { type: "tool_call"; id: string; name: string; args: Record<string, unknown> }
-  | { type: "tool_result"; id: string; name: string; ok: boolean; empty: boolean; source: string | null; age_s: number | null; stale: boolean; bytes: number; summary: string }
+  | { type: "tool_result"; id: string; name: string; ok: boolean; empty: boolean; source: string | null; age_s: number | null; stale: boolean; bytes: number; summary: string; untrusted?: boolean; fetched?: string }
   | { type: "usage"; prompt_tokens: number; completion_tokens: number; cost: number | null }
   | { type: "notice"; text: string }
   | { type: "draft"; draft: BtDraft }
@@ -94,6 +94,9 @@ export interface ToolRow {
   age_s?: number | null;
   stale?: boolean;
   summary?: string;
+  /** Web text or a third-party MCP tool: third-party text, never data (the server flags it, with the time it was fetched). */
+  untrusted?: boolean;
+  fetched?: string;
 }
 
 export interface Turn {
@@ -143,7 +146,7 @@ export function reduceTurn(t: Turn, e: AiEvent): Turn {
       return {
         ...t,
         tools: t.tools.map((r) =>
-          r.id === e.id ? { ...r, state: !e.ok ? "failed" : e.empty ? "empty" : "ok", source: e.source, age_s: e.age_s, stale: e.stale, summary: e.summary } : r,
+          r.id === e.id ? { ...r, state: !e.ok ? "failed" : e.empty ? "empty" : "ok", source: e.source, age_s: e.age_s, stale: e.stale, summary: e.summary, ...(e.untrusted ? { untrusted: true, fetched: e.fetched } : {}) } : r,
         ),
       };
     case "usage":
@@ -179,6 +182,17 @@ export function reduceTurn(t: Turn, e: AiEvent): Turn {
 export function turnLine(t: Turn): string {
   const time = t.started ? t.started.slice(11, 19) + "Z" : "";
   return ["AI", t.model, time, "MODEL OUTPUT, NOT DATA", `US$${t.cost.toFixed(4)}`].filter(Boolean).join(" · ");
+}
+
+/** The warning under a tool call whose text is third-party (web page, third-party MCP tool), or null for data from OpenTerm's own tools. */
+export function untrustedLine(r: ToolRow): string | null {
+  if (!r.untrusted) return null;
+  return `UNTRUSTED THIRD-PARTY TEXT, NOT DATA${r.fetched ? ` · FETCHED ${r.fetched.slice(11, 19)}Z` : ""}`;
+}
+
+/** The AI line goes under every answer, also one that failed part way: a model ran, so the reader is told which one and what it cost. */
+export function showsAiLine(t: Turn): boolean {
+  return t.status === "done" || (t.status === "error" && !!t.model);
 }
 
 export type Segment = { text: string } | { cite: string };

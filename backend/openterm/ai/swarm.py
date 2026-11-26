@@ -449,8 +449,12 @@ async def _run_task(gateway, runner_for, preset: Preset, role: Role, task: Task,
     is_final = task.id == final_task(preset).id
     if is_final:
         sources = [t for _, t in st.notes if not t.startswith("ROLE FAILED")]
-        grounded = any(o.get("grounded") for o in st.outcomes if o["ok"])
-        done = {**done, "unsourced": ground.check(done["answer"], sources) if sources else [], "grounded": grounded, "label": None if grounded else "UNGROUNDED"}
+        # the chair counts too: data it fetched itself grounds the desk even when no analyst used a tool (it was left out before: C-13)
+        grounded = done["grounded"] or any(o.get("grounded") for o in st.outcomes if o["ok"])
+        unsourced = ground.check(done["answer"], sources) if sources else []
+        if done["grounded"]:  # a figure the chair read from its own tools is sourced even if no analyst note holds it
+            unsourced = [u for u in unsourced if u in done["unsourced"]] if sources else done["unsourced"]
+        done = {**done, "unsourced": unsourced, "grounded": grounded, "label": None if grounded else "UNGROUNDED"}
         st.final = done
     else:
         st.notes.append((role, done["answer"]))
