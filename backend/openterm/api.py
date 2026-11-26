@@ -497,7 +497,9 @@ async def list_news_alerts(request: Request):
 @router.post("/newsalerts")
 async def create_news_alert(request: Request):
     try:
-        return await news_alerts_store(request).create(await json_object(request))
+        alert = await news_alerts_store(request).create(await json_object(request))
+        await engine_of(request).sync()  # like the price alerts above (audit L-02)
+        return alert
     except UserDataError as e:
         return error(e)
 
@@ -506,13 +508,17 @@ async def create_news_alert(request: Request):
 async def clear_news_alerts(request: Request, status: str = Query(...)):
     if status != "triggered":
         return error(UserDataError("bad_request", "ONLY status=triggered CAN BE CLEARED"))
-    return {"deleted": await news_alerts_store(request).clear_triggered()}
+    deleted = await news_alerts_store(request).clear_triggered()
+    await engine_of(request).sync()
+    return {"deleted": deleted}
 
 
 @router.delete("/newsalerts/{alert_id}")
 async def delete_news_alert(request: Request, alert_id: int):
     try:
-        return {"deleted": await news_alerts_store(request).delete(alert_id)}
+        deleted = await news_alerts_store(request).delete(alert_id)
+        await engine_of(request).sync()
+        return {"deleted": deleted}
     except UserDataError as e:
         return error(e)
 
@@ -531,7 +537,9 @@ async def trigger_news_alert(request: Request, alert_id: int):
 @router.post("/newsalerts/{alert_id}/rearm")
 async def rearm_news_alert(request: Request, alert_id: int):
     try:
-        return await news_alerts_store(request).rearm(alert_id)
+        alert = await news_alerts_store(request).rearm(alert_id)
+        await engine_of(request).sync()
+        return alert
     except UserDataError as e:
         return error(e)
 
@@ -1103,7 +1111,8 @@ async def bt_import(request: Request, symbol: str = "", tz: str | None = Query(N
         except UnicodeDecodeError:
             raise BtError("bad_request", "CSV REJECTED", detail="THE FILE IS NOT UTF-8 TEXT") from None
         try:
-            cols = csvimport.parse_bars(text, tz)
+            # In a thread (audit H-08): up to 20 MB of CSV is tens of milliseconds to seconds of pure Python.
+            cols = await asyncio.to_thread(csvimport.parse_bars, text, tz)
         except csvimport.CsvError as e:
             raise BtError("bad_request", "CSV REJECTED", detail=str(e)) from None
     except csvimport.CsvError as e:

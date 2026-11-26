@@ -33,6 +33,7 @@ KV_LAST = "chainrec:last"
 MAX_EXPIRIES = 6          # the nearest six expiries are recorded
 RANK_MIN_DAYS = 20        # IV rank uses the nearest expiry at least this many days out (the 30-day-ish point)
 DAY = 86400.0
+SNAP_RETENTION_DAYS = 400  # strike-level rows older than this are dropped after each run (a bit over one trading year)
 
 
 def label(first_day: str | None) -> str:
@@ -125,8 +126,20 @@ async def run_all(app) -> dict:
     await db.execute("INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                      (KV_LAST, orjson.dumps(out)))
     await db.commit()
-    log.info("chain recorder %s: %d recorded, %d failed", name, len(done), len(failed))
+    pruned = await prune(db, day)
+    log.info("chain recorder %s: %d recorded, %d failed, %d old strike rows dropped", name, len(done), len(failed), pruned)
     return out
+
+
+async def prune(db, today: str) -> int:
+    """Deletes strike rows (`chain_snaps`) older than `SNAP_RETENTION_DAYS`; returns how many went (audit L-01).
+
+    Why only that table: it holds ~1,000 rows per symbol per day and grew without limit. `chain_atm` is one small row per expiry per
+    day and is the IV rank / term history, so it stays. The previous-day OI comparison needs only the newest earlier day."""
+    cutoff = datetime.fromtimestamp(_epoch(today) - SNAP_RETENTION_DAYS * DAY, UTC).strftime("%Y-%m-%d")
+    cur = await db.execute("DELETE FROM chain_snaps WHERE day < ?", (cutoff,))
+    await db.commit()
+    return cur.rowcount
 
 
 async def scheduled_run(app) -> None:

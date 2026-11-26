@@ -120,8 +120,17 @@ async def migrate(db: aiosqlite.Connection) -> int:
     async with db.execute("PRAGMA user_version") as cur:
         (version,) = await cur.fetchone()
     for i, sql in enumerate(MIGRATIONS[version:], start=version + 1):
-        for stmt in sql if isinstance(sql, list) else [sql]:
-            await db.execute(stmt)
-        await db.execute(f"PRAGMA user_version={i}")
-    await db.commit()
+        # One transaction per step (audit H-06). Python's sqlite3 does not open one for DDL, so without BEGIN each statement
+        # committed alone and a crash half way left a step that failed forever with "already exists". SQLite DDL and
+        # `user_version` are both transactional: the step lands whole, with its version number, or not at all.
+        await db.commit()  # nothing may be pending: BEGIN inside an open transaction is an error
+        await db.execute("BEGIN")
+        try:
+            for stmt in sql if isinstance(sql, list) else [sql]:
+                await db.execute(stmt)
+            await db.execute(f"PRAGMA user_version={i}")
+        except BaseException:
+            await db.rollback()
+            raise
+        await db.commit()
     return len(MIGRATIONS)

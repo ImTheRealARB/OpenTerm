@@ -55,7 +55,8 @@ log = logging.getLogger("openterm.recorder")
 DEFAULT_CAP_MB = 500
 DEFAULT_RETENTION_DAYS = 14
 DEFAULT_POLL_S = 5.0
-SESSION_RE = re.compile(r"^([A-Z0-9]{2,30})/(\d{4}-\d{2}-\d{2}-\d{6})$")  # a session id: SYMBOL/YYYY-MM-DD-HHMMSS
+SESSION_NAME_MAX = 30
+SESSION_RE = re.compile(rf"^([A-Z0-9]{{2,{SESSION_NAME_MAX}}})/(\d{{4}}-\d{{2}}-\d{{2}}-\d{{6}})$")  # a session id: SYMBOL/YYYY-MM-DD-HHMMSS
 MAX_SESSION_LINES = 50_000  # GET /session returns at most this many lines (a tail of the file): the response stays bounded
 MAX_SESSION_BYTES = 12_000_000
 
@@ -102,6 +103,7 @@ class Recorder:
         self.poll_s = poll_s
         self.kite = kite  # the Kite ticker (None in fixture mode): Indian symbols are recorded from it
         self.active: dict[str, _Active] = {}
+        self._starting: set[str] = set()  # symbols whose start is awaiting the network or settings: a second start must not slip in (H-07)
         self.stopped_notes: dict[str, str] = {}  # symbol -> why its last recording ended on its own (disk cap, errors)
 
     # ------------------------------------------------------------------ settings
@@ -143,34 +145,51 @@ class Recorder:
         except ValueError as e:
             raise RecorderError("bad_request", "RECORDER: CRYPTO ONLY (BINANCE SPOT PAIRS LIKE BTCUSDT)") from e
         sym = f"{base}{'USDT' if quote == 'USD' else quote}"
-        if sym in self.active:
-            raise RecorderError("conflict", f"ALREADY RECORDING {sym}")
-        cap, retention = await self._limits()
-        self.delete_old(retention)
-        if self.total_bytes() >= cap:
-            raise RecorderError("conflict", f"RECORDER STOPPED: DISK CAP {cap // 1_000_000} MB (DELETE OLD SESSIONS IN REC)")
-        # One request to the sources first: a symbol Binance does not list fails here, loudly, not after a silent empty file.
-        first = await self._poll_once(base, quote)
-        (self.root / sym).mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
-        rec = _Active(sym, self.root / sym / f"{stamp}.jsonl")
-        self._write(rec, [{"k": "meta", "v": 1, "symbol": sym, "started": rec.started, "venue": first["venue"]}])
-        self.stopped_notes.pop(sym, None)
-        self.active[sym] = rec
-        self._ingest(rec, first)  # the first poll is not wasted
-        rec.task = asyncio.create_task(self._run(rec, base, quote), name=f"recorder:{sym}")
-        return self._active_row(rec)
+        self._reserve(sym)  # no await between the check and the reservation: a double click cannot start two tasks (audit H-07)
+        try:
+            cap, retention = await self._limits()
+            self.delete_old(retention)
+            if self.total_bytes() >= cap:
+                raise RecorderError("conflict", f"RECORDER STOPPED: DISK CAP {cap // 1_000_000} MB (DELETE OLD SESSIONS IN REC)")
+            # One request to the sources first: a symbol Binance does not list fails here, loudly, not after a silent empty file.
+            first = await self._poll_once(base, quote)
+            (self.root / sym).mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
+            rec = _Active(sym, self.root / sym / f"{stamp}.jsonl")
+            self._write(rec, [{"k": "meta", "v": 1, "symbol": sym, "started": rec.started, "venue": first["venue"]}])
+            self.stopped_notes.pop(sym, None)
+            self.active[sym] = rec
+            self._ingest(rec, first)  # the first poll is not wasted
+            rec.task = asyncio.create_task(self._run(rec, base, quote), name=f"recorder:{sym}")
+            return self._active_row(rec)
+        finally:
+            self._starting.discard(sym)
+
+    def _reserve(self, key: str) -> None:
+        """Claims `key` for a start in progress, or says it is already recording or being started."""
+        if key in self.active or key in self._starting:
+            raise RecorderError("conflict", f"ALREADY RECORDING {key}")
+        self._starting.add(key)
 
     async def _start_kite(self, symbol: str) -> dict[str, Any]:
         """Records an Indian symbol from the Kite ticker (read-only): prints and book changes, no polling."""
         assert self.root is not None
+        key = _clean(symbol)
+        # The session route accepts folder names of 2-30 letters and digits (SESSION_RE): a longer or shorter one would record fine and
+        # then never be readable, so refuse it now (audit L-02).
+        if not 2 <= len(key) <= SESSION_NAME_MAX:
+            raise RecorderError("bad_request", f"RECORDER NAME {key[:12]}... MUST BE 2-{SESSION_NAME_MAX} LETTERS AND DIGITS")
         try:
             kiteflow.need_ticker(self.kite)
         except DataError as e:
             raise RecorderError("bad_request", f"RECORDING {symbol} NEEDS THE KITE TICKER: {e}") from e
-        key = _clean(symbol)
-        if key in self.active:
-            raise RecorderError("conflict", f"ALREADY RECORDING {symbol}")
+        self._reserve(key)  # audit H-07, as in the crypto path
+        try:
+            return await self._start_kite_reserved(symbol, key)
+        finally:
+            self._starting.discard(key)
+
+    async def _start_kite_reserved(self, symbol: str, key: str) -> dict[str, Any]:
         cap, retention = await self._limits()
         self.delete_old(retention)
         if self.total_bytes() >= cap:

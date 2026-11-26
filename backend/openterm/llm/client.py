@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 
 import aiosqlite
 import httpx
+import orjson
 
 from .. import keys as keystore
 from ..redact import redact
@@ -50,6 +51,7 @@ class Gateway:
         self._or_prices: dict[str, dict] = {}
         self._or_at = 0.0
         self._ollama: tuple[float, str, str | None] = (0.0, "DOWN", None)
+        self._reserved = 0.0  # US$ the calls still streaming may yet cost (see `chat`, audit C-12)
 
     # --- prices ---
     async def _openrouter_prices(self) -> dict[str, dict]:
@@ -103,22 +105,28 @@ class Gateway:
         local = provider == "ollama"
         price = await self.price(provider, model)
         spent, cap = await spend.today(self.db), await spend.get_cap(self.db)
-        if refusal := spend.check(spent, cap, max_tokens, price, local):
+        # The prompt counts too (audit C-12): ~3 characters a token over-estimates on purpose, a cap should err on the safe side.
+        prompt_tokens = len(orjson.dumps([messages, tools])) // 3
+        if refusal := spend.check(spent, cap, max_tokens, price, local, self._reserved, prompt_tokens):
             yield Event("error", kind="spend_cap" if refusal == "SPEND CAP REACHED" else "price_unknown",
                         text=f"{refusal}: US${spent:.2f} of US${cap:.2f} today" if refusal == "SPEND CAP REACHED"
                         else f"{refusal}: {provider}/{model} has no price in config.yaml llm.prices")
             return
-
-        if provider == "anthropic":
-            url, headers, body = anthropic.request(key, messages, model, tools, max_tokens, temperature)
-            stream = anthropic.AnthropicStream()
-        else:
-            url, headers, body = openai_compat.request(provider, key, messages, model, tools, max_tokens, temperature,
-                                                       base=f"{self.ollama}/v1" if local else None)
-            stream = openai_compat.OpenAIStream()
+        # Reserve this call's worst case until it ends, so a call that starts while this one streams sees it. Nothing awaits
+        # between the check above and this line, so two calls cannot both pass on the same numbers.
+        reserve = 0.0 if local or price is None else spend.worst_case(max_tokens, price, prompt_tokens)
+        self._reserved += reserve
 
         charged = streaming = False
         try:
+            if provider == "anthropic":
+                url, headers, body = anthropic.request(key, messages, model, tools, max_tokens, temperature)
+                stream = anthropic.AnthropicStream()
+            else:
+                url, headers, body = openai_compat.request(provider, key, messages, model, tools, max_tokens, temperature,
+                                                           base=f"{self.ollama}/v1" if local else None)
+                stream = openai_compat.OpenAIStream()
+
             async with self.http.stream("POST", url, headers=headers, json=body, timeout=TIMEOUT) as r:
                 if r.status_code != 200:
                     text = (await r.aread()).decode("utf-8", errors="replace")
@@ -149,6 +157,7 @@ class Gateway:
             if streaming and not charged and not local and price is not None:
                 # No usage arrived (cut off or stopped early): charge the worst case so the cap holds.
                 await spend.add(self.db, max_tokens * price["output"] / 1e6)
+            self._reserved = max(0.0, self._reserved - reserve)  # the real cost is in the day's spend now
 
     async def _charge(self, ev: Event, price: dict | None) -> Event:
         if ev.cost is None and price is not None:

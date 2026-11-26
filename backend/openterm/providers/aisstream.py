@@ -80,7 +80,7 @@ async def _open(url: str, key: str, box: tuple[float, float, float, float], type
         raise ProviderError("unavailable", f"AISSTREAM UNREACHABLE: {type(e).__name__}") from e  # class name only, never str(e)
     try:
         await ws.send(orjson.dumps(ap.subscription(key, box, types)).decode())
-    except websockets.WebSocketException as e:
+    except (websockets.WebSocketException, OSError) as e:  # OSError: the connection reset under the send; the socket must still be closed (audit M-02)
         await ws.close()
         raise ProviderError("unavailable", _closed(e)) from e
     return ws
