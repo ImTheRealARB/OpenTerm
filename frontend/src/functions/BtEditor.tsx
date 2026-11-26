@@ -27,6 +27,7 @@ import { replaceView } from "../state/workspace";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import { errText as netErrText } from "../net/errText";
+import { usePanelMemory } from "./usePanelMemory";
 
 /** This editor joins the server's detail with a colon ("NOT SAVED: LINE 3: ..."). */
 const errText = (e: unknown) => netErrText(e, "colon");
@@ -39,6 +40,8 @@ const TEMPLATE_COLS: Column<BtTemplate>[] = [
 
 /** How long to wait after the last keystroke before asking the server to check the code. */
 const CHECK_DELAY_MS = 400;
+/** Shown when a remount (maximize, restore) put back edits that were never saved. */
+const RESTORED = "UNSAVED EDITS RESTORED, NOT SAVED: CTRL+S SAVES THEM";
 
 const COLS: Column<BtStrategyCard>[] = [
   { title: "NAME", width: 24, text: (s) => s.name, color: () => "acc" },
@@ -239,6 +242,10 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
   const checkSeq = useRef(0);
   const latest = useLatest({ text, runLine, saved, view, templates, armed });
   const valid = NAME_RE.test(name);
+  // Unsaved edits also live in panel memory: maximize (and any remount) throws `useState` away, which wiped the draft
+  // (audit H-31). Keyed by strategy name, so `BT EDIT other` in the same panel starts clean. null = matches the saved code.
+  const [kept, setKept] = usePanelMemory<string | null>("BT", panelId, `draft:${name}`, null);
+  const keptRef = useLatest(kept);
 
   const loadTemplates = () =>
     btApi
@@ -258,21 +265,24 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
       .then((s) => {
         if (!live) return;
         const draft = takePendingDraft(name); // an AI draft for this name replaces the box text, unsaved
-        docRef.current = draft ?? s.code;
+        const start = draft ?? keptRef.current ?? s.code; // else the edits this panel had before a remount
+        docRef.current = start;
         setSaved(s);
-        setText(draft ?? s.code);
+        setText(start);
         if (draft) setMsg({ cls: "warn", text: "AI DRAFT LOADED, NOT RUN AND NOT SAVED: CTRL+S SAVES IT (IT REPLACES THE SAVED STRATEGY OF THIS NAME)" });
+        else if (keptRef.current !== null) setMsg({ cls: "warn", text: RESTORED });
       })
       .catch((e: ApiError) => {
         if (!live) return;
         if (e.status === 404) {
           // A name that does not exist yet: the box starts empty, hidden behind the template chooser.
           const draft = takePendingDraft(name);
-          docRef.current = draft ?? "";
+          const start = draft ?? keptRef.current;
+          docRef.current = start ?? "";
           setSaved("new");
-          if (draft) {
-            setText(draft);
-            setMsg({ cls: "warn", text: "AI DRAFT LOADED, NOT RUN AND NOT SAVED: CTRL+S SAVES IT" });
+          if (start !== null) {
+            setText(start);
+            setMsg({ cls: "warn", text: draft ? "AI DRAFT LOADED, NOT RUN AND NOT SAVED: CTRL+S SAVES IT" : RESTORED });
           } else {
             setView("choose");
             void loadTemplates();
@@ -282,8 +292,14 @@ function Editor({ panelId, name }: { panelId: number; name: string }) {
     return () => {
       live = false;
     };
-    // loadTemplates only uses setters
-  }, [name, valid]);
+    // loadTemplates only uses setters; keptRef is a stable ref (read once per load, on purpose)
+  }, [name, valid, keptRef]);
+
+  // Mirror the box into panel memory while it differs from the saved code; a save (or undoing back to it) clears it.
+  useEffect(() => {
+    if (saved === null) return; // still loading: the box is not the user's text yet
+    setKept(text === (saved === "new" ? "" : saved.code) ? null : text);
+  }, [text, saved, setKept]);
 
   const isRule = saved !== null && saved !== "new" && saved.kind === "rule";
   const loaded = saved !== null;

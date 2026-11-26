@@ -360,6 +360,29 @@ test("BT EDIT: lists saved strategies and Enter opens one in the editor", async 
   await expect(p.locator(".cm-lineNumbers")).toBeVisible();
 });
 
+test("BT EDIT: unsaved edits survive maximize and restore (audit H-31: maximize remounts the panel)", async ({ page }) => {
+  await setup(page);
+  await cmd(page, "BT EDIT mysma");
+  const p = panel(page);
+  await expect(box(page)).toContainText("class SignalEngine");
+  await box(page).click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("# my unsaved note");
+  await expect(p).toContainText("UNSAVED CHANGES");
+  // Maximize remounts the React component: before the fix the box went back to the saved code.
+  // The code box keeps every chord but Ctrl+K, so leave it with Escape first, and check the maximize really happened.
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+Shift+F");
+  await expect(page.locator("footer.status")).toContainText(" MAX");
+  await expect(box(page)).toContainText("class SignalEngine");
+  await expect(box(page)).toContainText("# my unsaved note");
+  await expect(p).toContainText("UNSAVED CHANGES");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+Shift+F");
+  await expect(page.locator("footer.status")).not.toContainText(" MAX");
+  await expect(box(page)).toContainText("# my unsaved note");
+});
+
 test("BT EDIT: a new name shows the three templates; Enter loads one, Tab indents, Ctrl+S saves it", async ({ page }) => {
   const { posts } = await setup(page);
   await cmd(page, "BT EDIT newone");
