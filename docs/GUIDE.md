@@ -488,8 +488,8 @@ the example need one. [FUNCTIONS.md](FUNCTIONS.md) lists every argument of every
 | Code | What it does | Try |
 |---|---|---|
 | `ECO` | Lists upcoming economic data releases, such as inflation and jobs reports. | `ECO MAJOR` |
-| `ERN` | Lists the companies that report earnings (quarterly profit results) on a day. | `ERN TOMORROW` |
-| `IPO` | Lists IPOs (companies selling shares to the public for the first time): upcoming, priced, filed and withdrawn. | `IPO 2026-12` |
+| `ERN` | Lists the companies that report earnings (quarterly profit results) on a day. While Nasdaq blocks OpenTerm, this needs a free Finnhub key (`FINNHUB_API_KEY` in `APIKEYS`). | `ERN TOMORROW` |
+| `IPO` | Lists IPOs (companies selling shares to the public for the first time): upcoming, priced, filed and withdrawn. While Nasdaq blocks OpenTerm, this needs a free Finnhub key (`FINNHUB_API_KEY` in `APIKEYS`). | `IPO 2026-12` |
 | `CENB` | Shows policy interest rates and the next rate-decision dates for eight central banks, including the Fed, ECB, Bank of England and RBI. | `CENB` |
 | `FOMC` | Shows the US Federal Reserve meeting calendar, what changed in each statement, the rate projections (dots) and links to minutes. | `FOMC` |
 | `CDR` | Lists exchange holidays, early closes and regular trading hours. | `CDR 2027` |
