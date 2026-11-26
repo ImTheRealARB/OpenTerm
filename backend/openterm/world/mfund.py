@@ -19,6 +19,7 @@ so a return worked out from the NAV alone leaves the payouts out; the payload sa
 from __future__ import annotations
 
 import calendar
+import math
 import re
 from bisect import bisect_right
 from datetime import date, datetime, timedelta
@@ -117,7 +118,7 @@ def parse_fund(body: Any) -> dict[str, Any] | None:
             nav = float(row["nav"])
         except (KeyError, TypeError, ValueError) as e:
             raise MfundError("unavailable", f"MFAPI NAV ROW {i} IS UNREADABLE: {str(row)[:60]}") from e
-        if not nav > 0:  # also catches NaN
+        if not (nav > 0 and math.isfinite(nav)):  # catches NaN and "inf" too (float("inf") > 0 is True)
             raise MfundError("unavailable", f"MFAPI NAV ROW {i} ({row['date']}) IS NOT A POSITIVE NUMBER: {row['nav']}")
         pairs.append((d, nav))
     pairs.sort()  # the service sends newest first; every calculation below wants oldest first

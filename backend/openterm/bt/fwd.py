@@ -26,6 +26,7 @@ from collections.abc import Callable
 BAR_SECONDS = {"1D": 86_400, "1W": 7 * 86_400}
 HISTORY_RANGE = {"1D": "2Y", "1W": "10Y"}  # enough bars for the slowest built-in indicator (200 bars) to warm up
 MAX_DECISIONS = 2000  # a forward test keeps at most this many decisions (about 8 years of daily bars)
+MAX_FILLS = 2000  # and at most this many fills (the book is stored whole in one kv row, so it must stay bounded)
 
 
 def new_state(fwd_id: str, symbol: str, strategy: str, interval: str, cash: float, now: float) -> dict:
@@ -41,12 +42,27 @@ def _sign(v) -> int:
 
 
 def _trade(book: dict, d: int, price: float, t: int) -> None:
-    """Move the whole book to direction `d` at `price` (all-in long, all-in short, or flat)."""
+    """Move the whole book to direction `d` at `price` (all-in long, all-in short, or flat).
+
+    A book whose equity is zero or below (a short that the price ran away from) is WIPED OUT: sizing a new position from a
+    negative equity would give a short the opposite sign (equity -5,000 "long" = -20 shares) while `pos` said long. It is
+    closed flat at `price`, the debt is not carried (play money cannot owe), and `busted` stops every later trade."""
     equity = book["cash"] + book["qty"] * price
-    qty = d * equity / price if d else 0.0
-    side = "BUY" if qty > book["qty"] else "SELL"
-    book["fills"].append([t, side, round(abs(qty - book["qty"]), 6), price])
-    book["cash"], book["qty"], book["pos"] = equity - qty * price, qty, d
+    if equity <= 0:
+        if book["qty"]:
+            book["fills"].append([t, "BUY" if book["qty"] < 0 else "SELL", round(abs(book["qty"]), 6), price])
+        book["cash"], book["qty"], book["pos"], book["busted"] = 0.0, 0.0, 0, True
+    else:
+        qty = d * equity / price if d else 0.0
+        side = "BUY" if qty > book["qty"] else "SELL"
+        book["fills"].append([t, side, round(abs(qty - book["qty"]), 6), price])
+        book["cash"], book["qty"], book["pos"] = equity - qty * price, qty, d
+    del book["fills"][:-MAX_FILLS]
+
+
+def _fill_open(t: list[int], o: list[float], i: int) -> int | None:
+    """Index of the first usable open after bar i (the bar a decision on bar i fills at), or None while there is none yet."""
+    return next((j for j in range(i + 1, len(o)) if o[j] is not None and o[j] > 0), None)
 
 
 def _advance(book: dict, t: list[int], o: list[float], sig: list, start: float, bar_s: int, late_before: int) -> None:
@@ -56,9 +72,12 @@ def _advance(book: dict, t: list[int], o: list[float], sig: list, start: float, 
         if t[i] + bar_s <= start or (book["last_t"] is not None and t[i] <= book["last_t"]):
             continue
         d = _sign(sig[i])
+        j = _fill_open(t, o, i) if d != book["pos"] and not book.get("busted") else None
+        if d != book["pos"] and not book.get("busted") and j is None:
+            break  # the fill price does not exist yet: leave this bar undecided so the next step makes the same trade
         book["decisions"].append([t[i], d, i < late_before])
-        if d != book["pos"] and i + 1 < len(o) and o[i + 1] is not None and o[i + 1] > 0:
-            _trade(book, d, float(o[i + 1]), t[i + 1])
+        if j is not None:
+            _trade(book, d, float(o[j]), t[j])
         book["last_t"] = t[i]
     del book["decisions"][:-MAX_DECISIONS]
 
@@ -69,6 +88,9 @@ def step(state: dict, t: list[int], o: list[float], sig: list, now: float) -> di
     _advance(state, t, o, sig, state["started"], bar_s, late_before=len(sig) - 1)
     state["checked"] = now
     state["error"] = None
+    if state.get("busted"):  # the scheduler and the signal job skip a stopped book
+        state["status"] = "stopped"
+        state["error"] = "PAPER BOOK WIPED OUT (EQUITY <= 0): CLOSED FLAT AND STOPPED"
     return state
 
 

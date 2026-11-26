@@ -1,5 +1,6 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/forex.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths; docstrings and comments re-wrapped to 120 columns (no code change).
+# Changes: import paths; docstrings and comments re-wrapped to 120 columns (no code change); audit C-08: PnL, margin
+# and sizing of USD-base pairs (USD/JPY, USD/CHF, ...) are kept in dollars (`_usd_is_base`, three overrides at the end).
 """Forex (FX spot / CFD) backtest engine.
 
 Market rules:
@@ -83,6 +84,11 @@ def _lot_units(symbol: str, default: float = STANDARD_LOT) -> float:
     """Units in one standard lot: 100,000 for FX, 100 oz for gold, etc."""
     metal = _metal_base(symbol)
     return _METAL_SPECS[metal][1] if metal is not None else default
+
+
+def _usd_is_base(symbol: str) -> bool:
+    """True for pairs quoted as USD/XXX (USD/JPY, USD/CHF, USD/TRY ...): their PnL arrives in the quote currency."""
+    return _normalize_symbol(symbol).startswith("USD/")
 
 
 class ForexEngine(BaseEngine):
@@ -169,3 +175,32 @@ class ForexEngine(BaseEngine):
     def get_contract_multiplier(self, symbol: str) -> float:
         """Forex: multiplier is 1.0 (size is in currency units)."""
         return 1.0
+
+    # -- Account currency is USD. Pairs quoted in USD (EUR/USD, XAU/USD) already give PnL in dollars. A USD-base pair
+    # (USD/JPY) gives it in the quote currency, and its size is a count of dollars, so the three hooks below keep PnL,
+    # margin and sizing in dollars. Crosses with no USD leg (EUR/GBP) need a third rate this engine does not have: they
+    # stay in the quote currency, as before.
+
+    def _calc_pnl(
+        self, symbol: str, direction: int, size: float,
+        entry_price: float, exit_price: float,
+    ) -> float:
+        pnl = direction * size * (exit_price - entry_price)
+        # quote -> USD at the exit rate: 10,000 USD long from 150 to 151 = 10,000 JPY = 10,000 / 151 USD.
+        return pnl / exit_price if _usd_is_base(symbol) else pnl
+
+    def _calc_margin(
+        self, symbol: str, size: float, price: float, leverage: float,
+    ) -> float:
+        # `size` is already dollars for a USD-base pair, so no price factor.
+        if _usd_is_base(symbol):
+            return size / leverage
+        return super()._calc_margin(symbol, size, price, leverage)
+
+    def _calc_raw_size(
+        self, symbol: str, target_notional: float, price: float,
+    ) -> float:
+        # A dollar notional is that many units of a USD base; only a USD-quote pair divides by its price.
+        if _usd_is_base(symbol):
+            return target_notional
+        return super()._calc_raw_size(symbol, target_notional, price)

@@ -1691,26 +1691,25 @@
     "initial_cash": 10000
    },
    "metrics": {
-    "final_value": 7352.89,
-    "total_return": -0.264711,
-    "annual_return": -0.99843101,
-    "max_drawdown": -2.60319503,
-    "sharpe": -0.11005627,
-    "sortino": -0.1632,
-    "calmar": -0.3835,
+    "final_value": 7746.795,
+    "total_return": -0.2253205,
+    "annual_return": -0.99530578,
+    "max_drawdown": -2.58421304,
+    "sharpe": -0.11114043,
+    "calmar": -0.3851,
     "win_rate": 0.5,
-    "profit_loss_ratio": 0.7357,
-    "profit_factor": 0.7357,
+    "profit_loss_ratio": 0.7663,
+    "profit_factor": 0.7663,
     "max_consecutive_loss": 1.0,
     "avg_holding_days": 3.5,
     "trade_count": 2.0,
     "benchmark_return": 0.01375,
-    "excess_return": -0.278461,
-    "information_ratio": -0.111,
-    "tracking_error": 305.06146,
-    "benchmark_beta": 134.6555,
-    "avg_turnover": 0.123129,
-    "total_turnover": 1.477551
+    "excess_return": -0.239071,
+    "information_ratio": -0.1121,
+    "tracking_error": 305.038302,
+    "benchmark_beta": 133.4733,
+    "avg_turnover": 0.117441,
+    "total_turnover": 1.409291
    },
    "equity_points": 12,
    "equity_at": [
@@ -1724,11 +1723,11 @@
     ],
     [
      "2024-01-09",
-     16950.4
+     16742.25
     ],
     [
      "2024-01-16",
-     7352.89
+     7746.795
     ]
    ],
    "equity": [
@@ -1742,43 +1741,43 @@
     ],
     [
      "2024-01-03",
-     462355.2
+     462251.125
     ],
     [
      "2024-01-04",
-     464156.15
+     464002.3
     ],
     [
      "2024-01-05",
-     465957.1
+     465753.475
     ],
     [
      "2024-01-08",
-     467758.05
+     467504.65
     ],
     [
      "2024-01-09",
-     16950.4
+     16742.25
     ],
     [
      "2024-01-10",
-     -743792.96
+     -734720.175
     ],
     [
      "2024-01-11",
-     -746850.17
+     -737673.57
     ],
     [
      "2024-01-12",
-     -749907.38
+     -740626.965
     ],
     [
      "2024-01-15",
-     7352.89
+     7746.795
     ],
     [
      "2024-01-16",
-     7352.89
+     7746.795
     ]
    ],
    "trade_count": 2,
@@ -1788,10 +1787,10 @@
      "direction": 1,
      "entry_time": "2024-01-03",
      "exit_time": "2024-01-09",
-     "entry_price": 1.10413,
-     "exit_price": 1.11187,
+     "entry_price": 1.10408,
+     "exit_price": 1.11192,
      "size": 905000.0,
-     "pnl": 7004.7,
+     "pnl": 7095.2,
      "commission": 0.0,
      "exit_reason": "signal"
     },
@@ -1800,14 +1799,15 @@
      "direction": -1,
      "entry_time": "2024-01-10",
      "exit_time": "2024-01-15",
-     "entry_price": 1.11387,
-     "exit_price": 1.12013,
-     "size": 1521000.0,
-     "pnl": -9521.46,
+     "entry_price": 1.11392,
+     "exit_price": 1.12008,
+     "size": 1503000.0,
+     "pnl": -9258.48,
      "commission": 0.0,
      "exit_reason": "signal"
     }
-   ]
+   ],
+   "note": "Vibe spells EURUSD=X as an unknown pair (default 2.0 pip spread, -1.0 swap); the expected numbers were run with Vibe's own ForexEngine under the spelling EURUSD.FX, which it does understand, then the ticker was renamed back. OpenTerm strips =X, so the same data under EURUSD=X must match."
   },
   "futures_es": {
    "bars": {

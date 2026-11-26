@@ -153,8 +153,10 @@ def _cond(text: str) -> Cond:
                 num = float(val.replace(",", "").rstrip("%"))
             except ValueError as e:
                 raise QueryError(f"NOT A NUMBER: {val[:20]} (IN {t[:30]})") from e
-            if val.endswith("%") or FIELDS[name].unit == "RATIO" and abs(num) > 1:
-                num /= 100.0  # "divy>3%" and "divy>3" both mean 3 percent: ratio fields are stored as ratios
+            if val.endswith("%") or FIELDS[name].unit == "RATIO":
+                # "divy>3%" and "divy>3" both mean 3 percent (ratio fields are stored as ratios, shown as percent). EVERY
+                # bare number is a percent: the old "only above 1" rule made "divy>1" mean 100% and "divy>1.01" 1.01%.
+                num /= 100.0
             return Cond(name, op, num)
     raise QueryError(f"NO COMPARISON IN: {t[:30]} (USE < <= > >= = !=)")
 

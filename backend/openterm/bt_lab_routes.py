@@ -131,6 +131,13 @@ async def _all(db) -> list[dict]:
         return [orjson.loads(r[0]) for r in await cur.fetchall()]
 
 
+def _lock(app) -> asyncio.Lock:
+    """One lock for every read-modify-write of a forward test's kv row (job finish, stop, delete)."""
+    if getattr(app.state, "fwd_lock", None) is None:
+        app.state.fwd_lock = asyncio.Lock()
+    return app.state.fwd_lock
+
+
 def _hook(app) -> None:
     """Registers the bt.fwdsig on-done hook once: a finished signal job advances its forward test and refreshes the
     comparison before the job shows done (so the panel's next GET already sees it)."""
@@ -140,13 +147,14 @@ def _hook(app) -> None:
 
     async def on_done(job: dict, result: dict) -> dict:
         db = app.state.userdata.db
-        state = await _load(db, result["fwd_id"])
-        if state is None or state["status"] != "active":
-            return {"fwd_id": result["fwd_id"], "applied": False}
-        sig, t, o, c = result["signal"], result["t"], result["o"], result["c"]
-        fwd.step(state, t, o, sig, time.time())
-        state["backtest"] = fwd.compare(state, t, o, c, sig)
-        await _save(db, state)
+        async with _lock(app):  # load-modify-save: a stop or delete between the load and the save would be overwritten
+            state = await _load(db, result["fwd_id"])
+            if state is None or state["status"] != "active":
+                return {"fwd_id": result["fwd_id"], "applied": False}
+            sig, t, o, c = result["signal"], result["t"], result["o"], result["c"]
+            fwd.step(state, t, o, sig, time.time())
+            state["backtest"] = fwd.compare(state, t, o, c, sig)
+            await _save(db, state)
         return {"fwd_id": state["id"], "applied": True, "decisions": len(state["decisions"])}
 
     jobs.on_done["bt.fwdsig"] = on_done
@@ -158,6 +166,9 @@ async def _submit_step(app, state: dict) -> dict:
     req = SimpleNamespace(app=app)  # bt_of / svc only read `.app`; the scheduler has no Request
     saved = await bt_of(req).strategy(state["strategy"])
     env = await svc(req).history(state["symbol"], fwd.HISTORY_RANGE[state["interval"]], state["interval"])
+    if env.get("stale"):
+        # Cached bars after a failed refresh: stepping on them would fill the paper book at yesterday's prices.
+        raise DataError("unavailable", f"STALE BARS FOR {state['symbol']} ({env.get('age_s', '?')} S OLD): PAPER BOOK NOT STEPPED")
     sha, path = await asyncio.to_thread(bt_of(req).write_data, {"bars": {state["symbol"]: env["data"]}})
     params ={"fwd_id": state["id"], "data_path": str(path), "data_sha": sha, "short": False,
               **({"rule": saved["code"]} if saved["kind"] == "rule" else {"code": saved["code"]})}
@@ -235,19 +246,21 @@ async def fwd_stop(request: Request, fwd_id: str):
     from .bt.store import BtError
 
     db = request.app.state.userdata.db
-    state = await _load(db, fwd_id)
-    if state is None:
-        return bt_error(BtError("not_found", f"NO FORWARD TEST {fwd_id[:12]}"))
-    state["status"] = "stopped"
-    await _save(db, state)
+    async with _lock(request.app):
+        state = await _load(db, fwd_id)
+        if state is None:
+            return bt_error(BtError("not_found", f"NO FORWARD TEST {fwd_id[:12]}"))
+        state["status"] = "stopped"
+        await _save(db, state)
     return Orjson(fwd.summary(state))
 
 
 @router.delete("/fwd/{fwd_id}")
 async def fwd_delete(request: Request, fwd_id: str):
     db = request.app.state.userdata.db
-    await db.execute("DELETE FROM kv WHERE key=?", (KV_PREFIX + fwd_id,))
-    await db.commit()
+    async with _lock(request.app):
+        await db.execute("DELETE FROM kv WHERE key=?", (KV_PREFIX + fwd_id,))
+        await db.commit()
     return {"deleted": fwd_id}
 
 

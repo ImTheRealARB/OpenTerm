@@ -95,7 +95,8 @@ async def _bars(request: Request, symbols: list[str], range_: str, tolerate: boo
 
 def _slim(env: dict) -> dict:
     d = env["data"]
-    return {"t": d["t"], "c": d["c"]}
+    # `tz` (the exchange's zone) lets the jobs bucket bars by the exchange's calendar date, not the UTC one
+    return {"t": d["t"], "c": d["c"], "tz": d.get("tz")}
 
 
 def _labels(request: Request, envs: dict[str, dict]) -> dict:

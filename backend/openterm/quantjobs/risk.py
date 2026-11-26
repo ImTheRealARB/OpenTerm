@@ -115,11 +115,11 @@ def run(params: dict, progress: Callable[[float, str], None]) -> dict:
     for lv in levels:
         c = lv / 100.0
         hv, hes = qr.historical_var(port, c, hor), qr.historical_cvar(port, c, hor)
-        nv = qr.parametric_var(port, c, hor)
+        nv = cm.parametric_var(port, c, hor)  # mean grows with the horizon, spread with its square root (audit H-25)
         mu, sd = float(port.mean()), float(port.std(ddof=1))
         z = float(norm.ppf(1 - c))
         phi = math.exp(-z * z / 2) / math.sqrt(2 * math.pi)
-        nes = (-mu + sd * phi / (1 - c)) * math.sqrt(hor)
+        nes = -mu * hor + sd * phi / (1 - c) * math.sqrt(hor)  # same scaling for the normal expected shortfall
         ev, ees = (None, None)
         if fit is not None:
             ev, ees = _gpd_var(port, c, hor, fit)

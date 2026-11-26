@@ -311,10 +311,10 @@ def hvar(p: dict, data: dict, progress):
     conf = float(p.get("conf") or 95.0) / 100.0
     hor = int(p.get("hor") or 1)
     heads = [_pct("HVAR", qr.historical_var(r, conf, hor)), _pct("CVAR", qr.historical_cvar(r, conf, hor)),
-             _pct("PARAMETRIC VAR", qr.parametric_var(r, conf, hor)), head("CONFIDENCE", f"{conf * 100:g}%", conf * 100),
+             _pct("PARAMETRIC VAR", cm.parametric_var(r, conf, hor)), head("CONFIDENCE", f"{conf * 100:g}%", conf * 100),
              head("HORIZON (DAYS)", str(hor), hor), _pct("WORST DAY", float(r.min()), True), head("OBSERVATIONS", str(r.size), r.size)]
     rows = [{"conf": lv, "hvar": cm.fin(qr.historical_var(r, lv / 100, hor)), "cvar": cm.fin(qr.historical_cvar(r, lv / 100, hor)),
-             "pvar": cm.fin(qr.parametric_var(r, lv / 100, hor))} for lv in (95.0, 99.0)]
+             "pvar": cm.fin(cm.parametric_var(r, lv / 100, hor))} for lv in (95.0, 99.0)]
     sec = section("levels", "VAR BY CONFIDENCE", [col("conf", "CONFIDENCE %", "num"), col("hvar", "HISTORICAL", "pct"), col("cvar", "CVAR", "pct"),
                                                   col("pvar", "PARAMETRIC", "pct")], rows)
     return heads, [sec], ["HISTORICAL VAR: LOSS AT THE EMPIRICAL TAIL OF DAILY RETURNS, SQRT-OF-TIME FOR HORIZONS ABOVE 1 DAY"], []

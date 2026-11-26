@@ -1,5 +1,6 @@
 # Ported from HKUDS/Vibe-Trading @ d0db2e3, agent/backtest/engines/_market_hooks.py (MIT; see THIRD_PARTY.md).
-# Changes: import paths; ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change).
+# Changes: import paths; ruff fixes (PEP 585/604 annotations, re flag names; no behaviour change);
+# `_normalize_symbol` also strips Yahoo's `=X` (audit C-08: `USDJPY=X` missed every spread / swap table).
 """Extracted per-bar market hooks and symbol-classification helpers.
 
 Both the original engines (CryptoEngine, ForexEngine) and CompositeEngine
@@ -611,7 +612,9 @@ _SWAP_SHORT: dict[str, float] = {
 
 def _normalize_symbol(symbol: str) -> str:
     """Normalize forex symbol to 'XXX/YYY' format."""
-    s = symbol.replace(".FX", "").replace(".", "").strip()
+    # Yahoo spells a pair `USDJPY=X`: without stripping "=X" the 8-character string missed the spread and swap tables
+    # (every Yahoo pair paid the 2.0-pip default and a -1.0 swap).
+    s = symbol.upper().removesuffix("=X").replace(".FX", "").replace(".", "").strip()
     if "/" in s:
         return s.upper()
     if len(s) == 6:

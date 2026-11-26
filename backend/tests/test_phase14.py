@@ -99,8 +99,12 @@ def exp_date(epoch: int) -> str:
 
 
 def years_to(epoch: int) -> float:
-    """Spec C: expiry date 16:00 New York (20:00 UTC in October) minus the pinned clock, over 365 days."""
-    return (epoch + 20 * 3600 - NOW.timestamp()) / 86400 / 365
+    """Spec C: expiry date 16:00 New York (20:00 UTC in daylight time, 21:00 UTC in winter) minus the pinned clock, over 365 days."""
+    from zoneinfo import ZoneInfo
+
+    day = datetime.fromtimestamp(epoch, UTC)  # the expiry epoch is 00:00 UTC of the expiry date
+    close = datetime(day.year, day.month, day.day, 16, 0, tzinfo=ZoneInfo("America/New_York")).timestamp()
+    return (close - NOW.timestamp()) / 86400 / 365
 
 
 def test_recorded_expiries_are_the_ones_pick_expiries_chooses():
