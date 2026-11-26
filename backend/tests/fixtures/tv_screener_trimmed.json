@@ -1,0 +1,7166 @@
+{
+ "request": {
+  "columns": [
+   "name",
+   "description",
+   "close",
+   "change_abs",
+   "change",
+   "volume",
+   "market_cap_basic",
+   "country",
+   "sector",
+   "industry",
+   "subtype"
+  ],
+  "filter": [
+   {
+    "left": "exchange",
+    "operation": "in_range",
+    "right": [
+     "AMEX",
+     "NASDAQ",
+     "NYSE"
+    ]
+   },
+   {
+    "left": "type",
+    "operation": "in_range",
+    "right": [
+     "stock",
+     "dr"
+    ]
+   }
+  ],
+  "range": [
+   0,
+   20000
+  ]
+ },
+ "status": 200,
+ "body": {
+  "totalCount": 6083,
+  "data": [
+   {
+    "s": "NYSE:HIG/PG",
+    "d": [
+     "HIG/PG",
+     "Hartford Insurance Group, Inc. Depositary Shs Repr 1/1000th 6 % Non-Cum Red Pfd Registered Shs Series G",
+     21.24,
+     0.13999999999999702,
+     0.6635071090047251,
+     41880,
+     37379043483,
+     "United States",
+     "Finance",
+     "Property/Casualty Insurance",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NASDAQ:KRMD",
+    "d": [
+     "KRMD",
+     "KORU Medical Systems, Inc.",
+     3.52,
+     0.08999999999999986,
+     2.6239067055393543,
+     201636,
+     152680617.00000003,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:IBN",
+    "d": [
+     "IBN",
+     "ICICI Bank Limited Sponsored ADR",
+     36.5,
+     0.6000000000000014,
+     1.671309192200561,
+     6928297,
+     127624617678.12502,
+     "India",
+     "Finance",
+     "Regional Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:DSP",
+    "d": [
+     "DSP",
+     "Viant Technology, Inc. Class A",
+     11.23,
+     0.019999999999999574,
+     0.17841213202497389,
+     361986,
+     729203470,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ANET",
+    "d": [
+     "ANET",
+     "Arista Networks Inc",
+     163.99,
+     -4.569999999999993,
+     -2.711200759373513,
+     8272981,
+     207185357292,
+     "United States",
+     "Electronic Technology",
+     "Computer Peripherals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:WELL",
+    "d": [
+     "WELL",
+     "Welltower Inc.",
+     246.18,
+     1.0400000000000205,
+     0.4242473688504612,
+     3148915,
+     180600070769.00003,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SHBI",
+    "d": [
+     "SHBI",
+     "Shore Bancshares, Inc.",
+     21.59,
+     -0.10999999999999943,
+     -0.5069124423963107,
+     125222,
+     717831349.0000001,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:APD",
+    "d": [
+     "APD",
+     "Air Products and Chemicals, Inc.",
+     314.26,
+     5.680000000000007,
+     1.8406896104737853,
+     816711,
+     69983631678,
+     "United States",
+     "Process Industries",
+     "Chemicals: Specialty",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AMC",
+    "d": [
+     "AMC",
+     "AMC Entertainment Holdings, Inc. Class A",
+     3.21,
+     0.2599999999999998,
+     8.81355932203389,
+     20945811,
+     2865260846,
+     "United States",
+     "Consumer Services",
+     "Movies/Entertainment",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MFC",
+    "d": [
+     "MFC",
+     "Manulife Financial Corporation",
+     42.26,
+     0.19999999999999574,
+     0.4755111745125909,
+     1681085,
+     69811818164.03,
+     "Canada",
+     "Finance",
+     "Life/Health Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:RIO",
+    "d": [
+     "RIO",
+     "Rio Tinto plc Sponsored ADR",
+     74.58,
+     1.3900000000000006,
+     1.8991665528077615,
+     2568160,
+     124103424018.1221,
+     "United Kingdom",
+     "Non-Energy Minerals",
+     "Other Metals/Minerals",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:UMH/PD",
+    "d": [
+     "UMH/PD",
+     "UMH Properties Inc Cum Conv Red Perp Pfd Registered Shs Series D",
+     20.21,
+     0.240000000000002,
+     1.2018027040560941,
+     11921,
+     1237939560,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NASDAQ:HLT",
+    "d": [
+     "HLT",
+     "Hilton Worldwide Holdings Inc.",
+     366.2,
+     1.8799999999999955,
+     0.5160298638559496,
+     1837800,
+     81481100818.00002,
+     "United States",
+     "Consumer Services",
+     "Hotels/Resorts/Cruise lines",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GDRX",
+    "d": [
+     "GDRX",
+     "GoodRx Holdings, Inc. Class A",
+     2.38,
+     -0.6200000000000001,
+     -20.666666666666668,
+     7119315,
+     819532796.9999999,
+     "United States",
+     "Health Services",
+     "Medical/Nursing Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CSX",
+    "d": [
+     "CSX",
+     "CSX Corporation",
+     51.16,
+     1.0799999999999983,
+     2.1565495207667698,
+     12318072,
+     94308251291,
+     "United States",
+     "Transportation",
+     "Railroads",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CNI",
+    "d": [
+     "CNI",
+     "Canadian National Railway Company",
+     126.4,
+     0.9200000000000017,
+     0.7331845712464151,
+     1058361,
+     75802083087.886,
+     "Canada",
+     "Transportation",
+     "Railroads",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MELI",
+    "d": [
+     "MELI",
+     "MercadoLibre, Inc.",
+     1467.3,
+     16.99000000000001,
+     1.1714736849363245,
+     804929,
+     74387417456,
+     "Uruguay",
+     "Retail Trade",
+     "Internet Retail",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BGL",
+    "d": [
+     "BGL",
+     "Blue Gold Limited Class A",
+     0.093,
+     0.0020000000000000018,
+     2.1978021978021998,
+     77158322,
+     4234100,
+     "Cayman Islands",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BNS",
+    "d": [
+     "BNS",
+     "Bank of Nova Scotia",
+     84.29,
+     -0.8399999999999892,
+     -0.9867261834840706,
+     1299245,
+     103797536823.07411,
+     "Canada",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GOOGL",
+    "d": [
+     "GOOGL",
+     "Alphabet Inc. Class A",
+     273.1,
+     -5.949999999999989,
+     -2.1322343666009633,
+     41282875,
+     3326384161591,
+     "United States",
+     "Technology Services",
+     "Internet Software/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GIL",
+    "d": [
+     "GIL",
+     "Gildan Activewear Inc.",
+     35.02,
+     0.020000000000003126,
+     0.05714285714286607,
+     1617457,
+     6485813278.158296,
+     "Canada",
+     "Consumer Non-Durables",
+     "Apparel/Footwear",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SNY",
+    "d": [
+     "SNY",
+     "Sanofi SA Sponsored ADR",
+     54.39,
+     2.490000000000002,
+     4.7976878612716805,
+     9836184,
+     129199467359.0448,
+     "France",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:TDS/PV",
+    "d": [
+     "TDS/PV",
+     "Telephone and Data Systems, Inc. Depositary Shs Repr 1/1000th 6.000% Cum Conv Red Perp Pfd Rg",
+     16.15,
+     0,
+     0,
+     91794,
+     3430287861,
+     "United States",
+     "Communications",
+     "Wireless Telecommunications",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:BN",
+    "d": [
+     "BN",
+     "Brookfield Corporation",
+     40.32,
+     0.8400000000000034,
+     2.127659574468094,
+     4613855,
+     89749680841.17166,
+     "Canada",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CNQ",
+    "d": [
+     "CNQ",
+     "Canadian Natural Resources Limited",
+     45.56,
+     0.7800000000000011,
+     1.7418490397498907,
+     7723809,
+     92720519963.23203,
+     "Canada",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GLNG",
+    "d": [
+     "GLNG",
+     "Golar LNG Limited",
+     39.85,
+     0.23000000000000398,
+     0.5805148914689652,
+     1376971,
+     4068684783,
+     "Bermuda",
+     "Industrial Services",
+     "Oil & Gas Pipelines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UBER",
+    "d": [
+     "UBER",
+     "Uber Technologies, Inc.",
+     66.35,
+     1.6499999999999915,
+     2.5502318392581014,
+     19842511,
+     135479933914,
+     "United States",
+     "Transportation",
+     "Other Transportation",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:KKR",
+    "d": [
+     "KKR",
+     "KKR & Co Inc",
+     94.1,
+     1.009999999999991,
+     1.0849715329251164,
+     4421093,
+     83950333813,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:INSG",
+    "d": [
+     "INSG",
+     "Inseego Corp.",
+     3.475,
+     0.04499999999999993,
+     1.3119533527696772,
+     194124,
+     64241944.00000001,
+     "United States",
+     "Electronic Technology",
+     "Telecommunications Equipment",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AJG",
+    "d": [
+     "AJG",
+     "Arthur J. Gallagher & Co.",
+     292.39,
+     5.569999999999993,
+     1.941984519907954,
+     2374496,
+     74968797971.00002,
+     "United States",
+     "Finance",
+     "Insurance Brokers/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:IBM",
+    "d": [
+     "IBM",
+     "International Business Machines Corporation",
+     243.47,
+     7.849999999999994,
+     3.3316356845768587,
+     5231889,
+     230108559547.99997,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BHE",
+    "d": [
+     "BHE",
+     "Benchmark Electronics, Inc.",
+     56.64,
+     0.4399999999999977,
+     0.782918149466188,
+     456963,
+     2025748773,
+     "United States",
+     "Electronic Technology",
+     "Electronic Production Equipment",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CEG",
+    "d": [
+     "CEG",
+     "Constellation Energy Corporation",
+     235.28,
+     -9.560000000000002,
+     -3.904590753144912,
+     4792517,
+     82726445096,
+     "United States",
+     "Utilities",
+     "Electric Utilities",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:FSLY",
+    "d": [
+     "FSLY",
+     "Fastly, Inc. Class A",
+     15.74,
+     0.10999999999999943,
+     0.703774792066535,
+     4767130,
+     2537287914.9999995,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BEAM",
+    "d": [
+     "BEAM",
+     "Beam Therapeutics, Inc.",
+     23.83,
+     -0.43000000000000327,
+     -1.7724649629019096,
+     2099970,
+     2466301179,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MNST",
+    "d": [
+     "MNST",
+     "Monster Beverage Corporation",
+     42.6,
+     0.4299999999999997,
+     1.019682238558216,
+     11271231,
+     83390001432.00002,
+     "United States",
+     "Consumer Non-Durables",
+     "Beverages: Non-Alcoholic",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ANT",
+    "d": [
+     "ANT",
+     "Anthropic, PBC Class A",
+     82.79,
+     0.8850000000000051,
+     1.0805201147671144,
+     293738459,
+     1094454196788,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:RITM/PA",
+    "d": [
+     "RITM/PA",
+     "Rithm Capital Corp. Cum Conv Red Perp Pfd Registered Shs Series A",
+     23.875,
+     0.254999999999999,
+     1.0795935647756096,
+     29037,
+     4980990326,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:MPC",
+    "d": [
+     "MPC",
+     "Marathon Petroleum Corporation",
+     346.27,
+     -8.890000000000043,
+     -2.5030971956301507,
+     2275974,
+     94283184735,
+     "United States",
+     "Energy Minerals",
+     "Oil Refining/Marketing",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:OZ",
+    "d": [
+     "OZ",
+     "Belpointe PREP LLC Class A",
+     30.13,
+     0.7799999999999976,
+     2.6575809199318483,
+     14355,
+     122369284,
+     "United States",
+     "Finance",
+     "Real Estate Development",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:APYX",
+    "d": [
+     "APYX",
+     "Apyx Medical Corporation",
+     2.37,
+     0.07000000000000028,
+     3.043478260869578,
+     86307,
+     99833931,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AAPL",
+    "d": [
+     "AAPL",
+     "Apple Inc.",
+     355.58,
+     1.509999999999991,
+     0.4264693422204623,
+     54285151,
+     5167352952638.999,
+     "United States",
+     "Electronic Technology",
+     "Telecommunications Equipment",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MDLZ",
+    "d": [
+     "MDLZ",
+     "Mondelez International, Inc. Class A",
+     67.81,
+     0.7999999999999972,
+     1.1938516639307524,
+     10118638,
+     85836497383,
+     "United States",
+     "Consumer Non-Durables",
+     "Food: Specialty/Candy",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TSLA",
+    "d": [
+     "TSLA",
+     "Tesla, Inc.",
+     380.14,
+     -4.5400000000000205,
+     -1.1802017261100188,
+     34914719,
+     1502601505553,
+     "United States",
+     "Consumer Durables",
+     "Motor Vehicles",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:RACE",
+    "d": [
+     "RACE",
+     "Ferrari NV",
+     409.59,
+     11.769999999999982,
+     2.958624503544312,
+     472513,
+     90018150063.19884,
+     "Italy",
+     "Consumer Durables",
+     "Motor Vehicles",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PH",
+    "d": [
+     "PH",
+     "Parker-Hannifin Corporation",
+     897.9,
+     -8.340000000000032,
+     -0.920286016949156,
+     562057,
+     113222314526,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:SNSC",
+    "d": [
+     "SNSC",
+     "SunScout Holding Limited Class A",
+     0.3432,
+     -0.03720000000000001,
+     -9.779179810725555,
+     137340,
+     7927920,
+     "New Zealand",
+     "Industrial Services",
+     "Engineering & Construction",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AMT",
+    "d": [
+     "AMT",
+     "American Tower Corporation",
+     184.59,
+     1.759999999999991,
+     0.9626428923043214,
+     1935409,
+     85606111959.99998,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BON",
+    "d": [
+     "BON",
+     "Bon Natural Life Limited Class A",
+     1.14,
+     0.08999999999999986,
+     8.571428571428557,
+     20888,
+     9312444,
+     "China",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:META",
+    "d": [
+     "META",
+     "Meta Platforms Inc Class A",
+     609.89,
+     20.069999999999936,
+     3.402733037197778,
+     18667907,
+     1559025893850,
+     "United States",
+     "Technology Services",
+     "Internet Software/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:YOU",
+    "d": [
+     "YOU",
+     "Clear Secure, Inc. Class A",
+     54.38,
+     3.1500000000000057,
+     6.14874097208668,
+     1435201,
+     7139979414,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PFE",
+    "d": [
+     "PFE",
+     "Pfizer Inc.",
+     28.46,
+     0,
+     0,
+     27143414,
+     162217825836,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HTT",
+    "d": [
+     "HTT",
+     "High Templar Tech Limited Sponsored ADR Class A",
+     1.33,
+     -0.010000000000000009,
+     -0.7462686567164185,
+     46850,
+     208379695,
+     "China",
+     "Technology Services",
+     "Internet Software/Services",
+     ""
+    ]
+   },
+   {
+    "s": "AMEX:JOB",
+    "d": [
+     "JOB",
+     "GEE Group, Inc.",
+     5.5,
+     -0.1900000000000004,
+     -3.339191564147634,
+     13273,
+     20142957,
+     "United States",
+     "Commercial Services",
+     "Personnel Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GAB/PK",
+    "d": [
+     "GAB/PK",
+     "Gabelli Equity Trust Inc 5 % Cum Red Perp Pfd Registered Shs Series K",
+     18.54,
+     -0.19000000000000128,
+     -1.0144153764015018,
+     38406,
+     null,
+     "United States",
+     "Miscellaneous",
+     "Investment Trusts/Mutual Funds",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:NSC",
+    "d": [
+     "NSC",
+     "Norfolk Southern Corporation",
+     326.51,
+     8.269999999999982,
+     2.5986676721970783,
+     1156790,
+     73339595673,
+     "United States",
+     "Transportation",
+     "Railroads",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BMY",
+    "d": [
+     "BMY",
+     "Bristol-Myers Squibb Company",
+     61.56,
+     -0.46000000000000085,
+     -0.7416962270235421,
+     8406465,
+     125833925605,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ALB",
+    "d": [
+     "ALB",
+     "Albemarle Corporation",
+     81.5,
+     0.8700000000000045,
+     1.0790028525362825,
+     2818980,
+     9617802738.000002,
+     "United States",
+     "Process Industries",
+     "Chemicals: Specialty",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:COST",
+    "d": [
+     "COST",
+     "Costco Wholesale Corporation",
+     1086.81,
+     -4.900000000000091,
+     -0.4488371453957636,
+     2702759,
+     481597416901.00006,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CMDB",
+    "d": [
+     "CMDB",
+     "Costamare Bulkers Holdings Limited",
+     17.6,
+     -0.16000000000000014,
+     -0.9009009009009016,
+     53038,
+     427706247.00000006,
+     "Monaco",
+     "Transportation",
+     "Marine Shipping",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BALY",
+    "d": [
+     "BALY",
+     "Bally's Corporation",
+     9.07,
+     0.33000000000000007,
+     3.7757437070938225,
+     107905,
+     457903023.00000006,
+     "United States",
+     "Consumer Services",
+     "Casinos/Gaming",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ROST",
+    "d": [
+     "ROST",
+     "Ross Stores, Inc.",
+     223.26,
+     -2.920000000000016,
+     -1.291007162437004,
+     2099741,
+     71321102933,
+     "United States",
+     "Retail Trade",
+     "Apparel/Footwear Retail",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:IMNM",
+    "d": [
+     "IMNM",
+     "Immunome, Inc.",
+     18.39,
+     -0.05999999999999872,
+     -0.3252032520325134,
+     982905,
+     2171361379.9999995,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SNPS",
+    "d": [
+     "SNPS",
+     "Synopsys, Inc.",
+     405.09,
+     -9.730000000000018,
+     -2.3455956800540037,
+     1796582,
+     77630086791,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AEM",
+    "d": [
+     "AEM",
+     "Agnico Eagle Mines Limited",
+     161.2,
+     4.739999999999981,
+     3.029528313946044,
+     3407923,
+     81551198168.1064,
+     "Canada",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AVPT",
+    "d": [
+     "AVPT",
+     "AvePoint, Inc. Class A",
+     17.3,
+     0.23000000000000043,
+     1.3473930872876416,
+     2578956,
+     3634326588,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:FSI",
+    "d": [
+     "FSI",
+     "Flexible Solutions International Inc",
+     5.97,
+     -0.010000000000000675,
+     -0.1672240802675698,
+     39009,
+     76263750,
+     "Canada",
+     "Process Industries",
+     "Chemicals: Major Diversified",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:REGN",
+    "d": [
+     "REGN",
+     "Regeneron Pharmaceuticals, Inc.",
+     981.87,
+     -5.220000000000027,
+     -0.528827158617758,
+     854673,
+     101555515059,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GEF.B",
+    "d": [
+     "GEF.B",
+     "Greif Inc Class B",
+     95.4,
+     0.9400000000000119,
+     0.9951302138471438,
+     60912,
+     3648454643,
+     "United States",
+     "Process Industries",
+     "Containers/Packaging",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CVS",
+    "d": [
+     "CVS",
+     "CVS Health Corporation",
+     81.06,
+     0.37000000000000455,
+     0.45854504895278786,
+     10408516,
+     103714179027,
+     "United States",
+     "Retail Trade",
+     "Drugstore Chains",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ADP",
+    "d": [
+     "ADP",
+     "Automatic Data Processing, Inc.",
+     316.72,
+     5.930000000000007,
+     1.9080407992535173,
+     2262482,
+     125028207130,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MDT",
+    "d": [
+     "MDT",
+     "Medtronic Plc",
+     96.06,
+     -0.06999999999999318,
+     -0.0728180588785948,
+     12304789,
+     122877059571.99998,
+     "Ireland",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PANL",
+    "d": [
+     "PANL",
+     "Pangaea Logistics Solutions Ltd.",
+     8.34,
+     0.15000000000000036,
+     1.831501831501836,
+     550313,
+     546051253,
+     "United States",
+     "Transportation",
+     "Marine Shipping",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CM",
+    "d": [
+     "CM",
+     "Canadian Imperial Bank of Commerce",
+     104.58,
+     -1.1500000000000057,
+     -1.0876761562470498,
+     1187313,
+     94954054876.36319,
+     "Canada",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SKHY",
+    "d": [
+     "SKHY",
+     "SK hynix Inc. Sponsored ADR",
+     111.14,
+     -0.8400000000000034,
+     -0.7501339524915194,
+     24188593,
+     537482282250.97675,
+     "South Korea",
+     "Electronic Technology",
+     "Semiconductors",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:LPL",
+    "d": [
+     "LPL",
+     "LG Display Co., Ltd Sponsored ADR",
+     2.38,
+     -0.010000000000000231,
+     -0.4184100418410139,
+     1852578,
+     2427200000,
+     "South Korea",
+     "Electronic Technology",
+     "Electronic Production Equipment",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:AAOI",
+    "d": [
+     "AAOI",
+     "Applied Optoelectronics, Inc.",
+     37.02,
+     -1.3799999999999955,
+     -3.5937499999999885,
+     12807443,
+     3360332714,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:JNJ",
+    "d": [
+     "JNJ",
+     "Johnson & Johnson",
+     273.94,
+     -2.519999999999982,
+     -0.9115242711422925,
+     9058054,
+     659458590208,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SU",
+    "d": [
+     "SU",
+     "Suncor Energy Inc.",
+     64.42,
+     0.5900000000000034,
+     0.9243302522324979,
+     4505722,
+     74161864509.09541,
+     "Canada",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TENB",
+    "d": [
+     "TENB",
+     "Tenable Holdings, Inc.",
+     45.7,
+     0.47000000000000597,
+     1.039133318593867,
+     2426634,
+     4775998394,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TSBK",
+    "d": [
+     "TSBK",
+     "Timberland Bancorp, Inc.",
+     46.09,
+     0.5,
+     1.0967317394165388,
+     45861,
+     358683593,
+     "United States",
+     "Finance",
+     "Savings Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CVNA",
+    "d": [
+     "CVNA",
+     "Carvana Co. Class A",
+     67.84,
+     1.8800000000000097,
+     2.8502122498484077,
+     9849843,
+     74845228992,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MMM",
+    "d": [
+     "MMM",
+     "3M Company",
+     189.83,
+     2.690000000000026,
+     1.4374265255958247,
+     4483451,
+     98090772034,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BW/PA",
+    "d": [
+     "BW/PA",
+     "Babcock & Wilcox Enterprises Inc 7.75 % Cum Conv Red Perp Pfd Registered Shs Series A",
+     17.82,
+     -0.129999999999999,
+     -0.7242339832869026,
+     13112,
+     543968038,
+     "United States",
+     "Electronic Technology",
+     "Electronic Equipment/Instruments",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:JPM",
+    "d": [
+     "JPM",
+     "JPMorgan Chase & Co.",
+     316.74,
+     -0.36000000000001364,
+     -0.11352885525071385,
+     7639010,
+     841137764833,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:JD",
+    "d": [
+     "JD",
+     "JD.com, Inc. Sponsored ADR Class A",
+     26.38,
+     0.6499999999999986,
+     2.5262339681305814,
+     10832906,
+     30820508255.885796,
+     "China",
+     "Retail Trade",
+     "Internet Retail",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:NET",
+    "d": [
+     "NET",
+     "Cloudflare Inc Class A",
+     283.3,
+     -3.990000000000009,
+     -1.3888405443976501,
+     2560315,
+     100831217847,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ITW",
+    "d": [
+     "ITW",
+     "Illinois Tool Works Inc.",
+     285.08,
+     1.329999999999984,
+     0.46872246696034686,
+     965327,
+     81019735664.00002,
+     "United States",
+     "Producer Manufacturing",
+     "Auto Parts: OEM",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:WEN",
+    "d": [
+     "WEN",
+     "Wendy's Company",
+     8.87,
+     0.28999999999999915,
+     3.37995337995337,
+     4754843,
+     1696324542,
+     "United States",
+     "Consumer Services",
+     "Restaurants",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ABBV",
+    "d": [
+     "ABBV",
+     "AbbVie, Inc.",
+     294.48,
+     -5.7999999999999545,
+     -1.931530571466616,
+     6164335,
+     520527641216,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:UFPT",
+    "d": [
+     "UFPT",
+     "UFP Technologies, Inc.",
+     305.02,
+     -0.8100000000000023,
+     -0.2648530229212315,
+     76477,
+     2362985557.9999995,
+     "United States",
+     "Process Industries",
+     "Industrial Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AMZN",
+    "d": [
+     "AMZN",
+     "Amazon.com, Inc.",
+     244.43,
+     -7.859999999999985,
+     -3.1154623647389847,
+     62479241,
+     2643055167667,
+     "United States",
+     "Retail Trade",
+     "Internet Retail",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:RELX",
+    "d": [
+     "RELX",
+     "RELX PLC Sponsored ADR",
+     40.15,
+     0.6099999999999994,
+     1.5427415275670193,
+     2223804,
+     69028856163.33029,
+     "United Kingdom",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:SMFG",
+    "d": [
+     "SMFG",
+     "Sumitomo Mitsui Financial Group Inc Sponsored ADR",
+     22.59,
+     0.120000000000001,
+     0.5340453938584825,
+     2203606,
+     142358096394.43536,
+     "Japan",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:SATL",
+    "d": [
+     "SATL",
+     "Satellogic Inc. Class A",
+     2.525,
+     0.02499999999999991,
+     0.9999999999999963,
+     5387376,
+     389084269.00000006,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:RKTO",
+    "d": [
+     "RKTO",
+     "Rocket One Inc.",
+     0.272,
+     0.014100000000000001,
+     5.467235362543621,
+     294116,
+     6772141.999999999,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BTI",
+    "d": [
+     "BTI",
+     "British American Tobacco PLC Sponsored ADR",
+     60.43,
+     2.1899999999999977,
+     3.7603021978021935,
+     5353639,
+     128257018442.52118,
+     "United Kingdom",
+     "Consumer Non-Durables",
+     "Tobacco",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:SHEL",
+    "d": [
+     "SHEL",
+     "Shell Plc Sponsored ADR",
+     94.13,
+     0.7099999999999937,
+     0.7600085634767648,
+     4552801,
+     263143453999.2705,
+     "United Kingdom",
+     "Energy Minerals",
+     "Integrated Oil",
+     ""
+    ]
+   },
+   {
+    "s": "AMEX:CECO",
+    "d": [
+     "CECO",
+     "CECO Environmental Corp.",
+     46.88,
+     -0.46000000000000085,
+     -0.9716941275876655,
+     1099716,
+     2748444322,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:EQNR",
+    "d": [
+     "EQNR",
+     "Equinor ASA Sponsored ADR",
+     38.71,
+     -0.1700000000000017,
+     -0.43724279835391383,
+     7050110,
+     93823952362.17224,
+     "Norway",
+     "Energy Minerals",
+     "Integrated Oil",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:LCFY",
+    "d": [
+     "LCFY",
+     "Locafy Ltd.",
+     0.6299,
+     0.0049000000000000155,
+     0.7840000000000024,
+     21952,
+     1133225,
+     "Australia",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TT",
+    "d": [
+     "TT",
+     "Trane Technologies plc",
+     403.48,
+     -1.009999999999991,
+     -0.24969714949689506,
+     1335119,
+     88319894174,
+     "Ireland",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MRKR",
+    "d": [
+     "MRKR",
+     "Marker Therapeutics, Inc.",
+     1,
+     0.01429999999999998,
+     1.4507456629806208,
+     200932,
+     16673126,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:LOW",
+    "d": [
+     "LOW",
+     "Lowe's Companies, Inc.",
+     235.65,
+     4.610000000000014,
+     1.995325484764549,
+     3099376,
+     132212375473,
+     "United States",
+     "Retail Trade",
+     "Home Improvement Chains",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:OCGN",
+    "d": [
+     "OCGN",
+     "Ocugen Inc",
+     0.8442,
+     -0.034700000000000064,
+     -3.9481169643873097,
+     4305517,
+     286442620,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BCS",
+    "d": [
+     "BCS",
+     "Barclays PLC Sponsored ADR",
+     21.14,
+     -0.14999999999999858,
+     -0.7045561296383211,
+     5525568,
+     68023667812.14179,
+     "United Kingdom",
+     "Finance",
+     "Investment Banks/Brokers",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:AMD",
+    "d": [
+     "AMD",
+     "Advanced Micro Devices, Inc.",
+     406.03,
+     -7.240000000000009,
+     -1.7518813366564256,
+     51630062,
+     665924636407,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SYK",
+    "d": [
+     "SYK",
+     "Stryker Corporation",
+     332.9,
+     8.819999999999993,
+     2.7215502345099956,
+     2196229,
+     126732034746.00002,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TFII",
+    "d": [
+     "TFII",
+     "TFI International Inc.",
+     92.12,
+     3.719999999999999,
+     4.208144796380089,
+     330921,
+     7535506277.036835,
+     "Canada",
+     "Transportation",
+     "Trucking",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CL",
+    "d": [
+     "CL",
+     "Colgate-Palmolive Company",
+     99.66,
+     0.4200000000000017,
+     0.4232164449818639,
+     5121874,
+     79221777069.99998,
+     "United States",
+     "Consumer Non-Durables",
+     "Household/Personal Care",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NVO",
+    "d": [
+     "NVO",
+     "Novo Nordisk A/S Sponsored ADR Class B",
+     40.97,
+     0.6599999999999966,
+     1.637310840982378,
+     10266884,
+     178133888022.09,
+     "Denmark",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:GD",
+    "d": [
+     "GD",
+     "General Dynamics Corporation",
+     360.27,
+     8.71999999999997,
+     2.480443749111071,
+     1225946,
+     97353498207.99998,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UPS",
+    "d": [
+     "UPS",
+     "United Parcel Service, Inc. Class B",
+     111.47,
+     0.6400000000000006,
+     0.5774609762699635,
+     5391938,
+     94913286652,
+     "United States",
+     "Transportation",
+     "Air Freight/Couriers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MTR",
+    "d": [
+     "MTR",
+     "Mesa Royalty Trust",
+     2.1501,
+     0.010099999999999998,
+     0.47196261682242974,
+     32060,
+     4006904.9999999995,
+     "United States",
+     "Miscellaneous",
+     "Investment Trusts/Mutual Funds",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SBUX",
+    "d": [
+     "SBUX",
+     "Starbucks Corporation",
+     107.74,
+     1.3599999999999994,
+     1.2784357962022932,
+     9292729,
+     122834368934,
+     "United States",
+     "Consumer Services",
+     "Restaurants",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ARM",
+    "d": [
+     "ARM",
+     "ARM Holdings PLC Sponsored ADR",
+     161.51,
+     -0.05000000000001137,
+     -0.030948254518452196,
+     8187876,
+     171855565311,
+     "United Kingdom",
+     "Electronic Technology",
+     "Semiconductors",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:MA",
+    "d": [
+     "MA",
+     "Mastercard Incorporated Class A",
+     659.97,
+     12.529999999999973,
+     1.9353144692944475,
+     3545656,
+     574950071459,
+     "United States",
+     "Finance",
+     "Finance/Rental/Leasing",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:STLD",
+    "d": [
+     "STLD",
+     "Steel Dynamics, Inc.",
+     216.86,
+     1.6300000000000239,
+     0.7573293685824578,
+     975382,
+     30841283563.000004,
+     "United States",
+     "Non-Energy Minerals",
+     "Steel",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:FDX",
+    "d": [
+     "FDX",
+     "FedEx Corporation",
+     308.87,
+     0.5799999999999841,
+     0.18813454863926304,
+     800699,
+     72337153969,
+     "United States",
+     "Transportation",
+     "Air Freight/Couriers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:IAM",
+    "d": [
+     "IAM",
+     "Iambic Therapeutics, Inc.",
+     15.51,
+     -0.9399999999999995,
+     -5.714285714285712,
+     437721,
+     758964487.9999999,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:INTU",
+    "d": [
+     "INTU",
+     "Intuit Inc.",
+     271.72,
+     -7.699999999999989,
+     -2.7557082528093866,
+     3821765,
+     71738160103.00002,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PRTA",
+    "d": [
+     "PRTA",
+     "Prothena Corp. Plc",
+     8.78,
+     -0.120000000000001,
+     -1.348314606741584,
+     294596,
+     450851198.00000006,
+     "Ireland",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NWPX",
+    "d": [
+     "NWPX",
+     "NWPX Infrastructure Inc.",
+     87.58,
+     0.09999999999999432,
+     0.11431184270689794,
+     77547,
+     843395595,
+     "United States",
+     "Non-Energy Minerals",
+     "Construction Materials",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:RY",
+    "d": [
+     "RY",
+     "Royal Bank of Canada",
+     189.42,
+     0.28999999999999204,
+     0.15333368582456092,
+     1175820,
+     262649684411.36472,
+     "Canada",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TD",
+    "d": [
+     "TD",
+     "Toronto-Dominion Bank",
+     116.06,
+     0.3500000000000085,
+     0.3024803387779868,
+     1000516,
+     196082910465.5351,
+     "Canada",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UMH",
+    "d": [
+     "UMH",
+     "UMH Properties, Inc.",
+     14.44,
+     0.07000000000000028,
+     0.4871259568545601,
+     607911,
+     1237939560,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GEV",
+    "d": [
+     "GEV",
+     "GE Vernova Inc.",
+     715,
+     -5.649999999999977,
+     -0.7840144314160795,
+     5548498,
+     189244100037,
+     "United States",
+     "Producer Manufacturing",
+     "Electrical Products",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PSN",
+    "d": [
+     "PSN",
+     "Parsons Corporation",
+     53.26,
+     1.5899999999999963,
+     3.0772208244629304,
+     660332,
+     5621000539,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:REX",
+    "d": [
+     "REX",
+     "REX American Resources Corporation",
+     33.74,
+     -0.37999999999999545,
+     -1.1137162954278883,
+     164636,
+     1119346153,
+     "United States",
+     "Process Industries",
+     "Chemicals: Specialty",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CLSK",
+    "d": [
+     "CLSK",
+     "Cleanspark, Inc.",
+     5.18,
+     0.0649999999999995,
+     1.2707722385141642,
+     33349172,
+     1349440383,
+     "United States",
+     "Technology Services",
+     "Data Processing Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TALO",
+    "d": [
+     "TALO",
+     "Talos Energy, Inc.",
+     14.94,
+     0.11999999999999922,
+     0.809716599190278,
+     1500044,
+     2476928646,
+     "United States",
+     "Energy Minerals",
+     "Oil & Gas Production",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SLB",
+    "d": [
+     "SLB",
+     "SLB Limited",
+     48.52,
+     1.5300000000000011,
+     3.256011917429243,
+     9716122,
+     71616959929,
+     "United States",
+     "Industrial Services",
+     "Contract Drilling",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GLW",
+    "d": [
+     "GLW",
+     "Corning Inc",
+     100.24,
+     -1.6300000000000097,
+     -1.6000785314616763,
+     9025272,
+     86346846734,
+     "United States",
+     "Electronic Technology",
+     "Electronic Components",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:XPEV",
+    "d": [
+     "XPEV",
+     "XPeng, Inc. ADR Sponsored Class A",
+     8.99,
+     -0.02999999999999936,
+     -0.33259423503325236,
+     11556361,
+     8370920383.450661,
+     "China",
+     "Consumer Durables",
+     "Motor Vehicles",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:FRBT",
+    "d": [
+     "FRBT",
+     "Forbright, Inc. Class A",
+     17.7,
+     0.3000000000000007,
+     1.7241379310344869,
+     208645,
+     881143937,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:IPDN",
+    "d": [
+     "IPDN",
+     "Professional Diversity Network, Inc.",
+     0.7493,
+     0.02179999999999993,
+     2.9965635738831518,
+     53539,
+     1037258,
+     "United States",
+     "Commercial Services",
+     "Commercial Printing/Forms",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:EPD",
+    "d": [
+     "EPD",
+     "Enterprise Products Partners L.P.",
+     36.06,
+     0.060000000000002274,
+     0.16666666666667299,
+     2111816,
+     77767169754.00002,
+     "United States",
+     "Industrial Services",
+     "Oil & Gas Pipelines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:FCX",
+    "d": [
+     "FCX",
+     "Freeport-McMoRan, Inc.",
+     48.55,
+     0.8200000000000003,
+     1.717997066834277,
+     17420626,
+     69666143412,
+     "United States",
+     "Non-Energy Minerals",
+     "Other Metals/Minerals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MBRX",
+    "d": [
+     "MBRX",
+     "Moleculin Biotech, Inc.",
+     8.65,
+     -0.25,
+     -2.8089887640449436,
+     24117,
+     9182259.999999998,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:T",
+    "d": [
+     "T",
+     "AT&T Inc",
+     22.97,
+     0.08999999999999986,
+     0.3933566433566428,
+     40329221,
+     154736794720,
+     "United States",
+     "Communications",
+     "Wireless Telecommunications",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BHP",
+    "d": [
+     "BHP",
+     "BHP Group Ltd Sponsored American Depositary Receipt Repr 2 Shs",
+     70.77,
+     1.1599999999999966,
+     1.6664272374658764,
+     4598427,
+     175896040962.57104,
+     "Australia",
+     "Non-Energy Minerals",
+     "Steel",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:AGCO",
+    "d": [
+     "AGCO",
+     "AGCO Corporation",
+     106.62,
+     4.109999999999999,
+     4.009364940005852,
+     1004770,
+     7351538343,
+     "United States",
+     "Producer Manufacturing",
+     "Trucks/Construction/Farm Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ABT",
+    "d": [
+     "ABT",
+     "Abbott Laboratories",
+     108,
+     2.6099999999999994,
+     2.476515798462852,
+     8061899,
+     187049698242.00003,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:LYG",
+    "d": [
+     "LYG",
+     "Lloyds Banking Group plc Sponsored ADR",
+     4.98,
+     0.020000000000000462,
+     0.40322580645162226,
+     28598624,
+     69843573971.0667,
+     "United Kingdom",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:RCL",
+    "d": [
+     "RCL",
+     "Royal Caribbean Group",
+     314.11,
+     -4.159999999999968,
+     -1.3070663273321295,
+     1382517,
+     84015295327.99998,
+     "United States",
+     "Consumer Services",
+     "Hotels/Resorts/Cruise lines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CP",
+    "d": [
+     "CP",
+     "Canadian Pacific Kansas City Limited",
+     93.19,
+     0.37000000000000455,
+     0.3986209868562859,
+     2748745,
+     81033811123.24104,
+     "Canada",
+     "Transportation",
+     "Railroads",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MZYX",
+    "d": [
+     "MZYX",
+     "MOZAYYX Acquisition Corp. Class A",
+     10.01,
+     0,
+     0,
+     1595,
+     375375009,
+     "United States",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MCK",
+    "d": [
+     "MCK",
+     "McKesson Corporation",
+     1077.32,
+     -0.7699999999999818,
+     -0.07142260850207142,
+     557109,
+     124383768179,
+     "United States",
+     "Distribution Services",
+     "Medical Distributors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PNC",
+    "d": [
+     "PNC",
+     "PNC Financial Services Group, Inc.",
+     220.33,
+     1.710000000000008,
+     0.7821791235934534,
+     1149832,
+     87422100802,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HUBS",
+    "d": [
+     "HUBS",
+     "HubSpot, Inc.",
+     210.21,
+     4.920000000000016,
+     2.396609674119546,
+     1121063,
+     10265912608.000002,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HBANZ",
+    "d": [
+     "HBANZ",
+     "Huntington Bancshares Incorporated Depositary Shs Repr Perp Pfd Shs Series L",
+     17.7,
+     -0.030000000000001137,
+     -0.16920473773266292,
+     14275,
+     29988961871,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:UNP",
+    "d": [
+     "UNP",
+     "Union Pacific Corporation",
+     298.38,
+     7.550000000000011,
+     2.59601829247327,
+     3061093,
+     177312445383,
+     "United States",
+     "Transportation",
+     "Railroads",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:DELL",
+    "d": [
+     "DELL",
+     "Dell Technologies, Inc. Class C",
+     297.06,
+     1.7800000000000296,
+     0.6028176645895522,
+     26689276,
+     188874536642.99997,
+     "United States",
+     "Electronic Technology",
+     "Computer Processing Hardware",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PEP",
+    "d": [
+     "PEP",
+     "PepsiCo, Inc.",
+     143.93,
+     1.25,
+     0.8760863470703673,
+     6222878,
+     196139314940.00003,
+     "United States",
+     "Consumer Non-Durables",
+     "Food: Specialty/Candy",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TECX",
+    "d": [
+     "TECX",
+     "Tectonic Therapeutic Inc",
+     21.54,
+     -0.4400000000000013,
+     -2.0018198362147466,
+     243700,
+     429680717.99999994,
+     "United States",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:TXCP",
+    "d": [
+     "TXCP",
+     "Texas Capital Bancshares, Inc.",
+     95.81,
+     0.5499999999999972,
+     0.5773672055427221,
+     401871,
+     4065262084.0000005,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PBR",
+    "d": [
+     "PBR",
+     "Petroleo Brasileiro SA Sponsored ADR",
+     16.05,
+     0.3800000000000008,
+     2.425015954052334,
+     29061433,
+     97209788806.09601,
+     "Brazil",
+     "Energy Minerals",
+     "Integrated Oil",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:MFG",
+    "d": [
+     "MFG",
+     "Mizuho Financial Group Inc Sponsored ADR",
+     9.3,
+     -0.09999999999999964,
+     -1.0638297872340388,
+     6845232,
+     112568917666.98946,
+     "Japan",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "AMEX:ZONE",
+    "d": [
+     "ZONE",
+     "Zone Frontier Inc. Class B",
+     3.75,
+     0.16000000000000014,
+     4.456824512534823,
+     254305,
+     31868563,
+     "United States",
+     "Distribution Services",
+     "Wholesale Distributors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CI",
+    "d": [
+     "CI",
+     "Cigna Group",
+     271.42,
+     -3.579999999999984,
+     -1.301818181818176,
+     4483605,
+     71519869317,
+     "United States",
+     "Health Services",
+     "Managed Health Care",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ITUB",
+    "d": [
+     "ITUB",
+     "Itau Unibanco Holding S.A. Sponsored ADR Pfd",
+     6.88,
+     0.16000000000000014,
+     2.380952380952383,
+     32631668,
+     79054002769.01839,
+     "Brazil",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:SRPT",
+    "d": [
+     "SRPT",
+     "Sarepta Therapeutics, Inc.",
+     14.96,
+     -0.129999999999999,
+     -0.8614976805831611,
+     3317868,
+     1604248396,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SO",
+    "d": [
+     "SO",
+     "Southern Company",
+     95,
+     0.8900000000000006,
+     0.9457018382743604,
+     6618298,
+     110604793701.00002,
+     "United States",
+     "Utilities",
+     "Electric Utilities",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:WDC",
+    "d": [
+     "WDC",
+     "Western Digital Corporation",
+     272.45,
+     -1.5,
+     -0.5475451724767293,
+     6515055,
+     101984380218,
+     "United States",
+     "Electronic Technology",
+     "Computer Peripherals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SPOT",
+    "d": [
+     "SPOT",
+     "Spotify Technology SA",
+     616.46,
+     16.720000000000027,
+     2.787874745723151,
+     1967903,
+     126918231518,
+     "Sweden",
+     "Technology Services",
+     "Internet Software/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LIVN",
+    "d": [
+     "LIVN",
+     "LivaNova Plc",
+     94.06,
+     0.12999999999999545,
+     0.1384009368678755,
+     462506,
+     5181464956,
+     "United Kingdom",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TSM",
+    "d": [
+     "TSM",
+     "Taiwan Semiconductor Manufacturing Co., Ltd. Sponsored ADR",
+     342.34,
+     -6.860000000000014,
+     -1.9644902634593397,
+     22860841,
+     1678380532716.5115,
+     "Taiwan",
+     "Electronic Technology",
+     "Semiconductors",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:TRV",
+    "d": [
+     "TRV",
+     "Travelers Companies, Inc.",
+     406.86,
+     5.990000000000009,
+     1.494250006236438,
+     1205287,
+     83384468999,
+     "United States",
+     "Finance",
+     "Property/Casualty Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AOMN",
+    "d": [
+     "AOMN",
+     "Angel Oak Mortgage REIT, Inc. 9.5 % Notes 2024-30.07.29",
+     22.27,
+     -0.05000000000000071,
+     -0.22401433691756592,
+     4191,
+     123764163,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:BABA",
+    "d": [
+     "BABA",
+     "Alibaba Group Holding Limited Sponsored ADR",
+     86.26,
+     1.4000000000000057,
+     1.6497761018147605,
+     13099523,
+     206061154233.7714,
+     "China",
+     "Retail Trade",
+     "Internet Retail",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:QCOM",
+    "d": [
+     "QCOM",
+     "QUALCOMM Incorporated",
+     168.66,
+     3.6999999999999886,
+     2.242967992240536,
+     14053656,
+     180466203918,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NCNA",
+    "d": [
+     "NCNA",
+     "NuCana plc Sponsored ADR",
+     0.7721,
+     0.01319999999999999,
+     1.739359599420212,
+     21898,
+     3719136,
+     "United Kingdom",
+     "Health Technology",
+     "Biotechnology",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:MU",
+    "d": [
+     "MU",
+     "Micron Technology, Inc.",
+     601.25,
+     -28.539999999999964,
+     -4.531669286587587,
+     52986611,
+     681065350342,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:FC",
+    "d": [
+     "FC",
+     "Franklin Covey Co.",
+     13.06,
+     -0.15000000000000036,
+     -1.1355034065102223,
+     59937,
+     148041258,
+     "United States",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BAC",
+    "d": [
+     "BAC",
+     "Bank of America Corp",
+     48.54,
+     -0.020000000000003126,
+     -0.04118616144975932,
+     38285847,
+     334936150419,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LIN",
+    "d": [
+     "LIN",
+     "Linde plc",
+     524.61,
+     7.779999999999973,
+     1.5053305729156534,
+     1982114,
+     240839930249,
+     "United Kingdom",
+     "Process Industries",
+     "Chemicals: Specialty",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AQMS",
+    "d": [
+     "AQMS",
+     "Aqua Metals, Inc.",
+     0.8862,
+     0.04720000000000002,
+     5.6257449344457715,
+     48649,
+     3194276,
+     "United States",
+     "Non-Energy Minerals",
+     "Other Metals/Minerals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:FTNT",
+    "d": [
+     "FTNT",
+     "Fortinet, Inc.",
+     134.96,
+     2.460000000000008,
+     1.856603773584912,
+     4409143,
+     99156436549,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ICE",
+    "d": [
+     "ICE",
+     "Intercontinental Exchange, Inc.",
+     177.81,
+     2.920000000000016,
+     1.6696209045685952,
+     3030357,
+     99370621313.99998,
+     "United States",
+     "Finance",
+     "Investment Banks/Brokers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:FGBIP",
+    "d": [
+     "FGBIP",
+     "First Guaranty Bancshares, Inc. Depositary Shs Repr 1/40th 6.75 % Non-Cum Perp Red Pfd Rg Shs Series A",
+     17.43,
+     -0.33999999999999986,
+     -1.9133370849746756,
+     2936,
+     180193551,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:MCD",
+    "d": [
+     "MCD",
+     "McDonald's Corporation",
+     283.5,
+     2.8000000000000114,
+     0.9975062344139692,
+     5923056,
+     200089970673.00003,
+     "United States",
+     "Consumer Services",
+     "Restaurants",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MBVI",
+    "d": [
+     "MBVI",
+     "M3-Brigade Acquisition VI Corp. Class A",
+     10.32,
+     0,
+     0,
+     20673,
+     445049986.99999994,
+     "United States",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:CMT",
+    "d": [
+     "CMT",
+     "Core Molding Technologies, Inc.",
+     21.54,
+     0.23999999999999844,
+     1.1267605633802742,
+     23482,
+     184272290,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UNH",
+    "d": [
+     "UNH",
+     "UnitedHealth Group Incorporated",
+     346.19,
+     4.310000000000002,
+     1.2606762606762614,
+     6596382,
+     310194081329,
+     "United States",
+     "Health Services",
+     "Managed Health Care",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:FULT",
+    "d": [
+     "FULT",
+     "Fulton Financial Corporation",
+     22.99,
+     -0.0400000000000027,
+     -0.17368649587495744,
+     1425937,
+     4351415579,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ABNB",
+    "d": [
+     "ABNB",
+     "Airbnb, Inc. Class A",
+     172.15,
+     -1.2399999999999807,
+     -0.7151508160793476,
+     3944739,
+     101866242127.99998,
+     "United States",
+     "Consumer Services",
+     "Hotels/Resorts/Cruise lines",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PDD",
+    "d": [
+     "PDD",
+     "PDD Holdings Inc. Sponsored ADR Class A",
+     87.42,
+     0.20000000000000284,
+     0.22930520522816195,
+     10600984,
+     124433316102,
+     "Ireland",
+     "Retail Trade",
+     "Department Stores",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:RUSHA",
+    "d": [
+     "RUSHA",
+     "Rush Enterprises, Inc. Class A",
+     45.49,
+     0.6300000000000026,
+     1.4043691484618872,
+     745340,
+     5632881168,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:VSNT",
+    "d": [
+     "VSNT",
+     "Versant Media Group, Inc. Class A",
+     35.31,
+     0.25,
+     0.7130633200228179,
+     1432482,
+     4813279691,
+     "United States",
+     "Consumer Services",
+     "Cable/Satellite TV",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MSFT",
+    "d": [
+     "MSFT",
+     "Microsoft Corporation",
+     489.93,
+     -6.199999999999989,
+     -1.2496724648781548,
+     26759322,
+     3638315336615,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ETN",
+    "d": [
+     "ETN",
+     "Eaton Corp. Plc",
+     317.81,
+     -1.4599999999999795,
+     -0.4572932001127509,
+     3520242,
+     123469184052,
+     "Ireland",
+     "Producer Manufacturing",
+     "Electrical Products",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AMTX",
+    "d": [
+     "AMTX",
+     "Aemetis, Inc.",
+     0.8106,
+     0.04389999999999994,
+     5.725838007043164,
+     1397758,
+     59252903.00000001,
+     "United States",
+     "Process Industries",
+     "Chemicals: Specialty",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HCA",
+    "d": [
+     "HCA",
+     "HCA Healthcare Inc",
+     491.01,
+     9.240000000000009,
+     1.9179276418207876,
+     866281,
+     102568309364,
+     "United States",
+     "Health Services",
+     "Hospital/Nursing Management",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:LMT",
+    "d": [
+     "LMT",
+     "Lockheed Martin Corporation",
+     599.24,
+     12.610000000000014,
+     2.1495661660671996,
+     1545115,
+     138427217421.99997,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GRWG",
+    "d": [
+     "GRWG",
+     "GrowGeneration Corp.",
+     1.02,
+     0.010000000000000009,
+     0.990099009900991,
+     471211,
+     59791373.99999999,
+     "United States",
+     "Distribution Services",
+     "Wholesale Distributors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GE",
+    "d": [
+     "GE",
+     "GE Aerospace",
+     316.98,
+     -1.0499999999999545,
+     -0.3301575323082585,
+     4369437,
+     327551905716,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CPNG",
+    "d": [
+     "CPNG",
+     "Coupang, Inc. Class A",
+     16.09,
+     0.0799999999999983,
+     0.4996876951904952,
+     22089802,
+     28838068962,
+     "United States",
+     "Retail Trade",
+     "Internet Retail",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TAK",
+    "d": [
+     "TAK",
+     "Takeda Pharmaceutical Co. Ltd. Sponsored ADR",
+     23.01,
+     0.41000000000000014,
+     1.8141592920353988,
+     3608747,
+     73831344604.61676,
+     "Japan",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:AVT",
+    "d": [
+     "AVT",
+     "Avnet, Inc.",
+     74.195,
+     0.9949999999999903,
+     1.3592896174863256,
+     1592201,
+     6101418486,
+     "United States",
+     "Distribution Services",
+     "Electronics Distributors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MCO",
+    "d": [
+     "MCO",
+     "Moody's Corporation",
+     485.69,
+     0.29000000000002046,
+     0.05974454058508868,
+     693453,
+     83732953456,
+     "United States",
+     "Commercial Services",
+     "Financial Publishing/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HD",
+    "d": [
+     "HD",
+     "Home Depot, Inc.",
+     361.26,
+     7.569999999999993,
+     2.140292346405042,
+     7229996,
+     360484107759,
+     "United States",
+     "Retail Trade",
+     "Home Improvement Chains",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:OTEX",
+    "d": [
+     "OTEX",
+     "Open Text Corporation",
+     23.71,
+     0.25,
+     1.0656436487638534,
+     1035463,
+     5726911199.9652815,
+     "Canada",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NOC",
+    "d": [
+     "NOC",
+     "Northrop Grumman Corp.",
+     555.79,
+     4.949999999999932,
+     0.8986275506499041,
+     583235,
+     78958016242,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:FIG",
+    "d": [
+     "FIG",
+     "Figma, Inc. Class A",
+     17.11,
+     0.16000000000000014,
+     0.9439528023598829,
+     12285471,
+     9164699746,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:EQIX",
+    "d": [
+     "EQIX",
+     "Equinix, Inc.",
+     978.22,
+     -4.5499999999999545,
+     -0.46297709535292636,
+     502210,
+     96832350900.00002,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MUFG",
+    "d": [
+     "MUFG",
+     "Mitsubishi UFJ Financial Group, Inc. Sponsored ADR",
+     19.56,
+     0.08999999999999986,
+     0.46224961479198695,
+     4274599,
+     220682322619.61017,
+     "Japan",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:VVOS",
+    "d": [
+     "VVOS",
+     "Vivos Therapeutics, Inc.",
+     0.046,
+     -0.0126,
+     -21.501706484641637,
+     5405373,
+     1555755,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LRCX",
+    "d": [
+     "LRCX",
+     "Lam Research Corporation",
+     185.01,
+     -11.150000000000006,
+     -5.684135399673738,
+     21505522,
+     231109123642,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BLK",
+    "d": [
+     "BLK",
+     "BlackRock, Inc.",
+     1141.86,
+     -4.170000000000073,
+     -0.36386482029266887,
+     650165,
+     185015965242.00003,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:DRH",
+    "d": [
+     "DRH",
+     "DiamondRock Hospitality Company",
+     14.34,
+     0.03999999999999915,
+     0.27972027972027375,
+     5407308,
+     2942564998,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PANW",
+    "d": [
+     "PANW",
+     "Palo Alto Networks, Inc.",
+     356.14,
+     3.1499999999999773,
+     0.8923765545766105,
+     6690876,
+     292390952026.00006,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NEM",
+    "d": [
+     "NEM",
+     "Newmont Corporation",
+     101.44,
+     1.75,
+     1.755441869796369,
+     7992031,
+     105415764528.99998,
+     "United States",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GS",
+    "d": [
+     "GS",
+     "Goldman Sachs Group, Inc.",
+     801.03,
+     -4.990000000000009,
+     -0.6190913376839297,
+     3425908,
+     231044776753,
+     "United States",
+     "Finance",
+     "Investment Banks/Brokers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MUX",
+    "d": [
+     "MUX",
+     "McEwen Inc.",
+     9.39,
+     0.45000000000000107,
+     5.033557046979878,
+     2143559,
+     578434322.9999999,
+     "Canada",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CSCO",
+    "d": [
+     "CSCO",
+     "Cisco Systems, Inc.",
+     94.2,
+     0.21000000000000796,
+     0.22342802425790825,
+     18542335,
+     371378612383,
+     "United States",
+     "Electronic Technology",
+     "Telecommunications Equipment",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CNTX",
+    "d": [
+     "CNTX",
+     "Context Therapeutics, Inc.",
+     0.178,
+     0.00019999999999997797,
+     0.11248593925758041,
+     607874,
+     16354494,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:WMT",
+    "d": [
+     "WMT",
+     "Walmart Inc.",
+     131.94,
+     -0.37000000000000455,
+     -0.27964628523921436,
+     23619936,
+     1046778478979,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ADI",
+    "d": [
+     "ADI",
+     "Analog Devices, Inc.",
+     333.105,
+     20.15500000000003,
+     6.44032593065986,
+     9205502,
+     160781924727,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TMUS",
+    "d": [
+     "TMUS",
+     "T-Mobile US, Inc.",
+     166.25,
+     -1.0500000000000114,
+     -0.627615062761513,
+     4415233,
+     176104066925,
+     "United States",
+     "Communications",
+     "Wireless Telecommunications",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BAM",
+    "d": [
+     "BAM",
+     "Brookfield Asset Management Ltd. Class A",
+     52.12,
+     1.3200000000000003,
+     2.5984251968503944,
+     2168531,
+     83281410777.47206,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ALAB",
+    "d": [
+     "ALAB",
+     "Astera Labs, Inc.",
+     190.34,
+     -0.960000000000008,
+     -0.5018295870360732,
+     6030686,
+     33268019320.000004,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LFS",
+    "d": [
+     "LFS",
+     "LEIFRAS Co., Ltd. Sponsored ADR",
+     1.76,
+     0.010000000000000009,
+     0.571428571428572,
+     13621,
+     46042689,
+     "Japan",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:CMCSA",
+    "d": [
+     "CMCSA",
+     "Comcast Corporation Class A",
+     25.73,
+     0.3500000000000014,
+     1.3790386130811718,
+     23645022,
+     91367392705,
+     "United States",
+     "Consumer Services",
+     "Cable/Satellite TV",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SKYE",
+    "d": [
+     "SKYE",
+     "Skye Bioscience, Inc.",
+     0.9839,
+     0.16400000000000003,
+     20.002439321868525,
+     112258,
+     4352251,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TM",
+    "d": [
+     "TM",
+     "Toyota Motor Corp. Sponsored ADR",
+     215.79,
+     5.819999999999993,
+     2.771824546363763,
+     441673,
+     253293039538.90463,
+     "Japan",
+     "Consumer Durables",
+     "Motor Vehicles",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:USB",
+    "d": [
+     "USB",
+     "U.S. Bancorp",
+     58.55,
+     0.4799999999999969,
+     0.8265885999655534,
+     6889575,
+     91233127699,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MKL",
+    "d": [
+     "MKL",
+     "Markel Group Inc.",
+     1979.48,
+     18.039999999999964,
+     0.9197324414715701,
+     66369,
+     24207783882,
+     "United States",
+     "Finance",
+     "Property/Casualty Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TXN",
+    "d": [
+     "TXN",
+     "Texas Instruments Incorporated",
+     270.19,
+     11.75,
+     4.546509828199969,
+     10474335,
+     246891606262.99997,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PLAY",
+    "d": [
+     "PLAY",
+     "Dave & Buster's Entertainment, Inc.",
+     5.91,
+     0,
+     0,
+     1300058,
+     205849093,
+     "United States",
+     "Consumer Services",
+     "Movies/Entertainment",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:RVSB",
+    "d": [
+     "RVSB",
+     "Riverview Bancorp, Inc.",
+     6.52,
+     0.0699999999999994,
+     1.085271317829448,
+     30381,
+     127025390,
+     "United States",
+     "Finance",
+     "Savings Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NOW",
+    "d": [
+     "NOW",
+     "ServiceNow, Inc.",
+     92.16,
+     0.4200000000000017,
+     0.45781556572923665,
+     15488606,
+     95662083801.00002,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GPMT",
+    "d": [
+     "GPMT",
+     "Granite Point Mortgage Trust Inc.",
+     1.84,
+     -0.07999999999999985,
+     -4.166666666666659,
+     105717,
+     8870329,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:DUK",
+    "d": [
+     "DUK",
+     "Duke Energy Corporation",
+     131.9,
+     0.9399999999999977,
+     0.717776420281,
+     4204149,
+     102843521724.00002,
+     "United States",
+     "Utilities",
+     "Electric Utilities",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:RSG",
+    "d": [
+     "RSG",
+     "Republic Services, Inc.",
+     254.16,
+     2.009999999999991,
+     0.7971445568114182,
+     1178240,
+     77427214162,
+     "United States",
+     "Industrial Services",
+     "Environmental Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HPK",
+    "d": [
+     "HPK",
+     "HighPeak Energy Inc",
+     7.17,
+     0.29000000000000004,
+     4.215116279069768,
+     611222,
+     907288424.9999999,
+     "United States",
+     "Energy Minerals",
+     "Oil & Gas Production",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AVGO",
+    "d": [
+     "AVGO",
+     "Broadcom Inc.",
+     300.86,
+     -0.21999999999997044,
+     -0.07307028032415652,
+     34349549,
+     1436194216616.9998,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MCHPP",
+    "d": [
+     "MCHPP",
+     "Microchip Technology Incorporated Pfd Shs Depositary Shares Repr 1/20th Conv Pfd Shs Series A",
+     51.71,
+     0.9600000000000009,
+     1.8916256157635485,
+     411139,
+     31377212885,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NASDAQ:NTGR",
+    "d": [
+     "NTGR",
+     "NETGEAR, Inc.",
+     18.29,
+     -0.1700000000000017,
+     -0.9209100758396624,
+     298092,
+     480173155,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:IONQ",
+    "d": [
+     "IONQ",
+     "IonQ, Inc.",
+     23.54,
+     1.1400000000000006,
+     5.089285714285717,
+     23116937,
+     10180171093.999998,
+     "United States",
+     "Electronic Technology",
+     "Computer Processing Hardware",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BANR",
+    "d": [
+     "BANR",
+     "Banner Corporation",
+     70.2,
+     0.23000000000000398,
+     0.3287123052736944,
+     472893,
+     2558232668,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:EOG",
+    "d": [
+     "EOG",
+     "EOG Resources, Inc.",
+     148.31,
+     1.7199999999999989,
+     1.1733406098642465,
+     4687619,
+     76896389234,
+     "United States",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MNDY",
+    "d": [
+     "MNDY",
+     "monday.com Ltd.",
+     77.055,
+     1.9550000000000125,
+     2.603195739014664,
+     556533,
+     3257432060.9999995,
+     "Israel",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PWR",
+    "d": [
+     "PWR",
+     "Quanta Services, Inc.",
+     565.47,
+     -24.16999999999996,
+     -4.099111322162669,
+     2458419,
+     85203397536,
+     "United States",
+     "Industrial Services",
+     "Engineering & Construction",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:IBKR",
+    "d": [
+     "IBKR",
+     "Interactive Brokers Group, Inc. Class A",
+     74.74,
+     0.030000000000001137,
+     0.04015526703252729,
+     5796433,
+     127157618479.57999,
+     "United States",
+     "Finance",
+     "Investment Banks/Brokers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:KEQU",
+    "d": [
+     "KEQU",
+     "Kewaunee Scientific Corporation",
+     33.69,
+     0.269999999999996,
+     0.8078994614003471,
+     26203,
+     97544231.99999999,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ELV",
+    "d": [
+     "ELV",
+     "Elevance Health, Inc.",
+     389.7,
+     -1.4700000000000273,
+     -0.37579568985352335,
+     1291027,
+     84196984118,
+     "United States",
+     "Health Services",
+     "Managed Health Care",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:VEEV",
+    "d": [
+     "VEEV",
+     "Veeva Systems Inc. Class A",
+     271.9,
+     -1.7200000000000273,
+     -0.6286090198085035,
+     1185346,
+     44023013694,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NMIH",
+    "d": [
+     "NMIH",
+     "NMI Holdings, Inc.",
+     39.46,
+     0.13000000000000256,
+     0.3305364861429,
+     640846,
+     2942072407.0000005,
+     "United States",
+     "Finance",
+     "Property/Casualty Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:INGM",
+    "d": [
+     "INGM",
+     "Ingram Micro Holding Corporation",
+     27.43,
+     0.7699999999999996,
+     2.888222055513877,
+     1668754,
+     6310283373,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:COF",
+    "d": [
+     "COF",
+     "Capital One Financial Corp",
+     182.52,
+     1.1599999999999966,
+     0.6396118217909111,
+     4298237,
+     109791831664.00002,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CAT",
+    "d": [
+     "CAT",
+     "Caterpillar Inc.",
+     543.69,
+     3.060000000000059,
+     0.5660063259530658,
+     3721530,
+     248789379343.99997,
+     "United States",
+     "Producer Manufacturing",
+     "Trucks/Construction/Farm Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LIND",
+    "d": [
+     "LIND",
+     "Lindblad Expeditions Holdings, Inc.",
+     31.76,
+     -1.0800000000000018,
+     -3.288672350791723,
+     798798,
+     2085294612.0000002,
+     "United States",
+     "Consumer Services",
+     "Hotels/Resorts/Cruise lines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:XOM",
+    "d": [
+     "XOM",
+     "Exxonmobil Holdings Corporation",
+     158.08,
+     -0.14999999999997726,
+     -0.09479871073751961,
+     21533706,
+     644843486376,
+     "United States",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LULU",
+    "d": [
+     "LULU",
+     "lululemon athletica inc.",
+     107.44,
+     1.3900000000000006,
+     1.3107024988213112,
+     2256422,
+     12444352471,
+     "Canada",
+     "Consumer Non-Durables",
+     "Apparel/Footwear",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SHW",
+    "d": [
+     "SHW",
+     "Sherwin-Williams Company",
+     361.02,
+     8.45999999999998,
+     2.3995915588835888,
+     2187885,
+     87218123724,
+     "United States",
+     "Process Industries",
+     "Industrial Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MAMO",
+    "d": [
+     "MAMO",
+     "Massimo Group",
+     0.7921,
+     0.05435000000000001,
+     7.3669942392409355,
+     45654,
+     32983796,
+     "United States",
+     "Finance",
+     "Real Estate Development",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:TURB",
+    "d": [
+     "TURB",
+     "Turbo Energy, S.A. Sponsored ADR",
+     0.7166,
+     0.08620000000000005,
+     13.673857868020315,
+     111088,
+     9011547,
+     "Spain",
+     "Technology Services",
+     "Packaged Software",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:SHO",
+    "d": [
+     "SHO",
+     "Sunstone Hotel Investors, Inc.",
+     12.86,
+     -0.0600000000000005,
+     -0.4643962848297252,
+     1327221,
+     2270755185,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:APH",
+    "d": [
+     "APH",
+     "Amphenol Corporation Class A",
+     73.08,
+     -0.39000000000000057,
+     -0.5308289097590861,
+     16371429,
+     180453615244,
+     "United States",
+     "Electronic Technology",
+     "Electronic Components",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CRWD",
+    "d": [
+     "CRWD",
+     "CrowdStrike Holdings, Inc. Class A",
+     209.3,
+     -1.5600000000000023,
+     -0.7398273736128247,
+     14571730,
+     215703862654.00003,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:VNDA",
+    "d": [
+     "VNDA",
+     "Vanda Pharmaceuticals Inc.",
+     3.9,
+     0.1499999999999999,
+     3.9999999999999973,
+     1143638,
+     235831791.00000003,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CDNS",
+    "d": [
+     "CDNS",
+     "Cadence Design Systems, Inc.",
+     294.89,
+     -1.7100000000000364,
+     -0.5765340525961012,
+     2153705,
+     80911626680.99998,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BF.A",
+    "d": [
+     "BF.A",
+     "Brown-Forman Corporation Class A",
+     30.4,
+     -0.22000000000000242,
+     -0.7184846505552006,
+     116484,
+     13722974106.999998,
+     "United States",
+     "Consumer Non-Durables",
+     "Beverages: Alcoholic",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TGT",
+    "d": [
+     "TGT",
+     "Target Corporation",
+     172.22,
+     -3.8400000000000034,
+     -2.181074633647622,
+     5082630,
+     77969956661,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SOC",
+    "d": [
+     "SOC",
+     "Sable Offshore Corp.",
+     0.5125,
+     0.007399999999999962,
+     1.4650564244703945,
+     9580710,
+     106589894,
+     "United States",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AMX",
+    "d": [
+     "AMX",
+     "America Movil SAB de CV Sponsored ADR Class B",
+     24.9,
+     0.2699999999999996,
+     1.0962241169305709,
+     3423135,
+     74444164272.948,
+     "Mexico",
+     "Communications",
+     "Wireless Telecommunications",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:TJX",
+    "d": [
+     "TJX",
+     "TJX Companies Inc",
+     146.09,
+     2.2299999999999898,
+     1.5501181704434794,
+     9309103,
+     160695197489,
+     "United States",
+     "Retail Trade",
+     "Apparel/Footwear Retail",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SPGI",
+    "d": [
+     "SPGI",
+     "S&P Global, Inc.",
+     460.74,
+     5.569999999999993,
+     1.2237186106289943,
+     1539869,
+     133568520357.00002,
+     "United States",
+     "Commercial Services",
+     "Financial Publishing/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:V",
+    "d": [
+     "V",
+     "Visa Inc. Class A",
+     424.39,
+     7.610000000000014,
+     1.8259033542876373,
+     6593337,
+     786983451614,
+     "United States",
+     "Finance",
+     "Finance/Rental/Leasing",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:DSAC",
+    "d": [
+     "DSAC",
+     "Daedalus Special Acquisition Corp. Class A",
+     10.1,
+     0.009999999999999787,
+     0.09910802775024566,
+     633929,
+     343585170.99999994,
+     "United Kingdom",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:XHLD",
+    "d": [
+     "XHLD",
+     "TEN Holdings, Inc.",
+     0.6296,
+     -0.006199999999999983,
+     -0.9751494180559898,
+     268318,
+     10671204,
+     "United States",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PBR.A",
+    "d": [
+     "PBR.A",
+     "Petroleo Brasileiro SA Sponsored ADR Pfd",
+     14.19,
+     0.4599999999999991,
+     3.3503277494537445,
+     12342935,
+     97209788806.09601,
+     "Brazil",
+     "Energy Minerals",
+     "Integrated Oil",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:PM",
+    "d": [
+     "PM",
+     "Philip Morris International Inc.",
+     184.32,
+     0.37000000000000455,
+     0.20114161456917887,
+     6593619,
+     287291418916,
+     "United States",
+     "Consumer Non-Durables",
+     "Tobacco",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GM",
+    "d": [
+     "GM",
+     "General Motors Company",
+     83.99,
+     1.6700000000000017,
+     2.0286686103012657,
+     5497569,
+     70849715536.00002,
+     "United States",
+     "Consumer Durables",
+     "Motor Vehicles",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:USB/PS",
+    "d": [
+     "USB/PS",
+     "U.S. Bancorp Depositary Shs Repr 1/1000th Non-Cum Red Perp Pfd Shs Series -O-",
+     15.44,
+     -0.02000000000000135,
+     -0.1293661060802157,
+     95719,
+     91233127699,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:KMI",
+    "d": [
+     "KMI",
+     "Kinder Morgan Inc Class P",
+     31.69,
+     0.610000000000003,
+     1.9626769626769724,
+     12237981,
+     70596300061.99998,
+     "United States",
+     "Industrial Services",
+     "Oil & Gas Pipelines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:WMB",
+    "d": [
+     "WMB",
+     "Williams Companies, Inc.",
+     66.45,
+     0.45000000000000284,
+     0.6818181818181861,
+     7674242,
+     83075953283,
+     "United States",
+     "Industrial Services",
+     "Oil & Gas Pipelines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:DIS",
+    "d": [
+     "DIS",
+     "Walt Disney Company",
+     125.6,
+     3.089999999999989,
+     2.5222430821973627,
+     16354985,
+     214528523077,
+     "United States",
+     "Consumer Services",
+     "Movies/Entertainment",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:VLO",
+    "d": [
+     "VLO",
+     "Valero Energy Corporation",
+     323,
+     -1.670000000000016,
+     -0.5143684356423494,
+     2304585,
+     90079661011,
+     "United States",
+     "Energy Minerals",
+     "Oil Refining/Marketing",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AGYS",
+    "d": [
+     "AGYS",
+     "Agilysys, Inc.",
+     117.81,
+     4.219999999999999,
+     3.71511576723303,
+     222955,
+     3324103924.0000005,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TTE",
+    "d": [
+     "TTE",
+     "TotalEnergies SE",
+     85.59,
+     0.39000000000000057,
+     0.4577464788732401,
+     1111174,
+     191052946002.7663,
+     "France",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:STX",
+    "d": [
+     "STX",
+     "Seagate Technology Holdings PLC",
+     472.33,
+     -10.150000000000034,
+     -2.1037141435914513,
+     3717024,
+     108428596689,
+     "United States",
+     "Electronic Technology",
+     "Computer Peripherals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:WTW",
+    "d": [
+     "WTW",
+     "Willis Towers Watson Public Limited Company",
+     352.56,
+     5.800000000000011,
+     1.6726266005306296,
+     1247275,
+     32511754634,
+     "United Kingdom",
+     "Finance",
+     "Insurance Brokers/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:DHR",
+    "d": [
+     "DHR",
+     "Danaher Corporation",
+     227.35,
+     -1.740000000000009,
+     -0.7595268235191449,
+     2503376,
+     159947736847,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TWI",
+    "d": [
+     "TWI",
+     "Titan International, Inc.",
+     4.54,
+     0.16999999999999993,
+     3.89016018306636,
+     590484,
+     293313812.99999994,
+     "United States",
+     "Producer Manufacturing",
+     "Auto Parts: OEM",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BRK.A",
+    "d": [
+     "BRK.A",
+     "Berkshire Hathaway Inc. Class A",
+     870150,
+     4659.989999999991,
+     0.5384221592575044,
+     160,
+     1231338917927,
+     "United States",
+     "Finance",
+     "Property/Casualty Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PGR",
+    "d": [
+     "PGR",
+     "Progressive Corporation",
+     238.7,
+     3.019999999999982,
+     1.281398506449415,
+     1946228,
+     137896991151,
+     "United States",
+     "Finance",
+     "Multi-Line Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:WDFC",
+    "d": [
+     "WDFC",
+     "WD-40 Company",
+     227.4,
+     3.0600000000000023,
+     1.3640010698047615,
+     120754,
+     3045450714,
+     "United States",
+     "Process Industries",
+     "Industrial Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LVLU",
+    "d": [
+     "LVLU",
+     "Lulu's Fashion Lounge Holdings, Inc.",
+     5.005,
+     -0.33420000000000005,
+     -6.259364698831287,
+     12654,
+     14491758,
+     "United States",
+     "Retail Trade",
+     "Internet Retail",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CRM",
+    "d": [
+     "CRM",
+     "Salesforce, Inc.",
+     197.21,
+     3.950000000000017,
+     2.0438787126151388,
+     6736401,
+     162303835526,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BTQ",
+    "d": [
+     "BTQ",
+     "BTQ Technologies Corp.",
+     1.115,
+     0.04499999999999993,
+     4.205607476635507,
+     1764349,
+     5534617.0649999995,
+     "Canada",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AEP",
+    "d": [
+     "AEP",
+     "American Electric Power Company, Inc.",
+     127.59,
+     0.29000000000000625,
+     0.22780832678712198,
+     2871157,
+     69476109408,
+     "United States",
+     "Utilities",
+     "Electric Utilities",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:EMR",
+    "d": [
+     "EMR",
+     "Emerson Electric Co.",
+     157.23,
+     0.25,
+     0.15925595617276087,
+     2982540,
+     86256371817.99998,
+     "United States",
+     "Electronic Technology",
+     "Electronic Equipment/Instruments",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SONY",
+    "d": [
+     "SONY",
+     "Sony Group Corporation Sponsored ADR",
+     28.49,
+     0.6999999999999993,
+     2.5188916876574283,
+     7476518,
+     167939342689.70447,
+     "Japan",
+     "Electronic Technology",
+     "Computer Processing Hardware",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:MPWR",
+    "d": [
+     "MPWR",
+     "Monolithic Power Systems, Inc.",
+     1194.63,
+     4.470000000000027,
+     0.37557975398266,
+     923243,
+     58259717937,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BRRK",
+    "d": [
+     "BRRK",
+     "Bluerock Acquisition Corporation II Class A",
+     9.83,
+     0.019999999999999574,
+     0.20387359836900684,
+     30743,
+     229145282.24057087,
+     "United States",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SAP",
+    "d": [
+     "SAP",
+     "SAP SE Sponsored ADR",
+     209.37,
+     0.6200000000000045,
+     0.2970059880239543,
+     2514768,
+     243185832507.1997,
+     "Germany",
+     "Technology Services",
+     "Packaged Software",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:SHOP",
+    "d": [
+     "SHOP",
+     "Shopify, Inc. Class A",
+     133.4,
+     1.0900000000000034,
+     0.8238228402992996,
+     7338283,
+     171622032366.48917,
+     "Canada",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NICM",
+    "d": [
+     "NICM",
+     "Nicola Mining Inc. Sponsored ADR",
+     3.77,
+     -0.1299999999999999,
+     -3.3333333333333304,
+     1763,
+     75837585.131,
+     "Canada",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:NGG",
+    "d": [
+     "NGG",
+     "National Grid plc Sponsored ADR",
+     82.54,
+     0.25,
+     0.30380362133916633,
+     791067,
+     82530093724.69229,
+     "United Kingdom",
+     "Utilities",
+     "Electric Utilities",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:NCEW",
+    "d": [
+     "NCEW",
+     "New Century Logistics (BVI) Limited",
+     18.7,
+     1.7949999999999982,
+     10.61816030760129,
+     12644,
+     59840003.00000001,
+     "Hong Kong",
+     "Transportation",
+     "Airlines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SPG",
+    "d": [
+     "SPG",
+     "Simon Property Group, Inc.",
+     233.98,
+     4.149999999999977,
+     1.8056824609493876,
+     1308356,
+     75704581787,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SPCX",
+    "d": [
+     "SPCX",
+     "Space Exploration Technologies Corp",
+     127.44,
+     1.6299999999999955,
+     1.2956044829504771,
+     148278739,
+     1730770766441,
+     "United States",
+     "Communications",
+     "Specialty Telecommunications",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HNST",
+    "d": [
+     "HNST",
+     "Honest Company, Inc.",
+     4.47,
+     -0.04999999999999982,
+     -1.106194690265483,
+     2816193,
+     487608660.99999994,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BMO",
+    "d": [
+     "BMO",
+     "Bank of Montreal",
+     160.12,
+     -0.6299999999999955,
+     -0.39191290824260994,
+     679547,
+     110748576245.10448,
+     "Canada",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ONT",
+    "d": [
+     "ONT",
+     "Onterris, Inc.",
+     22.4,
+     0.00999999999999801,
+     0.04466279589101389,
+     370570,
+     787355150,
+     "United States",
+     "Industrial Services",
+     "Environmental Services",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:VZLA",
+    "d": [
+     "VZLA",
+     "Vizsla Silver Corp.",
+     2.86,
+     0.16999999999999993,
+     6.319702602230482,
+     8288163,
+     1015462738.2370371,
+     "Canada",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MO",
+    "d": [
+     "MO",
+     "Altria Group, Inc.",
+     76.28,
+     1.460000000000008,
+     1.9513499064421385,
+     7112518,
+     126886963912,
+     "United States",
+     "Consumer Non-Durables",
+     "Tobacco",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HOFT",
+    "d": [
+     "HOFT",
+     "Hooker Furnishings Corporation",
+     13.68,
+     -0.5800000000000001,
+     -4.0673211781206176,
+     26333,
+     146269256,
+     "United States",
+     "Consumer Durables",
+     "Home Furnishings",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CB",
+    "d": [
+     "CB",
+     "Chubb Limited",
+     380.51,
+     5.139999999999986,
+     1.3693156085995115,
+     1980300,
+     145384969116,
+     "Switzerland",
+     "Finance",
+     "Property/Casualty Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GILD",
+    "d": [
+     "GILD",
+     "Gilead Sciences, Inc.",
+     176.74,
+     -1.549999999999983,
+     -0.8693701273206478,
+     6201136,
+     219217455051.00003,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NYT",
+    "d": [
+     "NYT",
+     "New York Times Company Class A",
+     71.7,
+     1.2600000000000051,
+     1.7887563884156803,
+     1632172,
+     11465212571,
+     "United States",
+     "Consumer Services",
+     "Publishing: Newspapers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UIS",
+    "d": [
+     "UIS",
+     "Unisys Corporation",
+     2.67,
+     0.029999999999999805,
+     1.136363636363629,
+     987044,
+     194733068.00000003,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NFLX",
+    "d": [
+     "NFLX",
+     "Netflix, Inc.",
+     59.41,
+     0.5399999999999991,
+     0.9172753524715461,
+     45756502,
+     243956837245.00003,
+     "United States",
+     "Technology Services",
+     "Internet Software/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BP",
+    "d": [
+     "BP",
+     "BP PLC Sponsored ADR",
+     43,
+     0.22999999999999687,
+     0.53776011222819,
+     6618430,
+     110482970440.75648,
+     "United Kingdom",
+     "Energy Minerals",
+     "Integrated Oil",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:SGP",
+    "d": [
+     "SGP",
+     "SpyGlass Pharma, Inc.",
+     33.75,
+     -0.5399999999999991,
+     -1.5748031496062969,
+     123667,
+     1129323892.9999998,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TIMB",
+    "d": [
+     "TIMB",
+     "TIM S.A. Sponsored ADR",
+     18.84,
+     0.2699999999999996,
+     1.4539579967689797,
+     656316,
+     8901091404.2722,
+     "Brazil",
+     "Communications",
+     "Wireless Telecommunications",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:HAVA",
+    "d": [
+     "HAVA",
+     "Harvard Ave Acquisition Corporation Class A",
+     10.3,
+     0.010000000000001563,
+     0.09718172983480626,
+     2346,
+     213139849.26876518,
+     "South Korea",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SCCO",
+    "d": [
+     "SCCO",
+     "Southern Copper Corporation",
+     140.99,
+     4.140000000000015,
+     3.025210084033624,
+     2603969,
+     120305831983,
+     "United States",
+     "Non-Energy Minerals",
+     "Other Metals/Minerals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:XBIO",
+    "d": [
+     "XBIO",
+     "Xenetic Biosciences, Inc.",
+     1.4,
+     0.05999999999999983,
+     4.477611940298495,
+     14882,
+     3280453,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HDB",
+    "d": [
+     "HDB",
+     "HDFC Bank Limited Sponsored ADR",
+     28.35,
+     0.7900000000000027,
+     2.8664731494920273,
+     13090364,
+     141085098133.5625,
+     "India",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:WFC",
+    "d": [
+     "WFC",
+     "Wells Fargo & Company",
+     80.94,
+     -0.25,
+     -0.307919694543663,
+     10494455,
+     242969773994,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:OPTH",
+    "d": [
+     "OPTH",
+     "Optimi Health Corp.",
+     2.15,
+     0.24,
+     12.56544502617801,
+     14454,
+     12310614.022435896,
+     "Canada",
+     "Process Industries",
+     "Agricultural Commodities/Milling",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MEI",
+    "d": [
+     "MEI",
+     "Methode Electronics, Inc.",
+     10.2,
+     0.29999999999999893,
+     3.030303030303019,
+     718675,
+     363579543,
+     "United States",
+     "Electronic Technology",
+     "Electronic Components",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:INTC",
+    "d": [
+     "INTC",
+     "Intel Corporation",
+     54.47,
+     -0.3299999999999983,
+     -0.6021897810218948,
+     129274843,
+     289508056487.99994,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:VZ",
+    "d": [
+     "VZ",
+     "Verizon Communications Inc.",
+     47.28,
+     0.12000000000000455,
+     0.25445292620866106,
+     19336396,
+     195956595213.99997,
+     "United States",
+     "Communications",
+     "Wireless Telecommunications",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HVMC",
+    "d": [
+     "HVMC",
+     "Highview Merger Corp. Class A",
+     10.34,
+     0.004999999999999005,
+     0.048379293662302904,
+     2021,
+     304099403,
+     "United States",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:WHR/PA",
+    "d": [
+     "WHR/PA",
+     "Whirlpool Corporation Conv Pfd Registered shs Series A",
+     24.86,
+     0.879999999999999,
+     3.669724770642198,
+     27918,
+     1784094258,
+     "United States",
+     "Consumer Durables",
+     "Electronics/Appliances",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:RTX",
+    "d": [
+     "RTX",
+     "RTX Corporation",
+     196.19,
+     0.8599999999999852,
+     0.4402805508626351,
+     4508731,
+     264746745144,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HCIC",
+    "d": [
+     "HCIC",
+     "Hennessy Capital Investment Corp. VIII Class A",
+     10,
+     0,
+     0,
+     740,
+     355135140.99999994,
+     "United States",
+     "Finance",
+     "Financial Conglomerates",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:UMBFO",
+    "d": [
+     "UMBFO",
+     "UMB Financial Corporation Depositary Shs Repr 1/400th Perp Pfd Shs Series B",
+     25.26,
+     0.060000000000002274,
+     0.23809523809524713,
+     21360,
+     9800170592,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NASDAQ:PICS",
+    "d": [
+     "PICS",
+     "PicS N.V. Class A",
+     5.26,
+     0.35999999999999943,
+     7.346938775510193,
+     1041186,
+     681630499.0000001,
+     "Brazil",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CVX",
+    "d": [
+     "CVX",
+     "Chevron Corporation",
+     210.95,
+     2.219999999999999,
+     1.0635749532889374,
+     7367016,
+     414605687032,
+     "United States",
+     "Energy Minerals",
+     "Integrated Oil",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BX",
+    "d": [
+     "BX",
+     "Blackstone Inc.",
+     118.95,
+     -0.3999999999999915,
+     -0.3351487222454893,
+     4949681,
+     146828718873,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CACC",
+    "d": [
+     "CACC",
+     "Credit Acceptance Corporation",
+     490.22,
+     12.810000000000002,
+     2.6832282524454873,
+     74776,
+     4969587870.999999,
+     "United States",
+     "Finance",
+     "Finance/Rental/Leasing",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BA",
+    "d": [
+     "BA",
+     "Boeing Company",
+     164.53,
+     0.9399999999999977,
+     0.5746072498318955,
+     6094401,
+     130381789499,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PLTR",
+    "d": [
+     "PLTR",
+     "Palantir Technologies Inc. Class A",
+     163.59,
+     2.4099999999999966,
+     1.4952227323489244,
+     21485940,
+     394169658126,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CTBI",
+    "d": [
+     "CTBI",
+     "Community Trust Bancorp, Inc.",
+     67.84,
+     -0.11999999999999034,
+     -0.17657445556208115,
+     79726,
+     1232885908,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:KLAC",
+    "d": [
+     "KLAC",
+     "KLA Corporation",
+     134.2,
+     0.549999999999983,
+     0.41152263374484316,
+     14192581,
+     174857550418,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:OVID",
+    "d": [
+     "OVID",
+     "Ovid Therapeutics Inc.",
+     2.59,
+     0.06000000000000005,
+     2.371541501976287,
+     1432940,
+     488815613,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HSBC",
+    "d": [
+     "HSBC",
+     "HSBC Holdings PLC Sponsored ADR",
+     81.81,
+     -0.21999999999999886,
+     -0.26819456296476757,
+     2392467,
+     273224631528.29425,
+     "United Kingdom",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:PSX",
+    "d": [
+     "PSX",
+     "Phillips 66",
+     236.08,
+     -0.8699999999999761,
+     -0.3671660687908741,
+     3155306,
+     92088290001,
+     "United States",
+     "Energy Minerals",
+     "Oil Refining/Marketing",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MAR",
+    "d": [
+     "MAR",
+     "Marriott International, Inc. Class A",
+     415.77,
+     -0.4600000000000364,
+     -0.11051582057997654,
+     1696072,
+     107062599285.00002,
+     "United States",
+     "Consumer Services",
+     "Hotels/Resorts/Cruise lines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BHR/PB",
+    "d": [
+     "BHR/PB",
+     "Braemar Hotels & Resorts, Inc. 5.5 % Cum Conv Pfd Registered Shs Series B",
+     14,
+     0.5500000000000007,
+     4.089219330855024,
+     26559,
+     121562397,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:AZN",
+    "d": [
+     "AZN",
+     "AstraZeneca PLC",
+     184.21,
+     1.0100000000000193,
+     0.5513100436681329,
+     2214679,
+     285694542781.41675,
+     "United Kingdom",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:IESC",
+    "d": [
+     "IESC",
+     "IES Holdings, Inc.",
+     171.98,
+     5.939999999999998,
+     3.5774512165743184,
+     528868,
+     6864053565,
+     "United States",
+     "Industrial Services",
+     "Engineering & Construction",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:WAY",
+    "d": [
+     "WAY",
+     "Waystar Holding Corp.",
+     27.7,
+     0.6799999999999997,
+     2.5166543301258315,
+     1021242,
+     5329249200.999999,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:CDE",
+    "d": [
+     "CDE",
+     "Coeur Mining, Inc.",
+     11.75,
+     0.5600000000000005,
+     5.00446827524576,
+     35256559,
+     12007366165,
+     "United States",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ASML",
+    "d": [
+     "ASML",
+     "ASML Holding NV Sponsored ADR",
+     1303.08,
+     -32.98000000000002,
+     -2.468452015628042,
+     2060584,
+     474303775004.22815,
+     "Netherlands",
+     "Electronic Technology",
+     "Semiconductors",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:CTAS",
+    "d": [
+     "CTAS",
+     "Cintas Corporation",
+     227.65,
+     1.8900000000000148,
+     0.8371722182849108,
+     1874527,
+     90394144947,
+     "United States",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:FROG",
+    "d": [
+     "FROG",
+     "JFrog Ltd.",
+     104.85,
+     0.28000000000000114,
+     0.26776322080902853,
+     1748394,
+     13066670279,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:PRTH",
+    "d": [
+     "PRTH",
+     "Priority Technology Holdings, Inc.",
+     7.92,
+     0,
+     0,
+     458777,
+     653984979,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:IRWD",
+    "d": [
+     "IRWD",
+     "Ironwood Pharmaceuticals, Inc. Class A",
+     5.17,
+     0.08000000000000007,
+     1.5717092337917498,
+     2551380,
+     855897473,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:APO",
+    "d": [
+     "APO",
+     "Apollo Global Management Inc",
+     120.48,
+     0.6400000000000006,
+     0.5340453938584784,
+     4383833,
+     71135316347,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:KO",
+    "d": [
+     "KO",
+     "Coca-Cola Company",
+     97.59,
+     -0.030000000000001137,
+     -0.03073140749846459,
+     24905461,
+     419822633972.99994,
+     "United States",
+     "Consumer Non-Durables",
+     "Beverages: Non-Alcoholic",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BOH/PA",
+    "d": [
+     "BOH/PA",
+     "Bank of Hawaii Corp Depositary Shs Repr 1/40th 4.375 % Non-Cum Red Perp Pfd Registered Shs A",
+     14.44,
+     0.15000000000000036,
+     1.0496850944716611,
+     12387,
+     2636008354,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "preferred"
+    ]
+   },
+   {
+    "s": "AMEX:GLU/PA",
+    "d": [
+     "GLU/PA",
+     "Gabelli Global Utility & Income Trust Pfd Shs Series A",
+     73.3,
+     0,
+     0,
+     607,
+     null,
+     "United States",
+     "Miscellaneous",
+     "Investment Trusts/Mutual Funds",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NASDAQ:DPRO",
+    "d": [
+     "DPRO",
+     "Draganfly Inc",
+     2.14,
+     0.18000000000000016,
+     9.183673469387763,
+     850058,
+     83765498.9869281,
+     "Canada",
+     "Consumer Durables",
+     "Motor Vehicles",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:DE",
+    "d": [
+     "DE",
+     "Deere & Company",
+     641.02,
+     27.25999999999999,
+     4.4414754953076105,
+     2353951,
+     172835277077,
+     "United States",
+     "Producer Manufacturing",
+     "Trucks/Construction/Farm Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PG",
+    "d": [
+     "PG",
+     "Procter & Gamble Company",
+     173.23,
+     0.7599999999999909,
+     0.44065634603118853,
+     9893896,
+     401509574375,
+     "United States",
+     "Consumer Non-Durables",
+     "Household/Personal Care",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HELE",
+    "d": [
+     "HELE",
+     "Helen of Troy Limited",
+     36.48,
+     0.75,
+     2.0990764063811924,
+     517788,
+     853290337,
+     "Bermuda",
+     "Consumer Durables",
+     "Home Furnishings",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HNNA",
+    "d": [
+     "HNNA",
+     "Hennessy Advisors, Inc.",
+     10.05,
+     0.030000000000001137,
+     0.29940119760480177,
+     4572,
+     79439325.99999999,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SCHW",
+    "d": [
+     "SCHW",
+     "Charles Schwab Corp",
+     93.45,
+     -0.45999999999999375,
+     -0.48983068895750587,
+     10793268,
+     161295413403.00003,
+     "United States",
+     "Finance",
+     "Investment Banks/Brokers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CRDF",
+    "d": [
+     "CRDF",
+     "Cardiff Oncology, Inc.",
+     0.8533,
+     -0.0263000000000001,
+     -2.9899954524784103,
+     375041,
+     66382684.99999999,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PEB/PF",
+    "d": [
+     "PEB/PF",
+     "Pebblebrook Hotel Trust 6.3 % Cum Red Pfd Registered Shs of Benef Interest Series F",
+     19.99,
+     0.08999999999999986,
+     0.4522613065326626,
+     69542,
+     2375733059,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NYSE:MSI",
+    "d": [
+     "MSI",
+     "Motorola Solutions, Inc.",
+     541,
+     10.919999999999959,
+     2.0600664050709248,
+     1248319,
+     89445660782.00002,
+     "United States",
+     "Electronic Technology",
+     "Telecommunications Equipment",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SGHT",
+    "d": [
+     "SGHT",
+     "Sight Sciences, Inc.",
+     10.96,
+     -0.3099999999999987,
+     -2.7506654835847266,
+     279296,
+     609145576.0000001,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BYFC",
+    "d": [
+     "BYFC",
+     "Broadway Financial Corporation",
+     10.44,
+     -0.33999999999999986,
+     -3.153988868274581,
+     3431,
+     96844745,
+     "United States",
+     "Finance",
+     "Savings Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:RPAY",
+    "d": [
+     "RPAY",
+     "Repay Holdings Corp. Class A",
+     3.88,
+     -0.08000000000000007,
+     -2.020202020202022,
+     454361,
+     368617330,
+     "United States",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BHR",
+    "d": [
+     "BHR",
+     "Braemar Hotels & Resorts, Inc.",
+     1.77,
+     0.3700000000000001,
+     26.42857142857144,
+     1592452,
+     121562396.99999999,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NRIX",
+    "d": [
+     "NRIX",
+     "Nurix Therapeutics, Inc.",
+     14.76,
+     0.07000000000000028,
+     0.47651463580667314,
+     2529679,
+     1612527210,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:C",
+    "d": [
+     "C",
+     "Citigroup Inc.",
+     113.33,
+     -0.519999999999996,
+     -0.4567413263065402,
+     11772535,
+     187584325364,
+     "United States",
+     "Finance",
+     "Major Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:DCM",
+    "d": [
+     "DCM",
+     "DeFi Capital Markets, Inc.",
+     3.49,
+     -0.029999999999999805,
+     -0.8522727272727216,
+     10483,
+     10569336,
+     "United States",
+     "Electronic Technology",
+     "Computer Communications",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:NVDA",
+    "d": [
+     "NVDA",
+     "NVIDIA Corporation",
+     149.3,
+     -6.079999999999984,
+     -3.9129875144806183,
+     366567648,
+     3598130073546.9995,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NEE",
+    "d": [
+     "NEE",
+     "NextEra Energy, Inc.",
+     85.41,
+     0.8299999999999983,
+     0.9813194608654507,
+     8714510,
+     179130905300,
+     "United States",
+     "Utilities",
+     "Electric Utilities",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:LLY",
+    "d": [
+     "LLY",
+     "Eli Lilly and Company",
+     1392.22,
+     -15.36999999999989,
+     -1.0919372828735563,
+     2928814,
+     1309723969541,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CUVL",
+    "d": [
+     "CUVL",
+     "Clinuvel Pharmaceuticals Limited Sponsored ADR",
+     4.68,
+     0.019899999999999807,
+     0.4270294628870584,
+     13017,
+     242201697.04536,
+     "Australia",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:ISRG",
+    "d": [
+     "ISRG",
+     "Intuitive Surgical, Inc.",
+     427.18,
+     -7.279999999999973,
+     -1.6756433273488869,
+     2839471,
+     148079256335,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:JCI",
+    "d": [
+     "JCI",
+     "Johnson Controls International plc",
+     136.5,
+     -0.539999999999992,
+     -0.39404553415060717,
+     4085861,
+     81927268341,
+     "Ireland",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:AEC",
+    "d": [
+     "AEC",
+     "Anfield Energy Inc",
+     2.39,
+     0.1200000000000001,
+     5.286343612334806,
+     32572,
+     47680443.76470589,
+     "Canada",
+     "Non-Energy Minerals",
+     "Other Metals/Minerals",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CROX",
+    "d": [
+     "CROX",
+     "Crocs, Inc.",
+     159.93,
+     0.6899999999999977,
+     0.4333082140165773,
+     702441,
+     7312805382,
+     "United States",
+     "Consumer Non-Durables",
+     "Apparel/Footwear",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:VRTX",
+    "d": [
+     "VRTX",
+     "Vertex Pharmaceuticals Incorporated",
+     564.12,
+     0.20000000000004547,
+     0.0354660235494477,
+     1621244,
+     143025671391.00003,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:TMO",
+    "d": [
+     "TMO",
+     "Thermo Fisher Scientific Inc.",
+     685.52,
+     -10.100000000000023,
+     -1.4519421523245484,
+     1642900,
+     253996045850.00003,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HON",
+    "d": [
+     "HON",
+     "Honeywell International Inc.",
+     225.1,
+     0.28000000000000114,
+     0.12454407970821152,
+     2490760,
+     71437404903.00002,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CAPR",
+    "d": [
+     "CAPR",
+     "Capricor Therapeutics, Inc.",
+     1.95,
+     -0.07000000000000006,
+     -3.4653465346534684,
+     8662732,
+     113377123,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HUBG",
+    "d": [
+     "HUBG",
+     "Hub Group, Inc. Class A",
+     23.28,
+     0.23000000000000043,
+     0.9978308026030386,
+     1378621,
+     1423653723,
+     "United States",
+     "Transportation",
+     "Air Freight/Couriers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:DASH",
+    "d": [
+     "DASH",
+     "DoorDash, Inc. Class A",
+     166.4,
+     6.27000000000001,
+     3.9155686005120907,
+     6406227,
+     72551157067,
+     "United States",
+     "Transportation",
+     "Air Freight/Couriers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BNY",
+    "d": [
+     "BNY",
+     "Bank of New York Mellon Corp",
+     147.16,
+     1.9399999999999977,
+     1.3359041454345115,
+     2487895,
+     99023745509,
+     "United States",
+     "Finance",
+     "Investment Banks/Brokers",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UL",
+    "d": [
+     "UL",
+     "Unilever PLC Sponsored ADR",
+     66.85,
+     1.6199999999999903,
+     2.483519852828438,
+     4603902,
+     143141329665.8226,
+     "United Kingdom",
+     "Consumer Non-Durables",
+     "Household/Personal Care",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:AMAT",
+    "d": [
+     "AMAT",
+     "Applied Materials, Inc.",
+     311.18,
+     -12.579999999999984,
+     -3.8855942673585324,
+     11719392,
+     246951636888.00003,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:UBS",
+    "d": [
+     "UBS",
+     "UBS Group AG",
+     45.4,
+     0.25,
+     0.5537098560354374,
+     2324855,
+     139003092430.58698,
+     "Switzerland",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:APP",
+    "d": [
+     "APP",
+     "AppLovin Corp. Class A",
+     378.95,
+     -2.160000000000025,
+     -0.5667655007740613,
+     4533963,
+     125554474279,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AWK",
+    "d": [
+     "AWK",
+     "American Water Works Company, Inc.",
+     152.84,
+     2.4399999999999977,
+     1.6223404255319134,
+     2458285,
+     30431155510,
+     "United States",
+     "Utilities",
+     "Water Utilities",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CUPR",
+    "d": [
+     "CUPR",
+     "Cuprina Holdings (Cayman) Limited Class A",
+     1.4,
+     -0.10000000000000009,
+     -6.666666666666672,
+     76415,
+     8248108,
+     "Singapore",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:PLG",
+    "d": [
+     "PLG",
+     "Platinum Group Metals Ltd.",
+     0.8284,
+     0.020299999999999985,
+     2.5120653384482097,
+     1170596,
+     106059997.97391306,
+     "Canada",
+     "Non-Energy Minerals",
+     "Other Metals/Minerals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AXP",
+    "d": [
+     "AXP",
+     "American Express Company",
+     312.39,
+     3.759999999999991,
+     1.2182872695460554,
+     2230151,
+     209473749713,
+     "United States",
+     "Finance",
+     "Finance/Rental/Leasing",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BRK.B",
+    "d": [
+     "BRK.B",
+     "Berkshire Hathaway Inc. Class B",
+     579.32,
+     2.1100000000000136,
+     0.3655515323712364,
+     4320606,
+     1231338917927,
+     "United States",
+     "Finance",
+     "Property/Casualty Insurance",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:FISN",
+    "d": [
+     "FISN",
+     "Deep Fission, Inc.",
+     2.83,
+     0.07000000000000028,
+     2.5362318840579814,
+     366968,
+     166714140,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:SNDK",
+    "d": [
+     "SNDK",
+     "Sandisk Corporation",
+     73.61,
+     -4.340000000000003,
+     -5.567671584348946,
+     124394626,
+     83791354546,
+     "United States",
+     "Electronic Technology",
+     "Computer Peripherals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ACN",
+    "d": [
+     "ACN",
+     "Accenture Plc Class A",
+     240.49,
+     8.170000000000016,
+     3.5167011019283816,
+     4133405,
+     142138770536,
+     "Ireland",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HWM",
+    "d": [
+     "HWM",
+     "Howmet Aerospace Inc.",
+     211.07,
+     0.22999999999998977,
+     0.10908745968506439,
+     2333618,
+     83934202947,
+     "United States",
+     "Electronic Technology",
+     "Aerospace & Defense",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ENB",
+    "d": [
+     "ENB",
+     "Enbridge Inc.",
+     46.95,
+     0.7100000000000009,
+     1.5354671280276835,
+     6260665,
+     104646289236.3055,
+     "Canada",
+     "Industrial Services",
+     "Oil & Gas Pipelines",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:EIIA",
+    "d": [
+     "EIIA",
+     "Eagle Point Institutional Income Fund Red Pfd Registered Shs Series A",
+     24.93,
+     -0.030000000000001137,
+     -0.12019230769231225,
+     1506,
+     null,
+     "United States",
+     "Miscellaneous",
+     "Investment Trusts/Mutual Funds",
+     "preferred"
+    ]
+   },
+   {
+    "s": "NASDAQ:PACB",
+    "d": [
+     "PACB",
+     "Pacific Biosciences of California, Inc.",
+     1.58,
+     -0.06999999999999984,
+     -4.242424242424233,
+     7124512,
+     494424243,
+     "United States",
+     "Health Technology",
+     "Medical Specialties",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:E",
+    "d": [
+     "E",
+     "Eni S.p.A. Sponsored ADR",
+     52.39,
+     0.13000000000000256,
+     0.24875621890547753,
+     272765,
+     76189301614.9757,
+     "Italy",
+     "Energy Minerals",
+     "Oil Refining/Marketing",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:EFX",
+    "d": [
+     "EFX",
+     "Equifax Inc.",
+     185.68,
+     3.0100000000000193,
+     1.6477801499972733,
+     1442506,
+     21727747968,
+     "United States",
+     "Commercial Services",
+     "Financial Publishing/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ORLY",
+    "d": [
+     "ORLY",
+     "O'Reilly Automotive, Inc.",
+     96.69,
+     1.259999999999991,
+     1.3203395158755011,
+     6992269,
+     77550097248,
+     "United States",
+     "Retail Trade",
+     "Specialty Stores",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:GSK",
+    "d": [
+     "GSK",
+     "GSK plc Sponsored ADR",
+     50.76,
+     0.6899999999999977,
+     1.3780707010185693,
+     3758118,
+     100906910857.9242,
+     "United Kingdom",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:AMGN",
+    "d": [
+     "AMGN",
+     "Amgen Inc.",
+     469.24,
+     -4.694999999999993,
+     -0.990642176669795,
+     3392679,
+     253817306519.00003,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:INVA",
+    "d": [
+     "INVA",
+     "Innoviva, Inc.",
+     18.85,
+     -0.41999999999999815,
+     -2.179553710430712,
+     726217,
+     1339885817.9999998,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AON",
+    "d": [
+     "AON",
+     "Aon Plc Class A",
+     347.49,
+     4.6299999999999955,
+     1.3504054132882213,
+     1221284,
+     73722491377,
+     "Ireland",
+     "Finance",
+     "Insurance Brokers/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:VIA",
+    "d": [
+     "VIA",
+     "Via Transportation, Inc. Class A",
+     46.71,
+     0.4399999999999977,
+     0.9509401339961048,
+     768253,
+     3843853853.9999995,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:HNI",
+    "d": [
+     "HNI",
+     "HNI Corporation",
+     50.41,
+     0.7899999999999991,
+     1.5920999596936702,
+     417203,
+     3643298204.0000005,
+     "United States",
+     "Producer Manufacturing",
+     "Office Equipment/Supplies",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:JBTM",
+    "d": [
+     "JBTM",
+     "JBT Marel Corporation",
+     122.7,
+     -0.3499999999999943,
+     -0.2844372206420108,
+     361894,
+     6267255358,
+     "United States",
+     "Producer Manufacturing",
+     "Industrial Machinery",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:BRIA",
+    "d": [
+     "BRIA",
+     "BrilliA Inc. Class A",
+     1.4699,
+     -9.999999999998899e-05,
+     -0.0068027210884346245,
+     1226,
+     45015688,
+     "Singapore",
+     "Distribution Services",
+     "Wholesale Distributors",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SNOW",
+    "d": [
+     "SNOW",
+     "Snowflake, Inc.",
+     267.72,
+     -3.3699999999999477,
+     -1.2431295879596989,
+     3713691,
+     94451613163,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:CME",
+    "d": [
+     "CME",
+     "CME Group Inc. Class A",
+     311.74,
+     2.490000000000009,
+     0.8051738075990328,
+     1368902,
+     111582308499.99998,
+     "United States",
+     "Finance",
+     "Investment Banks/Brokers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MRVL",
+    "d": [
+     "MRVL",
+     "Marvell Technology, Inc.",
+     130.93,
+     -0.6399999999999864,
+     -0.48643307744925623,
+     28713000,
+     114812513774,
+     "United States",
+     "Electronic Technology",
+     "Semiconductors",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:VWAV",
+    "d": [
+     "VWAV",
+     "VisionWave Holdings, Inc.",
+     0.0451,
+     -0.08510000000000001,
+     -65.3609831029186,
+     72804309,
+     146379,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MS",
+    "d": [
+     "MS",
+     "Morgan Stanley",
+     167.55,
+     -1.2399999999999807,
+     -0.7346406777652591,
+     9742557,
+     261887997353.99997,
+     "United States",
+     "Finance",
+     "Investment Managers",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:HAFC",
+    "d": [
+     "HAFC",
+     "Hanmi Financial Corporation",
+     31,
+     -0.1700000000000017,
+     -0.5453962143086355,
+     191817,
+     914076408,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:BKNG",
+    "d": [
+     "BKNG",
+     "Booking Holdings Inc.",
+     149.5,
+     2.8600000000000136,
+     1.9503546099290874,
+     5865728,
+     111183334320,
+     "United States",
+     "Consumer Services",
+     "Other Consumer Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ALLO",
+    "d": [
+     "ALLO",
+     "Allogene Therapeutics, Inc.",
+     0.66,
+     -0.008499999999999952,
+     -1.2715033657441963,
+     7646340,
+     228668437.00000003,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ECL",
+    "d": [
+     "ECL",
+     "Ecolab Inc.",
+     308.89,
+     1.75,
+     0.5697727420720192,
+     1751907,
+     86633694646.00002,
+     "United States",
+     "Process Industries",
+     "Chemicals: Specialty",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:AOMR",
+    "d": [
+     "AOMR",
+     "Angel Oak Mortgage REIT, Inc.",
+     5.29,
+     0.15000000000000036,
+     2.9182879377431976,
+     130057,
+     123764163,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:MRNA",
+    "d": [
+     "MRNA",
+     "Moderna, Inc.",
+     220.84,
+     -6.539999999999992,
+     -2.8762424135807865,
+     6812616,
+     89356493904,
+     "United States",
+     "Health Technology",
+     "Biotechnology",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:LOCO",
+    "d": [
+     "LOCO",
+     "El Pollo Loco Holdings, Inc.",
+     15.43,
+     -0.17999999999999972,
+     -1.1531069827033935,
+     229405,
+     466269082.00000006,
+     "United States",
+     "Consumer Services",
+     "Restaurants",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:GOOG",
+    "d": [
+     "GOOG",
+     "Alphabet Inc. Class C",
+     270.98,
+     -5.599999999999966,
+     -2.0247306385132573,
+     27916800,
+     3326384161590.9995,
+     "United States",
+     "Technology Services",
+     "Internet Software/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:COP",
+    "d": [
+     "COP",
+     "ConocoPhillips",
+     135.02,
+     0.3800000000000239,
+     0.2822341057635353,
+     5853056,
+     159638871477.00003,
+     "United States",
+     "Energy Minerals",
+     "Oil & Gas Production",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:WM",
+    "d": [
+     "WM",
+     "Waste Management, Inc.",
+     247.29,
+     2.579999999999984,
+     1.0543091822974067,
+     1896774,
+     98331136255.00002,
+     "United States",
+     "Industrial Services",
+     "Environmental Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:QTWO",
+    "d": [
+     "QTWO",
+     "Q2 Holdings, Inc.",
+     69.64,
+     1.8700000000000045,
+     2.759333038217507,
+     694268,
+     4302466668,
+     "United States",
+     "Technology Services",
+     "Information Technology Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:NVS",
+    "d": [
+     "NVS",
+     "Novartis AG Sponsored ADR",
+     155.29,
+     0.8799999999999955,
+     0.5699112751764753,
+     1823189,
+     282095534460.612,
+     "Switzerland",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:BBVA",
+    "d": [
+     "BBVA",
+     "Banco Bilbao Vizcaya Argentaria, S.A. Sponsored ADR",
+     24.01,
+     -0.25,
+     -1.030502885408079,
+     2149346,
+     128344226363.5104,
+     "Spain",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:GSUN",
+    "d": [
+     "GSUN",
+     "Golden Sun Technology Group Limited Class A",
+     0.139,
+     0.007650000000000018,
+     5.8241339931480915,
+     81004,
+     1394013,
+     "China",
+     "Commercial Services",
+     "Miscellaneous Commercial Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MRK",
+    "d": [
+     "MRK",
+     "Merck & Co., Inc.",
+     140.29,
+     -1.2800000000000011,
+     -0.904146358691814,
+     12609862,
+     345849323690,
+     "United States",
+     "Health Technology",
+     "Pharmaceuticals: Major",
+     "common"
+    ]
+   },
+   {
+    "s": "AMEX:TRX",
+    "d": [
+     "TRX",
+     "TRX Gold Corporation",
+     0.735,
+     0.041000000000000036,
+     5.907780979827095,
+     1851727,
+     241318987.37019232,
+     "Canada",
+     "Non-Energy Minerals",
+     "Precious Metals",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ORCL",
+    "d": [
+     "ORCL",
+     "Oracle Corporation",
+     103.88,
+     -5.6200000000000045,
+     -5.132420091324205,
+     38489049,
+     314105696099,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:BUD",
+    "d": [
+     "BUD",
+     "Anheuser-Busch InBev SA/NV Sponsored ADR",
+     79.98,
+     -0.0899999999999892,
+     -0.11240164855749869,
+     1952915,
+     158168052404.7408,
+     "Belgium",
+     "Consumer Non-Durables",
+     "Beverages: Alcoholic",
+     ""
+    ]
+   },
+   {
+    "s": "NASDAQ:FFIV",
+    "d": [
+     "FFIV",
+     "F5, Inc.",
+     317.05,
+     0.18000000000000682,
+     0.05680563006911567,
+     453348,
+     18051586183.999996,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NASDAQ:ADBE",
+    "d": [
+     "ADBE",
+     "Adobe Inc.",
+     232.83,
+     0.75,
+     0.3231644260599793,
+     3753707,
+     90617439555,
+     "United States",
+     "Technology Services",
+     "Packaged Software",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:MRSH",
+    "d": [
+     "MRSH",
+     "Marsh & McLennan Companies, Inc.",
+     216.66,
+     3.5,
+     1.6419590917620568,
+     2711359,
+     103024932741,
+     "United States",
+     "Finance",
+     "Insurance Brokers/Services",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:PLD",
+    "d": [
+     "PLD",
+     "Prologis, Inc.",
+     127.03,
+     -0.28999999999999204,
+     -0.2277725416273893,
+     2902852,
+     123165873308,
+     "United States",
+     "Finance",
+     "Real Estate Investment Trusts",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:SAN",
+    "d": [
+     "SAN",
+     "Banco Santander S.A. Sponsored ADR",
+     11.33,
+     -0.16000000000000014,
+     -1.3925152306353363,
+     6930034,
+     158344649775.94464,
+     "Spain",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   },
+   {
+    "s": "NYSE:XXI",
+    "d": [
+     "XXI",
+     "Twenty One Capital, Inc. Class A",
+     4.52,
+     0.25,
+     5.85480093676815,
+     1426548,
+     2944791509.0000005,
+     "United States",
+     "Finance",
+     "Regional Banks",
+     "common"
+    ]
+   },
+   {
+    "s": "NYSE:ING",
+    "d": [
+     "ING",
+     "ING Groep N.V. Sponsored ADR",
+     29.74,
+     -0.40000000000000213,
+     -1.327140013271407,
+     4302655,
+     80678416666.76064,
+     "Netherlands",
+     "Finance",
+     "Major Banks",
+     ""
+    ]
+   }
+  ]
+ }
+}

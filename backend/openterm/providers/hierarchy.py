@@ -128,8 +128,10 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "search": ["yahoo", "twelvedata", "polygon", "fmp"],  # keyed free-tier fallbacks, inert without a key; US names or mapped exchanges only
     "profile": ["yahoo", "nasdaq"],
     "sparks": ["yahoo"],  # board 2DAY sparkline: two sessions of 30 minute closes (only Yahoo's batched spark endpoint gives them keyless)
-    "movers": ["nasdaq", "yahoo_movers"],  # Nasdaq first (it has the $-volume and Nasdaq-100 tables); it blocks us since 2026-11-26
-    "screener": ["nasdaq_screener", "yahoo_screener"],  # Nasdaq first (one call, has country); Yahoo needs ~150 calls
+    # Nasdaq first in both (it blocks us since 2026-11-26, so it comes back by itself if the block lifts). TradingView next: all five
+    # MOV tabs and the whole universe with country in one call. Yahoo last: three MOV tabs, ~150 calls and no country for the screener.
+    "movers": ["nasdaq", "tradingview", "yahoo_movers"],
+    "screener": ["nasdaq_screener", "tradingview", "yahoo_screener"],
     "peers": ["yahoo_peers"],
     "figi": ["openfigi"],  # SECF identifier mapping
     "mfnav": ["amfi"],  # AMFI NAV for the SECF fund rows

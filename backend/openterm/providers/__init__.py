@@ -90,6 +90,7 @@ from .sec_funds import Sec13fProvider, SecNportProvider
 from .synthetic import SyntheticProvider
 from .tradeus import BeaProvider, BlsProvider, CensusProvider, ComtradeProvider
 from .tradier import TradierProvider
+from .tradingview import TradingViewProvider
 from .treasurydirect import TreasuryDirectProvider
 from .twelvedata import TwelveDataProvider
 from .usgov import CongressProvider, FederalRegisterProvider, OpenFecProvider, UsaSpendingProvider
@@ -112,6 +113,8 @@ ADAPTERS: dict[str, type[Provider]] = {
     "nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider,
     # Yahoo screens: the screener universe and market movers when Nasdaq is down (it blocks OpenTerm since 2026-11-26)
     "yahoo_screener": YahooScreenerProvider, "yahoo_movers": YahooMoversProvider,
+    # TradingView's public scanner: screener universe and all five MOV tabs in one or five calls, ahead of the Yahoo screens
+    "tradingview": TradingViewProvider,
     # Research functions: Yahoo quoteSummary modules, Nasdaq calendars, FINRA short volume, SEC funds (N-PORT, 13F)
     "yahoo_research": YahooResearchProvider, "nasdaq_research": NasdaqResearchProvider, "finra": FinraProvider,
     "sec_nport": SecNportProvider, "sec_13f": Sec13fProvider,

@@ -108,6 +108,26 @@ def _route_yahoo_screens(request: httpx.Request) -> httpx.Response | None:
     return None
 
 
+# TradingView scanner (recorded 2026-11-26 by scripts/record_tradingview.py). Every scan is a POST to one path, so a recording
+# is matched on its request body: each tv_*.json keeps the exact body it was recorded with under "request". A body nobody
+# recorded (a changed query in the adapter) is a 404, never a near match: rerun the recorder after changing a scan.
+_TV_RECORDINGS: list[tuple[object, str]] = []
+
+
+def _route_tradingview(request: httpx.Request) -> httpx.Response | None:
+    if request.url.host != "scanner.tradingview.com" or request.url.path != "/america/scan":
+        return None
+    if not _TV_RECORDINGS:  # read once, on the first scan request
+        _TV_RECORDINGS.extend((json.loads(f.read_text(encoding="utf-8"))["request"], f.stem)
+                              for f in sorted(FIXTURES.glob("tv_*.json")))
+    try:
+        body = json.loads(request.content or b"null")
+    except ValueError:
+        return httpx.Response(404, text="not recorded")
+    name = next((n for req, n in _TV_RECORDINGS if req == body), None)
+    return _load(name) if name else httpx.Response(404, text="not recorded")
+
+
 def _route_base(request: httpx.Request) -> httpx.Response:
     p = request.url.path
     q = request.url.params
@@ -1236,6 +1256,7 @@ ROUTE_TABLE: tuple[Callable[[httpx.Request], httpx.Response | None], ...] = (
     _route_phase19b,    # World Bank, DBnomics series, Nager.Date, policy rates
     _route_phase19,     # OpenFIGI mapping
     _route_kite,        # Zerodha Kite Connect
+    _route_tradingview,  # TradingView scanner (EQS universe and MOV), ahead of the Yahoo screens
     _route_yahoo_screens,  # Yahoo screener (EQS universe) and predefined screens (MOV), the Nasdaq replacements
     _route_kenfrench,   # Ken French factor zips
     _route_slice,       # shorter daily Yahoo charts cut from a longer recording

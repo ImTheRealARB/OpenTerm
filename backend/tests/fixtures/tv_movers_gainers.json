@@ -1,0 +1,147 @@
+{
+ "request": {
+  "columns": [
+   "name",
+   "description",
+   "close",
+   "change_abs",
+   "change",
+   "volume"
+  ],
+  "filter": [
+   {
+    "left": "exchange",
+    "operation": "in_range",
+    "right": [
+     "AMEX",
+     "NASDAQ",
+     "NYSE"
+    ]
+   }
+  ],
+  "sort": {
+   "sortBy": "change",
+   "sortOrder": "desc"
+  },
+  "range": [
+   0,
+   10
+  ]
+ },
+ "status": 200,
+ "body": {
+  "totalCount": 10824,
+  "data": [
+   {
+    "s": "NASDAQ:BGLC",
+    "d": [
+     "BGLC",
+     "BioNexus Gene Lab Corp",
+     1.26,
+     0.67,
+     113.55932203389831,
+     55338884
+    ]
+   },
+   {
+    "s": "AMEX:TOPP",
+    "d": [
+     "TOPP",
+     "Toppoint Holdings, Inc.",
+     0.565,
+     0.24999999999999994,
+     79.36507936507935,
+     139591365
+    ]
+   },
+   {
+    "s": "NASDAQ:RADX",
+    "d": [
+     "RADX",
+     "Radiopharm Theranostics Limited Sponsored ADR",
+     0.81,
+     0.31000000000000005,
+     62.000000000000014,
+     4581228
+    ]
+   },
+   {
+    "s": "NASDAQ:NRSN",
+    "d": [
+     "NRSN",
+     "Neurosense Therapeutics Ltd.",
+     1.76,
+     0.6599999999999999,
+     59.999999999999986,
+     82919948
+    ]
+   },
+   {
+    "s": "NASDAQ:LONA",
+    "d": [
+     "LONA",
+     "LeonaBio, Inc.",
+     2.71,
+     1,
+     58.47953216374269,
+     1359547
+    ]
+   },
+   {
+    "s": "NASDAQ:RAYA",
+    "d": [
+     "RAYA",
+     "Erayak Power Solution Group Incorporation Class A",
+     0.655,
+     0.23010000000000003,
+     54.15391856907509,
+     98619352
+    ]
+   },
+   {
+    "s": "NASDAQ:FCUV",
+    "d": [
+     "FCUV",
+     "Focus Universal, Inc.",
+     5.65,
+     1.9600000000000004,
+     53.11653116531166,
+     9404972
+    ]
+   },
+   {
+    "s": "NASDAQ:RIBBU",
+    "d": [
+     "RIBBU",
+     "Ribbon Acquisition Corporation Units Cons of 1 Shs A + 1/9 Rt",
+     94.55,
+     32.55,
+     52.49999999999999,
+     20435
+    ]
+   },
+   {
+    "s": "NASDAQ:NXAT",
+    "d": [
+     "NXAT",
+     "Nexus Advanced Technologies Inc.",
+     0.6448,
+     0.22080000000000005,
+     52.07547169811322,
+     133052079
+    ]
+   },
+   {
+    "s": "NASDAQ:ALGS",
+    "d": [
+     "ALGS",
+     "Aligos Therapeutics, Inc.",
+     2.26,
+     0.7699999999999998,
+     51.677852348993284,
+     32913930
+    ]
+   }
+  ]
+ }
+}

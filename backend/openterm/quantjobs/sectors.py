@@ -29,6 +29,36 @@ def from_yahoo_name(display: str | None) -> str:
     return YAHOO_TO_SECTOR.get("realestate" if key == "real_estate" else key, "")
 
 
+# TradingView's scanner uses its own 20 sectors (FactSet's RBICS-style names). Each maps onto the nearest canonical (Nasdaq)
+# sector; like the Yahoo map this is approximate, and a few industries are moved by name below where the sector alone lands
+# them in the wrong place (REITs sit under TradingView's "Finance", oilfield services under "Industrial Services").
+TRADINGVIEW_TO_SECTOR = {
+    "Electronic Technology": "Technology", "Technology Services": "Technology",
+    "Finance": "Finance",
+    "Health Technology": "Health Care", "Health Services": "Health Care",
+    "Consumer Durables": "Consumer Discretionary", "Consumer Services": "Consumer Discretionary",
+    "Retail Trade": "Consumer Discretionary",
+    "Consumer Non-Durables": "Consumer Staples",
+    "Energy Minerals": "Energy",
+    "Producer Manufacturing": "Industrials", "Industrial Services": "Industrials", "Transportation": "Industrials",
+    "Commercial Services": "Industrials", "Distribution Services": "Industrials",
+    "Non-Energy Minerals": "Basic Materials", "Process Industries": "Basic Materials",
+    "Utilities": "Utilities",
+    "Communications": "Telecommunications",
+    "Miscellaneous": "Miscellaneous",  # funds and trusts; Nasdaq has the same catch-all
+}
+TRADINGVIEW_INDUSTRY_TO_SECTOR = {
+    "Real Estate Investment Trusts": "Real Estate", "Real Estate Development": "Real Estate",
+    "Oilfield Services/Equipment": "Energy", "Contract Drilling": "Energy", "Oil & Gas Pipelines": "Energy",
+    "Food Retail": "Consumer Staples", "Drugstore Chains": "Consumer Staples",
+}
+
+
+def from_tradingview(sector: str | None, industry: str | None) -> str:
+    """A TradingView sector (and industry) as the canonical (Nasdaq) name; "" when blank or unknown, never a guess."""
+    return TRADINGVIEW_INDUSTRY_TO_SECTOR.get((industry or "").strip()) or TRADINGVIEW_TO_SECTOR.get((sector or "").strip(), "")
+
+
 def canonical(screener_sector: str | None) -> str:
     """A screener sector name as a SPDR-mapped sector, else Unclassified (Miscellaneous, blank, unknown)."""
     s = (screener_sector or "").strip()

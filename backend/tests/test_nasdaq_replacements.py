@@ -46,10 +46,12 @@ def body(name: str):
 
 # --- order: Nasdaq stays first, the replacements answer when it is down -----------------------------------------------------
 def test_each_nasdaq_only_capability_has_a_second_source_after_nasdaq():
-    for cap, nasdaq, other in [("screener", "nasdaq_screener", "yahoo_screener"), ("movers", "nasdaq", "yahoo_movers"),
-                               ("earnings", "nasdaq_earnings", "finnhub"), ("ipo", "nasdaq_research", "finnhub"),
+    for cap, nasdaq, other in [("earnings", "nasdaq_earnings", "finnhub"), ("ipo", "nasdaq_research", "finnhub"),
                                ("earnings_history", "nasdaq_research", "fmp")]:
         assert DEFAULT_ORDER[cap][:2] == [nasdaq, other], cap
+    # Screener and movers have two keyless stand-ins: TradingView (one call, all five MOV tabs), then the Yahoo screens.
+    assert DEFAULT_ORDER["screener"] == ["nasdaq_screener", "tradingview", "yahoo_screener"]
+    assert DEFAULT_ORDER["movers"] == ["nasdaq", "tradingview", "yahoo_movers"]
 
 
 # --- Yahoo screener ------------------------------------------------------------------------------------------------------------

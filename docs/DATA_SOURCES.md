@@ -210,8 +210,8 @@ on 2026-11-26 (free keys for Finnhub and FMP). Fixtures are real recordings, tri
 
 | Capability (functions) | Order | Replacement | What it lacks next to Nasdaq |
 |---|---|---|---|
-| `screener` (EQS, COMP peer fallback, ALPHA TOP100, quant sectors, QRY, plain-English company list) | `nasdaq_screener`, `yahoo_screener` | Yahoo screener, keyless (session crumb). One query per Yahoo industry (145, listed by Yahoo with their sectors), 250 rows a page: about 150 calls, 7 to 18 s measured, cached 15 min | No headquarters country (column blank). About 6,800 stocks instead of 7,000: Yahoo files about 600 listings under no industry. The IPO year is the first trading year. Sectors are mapped onto the Nasdaq names (`quantjobs/sectors.py` `from_yahoo_name`); industries are Yahoo's own names. |
-| `movers` (MOV) | `nasdaq`, `yahoo_movers` | Yahoo predefined screens `day_gainers`, `day_losers`, `most_actives`, keyless | Yahoo's own definitions (larger US companies only). No $-volume or Nasdaq-100 table (MOV says NOT IN THIS SOURCE). |
+| `screener` (EQS, COMP peer fallback, ALPHA TOP100, quant sectors, QRY, plain-English company list) | `nasdaq_screener`, `tradingview`, `yahoo_screener` | **TradingView** (see below), then the Yahoo screener, keyless (session crumb). One query per Yahoo industry (145, listed by Yahoo with their sectors), 250 rows a page: about 150 calls, 7 to 18 s measured, cached 15 min | No headquarters country (column blank). About 6,800 stocks instead of 7,000: Yahoo files about 600 listings under no industry. The IPO year is the first trading year. Sectors are mapped onto the Nasdaq names (`quantjobs/sectors.py` `from_yahoo_name`); industries are Yahoo's own names. |
+| `movers` (MOV) | `nasdaq`, `tradingview`, `yahoo_movers` | **TradingView** (see below, all five tabs), then Yahoo predefined screens `day_gainers`, `day_losers`, `most_actives`, keyless | Yahoo's own definitions (larger US companies only). No $-volume or Nasdaq-100 table (MOV says NOT IN THIS SOURCE). |
 | `earnings` (ERN, BRIEF "Earnings today") | `nasdaq_earnings`, `finnhub` | Finnhub `calendar/earnings` (FINNHUB_API_KEY, free) | No company name, analyst count, last year's EPS or market cap. `service._earnings_names` fills names and market caps from the screener and sorts largest first; the source line then names both. The free plan reaches about a month back. |
 | `ipo` (IPO) | `nasdaq_research`, `finnhub` | Finnhub `calendar/ipo` (FINNHUB_API_KEY, free) | One date per deal (its status date), so a withdrawn deal has no filing date. |
 | `earnings_history` (GP earnings markers) | `nasdaq_research`, `fmp` | FMP `stable/earnings` (FMP_API_KEY, free) | The last four reported quarters (plus the next date, which is not drawn). A free key covers larger US companies only: others answer 402, shown as KEY PLAN. |
@@ -220,6 +220,18 @@ Rejected on the way (2026-11-26): FMP `company-screener` and `ipos-calendar` (40
 (its newest dates stop in May 2025); Finnhub `stock/earnings` for the markers (it gives the quarter's END date, not the day results came
 out, so markers would sit about a month early); Finnhub `stock/symbol` (no sector or market cap). FMP `biggest-gainers` / `losers` /
 `most-actives` answer on a free key and could back up Yahoo for MOV, but are not built (one keyless source is enough for now).
+
+**TradingView scanner** (`tradingview`, added later on 2026-11-26, ranked above the Yahoo screens for both capabilities). TradingView's
+public screener endpoint (`scanner.tradingview.com/america/scan`): keyless, no crumb or cookie, a JSON POST of columns, filters, sort and
+row range. Unofficial and undocumented, prices delayed 15 minutes. Measured live on 2026-11-26 with OpenTerm's own client (httpx, which
+Nasdaq blocks): the whole universe (about 6,100 stocks: common, preferred and ADRs on NASDAQ, NYSE and AMEX; no ETFs or funds) in one
+call of about 1 MB, 1.3 to 1.4 s; the five MOV tables in five calls run side by side, 0.6 to 0.8 s. Why above Yahoo: one call instead of
+about 150, headquarters country is there, no listing is dropped for lacking an industry, and MOV keeps its $-volume and Nasdaq-100 tabs.
+What it lacks next to Nasdaq: no IPO year; no "data as of" time on MOV (its header shows the source only, plus STALE with the age when the cache is old); the Nasdaq-100 tab is the 10
+members that moved most either way. Sectors are mapped onto the Nasdaq names (`quantjobs/sectors.py` `from_tradingview`, with a few
+industry overrides such as REITs to Real Estate); industries stay TradingView's. TradingView gives every preferred series its issuer's
+market cap, so preferreds carry none. Fixtures `tv_*.json` (`scripts/record_tradingview.py`) are matched on the exact request body;
+tests are `test_tradingview.py`.
 
 When every keyless source is down and a keyed source in the chain has no key, the error detail says which key would unlock it
 (`Router.keys_to_unlock`, for example `ANOTHER SOURCE NEEDS A KEY: set FINNHUB_API_KEY in APIKEYS`). The error kind stays PROVIDER DOWN.
