@@ -38,7 +38,7 @@ Non-US symbols currently have **one** zero-key source (Yahoo). If Yahoo is down 
 | N (top stories) | Publisher RSS: CNBC, MarketWatch, BBC Business, Economic Times markets, Mint markets (override in `config.yaml` `news.feeds`) | Headlines, the feed's own teaser (max 300 chars, tags stripped) and a link only. Articles open on the publisher's site. Feeds that fail are listed as `NOT ANSWERING`. MarketWatch and Mint sometimes send invalid UTF-8; the bad bytes show as `�`. |
 | N (security) | Yahoo headline RSS, then GDELT | Yahoo RSS is unofficial and sparse outside US listings. The GDELT fallback searches the symbol's base as a keyword (3+ letters only). |
 | N (keyword) | GDELT DOC 2.0 (English, last 7 days) | GDELT asks for one request every 5 s and answers in 8-12 s from India. It often answers 429 even when calls are spaced; a second search inside 5 s waits for its slot (up to 6 s). |
-| MOV | Nasdaq.com market movers (US only) | Includes warrants and penny stocks as Nasdaq reports them. Each tab shows Nasdaq's own "data as of" (tabs can be from different sessions). %CHG on the share-volume tab is derived from the reported last and change. Slow (4-5 s), hence a 12 s timeout. Yahoo predefined screeners returned zero rows on 2026-10-17 (a Saturday, with and without crumb), so they are not used. |
+| MOV | Nasdaq.com market movers (US only) | Includes warrants and penny stocks as Nasdaq reports them. Each tab shows Nasdaq's own "data as of" (tabs can be from different sessions). %CHG on the share-volume tab is derived from the reported last and change. Slow (4-5 s), hence a 12 s timeout. Yahoo predefined screeners returned zero rows on 2026-10-17 (a Saturday, with and without crumb), so they are not used. Fallback: TradingView's scanner (see Phase 9 below). |
 | CRYP | CoinGecko markets (top 50), then Binance `data-api.binance.vision` 24 h tickers | CoinGecko keyless is roughly 5-30 calls/min (backend TTL 60 s). Binance fallback: 22 fixed USDT pairs, prices in USDT, no rank or market cap (blank). Binance rejects the whole call if one pair does not exist. |
 | WEI, FX, FXC, CMDTY | Yahoo quotes + stream (same path as Q) | Fixed symbol lists in `frontend/src/functions/boards.ts`, all checked on Yahoo spark. FXC crosses are triangulated through USD from `USDxxx=X` legs; a missing leg leaves the cell blank. Commodity units are contract specs (USC = US cents). |
 | WL | SQLite (`watchlists` table) | Up to 500 symbols per list; aliases are resolved like the command line (EURUSD becomes EURUSD=X). |
@@ -115,6 +115,14 @@ Probed 2026-10-17. All of it works with zero keys except FRED search and series 
   rows (Nasdaq, NYSE, AMEX), roughly 2.2 MB and 2-3 s to fetch. Cached 15 min server-side (`screener_ttl_s`), 5 min in the browser;
   the payload is reduced to a columnar form of about 1 MB. Prices are the last session's (not live). Rows with no market cap or sector
   stay in the universe but never pass a numeric / sector filter on that field. Non-US markets are not covered.
+- **Fallback when Nasdaq is down: TradingView's stock scanner** (`tradingview`, `scanner.tradingview.com/america/scan`, keyless JSON
+  POST, unofficial, delayed 15 min). It serves both `screener` (EQS, COMP's industry peers, IMAP) and `movers` (MOV). Same payload shapes,
+  with these differences, all visible through the envelope's `source`:
+  about 6,100 stock rows (common, preferred, ADRs; no ETFs or funds), about 1 MB and 1.3 s; **sectors and industries use TradingView's
+  taxonomy** ("Electronic Technology", not "Technology"), so a sector filter written for one source may match differently on the other;
+  **no IPO year**; **preferred series carry no market cap** (TradingView gives each series its issuer's cap); symbols are rewritten to
+  Nasdaq's spelling (`BRK.B` to `BRK/B`, `PCG/PB` to `PCG^B`). MOV tabs have no "data as of" text (the panel shows the fetch age), and
+  NASDAQ-100 shows the 10 members that moved most either way. Fixtures: `tv_*.json`, recorded by `scripts/record_tradingview.py`.
 - **COMP peers = Yahoo `v6/finance/recommendationsbysymbol/SYM`** (keyless, no crumb): about 5 "people also viewed" symbols with a
   score. An unknown symbol returns an empty list; then COMP falls back to the largest same-industry names in the screener (US only) and
   says so (`SAME INDUSTRY, LARGEST FIRST`). Peers come from a recommender, not an official peer group. Cached 24 h.

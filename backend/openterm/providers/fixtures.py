@@ -723,3 +723,28 @@ def _route_phase19h(request: httpx.Request) -> httpx.Response | None:
 
 def _route(request: httpx.Request) -> httpx.Response:
     return _route_phase19h(request) or _route_before_phase19h(request)
+
+
+# --- TradingView scanner (screener + movers fallback; recorded 2026-11-26 by scripts/record_tradingview.py) ---
+# Every scan is a POST to one path, so a recording is matched on its request body: each tv_*.json keeps the exact
+# body it was recorded with under "request". A body nobody recorded (a changed query) is a 404, never a near match.
+_TV_RECORDINGS: list[tuple[object, str]] | None = None
+
+
+def _tv_recordings() -> list[tuple[object, str]]:
+    global _TV_RECORDINGS
+    if _TV_RECORDINGS is None:  # read once, on the first scan request
+        _TV_RECORDINGS = [(json.loads(f.read_text(encoding="utf-8"))["request"], f.stem)
+                          for f in sorted(FIXTURES.glob("tv_*.json"))]
+    return _TV_RECORDINGS
+
+
+_route_before_tradingview = _route
+
+
+def _route(request: httpx.Request) -> httpx.Response:
+    if request.url.host == "scanner.tradingview.com" and request.url.path == "/america/scan":
+        body = json.loads(request.content or b"null")
+        name = next((n for req, n in _tv_recordings() if req == body), None)
+        return _load(name) if name else httpx.Response(404, text="not recorded")
+    return _route_before_tradingview(request)

@@ -97,7 +97,8 @@ result prefetches its quote and 1Y bars. Aliases: `SPX`, `NDX`, `NIFTY`, `SENSEX
 
 ## Data
 
-Works with **zero API keys** (Yahoo Finance + Nasdaq.com public endpoints). Every value carries its
+Works with **zero API keys** (Yahoo Finance + Nasdaq.com public endpoints, with TradingView's public
+screener as the fallback for the screener and market movers). Every value carries its
 `source` and `as_of`; when a provider fails you see `STALE` or `PROVIDER DOWN`, never invented numbers.
 Read [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) before relying on any of it: these are unofficial
 endpoints for personal use, and they change.

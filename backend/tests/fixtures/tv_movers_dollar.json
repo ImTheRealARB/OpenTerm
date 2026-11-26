@@ -1,0 +1,147 @@
+{
+ "request": {
+  "columns": [
+   "name",
+   "description",
+   "close",
+   "change_abs",
+   "change",
+   "volume"
+  ],
+  "filter": [
+   {
+    "left": "exchange",
+    "operation": "in_range",
+    "right": [
+     "AMEX",
+     "NASDAQ",
+     "NYSE"
+    ]
+   }
+  ],
+  "sort": {
+   "sortBy": "Value.Traded",
+   "sortOrder": "desc"
+  },
+  "range": [
+   0,
+   10
+  ]
+ },
+ "status": 200,
+ "body": {
+  "totalCount": 10824,
+  "data": [
+   {
+    "s": "NASDAQ:NVDA",
+    "d": [
+     "NVDA",
+     "NVIDIA Corporation",
+     149.3,
+     -6.079999999999984,
+     -3.9129875144806183,
+     366567648
+    ]
+   },
+   {
+    "s": "AMEX:SPY",
+    "d": [
+     "SPY",
+     "State Street SPDR S&P 500 ETF",
+     716.7,
+     -2.0799999999999272,
+     -0.2893792259105606,
+     73112452
+    ]
+   },
+   {
+    "s": "NASDAQ:QQQ",
+    "d": [
+     "QQQ",
+     "Invesco QQQ Trust Series I",
+     633.93,
+     -4.170000000000073,
+     -0.6535025858016099,
+     81994351
+    ]
+   },
+   {
+    "s": "NASDAQ:MU",
+    "d": [
+     "MU",
+     "Micron Technology, Inc.",
+     601.25,
+     -28.539999999999964,
+     -4.531669286587587,
+     52986611
+    ]
+   },
+   {
+    "s": "NASDAQ:ANT",
+    "d": [
+     "ANT",
+     "Anthropic, PBC Class A",
+     82.79,
+     0.8850000000000051,
+     1.0805201147671144,
+     293738459
+    ]
+   },
+   {
+    "s": "NASDAQ:AMD",
+    "d": [
+     "AMD",
+     "Advanced Micro Devices, Inc.",
+     406.03,
+     -7.240000000000009,
+     -1.7518813366564256,
+     51630062
+    ]
+   },
+   {
+    "s": "NASDAQ:AAPL",
+    "d": [
+     "AAPL",
+     "Apple Inc.",
+     355.58,
+     1.509999999999991,
+     0.4264693422204623,
+     54285151
+    ]
+   },
+   {
+    "s": "NASDAQ:SPCX",
+    "d": [
+     "SPCX",
+     "Space Exploration Technologies Corp",
+     127.44,
+     1.6299999999999955,
+     1.2956044829504771,
+     148278739
+    ]
+   },
+   {
+    "s": "AMEX:SOXL",
+    "d": [
+     "SOXL",
+     "Direxion Daily Semiconductor Bull 3X ETF",
+     32.02,
+     -0.5799999999999983,
+     -1.7791411042944731,
+     544565090
+    ]
+   },
+   {
+    "s": "NASDAQ:AMZN",
+    "d": [
+     "AMZN",
+     "Amazon.com, Inc.",
+     244.43,
+     -7.859999999999985,
+     -3.1154623647389847,
+     62479241
+    ]
+   }
+  ]
+ }
+}

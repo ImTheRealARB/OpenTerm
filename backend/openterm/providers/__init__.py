@@ -101,6 +101,11 @@ from .screener import NasdaqScreenerProvider, YahooPeersProvider
 
 ADAPTERS.update({"nasdaq_screener": NasdaqScreenerProvider, "yahoo_peers": YahooPeersProvider})
 
+# --- Second keyless source for the screener and movers (Nasdaq was their only one) ---
+from .tradingview import TradingViewProvider
+
+ADAPTERS["tradingview"] = TradingViewProvider
+
 # --- Phase 11: keyed rows come from the key store (APIKEYS) ---
 from ..keys import KEY_SPECS
 

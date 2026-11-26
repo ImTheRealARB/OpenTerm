@@ -106,6 +106,9 @@ stream), `OPENTERM_FIXTURE_LATENCY_MS`, `OPENTERM_DB_PATH`.
   distinctly (`corrMath.ts`). CORR is a DOM table (canvas grid has no per-cell fills); `.sr` mirrors its cursor cell.
 - **CSV export:** `functions/tableExport.ts` `useCsvExport(panelId, () => gridCsv(name, COLUMNS, rows))`; global binding `exportCsv` = Alt+X,
   plus the `E` panel key (`{ panelKey: false }` if the panel already uses E). E / Alt+X while a panel loads says NOTHING TO EXPORT: wait for content in e2e.
+- **TradingView scanner (`providers/tradingview.py`) is the keyless fallback for `screener` and `movers`** (after Nasdaq). Every scan is a POST to one URL,
+  so its fixtures (`tv_*.json`) store the request body and replay only on an exact match: changing a scan in the adapter means rerunning `scripts/record_tradingview.py`.
+  It gives preferreds their issuer's market cap (blanked) and its own sector taxonomy (see DATA_LIMITS Phase 9).
 - **Screener (`/api/screener`) is the whole US universe as one columnar ~1 MB payload,** filtered in the browser (`eqsFilter.ts`). COMP peers fall back to the
   largest same-industry names in it (`basis: "industry"`). Bars carry an optional `adj` (adjusted close) read from Yahoo `adjclose`.
 - **Don't use a ~50 ms TTL in a timing test:** 4 xdist workers on this machine stall longer (`test_stale_while_revalidate` used to flake).

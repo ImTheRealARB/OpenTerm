@@ -32,10 +32,10 @@ STARTED = time.time()
 DEFAULT_ORDER = {
     "quotes": ["yahoo", "nasdaq"], "history": ["binance_klines", "yahoo", "nasdaq"], "search": ["yahoo"], "profile": ["yahoo", "nasdaq"],
     "news_top": ["rss"], "news_symbol": ["yahoo_rss", "gdelt"], "news_keyword": ["gdelt"],
-    "movers": ["nasdaq"], "crypto": ["coingecko", "binance"],
+    "movers": ["nasdaq", "tradingview"], "crypto": ["coingecko", "binance"],
 }
-# --- Phase 9 ---
-DEFAULT_ORDER.update({"screener": ["nasdaq_screener"], "peers": ["yahoo_peers"]})
+# --- Phase 9 --- (tradingview: keyless fallback added 2026-11-26, so EQS and MOV survive a Nasdaq outage)
+DEFAULT_ORDER.update({"screener": ["nasdaq_screener", "tradingview"], "peers": ["yahoo_peers"]})
 MAX_SUBS_PER_CLIENT = 2000
 # --- Phase 19 (capabilities fill in step by step; all keyless) ---
 DEFAULT_ORDER["figi"] = ["openfigi"]

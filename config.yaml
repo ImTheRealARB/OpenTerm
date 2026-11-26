@@ -35,7 +35,7 @@ providers:
   news_top: [rss, finnhub, alpaca]            # finnhub and alpaca are inert until a key is set in APIKEYS
   news_symbol: [yahoo_rss, finnhub, alpaca, gdelt]
   news_keyword: [gdelt]
-  movers: [nasdaq]
+  movers: [nasdaq, tradingview]               # tradingview = keyless scanner, the fallback when Nasdaq is down
   crypto: [coingecko, binance]
   # Phase 6
   fundamentals: [sec]
@@ -50,7 +50,7 @@ providers:
   eco_calendar: [agency_ics, fred]
 
   # --- Phase 9 ---
-  screener: [nasdaq_screener]
+  screener: [nasdaq_screener, tradingview]
   peers: [yahoo_peers]
   # Streaming: Yahoo public streamer; REST polling every 5 s while it is down.
 news:

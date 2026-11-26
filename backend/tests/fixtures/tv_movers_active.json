@@ -1,0 +1,147 @@
+{
+ "request": {
+  "columns": [
+   "name",
+   "description",
+   "close",
+   "change_abs",
+   "change",
+   "volume"
+  ],
+  "filter": [
+   {
+    "left": "exchange",
+    "operation": "in_range",
+    "right": [
+     "AMEX",
+     "NASDAQ",
+     "NYSE"
+    ]
+   }
+  ],
+  "sort": {
+   "sortBy": "volume",
+   "sortOrder": "desc"
+  },
+  "range": [
+   0,
+   10
+  ]
+ },
+ "status": 200,
+ "body": {
+  "totalCount": 10824,
+  "data": [
+   {
+    "s": "NASDAQ:NIVF",
+    "d": [
+     "NIVF",
+     "NewGenIvf Group Limited Class A",
+     0.0177,
+     0.0006999999999999992,
+     4.1176470588235246,
+     860429966
+    ]
+   },
+   {
+    "s": "NASDAQ:FCHL",
+    "d": [
+     "FCHL",
+     "Fitness Champs Holdings Limited",
+     0.0107,
+     0.0011000000000000003,
+     11.458333333333337,
+     855559556
+    ]
+   },
+   {
+    "s": "AMEX:SOXL",
+    "d": [
+     "SOXL",
+     "Direxion Daily Semiconductor Bull 3X ETF",
+     32.02,
+     -0.5799999999999983,
+     -1.7791411042944731,
+     544565090
+    ]
+   },
+   {
+    "s": "NASDAQ:BFLR",
+    "d": [
+     "BFLR",
+     "BlueFlare, Inc.",
+     0.0168,
+     -0.0052,
+     -23.636363636363637,
+     373025713
+    ]
+   },
+   {
+    "s": "NASDAQ:NVDA",
+    "d": [
+     "NVDA",
+     "NVIDIA Corporation",
+     149.3,
+     -6.079999999999984,
+     -3.9129875144806183,
+     366567648
+    ]
+   },
+   {
+    "s": "NASDAQ:ANT",
+    "d": [
+     "ANT",
+     "Anthropic, PBC Class A",
+     82.79,
+     0.8850000000000051,
+     1.0805201147671144,
+     293738459
+    ]
+   },
+   {
+    "s": "AMEX:SPDN",
+    "d": [
+     "SPDN",
+     "Direxion Daily S&P 500 Bear 1X ETF",
+     9.05,
+     0.02000000000000135,
+     0.22148394241418992,
+     269348995
+    ]
+   },
+   {
+    "s": "NASDAQ:CHSN",
+    "d": [
+     "CHSN",
+     "Chanson International Holding Class A",
+     0.0644,
+     0.0068000000000000005,
+     11.805555555555557,
+     238971553
+    ]
+   },
+   {
+    "s": "NASDAQ:TQQQ",
+    "d": [
+     "TQQQ",
+     "ProShares UltraPro QQQ",
+     45.28,
+     -0.9099999999999966,
+     -1.9701234033340478,
+     192850655
+    ]
+   },
+   {
+    "s": "AMEX:SOXS",
+    "d": [
+     "SOXS",
+     "Direxion Daily Semiconductor Bear 3X ETF",
+     62.13,
+     1.1700000000000017,
+     1.91929133858268,
+     148290947
+    ]
+   }
+  ]
+ }
+}

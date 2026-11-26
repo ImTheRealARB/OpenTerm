@@ -6,6 +6,12 @@ _Last updated: 2026-10-19 (review sprint and terminal look merged to `main`). Ph
 > `.\scripts\start.ps1`; [docs/COMMANDS.md](docs/COMMANDS.md) lists commands to try, [docs/FUNCTIONS.md](docs/FUNCTIONS.md) every function.
 
 ## Resume here (2026-10-19, end of the review sprint and terminal-look session)
+- **2026-11-26, branch `claude/openterm-data-sources-e700ae` (not committed yet):** EQS (`screener`) and MOV (`movers`) had Nasdaq as their only source.
+  Added `providers/tradingview.py` (TradingView's keyless stock scanner) as the second source for both, after Nasdaq in `config.yaml` and `main.py`
+  `DEFAULT_ORDER`. Same payload shapes; differences in `docs/DATA_LIMITS.md` Phase 9. Fixtures `tv_*.json` (recorder `scripts/record_tradingview.py`,
+  matched on the exact request body in `fixtures.py`), tests `tests/test_tradingview.py`. Gate: ruff clean, pytest 1645 passed (frontend untouched,
+  so tsc/vitest/e2e not run). Live check: screener 6,083 rows in 1.3 s (Nasdaq 4.9 s), movers 0.63 s.
+  **Still single-source:** `earnings` (nasdaq_earnings; Finnhub's free earnings calendar is the next candidate), `search` and `peers` (Yahoo).
 - **State:** everything is on `main` (local; the user decides when to push `origin/main`): Phases 1-16 and 19, the review sprint (`docs/review/SUMMARY.md`, `DECISIONS_FOR_USER.md`,
   `REVERTED.md`, `BASELINE.md`) and the terminal-look restyle (yellow command field with GO, key-hint row, ticker/name title bands, amber grid headers with rules, blue selection,
   `components/dataColors.css`). Final gate ALL PASS (pytest 1628, ruff, tsc, vitest, e2e 183) in 123 s; bench 37/37 (BT rows can miss when throttled: rest 2 min, rerun once).

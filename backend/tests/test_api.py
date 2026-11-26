@@ -27,6 +27,7 @@ def test_search_and_sources(client):
         "yahoo", "nasdaq", "synthetic", "rss", "yahoo_rss", "gdelt", "coingecko", "binance", "binance_klines", "sec", "yahoo_own", "yahoo_research", "nasdaq_research", "finra", "sec_nport", "sec_13f", "finnhub", "alpaca", "yahoo_options", "tradier", "deribit", "ecb", "boe", "boc", "mof", "fred_oas", "treasurydirect", "yahoo_futures", "cftc", "fomc", "kenfrench", "kite",
         "fred", "fred_csv", "treasury", "nasdaq_earnings", "agency_ics",  # Phase 7
         "nasdaq_screener", "yahoo_peers",  # Phase 9
+        "tradingview",  # screener + movers fallback (2026-11-26)
         "openfigi", "nager", "worldbank", "dbnomics", "policy_rates", "openmeteo", "nws", "polymarket", "kalshi", "nse_archive", "amfi", "binance_deriv", "okx", "defillama",  # Phase 19
     }
     assert s["fixtures"] is True

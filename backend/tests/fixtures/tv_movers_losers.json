@@ -1,0 +1,147 @@
+{
+ "request": {
+  "columns": [
+   "name",
+   "description",
+   "close",
+   "change_abs",
+   "change",
+   "volume"
+  ],
+  "filter": [
+   {
+    "left": "exchange",
+    "operation": "in_range",
+    "right": [
+     "AMEX",
+     "NASDAQ",
+     "NYSE"
+    ]
+   }
+  ],
+  "sort": {
+   "sortBy": "change",
+   "sortOrder": "asc"
+  },
+  "range": [
+   0,
+   10
+  ]
+ },
+ "status": 200,
+ "body": {
+  "totalCount": 10824,
+  "data": [
+   {
+    "s": "NASDAQ:HCTI",
+    "d": [
+     "HCTI",
+     "Healthcare Triangle, Inc.",
+     0.4624,
+     -2.3882,
+     -83.77885357468602,
+     2806624
+    ]
+   },
+   {
+    "s": "NASDAQ:VWAV",
+    "d": [
+     "VWAV",
+     "VisionWave Holdings, Inc.",
+     0.0451,
+     -0.08510000000000001,
+     -65.3609831029186,
+     72804309
+    ]
+   },
+   {
+    "s": "NASDAQ:EUDA",
+    "d": [
+     "EUDA",
+     "EUDA Health Holdings Limited Class A",
+     4.17,
+     -4.83,
+     -53.666666666666664,
+     313413
+    ]
+   },
+   {
+    "s": "NASDAQ:GDHG",
+    "d": [
+     "GDHG",
+     "Golden Heaven Group Holdings Ltd. Class A",
+     0.061,
+     -0.05260000000000001,
+     -46.302816901408455,
+     48658900
+    ]
+   },
+   {
+    "s": "AMEX:DDC",
+    "d": [
+     "DDC",
+     "DDC Enterprise Ltd. Class A",
+     0.0865,
+     -0.04350000000000001,
+     -33.46153846153847,
+     6551644
+    ]
+   },
+   {
+    "s": "NASDAQ:PDC",
+    "d": [
+     "PDC",
+     "Perpetuals.com Ltd Sponsored ADR",
+     0.5185,
+     -0.2579,
+     -33.21741370427615,
+     320829
+    ]
+   },
+   {
+    "s": "NASDAQ:CODX",
+    "d": [
+     "CODX",
+     "Co-Diagnostics, Inc.",
+     2.64,
+     -1.2999999999999998,
+     -32.99492385786802,
+     504010
+    ]
+   },
+   {
+    "s": "AMEX:PW",
+    "d": [
+     "PW",
+     "Power REIT",
+     3.64,
+     -1.7899999999999996,
+     -32.965009208103126,
+     57137
+    ]
+   },
+   {
+    "s": "NASDAQ:WXM",
+    "d": [
+     "WXM",
+     "WF International Ltd.",
+     1.08,
+     -0.53,
+     -32.91925465838509,
+     96747
+    ]
+   },
+   {
+    "s": "AMEX:TOVX",
+    "d": [
+     "TOVX",
+     "Theriva Biologics, Inc.",
+     0.0825,
+     -0.03749999999999999,
+     -31.249999999999993,
+     861985
+    ]
+   }
+  ]
+ }
+}
