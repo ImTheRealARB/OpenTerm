@@ -83,7 +83,11 @@ async def _data(request: Request, name: str, route: str, q: str | None):
         payload = await m.call_route(name, route, split_args(q))
     except ExtError as e:
         return _err(e)
-    return {"data": payload, "source": f"ext:{name}", "as_of": time.time(), "age_s": 0.0, "stale": False, "fallback_from": []}
+    # The extension's own `as_of` / `stale` (payload.py) are the only freshness we can know; without them the data is "as of now".
+    now = time.time()
+    as_of = min(payload.pop("as_of", now), now)
+    return {"data": payload, "source": f"ext:{name}", "as_of": as_of, "age_s": round(now - as_of, 2),
+            "stale": payload.pop("stale", False), "fallback_from": []}
 
 
 @router.get("/{name}")

@@ -16,6 +16,7 @@ import asyncio
 from datetime import UTC, date, datetime
 from typing import Any
 
+from .. import freshness
 from ..errors import DataError
 from ..redact import redact
 from ..research.table import col, head, payload, section
@@ -234,7 +235,11 @@ async def run(app: Any, text: str) -> dict:
         q = L.parse(text)
     except L.QueryError as e:
         raise _bad(e) from e
-    return await (series(app, q) if q.series else snapshot(app, q))
+    # `series` / `snapshot` build their envelope here, but the numbers come from cached screener / quote / history / FRED answers:
+    # fold in their age and staleness (oldest as_of, stale if any) instead of "fresh, age 0" (audit H-16).
+    with freshness.collect() as notes:
+        result = await (series(app, q) if q.series else snapshot(app, q))
+    return freshness.stamp(result, notes)
 
 
 def fields_payload(words: str) -> dict:

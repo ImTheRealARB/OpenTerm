@@ -37,9 +37,19 @@ def _env(data: dict) -> dict:
     return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
 
 
+def _returns_basis(bars: dict) -> list[float]:
+    """The series to take returns from: adjusted closes when the source sent a complete series (a raw close turns a split into a
+    one-day -50% 'return' and wrecks a beta), else the raw closes."""
+    adj = bars.get("adj")
+    return adj if adj and len(adj) == len(bars["c"]) and all(v is not None for v in adj) else bars["c"]
+
+
 def _beta(t_a: list[float], c_a: list[float], t_b: list[float], c_b: list[float]) -> float | None:
-    """Beta of A to B from daily log returns on their common days (at least 60). Pure."""
-    pa, pb = dict(zip(t_a, c_a, strict=False)), dict(zip(t_b, c_b, strict=False))
+    """Beta of A to B from daily log returns on their common days (at least 60). Pure.
+    Days are matched by calendar day (UTC), not by the exact bar timestamp: two sources stamp the same session a few hours apart
+    and an exact join then finds no common days, or silently drops the days that differ."""
+    pa = {int(t // 86400): c for t, c in zip(t_a, c_a, strict=False)}
+    pb = {int(t // 86400): c for t, c in zip(t_b, c_b, strict=False)}
     days = sorted(set(pa) & set(pb))
     ra, rb = [], []
     for d0, d1 in pairwise(days):
@@ -190,10 +200,11 @@ class Phase28Mixin:
         async def root_info(root: str):
             S, _ = await self.spot(root)  # type: ignore[attr-defined]
             b = (await self.svc.history(root, "1Y", "1d"))["data"]
-            return root, S, _beta(b["t"], b["c"], idx_bars["t"], idx_bars["c"])
+            return root, S, _beta(b["t"], _returns_basis(b), idx_bars["t"], _returns_basis(idx_bars))
 
         info = {r: (S, beta) for r, S, beta in await asyncio.gather(*(root_info(r) for r in roots))}
         rows, tot = [], dict.fromkeys(("delta", "gamma", "theta", "vega", "bwd"), 0.0)
+        left_out: list[str] = []
         now = self.now()  # type: ignore[attr-defined]
         for p, o in opts:
             S, beta = info[o["root"]]
@@ -217,6 +228,8 @@ class Phase28Mixin:
                 for k in ("delta", "gamma", "theta", "vega"):
                     tot[k] += row[k]
                 tot["bwd"] += row["bwd"] or 0.0
+            else:
+                left_out.append(p["symbol"])  # no ATM IV for this expiry (or it has expired): its Greeks are NOT in the totals
             rows.append(row)
         headline = [head("NET DELTA (SHARES)", f"{tot['delta']:,.1f}", tot["delta"]),
                     head(f"BETA-WEIGHTED DELTA ({index} SHARES)", f"{tot['bwd']:,.1f}", tot["bwd"]),
@@ -225,9 +238,16 @@ class Phase28Mixin:
         notes = ["GREEKS: BLACK-SCHOLES, EUROPEAN, AT EACH UNDERLYING'S ATM IV FOR THAT EXPIRY (A SMILE IS IGNORED); x QTY x 100",
                  f"BETA = 1 YEAR OF DAILY LOG RETURNS VS {index}; BETA-WEIGHTED DELTA = DELTA x SPOT x BETA / {index} LEVEL",
                  "STOCK POSITIONS ARE LEFT OUT" + (f" ({len(skipped)} NOT AN OCC OPTION SYMBOL)" if skipped else "")]
+        status = None
+        if left_out:
+            # A net Greek that silently skips a leg looks like the whole book's risk. Say it in the status, the headline and a note.
+            status = f"INCOMPLETE: {len(left_out)} OF {len(opts)} LEGS NOT IN THE TOTALS"
+            headline.insert(0, head("INCOMPLETE", f"{len(opts) - len(left_out)} OF {len(opts)} LEGS IN THE TOTALS"))
+            notes.insert(0, "INCOMPLETE: NO ATM IV FOR THESE LEGS (EXPIRED, OR NO CHAIN FOR THAT EXPIRY), SO THEY ARE NOT IN THE NET GREEKS: "
+                         + ", ".join(left_out))
         data = payload(pf["name"], f"PGRK {pf['name']}", headline, [section("legs", "OPTION POSITIONS", [
             col("symbol", "CONTRACT"), col("qty", "QTY", "num"), col("under", "UNDER"), col("strike", "STRIKE", "price"),
             col("type", "C/P"), col("expiry", "EXPIRY"), col("iv", "ATM IV", "pct"), col("delta", "DELTA", "num"),
             col("gamma", "GAMMA", "num4"), col("theta", "THETA", "num"), col("vega", "VEGA", "num"), col("beta", "BETA", "num"),
-            col("bwd", f"BW DELTA ({index})", "num")], rows)], notes, "portfolio + quotes + options + history")
+            col("bwd", f"BW DELTA ({index})", "num")], rows)], notes, "portfolio + quotes + options + history", status=status)
         return _env(data)

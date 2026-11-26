@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 
 from . import cachekeys as ck
 from . import errkinds as K
-from . import symmath
+from . import freshness, symmath
 from .bt.localdata import LocalData, LocalError
 from .cache import Cache
 from .config import load_yaml
@@ -39,17 +39,22 @@ INTRADAY = {"1s", "1m", "2m", "5m", "15m", "30m", "60m", "90m"}  # candles that 
 
 
 def envelope(value: dict, stored_at: float, stale: bool) -> dict:
-    """value is the cached form: {"data": ..., "fallback_from": [...], optional "source"}."""
+    """value is the cached form: {"data": ..., "fallback_from": [...], optional "source"}.
+    A view built from other cached answers carries `as_of` (its oldest input) and `stale` (any input stale) in `value`
+    (`freshness.fold`, set by `swr`): they win over the time the view itself was stored (audit G3 H-16)."""
     data = value["data"]
-    return {
+    stored_at = min(stored_at, value.get("as_of") or stored_at)
+    env = {
         "data": data,
         "source": value.get("source") or (data.get("source") if isinstance(data, dict) else None),
         "as_of": stored_at,
         "age_s": round(time.time() - stored_at, 2),
-        "stale": stale,
+        "stale": bool(stale or value.get("stale")),
         "fallback_from": value.get("fallback_from", []),
         **({"fallback_notes": value["fallback_notes"]} if value.get("fallback_notes") else {}),
     }
+    freshness.note(env)  # a view that combines envelopes (a collect() scope) sees every one of them
+    return env
 
 
 class DataService:
@@ -83,7 +88,11 @@ class DataService:
 
             async def work() -> None:
                 try:
-                    value = await fetch()
+                    # Every envelope the fetch read (a view over FRED series, a chain, a curve ...) is folded into the value that gets
+                    # cached: without it a view built from stale inputs was stored as fresh and served as fresh (audit G3 H-16).
+                    with freshness.collect() as seen:
+                        value = await fetch()
+                    value = freshness.fold(value, seen)
                     self.cache.put(key, value)
                     fut.set_result(value)
                 except BaseException as e:  # noqa: BLE001 - forwarded to every waiter
@@ -122,7 +131,8 @@ class DataService:
         entry = await self.cache.get(key)
         if entry is not None:
             value, stored_at = entry
-            if time.time() - stored_at < ttl:
+            # A value built from stale inputs is never "fresh" (it is served with stale=True and rebuilt in the background).
+            if time.time() - stored_at < ttl and not value.get("stale"):
                 self.fresh_hits += 1
                 return envelope(value, stored_at, stale=False)
             self.stale_hits += 1

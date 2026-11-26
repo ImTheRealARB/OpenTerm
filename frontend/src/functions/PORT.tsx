@@ -24,11 +24,11 @@ import { LAYOUT_NAME_RE } from "../state/layoutState";
 import { termProps } from "../gui/term";
 import { useStore } from "../state/store";
 import { symId } from "../state/symbols";
-import { getLive, onTicks } from "../state/ticks";
+import { onTicks } from "../state/ticks";
 import { navigate } from "../state/workspace";
 import { exportPositions, importPositions, type ImportResult } from "./portfolioCsv";
 import { calcRow, fxSymbol, totals, weight, type RowCalc, type Totals } from "./portfolioMath";
-import { chg, dirColor, lastColor, lastFlash, price, srcColor, srcText, useLiveRows, useQuotes, type QRow } from "./quoteRows";
+import { chg, dirColor, lastColor, lastFlash, price, rowLiveTick, srcColor, srcText, useLiveRows, useQuotes, type QRow } from "./quoteRows";
 import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
@@ -123,7 +123,9 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
   const { rows: fxRows } = useQuotes(fxInputs, reload);
   useEffect(() => (fxKey ? subscribe(fxKey.split(",")) : undefined), [fxKey]);
 
-  const rate = (fx: string) => getLive(fx)?.price ?? fxRows.find((r) => r.input === fx)?.q?.price ?? null;
+  // A live tick only while the stream is up and nothing newer sits in the REST snapshot (audit H-17); `liveFx` says which one a rate was.
+  const rate = (fx: string) => rowLiveTick(fxRows.find((r) => r.input === fx), fx)?.price ?? fxRows.find((r) => r.input === fx)?.q?.price ?? null;
+  const liveFx = (fx: string) => rowLiveTick(fxRows.find((r) => r.input === fx), fx) !== undefined;
   const calcOf = (r: PRow): RowCalc =>
     calcRow(
       { symbol: r.pos.symbol, qty: r.pos.qty, cost: r.pos.cost, posCurrency: r.pos.currency, quoteCurrency: r.q?.q?.currency ?? null, last: r.q ? price(r.q) : null, change: r.q ? chg(r.q) : null },
@@ -381,7 +383,12 @@ function PortfolioView({ panelId, name }: { panelId: number; name: string }) {
         <span className="ps-l" {...termProps("MARKET VALUE", gui)}>TOTAL {base} {gui ? "MKT VALUE" : "MKT VAL"} </span><span className="ps-v">{fmtMoney(t.mv)}</span> · <span className="ps-l" {...termProps("DAY CHANGE", gui)}>DAY </span>
         <span className={`ps-v ${tc(t.day)}`}>{fmtChg(t.day)} ({fmtPct(t.dayPct)})</span> · <span className="ps-l" {...termProps("UNREALISED GAIN", gui)}>UNRL </span>
         <span className={`ps-v ${tc(t.unrl)}`}>{fmtChg(t.unrl)} ({fmtPct(t.unrlPct)})</span> · <span className="ps-l" {...termProps("COST BASIS", gui)}>COST </span><span className="ps-v">{fmtMoney(t.cost)}</span>
-        {t.converted.length > 0 && <span className="acc"> · CONVERTED AT LIVE FX: {t.converted.map((c) => `${c}${base}=X`).join(" ")}</span>}
+        {t.converted.length > 0 && (
+          // "LIVE" only when every rate used is a current tick; otherwise say the rates are the last snapshot (and which ones are old).
+          <span className={t.converted.every((c) => liveFx(`${c}${base}=X`)) ? "acc" : "warn"}>
+            {" "}· CONVERTED AT {t.converted.every((c) => liveFx(`${c}${base}=X`)) ? "LIVE FX" : "FX SNAPSHOT (NOT LIVE)"}: {t.converted.map((c) => `${c}${base}=X`).join(" ")}
+          </span>
+        )}
         {t.unconverted.map((u) => (
           <span key={u.ccy} className="warn">
             {" "}· NOT IN TOTAL: {u.ccy} {fmtMoney(u.mv)} ({u.count}){u.ccy.includes("MISMATCH") ? "" : " NO FX RATE YET"}

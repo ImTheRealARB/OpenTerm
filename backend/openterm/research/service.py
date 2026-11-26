@@ -11,6 +11,7 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from .. import freshness
 from ..errors import DataError
 from ..providers.base import ProviderError
 from ..redact import redact
@@ -284,8 +285,10 @@ class Research:
         except vp.ParamError as e:
             raise DataError("bad_request", str(e)) from e
         sym = resolve(symbol)
-        data = await getattr(self, f"val_{fn}")(sym, params)
-        return envelope({"data": data, "source": data["source"]}, time.time(), stale=False)
+        # DCF / WACC / RV are computed from cached facts, quotes and the curve: carry their age and staleness (audit G3 H-16).
+        with freshness.collect() as notes:
+            data = await getattr(self, f"val_{fn}")(sym, params)
+        return freshness.stamp(envelope({"data": data, "source": data["source"]}, time.time(), stale=False), notes)
 
     async def _safe(self, awaitable):
         try:
