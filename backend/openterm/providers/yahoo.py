@@ -290,7 +290,14 @@ class YahooProvider(Provider):
             if e.kind == "rate_limited":
                 raise
         # Spark refused (format change or block): fall back to one chart call per symbol.
-        found = await asyncio.gather(*(self._quote_via_chart(s) for s in symbols))
+        # Bounded like the spark path above: 160 symbols used to start 160 chart calls at once, which is what trips Yahoo's limit (audit M-03).
+        gate = asyncio.Semaphore(SPARK_PARALLEL * 2)
+
+        async def one(symbol: str) -> Quote | None:
+            async with gate:
+                return await self._quote_via_chart(symbol)
+
+        found = await asyncio.gather(*(one(s) for s in symbols))
         return [q for q in found if q is not None]
 
     async def search(self, query: str) -> list[SearchHit]:

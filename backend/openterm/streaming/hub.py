@@ -70,6 +70,7 @@ class Hub:
         self.tickbuf = TickBuffers()  # Phase 19: GIP reads the ticks seen since the session began
         self.clients: set[Client] = set()
         self.refs: dict[str, int] = {}
+        self._sync_lock = asyncio.Lock()
         self._pending: dict[str, Tick] = {}
         self._task: asyncio.Task | None = None
         self.ticks_in = 0
@@ -104,17 +105,21 @@ class Hub:
             listener(tick)
 
     async def _sync_upstream(self) -> None:
-        symbols = set(self.refs)
-        synth = {s for s in symbols if SYNTHETIC_RE.match(s)} if self.synthetic else set()
-        real = symbols - synth
-        await self.yahoo.set_symbols(real)
-        await self.poller.set_symbols(real)
-        if self.iex is not None:
-            await self.iex.set_symbols(real)
-        if self.kite is not None:
-            await self.kite.set_symbols(real)
-        if self.synthetic:
-            await self.synthetic.set_symbols(synth)
+        # One sync at a time, and the symbol set is read INSIDE the lock: only Yahoo's set_symbols really waits, so an older sync
+        # used to capture its set, stall there, and then overwrite the poller / IEX / Kite symbols a newer sync had already set
+        # (audit H-09). Queued syncs now each push the latest set, so the last one to run always wins with the newest refs.
+        async with self._sync_lock:
+            symbols = set(self.refs)
+            synth = {s for s in symbols if SYNTHETIC_RE.match(s)} if self.synthetic else set()
+            real = symbols - synth
+            await self.yahoo.set_symbols(real)
+            await self.poller.set_symbols(real)
+            if self.iex is not None:
+                await self.iex.set_symbols(real)
+            if self.kite is not None:
+                await self.kite.set_symbols(real)
+            if self.synthetic:
+                await self.synthetic.set_symbols(synth)
 
     async def _flush_loop(self) -> None:
         while True:

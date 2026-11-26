@@ -27,7 +27,8 @@ from .userdata import UserData, UserDataError
 
 # kind -> HTTP status for data and user-data errors (anything not listed is a 500)
 STATUS = {K.BAD_REQUEST: 400, K.NOT_FOUND: 404, K.TOO_LARGE: 413, K.UNAVAILABLE: 503, K.KEY_REQUIRED: 424,
-          K.LOGIN_REQUIRED: 401, K.LOGIN_EXPIRED: 403}  # Phase 15: Kite
+          K.LOGIN_REQUIRED: 401, K.LOGIN_EXPIRED: 403,  # Phase 15: Kite
+          K.RATE_LIMITED: 503}  # Kite's 429 reaches a route as this kind; 503 is what it answered before it had its own kind
 # kind -> HTTP status for the key store (APIKEYS), strategy and spend-cap routes
 KEY_STATUS = {"unknown_provider": 404, K.BAD_REQUEST: 400, "env_locked": 409, "forbidden": 403}
 

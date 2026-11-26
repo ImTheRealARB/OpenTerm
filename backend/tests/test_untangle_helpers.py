@@ -98,6 +98,6 @@ def test_error_builders_share_one_body_shape():
 
 
 def test_error_kinds_match_the_strings_the_status_map_and_breaker_use():
-    assert set(http_util.STATUS) == {"bad_request", "not_found", "too_large", "unavailable", "key_required", "login_required", "login_expired"}
+    assert set(http_util.STATUS) == {"bad_request", "not_found", "too_large", "unavailable", "key_required", "login_required", "login_expired", "rate_limited"}  # rate_limited: audit M-03 (Kite 429 -> 503)
     assert set(K.NOT_AN_OUTAGE) == {"not_found", "unsupported", "depth", "login_expired"}
     assert set(K.NEEDS_USER_ACTION) == {"key_required", "login_expired"}

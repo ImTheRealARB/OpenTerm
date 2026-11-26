@@ -50,7 +50,7 @@ class KiteClient:
         try:
             await bucket.acquire(max_wait=5.0)
         except RateLimited as e:
-            raise _error("unavailable", "KITE RATE LIMITED: TOO MANY REQUESTS, TRY AGAIN") from e
+            raise _error("rate_limited", "KITE RATE LIMITED: TOO MANY REQUESTS, TRY AGAIN") from e  # the kind trips the breaker at once (audit M-03)
         headers = {"X-Kite-Version": "3", "Authorization": f"token {key}:{token}", "User-Agent": "OpenTerm/0.1"}
         try:
             r = await self.http.get(f"{KITE_API}{path}", params=params, headers=headers, timeout=20.0)
@@ -62,7 +62,7 @@ class KiteClient:
             self.session.mark_expired()
             raise _error("login_expired", EXPIRED_MESSAGE)
         if r.status_code == 429:
-            raise _error("unavailable", "KITE RATE LIMITED (429)")
+            raise _error("rate_limited", "KITE RATE LIMITED (429)")
         return r
 
     @staticmethod

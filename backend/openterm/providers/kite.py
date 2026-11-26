@@ -49,7 +49,8 @@ def _stamp(text: str | None) -> int | None:
 
 def _kind(e) -> str:
     """DataError kind -> ProviderError kind."""
-    return {"key_required": "key_required", "not_found": "not_found", "login_expired": "login_expired"}.get(e.kind, "unavailable")
+    return {"key_required": "key_required", "not_found": "not_found", "login_expired": "login_expired",
+            "rate_limited": "rate_limited"}.get(e.kind, "unavailable")
 
 
 class KiteProvider(Provider):
