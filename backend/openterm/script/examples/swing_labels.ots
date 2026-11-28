@@ -1,0 +1,13 @@
+// Labels each swing high and swing low once it is confirmed by a number of bars on both sides.
+indicator("Swing labels", overlay=true, max_labels=100)
+k = input.int(5, "Bars on each side", min=1, max=20)
+
+// A swing high is a bar whose high is the highest of the 2k+1 bars around it.
+// The bar is k bars back, because we only know it is a swing after k more bars have closed.
+isHigh = high[k] == ta.highest(high, 2 * k + 1)
+isLow = low[k] == ta.lowest(low, 2 * k + 1)
+
+if isHigh
+    label.new(bar_index - k, high[k], "H " + str.tostring(high[k], 2), color=color.red, textcolor=color.white)
+if isLow
+    label.new(bar_index - k, low[k], "L " + str.tostring(low[k], 2), color=color.green, textcolor=color.white)

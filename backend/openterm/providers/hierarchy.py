@@ -126,11 +126,12 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "quotes": order_for("quotes"),
     "history": order_for("history"),
     "search": ["yahoo", "twelvedata", "polygon", "fmp"],  # keyed free-tier fallbacks, inert without a key; US names or mapped exchanges only
-    "profile": ["yahoo", "nasdaq"],
+    "profile": ["yahoo", "nasdaq", "fmp"],  # FMP last (2026-11-28): US tickers, needs FMP_API_KEY (inert without it), no P/E or share counts
     "sparks": ["yahoo"],  # board 2DAY sparkline: two sessions of 30 minute closes (only Yahoo's batched spark endpoint gives them keyless)
     # Nasdaq first in both (it blocks us since 2026-11-26, so it comes back by itself if the block lifts). TradingView next: all five
     # MOV tabs and the whole universe with country in one call. Yahoo last: three MOV tabs, ~150 calls and no country for the screener.
-    "movers": ["nasdaq", "tradingview", "yahoo_movers"],
+    # FMP last (2026-11-28): needs FMP_API_KEY (inert without it), three tabs, no volume, three calls of a 250-a-day free key per refresh.
+    "movers": ["nasdaq", "tradingview", "yahoo_movers", "fmp"],
     "screener": ["nasdaq_screener", "tradingview", "yahoo_screener"],
     "peers": ["yahoo_peers"],
     "figi": ["openfigi"],  # SECF identifier mapping
@@ -167,7 +168,7 @@ DEFAULT_ORDER: dict[str, list[str]] = {
     "keystats": ["yahoo_research"],
     "fund_info": ["yahoo_research"],
     "corp_events": ["yahoo_research"],
-    "dividends": ["nasdaq_research", "yahoo_research"],
+    "dividends": ["nasdaq_research", "yahoo_research", "fmp"],  # FMP last (2026-11-28): needs FMP_API_KEY; a free key sends the newest 5 payments
     "splits": ["yahoo_research"],
     "ipo": ["nasdaq_research", "finnhub"],  # Finnhub needs FINNHUB_API_KEY
     "short_interest": ["nasdaq_research", "yahoo_research"],

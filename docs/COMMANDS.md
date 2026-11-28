@@ -24,6 +24,7 @@ news tech                        -> N TECH (news + a section: MARKETS ECONOMY CO
 TMPL                             ready-made workspaces; TMPL DAY / LONGTERM / MACRO / INDIA apply one (asks before replacing panels)
 IND                              indicator library: search 109 indicators, F = your own formula, S / L = save / load a preset
 AAPL GP ATR(14)                  library indicator on the chart; GP args also take LIB:CMF and F:<formula>
+SCRIPT                           write your own indicators and alerts: the list (20 starter examples), SCRIPT <NAME> edits, SCRIPT NEW, SCRIPT IMPORT
 ```
 On a GP chart: `A` sets a price alert at the crosshair (or last price), Shift+A then a click sets one at the clicked price, Alt+click always does.
 In GUI mode, hover a table's column header or press Shift+T for a one-line explanation, and `BT` offers a sentence-style rule builder.
@@ -34,6 +35,7 @@ AAPL DES              profile, valuation, 52-week range
 AAPL QR               live quote recap
 AAPL GP               1-year price chart
 AAPL GP 5Y W LOG      5 years, weekly, log scale
+AAPL GP SCRIPT=RSI_BANDS(14,70)   your saved script on the chart (SCRIPT=A,B for several, at most 5; the numbers in brackets are its inputs in order, an empty slot keeps the default). Shift+I on the chart opens the inputs form
 AAPL GP 5D 15MIN      intraday
 AAPL GP 1Y RSI MACD   indicators (SMA20 SMA50 EMA20 BB RSI MACD VWAP)
 AAPL GP VS SPY        relative performance in %
@@ -102,6 +104,7 @@ ALRT AAPL > 250                price alert (ALRT MSFT -5% = percent move)
 ALRT                           list; ALRT DEL id, ALRT REARM id, ALRT CLEAR (triggered ones)
 ALRT AAPL > 250 VIA TG,EMAIL   send this alert only to Telegram and email (TG = Telegram; also EMAIL, WEBHOOK; ALRT NEWS RECALL VIA WEBHOOK works too). No VIA = every channel switched on in DELIVERY. A chosen channel that is switched off is logged as skipped: CHANNEL OFF
 ALRT alerts are checked by the OpenTerm server, so they fire with the browser closed (only while OpenTerm runs); the panel shows the engine state and why an alert was skipped (stale, synthetic or fixture data)
+ALRT AAPL SCRIPT=RSI_BANDS COND="RSI down"   script alert: fires when the script's alertcondition titled "RSI down" turns true on the newest daily bar (no COND = fire on the script's own alert(...) calls); listed as SC<id>, delete with ALRT DEL SC<id>. Script alerts RUN WHILE OPENTERM IS OPEN in the browser (server-side script alerts come later)
 ```
 Clean up: `PORT DEL MAIN`, `WL DEL TECH`, `ALRT DEL <id>`, `LAYOUT DEL <name>`.
 

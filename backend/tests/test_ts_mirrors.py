@@ -116,3 +116,34 @@ def test_energy_series_aliases_match_the_backend():
 def test_watchlist_flag_colours():
     """Phase 22: the F key cycles the frontend's colours; the server refuses any it does not know."""
     assert _strings(_ts("functions/wlFlags.ts"), "FLAG_COLORS") == list(wlmeta.COLORS)
+
+
+def test_script_builtins_limits_and_tables_match_names_ts():
+    """OpenTerm Script: the Python interpreter (`openterm/script/names.py`) and the TypeScript one (`script/names.ts`) must
+    know exactly the same built-in names, the same caps, colours and timeframes. `lib.*` is not a built-in in v1 (it is a
+    compile error in Python), so it is not listed in either file."""
+    from openterm.script import names as py
+
+    ts = _ts("script/names.ts")
+    body = ts[ts.index("export const BUILTINS") : ts.index("export const BY_NAME")]
+    ts_names = set(re.findall(r'(?<![\w.])(?:v|f|ta)\(\s*"([^"]+)"', body))
+    assert ts_names, "no built-in names found in names.ts"
+    # names.ts makes the `color.<name>` constants in a loop over COLORS, so add them here.
+    ts_colors = set(re.findall(r'(\w+):\s*"#', ts[ts.index("export const COLORS") : ts.index("export const COLORS") + 900]))
+    ts_names |= {f"color.{c}" for c in ts_colors}
+    assert ts_names == {b.name for b in py.BUILTINS}
+    assert not any(n.startswith("lib.") for n in ts_names)
+
+    limits = re.search(r"export const LIMITS = \{(.*?)\}", ts, re.DOTALL)
+    assert limits
+    ts_limits = {k: int(v.replace("_", "")) for k, v in re.findall(r"(\w+):\s*([\d_]+)", limits.group(1))}
+    assert ts_limits == dict(py.LIMITS)
+
+    colors = re.search(r"export const COLORS[^=]*=\s*\{(.*?)\};", ts, re.DOTALL)
+    assert colors
+    assert dict(re.findall(r'(\w+):\s*"([^"]*)"', colors.group(1))) == dict(py.COLORS)
+
+    tfs = re.search(r"export const TIMEFRAMES[^=]*=\s*\{(.*?)\};", ts, re.DOTALL)
+    assert tfs
+    assert dict(re.findall(r'"([^"]+)":\s*"([^"]+)"', tfs.group(1))) == dict(py.TIMEFRAMES)
+    assert _strings(ts, "SOURCES") == list(py.SOURCES)

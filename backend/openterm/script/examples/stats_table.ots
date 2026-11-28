@@ -1,0 +1,20 @@
+// Shows a small table of the 52-week range, the average volume and the distance from the high.
+indicator("Stats table", overlay=true)
+len = input.int(252, "Bars in the range", min=5, max=1000)
+
+// `var` creates the table once. Only its state after the last bar is shown.
+var info = table.new("top_right", 2, 4)
+
+rangeHigh = ta.highest(high, len)
+rangeLow = ta.lowest(low, len)
+averageVolume = ta.sma(volume, 20)
+
+if barstate.islast
+    table.cell(info, 0, 0, "Range high")
+    table.cell(info, 1, 0, str.tostring(rangeHigh, 2))
+    table.cell(info, 0, 1, "Range low")
+    table.cell(info, 1, 1, str.tostring(rangeLow, 2))
+    table.cell(info, 0, 2, "Below high %")
+    table.cell(info, 1, 2, str.tostring(100 * (rangeHigh - close) / rangeHigh, 1))
+    table.cell(info, 0, 3, "Avg volume (20)")
+    table.cell(info, 1, 3, str.tostring(math.round(averageVolume)))

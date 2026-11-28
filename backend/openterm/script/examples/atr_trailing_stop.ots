@@ -1,0 +1,28 @@
+// A trailing stop that sits an ATR multiple under price in an uptrend and flips above it when price closes through it.
+indicator("ATR trailing stop", overlay=true)
+len = input.int(14, "ATR length", min=1, max=100)
+mult = input.float(3.0, "ATR multiple", min=0.5, max=10, step=0.5)
+
+atrValue = ta.atr(len)
+
+// `var` keeps the value from bar to bar. Without it the stop would start from nothing on every bar.
+var stop = na
+var dir = 1
+
+if na(stop)
+    // First bar with an ATR value: start the stop below price.
+    stop := close - mult * atrValue
+else if dir == 1
+    // Uptrend: the stop only moves up.
+    stop := math.max(stop, close - mult * atrValue)
+    if close < stop
+        dir := -1
+        stop := close + mult * atrValue
+else
+    // Downtrend: the stop only moves down.
+    stop := math.min(stop, close + mult * atrValue)
+    if close > stop
+        dir := 1
+        stop := close - mult * atrValue
+
+plot(stop, "Stop", color=dir == 1 ? color.green : color.red, style="stepline", linewidth=2)

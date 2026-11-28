@@ -1,4 +1,4 @@
-/** US market movers from Nasdaq.com: gainers, losers, most active (shares / dollars), Nasdaq-100. */
+/** US market movers (Nasdaq.com, or TradingView / Yahoo / FMP while Nasdaq blocks OpenTerm): gainers, losers, most active (shares / dollars), Nasdaq-100. */
 import { pollMs } from "../settings/runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
@@ -14,6 +14,7 @@ import { navKey } from "../keys/gridNav";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import { gridCsv, useCsvExport } from "./tableExport";
+import { moversAsOf } from "./moversAsOf";
 
 const TABS = [
   ["GAINERS", "GAINERS"],
@@ -97,13 +98,14 @@ export default function MOV({ panelId, args }: FunctionProps) {
     [panelId, latest],
   );
 
-  const asOf = env?.data.table_as_of[tab] ?? env?.data.as_of_text;
+  // Source text, else the newest quote time, else when OpenTerm fetched it (labelled FETCHED): see moversAsOf.ts.
+  const asOf = env ? moversAsOf(env.data, tab, env.as_of) : null;
   return (
     <div className="fn">
       <div className="line">
         <span className="acc">US MOVERS</span>
         {env && ` · ${(env.source ?? "").toUpperCase()}`}
-        {asOf && <span> · {asOf.toUpperCase()}</span>}
+        {asOf && <span> · {asOf}</span>}
         {env?.stale && <span className="warn"> · STALE {fmtAge(env.age_s)}</span>}
         {loading && <span className="dim"> · LOADING…</span>}
         <span className="dim legend"> · 1-5 / TAB SWITCH · J/K MOVE · ENTER DES · E CSV · F5 REFRESH</span>

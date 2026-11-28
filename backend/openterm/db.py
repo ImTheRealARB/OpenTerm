@@ -105,6 +105,9 @@ MIGRATIONS: list[str | list[str]] = [
     ],
     # 21: no new table. Re-key stored journal trades with the audit C-10 rule (a Python step, see `_rekey_journal`)
     [lambda db: _rekey_journal(db)],
+    # 22: OpenTerm Script (Phase 25): the user's saved scripts. `name` is a stored name (idents.STORED_NAME_RE), `source` the
+    # script text (capped at 20,000 characters by the route).
+    ("CREATE TABLE scripts (name TEXT PRIMARY KEY, source TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL)"),
 ]
 
 

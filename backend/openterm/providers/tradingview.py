@@ -126,7 +126,7 @@ def _mover(d: list[Any]) -> Mover:
 def movers_from_scans(bodies: dict[str, Any], source: str, as_of: float) -> Movers:
     """One scan answer per tab (keys of MOVER_SCANS) -> the same Movers Nasdaq's parser builds.
 
-    The scanner gives no "data as of" text, so `table_as_of` is empty: MOV shows the source with no time (STALE + age once the cache is old).
+    The scanner gives no "data as of" text, so `table_as_of` is empty: MOV then shows "FETCHED hh:mm:ss" (when OpenTerm fetched it, from the envelope's `as_of`), never a market time.
     """
     tables: dict[str, list[Mover]] = {}
     for tab in MOVER_SCANS:

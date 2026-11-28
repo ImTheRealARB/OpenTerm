@@ -1,0 +1,16 @@
+// Shows MACD with its signal line and a histogram that is bright when momentum grows and dim when it fades.
+indicator("MACD histogram", overlay=false)
+fastLen = input.int(12, "Fast length", min=1, max=100)
+slowLen = input.int(26, "Slow length", min=2, max=200)
+sigLen = input.int(9, "Signal length", min=1, max=100)
+src = input.source(close, "Source")
+
+// ta.macd gives three values at once, so the result is taken apart with [a, b, c] = ...
+[macdLine, signalLine, hist] = ta.macd(src, fastLen, slowLen, sigLen)
+
+// Above zero: green when the bar is taller than the one before, teal when it is shorter. Below zero: the same in red.
+histColor = hist >= 0 ? (hist > nz(hist[1]) ? color.green : color.teal) : (hist < nz(hist[1]) ? color.red : color.maroon)
+plot(hist, "Histogram", color=histColor, style="histogram")
+plot(macdLine, "MACD", color=color.blue)
+plot(signalLine, "Signal", color=color.orange)
+hline(0, "Zero", color=color.gray)

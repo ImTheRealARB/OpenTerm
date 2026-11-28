@@ -123,6 +123,10 @@ const CASES: Case[] = [
   { cmd: "QRY close, ret FOR AAPL,FRED:DGS10 DATES -6M..0 FREQ M", want: /W AND M ROWS ARE THE LAST VALUE/ },
   { cmd: "FLD valuation", want: /SNAPSHOT FIELDS GO WITHOUT DATES/ },
   { cmd: "NB", want: /NOT RUNNING/ },
+  // Phase 25: OpenTerm Script (the list says how many starter examples ship)
+  { cmd: "SCRIPT", want: /20 EXAMPLES/ },
+  // wave 2: GP loads the script layer and says plainly when the named script is not saved (never a silent chart)
+  { cmd: "AAPL GP SCRIPT=NOPE", want: /SCRIPT NOT FOUND: NOPE/ },
   // Phase 32
   { cmd: "RES SRC=BIS monetary", want: /NOT INCLUDED: IMF PAPERS/ },
 ];

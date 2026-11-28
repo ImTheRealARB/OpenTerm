@@ -1,0 +1,17 @@
+// Declares two alert conditions for a close beyond the highest high or lowest low of the last N bars.
+indicator("Breakout conditions", overlay=true)
+len = input.int(20, "Lookback bars", min=2, max=300)
+
+highestHigh = ta.highest(high, len)
+lowestLow = ta.lowest(low, len)
+plot(highestHigh, "Highest high", color=color.blue, style="stepline")
+plot(lowestLow, "Lowest low", color=color.blue, style="stepline")
+
+// highestHigh[1] is the level one bar ago, so the current bar cannot move the line it is compared with.
+breakUp = close > highestHigh[1]
+breakDown = close < lowestLow[1]
+plotshape(breakUp, "Break up", style="arrowup", location="belowbar", color=color.green)
+plotshape(breakDown, "Break down", style="arrowdown", location="abovebar", color=color.red)
+
+alertcondition(breakUp, "Breakout up", "Closed above the recent high")
+alertcondition(breakDown, "Breakout down", "Closed below the recent low")

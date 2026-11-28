@@ -163,7 +163,9 @@ def dvd_payload(symbol: str, raw: dict) -> dict:
                  [col("ex_date", "EX-DATE", "date", 10), col("amount", "AMOUNT", "price"), col("type", "TYPE", "text", 8),
                   col("declared", "DECLARED", "date", 10), col("record", "RECORD", "date", 10), col("pay", "PAY DATE", "date", 10)],
                  rows)],
-        [] if raw["annual"] is not None else ["DECLARATION, RECORD AND PAY DATES NEED THE NASDAQ SOURCE (UNAVAILABLE): EX-DATES AND AMOUNTS ONLY"],
+        # say so only when the answering source really sent no such dates (Yahoo: ex-dates and amounts only; FMP sends them)
+        [] if any(r["declared"] or r["record"] or r["pay"] for r in rows)
+        else ["THIS SOURCE SENDS NO DECLARATION, RECORD OR PAY DATES: EX-DATES AND AMOUNTS ONLY"],
         raw["source"])
 
 

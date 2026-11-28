@@ -33,6 +33,8 @@ import { fallbackText } from "./fallbackText";
 import { useLatest } from "../state/useLatest";
 import type { FunctionProps } from "./registry";
 import type { ConePoint } from "../chart/cone";
+import type { ScriptReport } from "../chart/scriptTypes";
+import { ScriptInputsForm } from "./ScriptInputsForm";
 import { researchApi } from "../net/researchApi";
 
 export { parseGpArgs };
@@ -130,6 +132,14 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
     [p.custom, hiddenStudies],
   );
   const shownIndicators = useMemo(() => p.indicators.filter((n) => !hiddenStudies.has(n)), [p.indicators, hiddenStudies]);
+  // --- OpenTerm Script (SCRIPT=NAME): each script's status from the chart layer, and the Shift+I inputs form ---
+  const [scriptReport, setScriptReport] = useState<ScriptReport>({});
+  const [scriptForm, setScriptFormState] = useState(false);
+  const scriptFormRef = useRef(false);
+  const setScriptForm = (on: boolean) => {
+    scriptFormRef.current = on;
+    setScriptFormState(on);
+  };
   const customKeys = p.custom.map((c) => c.key);
   const customKeyStr = customKeys.join("\n");
   const isAnswering = () => {
@@ -443,6 +453,11 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
     () =>
       registerPanelKeys(panelId, (e) => {
         const k = e.key;
+        if (scriptFormRef.current) {
+          // The script inputs form is modal; its own fields handle Enter / Escape, this catches Escape when focus is elsewhere.
+          if (k === "Escape") setScriptForm(false);
+          return true;
+        }
         if (picker) {
           const idx = PICK_KEYS.indexOf(k.toUpperCase());
           if (k.length === 1 && idx >= 0 && idx < INDICATORS.length) {
@@ -591,6 +606,11 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
           case "i":
             setPicker(true);
             return true;
+          case "I":
+            // Shift+I (plain I is the indicator picker): the inputs of the scripts on this chart.
+            if (!pRef.current.scripts.length) return !fail("NO SCRIPT ON THIS CHART: GP SYMBOL SCRIPT=NAME");
+            setScriptForm(true);
+            return true;
           case "x": {
             const on = !crossOn;
             chart.current?.crosshair(on);
@@ -628,7 +648,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
       <div className="line">
         <span className="acc">{L?.bars.symbol ?? symbol}</span> {p.range} {L?.bars.interval ?? p.interval ?? ""}{" "}
         {p.compare.length ? `VS ${p.compare.join(" ")} ${p.pane ? "(PANES)" : "(%)"}` : p.type}
-        {p.log && !overlayCompare && " LOG"} {p.indicators.join(" ")} {p.custom.map((c) => c.label).join(" ")}
+        {p.log && !overlayCompare && " LOG"} {p.indicators.join(" ")} {p.custom.map((c) => c.label).join(" ")} {p.scripts.map((sc) => scriptReport[sc.name]?.title || sc.name).join(" ")}
         {L && (
           <span className="dim">
             {" · "}
@@ -660,7 +680,13 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
         {Object.values(customErrors).map((m) => (
           <span className="err" key={m} data-testid="gp-custom-err"> · {m}</span>
         ))}
-        <span className="dim legend"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS · W DRAWING TOOLS · T/H/B DRAW (QUICK) · O OBJECTS · A ALERT (SHIFT+A OR ALT+CLICK: AT A CLICKED PRICE) · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
+        {p.scripts.map((sc) => {
+          const st = scriptReport[sc.name];
+          if (!st) return null;
+          if (st.state === "loading") return <span className="dim" key={sc.name} data-testid="gp-script-loading"> · SCRIPT {sc.name}: LOADING…</span>;
+          return st.error ? <span className="err" key={sc.name} data-testid="gp-script-err"> · {st.error}</span> : null;
+        })}
+        <span className="dim legend"> · 1-8 RANGE · C TYPE · I IND · L LOG · ←/→ PAN · +/- ZOOM · X CROSS{p.scripts.length ? " · SHIFT+I SCRIPT INPUTS" : ""} · W DRAWING TOOLS · T/H/B DRAW (QUICK) · O OBJECTS · A ALERT (SHIFT+A OR ALT+CLICK: AT A CLICKED PRICE) · CHARTS: TRADINGVIEW LIGHTWEIGHT CHARTS</span>
       </div>
       {ask && (
         <div className="line">
@@ -700,7 +726,7 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
       {chartNote && (
         <div className="line dim" data-testid="gp-chart-note">
           {chartNote}
-          {brick && (p.indicators.length || p.custom.length || p.compare.length || drawings.length) ? " · INDICATORS, COMPARE AND DRAWINGS ARE OFF ON A BRICK CHART" : ""}
+          {brick && (p.indicators.length || p.custom.length || p.scripts.length || p.compare.length || drawings.length) ? " · INDICATORS, SCRIPTS, COMPARE AND DRAWINGS ARE OFF ON A BRICK CHART" : ""}
         </div>
       )}
       {p.indicators.includes("PAT:GEO") && !brick && (
@@ -755,6 +781,10 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
             comparePanes: p.pane && !brick ? L.compares : undefined,
             custom: brick ? [] : custom,
             onCustomErrors: setCustomErrors,
+            // Phase 25: scripts need a time-based chart (a brick chart has no bars to run on).
+            scripts: brick
+              ? undefined
+              : { items: p.scripts, symbol, range: p.range, synthetic: /^SYN\d+$/i.test(symbol) || /synthetic|fixture/i.test(L.source ?? ""), onReport: setScriptReport },
             draw: brick ? undefined : drawState,
             events: brick ? undefined : markers,
             onPick: (id) => setSelected(id),
@@ -766,6 +796,14 @@ export default function GP({ panelId, security, args, source }: FunctionProps) {
               live.current.placeAlert(px);
             },
           }}
+        />
+      )}
+      {scriptForm && p.scripts.length > 0 && (
+        <ScriptInputsForm
+          scripts={p.scripts}
+          report={scriptReport}
+          onApply={(changes) => update((q) => ({ ...q, scripts: q.scripts.map((sc) => (changes[sc.name] ? { ...sc, inputs: changes[sc.name] } : sc)) }))}
+          onClose={() => setScriptForm(false)}
         />
       )}
       {picker && (

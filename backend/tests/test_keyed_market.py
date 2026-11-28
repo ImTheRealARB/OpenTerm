@@ -543,7 +543,10 @@ def test_fixture_labels():
     # Real success shapes exist where a public demo key could record them, plus FMP's earnings dates (recorded with the owner's
     # free key, 2026-11-26, for GP's earnings markers). Nothing real for Polygon besides the 401.
     assert not [n for n in names if n.startswith("polygon_real_")]
-    assert [n for n in names if n.startswith("fmp_real_")] == ["fmp_real_earnings_aapl"]
+    # Later FMP recordings (2026-11-28, same free key): MOV's three lists (record_fmp_movers.py), DES profile and DVD dividends (record_fmp_research.py).
+    assert [n for n in names if n.startswith("fmp_real_")] == [
+        "fmp_real_dividends_AAPL", "fmp_real_earnings_aapl", "fmp_real_movers_active", "fmp_real_movers_gainers",
+        "fmp_real_movers_losers", "fmp_real_profile_AAPL"]
 
 
 def test_no_fixture_holds_a_secret_shaped_value():

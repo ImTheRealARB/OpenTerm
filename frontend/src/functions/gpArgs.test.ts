@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { depthLimitFromError, intervalFits, intervalToken, limitText, longestRangeWithin, parseGpArgs, serializeGp, withInterval } from "./gpArgs";
+import { MAX_SCRIPTS, depthLimitFromError, intervalFits, intervalToken, limitText, longestRangeWithin, parseGpArgs, parseScriptToken, serializeGp, serializeScripts, withInterval } from "./gpArgs";
 
 describe("candle-length limits (reported by the backend per symbol)", () => {
   const yahoo = { "1m": 7, "5m": 60, "15m": 60, "60m": 730 };
@@ -117,5 +117,55 @@ describe("REPLAY practice exits (STOP= TARGET=)", () => {
     expect(parseGpArgs(["REPLAY", "STOP=0"]).exits).toBeUndefined();
     expect(parseGpArgs(["REPLAY", "STOP=100"]).exits).toBeUndefined();
     expect(parseGpArgs(["REPLAY", "STOP=abc"]).exits).toBeUndefined();
+  });
+});
+
+describe("SCRIPT= (OpenTerm Script on a chart)", () => {
+  it("reads one script, several, and per-chart inputs in order", () => {
+    expect(parseGpArgs(["1Y", "SCRIPT=rsi_bands"]).scripts).toEqual([{ name: "RSI_BANDS", inputs: [] }]);
+    expect(parseGpArgs(["SCRIPT=A,B"]).scripts.map((s) => s.name)).toEqual(["A", "B"]);
+    expect(parseGpArgs(["SCRIPT=RSI_BANDS(14,70)"]).scripts).toEqual([{ name: "RSI_BANDS", inputs: ["14", "70"] }]);
+    // an empty slot keeps the script's default; trailing empties are dropped
+    expect(parseGpArgs(["SCRIPT=A(,70,),B"]).scripts).toEqual([{ name: "A", inputs: ["", "70"] }, { name: "B", inputs: [] }]);
+  });
+
+  it("keeps the other args working and does not treat SCRIPT= as a compare symbol", () => {
+    const p = parseGpArgs(["VS", "MSFT", "SCRIPT=A(3)", "RSI", "ATR(14)", "5Y"]);
+    expect(p.compare).toEqual(["MSFT"]);
+    expect(p.scripts).toEqual([{ name: "A", inputs: ["3"] }]);
+    expect(p.indicators).toEqual(["RSI"]);
+    expect(p.custom.map((c) => c.key)).toEqual(["LIB:ATR:14"]);
+    expect(p.range).toBe("5Y");
+  });
+
+  it("round-trips through serializeGp as ONE token with no spaces", () => {
+    const args = ["1Y", "RSI", "SCRIPT=RSI_BANDS(14,,x%20y),OTHER"];
+    const p = parseGpArgs(args);
+    expect(p.scripts[0].inputs).toEqual(["14", "", "x y"]);
+    const out = serializeGp(p);
+    const tok = out.filter((a) => a.startsWith("SCRIPT="));
+    expect(tok).toEqual(["SCRIPT=RSI_BANDS(14,,x%20y),OTHER"]);
+    expect(parseGpArgs(out)).toEqual(p);
+  });
+
+  it("encodes the characters that would break the token", () => {
+    const list = [{ name: "A", inputs: ["a,b", "(c)", "100%"] }];
+    const tok = serializeScripts(list);
+    expect(tok).not.toMatch(/\s/);
+    expect(parseScriptToken(tok)).toEqual(list);
+  });
+
+  it("ignores a malformed SCRIPT= whole, dedupes names and caps the count", () => {
+    expect(parseGpArgs(["SCRIPT="]).scripts).toEqual([]);
+    expect(parseGpArgs(["SCRIPT=a b"]).scripts).toEqual([]);
+    expect(parseGpArgs(["SCRIPT=A,,B"]).scripts).toEqual([]);
+    expect(parseGpArgs(["SCRIPT=BAD%ZZ(%ZZ)"]).scripts).toEqual([]);
+    expect(parseGpArgs(["SCRIPT=A(1),A(2)"]).scripts).toEqual([{ name: "A", inputs: ["1"] }]);
+    const many = Array.from({ length: MAX_SCRIPTS + 3 }, (_, i) => `S${i}`).join(",");
+    expect(parseGpArgs([`SCRIPT=${many}`]).scripts).toHaveLength(MAX_SCRIPTS);
+  });
+
+  it("a chart with no script serializes exactly as before", () => {
+    expect(serializeGp(parseGpArgs(["1Y", "RSI"]))).toEqual(["1Y", "RSI"]);
   });
 });

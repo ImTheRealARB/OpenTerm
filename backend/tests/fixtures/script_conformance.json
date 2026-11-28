@@ -1,0 +1,6071 @@
+[
+ {
+  "name": "sma_basic",
+  "source": "indicator(\"t\")\nplot(ta.sma(close, 3), \"r\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "r": [
+     null,
+     null,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  }
+ },
+ {
+  "name": "sma_na_in_window_gives_na",
+  "source": "indicator(\"t\")\nx = bar_index == 2 ? na : close\nplot(ta.sma(x, 2), \"r\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "r": [
+     null,
+     1.5,
+     null,
+     null,
+     4.5,
+     5.5
+    ]
+   }
+  }
+ },
+ {
+  "name": "ema_seeded_with_sma",
+  "source": "indicator(\"t\")\nplot(ta.ema(close, 3), \"e\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "e": [
+     null,
+     null,
+     2,
+     4,
+     4,
+     4.5
+    ]
+   }
+  }
+ },
+ {
+  "name": "ema_na_input_keeps_state_and_leading_na_skipped",
+  "source": "indicator(\"t\")\nx = bar_index == 4 ? na : close\ny = bar_index < 1 ? na : close\nplot(ta.ema(x, 3), \"e\")\nplot(ta.ema(y, 3), \"lead\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300,
+    360
+   ]
+  },
+  "expect": {
+   "plots": {
+    "e": [
+     null,
+     null,
+     2,
+     4,
+     null,
+     4.5,
+     5.75
+    ],
+    "lead": [
+     null,
+     null,
+     null,
+     3.6666666666666665,
+     3.8333333333333335,
+     4.416666666666667,
+     5.708333333333333
+    ]
+   }
+  }
+ },
+ {
+  "name": "rma_wilder",
+  "source": "indicator(\"t\")\nplot(ta.rma(close, 3), \"r\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "r": [
+     null,
+     null,
+     2,
+     3.3333333333333335,
+     3.5555555555555554,
+     4.037037037037037
+    ]
+   }
+  }
+ },
+ {
+  "name": "wma_weights_newest_highest",
+  "source": "indicator(\"t\")\nplot(ta.wma(close, 3), \"w\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "w": [
+     null,
+     null,
+     2.1666666666666665,
+     4.166666666666667,
+     4.333333333333333,
+     4.833333333333333
+    ]
+   }
+  }
+ },
+ {
+  "name": "vwma_volume_weighted",
+  "source": "indicator(\"t\")\nplot(ta.vwma(close, 2), \"w\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6
+   ],
+   "v": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "w": [
+     null,
+     2.3333333333333335,
+     2.4,
+     4.285714285714286
+    ]
+   }
+  }
+ },
+ {
+  "name": "stdev_and_variance_are_population",
+  "source": "indicator(\"t\")\nplot(ta.variance(close, 8), \"var\")\nplot(ta.stdev(close, 2), \"sd\")\n",
+  "bars": {
+   "o": [
+    2,
+    4,
+    4,
+    4,
+    5,
+    5,
+    7,
+    9
+   ],
+   "h": [
+    2,
+    4,
+    4,
+    4,
+    5,
+    5,
+    7,
+    9
+   ],
+   "l": [
+    2,
+    4,
+    4,
+    4,
+    5,
+    5,
+    7,
+    9
+   ],
+   "c": [
+    2,
+    4,
+    4,
+    4,
+    5,
+    5,
+    7,
+    9
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300,
+    360,
+    420
+   ]
+  },
+  "expect": {
+   "plots": {
+    "var": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     4
+    ],
+    "sd": [
+     null,
+     1,
+     0,
+     0,
+     0.5,
+     0,
+     1,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "highest_lowest",
+  "source": "indicator(\"t\")\nplot(ta.highest(close, 3), \"hi\")\nplot(ta.lowest(close, 3), \"lo\")\n",
+  "bars": {
+   "o": [
+    3,
+    1,
+    4,
+    1,
+    5,
+    9,
+    2,
+    6
+   ],
+   "h": [
+    3,
+    1,
+    4,
+    1,
+    5,
+    9,
+    2,
+    6
+   ],
+   "l": [
+    3,
+    1,
+    4,
+    1,
+    5,
+    9,
+    2,
+    6
+   ],
+   "c": [
+    3,
+    1,
+    4,
+    1,
+    5,
+    9,
+    2,
+    6
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300,
+    360,
+    420
+   ]
+  },
+  "expect": {
+   "plots": {
+    "hi": [
+     null,
+     null,
+     4,
+     4,
+     5,
+     9,
+     9,
+     9
+    ],
+    "lo": [
+     null,
+     null,
+     1,
+     1,
+     1,
+     1,
+     2,
+     2
+    ]
+   }
+  }
+ },
+ {
+  "name": "rsi_wilder_seeded",
+  "source": "indicator(\"t\")\nplot(ta.rsi(close, 2), \"r\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    1,
+    3,
+    2,
+    2
+   ],
+   "h": [
+    1,
+    2,
+    1,
+    3,
+    2,
+    2
+   ],
+   "l": [
+    1,
+    2,
+    1,
+    3,
+    2,
+    2
+   ],
+   "c": [
+    1,
+    2,
+    1,
+    3,
+    2,
+    2
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "r": [
+     null,
+     null,
+     50,
+     83.33333333333333,
+     50,
+     50
+    ]
+   }
+  }
+ },
+ {
+  "name": "rsi_extremes_all_up_all_down_flat",
+  "source": "indicator(\"t\")\nplot(ta.rsi(close, 2), \"up\")\nplot(ta.rsi(-close, 2), \"down\")\nplot(ta.rsi(5, 2), \"flat\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "up": [
+     null,
+     null,
+     100,
+     100
+    ],
+    "down": [
+     null,
+     null,
+     0,
+     0
+    ],
+    "flat": [
+     null,
+     null,
+     100,
+     100
+    ]
+   }
+  }
+ },
+ {
+  "name": "true_range_and_atr",
+  "source": "indicator(\"t\")\nplot(ta.tr(), \"tr\")\nplot(ta.atr(2), \"atr\")\n",
+  "bars": {
+   "o": [
+    9,
+    10,
+    10.5,
+    11
+   ],
+   "h": [
+    10,
+    12,
+    11,
+    13
+   ],
+   "l": [
+    8,
+    9,
+    9,
+    10
+   ],
+   "c": [
+    9,
+    11,
+    10,
+    12
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "tr": [
+     2,
+     3,
+     2,
+     3
+    ],
+    "atr": [
+     null,
+     2.5,
+     2.25,
+     2.625
+    ]
+   }
+  }
+ },
+ {
+  "name": "change_mom_roc",
+  "source": "indicator(\"t\")\nplot(ta.change(close), \"ch1\")\nplot(ta.change(close, 2), \"ch2\")\nplot(ta.mom(close, 2), \"mom2\")\nplot(ta.roc(close, 1), \"roc1\")\n",
+  "bars": {
+   "o": [
+    2,
+    4,
+    8,
+    8,
+    4
+   ],
+   "h": [
+    2,
+    4,
+    8,
+    8,
+    4
+   ],
+   "l": [
+    2,
+    4,
+    8,
+    8,
+    4
+   ],
+   "c": [
+    2,
+    4,
+    8,
+    8,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "expect": {
+   "plots": {
+    "ch1": [
+     null,
+     2,
+     4,
+     0,
+     -4
+    ],
+    "ch2": [
+     null,
+     null,
+     6,
+     4,
+     -4
+    ],
+    "mom2": [
+     null,
+     null,
+     6,
+     4,
+     -4
+    ],
+    "roc1": [
+     null,
+     100,
+     100,
+     0,
+     -50
+    ]
+   }
+  }
+ },
+ {
+  "name": "cum_skips_na",
+  "source": "indicator(\"t\")\nx = bar_index == 1 ? na : close\nplot(ta.cum(close), \"all\")\nplot(ta.cum(x), \"skip\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "all": [
+     1,
+     3,
+     6,
+     10
+    ],
+    "skip": [
+     1,
+     1,
+     4,
+     8
+    ]
+   }
+  }
+ },
+ {
+  "name": "crossover_crossunder_cross",
+  "source": "indicator(\"t\")\nplot(ta.crossover(close, 3) ? 1 : 0, \"over\")\nplot(ta.crossunder(close, 3) ? 1 : 0, \"under\")\nplot(ta.cross(close, 3) ? 1 : 0, \"either\")\nx = bar_index == 1 ? na : close\nplot(ta.crossover(x, 3) ? 1 : 0, \"over_na\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    5,
+    3,
+    1,
+    4
+   ],
+   "h": [
+    1,
+    3,
+    5,
+    3,
+    1,
+    4
+   ],
+   "l": [
+    1,
+    3,
+    5,
+    3,
+    1,
+    4
+   ],
+   "c": [
+    1,
+    3,
+    5,
+    3,
+    1,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "over": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     1
+    ],
+    "under": [
+     0,
+     0,
+     0,
+     0,
+     1,
+     0
+    ],
+    "either": [
+     0,
+     0,
+     1,
+     0,
+     1,
+     1
+    ],
+    "over_na": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "rising_falling",
+  "source": "indicator(\"t\")\nplot(ta.rising(close, 2) ? 1 : 0, \"r\")\nplot(ta.falling(close, 2) ? 1 : 0, \"f\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    3,
+    2,
+    1
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    3,
+    2,
+    1
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    3,
+    2,
+    1
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    3,
+    2,
+    1
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "r": [
+     0,
+     0,
+     1,
+     0,
+     0,
+     0
+    ],
+    "f": [
+     0,
+     0,
+     0,
+     0,
+     1,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "barssince",
+  "source": "indicator(\"t\")\nplot(ta.barssince(close > 3), \"b\")\n",
+  "bars": {
+   "o": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "h": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "l": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "c": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "b": [
+     null,
+     0,
+     1,
+     2,
+     0,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "valuewhen_occurrence",
+  "source": "indicator(\"t\")\nhit = close > 3\nplot(ta.valuewhen(hit, bar_index, 0), \"v0\")\nplot(ta.valuewhen(hit, bar_index, 1), \"v1\")\n",
+  "bars": {
+   "o": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "h": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "l": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "c": [
+    1,
+    5,
+    1,
+    1,
+    5,
+    1
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "expect": {
+   "plots": {
+    "v0": [
+     null,
+     1,
+     1,
+     1,
+     4,
+     4
+    ],
+    "v1": [
+     null,
+     null,
+     null,
+     null,
+     1,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "linreg_with_offset",
+  "source": "indicator(\"t\")\nplot(ta.linreg(close, 3), \"l0\")\nplot(ta.linreg(close, 3, 1), \"l1\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    5,
+    4
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    5,
+    4
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    5,
+    4
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    5,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "expect": {
+   "plots": {
+    "l0": [
+     null,
+     null,
+     2.5,
+     4.333333333333333,
+     4.666666666666667
+    ],
+    "l1": [
+     null,
+     null,
+     2,
+     3.3333333333333335,
+     3.6666666666666665
+    ]
+   }
+  }
+ },
+ {
+  "name": "macd_tuple",
+  "source": "indicator(\"t\")\n[m, s, h] = ta.macd(close, 2, 3, 2)\nplot(m, \"m\")\nplot(s, \"s\")\nplot(h, \"h\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5,
+    7
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300,
+    360
+   ]
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     null,
+     0,
+     0.6666666666666666,
+     0.2222222222222222,
+     0.24074074074074073,
+     0.49691358024691357
+    ],
+    "s": [
+     null,
+     null,
+     null,
+     0.3333333333333333,
+     0.25925925925925924,
+     0.24691358024691357,
+     0.41358024691358025
+    ],
+    "h": [
+     null,
+     null,
+     null,
+     0.3333333333333333,
+     -0.037037037037037035,
+     -0.006172839506172839,
+     0.08333333333333333
+    ]
+   }
+  }
+ },
+ {
+  "name": "bollinger_tuple",
+  "source": "indicator(\"t\")\n[mid, up, lo] = ta.bb(close, 3, 2)\nplot(mid, \"mid\")\nplot(up, \"up\")\nplot(lo, \"lo\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "expect": {
+   "plots": {
+    "mid": [
+     null,
+     null,
+     2,
+     3.6666666666666665,
+     4
+    ],
+    "up": [
+     null,
+     null,
+     3.632993161855452,
+     7.066013009061857,
+     7.265986323710904
+    ],
+    "lo": [
+     null,
+     null,
+     0.36700683814454793,
+     0.26732032427147656,
+     0.7340136762890959
+    ]
+   }
+  }
+ },
+ {
+  "name": "stoch",
+  "source": "indicator(\"t\")\nplot(ta.stoch(close, high, low, 3), \"k\")\n",
+  "bars": {
+   "o": [
+    4,
+    5,
+    6,
+    4,
+    7
+   ],
+   "h": [
+    5,
+    6,
+    7,
+    6,
+    8
+   ],
+   "l": [
+    3,
+    4,
+    4,
+    3,
+    5
+   ],
+   "c": [
+    4,
+    5,
+    6,
+    4,
+    7
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "expect": {
+   "plots": {
+    "k": [
+     null,
+     null,
+     75,
+     25,
+     80
+    ]
+   }
+  }
+ },
+ {
+  "name": "stoch_zero_range_is_na",
+  "source": "indicator(\"t\")\nplot(ta.stoch(close, high, low, 2), \"k\")\n",
+  "bars": {
+   "o": [
+    5,
+    5,
+    5,
+    5
+   ],
+   "h": [
+    5,
+    5,
+    5,
+    5
+   ],
+   "l": [
+    5,
+    5,
+    5,
+    5
+   ],
+   "c": [
+    5,
+    5,
+    5,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "k": [
+     null,
+     null,
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "name": "ta_inside_if_advances_only_when_run",
+  "source": "indicator(\"t\")\nif bar_index % 2 == 0\n    x = ta.sma(close, 2)\n    plot(x, \"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    100,
+    3,
+    100,
+    5,
+    100,
+    7
+   ],
+   "h": [
+    1,
+    100,
+    3,
+    100,
+    5,
+    100,
+    7
+   ],
+   "l": [
+    1,
+    100,
+    3,
+    100,
+    5,
+    100,
+    7
+   ],
+   "c": [
+    1,
+    100,
+    3,
+    100,
+    5,
+    100,
+    7
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300,
+    360
+   ]
+  },
+  "expect": {
+   "plots": {
+    "x": [
+     null,
+     null,
+     2,
+     null,
+     4,
+     null,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "var_persists_and_plain_vars_reset",
+  "source": "indicator(\"t\")\nvar n = 0\nn += 1\nvar total = 0\nif close > 2\n    total += close\nplot(n, \"n\")\nplot(total, \"total\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "n": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "total": [
+     0,
+     3,
+     3,
+     7
+    ]
+   }
+  }
+ },
+ {
+  "name": "block_variable_is_na_in_history_when_block_did_not_run",
+  "source": "indicator(\"t\")\nif bar_index % 2 == 0\n    v = close\n    plot(v[1], \"p\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "expect": {
+   "plots": {
+    "p": [
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "name": "if_else_if_else_and_reassign",
+  "source": "indicator(\"t\")\ny = 0\nif close > 3\n    y := 3\nelse if close > 1\n    y := 2\nelse\n    y := 1\nplot(y, \"y\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    4,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    4,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    4,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    4,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "y": [
+     1,
+     2,
+     3,
+     2
+    ]
+   }
+  }
+ },
+ {
+  "name": "for_loops_inclusive_both_directions_and_by",
+  "source": "indicator(\"t\")\ns = 0\nfor i = 1 to 4\n    s += i\nt = 0\nfor j = 4 to 1\n    t += j\nu = 0\nfor k = 0 to 10 by 5\n    u += k\nw = 0\nfor q = 10 to 0 by -5\n    w += q\nr = 0\nfor m = 0 to bar_index\n    r += m\nplot(s, \"s\")\nplot(t, \"t\")\nplot(u, \"u\")\nplot(w, \"w\")\nplot(r, \"r\")\n",
+  "bars": {
+   "o": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "s": [
+     10,
+     10,
+     10,
+     10
+    ],
+    "t": [
+     10,
+     10,
+     10,
+     10
+    ],
+    "u": [
+     15,
+     15,
+     15,
+     15
+    ],
+    "w": [
+     15,
+     15,
+     15,
+     15
+    ],
+    "r": [
+     0,
+     1,
+     3,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "while_break_continue",
+  "source": "indicator(\"t\")\ni = 0\ns = 0\nwhile i < 10\n    i += 1\n    if i % 2 == 0\n        continue\n    if i > 7\n        break\n    s += i\nf = 0\nfor n2 = 1 to 10\n    if n2 == 5\n        break\n    f += n2\nplot(s, \"s\")\nplot(f, \"f\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "s": [
+     16,
+     16
+    ],
+    "f": [
+     10,
+     10
+    ]
+   }
+  }
+ },
+ {
+  "name": "history_reads",
+  "source": "indicator(\"t\")\nplot(close[1], \"c1\")\nplot(close[2], \"c2\")\nx = close * 2\nplot(x[1], \"x1\")\nplot(close[bar_index], \"ci\")\nplot(close[1.9], \"cf\")\nplot(bar_index[1], \"bi\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "plots": {
+    "c1": [
+     null,
+     1,
+     2
+    ],
+    "c2": [
+     null,
+     null,
+     1
+    ],
+    "x1": [
+     null,
+     2,
+     4
+    ],
+    "ci": [
+     1,
+     1,
+     1
+    ],
+    "cf": [
+     null,
+     1,
+     2
+    ],
+    "bi": [
+     null,
+     0,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "user_function_returns_tuple",
+  "source": "indicator(\"t\")\nminmax(a, b) =>\n    [math.min(a, b), math.max(a, b)]\n[lo, hi] = minmax(close, open)\nplot(lo, \"lo\")\nplot(hi, \"hi\")\n",
+  "bars": {
+   "o": [
+    3,
+    1,
+    2
+   ],
+   "h": [
+    1,
+    4,
+    2
+   ],
+   "l": [
+    1,
+    4,
+    2
+   ],
+   "c": [
+    1,
+    4,
+    2
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "plots": {
+    "lo": [
+     1,
+     1,
+     2
+    ],
+    "hi": [
+     3,
+     4,
+     2
+    ]
+   }
+  }
+ },
+ {
+  "name": "user_function_call_sites_have_own_state",
+  "source": "indicator(\"t\")\ncounter() =>\n    var n = 0\n    n += 1\n    n\na = counter()\nb = counter()\navg2(x) => ta.sma(x, 2)\np = avg2(close)\nq = avg2(close * 10)\nplot(a, \"a\")\nplot(b, \"b\")\nplot(p, \"p\")\nplot(q, \"q\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "plots": {
+    "a": [
+     1,
+     2,
+     3
+    ],
+    "b": [
+     1,
+     2,
+     3
+    ],
+    "p": [
+     null,
+     1.5,
+     2.5
+    ],
+    "q": [
+     null,
+     15,
+     25
+    ]
+   }
+  }
+ },
+ {
+  "name": "user_function_defaults_and_named_arguments",
+  "source": "indicator(\"t\")\nf(a, b = 10, c = 100) => a + b + c\nplot(f(1), \"d1\")\nplot(f(1, 2), \"d2\")\nplot(f(1, c = 5), \"d3\")\nplot(f(c = 1, a = 2), \"d4\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "d1": [
+     111,
+     111
+    ],
+    "d2": [
+     103,
+     103
+    ],
+    "d3": [
+     16,
+     16
+    ],
+    "d4": [
+     13,
+     13
+    ]
+   }
+  }
+ },
+ {
+  "name": "and_or_ternary_short_circuit",
+  "source": "indicator(\"t\")\nvar a = array.from(5, 5, 5, 5, 5, 5, 5, 5, 5, 5)\nok1 = false and array.pop(a) > 0\nok2 = true or array.pop(a) > 0\nok3 = true and array.pop(a) > 0\ny = true ? 1 : array.pop(a)\nplot(array.size(a), \"n\")\nplot(ok3 ? 1 : 0, \"ok3\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "plots": {
+    "n": [
+     9,
+     8,
+     7
+    ],
+    "ok3": [
+     1,
+     1,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "truthiness_of_numbers_and_na",
+  "source": "indicator(\"t\")\nplot(2 ? 1 : 0, \"two\")\nplot(0 ? 1 : 0, \"zero\")\nplot(na ? 1 : 0, \"na\")\nplot(not 0 ? 1 : 0, \"not0\")\nplot(not na ? 1 : 0, \"notna\")\nplot((1 and 0) ? 1 : 0, \"and\")\nplot((0 or 2) ? 1 : 0, \"or\")\nplot(-0.5 ? 1 : 0, \"neg\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "two": [
+     1,
+     1
+    ],
+    "zero": [
+     0,
+     0
+    ],
+    "na": [
+     0,
+     0
+    ],
+    "not0": [
+     1,
+     1
+    ],
+    "notna": [
+     1,
+     1
+    ],
+    "and": [
+     0,
+     0
+    ],
+    "or": [
+     1,
+     1
+    ],
+    "neg": [
+     1,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "division_modulo_and_precedence",
+  "source": "indicator(\"t\")\nplot(5 / 0, \"d0\")\nplot(5 % 0, \"m0\")\nplot(-7 % 3, \"m1\")\nplot(7 % -3, \"m2\")\nplot(7.5 % 2, \"m3\")\nplot(0 / 0, \"z\")\nplot(close / (close - close), \"c0\")\nplot(7 / 2, \"q\")\nplot(2 + 3 * 4 - 6 / 2, \"prec\")\nplot((2 + 3) * 4, \"par\")\nplot(2 - 3 - 4, \"left\")\nplot(-2 * -3, \"negneg\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "d0": [
+     null,
+     null
+    ],
+    "m0": [
+     null,
+     null
+    ],
+    "m1": [
+     -1,
+     -1
+    ],
+    "m2": [
+     1,
+     1
+    ],
+    "m3": [
+     1.5,
+     1.5
+    ],
+    "z": [
+     null,
+     null
+    ],
+    "c0": [
+     null,
+     null
+    ],
+    "q": [
+     3.5,
+     3.5
+    ],
+    "prec": [
+     11,
+     11
+    ],
+    "par": [
+     20,
+     20
+    ],
+    "left": [
+     -5,
+     -5
+    ],
+    "negneg": [
+     6,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "strings_concat_tostring_and_alert_messages",
+  "source": "indicator(\"t\")\ns = \"a\" + \"b\"\nalert(s + str.tostring(close))\nif barstate.isfirst\n    alert(str.tostring(3.14159, 2) + \"|\" + str.tostring(0.1) + \"|\" + str.tostring(-5) + \"|\" + str.tostring(true))\nplot(str.length(s), \"len\")\nplot(str.contains(\"hello\", \"ell\") ? 1 : 0, \"has\")\nplot(str.contains(\"hello\", \"xyz\") ? 1 : 0, \"no\")\n",
+  "bars": {
+   "o": [
+    1,
+    2.5
+   ],
+   "h": [
+    1,
+    2.5
+   ],
+   "l": [
+    1,
+    2.5
+   ],
+   "c": [
+    1,
+    2.5
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "len": [
+     2,
+     2
+    ],
+    "has": [
+     1,
+     1
+    ],
+    "no": [
+     0,
+     0
+    ]
+   },
+   "alerts": [
+    {
+     "bar": 0,
+     "message": "ab1"
+    },
+    {
+     "bar": 0,
+     "message": "3.14|0.1|-5|true"
+    },
+    {
+     "bar": 1,
+     "message": "ab2.5"
+    }
+   ]
+  }
+ },
+ {
+  "name": "math_functions",
+  "source": "indicator(\"t\")\nplot(math.abs(-2), \"abs\")\nplot(math.ceil(1.2), \"ceil\")\nplot(math.floor(-1.2), \"floor\")\nplot(math.round(2.5), \"r1\")\nplot(math.round(-2.5), \"r2\")\nplot(math.round(1.2345, 2), \"r3\")\nplot(math.sqrt(9), \"sqrt\")\nplot(math.pow(2, 10), \"pow\")\nplot(math.exp(0), \"exp\")\nplot(math.log(1), \"log\")\nplot(math.log10(1000), \"log10\")\nplot(math.max(1, 5, 3), \"max\")\nplot(math.min(4, 2, 8), \"min\")\nplot(math.avg(1, 2, 6), \"avg\")\nplot(math.sign(-4), \"s1\")\nplot(math.sign(0), \"s0\")\nplot(math.pi, \"pi\")\nplot(math.e, \"e\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "abs": [
+     2,
+     2
+    ],
+    "ceil": [
+     2,
+     2
+    ],
+    "floor": [
+     -2,
+     -2
+    ],
+    "r1": [
+     3,
+     3
+    ],
+    "r2": [
+     -3,
+     -3
+    ],
+    "r3": [
+     1.23,
+     1.23
+    ],
+    "sqrt": [
+     3,
+     3
+    ],
+    "pow": [
+     1024,
+     1024
+    ],
+    "exp": [
+     1,
+     1
+    ],
+    "log": [
+     0,
+     0
+    ],
+    "log10": [
+     3,
+     3
+    ],
+    "max": [
+     5,
+     5
+    ],
+    "min": [
+     2,
+     2
+    ],
+    "avg": [
+     3,
+     3
+    ],
+    "s1": [
+     -1,
+     -1
+    ],
+    "s0": [
+     0,
+     0
+    ],
+    "pi": [
+     3.141592653589793,
+     3.141592653589793
+    ],
+    "e": [
+     2.718281828459045,
+     2.718281828459045
+    ]
+   }
+  }
+ },
+ {
+  "name": "na_handling_in_math_and_functions",
+  "source": "indicator(\"t\")\nplot(math.max(1, na), \"mx\")\nplot(math.sqrt(-1), \"sq\")\nplot(nz(na, 5), \"nz1\")\nplot(nz(3, 5), \"nz2\")\nplot(nz(na), \"nz0\")\nplot(na(close) ? 1 : 0, \"na1\")\nx = na\nplot(na(x) ? 1 : 0, \"na2\")\nplot(close + na, \"add\")\nplot(na * 0, \"mul\")\nplot(-na, \"neg\")\nplot(math.round(na), \"rn\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "mx": [
+     null,
+     null
+    ],
+    "sq": [
+     null,
+     null
+    ],
+    "nz1": [
+     5,
+     5
+    ],
+    "nz2": [
+     3,
+     3
+    ],
+    "nz0": [
+     0,
+     0
+    ],
+    "na1": [
+     0,
+     0
+    ],
+    "na2": [
+     1,
+     1
+    ],
+    "add": [
+     null,
+     null
+    ],
+    "mul": [
+     null,
+     null
+    ],
+    "neg": [
+     null,
+     null
+    ],
+    "rn": [
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "name": "comparisons_with_na_are_false",
+  "source": "indicator(\"t\")\nplot(na == na ? 1 : 0, \"eq\")\nplot(na != 1 ? 1 : 0, \"ne\")\nplot(na < 1 ? 1 : 0, \"lt\")\nplot(1 > na ? 1 : 0, \"gt\")\nplot(close == close ? 1 : 0, \"same\")\nx = na\nplot(x == x ? 1 : 0, \"xx\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "eq": [
+     0,
+     0
+    ],
+    "ne": [
+     0,
+     0
+    ],
+    "lt": [
+     0,
+     0
+    ],
+    "gt": [
+     0,
+     0
+    ],
+    "same": [
+     1,
+     1
+    ],
+    "xx": [
+     0,
+     0
+    ]
+   }
+  }
+ },
+ {
+  "name": "number_and_text_literals",
+  "source": "indicator(\"t\")\nplot(.5 + 1e-3, \"n1\")\nplot(1.5e1, \"n2\")\nif barstate.isfirst\n    alert(\"a\\tb\\n\\\"q\\\" 'x'\")\n    alert('it\\'s')\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "n1": [
+     0.501,
+     0.501
+    ],
+    "n2": [
+     15,
+     15
+    ]
+   },
+   "alerts": [
+    {
+     "bar": 0,
+     "message": "a\tb\n\"q\" 'x'"
+    },
+    {
+     "bar": 0,
+     "message": "it's"
+    }
+   ]
+  }
+ },
+ {
+  "name": "line_continuation_comments_and_blank_lines",
+  "source": "indicator(\"c\")   // comment\nx = close +\n    1\ny = math.max(\n    close,\n    10\n)\n// whole-line comment\n\nz = x +\n  y   // trailing\nplot(x + y, \"s\")\nplot(z, \"z\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "s": [
+     12,
+     13
+    ],
+    "z": [
+     12,
+     13
+    ]
+   }
+  }
+ },
+ {
+  "name": "compound_assignment",
+  "source": "indicator(\"t\")\nx = 10\nx -= 3\nx *= 2\nx /= 7\nplot(x, \"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "x": [
+     2,
+     2
+    ]
+   }
+  }
+ },
+ {
+  "name": "var_history_reads_previous_bar",
+  "source": "indicator(\"t\")\nvar x = 0\nx := x + 1\nplot(x[1], \"p\")\nplot(x, \"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "p": [
+     null,
+     1,
+     2,
+     3
+    ],
+    "x": [
+     1,
+     2,
+     3,
+     4
+    ]
+   }
+  }
+ },
+ {
+  "name": "arrays_and_methods",
+  "source": "indicator(\"t\")\na = array.from(3, 1, 2)\na.push(5)\na.sort()\nplot(a.size(), \"size\")\nplot(a.sum(), \"sum\")\nplot(a.avg(), \"avg\")\nplot(a.min(), \"min\")\nplot(a.max(), \"max\")\nplot(array.indexof(a, 3), \"idx\")\nplot(array.includes(a, 9) ? 1 : 0, \"inc\")\na.reverse()\nplot(array.get(a, 0), \"first\")\nx = a.pop()\ny = a.shift()\na.unshift(9)\narray.set(a, 1, 7)\nplot(x * 100 + y, \"xy\")\nplot(array.get(a, 1), \"second\")\na.sort(true)\nplot(array.get(a, 2), \"last\")\nb = array.new(3, 4)\nplot(b.sum(), \"bsum\")\na.clear()\nplot(a.size(), \"empty\")\nplot(array.pop(a), \"popna\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "size": [
+     4,
+     4
+    ],
+    "sum": [
+     11,
+     11
+    ],
+    "avg": [
+     2.75,
+     2.75
+    ],
+    "min": [
+     1,
+     1
+    ],
+    "max": [
+     5,
+     5
+    ],
+    "idx": [
+     2,
+     2
+    ],
+    "inc": [
+     0,
+     0
+    ],
+    "first": [
+     5,
+     5
+    ],
+    "xy": [
+     105,
+     105
+    ],
+    "second": [
+     7,
+     7
+    ],
+    "last": [
+     2,
+     2
+    ],
+    "bsum": [
+     12,
+     12
+    ],
+    "empty": [
+     0,
+     0
+    ],
+    "popna": [
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "name": "maps",
+  "source": "indicator(\"t\")\nm = map.new()\nm.put(\"a\", 1)\nm.put(\"b\", 2)\nm.put(\"a\", 5)\nm.put(7, 70)\nplot(m.get(\"a\"), \"a\")\nplot(m.size(), \"size\")\nplot(m.contains(\"z\") ? 1 : 0, \"z\")\nplot(m.get(\"zz\"), \"miss\")\nplot(m.get(7), \"seven\")\nm.remove(\"a\")\nplot(m.size(), \"size2\")\nks = m.keys()\nplot(array.size(ks), \"nk\")\nplot(array.sum(m.values()), \"vsum\")\n",
+  "bars": {
+   "o": [
+    1,
+    1
+   ],
+   "h": [
+    1,
+    1
+   ],
+   "l": [
+    1,
+    1
+   ],
+   "c": [
+    1,
+    1
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "a": [
+     5,
+     5
+    ],
+    "size": [
+     3,
+     3
+    ],
+    "z": [
+     0,
+     0
+    ],
+    "miss": [
+     null,
+     null
+    ],
+    "seven": [
+     70,
+     70
+    ],
+    "size2": [
+     2,
+     2
+    ],
+    "nk": [
+     2,
+     2
+    ],
+    "vsum": [
+     72,
+     72
+    ]
+   }
+  }
+ },
+ {
+  "name": "built_in_series",
+  "source": "indicator(\"t\")\nplot(hl2, \"hl2\")\nplot(hlc3, \"hlc3\")\nplot(ohlc4, \"ohlc4\")\nplot(volume, \"v\")\nplot(time, \"t\")\nplot(bar_index, \"bi\")\nplot(last_bar_index, \"lb\")\nplot(barstate.isfirst ? 1 : 0, \"first\")\nplot(barstate.islast ? 1 : 0, \"last\")\n",
+  "bars": {
+   "o": [
+    2,
+    5
+   ],
+   "h": [
+    6,
+    9
+   ],
+   "l": [
+    2,
+    3
+   ],
+   "c": [
+    4,
+    6
+   ],
+   "v": [
+    7,
+    8
+   ],
+   "t": [
+    100,
+    160
+   ]
+  },
+  "expect": {
+   "plots": {
+    "hl2": [
+     4,
+     6
+    ],
+    "hlc3": [
+     4,
+     6
+    ],
+    "ohlc4": [
+     3.5,
+     5.75
+    ],
+    "v": [
+     7,
+     8
+    ],
+    "t": [
+     100,
+     160
+    ],
+    "bi": [
+     0,
+     1
+    ],
+    "lb": [
+     1,
+     1
+    ],
+    "first": [
+     1,
+     0
+    ],
+    "last": [
+     0,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_int_default",
+  "source": "indicator(\"t\")\nlen = input.int(2, \"Length\", min=1, max=5)\nplot(ta.sma(close, len), \"m\")\n",
+  "bars": {
+   "o": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "h": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "l": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "c": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     3,
+     5,
+     7
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_int_override",
+  "source": "indicator(\"t\")\nlen = input.int(2, \"Length\", min=1, max=5)\nplot(ta.sma(close, len), \"m\")\n",
+  "bars": {
+   "o": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "h": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "l": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "c": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "inputs": {
+   "Length": 3
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     null,
+     4,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_int_clamped_to_max",
+  "source": "indicator(\"t\")\nlen = input.int(2, \"Length\", min=1, max=5)\nplot(ta.sma(close, len), \"m\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "inputs": {
+   "Length": 99
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     null,
+     null,
+     null,
+     3,
+     4
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_int_clamped_to_min",
+  "source": "indicator(\"t\")\nlen = input.int(2, \"Length\", min=1, max=5)\nplot(ta.sma(close, len), \"m\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "inputs": {
+   "Length": 0
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_string_options_and_source_default",
+  "source": "indicator(\"t\")\nkind = input.string(\"sma\", \"Type\", options=array.from(\"sma\", \"ema\"))\nsrc = input.source(close, \"Source\")\nv = kind == \"sma\" ? ta.sma(src, 2) : ta.ema(src, 2)\nplot(v, \"v\")\nplot(src, \"src\")\n",
+  "bars": {
+   "o": [
+    10,
+    20,
+    30,
+    40
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "plots": {
+    "v": [
+     null,
+     1.5,
+     2.5,
+     3.5
+    ],
+    "src": [
+     1,
+     2,
+     3,
+     4
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_string_options_and_source_override",
+  "source": "indicator(\"t\")\nkind = input.string(\"sma\", \"Type\", options=array.from(\"sma\", \"ema\"))\nsrc = input.source(close, \"Source\")\nv = kind == \"sma\" ? ta.sma(src, 2) : ta.ema(src, 2)\nplot(v, \"v\")\nplot(src, \"src\")\n",
+  "bars": {
+   "o": [
+    10,
+    20,
+    30,
+    40
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "inputs": {
+   "Type": "ema",
+   "Source": "open"
+  },
+  "expect": {
+   "plots": {
+    "v": [
+     null,
+     15,
+     25,
+     35
+    ],
+    "src": [
+     10,
+     20,
+     30,
+     40
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_string_not_in_options_is_a_runtime_error",
+  "source": "indicator(\"t\")\nkind = input.string(\"sma\", \"Type\", options=array.from(\"sma\", \"ema\"))\nsrc = input.source(close, \"Source\")\nv = kind == \"sma\" ? ta.sma(src, 2) : ta.ema(src, 2)\nplot(v, \"v\")\nplot(src, \"src\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "inputs": {
+   "Type": "zzz"
+  },
+  "expect": {
+   "runtime_error": "OPTION",
+   "error_bar": 0
+  }
+ },
+ {
+  "name": "input_float_and_bool_default",
+  "source": "indicator(\"t\")\nm = input.float(1.5, \"Mult\", min=1, max=3)\non = input.bool(true, \"On\")\nplot(on ? close * m : na, \"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "plots": {
+    "x": [
+     1.5,
+     3
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_float_clamped_to_max",
+  "source": "indicator(\"t\")\nm = input.float(1.5, \"Mult\", min=1, max=3)\non = input.bool(true, \"On\")\nplot(on ? close * m : na, \"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "inputs": {
+   "Mult": 10
+  },
+  "expect": {
+   "plots": {
+    "x": [
+     3,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "input_bool_off_gives_na",
+  "source": "indicator(\"t\")\nm = input.float(1.5, \"Mult\", min=1, max=3)\non = input.bool(true, \"On\")\nplot(on ? close * m : na, \"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "inputs": {
+   "On": false
+  },
+  "expect": {
+   "plots": {
+    "x": [
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "name": "plot_colours_constant_and_per_bar",
+  "source": "indicator(\"t\")\nplot(close, \"c\", color = close > 2 ? color.red : color.green)\nplot(close, \"k\", color = color.blue)\nplot(close, \"n\")\nplot(close, \"alpha\", color = color.new(color.blue, 80))\nplot(close, \"rgb\", color = color.rgb(0, 128, 255, 80))\nplot(close, \"lit\", color = #ff0000)\nplot(close, \"lit8\", color = #00ff0080)\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "outputs": [
+    {
+     "title": "c",
+     "colors": [
+      "#089981",
+      "#f23645",
+      "#089981",
+      "#f23645"
+     ],
+     "absent": []
+    },
+    {
+     "title": "k",
+     "color": "#2962ff",
+     "style": "line",
+     "linewidth": 1,
+     "absent": [
+      "colors"
+     ]
+    },
+    {
+     "title": "n",
+     "absent": [
+      "color",
+      "colors"
+     ]
+    },
+    {
+     "title": "alpha",
+     "color": "#2962ff33"
+    },
+    {
+     "title": "rgb",
+     "color": "#0080ff33"
+    },
+    {
+     "title": "lit",
+     "color": "#ff0000"
+    },
+    {
+     "title": "lit8",
+     "color": "#00ff0080"
+    }
+   ]
+  }
+ },
+ {
+  "name": "plot_hline_fill_shape_bgcolor_result_shape",
+  "source": "indicator(\"t\")\np1 = plot(close, \"a\")\np2 = plot(open, \"b\")\nhline(2.5, \"mid\", color=color.gray)\nfill(p1, p2, color=color.new(color.green, 80))\nplotshape(close > open, \"up\", style=\"triangleup\", location=\"belowbar\", color=color.green, text=\"U\")\nbgcolor(close > open ? color.new(color.red, 80) : na)\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2
+   ],
+   "h": [
+    2,
+    2,
+    3
+   ],
+   "l": [
+    2,
+    2,
+    3
+   ],
+   "c": [
+    2,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "outputs": [
+    {
+     "kind": "plot",
+     "title": "a",
+     "values": [
+      2,
+      2,
+      3
+     ]
+    },
+    {
+     "kind": "plot",
+     "title": "b",
+     "values": [
+      1,
+      3,
+      2
+     ]
+    },
+    {
+     "kind": "hline",
+     "title": "mid",
+     "price": 2.5,
+     "color": "#787b86",
+     "style": "dashed"
+    },
+    {
+     "kind": "fill",
+     "a": 0,
+     "b": 1,
+     "color": "#08998133"
+    },
+    {
+     "kind": "shape",
+     "title": "up",
+     "style": "triangleup",
+     "location": "belowbar",
+     "text": "U",
+     "color": "#089981",
+     "values": [
+      1,
+      null,
+      1
+     ]
+    },
+    {
+     "kind": "bgcolor",
+     "colors": [
+      "#f2364533",
+      null,
+      "#f2364533"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "plotshape_absolute_uses_the_condition_value_as_price",
+  "source": "indicator(\"t\")\nplotshape(close > open ? close : na, \"abs\", location=\"absolute\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2
+   ],
+   "h": [
+    2,
+    2,
+    3
+   ],
+   "l": [
+    2,
+    2,
+    3
+   ],
+   "c": [
+    2,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "outputs": [
+    {
+     "kind": "shape",
+     "location": "absolute",
+     "style": "triangleup",
+     "text": "",
+     "values": [
+      2,
+      null,
+      3
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "name": "drawings_oldest_is_evicted_at_max_labels",
+  "source": "indicator(\"d\", max_labels=2)\nlabel.new(bar_index, close, \"L\" + str.tostring(bar_index))\nline.new(bar_index, low, bar_index + 1, high, color=color.red)\nbox.new(bar_index, high, bar_index + 1, low)\n",
+  "bars": {
+   "o": [
+    10,
+    11,
+    12,
+    13
+   ],
+   "h": [
+    11,
+    12,
+    13,
+    14
+   ],
+   "l": [
+    9,
+    10,
+    11,
+    12
+   ],
+   "c": [
+    10,
+    11,
+    12,
+    13
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "drawings": {
+    "labels": [
+     {
+      "x": 2,
+      "y": 12,
+      "text": "L2"
+     },
+     {
+      "x": 3,
+      "y": 13,
+      "text": "L3"
+     }
+    ],
+    "lines": [
+     {
+      "x1": 2,
+      "y1": 11,
+      "x2": 3,
+      "y2": 13,
+      "color": "#f23645",
+      "width": 1
+     },
+     {
+      "x1": 3,
+      "y1": 12,
+      "x2": 4,
+      "y2": 14,
+      "color": "#f23645",
+      "width": 1
+     }
+    ],
+    "boxes": [
+     {
+      "left": 2,
+      "top": 13,
+      "right": 3,
+      "bottom": 11
+     },
+     {
+      "left": 3,
+      "top": 14,
+      "right": 4,
+      "bottom": 12
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "drawings_set_text_set_xy",
+  "source": "indicator(\"t\")\nvar l = label.new(0, 0, \"start\")\nlabel.set_text(l, \"n\" + str.tostring(bar_index))\nlabel.set_xy(l, bar_index, close)\n",
+  "bars": {
+   "o": [
+    10,
+    11,
+    12
+   ],
+   "h": [
+    10,
+    11,
+    12
+   ],
+   "l": [
+    10,
+    11,
+    12
+   ],
+   "c": [
+    10,
+    11,
+    12
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "drawings": {
+    "labels": [
+     {
+      "x": 2,
+      "y": 12,
+      "text": "n2"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "drawings_delete_by_function_and_by_method",
+  "source": "indicator(\"t\")\nvar l = label.new(0, 0, \"x\")\nvar ln = line.new(0, 0, 1, 1)\nvar bx = box.new(0, 2, 1, 1)\nif bar_index == 1\n    l.delete()\nif bar_index == 2\n    line.delete(ln)\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "drawings": {
+    "labels": [],
+    "lines": [],
+    "boxes": [
+     {
+      "left": 0,
+      "top": 2,
+      "right": 1,
+      "bottom": 1
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "table_final_state_with_var",
+  "source": "indicator(\"t\")\nvar t = table.new(\"top_right\", 2, 1)\ntable.cell(t, 0, 0, \"bar\")\ntable.cell(t, 1, 0, str.tostring(bar_index), color=color.white, bgcolor=color.black)\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "drawings": {
+    "tables": [
+     {
+      "position": "top_right",
+      "columns": 2,
+      "rows": 1,
+      "cells": [
+       {
+        "column": 0,
+        "row": 0,
+        "text": "bar",
+        "color": null,
+        "bgcolor": null
+       },
+       {
+        "column": 1,
+        "row": 0,
+        "text": "2",
+        "color": "#ffffff",
+        "bgcolor": "#363a45"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "table_made_every_bar_shows_only_the_last_one",
+  "source": "indicator(\"t\")\nt = table.new(\"top_left\", 1, 1)\ntable.cell(t, 0, 0, str.tostring(bar_index))\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "drawings": {
+    "tables": [
+     {
+      "position": "top_left",
+      "columns": 1,
+      "rows": 1,
+      "cells": [
+       {
+        "column": 0,
+        "row": 0,
+        "text": "2"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ },
+ {
+  "name": "alert_fires_once_per_bar_per_call_site",
+  "source": "indicator(\"t\")\nif close > 1\n    alert(\"a\")\n    alert(\"b\")\nfor i = 1 to 3\n    alert(\"loop\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120
+   ]
+  },
+  "expect": {
+   "alerts": [
+    {
+     "bar": 0,
+     "message": "loop"
+    },
+    {
+     "bar": 1,
+     "message": "a"
+    },
+    {
+     "bar": 1,
+     "message": "b"
+    },
+    {
+     "bar": 1,
+     "message": "loop"
+    },
+    {
+     "bar": 2,
+     "message": "a"
+    },
+    {
+     "bar": 2,
+     "message": "b"
+    },
+    {
+     "bar": 2,
+     "message": "loop"
+    }
+   ]
+  }
+ },
+ {
+  "name": "alertcondition_values_per_bar",
+  "source": "indicator(\"t\")\nalertcondition(ta.crossover(close, 3), \"Up\", \"went up\")\nalertcondition(close > 4, \"High\")\n",
+  "bars": {
+   "o": [
+    1,
+    4,
+    5,
+    3,
+    5
+   ],
+   "h": [
+    1,
+    4,
+    5,
+    3,
+    5
+   ],
+   "l": [
+    1,
+    4,
+    5,
+    3,
+    5
+   ],
+   "c": [
+    1,
+    4,
+    5,
+    3,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "expect": {
+   "conditions": {
+    "Up": [
+     0,
+     1,
+     0,
+     0,
+     1
+    ],
+    "High": [
+     0,
+     0,
+     1,
+     0,
+     1
+    ]
+   }
+  }
+ },
+ {
+  "name": "request_longer_timeframe_same_symbol_no_look_ahead",
+  "source": "indicator(\"t\")\nplot(request(\"\", \"4h\", close), \"c4\")\nplot(request(\"\", \"4h\", high), \"h4\")\nplot(request(\"\", \"4h\", volume), \"v4\")\nplot(request(\"\", \"4h\", ta.sma(close, 2)), \"s4\")\n",
+  "bars": {
+   "o": [
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+   ],
+   "h": [
+    10.5,
+    11.5,
+    12.5,
+    13.5,
+    14.5,
+    15.5,
+    16.5,
+    17.5,
+    18.5,
+    19.5,
+    20.5,
+    21.5
+   ],
+   "l": [
+    9.5,
+    10.5,
+    11.5,
+    12.5,
+    13.5,
+    14.5,
+    15.5,
+    16.5,
+    17.5,
+    18.5,
+    19.5,
+    20.5
+   ],
+   "c": [
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+   ],
+   "v": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "t": [
+    0,
+    3600,
+    7200,
+    10800,
+    14400,
+    18000,
+    21600,
+    25200,
+    28800,
+    32400,
+    36000,
+    39600
+   ]
+  },
+  "chart_timeframe": "1h",
+  "expect": {
+   "plots": {
+    "c4": [
+     null,
+     null,
+     null,
+     13,
+     13,
+     13,
+     13,
+     17,
+     17,
+     17,
+     17,
+     21
+    ],
+    "h4": [
+     null,
+     null,
+     null,
+     13.5,
+     13.5,
+     13.5,
+     13.5,
+     17.5,
+     17.5,
+     17.5,
+     17.5,
+     21.5
+    ],
+    "v4": [
+     null,
+     null,
+     null,
+     8,
+     8,
+     8,
+     8,
+     8,
+     8,
+     8,
+     8,
+     8
+    ],
+    "s4": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     15,
+     15,
+     15,
+     15,
+     19
+    ]
+   }
+  }
+ },
+ {
+  "name": "request_timeframe_from_input_default",
+  "source": "indicator(\"t\")\ntf = input.timeframe(\"4h\", \"TF\")\nplot(request(\"\", tf, close), \"c4\")\n",
+  "bars": {
+   "o": [
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+   ],
+   "h": [
+    10.5,
+    11.5,
+    12.5,
+    13.5,
+    14.5,
+    15.5,
+    16.5,
+    17.5,
+    18.5,
+    19.5,
+    20.5,
+    21.5
+   ],
+   "l": [
+    9.5,
+    10.5,
+    11.5,
+    12.5,
+    13.5,
+    14.5,
+    15.5,
+    16.5,
+    17.5,
+    18.5,
+    19.5,
+    20.5
+   ],
+   "c": [
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+   ],
+   "v": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "t": [
+    0,
+    3600,
+    7200,
+    10800,
+    14400,
+    18000,
+    21600,
+    25200,
+    28800,
+    32400,
+    36000,
+    39600
+   ]
+  },
+  "chart_timeframe": "1h",
+  "expect": {
+   "plots": {
+    "c4": [
+     null,
+     null,
+     null,
+     13,
+     13,
+     13,
+     13,
+     17,
+     17,
+     17,
+     17,
+     21
+    ]
+   }
+  }
+ },
+ {
+  "name": "request_timeframe_from_input_same_as_chart",
+  "source": "indicator(\"t\")\ntf = input.timeframe(\"4h\", \"TF\")\nplot(request(\"\", tf, close), \"c4\")\n",
+  "bars": {
+   "o": [
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+   ],
+   "h": [
+    10.5,
+    11.5,
+    12.5,
+    13.5,
+    14.5,
+    15.5,
+    16.5,
+    17.5,
+    18.5,
+    19.5,
+    20.5,
+    21.5
+   ],
+   "l": [
+    9.5,
+    10.5,
+    11.5,
+    12.5,
+    13.5,
+    14.5,
+    15.5,
+    16.5,
+    17.5,
+    18.5,
+    19.5,
+    20.5
+   ],
+   "c": [
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+   ],
+   "v": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "t": [
+    0,
+    3600,
+    7200,
+    10800,
+    14400,
+    18000,
+    21600,
+    25200,
+    28800,
+    32400,
+    36000,
+    39600
+   ]
+  },
+  "chart_timeframe": "1h",
+  "inputs": {
+   "TF": "60"
+  },
+  "expect": {
+   "plots": {
+    "c4": [
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21
+    ]
+   }
+  }
+ },
+ {
+  "name": "request_other_symbol_aligns_without_look_ahead",
+  "source": "indicator(\"t\")\nplot(request(\"MSFT\", \"1D\", close), \"m\")\nplot(close - request(\"MSFT\", \"1D\", close), \"spread\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    86400,
+    172800,
+    259200,
+    345600
+   ]
+  },
+  "chart_timeframe": "1D",
+  "requests": {
+   "MSFT|1D": {
+    "o": [
+     10,
+     20,
+     30
+    ],
+    "h": [
+     10,
+     20,
+     30
+    ],
+    "l": [
+     10,
+     20,
+     30
+    ],
+    "c": [
+     10,
+     20,
+     30
+    ],
+    "v": [
+     1,
+     1,
+     1
+    ],
+    "t": [
+     0,
+     172800,
+     345600
+    ]
+   }
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     10,
+     10,
+     20,
+     30
+    ],
+    "spread": [
+     null,
+     -8,
+     -7,
+     -16,
+     -25
+    ]
+   }
+  }
+ },
+ {
+  "name": "request_same_symbol_same_timeframe_is_the_chart",
+  "source": "indicator(\"t\")\nplot(request(\"\", \"\", close * 2), \"d\")\nplot(request(\"\", \"1D\", close), \"same\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3
+   ],
+   "h": [
+    1,
+    2,
+    3
+   ],
+   "l": [
+    1,
+    2,
+    3
+   ],
+   "c": [
+    1,
+    2,
+    3
+   ],
+   "v": [
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    86400,
+    172800
+   ]
+  },
+  "chart_timeframe": "1D",
+  "expect": {
+   "plots": {
+    "d": [
+     2,
+     4,
+     6
+    ],
+    "same": [
+     1,
+     2,
+     3
+    ]
+   }
+  }
+ },
+ {
+  "name": "error_unknown_name",
+  "source": "indicator(\"t\")\nplot(foo)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "UNKNOWN NAME FOO"
+  }
+ },
+ {
+  "name": "error_missing_paren",
+  "source": "indicator(\"t\")\nplot(close\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "EXPECTED )"
+  }
+ },
+ {
+  "name": "error_too_few_arguments",
+  "source": "indicator(\"t\")\nx = ta.sma(close)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "TA.SMA TAKES 2 ARGUMENTS"
+  }
+ },
+ {
+  "name": "error_argument_range",
+  "source": "indicator(\"t\")\nx = math.round(1, 2, 3)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "MATH.ROUND TAKES 1 TO 2 ARGUMENTS"
+  }
+ },
+ {
+  "name": "error_reassign_before_declare",
+  "source": "indicator(\"t\")\nx := 1\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "X IS NOT DECLARED (USE = FIRST)"
+  }
+ },
+ {
+  "name": "error_history_needs_a_variable",
+  "source": "indicator(\"t\")\nplot((close + 1)[1])\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "ASSIGN TO A VARIABLE FIRST"
+  }
+ },
+ {
+  "name": "error_ta_in_loop",
+  "source": "indicator(\"t\")\nfor i = 1 to 3\n    x = ta.sma(close, 2)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "TA CALLS CANNOT RUN INSIDE A LOOP"
+  }
+ },
+ {
+  "name": "error_ta_in_loop_through_function",
+  "source": "indicator(\"t\")\nf(x) => ta.sma(x, 2)\nfor i = 1 to 3\n    y = f(close)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "TA CALLS CANNOT RUN INSIDE A LOOP"
+  }
+ },
+ {
+  "name": "error_strategy_not_built_yet",
+  "source": "strategy(\"x\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "STRATEGIES COME IN PART 2 (NOT BUILT YET)"
+  }
+ },
+ {
+  "name": "error_request_uses_script_variable",
+  "source": "indicator(\"t\")\nx = close\nplot(request(\"\", \"1D\", x))\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "REQUEST CAN ONLY USE BAR DATA, INPUTS AND BUILT-INS"
+  }
+ },
+ {
+  "name": "error_redeclared",
+  "source": "indicator(\"t\")\nx = 1\nx = 2\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "ALREADY DECLARED"
+  }
+ },
+ {
+  "name": "error_recursion",
+  "source": "indicator(\"t\")\nf(x) => f(x)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "CANNOT CALL ITSELF"
+  }
+ },
+ {
+  "name": "error_indicator_must_be_first",
+  "source": "plot(close)\nindicator(\"t\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "INDICATOR MUST BE THE FIRST STATEMENT"
+  }
+ },
+ {
+  "name": "error_break_outside_loop",
+  "source": "indicator(\"t\")\nbreak\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "BREAK OUTSIDE A LOOP"
+  }
+ },
+ {
+  "name": "error_block_variable_not_visible_after_block",
+  "source": "indicator(\"t\")\nif close > 1\n    z = 1\nplot(z)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "UNKNOWN NAME Z"
+  }
+ },
+ {
+  "name": "error_unknown_argument_name",
+  "source": "indicator(\"t\")\nplot(close, colour=color.red)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "UNKNOWN ARGUMENT COLOUR"
+  }
+ },
+ {
+  "name": "error_hline_only_at_top_level",
+  "source": "indicator(\"t\")\nif close > 1\n    hline(1)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "TOP LEVEL"
+  }
+ },
+ {
+  "name": "error_duplicate_input_title",
+  "source": "indicator(\"t\")\nx = input.int(1, \"A\")\ny = input.int(2, \"A\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "DUPLICATE INPUT TITLE"
+  }
+ },
+ {
+  "name": "error_tuple_size_mismatch",
+  "source": "indicator(\"t\")\n[a, b] = ta.macd(close, 2, 3, 2)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "GIVES 3 VALUES"
+  }
+ },
+ {
+  "name": "error_block_needs_indent",
+  "source": "indicator(\"t\")\nif close > 1\nplot(close)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "EXPECTED AN INDENTED BLOCK"
+  }
+ },
+ {
+  "name": "error_input_must_be_constant",
+  "source": "indicator(\"t\")\nn = 2\nx = input.int(n, \"A\")\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "compile_error": "MUST BE A CONSTANT"
+  }
+ },
+ {
+  "name": "runtime_step_limit_per_bar",
+  "source": "indicator(\"t\")\nwhile true\n    x = 1\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "runtime_error": "STEP LIMIT",
+   "error_bar": 0
+  }
+ },
+ {
+  "name": "runtime_memory_limit",
+  "source": "indicator(\"t\")\na = array.new(200000)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "runtime_error": "MEMORY LIMIT",
+   "error_bar": 0
+  }
+ },
+ {
+  "name": "runtime_lookback_beyond_5000",
+  "source": "indicator(\"t\")\nplot(close[5001])\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "runtime_error": "LOOKBACK",
+   "error_bar": 0
+  }
+ },
+ {
+  "name": "runtime_text_plus_number_stops_the_run_and_keeps_earlier_bars",
+  "source": "indicator(\"t\")\ns = bar_index == 2 ? \"a\" + 1 : \"a\"\nplot(close, \"p\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "expect": {
+   "runtime_error": "STR.TOSTRING",
+   "error_bar": 2,
+   "plots": {
+    "p": [
+     1,
+     2,
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "name": "runtime_array_index_out_of_range",
+  "source": "indicator(\"t\")\na = array.new(0)\nx = array.get(a, 0)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "runtime_error": "OUT OF RANGE",
+   "error_bar": 0
+  }
+ },
+ {
+  "name": "runtime_bad_window_length",
+  "source": "indicator(\"t\")\nx = ta.sma(close, 0)\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "runtime_error": "LENGTH",
+   "error_bar": 0
+  }
+ },
+ {
+  "name": "lib_sma",
+  "source": "indicator(\"t\")\nplot(lib.SMA(3), \"m\")\n",
+  "bars": {
+   "o": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "h": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "l": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "c": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "ts_only": true,
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     null,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  }
+ },
+ {
+  "name": "lib_ema_seeded_with_sma",
+  "source": "indicator(\"t\")\nplot(lib.EMA(3), \"m\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4,
+    5
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240,
+    300
+   ]
+  },
+  "ts_only": true,
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     null,
+     2,
+     4,
+     4,
+     4.5
+    ]
+   }
+  }
+ },
+ {
+  "name": "lib_param_from_input",
+  "source": "indicator(\"t\")\nn = input.int(2, \"N\")\nplot(lib.SMA(n), \"m\")\n",
+  "bars": {
+   "o": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "h": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "l": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "c": [
+    2,
+    4,
+    6,
+    8
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180
+   ]
+  },
+  "ts_only": true,
+  "inputs": {
+   "N": 3
+  },
+  "expect": {
+   "plots": {
+    "m": [
+     null,
+     null,
+     4,
+     6
+    ]
+   }
+  }
+ },
+ {
+  "name": "lib_tuple_output",
+  "source": "indicator(\"t\")\n[mid, up, lo] = lib.BB(3, 2)\nplot(mid, \"mid\")\nplot(up, \"up\")\nplot(lo, \"lo\")\n",
+  "bars": {
+   "o": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "h": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "l": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "c": [
+    1,
+    3,
+    2,
+    6,
+    4
+   ],
+   "v": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60,
+    120,
+    180,
+    240
+   ]
+  },
+  "ts_only": true,
+  "expect": {
+   "plots": {
+    "mid": [
+     null,
+     null,
+     2,
+     3.6666666666666665,
+     4
+    ],
+    "up": [
+     null,
+     null,
+     3.632993161855452,
+     7.066013009061857,
+     7.265986323710904
+    ],
+    "lo": [
+     null,
+     null,
+     0.36700683814454793,
+     0.26732032427147656,
+     0.7340136762890959
+    ]
+   }
+  }
+ },
+ {
+  "name": "table_one_per_position_across_call_sites",
+  "source": "indicator(\"t\")\na = table.new(\"top_left\", 1, 1)\ntable.cell(a, 0, 0, \"first\")\nb = table.new(\"top_left\", 1, 1)\ntable.cell(b, 0, 0, \"second\")\nvar c = table.new(\"top_right\", 1, 1)\ntable.cell(c, 0, 0, str.tostring(bar_index))\n",
+  "bars": {
+   "o": [
+    1,
+    2
+   ],
+   "h": [
+    1,
+    2
+   ],
+   "l": [
+    1,
+    2
+   ],
+   "c": [
+    1,
+    2
+   ],
+   "v": [
+    1,
+    1
+   ],
+   "t": [
+    0,
+    60
+   ]
+  },
+  "expect": {
+   "drawings": {
+    "tables": [
+     {
+      "position": "top_right",
+      "cells": [
+       {
+        "text": "1"
+       }
+      ]
+     },
+     {
+      "position": "top_left",
+      "cells": [
+       {
+        "text": "second"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ }
+]

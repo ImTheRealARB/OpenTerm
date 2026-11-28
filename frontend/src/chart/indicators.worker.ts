@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { computeEach, type IndicatorName, type Series } from "./indicators";
 import { handleLibrary, isLibraryMsg } from "./libraryWorker";
+import { isScriptMsg, routeScript } from "../script/worker";
 
 interface Req {
   id: number;
@@ -12,6 +13,12 @@ self.onmessage = (ev: MessageEvent<Req>) => {
   if (isLibraryMsg(ev.data)) {
     const r = handleLibrary(ev.data);
     (self as unknown as Worker).postMessage(r.msg, r.transfer);
+    return;
+  }
+  // OpenTerm Script (Phase 25): compile + run a script, live ticks, drop a chart's runs. The engine is part of this worker's chunk only.
+  if (isScriptMsg(ev.data)) {
+    const r = routeScript(ev.data);
+    if (r) (self as unknown as Worker).postMessage(r.msg, r.transfer);
     return;
   }
   const { id, series, which } = ev.data;

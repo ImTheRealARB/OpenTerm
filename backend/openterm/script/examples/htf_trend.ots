@@ -1,0 +1,11 @@
+// Shows a moving average from a longer timeframe on your chart and tints the background by whether price is above it.
+indicator("Higher timeframe trend", overlay=true)
+tf = input.timeframe("1D", "Higher timeframe")
+len = input.int(20, "Average length", min=1, max=200)
+
+// request() runs the expression on the longer timeframe. It only uses bars that had already closed,
+// so the line never looks into the future. "" means this chart's own symbol.
+higher = request("", tf, ta.ema(close, len))
+
+plot(higher, "Higher timeframe EMA", color=color.orange, style="stepline", linewidth=2)
+bgcolor(close > higher ? color.new(color.green, 92) : color.new(color.red, 92))

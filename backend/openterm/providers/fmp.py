@@ -6,6 +6,15 @@ error text, log or SOURCES row because every message here is a fixed sentence an
 Errors: HTTP 401 `{"Error Message": "Invalid API KEY. ..."}` (a real recording), 402 (premium endpoint or parameter), 429 (daily limit).
 The same texts also arrive as a 200 body on some endpoints, so the body is read whatever the status is.
 
+Movers (added 2026-11-28, the last source in MOV's order behind Nasdaq, TradingView and the Yahoo screens): the free
+`biggest-gainers`, `biggest-losers` and `most-actives` lists. They carry no volume, so MOV's VOLUME column stays empty
+(never guessed), and there is no $-volume or Nasdaq-100 list: those two tabs say NOT IN THIS SOURCE, like Yahoo's.
+
+Profile and dividends (added 2026-11-28, the last source for DES and for DVD / CACS / EVT behind Nasdaq and Yahoo): the free `profile`
+and `dividends` endpoints, US tickers only (a non-US or some share-class symbols answer HTTP 402). A free key sends only the newest 5
+dividend payments (`limit` above 5 is 402), with no yield or annual figure for the year (FMP's `yield` is one payment's, so it is not
+used) and no payment type. The profile has no P/E, EPS, share counts or enterprise value: those stay empty.
+
 Fixtures: keytest_fmp_401 is a REAL answer to a made-up key (no account). FMP has no public demo key, so every success shape
 (`fmp_docshape_*`) is built from the documentation and says NOT A RECORDING inside the file: field names are not checked against a live key.
 """
@@ -20,13 +29,13 @@ from typing import Any, ClassVar
 import httpx
 
 from .. import errkinds as K
-from ..models import Bars, Quote, SearchHit
+from ..models import Bars, Mover, Movers, Profile, Quote, SearchHit
 from ..ranges import range_days
 from ..research import calendars_parse as cal
-from .base import HISTORY, QUOTES, SEARCH, ProviderError
+from .base import HISTORY, MOVERS, PROFILE, QUOTES, SEARCH, ProviderError
 from .keyed import KeyedProvider
 from .keyed_market import build_fa, fnum, inum
-from .research_nasdaq import EARNINGS_HISTORY
+from .research_nasdaq import DIVIDENDS, EARNINGS_HISTORY
 
 FUNDAMENTALS = "fundamentals"
 BASE = "https://financialmodelingprep.com/stable"
@@ -34,6 +43,8 @@ HISTORY_DAYS = 1827  # the free plan's five years
 MAX_QUOTE_SYMBOLS = 5
 STATEMENT_ROWS = 5  # the free plan's limit per statement call
 _US = re.compile(r"^[A-Z]{1,5}(-[A-Z])?$")
+_RANGE = re.compile(r"^\s*([0-9.]+)\s*-\s*([0-9.]+)\s*$")
+_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _US_EXCHANGES = {"NASDAQ", "NYSE", "AMEX", "NYSE ARCA", "BATS", "CBOE"}
 
 
@@ -58,6 +69,82 @@ FIELDS: dict[str, tuple[str, str | tuple[str, ...], Any]] = {
     "dividends": ("CF", ("commonDividendsPaid", "netDividendsPaid"), _abs), "buybacks": ("CF", "commonStockRepurchased", _abs),
     "da": ("CF", "depreciationAndAmortization", None),
 }
+
+
+# MOV tab -> FMP path. scripts/record_fmp_movers.py records the same three lists.
+MOVER_PATHS = {"GAINERS": "biggest-gainers", "LOSERS": "biggest-losers", "ACTIVE": "most-actives"}
+
+
+def movers_from_lists(bodies: dict[str, Any], source: str, as_of: float) -> Movers:
+    """{MOV tab: FMP list answer} -> Movers. Rows are {symbol, name, price, change, changesPercentage, exchange}.
+
+    FMP gives no volume (left None) and no "data as of" time, so the times stay empty: MOV then says FETCHED.
+    """
+    tables: dict[str, list[Mover]] = {}
+    for tab in MOVER_PATHS:
+        body = bodies.get(tab)
+        if not isinstance(body, list):
+            raise ProviderError(K.UNAVAILABLE, f"Financial Modeling Prep sent no {tab} list")
+        tables[tab] = [
+            Mover(symbol=str(d["symbol"]).upper(), name=d.get("name"), price=fnum(d.get("price")), change=fnum(d.get("change")),
+                  change_pct=fnum(d.get("changesPercentage")))
+            for d in body if isinstance(d, dict) and d.get("symbol")
+        ]
+    if not any(tables.values()):
+        raise ProviderError(K.NOT_FOUND, "no movers")
+    return Movers(tables=tables, table_as_of={}, as_of_text=None, market_time=None, source=source, as_of=as_of)
+
+
+DIVIDEND_ROWS = 5  # a free key's cap: `limit` above 5 is HTTP 402
+
+
+def _text(v: Any) -> str | None:
+    s = str(v).strip() if v is not None else ""
+    return s or None
+
+
+def _range(text: Any) -> tuple[float | None, float | None]:
+    """FMP's 52-week range is one text, "243.42-360.83": (low, high), or (None, None) when it is not that shape."""
+    m = _RANGE.match(str(text or ""))
+    return (fnum(m.group(1)), fnum(m.group(2))) if m else (None, None)
+
+
+def profile_from_body(symbol: str, body: Any, source: str, as_of: float) -> Profile:
+    """The /stable/profile answer (a one-item list) -> Profile. Fields FMP does not send (P/E, EPS, share counts, enterprise value,
+    dividend yield) stay None, never computed. `quote_type` is set only for an ETF, the one type FMP states plainly."""
+    d = body[0] if isinstance(body, list) and body and isinstance(body[0], dict) else None
+    if d is None or not _text(d.get("companyName")):
+        raise ProviderError(K.NOT_FOUND, "no profile")
+    low, high = _range(d.get("range"))
+    return Profile(
+        symbol=symbol, name=_text(d.get("companyName")), exchange=_text(d.get("exchange")), currency=_text(d.get("currency")),
+        quote_type="ETF" if d.get("isEtf") is True else None, sector=_text(d.get("sector")), industry=_text(d.get("industry")),
+        country=_text(d.get("country")), website=_text(d.get("website")), employees=inum(d.get("fullTimeEmployees")),
+        description=_text(d.get("description")), market_cap=fnum(d.get("marketCap")), beta=fnum(d.get("beta")),
+        high_52w=high, low_52w=low, avg_volume=fnum(d.get("averageVolume")), source=source, as_of=as_of,
+    )
+
+
+def dividends_from_body(body: Any, source: str) -> dict:
+    """The /stable/dividends answer -> the raw dict `research.corp_parse.dvd_payload` reads (same keys as the Nasdaq and Yahoo parsers).
+
+    Row: ex-date (`date`), amount as declared (`dividend`, not the split-adjusted `adjDividend`), declared / record / pay dates.
+    Not sent, so None: the payment type, the annual dividend and the yield (FMP's `yield` is one payment's, not a year's).
+    """
+    if not isinstance(body, list):
+        raise ProviderError(K.UNAVAILABLE, "Financial Modeling Prep sent no dividend list")
+    rows = [{"ex_date": _iso_day(d.get("date")), "amount": fnum(d.get("dividend")), "type": None,
+             "declared": _iso_day(d.get("declarationDate")), "record": _iso_day(d.get("recordDate")), "pay": _iso_day(d.get("paymentDate"))}
+            for d in body if isinstance(d, dict) and _iso_day(d.get("date"))]
+    if not rows:
+        raise ProviderError(K.NOT_FOUND, "no dividends")
+    return {"rows": rows, "annual": None, "yield": None, "ex_date": None, "pay_date": None, "source": source}
+
+
+def _iso_day(text: Any) -> str | None:
+    """FMP writes dates as YYYY-MM-DD already; anything else (an empty text, junk) is None rather than a guess."""
+    s = str(text or "")[:10]
+    return s if _DAY.match(s) else None
 
 
 def fmp_symbol(symbol: str) -> str | None:
@@ -85,8 +172,9 @@ def error_for(status: int, body: Any) -> ProviderError | None:
 class FmpProvider(KeyedProvider):
     name = "fmp"
     label = "Financial Modeling Prep (free key)"
-    capabilities = frozenset({QUOTES, HISTORY, SEARCH, FUNDAMENTALS, EARNINGS_HISTORY})
-    markets = "US shares and ETFs: quote, daily candles (about 5 years), symbol search, annual income statement, balance sheet and cash flow"
+    capabilities = frozenset({QUOTES, HISTORY, SEARCH, FUNDAMENTALS, EARNINGS_HISTORY, MOVERS, PROFILE, DIVIDENDS})
+    markets = ("US shares and ETFs: quote, daily candles (about 5 years), symbol search, annual income statement, balance sheet and cash flow, "
+               "market movers (gainers, losers, most active), company profile, the last 5 dividend payments")
     terms = ("Free key (FMP_API_KEY): 250 requests a day, US coverage, annual statements only (per provider docs, not verified here). "
              "Quarterly statements, intraday candles and most non-US data need a paid plan.")
     rate = (2.0, 5)
@@ -220,6 +308,26 @@ class FmpProvider(KeyedProvider):
             raise ProviderError(K.UNSUPPORTED, "US tickers only")
         today = datetime.now(UTC).date().isoformat()
         return cal.fmp_earnings_history(await self._api("earnings", {"symbol": fmp}), today, self.source)
+
+    # --- movers ---------------------------------------------------------------------------------------------------------------
+    async def movers(self) -> Movers:
+        """MOV's GAINERS, LOSERS and ACTIVE tabs; three calls of a 250-a-day free key per refresh (MOV caches 60 s)."""
+        tabs = list(MOVER_PATHS)
+        answers = await asyncio.gather(*(self._api(MOVER_PATHS[t], {}) for t in tabs))
+        return movers_from_lists(dict(zip(tabs, answers, strict=True)), self.source, self.now())
+
+    # --- profile and dividends ------------------------------------------------------------------------------------------------
+    async def profile(self, symbol: str) -> Profile:
+        sym = fmp_symbol(symbol)
+        if sym is None:
+            raise ProviderError(K.UNSUPPORTED, "US tickers only")
+        return profile_from_body(symbol, await self._api("profile", {"symbol": sym}), self.source, self.now())
+
+    async def dividends(self, symbol: str) -> dict:
+        sym = fmp_symbol(symbol)
+        if sym is None:
+            raise ProviderError(K.UNSUPPORTED, "US tickers only")
+        return dividends_from_body(await self._api("dividends", {"symbol": sym, "limit": DIVIDEND_ROWS}), self.source)
 
     async def probe(self) -> None:
         await self._api("quote", {"symbol": "AAPL"})

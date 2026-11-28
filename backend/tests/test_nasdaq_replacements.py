@@ -51,7 +51,7 @@ def test_each_nasdaq_only_capability_has_a_second_source_after_nasdaq():
         assert DEFAULT_ORDER[cap][:2] == [nasdaq, other], cap
     # Screener and movers have two keyless stand-ins: TradingView (one call, all five MOV tabs), then the Yahoo screens.
     assert DEFAULT_ORDER["screener"] == ["nasdaq_screener", "tradingview", "yahoo_screener"]
-    assert DEFAULT_ORDER["movers"] == ["nasdaq", "tradingview", "yahoo_movers"]
+    assert DEFAULT_ORDER["movers"] == ["nasdaq", "tradingview", "yahoo_movers", "fmp"]  # FMP: keyed backup, last
 
 
 # --- Yahoo screener ------------------------------------------------------------------------------------------------------------

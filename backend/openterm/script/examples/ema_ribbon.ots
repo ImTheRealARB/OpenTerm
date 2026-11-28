@@ -1,0 +1,22 @@
+// Draws six exponential averages in a row, and shades the background green when they are lined up in an uptrend.
+indicator("EMA ribbon", overlay=true)
+base = input.int(10, "First length", min=1, max=100)
+step = input.int(5, "Step between lengths", min=1, max=50)
+
+e1 = ta.ema(close, base)
+e2 = ta.ema(close, base + step)
+e3 = ta.ema(close, base + 2 * step)
+e4 = ta.ema(close, base + 3 * step)
+e5 = ta.ema(close, base + 4 * step)
+e6 = ta.ema(close, base + 5 * step)
+
+plot(e1, "EMA 1", color=color.aqua)
+plot(e2, "EMA 2", color=color.teal)
+plot(e3, "EMA 3", color=color.blue)
+plot(e4, "EMA 4", color=color.purple)
+plot(e5, "EMA 5", color=color.fuchsia)
+plot(e6, "EMA 6", color=color.red)
+
+// Lined up: the shortest average is on top and the longest is at the bottom.
+aligned = e1 > e2 and e2 > e3 and e3 > e4 and e4 > e5 and e5 > e6
+bgcolor(aligned ? color.new(color.green, 90) : na)

@@ -1,0 +1,15 @@
+// Plots this symbol divided by a benchmark (SPY by default), with an average of that ratio to show when it is rising.
+indicator("Relative strength", overlay=false)
+bench = input.symbol("SPY", "Benchmark")
+tf = input.timeframe("1D", "Timeframe")
+len = input.int(50, "Average length", min=2, max=300)
+
+// The benchmark's close, read from another symbol. Where it has no bar yet the value is na.
+benchClose = request(bench, tf, close)
+ratio = close / benchClose
+average = ta.sma(ratio, len)
+
+plot(ratio, "Ratio", color=color.blue)
+plot(average, "Average", color=color.orange)
+// Above its average the symbol is beating the benchmark.
+bgcolor(ratio > average ? color.new(color.green, 92) : na)

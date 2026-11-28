@@ -235,6 +235,8 @@ const defs: FunctionDef[] = [
   { code: "QRY", title: "Query fields over universes and dates (also via SDK and Excel)", needsSecurity: false, argsSchema: "<fields> FOR <universe> [WHERE ..] [SORT ..] [LIMIT n] | <fields> FOR <symbols> DATES -1Y..0 [FREQ D|W|M]", load: () => import("./QRY") },
   { code: "FLD", title: "Field catalog for QRY: source, unit, frequency, key", needsSecurity: false, argsSchema: "[words]", load: () => import("./FLD") },
   { code: "NB", title: "Local JupyterLab with openterm-sdk and example notebooks", needsSecurity: false, load: () => import("./NB") },
+  // Phase 25: OpenTerm Script. The editor chunk (CodeMirror + the engine) loads only inside the panel; idlePreload stays off.
+  { code: "SCRIPT", title: "OpenTerm Script: write, save and import your own chart indicators and alerts (20 starter examples)", needsSecurity: false, argsSchema: "[NAME | NEW [EXAMPLE] | IMPORT]", load: () => import("./SCRIPT"), idlePreload: false },
 ];
 
 export const FUNCTIONS = new Map(defs.map((d) => [d.code, d]));

@@ -1,0 +1,11 @@
+// Plots the percent change over N bars as a histogram, with a stronger colour when the change is speeding up.
+indicator("Rate of change", overlay=false)
+len = input.int(12, "Length", min=1, max=200)
+src = input.source(close, "Source")
+
+change = ta.roc(src, len)
+// Positive and growing = green, positive and shrinking = teal, negative and falling = red, negative and recovering = maroon.
+barColor = change >= 0 ? (change > nz(change[1]) ? color.green : color.teal) : (change < nz(change[1]) ? color.red : color.maroon)
+
+plot(change, "ROC %", color=barColor, style="histogram")
+hline(0, "Zero", color=color.gray)
