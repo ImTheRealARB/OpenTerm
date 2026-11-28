@@ -501,6 +501,8 @@ async function browserBench() {
       const page = await freshPage(browser);
       await run(page, "PERF CALC");
       await page.waitForFunction(() => window.__openterm_perf?.snapshot?.().gauges?.["p19.patternsMs"] !== undefined, null, { timeout: 15000 }).catch(() => {});
+      // Phase 25: the script engine loads lazily after the Phase 19 maths, so wait for its own gauge too (missing = FAIL below)
+      await page.waitForFunction(() => window.__openterm_perf?.snapshot?.().gauges?.["p25.scriptMs"] !== undefined, null, { timeout: 15000 }).catch(() => {});
       out.p19 = await page.evaluate(() => window.__openterm_perf.snapshot().gauges);
       await page.context().close();
     }
@@ -606,6 +608,11 @@ async function main() {
   add("IMAP treemap layout, 5,000 tiles p95", r.p19["p19.treemapMs"] ?? null, 30, "ms", "PERF CALC, TEST DATA");
   add("SECF fuzzy rank, 7,000 names, per query p95", r.p19["p19.secfMs"] ?? null, 25, "ms", "PERF CALC, TEST DATA, prefix + word + typo + subsequence");
   add("IMAP canvas paint, 5,000 tiles p95", r.p19["p19.imapPaintMs"] ?? null, 16, "ms", "PERF CALC, 1600x900, TEST DATA");
+
+  // Phase 25 budgets (spec section 7): OpenTerm Script in the page (PERF CALC, 2 warm-up runs not counted). A missing gauge
+  // is NaN, so it FAILS instead of showing N/A: the script bench must always run.
+  add("Script, 40 lines over 10,000 bars p95", r.p19["p25.scriptMs"] ?? NaN, 30, "ms", "PERF CALC, TEST DATA");
+  add("Script, 5 studies one live tick each p95", r.p19["p25.tickMs"] ?? NaN, 4, "ms", "PERF CALC, TEST DATA, updateLast + tick");
 
   const pad = (s, n) => String(s).padEnd(n);
   console.log("\n" + pad("METRIC", 52) + pad("VALUE", 12) + pad("BUDGET", 12) + pad("STATUS", 8) + "NOTE");

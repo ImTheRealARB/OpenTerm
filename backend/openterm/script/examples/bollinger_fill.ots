@@ -1,0 +1,12 @@
+// Draws Bollinger bands around a moving average and shades the space between the two outer bands.
+indicator("Bollinger fill", overlay=true)
+len = input.int(20, "Length", min=2, max=200)
+mult = input.float(2.0, "Width in standard deviations", min=0.5, max=5, step=0.5)
+src = input.source(close, "Source")
+
+[mid, upper, lower] = ta.bb(src, len, mult)
+plot(mid, "Middle", color=color.gray)
+// plot() returns a handle. fill() needs the two handles to know which lines to shade between.
+upperLine = plot(upper, "Upper", color=color.blue)
+lowerLine = plot(lower, "Lower", color=color.blue)
+fill(upperLine, lowerLine, color.new(color.blue, 88))

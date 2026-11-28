@@ -2,6 +2,21 @@
 
 Format: newest first, one section per phase. Details for each release are in `docs/RELEASE_NOTES.md`.
 
+## OpenTerm Script (2026-11-28)
+A small language for your own chart indicators and alerts (strategies come in part 2):
+- `SCRIPT` opens the editor with 20 starter examples. Ctrl+Enter checks and saves; errors show the line and column.
+- `AAPL GP SCRIPT=RSI_BANDS(14,70)` draws a saved script on the chart (lines, fills, shapes, labels, tables). Shift+I edits its inputs.
+- `ALRT AAPL SCRIPT=RSI_BANDS COND="RSI down"` fires when the script's alert condition becomes true on a new bar.
+- A paste importer converts scripts written for other charting tools where the features match, and lists the lines it dropped.
+- Scripts run in a background worker and never use `eval`. A 40-line script over 10,000 bars takes about 16 ms.
+
+## FMP backups for profile and dividends (2026-11-28)
+- With a free `FMP_API_KEY`, `DES` and `DVD` get a backup source after Yahoo. `DVD` now says which dates the answering source does not send.
+
+## MOV header time and an FMP backup (2026-11-28)
+- `MOV` always says what its time is: Nasdaq's own "data as of", `QUOTES hh:mm:ss` (Yahoo's newest trade time) or `FETCHED hh:mm:ss` (when OpenTerm fetched it, for TradingView and FMP, which give no time). It used to show no time for TradingView.
+- Financial Modeling Prep (free `FMP_API_KEY`) is the last backup for `MOV`: gainers, losers and most active, no volume column.
+
 ## TradingView for the screener and market movers (2026-11-26)
 A second free source for `EQS` and `MOV` while Nasdaq refuses OpenTerm, tried before Yahoo (details in
 [docs/DATA_LIMITS.md](docs/DATA_LIMITS.md) and [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)):

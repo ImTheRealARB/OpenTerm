@@ -1,0 +1,13 @@
+// Marks inside bars (the bar fits entirely inside the one before it) and breakouts from them.
+indicator("Inside bar", overlay=true)
+
+// high[1] is the high of the previous bar.
+inside = high < high[1] and low > low[1]
+plotshape(inside, "Inside bar", style="diamond", location="belowbar", color=color.yellow)
+
+// A breakout: the bar before was an inside bar and this bar closes beyond the bar before that.
+wasInside = inside[1]
+breakUp = wasInside and close > high[2]
+breakDown = wasInside and close < low[2]
+plotshape(breakUp, "Breakout up", style="arrowup", location="belowbar", color=color.green)
+plotshape(breakDown, "Breakout down", style="arrowdown", location="abovebar", color=color.red)

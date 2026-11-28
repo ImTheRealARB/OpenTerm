@@ -1,0 +1,17 @@
+// Sends an alert when the relative strength index climbs back above 30 or falls back below 70.
+indicator("RSI alert", overlay=false)
+len = input.int(14, "Length", min=1, max=200)
+
+r = ta.rsi(close, len)
+plot(r, "RSI", color=color.orange)
+hline(70, "Upper")
+hline(30, "Lower")
+
+recovered = ta.crossover(r, 30)
+faded = ta.crossunder(r, 70)
+
+// alert() records a message on the bar where it runs. The chart only fires it for the newest bar.
+if recovered
+    alert("RSI back above 30 at " + str.tostring(close, 2))
+if faded
+    alert("RSI back below 70 at " + str.tostring(close, 2))

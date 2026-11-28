@@ -52,6 +52,7 @@ from .remote_routes import router as remote_router
 from .responses import Orjson, OrjsonRoute
 from .router import Router
 from .scanner.routes import router as scan_router
+from .script_routes import router as script_router
 from .service import DataService
 from .smart_alerts import router as smart_alerts_router
 from .streaming.hub import Client, Hub
@@ -305,6 +306,7 @@ app.include_router(smart_alerts_router)
 app.include_router(filings_router)
 app.include_router(macrod_router)  # Phase 30 macro depth
 app.include_router(query_router)  # Phase 31 QRY, FLD, Excel bridge
+app.include_router(script_router)  # Phase 25 OpenTerm Script storage
 app.include_router(kite_router)
 app.include_router(brokers_router)
 app.include_router(orders_router)

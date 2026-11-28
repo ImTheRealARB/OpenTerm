@@ -178,6 +178,17 @@ export const TOOLBARS: Readonly<Record<string, readonly ToolbarButton[]>> = {
     // and a press from this button moves focus to the panel first, so it works from the mouse too.
     { label: "Templates", key: "t", firstArg: "EDIT", title: "Replace the code with a starter template (T)" },
   ],
+  // OpenTerm Script (Phase 25). The list (SCRIPT alone) and the editor (SCRIPT <NAME>) have different keys, so `when` splits them.
+  // Both the list and the editor read the same E key for "export", so the label is the same.
+  SCRIPT: [
+    { label: "Open", key: "Enter", when: "noargs", title: "Open the selected script (an example opens as a copy) (Enter)" },
+    { label: "New", key: "n", when: "noargs", title: "Start a new script (N)" },
+    { label: "Import", key: "i", when: "noargs", title: "Paste a script from common chart-script syntax and convert it (I)" },
+    { label: "Convert", key: "Enter", firstArg: "IMPORT", title: "Convert the pasted text (Enter, after Esc)" },
+    { label: "Add to chart", key: "g", when: "args", title: "Save the script and show it on a chart (G, or Ctrl+Enter in the box)" },
+    { label: "Save", key: "s", when: "args", title: "Save the script (S, or Ctrl+S in the box)" },
+    { label: "Export", key: "e", title: "Save the script as a .ots file (E)" },
+  ],
   // Third-party extensions: L shows the list from an extension panel; Enter / D on a list row enable / disable it (the panel's own keys).
   EXT: [
     { label: "List", key: "l", title: "Show the installed extensions (L)", when: "args" },

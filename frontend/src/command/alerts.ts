@@ -133,6 +133,26 @@ function announceNews(a: NewsAlert, headline: string): void {
   desktopNotify(`NEWS ${where} ${a.word}`, headline, `openterm-news-alert-${a.id}`);
 }
 
+/**
+ * Script alerts (Phase 25): `alert(...)` on a script's newest bar, or a condition attached with `ALRT ... SCRIPT=`.
+ * Same path as a price alert (status-bar flash, message line, desktop notification), once per bar per message: a live
+ * tick re-runs the newest bar many times, so (symbol, script, bar time, message) is remembered and a repeat is ignored.
+ * `synthetic` labels test data on screen (never fake data).
+ */
+const scriptFired = new Set<string>();
+export function fireScriptAlert(p: { symbol: string; script: string; message: string; barTime: number; synthetic?: boolean }): boolean {
+  const key = `${p.symbol}|${p.script}|${p.barTime}|${p.message}`;
+  if (scriptFired.has(key)) return false;
+  if (scriptFired.size > 5000) scriptFired.clear(); // bounded memory; old bars never fire again anyway
+  scriptFired.add(key);
+  const tag = p.synthetic ? " (SYNTHETIC)" : "";
+  const text = `SCRIPT ALERT ${p.symbol} ${p.script}: ${p.message}${tag}`;
+  lastFired.set(() => ({ text, at: Date.now() }));
+  info(text);
+  desktopNotify(`SCRIPT ${p.script} ${p.symbol}`, `${p.message}${tag}`, `openterm-script-${key}`);
+  return true;
+}
+
 function fire(a: Alert, price: number, src: string): void {
   firing.add(a.id);
   const at = Date.now() / 1000;
@@ -245,6 +265,14 @@ export async function pollNewsAlerts(): Promise<void> {
 
 let started = false;
 
+/**
+ * Phase 25: live script alerts (`ALRT AAPL SCRIPT=NAME`). They RUN WHILE OPENTERM IS OPEN, in this tab. Everything lives in
+ * `script/liveAlert*.ts`, reached with `import()` so the startup bundle only carries this one-line door: the list is read through
+ * a tiny chunk, and the runner (with the script engine) loads only when at least one script alert exists.
+ */
+export const refreshScriptAlerts = (): Promise<void> => import("../script/liveAlertSync").then((m) => m.refreshScriptAlerts());
+const scriptAlertsFailed = (e: unknown): void => void fail(`SCRIPT ALERTS: ${errMessage(e)}`); // a chunk that did not load: said, not swallowed
+
 /** Boot: load alerts, subscribe their symbols, watch ticks. Re-syncs every minute (other tabs, restarts). */
 export function startAlerts(): void {
   if (started) return;
@@ -269,6 +297,8 @@ export function startAlerts(): void {
   void refreshNewsAlerts().then(() => pollNewsAlerts()).catch(failureIsRecorded);
   setInterval(() => void refreshAlerts().catch(failureIsRecorded), 60_000);
   setInterval(() => void refreshNewsAlerts().catch(failureIsRecorded), 60_000);
+  void refreshScriptAlerts().catch(scriptAlertsFailed);
+  setInterval(() => void refreshScriptAlerts().catch(scriptAlertsFailed), 60_000);
   setInterval(() => void pollNewsAlerts(), NEWS_POLL_MS);
 }
 
@@ -305,8 +335,17 @@ export const rearmNewsAlert = (id: number) => {
   return act(`NEWS ALERT N${id} NOT REARMED`, () => newsAlertsApi.rearm(id), `NEWS ALERT N${id} REARMED`).then((ok) => (void refreshNewsAlerts().catch(failureIsRecorded), ok));
 };
 
+/** `ALRT SYM SCRIPT=NAME [COND="title"]` and `ALRT DEL SC<id>`: the (lazily loaded) script-alert modules read and run these. */
+const isScriptAlertForm = (a: string[]): boolean =>
+  a[0]?.toUpperCase() !== "NEWS" && (a.some((t) => /^(SCRIPT|COND)=/i.test(t)) || (/^(DEL|DELETE|RM)$/i.test(a[0]) && /^SC\d+$/i.test(a[1] ?? "")));
+
 /** Runs an `ALRT ...` command. true/false = finished here; string[] = show `ALRT <args>`. */
 export function alrtCommand(args: string[], security?: SecurityRef): boolean | string[] {
+  if (isScriptAlertForm(args)) {
+    askNotifyPermission(); // synchronously, inside the keypress that ran the command
+    void import("../script/liveAlertSync").then((m) => m.scriptAlertCommand(args, security), scriptAlertsFailed);
+    return [];
+  }
   const a = parseAlrt(args, security);
   switch (a.kind) {
     case "error":

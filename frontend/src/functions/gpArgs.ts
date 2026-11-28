@@ -1,5 +1,5 @@
 /**
- * GP command arguments (pure, so vitest can run it): [range] [interval] [VS SYM...] [PANE] [EVT] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|...] [BOX=n] [REV=n] [LOG] [studies...].
+ * GP command arguments (pure, so vitest can run it): [range] [interval] [VS SYM...] [PANE] [EVT] [CANDLE|OHLC|LINE|AREA|RENKO|KAGI|PNF|...] [BOX=n] [REV=n] [LOG] [SCRIPT=NAME[(inputs)][,NAME2]] [studies...].
  * Order is free. `VS` takes up to three symbols; with `PANE` each gets its own pane, without it the first one is overlaid (rebased to %).
  */
 import { CHART_TYPES, type ChartType } from "../chart/chartTypes";
@@ -97,6 +97,74 @@ export function parseCustomToken(raw: string): CustomInd | null {
   return null;
 }
 
+/**
+ * OpenTerm Script on a chart (Phase 25): `SCRIPT=NAME`, several as `SCRIPT=A,B`. Per-chart input overrides follow a name in
+ * parentheses, in the order of the script's `input.*` calls, empty = the script's default: `SCRIPT=RSI_BANDS(14,70)`,
+ * `SCRIPT=A(,70),B`. Text values are percent-encoded (`SCRIPT=X(%28a%29)`), so one chart's whole script state is ONE token with
+ * no spaces: the command line, layouts (`replaceView` args) and history keep it as they keep `ATR(14)`.
+ * The values stay RAW TEXT here ("14", "true", "close"); `script/inputArgs.ts` turns them into typed values using the
+ * script's own input definitions, so this file never imports the script engine (startup bundle).
+ */
+export interface ScriptRef {
+  /** Stored name, upper case (backend `STORED_NAME_RE`). */
+  name: string;
+  /** Raw positional input values; "" = use the default. Trailing empties are never kept. */
+  inputs: string[];
+}
+/** The five-studies budget of spec section 2 (a tick runs every script on the chart). */
+export const MAX_SCRIPTS = 5;
+const SCRIPT_ENTRY = /^([A-Z0-9][A-Z0-9_.-]{0,31})(?:\((.*)\))?$/i;
+
+/** Encodes one input value so it cannot clash with the token's own `( ) ,` (encodeURIComponent keeps `( )`). */
+function encodeInput(v: string): string {
+  return encodeURIComponent(v).replace(/[()!'*]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+/** Splits at commas that are not inside parentheses. */
+function splitTop(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of text) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+/** One `SCRIPT=...` arg as its script list, or null when it is not a well-formed SCRIPT arg (the whole token is then ignored). */
+export function parseScriptToken(raw: string): ScriptRef[] | null {
+  const m = /^SCRIPT=(.+)$/i.exec(raw);
+  if (!m) return null;
+  const out: ScriptRef[] = [];
+  for (const part of splitTop(m[1])) {
+    const e = SCRIPT_ENTRY.exec(part);
+    if (!e) return null;
+    let inputs: string[] = [];
+    if (e[2] !== undefined && e[2] !== "") {
+      try {
+        inputs = e[2].split(",").map((x) => decodeURIComponent(x));
+      } catch {
+        return null;
+      }
+      while (inputs.length && inputs[inputs.length - 1] === "") inputs.pop();
+    }
+    out.push({ name: e[1].toUpperCase(), inputs });
+  }
+  return out;
+}
+
+/** The single `SCRIPT=...` arg for a list of scripts ("" for none). */
+export function serializeScripts(list: ScriptRef[]): string {
+  if (!list.length) return "";
+  return "SCRIPT=" + list.map((s) => (s.inputs.length ? `${s.name}(${s.inputs.map(encodeInput).join(",")})` : s.name)).join(",");
+}
+
 export interface GpParsed {
   range: string;
   interval?: string;
@@ -113,6 +181,8 @@ export interface GpParsed {
   indicators: IndicatorName[];
   /** Library indicators and formulas, in the order given (at most MAX_CUSTOM). */
   custom: CustomInd[];
+  /** Phase 25: scripts drawn on the chart (`SCRIPT=NAME`), at most MAX_SCRIPTS, with their per-chart input overrides. */
+  scripts: ScriptRef[];
   /** Phase 24: `REPLAY [YYYY-MM-DD]`: bar replay from that day (absent date = the last 100 bars are hidden). */
   replay?: { start: string | null };
   /** Phase 24 gap: `STOP=5 TARGET=10` (percent from the average entry): the replay practice book's exits. Used only with REPLAY. */
@@ -154,14 +224,14 @@ function isKeyword(raw: string): boolean {
   const a = raw.toUpperCase();
   return (
     a === "VS" || a === "PANE" || a === "EVT" || a === "LOG" || a === "REPLAY" || a === "CONE" || a === "PAT:ICHI" || RANGES.includes(a) || YAHOO_INTERVALS.has(raw) || INTERVAL_WORDS.has(a) ||
-    parseBox(raw) !== null || parseRev(raw) !== null || parseExit(raw) !== null ||
+    parseBox(raw) !== null || parseRev(raw) !== null || parseExit(raw) !== null || parseScriptToken(raw) !== null ||
     (CHART_TYPES as string[]).includes(a) || (INDICATORS as readonly string[]).includes(a) || parseCustomToken(raw) !== null
   );
 }
 
 /** `defaults`: the SETTINGS default range and chart type (Phase 10). */
 export function parseGpArgs(args: string[], defaults: { range: string; type: ChartType } = { range: "1Y", type: "CANDLE" }): GpParsed {
-  const p: GpParsed = { range: defaults.range, type: defaults.type, log: false, compare: [], pane: false, evt: false, indicators: [], custom: [] };
+  const p: GpParsed = { range: defaults.range, type: defaults.type, log: false, compare: [], pane: false, evt: false, indicators: [], custom: [], scripts: [] };
   for (let i = 0; i < args.length; i++) {
     const raw = args[i];
     const a = raw.toUpperCase();
@@ -188,7 +258,10 @@ export function parseGpArgs(args: string[], defaults: { range: string; type: Cha
     } else if (a === "LOG") p.log = true;
     else if (a === "CONE") p.cone = true;
     else if (a === "REPLAY") p.replay = { start: args[i + 1] && DAY_TOKEN.test(args[i + 1]) ? args[++i] : null };
-    else if (a === "PAT:ICHI" && !p.indicators.includes("ICHIMOKU")) p.indicators.push("ICHIMOKU");
+    else if (a.startsWith("SCRIPT=")) {
+      // A malformed SCRIPT= arg is ignored whole (like a bad BOX=); a name already on the chart keeps its first inputs.
+      for (const sc of parseScriptToken(raw) ?? []) if (p.scripts.length < MAX_SCRIPTS && !p.scripts.some((x) => x.name === sc.name)) p.scripts.push(sc);
+    } else if (a === "PAT:ICHI" && !p.indicators.includes("ICHIMOKU")) p.indicators.push("ICHIMOKU");
     else if ((INDICATORS as readonly string[]).includes(a)) {
       if (!p.indicators.includes(a as IndicatorName)) p.indicators.push(a as IndicatorName);
     } else {
@@ -277,5 +350,6 @@ export function serializeGp(p: GpParsed, defaultType: ChartType = "CANDLE"): str
     ...(p.exits?.target ? [`TARGET=${p.exits.target}`] : []),
     ...p.indicators,
     ...p.custom.map((c) => c.token),
+    ...(p.scripts.length ? [serializeScripts(p.scripts)] : []),
   ];
 }

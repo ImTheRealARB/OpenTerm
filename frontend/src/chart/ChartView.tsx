@@ -541,6 +541,7 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp,
       const iv = INTERVAL_S[data.interval] ?? 86400;
       const ts = Math.floor(timeMs / 1000);
       if (ts < b.t) return;
+      let opened = false; // a new bar began with this tick (scripts then `append` instead of re-running the newest bar)
       if (ts < b.t + iv) {
         // Same bar: extend it.
         b.c = price;
@@ -555,6 +556,7 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp,
         // first candle arrives with the next history load instead of being guessed on the wrong grid.
         if (iv > 3600 && !(data.tz === "UTC" && 86400 % iv === 0) && localDay(t, data.tz) !== localDay(b.t, data.tz)) return;
         Object.assign(b, { t, o: price, h: price, l: price, c: price, v: 0 });
+        opened = true;
       } else {
         return; // new daily+ bar: arrives with the next history refresh rather than guessed here
       }
@@ -568,6 +570,7 @@ function ChartViewInner({ data, compare, type, log, readoutLabel, lowerPane, gp,
       vol.current?.update({ time, value: Number.isFinite(b.v) ? b.v : 0, color: b.c >= b.o ? cols.up : cols.down });
       // Keep the readout current, unless a crosshair (keyboard or mouse) is parked on a bar: that bar's values must not jump.
       if (!cross.current.on && !hovering.current) writeRef.current(dataRef.current.c.length - 1);
+      gpRef.current?.onLive({ ...b }, opened); // OpenTerm Script (GP only): the newest bar as it is now
     },
   }));
 

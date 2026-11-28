@@ -18,6 +18,8 @@ def _old_key(broker: str, trade_id: str, n: int = 1) -> str:
     return hashlib.sha1(f"{broker}|id|{trade_id}#{n}".encode()).hexdigest()[:24]
 
 
+REKEY_MIGRATION = 21  # the migration that re-keys journal_trades (db.py)
+
 COLS = "dkey, ts, time, symbol, side, qty, price, fee, currency, broker, order_id, trade_id, mult, import_id"
 
 
@@ -31,7 +33,10 @@ async def test_migration_rekeys_rows_stored_with_the_old_rule(tmp_path):
             ("x" * 24, 0.0, "2026-01-02T11:00:00", "TCS.NS", "sell", 2.0, 4000.0, 0.0, "INR", "zerodha", "O2", "", 1.0, 1),
         ]
         await db.executemany(f"INSERT INTO journal_trades ({COLS}) VALUES ({','.join('?' * 14)})", rows)
-        await db.execute(f"PRAGMA user_version={len(MIGRATIONS) - 1}")  # as if the DB predates the re-key step
+        # As if the DB predates the re-key step (migration 21): roll the version back to 20 and drop what later
+        # migrations create, so they can run again (22 = `scripts`, Phase 25). A new migration adds its tables here.
+        await db.execute(f"PRAGMA user_version={REKEY_MIGRATION - 1}")
+        await db.execute("DROP TABLE scripts")
         await db.commit()
 
         await migrate(db)

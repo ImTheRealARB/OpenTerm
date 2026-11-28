@@ -373,7 +373,12 @@ _AV = {"GLOBAL_QUOTE": "alphavantage_real_quote_ibm", "TIME_SERIES_DAILY": "alph
        "INCOME_STATEMENT": "alphavantage_real_income_ibm", "BALANCE_SHEET": "alphavantage_real_balance_ibm", "CASH_FLOW": "alphavantage_real_cashflow_ibm"}
 _FMP = {"quote": "fmp_docshape_quote_aapl", "historical-price-eod/full": "fmp_docshape_history_aapl", "income-statement": "fmp_docshape_income_aapl",
         "balance-sheet-statement": "fmp_docshape_balance_aapl", "cash-flow-statement": "fmp_docshape_cashflow_aapl", "search-symbol": "fmp_docshape_search_apple",
-        "earnings": "fmp_real_earnings_aapl"}  # earnings: a REAL recording (scripts/record_nasdaq_replacements.py)
+        "earnings": "fmp_real_earnings_aapl",  # earnings: a REAL recording (scripts/record_nasdaq_replacements.py)
+        # profile + dividends: REAL recordings of AAPL (scripts/record_fmp_research.py); other symbols fall to `missing` below
+        "profile": "fmp_real_profile_AAPL", "dividends": "fmp_real_dividends_AAPL"}
+# MOV's three lists: REAL recordings (scripts/record_fmp_movers.py), no symbol parameter
+_FMP_MOVERS = {"biggest-gainers": "fmp_real_movers_gainers", "biggest-losers": "fmp_real_movers_losers",
+               "most-actives": "fmp_real_movers_active"}
 _KEYED_MARKET_HOSTS = ("api.twelvedata.com", "www.alphavantage.co", "api.massive.com", "financialmodelingprep.com")
 
 
@@ -413,6 +418,8 @@ def _route_keyedmarket(request: httpx.Request) -> httpx.Response | None:
         return missing
     if not q.get("apikey", "").startswith(_DOCSHAPE_KEY):
         return _load("keytest_fmp_401")
+    if (movers := _FMP_MOVERS.get(p.removeprefix("/stable/"))) is not None:
+        return _load(movers)
     name = _FMP.get(p.removeprefix("/stable/"))
     if name and q.get("period") == "quarter":
         return _load("fmp_docshape_402_premium")  # a free key is refused the quarterly view

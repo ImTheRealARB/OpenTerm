@@ -1,0 +1,14 @@
+// Draws a volume-weighted average price that adds up every loaded bar, with a band one standard deviation wide.
+indicator("Cumulative VWAP", overlay=true)
+bandMult = input.float(1.0, "Band width in standard deviations", min=0, max=4, step=0.5)
+
+// Running totals over all loaded bars: price times volume, and volume alone.
+priceVolume = ta.cum(hlc3 * volume)
+totalVolume = ta.cum(volume)
+// Dividing by zero volume gives na, so the line simply starts when volume does.
+vwap = priceVolume / totalVolume
+
+spread = ta.stdev(close, 50)
+plot(vwap, "VWAP", color=color.orange, linewidth=2)
+plot(vwap + bandMult * spread, "Upper band", color=color.gray)
+plot(vwap - bandMult * spread, "Lower band", color=color.gray)

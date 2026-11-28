@@ -35,6 +35,9 @@ import { GEO_INFO, geoUnflat } from "./geoPatterns";
 import type { LibraryRes } from "./libraryWorker";
 import { toTime, type BarData, type ThemeColors } from "./chartBase";
 import type { ChartType } from "./chartTypes";
+import type { LiveBar, ScriptHost, ScriptLayerProps } from "./scriptTypes";
+import type { ScriptController } from "./scriptLayer";
+import type { ScriptRes, ScriptTickRes } from "../script/worker";
 
 /** Phase 19 drawings overlay state, owned by GP. `pending` is a drawing being placed: its anchors so far; the cursor is the next one. */
 export interface DrawState {
@@ -79,6 +82,8 @@ export interface GpLayerProps {
   onCustomErrors?: (errors: Record<string, string>) => void;
   /** Phase 28 `GP ... CONE`: model price ranges per expiry (chart/cone.ts), drawn past the last bar. */
   cone?: ConePoint[];
+  /** Phase 25 `SCRIPT=NAME`: OpenTerm Script outputs on this chart (scriptLayer.ts, loaded only when this is non-empty). */
+  scripts?: ScriptLayerProps;
 }
 
 /** The parts of ChartView's state the layer reads. All refs, so reading them is always current. */
@@ -125,6 +130,8 @@ export interface GpOps {
   eventText(i: number): string;
   /** Click handler for the chart box (pick a price for an alert, or pick a drawing). */
   onClick(e: MouseEvent<HTMLDivElement>): void;
+  /** A live tick changed the newest bar (`isNew`: a new bar opened). Scripts re-run that bar only. */
+  onLive(bar: LiveBar, isNew: boolean): void;
 }
 
 export function useGpLayer(
@@ -177,15 +184,26 @@ export function useGpLayer(
   const compareOn = useRef(false);
   compareOn.current = !!compare;
   const geoRef = useRef<Geo | null>(null);
+  // Phase 25: OpenTerm Script. The controller is created on the first `SCRIPT=` (dynamic import), never for charts without one.
+  const scripts = gp?.scripts;
+  const scriptsRef = useRef<ScriptLayerProps | undefined>(scripts);
+  scriptsRef.current = scripts;
+  const scriptCtl = useRef<ScriptController | null>(null);
+  const scriptMarks = useRef<SeriesMarker<Time>[]>([]);
+  const scriptsMounted = useRef(true);
+  const scriptsKey = (scripts?.items ?? []).map((s) => `${s.name}(${s.inputs.join("\u0001")})`).join("\n");
 
   // The worker belongs to the layer: it is stopped when the chart goes away.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    scriptsMounted.current = true;
+    return () => {
+      scriptsMounted.current = false;
+      scriptCtl.current?.dispose();
+      scriptCtl.current = null;
       worker.current?.terminate();
       worker.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   /** Runs `fn` (series added or removed) and puts the visible range back if lightweight-charts moved it. */
   function keepRange(fn: () => void) {
@@ -211,7 +229,7 @@ export function useGpLayer(
     const c = colors.current;
     const ev: SeriesMarker<Time>[] = (eventsRef.current ?? []).map((e) => ({ time: toTime(e.t), position: "aboveBar", shape: "square", color: c.fg, text: e.kind }));
     const pat = [...ind.current.values()].flatMap((e) => e.marks);
-    const all = [...pat, ...ev];
+    const all = [...pat, ...ev, ...scriptMarks.current];
     all.sort((a, b) => (a.time as number) - (b.time as number));
     api.setMarkers(all);
     gauges.set("chart.markers", pat.length);
@@ -223,6 +241,7 @@ export function useGpLayer(
     const w = new Worker(new URL("./indicators.worker.ts", import.meta.url), { type: "module" });
     w.onmessage = (ev: MessageEvent<{ type?: string; id: number; parts: Partial<Record<IndicatorName, Record<string, Float64Array>>> }>) => {
       if (ev.data.type === "library") onLibResult.current(ev.data as unknown as LibraryRes);
+      else if (ev.data.type === "script" || ev.data.type === "script-tick") scriptCtl.current?.onMessage(ev.data as unknown as ScriptRes | ScriptTickRes);
       else onIndResult.current(ev.data.id, ev.data.parts);
     };
     worker.current = w;
@@ -244,6 +263,7 @@ export function useGpLayer(
         libErr.current.clear();
         errCb.current?.({});
       }
+      scriptCtl.current?.reset();
     },
     afterMain(s) {
       markersApi.current = createSeriesMarkers(s, []);
@@ -265,7 +285,7 @@ export function useGpLayer(
       let n = paneSeries.current.length;
       for (const e of ind.current.values()) n += e.series.length;
       for (const s of lib.current.values()) n += s.length;
-      return n;
+      return n + (scriptCtl.current?.seriesCount() ?? 0);
     },
     eventText(i) {
       const t = data.t[i];
@@ -287,6 +307,9 @@ export function useGpLayer(
       const r = e.currentTarget.getBoundingClientRect();
       const b = dataRef.current;
       onPick(hitTest(d.drawings, e.clientX - r.left, e.clientY - r.top, g, 6, { t: b.t, c: b.c }));
+    },
+    onLive(bar, isNew) {
+      scriptCtl.current?.onLive(bar, isNew);
     },
   };
   gpRef.current = gp ? ops : null;
@@ -591,6 +614,50 @@ export function useGpLayer(
     ind.current.set(name, { series: mine, marks });
   }
 
+  // OpenTerm Script: the same add / remove-only-this-entry rule as the indicators. Runs after ChartView's series effect (which calls
+  // `reset` when it rebuilds), so a rebuild draws every script again; an unchanged script is left alone. The controller is a lazy chunk.
+  useEffect(() => {
+    if (!gp) return;
+    const wanted = scriptsRef.current?.items ?? [];
+    if (!wanted.length && !scriptCtl.current) return;
+    let alive = true;
+    void import("./scriptLayer").then((mod) => {
+      if (!alive || !scriptsMounted.current) return;
+      if (!scriptCtl.current) {
+        const host: ScriptHost = {
+          chart: () => chartRef.current,
+          main: () => main.current,
+          data: () => dataRef.current,
+          colors: () => colors.current,
+          box: () => box.current,
+          props: () => scriptsRef.current,
+          post: (m) => ensureWorker().postMessage(m),
+          keepRange: (fn) => keepRange(fn),
+          layoutPanes: (ch) => layoutPanes(ch),
+          publish: () => publish(),
+          setMarks: (m) => {
+            scriptMarks.current = m.map((x) => ({ time: toTime(x.time), position: x.position, shape: x.shape, color: x.color, text: x.text }));
+            applyMarkers();
+          },
+          repaint: () => {
+            if (rafRef.current) return;
+            rafRef.current = requestAnimationFrame(() => {
+              rafRef.current = 0;
+              paintRef.current();
+            });
+          },
+        };
+        scriptCtl.current = mod.createScriptController(host);
+      }
+      // Scripts plot raw prices: a % overlay (VS without PANE) rebases the price scale, so they would be drawn at the wrong height.
+      scriptCtl.current.sync(scriptsRef.current?.items ?? [], compareOn.current ? "OFF WHILE A % OVERLAY (VS) IS ON: ADD PANE OR REMOVE VS" : undefined);
+    });
+    return () => {
+      alive = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on the script list + rebuild inputs only; the helpers read refs
+  }, [scriptsKey, data, compare, type, log, lowerPane, comparePanes, ver]);
+
   // Events changed: refresh the markers and the readout (its "[E ...]" suffix).
   useEffect(() => {
     if (!gp) return;
@@ -640,6 +707,17 @@ export function useGpLayer(
         ctx, bars, geo, colors: colors.current, studies, drawings: d?.drawings ?? [],
         visible: vis ? [Math.max(0, Math.floor(vis.from)), Math.ceil(vis.to) + 1] : [0, bars.t.length],
       }));
+      // Phase 25: OpenTerm Script stripes, fills, boxes, lines and labels (scriptLayer.ts), under the cone and the drawings.
+      if (scriptCtl.current && !compareOn.current) {
+        scriptCtl.current.paint(ctx, {
+          w: plotW,
+          h,
+          priceH: paneH,
+          visible: vis ? [Math.max(0, Math.floor(vis.from)), Math.ceil(vis.to) + 1] : [0, bars.t.length],
+          xOf: (l) => geo.xOfLogical?.(l) ?? null,
+          yMain: (p) => s.priceToCoordinate(p),
+        });
+      }
       // Phase 28: the probability cone (1 SD solid, 2 SD dashed), from the last close out to each expiry.
       const coneV = coneRef.current && !compareOn.current && bars.t.length ? coneVertices(coneRef.current, bars.t, bars.c[bars.c.length - 1]) : [];
       gauges.set("chart.cone", coneV.length);

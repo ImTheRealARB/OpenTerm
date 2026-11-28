@@ -1,0 +1,14 @@
+// Uses a ready-made indicator from the chart library (SuperTrend) and colours it by trend direction.
+indicator("Library SuperTrend", overlay=true)
+len = input.int(10, "Length", min=1, max=100)
+mult = input.float(3.0, "ATR multiple", min=0.5, max=10, step=0.5)
+
+// lib.<ID> calls any indicator of the chart's library. SuperTrend gives two values: the line and the direction (1 up, -1 down).
+[stLine, dir] = lib.SUPERTREND(len, mult)
+
+plot(stLine, "SuperTrend", color=dir > 0 ? color.green : color.red, linewidth=2)
+// A flip of direction is a trend change.
+flipUp = ta.crossover(dir, 0)
+flipDown = ta.crossunder(dir, 0)
+plotshape(flipUp, "Flip up", style="triangleup", location="belowbar", color=color.green)
+plotshape(flipDown, "Flip down", style="triangledown", location="abovebar", color=color.red)

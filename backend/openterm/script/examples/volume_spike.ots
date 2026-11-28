@@ -1,0 +1,11 @@
+// Marks bars whose volume is far above its recent average, and tints the background on those bars.
+indicator("Volume spike", overlay=true)
+len = input.int(20, "Average length", min=2, max=200)
+mult = input.float(2.5, "Spike size (times the average)", min=1, max=10, step=0.5)
+
+averageVolume = ta.sma(volume, len)
+// A comparison with na is false, so there is no spike until the average exists.
+spike = volume > mult * averageVolume
+
+plotshape(spike, "Spike", style="circle", location="abovebar", color=color.orange)
+bgcolor(spike ? color.new(color.orange, 85) : na)

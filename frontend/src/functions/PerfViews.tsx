@@ -2,7 +2,7 @@
  * Load-test views behind `PERF GRID <rows>` and `PERF CHART <bars>`. Generated locally and labelled
  * TEST DATA on screen; they exist so scripts/bench can measure scrolling and panning at scale.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChartView, type BarData, type ChartHandle } from "../chart/ChartView";
 import { Grid, type Column, type GridHandle } from "../components/Grid";
 import { fmtBig, fmtPct, fmtPrice } from "../format";
@@ -111,6 +111,40 @@ export function TestChart({ panelId, bars }: { panelId: number; bars: number }) 
 }
 
 /** `PERF CALC`: times the Phase 19 chart maths on generated bars (TEST DATA) and publishes gauges p19.patternsMs / p19.seasMs (p95 of 15 runs). */
+/** Phase 25: OpenTerm Script timings. The engine is loaded on demand (dynamic import), never in this chunk's static graph. */
+function ScriptBench() {
+  const [r, setR] = useState<{ lines: number; bars: number; runMs: number; tickMs: number } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void Promise.all([import("../script/benchCalc"), import("../script/index")]).then(
+      ([b, eng]) => {
+        try {
+          const out = b.benchScript(eng.compile);
+          gauges.set("p25.scriptMs", out.runMs);
+          gauges.set("p25.tickMs", out.tickMs);
+          if (live) setR(out);
+        } catch (e) {
+          // a broken bench script must fail the bench loudly, not report a fast number
+          gauges.set("p25.scriptMs", NaN);
+          if (live) setErr(String(e instanceof Error ? e.message : e));
+        }
+      },
+      (e: unknown) => live && setErr(`SCRIPT ENGINE DID NOT LOAD: ${String(e)}`),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (err) return <div>SCRIPT BENCH ERR: {err}</div>;
+  if (!r) return <div>SCRIPT BENCH: RUNNING</div>;
+  return (
+    <div>
+      SCRIPT {r.lines} LINES, {r.bars} BARS: {r.runMs.toFixed(2)} MS P95 · 5 STUDIES ONE TICK: {r.tickMs.toFixed(2)} MS P95
+    </div>
+  );
+}
+
 export function CalcBench() {
   const res = useMemo(() => {
     const r = rng(7);
@@ -211,6 +245,7 @@ export function CalcBench() {
       <div>HIT TEST OVER 200 DRAWINGS: {res.hit.toFixed(3)} MS P95</div>
       <div>SECF RANK, 7000 NAMES (PER QUERY): {res.secf.toFixed(2)} MS P95</div>
       <div>IMAP 5000 TILES: LAYOUT {res.lay.toFixed(2)} MS · PAINT {res.paint.toFixed(2)} MS P95</div>
+      <ScriptBench />
     </div>
   );
 }

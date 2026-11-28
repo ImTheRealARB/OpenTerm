@@ -1,0 +1,19 @@
+// Marks the bars where a fast moving average crosses a slow one.
+indicator("SMA cross", overlay=true)
+fastLen = input.int(20, "Fast length", min=1, max=200)
+slowLen = input.int(50, "Slow length", min=2, max=400)
+
+fast = ta.sma(close, fastLen)
+slow = ta.sma(close, slowLen)
+plot(fast, "Fast", color=color.orange, linewidth=2)
+plot(slow, "Slow", color=color.blue, linewidth=2)
+
+// ta.crossover is true only on the bar where the first line moves above the second.
+up = ta.crossover(fast, slow)
+down = ta.crossunder(fast, slow)
+plotshape(up, "Cross up", style="triangleup", location="belowbar", color=color.green, text="UP")
+plotshape(down, "Cross down", style="triangledown", location="abovebar", color=color.red, text="DOWN")
+
+// A named condition: attach a chart alert to it later.
+alertcondition(up, "Fast above slow", "The fast average crossed above the slow one")
+alertcondition(down, "Fast below slow", "The fast average crossed below the slow one")

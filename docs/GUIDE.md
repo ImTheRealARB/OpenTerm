@@ -257,6 +257,8 @@ Keys in a chart:
 
 `IND` opens the indicator library, with 109 indicators and your own formulas.
 
+`SCRIPT` opens the list of your scripts and 20 starter examples. Press Enter on an example to open a copy, give it your own name and save it with Ctrl+S. Press Ctrl+Enter to save the script and show it on a chart. The editor marks mistakes on the line where they are and suggests built-in names as you type. Press N for a new script, I to import text written in common chart-script syntax, and E to save the script as a `.ots` file. To show a saved script on any chart, type `AAPL GP SCRIPT=<NAME>`. Press Shift+I on the chart to change the script's inputs. A mistake in the script shows on the chart as `SCRIPT <NAME>:` with the line and column.
+
 ### Watch the markets
 
 | Type | You get |
@@ -341,6 +343,7 @@ in rupees.
 | `ALRT MSFT -5%` | Alerts you when Microsoft falls 5% from the previous close |
 | `ALRT` | Lists your alerts |
 | `ALRT DEL 3` | Deletes alert number 3 |
+| `ALRT AAPL SCRIPT=RSI_BANDS COND="RSI down"` | Alerts you when the condition "RSI down" in your script RSI_BANDS turns true. It runs only while OpenTerm is open in the browser. |
 
 The OpenTerm server checks alerts, so they work while the browser is closed. They do not work while OpenTerm is
 stopped. `DLVR` sends alerts to Telegram, email or a webhook.
@@ -580,6 +583,7 @@ the example need one. [FUNCTIONS.md](FUNCTIONS.md) lists every argument of every
 |---|---|---|
 | `GP` | Charts a ticker's price over time. Offers many chart types and indicators (calculated lines such as moving averages and RSI). | `AAPL GP 1Y SMA50` |
 | `IND` | Lists the indicators that GP can draw, with their formulas and presets. | `IND RSI` |
+| `SCRIPT` | Writes, saves and imports your own indicators and alerts in OpenTerm Script. Starts with 20 examples you can copy. | `SCRIPT` |
 | `GIP` | Charts a ticker in short bars built from the live price updates seen since the session began. | `AAPL GIP 5S` |
 | `HIST` | Lists a ticker's past prices in a table. | `AAPL HIST 1Y` |
 | `SEAS` | Shows a ticker's average return by month, weekday, day of month or week of year. | `AAPL SEAS MONTH` |

@@ -51,7 +51,7 @@ def test_yahoo_dividends_trailing_twelve_months_is_computed_from_the_rows_shown(
     p = cp.dvd_payload("AAPL", {"rows": rows, "annual": None, "yield": None, "ex_date": None, "pay_date": None, "source": "yahoo_research"})
     last12 = next(h for h in p["headline"] if h["label"].startswith("PAID IN THE 12 MONTHS"))
     assert last12["raw"] == pytest.approx(0.27 + 0.27 + 0.26)  # 2025-08-09 is more than 365 days before 2026-08-10
-    assert p["notes"] and "NASDAQ" in p["notes"][0]  # the missing dates are admitted, not hidden
+    assert p["notes"] and "SENDS NO DECLARATION" in p["notes"][0]  # the missing dates are admitted, not hidden
 
 
 def test_cacs_with_one_source_down_says_so_and_still_lists_the_other():
@@ -99,7 +99,7 @@ def test_dvd_falls_back_to_yahoo_when_nasdaq_is_down(client):
     assert d["fallback_from"] == ["nasdaq_research"] and d["source"].startswith("yahoo_research")
     rows = d["data"]["sections"][0]["rows"]
     assert rows[0]["amount"] == pytest.approx(0.27) and rows[0]["declared"] is None  # dates only Nasdaq has: left empty
-    assert any("NASDAQ" in n for n in d["data"]["notes"])
+    assert any("SENDS NO DECLARATION" in n for n in d["data"]["notes"])
 
 
 def test_si_falls_back_to_yahoo_key_statistics(client):

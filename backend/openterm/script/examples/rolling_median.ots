@@ -1,0 +1,29 @@
+// Computes a rolling median of the close with a list, which stays smooth when one bar spikes.
+indicator("Rolling median", overlay=true)
+len = input.int(9, "Window length", min=3, max=51)
+
+// Two lists that live from bar to bar: the last N closes, and a scratch copy that gets sorted.
+var window = array.new()
+var sorted = array.new()
+
+window.push(close)
+if window.size() > len
+    window.shift()
+
+// Copy the window, then sort the copy. The median is the middle value of a sorted list.
+sorted.clear()
+for i = 0 to window.size() - 1
+    sorted.push(window.get(i))
+sorted.sort()
+
+count = sorted.size()
+half = math.floor(count / 2)
+med = na
+if count % 2 == 1
+    med := sorted.get(half)
+else
+    med := math.avg(sorted.get(half - 1), sorted.get(half))
+
+// Show nothing until the window is full.
+plot(count == len ? med : na, "Median", color=color.orange, linewidth=2)
+plot(ta.sma(close, len), "Average", color=color.gray)

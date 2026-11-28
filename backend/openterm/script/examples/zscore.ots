@@ -1,0 +1,13 @@
+// Measures how many standard deviations price is from its moving average, with lines at 2 and minus 2.
+indicator("Z-score", overlay=false)
+len = input.int(50, "Length", min=2, max=300)
+src = input.source(close, "Source")
+
+// A flat window has a standard deviation of zero. Dividing by it gives na, so the line just has a gap there.
+z = (src - ta.sma(src, len)) / ta.stdev(src, len)
+
+zColor = z > 2 ? color.red : (z < -2 ? color.green : color.gray)
+plot(z, "Z-score", color=zColor, style="histogram")
+hline(2, "Stretched up", color=color.red)
+hline(-2, "Stretched down", color=color.green)
+hline(0, "Zero", color=color.gray)

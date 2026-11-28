@@ -1,0 +1,12 @@
+// Plots the relative strength index with bands at 70 and 30, and colours the line when it is stretched.
+indicator("RSI bands", overlay=false)
+len = input.int(14, "Length", min=1, max=200)
+src = input.source(close, "Source")
+
+r = ta.rsi(src, len)
+// The colour can change on every bar: red above 70, green below 30, orange in between.
+rsiColor = r > 70 ? color.red : (r < 30 ? color.green : color.orange)
+plot(r, "RSI", color=rsiColor)
+hline(70, "Upper")
+hline(30, "Lower")
+hline(50, "Middle", color=color.gray)
